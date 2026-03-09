@@ -1,4 +1,4 @@
-# CONTEXT.md — M1: Core Platform & Compliance
+# m1-context.md — M1: Core Platform & Compliance
 > Updated at end of every AI session.
 > Owner: [ASSIGN]
 > Phase 1 Stage 1 — MVP

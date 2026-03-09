@@ -1,4 +1,4 @@
-# PROJECT.md — Biotope
+# PROJECT-CONTEXT.md — Biotope
 > **CONSTANT LAYER** — Change only at formal phase transitions or full team agreement.
 > Last updated: Phase 1 Stage 1 (MVP)
 
@@ -44,7 +44,7 @@ The app surfaces descriptive patterns and insight cards. It never diagnoses.
 | CI/CD | GitHub Actions |
 | Hosting | Supabase (backend), App Store + Play Store (mobile) |
 
-> ⚠️ Stack decisions are CONSTANT. Changes require full team agreement and PROJECT.md update.
+> ⚠️ Stack decisions are CONSTANT. Changes require full team agreement and PROJECT-CONTEXT.md update.
 
 ---
 
@@ -61,7 +61,7 @@ M6  Engagement & Motivation         ← depends on M2 (completeness), M5b (Insig
 M7  Community & Ecosystem           ← depends on M4, M2 aggregates  [DORMANT — Phase 3]
 ```
 
-Full dependency diagram: see `ARCHITECTURE.md`
+Full dependency diagram: see `ARCHITECTURE-CONTEXT.md`
 
 ---
 
@@ -127,7 +127,7 @@ Defined in `shared/types/`. Changes require team discussion + PR with two review
 - Branch naming: `feat/m{n}-{module-name}/{short-description}`
 - No module imports from another module's `/impl` — public `index` only
 - All user-facing strings must pass the non-diagnostic language check
-- CONTEXT.md updated at the end of every AI session (even 2–3 lines)
+- context.md updated at the end of every AI session (even 2–3 lines)
 - Shared types changes require PR with 2 reviewers
 - Tests required before any PR merge to main
 - `main` is always deployable

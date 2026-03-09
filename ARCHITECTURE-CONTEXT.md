@@ -1,4 +1,4 @@
-# ARCHITECTURE.md — Biotope
+# ARCHITECTURE-CONTEXT.md — Biotope
 > **CONSTANT LAYER** — Update only at phase transitions.
 > Last updated: Phase 1 Stage 1 (MVP)
 

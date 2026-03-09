@@ -1,4 +1,4 @@
-# shared/types/README.md — Biotope Shared Contract
+# shared/SHARED-CONTEXT.md — Biotope Shared Contract
 > **CONSTANT LAYER** — All changes require PR with 2 team reviewers.
 > Breaking changes to any type below require notifying all module owners.
 > Last updated: Phase 1 Stage 1 (MVP)

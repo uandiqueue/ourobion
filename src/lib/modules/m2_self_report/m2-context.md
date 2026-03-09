@@ -1,4 +1,4 @@
-# CONTEXT.md — M2: Self-Report — Gut & Behaviour
+# m2-context.md — M2: Self-Report — Gut & Behaviour
 > Updated at end of every AI session.
 > Owner: [ASSIGN]
 > Phase 1 Stage 1 — MVP
@@ -100,7 +100,7 @@ Streak counts as a streak day if DQS ≥ 60. (Configurable — see M6.)
 
 ```
 /modules/m2-self-report
-  CONTEXT.md
+  m2-context.md
   index.dart              ← exports getRow(), getRows(), getCompletenessScore()
 
   /impl
