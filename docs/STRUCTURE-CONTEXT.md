@@ -12,7 +12,10 @@ This is a monolithic repository containing the frontend mobile application, back
 biotope/
 ├── .github/                   # GitHub Actions CI/CD workflows
 ├── docs/                      # General project documentation
-│   └── STRUCTURE-CONTEXT.md   # This document
+│   ├── ARCHITECTURE-CONTEXT.md# System architecture and data flow rules
+│   ├── PROJECT-CONTEXT.md     # Key project principles, goals, and phases
+│   ├── STRUCTURE-CONTEXT.md   # This document
+│   └── workspace-context.md   # Variable layer tracker for team sessions
 ├── scripts/                   # Utility scripts for database seeding, build tools, etc.
 ├── shared/                    # Code shared across frontend and backend boundaries
 │   ├── SHARED-CONTEXT.md      # Shared types and integration contracts
@@ -30,9 +33,7 @@ biotope/
 │   │   └── generate-insights/ # M5b backend worker
 │   └── migrations/            # Postgres schema definitions
 ├── tests/                     # Integration and end-to-end tests outside the app boundary
-├── .env.example               # Template for required environment variables
-├── ARCHITECTURE-CONTEXT.md    # System architecture and data flow rules
-└── PROJECT-CONTEXT.md         # Key project principles, goals, and phases
+└── .env.example               # Template for required environment variables
 ```
 
 ## Folder Conventions

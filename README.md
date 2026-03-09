@@ -6,8 +6,8 @@ This is a single-repository project.
 
 This is a monolithic repository architecture. To understand the rules and boundaries of the modules within the application, you must review the **Constant Layer** documentation before contributing. 
 
-- `PROJECT-CONTEXT.md`: Key project principles, goals, and phases (Non-diagnostic rules, ~30s logging).
-- `ARCHITECTURE-CONTEXT.md`: High-level system architecture and data flows.
+- `docs/PROJECT-CONTEXT.md`: Key project principles, goals, and phases (Non-diagnostic rules, ~30s logging).
+- `docs/ARCHITECTURE-CONTEXT.md`: High-level system architecture and data flows.
 - `docs/STRUCTURE-CONTEXT.md`: The repository layout rules.
 - `shared/SHARED-CONTEXT.md`: The shared TypeScript/Dart contracts between modules.
 
