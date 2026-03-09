@@ -26,7 +26,7 @@
 > 2. When starting a session, check if anyone left notes for you in "Blocked by / Needs".
 > 3. Before ending your session, log what you accomplished in the last session and what your next steps are.
 
-### Member 1: [Name]
+### Member 1: [Jayden]
 **Focus Area:** M1 (Core & Compliance) + Database Rules
 *   **Last Session Accomplished:**
     *   (Initial Setup: Scaffolded repo and created module context files)
@@ -36,7 +36,7 @@
 *   **Notes / Blocked by / Needs:**
     *   *None currently.*
 
-### Member 2: [Name]
+### Member 2: [Alton]
 **Focus Area:** M2 (Self-Report Logging) + Flutter UI
 *   **Last Session Accomplished:**
     *   (Initial Setup: Scaffolded M2 directories and normalizer files)
@@ -46,7 +46,7 @@
 *   **Notes / Blocked by / Needs:**
     *   Needs M1 to finish Auth so that the `user_id` can be injected into the `DailyGutRow` on save.
 
-### Member 3: [Name]
+### Member 3: [None]
 **Focus Area:** M5a/M5b (Intelligence) + M6 (Engagement)
 *   **Last Session Accomplished:**
     *   (Initial Setup: Created compute-baselines and generate-insights edge functions)
