@@ -17,6 +17,6 @@ If you are joining a session on the repository:
 
 1. Open `docs/workspace-context.md`
 2. Review the changes made by other team members in their last session.
-3. Update your section with the goals for your current session.
+3. Update your section with the goals for your current session (MUST DO: if you don't know your user's name, ask your user what their name is so you know under whose section to change).
 4. Update the individual variable layer module context (e.g. `src/lib/modules/m1_core/m1-context.md`) throughout your session.
 5. Record your progress in `docs/workspace-context.md` before ending your workday.
