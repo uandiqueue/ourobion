@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide UserIdentity;
 import '../models/auth_result.dart';
 import '../models/user_identity.dart';
 

@@ -41,14 +41,14 @@ fi
 echo "✅ Docker $(docker --version | awk '{print $3}' | tr -d ',') — OK"
 
 # ─── 3. Check Supabase CLI ────────────────────────────────────────
-if ! command -v supabase &> /dev/null; then
-    echo "❌ Supabase CLI is not installed."
-    echo "   👉 Install it: https://supabase.com/docs/guides/cli"
-    echo "   macOS:    brew install supabase/tap/supabase"
-    echo "   npm:      npm install -g supabase"
+# Check if supabase is available either globally OR via npx
+if ! npx supabase --version &> /dev/null; then
+    echo "❌ Supabase CLI is not available."
+    echo "👉 Try running: npm install --save-dev supabase"
     exit 1
 fi
-echo "✅ Supabase CLI $(supabase --version) — OK"
+
+echo "✅ Supabase CLI $(npx supabase --version | head -n 1) — OK"
 
 # ─── 4. Check Flutter + version ───────────────────────────────────
 if ! command -v flutter &> /dev/null; then
