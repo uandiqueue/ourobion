@@ -54,13 +54,13 @@ String getCopyRule(String ruleKey)          // returns approved phrasing by key
 
 | Feature | Status |
 |---|---|
-| Email auth (Supabase) | ❌ Not started |
-| Google OAuth | ❌ Not started |
-| Apple Sign-In | ❌ Not started |
-| Profile creation + onboarding | ❌ Not started |
-| Granular consent screen | ❌ Not started |
+| Email auth (Supabase) | ✅ Done |
+| Google OAuth | 🔨 Placeholders built |
+| Apple Sign-In | 🔨 Placeholders built |
+| Profile creation + onboarding | 🔨 DB & Services done, UI pending |
+| Granular consent screen | 🔨 DB & Services done, UI pending |
 | Non-diagnostic copy constants | ❌ Not started |
-| App shell + navigation scaffold | ❌ Not started |
+| App shell + navigation scaffold | 🔨 Scaffolded with AuthGate |
 | PDPA consent copy (MY law) | ❌ Not started |
 
 ---
@@ -110,10 +110,10 @@ class UserProfile {
 
 ## In Progress / Next Tasks
 
-1. Scaffold Flutter app with Supabase client init
-2. Build auth screens (sign in / sign up / onboarding flow)
-3. Build consent screen with granular toggles + PDPA copy
-4. Build profile setup (name, region, city, wearable toggle)
+1. ~~Scaffold Flutter app with Supabase client init~~ (Done)
+2. ~~Build auth screens (sign in / sign up)~~ (Done)
+3. Build consent screen UI with granular toggles + PDPA copy
+4. Build profile setup UI (name, region, city, wearable toggle)
 5. Implement app shell navigation (home / log / insights / profile tabs)
 6. Create `shared/constants/copy_guidelines.dart` with all approved strings
 

@@ -1,21 +1,15 @@
-# Environments
+# ═══════════════════════════════════════════════════════════════
+# 1. ENVIRONMENTS & SECRETS (Critical)
+# ═══════════════════════════════════════════════════════════════
 .env
 .env.*
 !.env.example
+.env.keys
+.env.local
 
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# OS Files
-.DS_Store
-Thumbs.db
-
-# Dependencies (Common)
+# ═══════════════════════════════════════════════════════════════
+# 2. DEPENDENCIES (Common)
+# ═══════════════════════════════════════════════════════════════
 node_modules/
 vendor/
 __pycache__/
@@ -24,15 +18,56 @@ __pycache__/
 venv/
 env/
 
-# Build / Output
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+
+# ═══════════════════════════════════════════════════════════════
+# 3. BUILD / OUTPUT
+# ═══════════════════════════════════════════════════════════════
 dist/
 build/
 out/
 bin/
 target/
 
-# IDEs and Editors
+# Flutter/Native Builds
+**/doc/api/
+**/ios/Flutter/.last_build_id
+/build/
+/coverage/
+app.*.symbols
+app.*.map.json
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# ═══════════════════════════════════════════════════════════════
+# 4. LOGS & OS FILES
+# ═══════════════════════════════════════════════════════════════
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.DS_Store
+Thumbs.db
+
+# ═══════════════════════════════════════════════════════════════
+# 5. IDEs AND EDITORS
+# ═══════════════════════════════════════════════════════════════
 .idea/
 .vscode/
 *.swp
 *.swo
+*.class
+*.pyc
+
+# Supabase Local Dev
+.branches
+.temp
