@@ -55,18 +55,9 @@
     *   M1 Auth backend is done. `user_id` is now available via `AuthService.getCurrentUser()`.
     *   M1 still needs: consent screen UI, profile setup screen UI, app shell navigation, copy constants (Jayden to pick up).
 
-### Member 3: [None]
-**Focus Area:** M5a/M5b (Intelligence) + M6 (Engagement)
-*   **Last Session Accomplished:**
-    *   (Initial Setup: Created compute-baselines and generate-insights edge functions)
-*   **Next Session Goals:**
-    *   Write the pg_cron scheduled job for `M5a`.
-    *   Map out the DQS (Data Quality Score) calculation trigger.
-*   **Notes / Blocked by / Needs:**
-    *   Needs M2 to finalize the `daily_gut_rows` table schema before writing the rolling average queries.
-
 ---
 
 ## 📝 Recent Change Log (Last 5 merged PRs/Sessions)
-1. **2026-03-18** - M1 Auth backend, DB models, services, SQL migration, sign-in/sign-up UI, `.env` config. — *Alton*
-2. **[Date]** - Initial repository structure and `SHARED-CONTEXT.md` types created. — *All*
+1. **2026-04-17** - Fixed two M1 bugs flagged in code review: (1) OAuth methods now return `AuthResult.pending()` instead of `.failure()` on redirect; (2) `getProfile()` now returns `null` on missing row (PGRST116) instead of crashing. Also fixed `updateProfile()` mutating the caller's map. — *Jayden*
+2. **2026-03-18** - M1 Auth backend, DB models, services, SQL migration, sign-in/sign-up UI, `.env` config. — *Alton*
+3. **2026-03-09** - Initial repository structure and `SHARED-CONTEXT.md` types created. — *All*

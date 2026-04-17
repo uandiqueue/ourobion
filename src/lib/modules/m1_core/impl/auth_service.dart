@@ -50,21 +50,24 @@ class AuthService {
   // ─── OAuth (placeholders — require Supabase dashboard config) ──
 
   /// Sign in with Google OAuth.
+  /// Returns [AuthResult.pending] on successful redirect launch — the real
+  /// session arrives via [onAuthStateChange], not this return value.
   Future<AuthResult> signInWithGoogle() async {
     try {
       await _client.auth.signInWithOAuth(OAuthProvider.google);
-      // OAuth redirects externally; session is picked up by the auth listener.
-      return AuthResult.failure('OAuth redirect initiated — await session.');
+      return AuthResult.pending();
     } on AuthException catch (e) {
       return AuthResult.failure(e.message);
     }
   }
 
   /// Sign in with Apple.
+  /// Returns [AuthResult.pending] on successful redirect launch — the real
+  /// session arrives via [onAuthStateChange], not this return value.
   Future<AuthResult> signInWithApple() async {
     try {
       await _client.auth.signInWithOAuth(OAuthProvider.apple);
-      return AuthResult.failure('OAuth redirect initiated — await session.');
+      return AuthResult.pending();
     } on AuthException catch (e) {
       return AuthResult.failure(e.message);
     }
