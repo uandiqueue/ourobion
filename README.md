@@ -1,106 +1,166 @@
-# biotope
+# Biotope
 
-This is a single-repository project.
+Single-repository project — Flutter mobile app + Supabase backend.
 
-## 📚 Orientation & Documentation
+## 📚 Documentation
 
-This is a monolithic repository architecture. To understand the rules and boundaries of the modules within the application, you must review the **Constant Layer** documentation before contributing.
+Read these before contributing:
 
-- `docs/PROJECT-CONTEXT.md`: Key project principles, goals, and phases (Non-diagnostic rules, ~30s logging).
-- `docs/ARCHITECTURE-CONTEXT.md`: High-level system architecture and data flows.
-- `docs/STRUCTURE-CONTEXT.md`: The repository layout rules.
-- `shared/SHARED-CONTEXT.md`: The shared TypeScript/Dart contracts between modules.
+- `docs/PROJECT-CONTEXT.md` — project principles, goals, phases
+- `docs/ARCHITECTURE-CONTEXT.md` — system architecture and data flows
+- `docs/STRUCTURE-CONTEXT.md` — repository layout rules
+- `shared/SHARED-CONTEXT.md` — shared TypeScript/Dart type contracts
+- `docs/ui-context/UI-DESIGN-CONTEXT.md` — design tokens, component specs
 
-## 👥 Getting Started / Workflow
+## 👥 Session Workflow
 
-If you are joining a session on the repository:
-
-1. Open `docs/workspace-context.md`
-2. Review the changes made by other team members in their last session.
-3. Update your section with the goals for your current session (MUST DO: if you don't know your user's name, ask your user what their name is so you know under whose section to change).
-4. Update the individual variable layer module context (e.g. `src/lib/modules/m1_core/m1-context.md`) throughout your session.
-5. Record your progress in `docs/workspace-context.md` before ending your workday.
+1. Open `docs/workspace-context.md` and review what others did last session
+2. Update your section with today's goals
+3. Update your module's context file (e.g. `m1-context.md`) as you work
+4. Record progress in `docs/workspace-context.md` before ending your session
 
 ---
 
-## 📱 Testing on Android Phone
+## 🛠 Development Setup
 
-This project runs Flutter on **Windows** and Supabase locally on **WSL2**. Follow both sections below.
+### Prerequisites
+
+Install these before running the setup script:
+
+| Tool | Version | All platforms |
+|---|---|---|
+| Node.js | 18+ | [nodejs.org](https://nodejs.org/) |
+| Docker Desktop | Latest | [docker.com](https://www.docker.com/products/docker-desktop/) |
+| Flutter | 3.11+ | [flutter.dev](https://docs.flutter.dev/get-started/install) |
+| Android Studio | Latest | [developer.android.com/studio](https://developer.android.com/studio) |
 
 ---
 
-### Part 1 — WSL2 Setup (Supabase backend)
+### Linux
 
-> Run these in your WSL2 terminal.
-
-**Bash**
 ```bash
-# 1. Install dependencies
+# Clone
+git clone https://github.com/uandiqueue/biotope.git && cd biotope
+
+# Install Node.js (if not installed)
+sudo apt install nodejs npm
+# or use nvm: https://github.com/nvm-sh/nvm
+
+# Install Flutter (if not installed)
+sudo snap install flutter --classic
+
+# Install Docker (if not installed)
+sudo apt install docker.io && sudo usermod -aG docker $USER
+
+# Run setup script
 chmod +x scripts/setup.sh && ./scripts/setup.sh
 
-# 2. Start local Supabase (Docker must be running)
-npx supabase start
+# Configure Android SDK after installing Android Studio
+flutter doctor --android-licenses
 
-# 3. Run database migrations
+# Start Supabase and run migrations
+npx supabase start
 npx supabase db push
 
-# 4. Set up port forwarding so your phone can reach Supabase
-#    (run this once — find your WSL2 IP with: hostname -I)
-#    Then run the port forward command in Windows PowerShell (see Part 2 Step 3)
+# Run the app
+cd src && flutter run
 ```
-
-> After `npx supabase start` completes, it will print your local API URL and anon key.
-> These should already match what is in `src/.env` — no changes needed if using defaults.
 
 ---
 
-### Part 2 — Windows Setup (Flutter + Android)
+### macOS
 
-> Run these in Windows PowerShell unless stated otherwise.
-
-**Step 1 — Install Flutter on Windows**
-
-Download and extract Flutter from [flutter.dev](https://flutter.dev/docs/get-started/install/windows), then add it to your PATH.
-
-```powershell
-# Verify Flutter is installed
-flutter --version
-```
-
-**Step 2 — Install Android Studio**
-
-Download from [developer.android.com/studio](https://developer.android.com/studio). Run the installer and let it install the Android SDK on first launch.
-
-Then point Flutter to the SDK and accept licenses:
-
-```powershell
-flutter config --android-sdk "$env:LOCALAPPDATA\Android\Sdk"
-flutter doctor --android-licenses
-# Press y and Enter for each license
-```
-
-Verify everything is green:
-```powershell
-flutter doctor
-```
-
-**Step 3 — Port forward WSL2 → Windows → Phone**
-
-Your phone needs to reach Supabase running inside WSL2. This forwards traffic from your Windows WiFi IP into WSL2.
-
-First find your WSL2 IP — run this in **WSL2 bash**:
 ```bash
+# Clone
+git clone https://github.com/uandiqueue/biotope.git && cd biotope
+
+# Install prerequisites via Homebrew (if not installed)
+brew install node
+brew install --cask flutter
+brew install --cask docker
+brew install --cask android-studio
+
+# Run setup script
+chmod +x scripts/setup.sh && ./scripts/setup.sh
+
+# Configure Android SDK after opening Android Studio once
+flutter config --android-sdk ~/Library/Android/sdk
+flutter doctor --android-licenses
+
+# Start Supabase and run migrations
+npx supabase start
+npx supabase db push
+
+# Run the app
+cd src && flutter run
+```
+
+---
+
+### Windows
+
+Windows uses a **split setup**: Flutter runs natively on Windows, Supabase runs inside WSL2 (via Docker). This avoids USB and port-forwarding complexity.
+
+#### Step 1 — WSL2: clone and start Supabase
+
+> Run in WSL2 terminal
+
+```bash
+# Clone
+git clone https://github.com/uandiqueue/biotope.git && cd biotope
+
+# Run setup script (checks Node, Docker, Supabase CLI)
+chmod +x scripts/setup.sh && ./scripts/setup.sh
+
+# Start Supabase and run migrations
+npx supabase start
+npx supabase db push
+
+# Note your WSL2 IP — you'll need it in Step 4
 hostname -I | awk '{print $1}'
 ```
 
-Then run this in **PowerShell as Administrator** (replace `<WSL2_IP>` with the output above):
+#### Step 2 — Windows: install Flutter and Android Studio
+
+Download and install:
+- Flutter: [flutter.dev](https://docs.flutter.dev/get-started/install/windows) — extract and add to Windows PATH
+- Android Studio: [developer.android.com/studio](https://developer.android.com/studio) — let it install the Android SDK on first launch
+
+Then in **PowerShell**:
+
+```powershell
+# Point Flutter to Android SDK
+flutter config --android-sdk "$env:LOCALAPPDATA\Android\Sdk"
+
+# Accept Android licenses
+flutter doctor --android-licenses
+# Press y and Enter for each
+
+# Verify setup
+flutter doctor
+```
+
+#### Step 3 — Windows: port forward WSL2 → phone
+
+Your phone needs to reach Supabase running inside WSL2. Run this once in **PowerShell as Administrator** (replace `<WSL2_IP>` with the IP from Step 1):
+
 ```powershell
 netsh interface portproxy add v4tov4 listenport=54321 listenaddress=0.0.0.0 connectport=54321 connectaddress=<WSL2_IP>
 ```
 
-> This survives reboots. To remove it later: `netsh interface portproxy delete v4tov4 listenport=54321 listenaddress=0.0.0.0`
+> To remove later: `netsh interface portproxy delete v4tov4 listenport=54321 listenaddress=0.0.0.0`
+> Note: WSL2 IP can change on reboot — re-run this command if Supabase becomes unreachable.
 
-**Step 4 — Configure `.env` on Windows**
+#### Step 4 — Windows: clone repo and configure `.env`
+
+```powershell
+# Clone the repo on the Windows side
+git clone https://github.com/uandiqueue/biotope.git
+cd biotope\src
+
+# Install Flutter dependencies
+flutter pub get
+```
 
 Find your Windows WiFi IP:
 ```powershell
@@ -108,62 +168,52 @@ ipconfig
 # Look for: Wireless LAN adapter Wi-Fi → IPv4 Address
 ```
 
-Edit `src/.env` and set:
+Edit `src/.env`:
 ```
 SUPABASE_URL=http://<windows-wifi-ip>:54321
 SUPABASE_ANON_KEY=<your-anon-key>
 ```
 
-**Step 5 — Install Flutter dependencies**
+#### Step 5 — Run
 
 ```powershell
 cd src
-flutter pub get
-```
-
----
-
-### Part 3 — Android Phone Setup
-
-**On your phone:**
-1. Go to **Settings → About Phone**
-2. Tap **Build Number** 7 times to unlock Developer Options
-3. Go to **Settings → Developer Options**
-4. Enable **USB Debugging**
-5. Plug phone into PC via USB — tap **Allow** on the phone prompt
-
-**Bridge USB to WSL2** (if running Flutter from WSL2 — skip if on Windows):
-
-```powershell
-# PowerShell as Administrator
-winget install usbipd
-usbipd list                         # find your phone's BUSID
-usbipd bind --busid <BUSID>
-usbipd attach --wsl --busid <BUSID>
-```
-
-> If running Flutter on Windows (recommended), USB bridging is not needed — plug in and go.
-
----
-
-### Part 4 — Run the App
-
-```powershell
-cd src
-flutter devices        # confirm your phone appears
+flutter devices    # confirm phone is listed
 flutter run
 ```
 
-The app will build and deploy to your phone. The first build takes ~2 minutes; subsequent runs are faster due to hot reload.
+---
+
+## 📱 Android Phone Setup
+
+Same steps regardless of OS.
+
+**On your phone:**
+1. Settings → About Phone → tap **Build Number** 7 times
+2. Settings → Developer Options → enable **USB Debugging**
+3. Plug phone into PC via USB — tap **Allow** on the phone prompt
+
+**Verify connection:**
+
+```bash
+# Linux / macOS / WSL2
+flutter devices
+
+# Windows PowerShell
+flutter devices
+```
+
+Your phone should appear in the list before running `flutter run`.
 
 ---
 
-### Troubleshooting
+## 🔧 Troubleshooting
 
 | Problem | Fix |
 |---|---|
 | Phone not detected | Re-enable USB Debugging, try a different USB cable |
-| Supabase connection refused | Check port forward is set up (Part 2 Step 3), confirm phone and PC are on same WiFi |
 | `flutter doctor` shows Android SDK missing | Re-run `flutter config --android-sdk` with correct path |
-| WSL2 IP changed after reboot | Re-run the `netsh` port forward command with the new IP (`hostname -I`) |
-| Build fails — package not found | Run `flutter pub get` in `src/` |
+| Supabase connection refused on phone | Check port forward (Windows Step 3), confirm phone and PC are on same WiFi |
+| WSL2 IP changed after reboot | Re-run the `netsh` port forward with the new IP from `hostname -I` |
+| `flutter pub get` fails | Check Flutter is installed and `src/pubspec.yaml` exists |
+| Docker not running | Start Docker Desktop before running `npx supabase start` |
