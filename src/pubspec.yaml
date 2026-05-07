@@ -38,6 +38,7 @@ dependencies:
   flutter_riverpod: ^3.3.1
   go_router: ^17.1.0
   flutter_dotenv: ^6.0.0
+  google_fonts: ^6.2.1
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +65,7 @@ flutter:
   # .env file for environment variables (loaded by flutter_dotenv)
   assets:
     - .env
+    - assets/images/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

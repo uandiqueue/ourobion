@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../../../core/theme.dart';
 import '../../impl/auth_service.dart';
+import '../widgets/living_backdrop.dart';
 import 'sign_up_screen.dart';
 
-/// Sign-In screen — email/password form with links to OAuth and Sign Up.
 class SignInScreen extends StatefulWidget {
   final AuthService authService;
   const SignInScreen({super.key, required this.authService});
@@ -13,165 +15,196 @@ class SignInScreen extends StatefulWidget {
 
 class _SignInScreenState extends State<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _isLoading = false;
-  String? _errorMessage;
+  final _emailCtrl = TextEditingController();
+  final _passCtrl  = TextEditingController();
+  bool _isLoading   = false;
+  bool _obscure     = true;
+  String? _error;
 
-  Future<void> _handleSignIn() async {
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() { _isLoading = true; _errorMessage = null; });
+    setState(() { _isLoading = true; _error = null; });
 
     final result = await widget.authService.signIn(
-      _emailController.text.trim(),
-      _passwordController.text,
+      _emailCtrl.text.trim(),
+      _passCtrl.text,
     );
 
     if (!mounted) return;
     setState(() { _isLoading = false; });
-
-    if (!result.success) {
-      setState(() { _errorMessage = result.errorMessage; });
+    if (!result.success && !result.pending) {
+      setState(() { _error = result.errorMessage; });
     }
-    // On success, the AuthGate StreamBuilder in main.dart will
-    // automatically navigate away from this screen.
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
+    // On success the AuthGate StreamBuilder navigates automatically.
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // ── App branding ──────────────────────────
-                  Icon(Icons.eco, size: 64, color: theme.colorScheme.primary),
-                  const SizedBox(height: 8),
-                  Text('Biotope',
-                      style: theme.textTheme.headlineMedium
-                          ?.copyWith(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text('Track your gut health',
-                      style: theme.textTheme.bodyMedium
-                          ?.copyWith(color: theme.colorScheme.outline)),
-                  const SizedBox(height: 40),
+      body: Stack(
+        children: [
+          const LivingBackdrop(),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 52),
 
-                  // ── Email field ───────────────────────────
-                  TextFormField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(),
+                    // ── Logo + brand ───────────────────────────
+                    Image.asset(
+                      'assets/images/logo.png',
+                      width: 72, height: 72,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 72, height: 72,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [BiotopeColors.primaryFixed, BiotopeColors.primary],
+                          ),
+                        ),
+                        child: const Icon(Icons.eco, color: Colors.white, size: 36),
+                      ),
                     ),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Enter your email' : null,
-                  ),
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 14),
+                    Text('Biotope', style: GoogleFonts.manrope(
+                      fontSize: 28, fontWeight: FontWeight.w700,
+                      letterSpacing: -0.6, color: BiotopeColors.onSurface,
+                    )),
+                    const SizedBox(height: 4),
+                    Text('Your health, your ecosystem.', style: GoogleFonts.manrope(
+                      fontSize: 13, fontWeight: FontWeight.w400,
+                      color: BiotopeColors.outline,
+                    )),
 
-                  // ── Password field ────────────────────────
-                  TextFormField(
-                    controller: _passwordController,
-                    decoration: const InputDecoration(
-                      labelText: 'Password',
-                      prefixIcon: Icon(Icons.lock_outline),
-                      border: OutlineInputBorder(),
+                    const SizedBox(height: 40),
+
+                    // ── Eyebrow ────────────────────────────────
+                    Text('WELCOME BACK', style: GoogleFonts.manrope(
+                      fontSize: 10, fontWeight: FontWeight.w700,
+                      letterSpacing: 1.6, color: BiotopeColors.primary,
+                    )),
+
+                    const SizedBox(height: 20),
+
+                    // ── Email ──────────────────────────────────
+                    TextFormField(
+                      controller: _emailCtrl,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w500),
+                      decoration: const InputDecoration(hintText: 'Email address'),
+                      validator: (v) => (v == null || v.isEmpty) ? 'Enter your email' : null,
                     ),
-                    obscureText: true,
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Enter your password' : null,
-                  ),
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 12),
 
-                  // ── Error message ─────────────────────────
-                  if (_errorMessage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: Text(_errorMessage!,
-                          style: TextStyle(color: theme.colorScheme.error)),
+                    // ── Password ───────────────────────────────
+                    TextFormField(
+                      controller: _passCtrl,
+                      obscureText: _obscure,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _submit(),
+                      style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w500),
+                      decoration: InputDecoration(
+                        hintText: 'Password',
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                            color: BiotopeColors.outline,
+                          ),
+                          onPressed: () => setState(() => _obscure = !_obscure),
+                        ),
+                      ),
+                      validator: (v) => (v == null || v.isEmpty) ? 'Enter your password' : null,
                     ),
 
-                  // ── Sign In button ────────────────────────
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: _isLoading ? null : _handleSignIn,
+                    // ── Forgot password ────────────────────────
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {},
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          foregroundColor: BiotopeColors.outline,
+                          textStyle: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                        child: const Text('Forgot password?'),
+                      ),
+                    ),
+
+                    // ── Error ──────────────────────────────────
+                    if (_error != null) ...[
+                      const SizedBox(height: 4),
+                      Text(_error!, style: GoogleFonts.manrope(
+                        fontSize: 13, color: Theme.of(context).colorScheme.error,
+                      )),
+                      const SizedBox(height: 8),
+                    ],
+
+                    const SizedBox(height: 8),
+
+                    // ── CTA ────────────────────────────────────
+                    FilledButton(
+                      onPressed: _isLoading ? null : _submit,
                       child: _isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white))
-                          : const Text('Sign In'),
+                          ? const SizedBox(width: 20, height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Text('Sign In →'),
                     ),
-                  ),
-                  const SizedBox(height: 16),
 
-                  // ── Divider ───────────────────────────────
-                  Row(children: [
-                    const Expanded(child: Divider()),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('or', style: theme.textTheme.bodySmall),
-                    ),
-                    const Expanded(child: Divider()),
-                  ]),
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 28),
 
-                  // ── OAuth buttons (placeholders) ──────────
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: _isLoading
-                          ? null
-                          : () => widget.authService.signInWithGoogle(),
-                      icon: const Icon(Icons.g_mobiledata),
-                      label: const Text('Continue with Google'),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: _isLoading
-                          ? null
-                          : () => widget.authService.signInWithApple(),
-                      icon: const Icon(Icons.apple),
-                      label: const Text('Continue with Apple'),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
+                    // ── Divider ────────────────────────────────
+                    Row(children: [
+                      const Expanded(child: Divider(color: BiotopeColors.outlineVariant)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        child: Text('or', style: GoogleFonts.manrope(
+                          fontSize: 12, fontWeight: FontWeight.w600,
+                          color: BiotopeColors.outline,
+                        )),
+                      ),
+                      const Expanded(child: Divider(color: BiotopeColors.outlineVariant)),
+                    ]),
 
-                  // ── Navigate to Sign Up ───────────────────
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) =>
-                            SignUpScreen(authService: widget.authService),
-                      ));
-                    },
-                    child: const Text("Don't have an account? Sign Up"),
-                  ),
-                ],
+                    const SizedBox(height: 20),
+
+                    // ── Sign up link ───────────────────────────
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Text("No account? ", style: GoogleFonts.manrope(
+                        fontSize: 13, color: BiotopeColors.outline,
+                      )),
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) =>
+                            SignUpScreen(authService: widget.authService)),
+                        ),
+                        child: Text('Create one →', style: GoogleFonts.manrope(
+                          fontSize: 13, fontWeight: FontWeight.w600,
+                          color: BiotopeColors.primary,
+                        )),
+                      ),
+                    ]),
+
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

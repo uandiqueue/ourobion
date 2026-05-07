@@ -2,28 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'core/theme.dart';
 import 'modules/m1_core/impl/auth_service.dart';
+import 'modules/m1_core/impl/consent_service.dart';
+import 'modules/m1_core/impl/profile_service.dart';
+import 'modules/m1_core/models/consent_record.dart';
 import 'modules/m1_core/ui/screens/sign_in_screen.dart';
-
-/// ──────────────────────────────────────────────────────────────
-/// Biotope — main entry point
-/// ──────────────────────────────────────────────────────────────
+import 'modules/m1_core/ui/screens/consent_screen.dart';
+import 'modules/m1_core/ui/screens/profile_setup_screen.dart';
+import 'modules/m1_core/ui/screens/home_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Load environment variables from .env file
   await dotenv.load(fileName: '.env');
-
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
-
   runApp(const BiotopeApp());
 }
 
-/// Root application widget.
 class BiotopeApp extends StatelessWidget {
   const BiotopeApp({super.key});
 
@@ -32,20 +30,30 @@ class BiotopeApp extends StatelessWidget {
     return MaterialApp(
       title: 'Biotope',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF4CAF50), // Green – health/wellness feel
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-      ),
+      theme: biotopeTheme(),
       home: const AuthGate(),
     );
   }
 }
 
-/// Decides whether to show the Sign-In screen or the Home screen
-/// based on the current Supabase session.
+// ─── Onboarding state ────────────────────────────────────────────────────────
+
+enum _OnboardStep { consent, profile, done }
+
+Future<_OnboardStep> _checkOnboarding(String userId) async {
+  final client = Supabase.instance.client;
+  final hasConsent = await ConsentService(client)
+      .hasConsented(userId, ConsentScope.gutTracking);
+  if (!hasConsent) return _OnboardStep.consent;
+
+  final profile = await ProfileService(client).getProfile(userId);
+  if (profile == null || profile.displayName.isEmpty) return _OnboardStep.profile;
+
+  return _OnboardStep.done;
+}
+
+// ─── Auth gate ────────────────────────────────────────────────────────────────
+
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
@@ -56,42 +64,31 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<AuthState>(
       stream: authService.onAuthStateChange,
       builder: (context, snapshot) {
-        // If a session exists, show the placeholder home screen.
         final session = Supabase.instance.client.auth.currentSession;
-        if (session != null) {
-          return const _HomeScaffold();
+
+        if (session == null) {
+          return SignInScreen(authService: authService);
         }
-        // Otherwise, show the sign-in screen.
-        return SignInScreen(authService: authService);
+
+        return FutureBuilder<_OnboardStep>(
+          future: _checkOnboarding(session.user.id),
+          builder: (context, snap) {
+            if (!snap.hasData) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+            switch (snap.data!) {
+              case _OnboardStep.consent:
+                return const ConsentScreen();
+              case _OnboardStep.profile:
+                return const ProfileSetupScreen();
+              case _OnboardStep.done:
+                return const HomeScreen();
+            }
+          },
+        );
       },
-    );
-  }
-}
-
-/// Temporary home screen placeholder — will be replaced with full
-/// app shell + tab navigation in a later step.
-class _HomeScaffold extends StatelessWidget {
-  const _HomeScaffold();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Biotope')),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Welcome! You are signed in.'),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () async {
-                await Supabase.instance.client.auth.signOut();
-              },
-              child: const Text('Sign Out'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

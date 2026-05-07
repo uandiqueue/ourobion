@@ -29,12 +29,17 @@
 ### Member 1: [Jayden]
 **Focus Area:** M1 (Core & Compliance) + Database Rules
 *   **Last Session Accomplished:**
-    *   (Initial Setup: Scaffolded repo and created module context files)
+    *   Fixed M1 bugs: OAuth return type (`AuthResult.pending()`), `getProfile()` null safety, `updateProfile()` map mutation.
+    *   Built consent screen UI (`consent_screen.dart`) — 4 toggles, wearable greyed out per MVP spec.
+    *   Built profile setup screen UI (`profile_setup_screen.dart`) — display name, region, city, wearable toggle.
+    *   Built home screen placeholder (`home_screen.dart`) — shows email + sign out.
+    *   Updated `main.dart` AuthGate to route through full onboarding flow (consent → profile → home).
 *   **Next Session Goals:**
-    *   Implement Supabase Email & Apple Sign In flows.
-    *   Implement user profile creation.
+    *   Start local Supabase (`npx supabase start`) and run the SQL migration.
+    *   Test the full sign-up → consent → profile → home flow on Android device.
+    *   App shell + bottom tab navigation (once basic flow is verified working).
 *   **Notes / Blocked by / Needs:**
-    *   *None currently.*
+    *   Android SDK still needs installing (Android Studio on Windows + `flutter config --android-sdk`).
 
 ### Member 2: [Alton]
 **Focus Area:** M2 (Self-Report Logging) + Flutter UI
@@ -58,6 +63,8 @@
 ---
 
 ## 📝 Recent Change Log (Last 5 merged PRs/Sessions)
-1. **2026-04-17** - Fixed two M1 bugs flagged in code review: (1) OAuth methods now return `AuthResult.pending()` instead of `.failure()` on redirect; (2) `getProfile()` now returns `null` on missing row (PGRST116) instead of crashing. Also fixed `updateProfile()` mutating the caller's map. — *Jayden*
+1. **2026-05-07** - Built styled auth screens (sign in + sign up) using Biotope design system: LivingBackdrop widget, Manrope font, full color token set, BiotopeTheme. Added google_fonts dependency, logo asset. — *Jayden*
+2. **2026-04-18** - Built M1 onboarding UI: consent screen, profile setup screen, home placeholder. Updated AuthGate to route through full onboarding flow. — *Jayden*
+2. **2026-04-17** - Fixed M1 bugs: OAuth return type, `getProfile()` null safety, `updateProfile()` map mutation. — *Jayden*
 2. **2026-03-18** - M1 Auth backend, DB models, services, SQL migration, sign-in/sign-up UI, `.env` config. — *Alton*
 3. **2026-03-09** - Initial repository structure and `SHARED-CONTEXT.md` types created. — *All*
