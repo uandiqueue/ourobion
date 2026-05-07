@@ -9,8 +9,8 @@
 | Phase | Milestone | Status | Target Date |
 |---|---|---|---|
 | **Phase 1 Stage 1 MVP** | **Repository Scaffolding** | ✅ Complete | - |
-| Phase 1 Stage 1 MVP | M1 Authentication & DB Models | 🔨 In Progress | TBD |
-| Phase 1 Stage 1 MVP | M2 Self-Report Logging UI | ⏳ Pending | TBD |
+| Phase 1 Stage 1 MVP | M1 Authentication & DB Models | 🔨 In Progress (testing pending) | TBD |
+| Phase 1 Stage 1 MVP | M2 Self-Report Logging UI | 🔨 In Progress (backend done, UI pending) | TBD |
 | Phase 1 Stage 1 MVP | M5a Baseline Computation Engine | ⏳ Pending | TBD |
 | Phase 1 Stage 1 MVP | M5b Insight Generation | ⏳ Pending | TBD |
 | Phase 1 Stage 1 MVP | M6 Engagement Systems | ⏳ Pending | TBD |
@@ -29,42 +29,44 @@
 ### Member 1: [Jayden]
 **Focus Area:** M1 (Core & Compliance) + Database Rules
 *   **Last Session Accomplished:**
-    *   Fixed M1 bugs: OAuth return type (`AuthResult.pending()`), `getProfile()` null safety, `updateProfile()` map mutation.
-    *   Built consent screen UI (`consent_screen.dart`) — 4 toggles, wearable greyed out per MVP spec.
-    *   Built profile setup screen UI (`profile_setup_screen.dart`) — display name, region, city, wearable toggle.
-    *   Built home screen placeholder (`home_screen.dart`) — shows email + sign out.
-    *   Updated `main.dart` AuthGate to route through full onboarding flow (consent → profile → home).
+    *   Built full Biotope design system (`core/theme.dart`) — M3 color tokens, Manrope font, input/button styles.
+    *   Built `LivingBackdrop` widget — animated drifting orbs using CustomPainter.
+    *   Rebuilt sign-in + sign-up screens with design system (logo, eyebrow labels, styled fields, CTA).
+    *   Added `google_fonts` dependency + logo asset (`src/assets/images/logo.png`).
+    *   Added UI design context docs (`UI-DESIGN-CONTEXT.md`, `auth-screen` HTML reference).
+    *   Set up Flutter-on-Windows dev plan to avoid WSL2/USB/port-forwarding complexity.
 *   **Next Session Goals:**
-    *   Start local Supabase (`npx supabase start`) and run the SQL migration.
-    *   Test the full sign-up → consent → profile → home flow on Android device.
-    *   App shell + bottom tab navigation (once basic flow is verified working).
+    *   Set up Flutter + Android Studio on Windows, clone repo there.
+    *   Start local Supabase in WSL2 (`npx supabase start` + `npx supabase db push`).
+    *   Test full sign-up → consent → profile → home flow on Android device.
+    *   App shell + bottom tab navigation (once basic flow verified).
 *   **Notes / Blocked by / Needs:**
-    *   Android SDK still needs installing (Android Studio on Windows + `flutter config --android-sdk`).
+    *   Flutter dev moving to Windows side. WSL2 = Supabase only.
+    *   `.env` on Windows clone needs LAN IP (`192.168.x.x:54321`) not `127.0.0.1`.
+    *   WSL2 needs `netsh` port forward: `netsh interface portproxy add v4tov4 listenport=54321 listenaddress=0.0.0.0 connectport=54321 connectaddress=172.25.169.171`.
 
 ### Member 2: [Alton]
 **Focus Area:** M2 (Self-Report Logging) + Flutter UI
 *   **Last Session Accomplished:**
-    *   Initialized Flutter project (`flutter create .`) and installed dependencies (`supabase_flutter`, `flutter_riverpod`, `go_router`, `flutter_dotenv`).
-    *   Set up `.env` for Supabase credentials + added to `.gitignore`.
-    *   Created M1 data models: `auth_result.dart`, `user_identity.dart`, `user_profile.dart`, `consent_record.dart`.
-    *   Implemented `auth_service.dart` (email sign-in/sign-up, OAuth placeholders, sign-out).
-    *   Implemented `profile_service.dart` and `consent_service.dart`.
+    *   Initialized Flutter project + installed all dependencies.
+    *   Created M1 data models + services (`auth_service`, `profile_service`, `consent_service`).
     *   Created SQL migration for `profiles` and `consent_records` tables with RLS + auto-profile trigger.
-    *   Built sign-in and sign-up UI screens.
-    *   Rewrote `main.dart` with Supabase init + AuthGate routing.
+    *   Implemented full M2 backend: `urine_logging`, `stool_logging`, `food_logging`, `mosquito_logging`, `antibiotics_logging`, `daily_checkin`, `logging_controller`, `normaliser`, `antibiotic_service`.
 *   **Next Session Goals:**
-    *   Run the SQL migration in Supabase SQL Editor.
-    *   Build the Urine Color UI (Armstrong scale) for M2.
-    *   Build the Stool Form UI (Bristol scale) for M2.
+    *   Create SQL migration for `daily_gut_rows` and `antibiotic_courses` tables (M2 owns these).
+    *   Build Urine Color UI (Armstrong 1–8 colour palette tap).
+    *   Build Stool Form UI (Bristol scale 1–7 icon picker).
+    *   Build daily log shell screen that stitches the M2 inputs together.
 *   **Notes / Blocked by / Needs:**
-    *   M1 Auth backend is done. `user_id` is now available via `AuthService.getCurrentUser()`.
-    *   M1 still needs: consent screen UI, profile setup screen UI, app shell navigation, copy constants (Jayden to pick up).
+    *   M1 UI is fully done by Jayden — no longer blocked on auth/consent/profile screens.
+    *   App shell + tab navigation (Home, Log, Insights, Squad, World) still needed from Jayden before M2 UI can be wired into navigation.
+    *   M2 UI should follow Biotope design system — see `docs/ui-context/UI-DESIGN-CONTEXT.md` before building any screens.
 
 ---
 
 ## 📝 Recent Change Log (Last 5 merged PRs/Sessions)
-1. **2026-05-07** - Built styled auth screens (sign in + sign up) using Biotope design system: LivingBackdrop widget, Manrope font, full color token set, BiotopeTheme. Added google_fonts dependency, logo asset. — *Jayden*
-2. **2026-04-18** - Built M1 onboarding UI: consent screen, profile setup screen, home placeholder. Updated AuthGate to route through full onboarding flow. — *Jayden*
-2. **2026-04-17** - Fixed M1 bugs: OAuth return type, `getProfile()` null safety, `updateProfile()` map mutation. — *Jayden*
-2. **2026-03-18** - M1 Auth backend, DB models, services, SQL migration, sign-in/sign-up UI, `.env` config. — *Alton*
-3. **2026-03-09** - Initial repository structure and `SHARED-CONTEXT.md` types created. — *All*
+1. **2026-05-07** - Built styled auth screens with Biotope design system: LivingBackdrop, Manrope, BiotopeTheme, logo asset, UI design context docs. — *Jayden*
+2. **2026-04-18** - Built M1 onboarding UI: consent screen, profile setup screen, home placeholder, AuthGate onboarding flow. — *Jayden*
+3. **2026-04-17** - Fixed M1 bugs: OAuth return type, `getProfile()` null safety, `updateProfile()` map mutation. — *Jayden*
+4. **2026-03-18** - M1 Auth backend, DB models, services, SQL migration, sign-in/sign-up UI, `.env` config. — *Alton*
+5. **2026-03-09** - Initial repository structure and `SHARED-CONTEXT.md` types created. — *All*
