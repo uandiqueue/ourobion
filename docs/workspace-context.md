@@ -9,7 +9,7 @@
 | Phase | Milestone | Status | Target Date |
 |---|---|---|---|
 | **Phase 1 Stage 1 MVP** | **Repository Scaffolding** | ✅ Complete | - |
-| Phase 1 Stage 1 MVP | M1 Authentication & DB Models | 🔨 In Progress (testing pending) | TBD |
+| Phase 1 Stage 1 MVP | M1 Authentication & DB Models | 🔨 In Progress (polish remaining) | TBD |
 | Phase 1 Stage 1 MVP | M2 Self-Report Logging UI | 🔨 In Progress (backend done, UI pending) | TBD |
 | Phase 1 Stage 1 MVP | M5a Baseline Computation Engine | ⏳ Pending | TBD |
 | Phase 1 Stage 1 MVP | M5b Insight Generation | ⏳ Pending | TBD |
@@ -29,21 +29,17 @@
 ### Member 1: [Jayden]
 **Focus Area:** M1 (Core & Compliance) + Database Rules
 *   **Last Session Accomplished:**
-    *   Built full Biotope design system (`core/theme.dart`) — M3 color tokens, Manrope font, input/button styles.
-    *   Built `LivingBackdrop` widget — animated drifting orbs using CustomPainter.
-    *   Rebuilt sign-in + sign-up screens with design system (logo, eyebrow labels, styled fields, CTA).
-    *   Added `google_fonts` dependency + logo asset (`src/assets/images/logo.png`).
-    *   Added UI design context docs (`UI-DESIGN-CONTEXT.md`, `auth-screen` HTML reference).
-    *   Set up Flutter-on-Windows dev plan to avoid WSL2/USB/port-forwarding complexity.
-*   **Next Session Goals:**
-    *   Set up Flutter + Android Studio on Windows, clone repo there.
-    *   Start local Supabase in WSL2 (`npx supabase start` + `npx supabase db push`).
-    *   Test full sign-up → consent → profile → home flow on Android device.
-    *   App shell + bottom tab navigation (once basic flow verified).
+    *   Fixed Manrope font crash — disabled runtime fetching, bundled font via pubspec.yaml.
+    *   Resolved Supabase connectivity via Tailscale (WiFi firewall workaround).
+    *   Verified full auth flow end-to-end on Android phone: sign-up → consent → profile → home. ✅
+*   **Next Session Goals (M1 MVP v1 Polish):**
+    *   Profile setup: replace region free-text with country picker + regions pulled from DB.
+    *   Sign-in/sign-up: implement Google and Apple OAuth via Supabase.
+    *   Fix sign-out button on home screen placeholder (currently not working).
+    *   Above 3 items complete = M1 MVP v1 done.
 *   **Notes / Blocked by / Needs:**
-    *   Flutter dev moving to Windows side. WSL2 = Supabase only.
-    *   `.env` on Windows clone needs LAN IP (`192.168.x.x:54321`) not `127.0.0.1`.
-    *   WSL2 needs `netsh` port forward: `netsh interface portproxy add v4tov4 listenport=54321 listenaddress=0.0.0.0 connectport=54321 connectaddress=172.25.169.171`.
+    *   Manrope TTF files still need to be downloaded and placed in `src/assets/fonts/` for font to fully render.
+    *   Alton still blocked on app shell + tab navigation before M2 UI can be wired in — do this after M1 polish.
 
 ### Member 2: [Alton]
 **Focus Area:** M2 (Self-Report Logging) + Flutter UI
@@ -65,7 +61,8 @@
 ---
 
 ## 📝 Recent Change Log (Last 5 merged PRs/Sessions)
-1. **2026-05-07** - Built styled auth screens with Biotope design system: LivingBackdrop, Manrope, BiotopeTheme, logo asset, UI design context docs. — *Jayden*
+1. **2026-05-08** - Verified end-to-end auth on Android phone. Fixed Manrope font crash, resolved Supabase connectivity via Tailscale. — *Jayden*
+2. **2026-05-07** - Built styled auth screens with Biotope design system: LivingBackdrop, Manrope, BiotopeTheme, logo asset, UI design context docs. — *Jayden*
 2. **2026-04-18** - Built M1 onboarding UI: consent screen, profile setup screen, home placeholder, AuthGate onboarding flow. — *Jayden*
 3. **2026-04-17** - Fixed M1 bugs: OAuth return type, `getProfile()` null safety, `updateProfile()` map mutation. — *Jayden*
 4. **2026-03-18** - M1 Auth backend, DB models, services, SQL migration, sign-in/sign-up UI, `.env` config. — *Alton*
