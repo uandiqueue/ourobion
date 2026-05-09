@@ -4,6 +4,36 @@
 
 ---
 
+## 📋 Session & Commit Conventions
+
+### Session Rules
+- **Read this file first** at the start of every session before doing any work.
+- **Update this file last** before ending every session — log what you did and what's next.
+- **One commit per session** — batch all session work into a single commit at the end. Do not commit mid-session.
+
+### Commit Message Format (Conventional Commits)
+```
+type(scope): short summary in imperative mood
+
+- bullet of what changed and why (optional body)
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+```
+
+**Types:**
+| Type | When to use |
+|---|---|
+| `feat` | New feature or behaviour |
+| `fix` | Bug fix |
+| `docs` | Documentation only |
+| `refactor` | Code restructure, no feature/fix |
+| `test` | Tests only |
+| `chore` | Dependency updates, config, tooling |
+
+**Scope** = the module or area (e.g. `m1`, `m2`, `db`, `ui`, `docs`).
+
+---
+
 ## 📅 Phase Timeline Status
 
 | Phase | Milestone | Status | Target Date |
@@ -28,24 +58,28 @@
 
 ### Member 1: [Jayden]
 **Focus Area:** M1 (Core & Compliance) + Database Rules
-*   **Last Session Accomplished:**
-    *   Fixed Manrope font crash — disabled runtime fetching, bundled font via pubspec.yaml.
-    *   Resolved Supabase connectivity via Tailscale (WiFi firewall workaround).
-    *   Verified full auth flow end-to-end on Android phone: sign-up → consent → profile → home. ✅
-*   **Next Session Goals (M1 MVP v1 Polish):**
-    *   Profile setup: replace region free-text with country picker + regions pulled from DB.
-    *   Sign-in/sign-up: implement Google and Apple OAuth via Supabase.
-    *   Above 2 items complete = M1 MVP v1 done.
+*   **Last Session Accomplished (2026-05-10):**
+    *   Fixed sign-out button: `HomeScreen` now explicitly navigates to `SignInScreen` after sign-out (was broken because `pushAndRemoveUntil` had removed `AuthGate` from widget tree). ✅
+    *   Profile setup: replaced free-text region field with `country_picker` package — all 195 countries with flag emoji + searchable bottom sheet. Stores country name in existing `region` column, no DB migration needed. ✅
+    *   Fixed all Malaysia/KL references to Singapore throughout codebase and docs (project is Singapore-based). ✅
+    *   Fixed stale `widget_test.dart` referencing deleted `MyApp` class. ✅
+    *   Added session & commit conventions to workspace. ✅
+    *   `flutter analyze` clean: zero errors.
+*   **Next Session Goals:**
+    *   Implement Google and Apple OAuth sign-in via Supabase (needs Supabase dashboard config + redirect URL setup + platform-specific deep link config — skip until ready).
+    *   App shell + bottom tab navigation (Home, Log, Insights, Squad, World) — unblocks Alton's M2 UI wiring.
+    *   Above = M1 MVP v1 done.
 *   **Notes / Blocked by / Needs:**
     *   Alton still blocked on app shell + tab navigation before M2 UI can be wired in — do this after M1 polish.
 
 ### Member 2: [Alton]
 **Focus Area:** M2 (Self-Report Logging) + Flutter UI
-*   **Last Session Accomplished:**
+*   **Last Session Accomplished (2026-05-11):**
     *   Connected physical Android phone (Samsung A165F) via USB debugging.
     *   Downloaded missing Manrope `.ttf` font files into `src/assets/fonts/` to resolve Android build errors.
     *   Configured `src/.env` to use the Mac's local WiFi IP (`192.168.4.53`) to allow the physical phone to communicate with the local Supabase instance.
-    *   Fixed sign-out bug in `home_screen.dart` to properly route back to the AuthGate (`/`) instead of closing the app.
+    *   Fixed sign-out bug in `home_screen.dart` to properly route back to sign-in (superseded by Jayden's cleaner fix in rebase).
+    *   Updated README with Android Emulator setup (Option B under macOS, restructured Android section).
 *   **Next Session Goals:**
     *   Create SQL migration for `daily_gut_rows` and `antibiotic_courses` tables (M2 owns these).
     *   Build Urine Color UI (Armstrong 1–8 colour palette tap).
@@ -59,9 +93,8 @@
 ---
 
 ## 📝 Recent Change Log (Last 5 merged PRs/Sessions)
-1. **2026-05-11** - Connected physical Android phone, resolved Manrope font build error, configured local Supabase IP for USB debugging, and fixed sign-out navigation bug. — *Alton*
-2. **2026-05-08** - Pulled latest dev-phase1. Updated README with Android Emulator setup (Option B under macOS, restructured Android section). — *Alton*
-3. **2026-05-08** - Verified end-to-end auth on Android phone. Fixed Manrope font crash, resolved Supabase connectivity via Tailscale. — *Jayden*
-3. **2026-05-07** - Built styled auth screens with Biotope design system: LivingBackdrop, Manrope, BiotopeTheme, logo asset, UI design context docs. — *Jayden*
-4. **2026-04-18** - Built M1 onboarding UI: consent screen, profile setup screen, home placeholder, AuthGate onboarding flow. — *Jayden*
-5. **2026-04-17** - Fixed M1 bugs: OAuth return type, `getProfile()` null safety, `updateProfile()` map mutation. — *Jayden*
+1. **2026-05-11** - Connected physical Android phone, resolved Manrope font build error, configured local Supabase IP for USB debugging, updated README Android section. — *Alton*
+2. **2026-05-10** - Fixed sign-out (AuthGate navigation bug). Full country picker (195 countries, search). Singapore corrections across codebase. Session/commit conventions added. — *Jayden*
+3. **2026-05-08** - Pulled latest dev-phase1. Updated README with Android Emulator setup. — *Alton*
+4. **2026-05-08** - Verified end-to-end auth on Android phone. Fixed Manrope font crash, resolved Supabase connectivity via Tailscale. — *Jayden*
+5. **2026-05-07** - Built styled auth screens with Biotope design system: LivingBackdrop, Manrope, BiotopeTheme, logo asset, UI design context docs. — *Jayden*

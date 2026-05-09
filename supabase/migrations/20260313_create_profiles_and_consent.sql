@@ -8,7 +8,7 @@
 create table if not exists public.profiles (
   user_id       uuid primary key references auth.users(id) on delete cascade,
   display_name  text not null default '',
-  region        text not null default '',        -- MY state code e.g. 'MY-14'
+  region        text not null default '',        -- country name e.g. 'Singapore'
   city          text not null default '',
   email         text,
   wearable_owned boolean not null default false,  -- toggle only, no integration in MVP

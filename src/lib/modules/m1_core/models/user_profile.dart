@@ -3,7 +3,7 @@
 class UserProfile {
   final String userId;
   final String displayName;
-  final String region; // MY state code e.g. 'MY-14' (Kuala Lumpur)
+  final String region; // country name e.g. 'Singapore'
   final String city;
   final String? email;
   final bool wearableOwned; // toggle only — no integration in MVP

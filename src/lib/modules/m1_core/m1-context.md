@@ -73,7 +73,7 @@ String getCopyRule(String ruleKey)          // returns approved phrasing by key
   `wearable_data` (future), `community_aggregation` (future). Each toggle independently.
 - **Non-diagnostic language** enforced via a constants file, not ad-hoc. M5b must call
   `validateCopyString()` before persisting any InsightCard body text.
-- **PDPA (Malaysia)** requires: purpose disclosure, consent before data collection,
+- **PDPA (Singapore)** requires: purpose disclosure, consent before data collection,
   right to withdraw. Consent record is immutable log — each change appends a new row.
 
 ---
@@ -97,7 +97,7 @@ enum ConsentScope {
 class UserProfile {
   String userId;
   String displayName;
-  String region;          // MY state code e.g. 'MY-14' (Kuala Lumpur)
+  String region;          // country name e.g. 'Singapore'
   String city;            // district/city string
   String? email;
   bool wearableOwned;     // toggle only — no integration in MVP
@@ -123,7 +123,7 @@ class UserProfile {
 
 - Apple Sign-In requires paid Apple Developer account — confirm this is available before
   building that flow.
-- PDPA consent copy should be reviewed by someone familiar with Malaysian data law before
+- PDPA consent copy should be reviewed by someone familiar with Singapore data law before
   shipping. Flag if legal review is needed.
 - RLS policies on Supabase must be set up before M2 starts writing to any table.
   M1 owns all RLS policy definitions.

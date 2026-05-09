@@ -1,3 +1,4 @@
+import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../impl/profile_service.dart';
@@ -14,8 +15,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _profileService = ProfileService(Supabase.instance.client);
   final _nameController = TextEditingController();
-  final _regionController = TextEditingController();
   final _cityController = TextEditingController();
+  Country? _selectedCountry;
   bool _wearableOwned = false;
   bool _isLoading = false;
   String? _errorMessage;
@@ -23,9 +24,16 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _regionController.dispose();
     _cityController.dispose();
     super.dispose();
+  }
+
+  void _pickCountry() {
+    showCountryPicker(
+      context: context,
+      showPhoneCode: false,
+      onSelect: (country) => setState(() => _selectedCountry = country),
+    );
   }
 
   Future<void> _handleContinue() async {
@@ -35,7 +43,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       final userId = Supabase.instance.client.auth.currentUser!.id;
       await _profileService.updateProfile(userId, {
         'display_name': _nameController.text.trim(),
-        'region': _regionController.text.trim(),
+        'region': _selectedCountry?.name ?? '',
         'city': _cityController.text.trim(),
         'wearable_owned': _wearableOwned,
       });
@@ -52,6 +60,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Your Profile')),
       body: SafeArea(
@@ -74,12 +83,22 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: _regionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Region (optional)',
-                    hintText: 'e.g. Selangor',
-                    border: OutlineInputBorder(),
+                // Country picker — taps open a searchable bottom sheet
+                InkWell(
+                  onTap: _pickCountry,
+                  borderRadius: BorderRadius.circular(4),
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Country (optional)',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.arrow_drop_down),
+                    ),
+                    child: _selectedCountry != null
+                        ? Text('${_selectedCountry!.flagEmoji}  ${_selectedCountry!.name}')
+                        : Text(
+                            'Select country',
+                            style: TextStyle(color: theme.hintColor),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -87,7 +106,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   controller: _cityController,
                   decoration: const InputDecoration(
                     labelText: 'City (optional)',
-                    hintText: 'e.g. Petaling Jaya',
+                    hintText: 'e.g. Tanjong Pagar',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -101,7 +120,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 ),
                 if (_errorMessage != null) ...[
                   const SizedBox(height: 8),
-                  Text(_errorMessage!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                  Text(_errorMessage!, style: TextStyle(color: theme.colorScheme.error)),
                 ],
                 const SizedBox(height: 24),
                 SizedBox(
@@ -109,8 +128,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   child: FilledButton(
                     onPressed: _isLoading ? null : _handleContinue,
                     child: _isLoading
-                        ? const SizedBox(height: 20, width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
                         : const Text('Get Started'),
                   ),
                 ),

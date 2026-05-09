@@ -1,9 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../impl/auth_service.dart';
+import 'sign_in_screen.dart';
 
 /// Temporary home screen — placeholder until the full app shell is built.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
+
+  Future<void> _signOut(BuildContext context) async {
+    await Supabase.instance.client.auth.signOut();
+    if (!context.mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => SignInScreen(
+          authService: AuthService(Supabase.instance.client),
+        ),
+      ),
+      (_) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,15 +31,7 @@ class HomeScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Sign out',
-            onPressed: () async {
-              await Supabase.instance.client.auth.signOut();
-              if (context.mounted) {
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  '/',
-                  (_) => false,
-                );
-              }
-            },
+            onPressed: () => _signOut(context),
           ),
         ],
       ),

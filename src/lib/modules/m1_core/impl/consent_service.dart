@@ -3,7 +3,7 @@ import '../models/consent_record.dart';
 
 /// M1 Consent Service — manages the append-only `consent_records` table.
 ///
-/// Per PDPA (Malaysia) requirements, consent records are immutable.
+/// Per PDPA (Singapore) requirements, consent records are immutable.
 /// Each change appends a new row rather than updating an existing one.
 class ConsentService {
   final SupabaseClient _client;
