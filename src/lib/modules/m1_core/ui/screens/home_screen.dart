@@ -18,6 +18,12 @@ class HomeScreen extends StatelessWidget {
             tooltip: 'Sign out',
             onPressed: () async {
               await Supabase.instance.client.auth.signOut();
+              if (context.mounted) {
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/',
+                  (_) => false,
+                );
+              }
             },
           ),
         ],

@@ -35,19 +35,17 @@
 *   **Next Session Goals (M1 MVP v1 Polish):**
     *   Profile setup: replace region free-text with country picker + regions pulled from DB.
     *   Sign-in/sign-up: implement Google and Apple OAuth via Supabase.
-    *   Fix sign-out button on home screen placeholder (currently not working).
-    *   Above 3 items complete = M1 MVP v1 done.
+    *   Above 2 items complete = M1 MVP v1 done.
 *   **Notes / Blocked by / Needs:**
-    *   Manrope TTF files still need to be downloaded and placed in `src/assets/fonts/` for font to fully render.
     *   Alton still blocked on app shell + tab navigation before M2 UI can be wired in — do this after M1 polish.
 
 ### Member 2: [Alton]
 **Focus Area:** M2 (Self-Report Logging) + Flutter UI
 *   **Last Session Accomplished:**
-    *   Initialized Flutter project + installed all dependencies.
-    *   Created M1 data models + services (`auth_service`, `profile_service`, `consent_service`).
-    *   Created SQL migration for `profiles` and `consent_records` tables with RLS + auto-profile trigger.
-    *   Implemented full M2 backend: `urine_logging`, `stool_logging`, `food_logging`, `mosquito_logging`, `antibiotics_logging`, `daily_checkin`, `logging_controller`, `normaliser`, `antibiotic_service`.
+    *   Connected physical Android phone (Samsung A165F) via USB debugging.
+    *   Downloaded missing Manrope `.ttf` font files into `src/assets/fonts/` to resolve Android build errors.
+    *   Configured `src/.env` to use the Mac's local WiFi IP (`192.168.4.53`) to allow the physical phone to communicate with the local Supabase instance.
+    *   Fixed sign-out bug in `home_screen.dart` to properly route back to the AuthGate (`/`) instead of closing the app.
 *   **Next Session Goals:**
     *   Create SQL migration for `daily_gut_rows` and `antibiotic_courses` tables (M2 owns these).
     *   Build Urine Color UI (Armstrong 1–8 colour palette tap).
@@ -61,9 +59,9 @@
 ---
 
 ## 📝 Recent Change Log (Last 5 merged PRs/Sessions)
-1. **2026-05-08** - Verified end-to-end auth on Android phone. Fixed Manrope font crash, resolved Supabase connectivity via Tailscale. — *Jayden*
-2. **2026-05-07** - Built styled auth screens with Biotope design system: LivingBackdrop, Manrope, BiotopeTheme, logo asset, UI design context docs. — *Jayden*
-2. **2026-04-18** - Built M1 onboarding UI: consent screen, profile setup screen, home placeholder, AuthGate onboarding flow. — *Jayden*
-3. **2026-04-17** - Fixed M1 bugs: OAuth return type, `getProfile()` null safety, `updateProfile()` map mutation. — *Jayden*
-4. **2026-03-18** - M1 Auth backend, DB models, services, SQL migration, sign-in/sign-up UI, `.env` config. — *Alton*
-5. **2026-03-09** - Initial repository structure and `SHARED-CONTEXT.md` types created. — *All*
+1. **2026-05-11** - Connected physical Android phone, resolved Manrope font build error, configured local Supabase IP for USB debugging, and fixed sign-out navigation bug. — *Alton*
+2. **2026-05-08** - Pulled latest dev-phase1. Updated README with Android Emulator setup (Option B under macOS, restructured Android section). — *Alton*
+3. **2026-05-08** - Verified end-to-end auth on Android phone. Fixed Manrope font crash, resolved Supabase connectivity via Tailscale. — *Jayden*
+3. **2026-05-07** - Built styled auth screens with Biotope design system: LivingBackdrop, Manrope, BiotopeTheme, logo asset, UI design context docs. — *Jayden*
+4. **2026-04-18** - Built M1 onboarding UI: consent screen, profile setup screen, home placeholder, AuthGate onboarding flow. — *Jayden*
+5. **2026-04-17** - Fixed M1 bugs: OAuth return type, `getProfile()` null safety, `updateProfile()` map mutation. — *Jayden*

@@ -184,9 +184,11 @@ flutter run
 
 ---
 
-## 📱 Android Phone Setup
+## 📱 Running on Android
 
-Same steps regardless of OS.
+You can use either a **physical Android phone** or an **Android emulator** (AVD). Both work the same way with `flutter run`.
+
+### Option A — Physical Phone (all platforms)
 
 **On your phone:**
 1. Settings → About Phone → tap **Build Number** 7 times
@@ -204,6 +206,24 @@ flutter devices
 ```
 
 Your phone should appear in the list before running `flutter run`.
+
+### Option B — Android Emulator (macOS / Linux / Windows)
+
+> Recommended on **macOS** — no USB or port-forwarding needed.
+
+1. Open **Android Studio** → **More Actions → Virtual Device Manager**
+2. Click **Create Device** → pick a phone model (e.g. Pixel 8) → pick a system image (e.g. **API 34**) → Finish
+3. Click ▶️ to boot the emulator
+4. Verify Flutter sees it:
+   ```bash
+   flutter devices   # emulator should appear in the list
+   ```
+5. Run the app:
+   ```bash
+   cd src && flutter run
+   ```
+
+> **Windows note:** If using an emulator on Windows, you still need the WSL2 port-forward from Step 3 so the emulator can reach Supabase.
 
 ---
 
