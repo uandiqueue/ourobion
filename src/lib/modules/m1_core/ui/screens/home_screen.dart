@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../impl/auth_service.dart';
 import 'sign_in_screen.dart';
+import '../../../m2_self_report/ui/screens/urine_color_screen.dart';
 
 /// Temporary home screen — placeholder until the full app shell is built.
 class HomeScreen extends StatelessWidget {
@@ -51,6 +52,14 @@ class HomeScreen extends StatelessWidget {
             const Text(
               'Home screen — coming soon.',
               style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 24),
+            // DEBUG: preview M2 screens before app shell is wired
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const UrineColorScreen()),
+              ),
+              child: const Text('[DEV] Urine Color Screen'),
             ),
           ],
         ),

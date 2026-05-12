@@ -74,26 +74,24 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
 ### Member 2: [Alton]
 **Focus Area:** M2 (Self-Report Logging) + Flutter UI
-*   **Last Session Accomplished (2026-05-11):**
-    *   Connected physical Android phone (Samsung A165F) via USB debugging.
-    *   Downloaded missing Manrope `.ttf` font files into `src/assets/fonts/` to resolve Android build errors.
-    *   Configured `src/.env` to use the Mac's local WiFi IP (`192.168.4.53`) to allow the physical phone to communicate with the local Supabase instance.
-    *   Fixed sign-out bug in `home_screen.dart` to properly route back to sign-in (superseded by Jayden's cleaner fix in rebase).
-    *   Updated README with Android Emulator setup (Option B under macOS, restructured Android section).
+*   **Last Session Accomplished (2026-05-13):**
+    *   Created SQL migration `20260513_create_m2_daily_gut_rows_and_antibiotic_courses.sql` — both tables live, RLS enabled, applied to local Supabase. ✅
+    *   Built `urine_color_screen.dart` — Armstrong 1–8 colour palette tap UI with animated swatches, description card, entry animation, skip + confirm flow. ✅
+    *   Added temporary `[DEV]` button on `home_screen.dart` to preview the urine color screen on device before app shell exists. ✅
+    *   Tested on physical Samsung A165F via ADB direct install.
 *   **Next Session Goals:**
-    *   Create SQL migration for `daily_gut_rows` and `antibiotic_courses` tables (M2 owns these).
-    *   Build Urine Color UI (Armstrong 1–8 colour palette tap).
-    *   Build Stool Form UI (Bristol scale 1–7 icon picker).
-    *   Build daily log shell screen that stitches the M2 inputs together.
+    *   Build Stool Form UI (Bristol scale 1–7 icon picker) — `stool_form_screen.dart`.
+    *   Build daily log shell screen that stitches M2 inputs together.
+    *   Remove `[DEV]` button from `home_screen.dart` once app shell + tab nav is wired in.
 *   **Notes / Blocked by / Needs:**
-    *   M1 UI is fully done by Jayden — no longer blocked on auth/consent/profile screens.
-    *   App shell + tab navigation (Home, Log, Insights, Squad, World) still needed from Jayden before M2 UI can be wired into navigation.
-    *   M2 UI should follow Biotope design system — see `docs/ui-context/UI-DESIGN-CONTEXT.md` before building any screens.
+    *   App shell + tab navigation (Home, Log, Insights, Squad, World) still needed from Jayden before M2 screens can be wired into navigation.
+    *   M2 UI follows Biotope design system — see `docs/ui-context/UI-DESIGN-CONTEXT.md`.
 
 ---
 
 ## 📝 Recent Change Log (Last 5 merged PRs/Sessions)
-1. **2026-05-11** - Connected physical Android phone, resolved Manrope font build error, configured local Supabase IP for USB debugging, updated README Android section. — *Alton*
+1. **2026-05-13** - M2 SQL migration (daily_gut_rows + antibiotic_courses, RLS). Urine Color UI (Armstrong 1–8 palette). Tested on Samsung A165F. — *Alton*
+2. **2026-05-11** - Connected physical Android phone, resolved Manrope font build error, configured local Supabase IP for USB debugging, updated README Android section. — *Alton*
 2. **2026-05-10** - Fixed sign-out (AuthGate navigation bug). Full country picker (195 countries, search). Singapore corrections across codebase. Session/commit conventions added. — *Jayden*
 3. **2026-05-08** - Pulled latest dev-phase1. Updated README with Android Emulator setup. — *Alton*
 4. **2026-05-08** - Verified end-to-end auth on Android phone. Fixed Manrope font crash, resolved Supabase connectivity via Tailscale. — *Jayden*
