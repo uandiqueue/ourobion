@@ -151,15 +151,17 @@ netsh interface portproxy add v4tov4 listenport=54321 listenaddress=0.0.0.0 conn
 > To remove later: `netsh interface portproxy delete v4tov4 listenport=54321 listenaddress=0.0.0.0`
 > Note: WSL2 IP can change on reboot — re-run this command if Supabase becomes unreachable.
 
-#### Step 4 — Windows: clone repo and configure `.env`
+#### Step 4 — Windows: clone repo and configure public local env
 
 ```powershell
 # Clone the repo on the Windows side
 git clone https://github.com/uandiqueue/biotope.git
-cd biotope\src
+cd biotope
 
 # Install Flutter dependencies
+cd src
 flutter pub get
+cd ..
 ```
 
 Find your Windows WiFi IP:
@@ -168,7 +170,7 @@ ipconfig
 # Look for: Wireless LAN adapter Wi-Fi → IPv4 Address
 ```
 
-Edit `src/.env`:
+Edit `src/.env.public`:
 ```
 SUPABASE_URL=http://<windows-wifi-ip>:54321
 SUPABASE_ANON_KEY=<your-anon-key>

@@ -74,7 +74,7 @@ begin
   values (new.id, new.email);
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = '';
 
 -- Trigger: fires after a new row in auth.users
 create or replace trigger on_auth_user_created

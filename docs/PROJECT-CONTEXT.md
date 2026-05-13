@@ -19,7 +19,7 @@ The app surfaces descriptive patterns and insight cards. It never diagnoses.
 ## Product Principles (Non-Negotiable)
 
 1. **Non-diagnostic always** — Every user-facing string must use observational language.
-   No "you may have X". Only "your data shows a pattern". See `shared/constants/copy-guidelines.ts`.
+   No "you may have X". Only "your data shows a pattern". See `shared/constants/copy_guidelines.ts`.
 2. **30-second logging** — The daily log flow must never exceed 30 seconds for core fields.
 3. **Graceful degradation** — Features that depend on wearables or external APIs must have
    wearable-free and offline-safe fallbacks. Wearables and env data are confidence multipliers,

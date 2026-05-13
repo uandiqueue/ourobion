@@ -57,11 +57,11 @@ String getCopyRule(String ruleKey)          // returns approved phrasing by key
 | Email auth (Supabase) | ✅ Done |
 | Google OAuth | 🔨 Placeholders built |
 | Apple Sign-In | 🔨 Placeholders built |
-| Profile creation + onboarding | 🔨 DB & Services done, UI pending |
-| Granular consent screen | 🔨 DB & Services done, UI pending |
+| Profile creation + onboarding | ✅ Done |
+| Granular consent screen | ✅ Done |
 | Non-diagnostic copy constants | ❌ Not started |
-| App shell + navigation scaffold | 🔨 Scaffolded with AuthGate |
-| PDPA consent copy (MY law) | ❌ Not started |
+| App shell + navigation scaffold | 🔨 AuthGate + temporary HomeScreen; tab shell pending |
+| PDPA consent copy (Singapore law) | 🔨 Basic consent UI done; legal copy review pending |
 
 ---
 
@@ -112,10 +112,12 @@ class UserProfile {
 
 1. ~~Scaffold Flutter app with Supabase client init~~ (Done)
 2. ~~Build auth screens (sign in / sign up)~~ (Done)
-3. Build consent screen UI with granular toggles + PDPA copy
-4. Build profile setup UI (name, region, city, wearable toggle)
+3. ~~Build consent screen UI with granular toggles~~ (Done)
+4. ~~Build profile setup UI (name, country, city, wearable toggle)~~ (Done)
 5. Implement app shell navigation (home / log / insights / profile tabs)
-6. Create `shared/constants/copy_guidelines.dart` with all approved strings
+6. Replace temporary `[DEV]` HomeScreen buttons with real app shell routes
+7. Create `shared/constants/copy_guidelines.dart` with all approved strings
+8. Review and finalize PDPA consent copy before any release build
 
 ---
 

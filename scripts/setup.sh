@@ -143,15 +143,16 @@ fi
 echo ""
 echo "Checking environment files..."
 
-if [ ! -f "src/.env" ]; then
-  if [ -f "src/.env.example" ]; then
-    cp src/.env.example src/.env
-    echo "✅ src/.env created from template — fill in your Supabase credentials."
+if [ ! -f "src/.env.public" ]; then
+  if [ -f "src/.env.public.example" ]; then
+    cp src/.env.public.example src/.env.public
+    echo "✅ src/.env.public created from template — fill in your local Supabase values."
+    echo "   This file is intentionally bundled as public Flutter client config."
   else
-    echo "❌ src/.env.example not found. Create src/.env manually."
+    echo "❌ src/.env.public.example not found. Create src/.env.public manually."
   fi
 else
-  echo "✅ src/.env found"
+  echo "✅ src/.env.public found"
 fi
 
 if [ ! -f "supabase/.env" ]; then
@@ -186,7 +187,7 @@ echo ""
 echo "✅ Setup complete!"
 echo ""
 echo "Next steps:"
-echo "  1. Fill in src/.env with your Supabase credentials (if not done)."
+echo "  1. Fill in src/.env.public with your local Supabase values (if not done)."
 echo "  2. npx supabase start        — start the local Supabase backend"
 echo "  3. npx supabase db push      — run database migrations"
 echo "  4. cd src && flutter run     — launch the app"

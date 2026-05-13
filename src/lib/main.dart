@@ -16,10 +16,20 @@ import 'modules/m1_core/ui/screens/home_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = false;
-  await dotenv.load(fileName: '.env');
+  await dotenv.load(fileName: '.env.public');
+
+  final supabaseUrl = dotenv.env['SUPABASE_URL'];
+  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
+  if (supabaseUrl == null || supabaseUrl.isEmpty ||
+      supabaseAnonKey == null || supabaseAnonKey.isEmpty) {
+    throw StateError(
+      'Missing SUPABASE_URL or SUPABASE_ANON_KEY in .env.public.',
+    );
+  }
+
   await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!,
-    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+    url: supabaseUrl,
+    anonKey: supabaseAnonKey,
   );
   runApp(const BiotopeApp());
 }

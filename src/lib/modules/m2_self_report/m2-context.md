@@ -129,19 +129,20 @@ Streak counts as a streak day if DQS ≥ 60. (Configurable — see M6.)
 
 | Feature | Status |
 |---|---|
-| Urine colour logging (Armstrong palette) | ❌ Not started |
-| Stool form logging (Bristol picker) | ❌ Not started |
-| Stool count stepper | ❌ Not started |
-| Outside meals 0–3 selector | ❌ Not started |
-| Mosquito bite counter | ❌ Not started |
+| Urine colour logging (Armstrong palette) | ✅ Done |
+| Stool form logging (Bristol picker) | ✅ Done |
+| Stool count stepper | ✅ Done in `DailyLogScreen` |
+| Outside meals 0–3 selector | ✅ Done in `DailyLogScreen` |
+| Mosquito bite counter | ✅ Done in `DailyLogScreen` |
 | Standing water weekly audit | ❌ Not started |
-| Daily check-in (energy/mood/comfort) | ❌ Not started |
+| Daily check-in (energy/mood/comfort) | ✅ Done in `DailyLogScreen` |
 | Symptom flag multi-select | ❌ Not started |
-| Notes free text (140 char) | ❌ Not started |
+| Notes free text (140 char) | ✅ Done in `DailyLogScreen` |
 | Antibiotic course tracker | ❌ Not started |
-| DQS computation | ❌ Not started |
-| `daily_gut_rows` DB table + RLS | ❌ Not started |
-| `antibiotic_courses` DB table + RLS | ❌ Not started |
+| DQS computation | 🔨 Inline UI computation done; normaliser/service pending |
+| Save/upsert to `daily_gut_rows` | ✅ Done in `DailyLogScreen` |
+| `daily_gut_rows` DB table + RLS | ✅ Done |
+| `antibiotic_courses` DB table + RLS | ✅ Done |
 
 ---
 
@@ -162,13 +163,14 @@ Streak counts as a streak day if DQS ≥ 60. (Configurable — see M6.)
 
 ## In Progress / Next Tasks
 
-1. Create `daily_gut_rows` Supabase table with RLS (`user_id = auth.uid()`)
-2. Create `antibiotic_courses` Supabase table with RLS
-3. Build normaliser + DQS computation (unit-testable, no UI dependency)
-4. Build logging UI — urine palette + Bristol picker first (highest signal)
-5. Add remaining fields to daily log flow
-6. Build antibiotic course setup flow + gut watch derivation
-7. Wire up to `logging_controller`, confirm upsert behaviour
+1. Extract inline `DailyLogScreen` save/DQS logic into `normaliser.dart` and
+   `logging_controller.dart` so it is unit-testable.
+2. Build symptom flags multi-select screen and write `symptom_flags`.
+3. Build standing water weekly audit prompt logic.
+4. Build antibiotic course setup flow + gut watch derivation.
+5. Implement `antibiotic_service.dart` for `antibiotic_courses`.
+6. Replace temporary HomeScreen `[DEV]` entry points once app shell tabs exist.
+7. Add focused tests for DQS, normalisation, and upsert payloads.
 
 ---
 
@@ -180,6 +182,8 @@ Streak counts as a streak day if DQS ≥ 60. (Configurable — see M6.)
   Suggested: show on Monday, or if it's been >7 days since last response.
 - Antibiotic dose reminders require local notifications — confirm Flutter local_notifications
   package is set up in M1 app scaffold before building this.
+- Current M2 persistence lives directly in `DailyLogScreen`; extract before expanding
+  the flow further to avoid UI-owned data logic.
 
 ---
 

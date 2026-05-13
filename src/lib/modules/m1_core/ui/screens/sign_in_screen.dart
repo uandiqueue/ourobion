@@ -65,7 +65,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     Image.asset(
                       'assets/images/logo.png',
                       width: 72, height: 72,
-                      errorBuilder: (_, __, ___) => Container(
+                      errorBuilder: (context, error, stackTrace) => Container(
                         width: 72, height: 72,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(20),

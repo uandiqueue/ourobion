@@ -63,9 +63,8 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # .env file for environment variables (loaded by flutter_dotenv)
   assets:
-    - .env
+    - .env.public
     - assets/images/
 
   fonts:

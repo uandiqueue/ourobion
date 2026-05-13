@@ -1,6 +1,6 @@
 # STRUCTURE-CONTEXT.md — Biotope Repository Structure
 > **CONSTANT LAYER** — Update only when the repository structure changes.
-> Last updated: Initial scaffolding
+> Last updated: 2026-05-13
 
 ---
 
@@ -16,7 +16,7 @@ biotope/
 │   ├── PROJECT-CONTEXT.md     # Key project principles, goals, and phases
 │   ├── STRUCTURE-CONTEXT.md   # This document
 │   └── workspace-context.md   # Variable layer tracker for team sessions
-├── scripts/                   # Utility scripts for database seeding, build tools, etc.
+├── scripts/                   # Local setup and utility scripts
 ├── shared/                    # Code shared across frontend and backend boundaries
 │   ├── SHARED-CONTEXT.md      # Shared types and integration contracts
 │   ├── types/                 # Shared data models (TypeScript + Dart)
@@ -32,9 +32,18 @@ biotope/
 │   │   ├── compute-baselines/ # M5a backend worker
 │   │   └── generate-insights/ # M5b backend worker
 │   └── migrations/            # Postgres schema definitions
-├── tests/                     # Integration and end-to-end tests outside the app boundary
-└── .env.example               # Template for required environment variables
+└── tests/                     # Integration and end-to-end tests outside the app boundary
 ```
+
+## Environment Files
+
+- `src/.env.public` is local frontend config and is intentionally bundled by Flutter.
+  It may contain client-visible values only, such as `SUPABASE_URL` and
+  `SUPABASE_ANON_KEY`.
+- `src/.env.public.example` is the committed template for frontend config.
+- `supabase/.env` is local backend/Supabase config and may contain backend-only values.
+  It is never bundled into the Flutter app.
+- `supabase/.env.example` is the committed template for Supabase/backend config.
 
 ## Folder Conventions
 

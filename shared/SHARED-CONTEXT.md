@@ -25,7 +25,7 @@ interface DailyGutRow {
   id: string                        // uuid
   user_id: string                   // uuid, FK profiles
   date: string                      // ISO date YYYY-MM-DD
-  region: string                    // state/city code — required even in MVP (M7 future join)
+  region: string                    // country name e.g. 'Singapore' — required even in MVP (M7 future join)
 
   // Hydration
   urine_colour: number | null       // Armstrong scale 1–8
@@ -266,7 +266,7 @@ type SymptomFlag = typeof SYMPTOM_FLAGS[number]
 
 ## Non-Diagnostic Copy Rules
 
-Defined in `shared/constants/copy-guidelines.ts`. Key constraints:
+Defined in `shared/constants/copy_guidelines.ts`. Key constraints:
 - Never use: "diagnosed", "condition", "disease", "illness", "treatment", "symptom" (as label)
 - Always use: "pattern", "signal", "observation", "your data shows", "you may notice"
 - Severity labels: "info" (blue), "notice" (amber), "watch" (soft red) — never "alert" or "warning"

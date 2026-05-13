@@ -34,7 +34,7 @@ class _LivingBackdropState extends State<LivingBackdrop>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _ctrl,
-      builder: (_, __) {
+      builder: (context, child) {
         final t = _ctrl.value * 2 * pi;
         return SizedBox.expand(
           child: ColoredBox(

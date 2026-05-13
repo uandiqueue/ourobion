@@ -1,17 +1,30 @@
-# src
+# Biotope Flutter App
 
-A new Flutter project.
+This directory contains the Biotope Flutter frontend.
 
-## Getting Started
+## Local Config
 
-This project is a starting point for a Flutter application.
+The app loads `src/.env.public` through `flutter_dotenv`. This file is
+intentionally bundled as public client config, so it must contain only values
+that are safe to expose in the app package:
 
-A few resources to get you started if this is your first Flutter project:
+```env
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_ANON_KEY=your-anon-key
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Create it from the template if needed:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+cp .env.public.example .env.public
+```
+
+Backend/private secrets belong in `../supabase/.env` or Supabase secrets,
+never in `src/.env.public`.
+
+## Run
+
+```bash
+flutter pub get
+flutter run
+```

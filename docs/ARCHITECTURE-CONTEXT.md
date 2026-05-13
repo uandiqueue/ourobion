@@ -57,7 +57,7 @@
 User taps logging UI
         │
         ▼
-  M2 logging controller
+  M2 logging layer
   validates + normalises input
         │
         ▼
