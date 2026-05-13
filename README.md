@@ -89,7 +89,7 @@ flutter doctor --android-licenses
 
 # Start Supabase and run migrations
 npx supabase start
-npx supabase db push
+npx supabase db push # use db reset if on docker
 
 # Run the app
 cd src && flutter run

@@ -176,24 +176,6 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: BiotopeColors.surfaceLowest,
-                        border: Border.all(color: BiotopeColors.outlineVariant),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_rounded,
-                        size: 18,
-                        color: BiotopeColors.onSurface,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

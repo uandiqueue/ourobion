@@ -11,7 +11,7 @@ import 'modules/m1_core/models/consent_record.dart';
 import 'modules/m1_core/ui/screens/sign_in_screen.dart';
 import 'modules/m1_core/ui/screens/consent_screen.dart';
 import 'modules/m1_core/ui/screens/profile_setup_screen.dart';
-import 'modules/m1_core/ui/screens/home_screen.dart';
+import 'modules/m1_core/ui/screens/app_shell.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -96,7 +96,7 @@ class AuthGate extends StatelessWidget {
               case _OnboardStep.profile:
                 return const ProfileSetupScreen();
               case _OnboardStep.done:
-                return const HomeScreen();
+                return const AppShell();
             }
           },
         );

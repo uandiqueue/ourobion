@@ -39,7 +39,7 @@ Co-Authored-By: ...
 | Phase | Milestone | Status | Target Date |
 |---|---|---|---|
 | **Phase 1 Stage 1 MVP** | **Repository Scaffolding** | ✅ Complete | - |
-| Phase 1 Stage 1 MVP | M1 Authentication & DB Models | 🔨 In Progress (tab shell + copy polish remaining) | TBD |
+| Phase 1 Stage 1 MVP | M1 Authentication & DB Models | 🔨 In Progress (copy polish remaining; app shell + tab nav ✅) | TBD |
 | Phase 1 Stage 1 MVP | M2 Self-Report Logging UI | 🔨 In Progress (core UI + DB done, service extraction pending) | TBD |
 | Phase 1 Stage 1 MVP | M5a Baseline Computation Engine | ⏳ Pending | TBD |
 | Phase 1 Stage 1 MVP | M5b Insight Generation | ⏳ Pending | TBD |
@@ -66,36 +66,32 @@ Co-Authored-By: ...
     *   Refreshed stale docs across workspace, structure, M1, M2, shared contract, architecture, project context, and `src/README.md`. ✅
     *   Verified `flutter analyze` and `flutter test` pass. ✅
 *   **Next Session Goals:**
-    *   Build app shell + bottom tab navigation (Home, Log, Insights, Squad, World) and wire `DailyLogScreen` into the Log tab — this unblocks Alton's M2 integration.
-    *   Remove temporary `[DEV]` buttons from `HomeScreen` after real tab navigation is in place.
-    *   Finalize M1 copy/legal polish: review PDPA consent wording and start/finish `shared/constants/copy_guidelines.dart` enforcement path.
+    *   Finalize M1 copy/legal polish: review PDPA consent wording and complete `shared/constants/copy_guidelines.dart` enforcement path.
     *   Defer Google/Apple OAuth until Supabase dashboard redirect URLs and platform deep-link config are ready.
 *   **Notes / Blocked by / Needs:**
-    *   Alton is blocked on app shell + tab navigation before M2 screens can be wired into real navigation.
+    *   App shell + tab nav delivered by Alton this session — no longer blocked.
 
 ### Member 2: [Alton]
 **Focus Area:** M2 (Self-Report Logging) + Flutter UI
 *   **Last Session Accomplished (2026-05-13):**
-    *   Built `stool_form_screen.dart` — Bristol scale 1–7 tile picker with custom-painted shape icons (pellets → wavy lines), description card, entry animation, skip + confirm flow. ✅
-    *   Built `daily_log_screen.dart` — full M2 daily log hub: urine + stool navigate to dedicated screens, stool count + mosquito bites use +/− steppers, outside meals uses 0–3 segmented selector, energy/mood/gut comfort use 1–5 Likert rows, notes field with 140-char counter. ✅
-    *   Live DQS progress bar (0–100 pts, turns green at 60 = streak-worthy). ✅
-    *   Save upserts to `daily_gut_rows` via Supabase (`onConflict: user_id,log_date`). ✅
-    *   Tested full logging flow end-to-end on physical Samsung A165F. ✅
+    *   Built `app_shell.dart` — `AppShell` with Material 3 `NavigationBar` (5 tabs: Home, Log, Insights, Squad, World), `IndexedStack`, design-token styled, 6px indicator radius, `outlineVariant` top border. ✅
+    *   Built `home_tab.dart` — Home dashboard with time-based greeting, display name from `ProfileService`, today's log status card, streak card, insights teaser with 7-day progress bar; 600ms slide+fade entry animation. ✅
+    *   Placeholder tabs for Insights / Squad / World with contextual subtitles. ✅
+    *   `DailyLogScreen` wired into Log tab; back button removed. `main.dart` updated to `AppShell`. ✅
+    *   Sign-out moved to profile icon in home header with confirmation dialog. ✅
+    *   `flutter analyze` passes with no issues. ✅
 *   **Next Session Goals:**
-    *   Remove `[DEV]` buttons from `home_screen.dart` once app shell + tab nav is wired in.
-    *   Wire `DailyLogScreen` into the Log tab once Jayden delivers app shell.
     *   Symptom flags multi-select screen — `symptom_flags_screen.dart` (presence-only, multi-select chips).
     *   Antibiotic course setup flow (separate screen, event-based not daily).
+    *   Extract M2 persistence out of `DailyLogScreen` into impl services before adding more write paths.
 *   **Notes / Blocked by / Needs:**
-    *   App shell + tab navigation (Home, Log, Insights, Squad, World) still needed from Jayden before M2 screens can be wired into real navigation.
-    *   M2 persistence currently lives in `DailyLogScreen`; extract to M2 impl services before adding more write paths.
     *   M2 UI follows Biotope design system — see `docs/ui-context/UI-DESIGN-CONTEXT.md`.
 
 ---
 
 ## 📝 Recent Change Log (Last 5 merged PRs/Sessions)
-1. **2026-05-13** - Frontend env cleanup: `src/.env.public` for bundled client config, removed `src/.env`, kept backend secrets in `supabase/.env`; hardened Supabase trigger `search_path`; docs refreshed. — *Jayden*
-2. **2026-05-13** - Stool Form UI (Bristol 1–7 picker, custom shape icons). Daily Log shell (all M2 inputs, live DQS, Supabase upsert). Tested on Samsung A165F. — *Alton*
-3. **2026-05-13** - M2 SQL migration (daily_gut_rows + antibiotic_courses, RLS). Urine Color UI (Armstrong 1–8 palette). Tested on Samsung A165F. — *Alton*
-4. **2026-05-10** - Fixed sign-out (AuthGate navigation bug). Full country picker (195 countries, search). Singapore corrections across codebase. Session/commit conventions added. — *Jayden*
-5. **2026-05-11** - Connected physical Android phone, resolved Manrope font build error, configured local Supabase IP for USB debugging, updated README Android section. — *Alton*
+1. **2026-05-13** - App shell (`app_shell.dart`) + Home dashboard (`home_tab.dart`): 5-tab NavigationBar, today's log card, streak card, insights teaser, sign-out dialog. `DailyLogScreen` wired into Log tab. `flutter analyze` clean. — *Alton*
+2. **2026-05-13** - Frontend env cleanup: `src/.env.public` for bundled client config, removed `src/.env`, kept backend secrets in `supabase/.env`; hardened Supabase trigger `search_path`; docs refreshed. — *Jayden*
+3. **2026-05-13** - Stool Form UI (Bristol 1–7 picker, custom shape icons). Daily Log shell (all M2 inputs, live DQS, Supabase upsert). Tested on Samsung A165F. — *Alton*
+4. **2026-05-13** - M2 SQL migration (daily_gut_rows + antibiotic_courses, RLS). Urine Color UI (Armstrong 1–8 palette). Tested on Samsung A165F. — *Alton*
+5. **2026-05-10** - Fixed sign-out (AuthGate navigation bug). Full country picker (195 countries, search). Singapore corrections across codebase. Session/commit conventions added. — *Jayden*
