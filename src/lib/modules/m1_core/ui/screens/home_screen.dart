@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../impl/auth_service.dart';
 import 'sign_in_screen.dart';
 import '../../../m2_self_report/ui/screens/urine_color_screen.dart';
+import '../../../m2_self_report/ui/screens/stool_form_screen.dart';
+import '../../../m2_self_report/ui/screens/daily_log_screen.dart';
 
 /// Temporary home screen — placeholder until the full app shell is built.
 class HomeScreen extends StatelessWidget {
@@ -60,6 +62,20 @@ class HomeScreen extends StatelessWidget {
                 MaterialPageRoute(builder: (_) => const UrineColorScreen()),
               ),
               child: const Text('[DEV] Urine Color Screen'),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const StoolFormScreen()),
+              ),
+              child: const Text('[DEV] Stool Form Screen'),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const DailyLogScreen()),
+              ),
+              child: const Text('[DEV] Daily Log Screen'),
             ),
           ],
         ),
