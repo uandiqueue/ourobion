@@ -57,19 +57,19 @@ Co-Authored-By: ...
 > 3. Before ending your session, log what you accomplished in the last session and what your next steps are.
 
 ### Member 1: [Jayden]
-**Focus Area:** M1 (Core & Compliance) + Database Rules
-*   **Last Session Accomplished (2026-05-13):**
-    *   Audited frontend/backend env handling and replaced ambiguous `src/.env` with explicit `src/.env.public` for bundled Flutter client config. ✅
-    *   Kept backend/local secrets isolated under `supabase/.env`; removed old frontend `src/.env` local file and deleted tracked `src/.env.example`. ✅
-    *   Updated `main.dart`, `pubspec.yaml`, `setup.sh`, README, and app docs to support plain `cd src && flutter run` with `.env.public`. ✅
-    *   Hardened Supabase `handle_new_user()` `SECURITY DEFINER` migration with pinned `search_path`. ✅
-    *   Refreshed stale docs across workspace, structure, M1, M2, shared contract, architecture, project context, and `src/README.md`. ✅
-    *   Verified `flutter analyze` and `flutter test` pass. ✅
+**Focus Area:** M1 (Core & Compliance) + Database Rules + M2 assist
+*   **Last Session Accomplished (2026-05-14):**
+    *   Extracted M2 persistence from `DailyLogScreen` into `DailyLogService` (`logging_controller.dart`) — pulls region from profiles, derives `on_antibiotics` / `gut_watch_active` from antibiotic_courses at write time, passes `symptom_flags`. ✅
+    *   Built `symptom_flags_screen.dart` — 7-flag presence-only multi-select chip screen (feverish, nausea, body_aches, fatigue, loss_of_appetite, abdominal_cramps, headache); wired into DailyLogScreen BEHAVIOUR section. ✅
+    *   Built `antibiotic_service.dart` (`AntibioticCourse` model + `AntibioticService.addCourse` / `getCourses`). ✅
+    *   Built `antibiotic_course_screen.dart` — drug name, start date picker, duration stepper (1–30 days), computes end_date, 14-day gut watch note; wired into DailyLogScreen MEDICATIONS section. ✅
+    *   `flutter analyze` passes with no issues. ✅
 *   **Next Session Goals:**
-    *   Finalize M1 copy/legal polish: review PDPA consent wording and complete `shared/constants/copy_guidelines.dart` enforcement path.
-    *   Defer Google/Apple OAuth until Supabase dashboard redirect URLs and platform deep-link config are ready.
+    *   M1: Finalize copy/legal polish — review PDPA consent wording and complete `shared/constants/copy_guidelines.dart` enforcement path.
+    *   M1: Defer Google/Apple OAuth until Supabase dashboard redirect URLs and platform deep-link config are ready.
+    *   M2 (optional): Load today's existing row on `DailyLogScreen` open so returning mid-day pre-populates fields.
 *   **Notes / Blocked by / Needs:**
-    *   App shell + tab nav delivered by Alton this session — no longer blocked.
+    *   Nothing blocking.
 
 ### Member 2: [Alton]
 **Focus Area:** M2 (Self-Report Logging) + Flutter UI
@@ -81,16 +81,18 @@ Co-Authored-By: ...
     *   Sign-out moved to profile icon in home header with confirmation dialog. ✅
     *   `flutter analyze` passes with no issues. ✅
 *   **Next Session Goals:**
-    *   Symptom flags multi-select screen — `symptom_flags_screen.dart` (presence-only, multi-select chips).
-    *   Antibiotic course setup flow (separate screen, event-based not daily).
-    *   Extract M2 persistence out of `DailyLogScreen` into impl services before adding more write paths.
+    *   ~~Symptom flags multi-select screen~~ — **Done by Jayden 2026-05-14** (`symptom_flags_screen.dart`, 7-flag presence-only multi-select chips, wired into DailyLogScreen BEHAVIOUR section). ✅
+    *   ~~Antibiotic course setup flow~~ — **Done by Jayden 2026-05-14** (`antibiotic_course_screen.dart` + `AntibioticService`, event-based, drug name / start date / duration stepper, computes end_date, writes to antibiotic_courses). ✅
+    *   ~~Extract M2 persistence out of `DailyLogScreen`~~ — **Done by Jayden 2026-05-14** (`DailyLogService` in `logging_controller.dart`, pulls region from profiles, derives on_antibiotics / gut_watch_active from antibiotic_courses at write time, passes symptom_flags). ✅
+    *   Next M2 work: loading today's existing row on screen open (so returning mid-day pre-populates fields); active antibiotic course display on DailyLogScreen.
 *   **Notes / Blocked by / Needs:**
     *   M2 UI follows Biotope design system — see `docs/ui-context/UI-DESIGN-CONTEXT.md`.
 
 ---
 
 ## 📝 Recent Change Log (Last 5 merged PRs/Sessions)
-1. **2026-05-13** - App shell (`app_shell.dart`) + Home dashboard (`home_tab.dart`): 5-tab NavigationBar, today's log card, streak card, insights teaser, sign-out dialog. `DailyLogScreen` wired into Log tab. `flutter analyze` clean. — *Alton*
+1. **2026-05-14** - M2 service extraction + symptom flags + antibiotic course flow: `DailyLogService` (region, on_antibiotics, gut_watch_active), `symptom_flags_screen.dart` (7 flags, multi-select), `antibiotic_course_screen.dart` + `AntibioticService`. `flutter analyze` clean. — *Jayden*
+2. **2026-05-13** - App shell (`app_shell.dart`) + Home dashboard (`home_tab.dart`): 5-tab NavigationBar, today's log card, streak card, insights teaser, sign-out dialog. `DailyLogScreen` wired into Log tab. `flutter analyze` clean. — *Alton*
 2. **2026-05-13** - Frontend env cleanup: `src/.env.public` for bundled client config, removed `src/.env`, kept backend secrets in `supabase/.env`; hardened Supabase trigger `search_path`; docs refreshed. — *Jayden*
 3. **2026-05-13** - Stool Form UI (Bristol 1–7 picker, custom shape icons). Daily Log shell (all M2 inputs, live DQS, Supabase upsert). Tested on Samsung A165F. — *Alton*
 4. **2026-05-13** - M2 SQL migration (daily_gut_rows + antibiotic_courses, RLS). Urine Color UI (Armstrong 1–8 palette). Tested on Samsung A165F. — *Alton*

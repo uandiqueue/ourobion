@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme.dart';
+import '../../impl/logging_controller.dart';
+import 'antibiotic_course_screen.dart';
+import 'symptom_flags_screen.dart';
 import 'urine_color_screen.dart';
 import 'stool_form_screen.dart';
 
@@ -52,6 +55,7 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
   int? _energy;
   int? _mood;
   int? _gutComfort;
+  List<String> _symptomFlags = [];
   final _notesCtrl = TextEditingController();
   bool _isSaving = false;
 
@@ -108,29 +112,43 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
     if (result != null) setState(() => _stoolForm = result);
   }
 
+  Future<void> _openSymptomFlags() async {
+    final result = await Navigator.of(context).push<List<String>?>(
+      MaterialPageRoute(
+        builder: (_) => SymptomFlagsScreen(initialFlags: _symptomFlags),
+      ),
+    );
+    if (result != null) setState(() => _symptomFlags = result);
+  }
+
+  Future<void> _openAntibiotics() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const AntibioticCourseScreen()),
+    );
+  }
+
   // ── Save ───────────────────────────────────────────────────────
   Future<void> _save() async {
     setState(() => _isSaving = true);
     try {
-      final userId = Supabase.instance.client.auth.currentUser!.id;
-      final notes = _notesCtrl.text.trim();
-      await Supabase.instance.client.from('daily_gut_rows').upsert(
-        {
-          'user_id': userId,
-          'log_date': _logDate,
-          'urine_colour': _urineColour,
-          'stool_form': _stoolForm,
-          'stool_count': _stoolCount,
-          'outside_meals': _outsideMeals,
-          'mosquito_bites': _mosquitoBites,
-          'energy_score': _energy,
-          'mood_score': _mood,
-          'gut_comfort_score': _gutComfort,
-          'notes': notes.isEmpty ? null : notes,
-          'log_completeness': _dqs.toDouble(),
-          'updated_at': DateTime.now().toIso8601String(),
-        },
-        onConflict: 'user_id,log_date',
+      final client = Supabase.instance.client;
+      final userId = client.auth.currentUser!.id;
+      await DailyLogService(client).saveDailyLog(
+        userId,
+        _logDate,
+        DailyLogInput(
+          urineColour: _urineColour,
+          stoolForm: _stoolForm,
+          stoolCount: _stoolCount,
+          outsideMeals: _outsideMeals,
+          mosquitoBites: _mosquitoBites,
+          energy: _energy,
+          mood: _mood,
+          gutComfort: _gutComfort,
+          symptomFlags: _symptomFlags,
+          notes: _notesCtrl.text,
+          logCompleteness: _dqs.toDouble(),
+        ),
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -293,6 +311,22 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
                       onChanged: (v) => setState(() => _mosquitoBites = v),
                     ),
 
+                    _NavigatorCard(
+                      icon: Icons.warning_amber_rounded,
+                      label: 'Symptom signals',
+                      valueWidget: _symptomFlags.isNotEmpty
+                          ? Text(
+                              '${_symptomFlags.length} signal${_symptomFlags.length == 1 ? '' : 's'} noted',
+                              style: GoogleFonts.manrope(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: BiotopeColors.onSurface,
+                              ),
+                            )
+                          : null,
+                      onTap: _openSymptomFlags,
+                    ),
+
                     // ── DAILY CHECK-IN ────────────────────────────
                     const _SectionLabel('DAILY CHECK-IN'),
 
@@ -332,6 +366,14 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
                     // ── NOTES ────────────────────────────────────
                     const _SectionLabel('NOTES'),
                     _NotesCard(controller: _notesCtrl),
+
+                    // ── MEDICATIONS ──────────────────────────────
+                    const _SectionLabel('MEDICATIONS'),
+                    _NavigatorCard(
+                      icon: Icons.medication_rounded,
+                      label: 'Antibiotic course',
+                      onTap: _openAntibiotics,
+                    ),
 
                     const SizedBox(height: 8),
                   ],
