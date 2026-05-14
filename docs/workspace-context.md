@@ -40,7 +40,7 @@ Co-Authored-By: ...
 |---|---|---|---|
 | **Phase 1 Stage 1 MVP** | **Repository Scaffolding** | ✅ Complete | - |
 | Phase 1 Stage 1 MVP | M1 Authentication & DB Models | 🔨 In Progress (copy polish remaining; app shell + tab nav ✅) | TBD |
-| Phase 1 Stage 1 MVP | M2 Self-Report Logging UI | 🔨 In Progress (pre-populate + active course display done; home tab real DQS + streak pending) | TBD |
+| Phase 1 Stage 1 MVP | M2 Self-Report Logging UI | ✅ Complete (all logging UI done, home tab wired, titles, reload fix) | - |
 | Phase 1 Stage 1 MVP | M5a Baseline Computation Engine | ⏳ Pending | TBD |
 | Phase 1 Stage 1 MVP | M5b Insight Generation | ⏳ Pending | TBD |
 | Phase 1 Stage 1 MVP | M6 Engagement Systems | ⏳ Pending | TBD |
@@ -74,16 +74,14 @@ Co-Authored-By: ...
 ### Member 2: [Alton]
 **Focus Area:** M2 (Self-Report Logging) + Flutter UI
 *   **Last Session Accomplished (2026-05-14):**
-    *   Fixed Supabase connection error — Mac WiFi IP changed from `.53` to `.52`; updated `src/.env.public`. ✅
-    *   Added `getTodayLog` to `DailyLogService` (`logging_controller.dart`) — fetches today's existing `daily_gut_rows` row (`maybeSingle`). ✅
-    *   Added `getActiveCourse` to `AntibioticService` (`antibiotic_service.dart`) — queries `antibiotic_courses` where today falls within `start_date..end_date`. ✅
-    *   Updated `DailyLogScreen` — `initState` calls `_loadTodayData`: fetches today's row + active course in parallel, pre-populates all fields (urine, stool, count, meals, mosquito, energy, mood, gut comfort, symptom flags, notes); shows spinner while loading. ✅
-    *   Added `_ActiveCourseCard` widget — shows drug name, "Day X of Y · N days remaining", ACTIVE badge in MEDICATIONS section; refreshes when returning from antibiotic course screen. ✅
+    *   Home tab reload fix — `HomeTabState` made public, `reload()` method added; `AppShell` calls `reload()` via `GlobalKey` whenever user navigates back to Home tab, so DQS + streak always reflect latest saved log. ✅
+    *   Today card UX fix — partially logged card (< 60 pts) is now tappable with "Complete →" affordance; only streak-worthy (≥ 60 pts) is non-tappable. ✅
+    *   M6 early titles — Pioneer (first log) and Committed (7-day streak) badges on home screen; titles section hidden until first log; earned = coloured, locked = greyed. ✅
+    *   Tested on Android phone — all features working. ✅
     *   `flutter analyze` passes with no issues. ✅
 *   **Next Session Goals:**
-    *   M2: Home tab `today's log status card` — wire up real DQS from `daily_gut_rows` so the card shows actual completeness, not a placeholder.
-    *   M2: Streak counter — read `daily_gut_rows` consecutive days ≥ 60 pts to compute streak; display on home tab streak card.
-    *   M5a / M6: Begin baseline computation engine or engagement state table once M2 data is stable.
+    *   M5a: Baseline computation — migration for `baseline_snapshots` table + nightly Edge Function (pg_cron) computing 7-day rolling averages per metric from `daily_gut_rows`.
+    *   M5b: First descriptive insight card — read `baseline_snapshots`, write to `insight_cards`, display on Insights tab.
 *   **Notes / Blocked by / Needs:**
     *   Note for Jayden: WiFi IP changes on network reconnect — remind team to check `src/.env.public` if Supabase connection fails.
     *   M2 UI follows Biotope design system — see `docs/ui-context/UI-DESIGN-CONTEXT.md`.
@@ -91,7 +89,8 @@ Co-Authored-By: ...
 ---
 
 ## 📝 Recent Change Log (Last 5 merged PRs/Sessions)
-1. **2026-05-14** - M2 pre-populate + active antibiotic display: `getTodayLog` (logging_controller), `getActiveCourse` (antibiotic_service), `DailyLogScreen` initState pre-fill + spinner + `_ActiveCourseCard`. Fixed `src/.env.public` Supabase IP. `flutter analyze` clean. — *Alton*
+1. **2026-05-14** - M6 titles + home tab reload + today card UX: Pioneer/Committed badges, `HomeTabState.reload()` via GlobalKey on tab switch, partially-logged card tappable. Tested on Android. `flutter analyze` clean. — *Alton*
+2. **2026-05-14** - M2 pre-populate + active antibiotic display: `getTodayLog` (logging_controller), `getActiveCourse` (antibiotic_service), `DailyLogScreen` initState pre-fill + spinner + `_ActiveCourseCard`. Fixed `src/.env.public` Supabase IP. `flutter analyze` clean. — *Alton*
 2. **2026-05-14** - M2 service extraction + symptom flags + antibiotic course flow: `DailyLogService` (region, on_antibiotics, gut_watch_active), `symptom_flags_screen.dart` (7 flags, multi-select), `antibiotic_course_screen.dart` + `AntibioticService`. `flutter analyze` clean. — *Jayden*
 3. **2026-05-13** - App shell (`app_shell.dart`) + Home dashboard (`home_tab.dart`): 5-tab NavigationBar, today's log card, streak card, insights teaser, sign-out dialog. `DailyLogScreen` wired into Log tab. `flutter analyze` clean. — *Alton*
 2. **2026-05-13** - Frontend env cleanup: `src/.env.public` for bundled client config, removed `src/.env`, kept backend secrets in `supabase/.env`; hardened Supabase trigger `search_path`; docs refreshed. — *Jayden*

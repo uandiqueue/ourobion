@@ -13,8 +13,12 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _index = 0;
+  final _homeKey = GlobalKey<HomeTabState>();
 
-  void _switchTo(int i) => setState(() => _index = i);
+  void _switchTo(int i) {
+    if (i == 0 && _index != 0) _homeKey.currentState?.reload();
+    setState(() => _index = i);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +26,7 @@ class _AppShellState extends State<AppShell> {
       body: IndexedStack(
         index: _index,
         children: [
-          HomeTab(onLogTodayTap: () => _switchTo(1)),
+          HomeTab(key: _homeKey, onLogTodayTap: () => _switchTo(1)),
           const DailyLogScreen(),
           const _PlaceholderTab(
             label: 'Insights',

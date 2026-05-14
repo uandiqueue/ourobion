@@ -11,10 +11,10 @@ class HomeTab extends StatefulWidget {
   const HomeTab({super.key, required this.onLogTodayTap});
 
   @override
-  State<HomeTab> createState() => _HomeTabState();
+  State<HomeTab> createState() => HomeTabState();
 }
 
-class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
+class HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
   late final AnimationController _anim;
   late final Animation<double> _opacity;
   late final Animation<Offset> _slide;
@@ -22,6 +22,7 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
   String _displayName = '';
   double? _todayDqs;
   int _streak = 0;
+  int _totalLogs = 0;
   bool _loading = true;
 
   @override
@@ -45,27 +46,36 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool animate = true}) async {
     final client = Supabase.instance.client;
     final userId = client.auth.currentUser!.id;
     final today = _dateStr(DateTime.now());
 
     final profile = await ProfileService(client).getProfile(userId);
 
-    final todayRow = await client
+    final todayRowFuture = client
         .from('daily_gut_rows')
         .select('log_completeness')
         .eq('user_id', userId)
         .eq('log_date', today)
         .maybeSingle();
 
-    final streakRows = await client
+    final streakRowsFuture = client
         .from('daily_gut_rows')
         .select('log_date')
         .eq('user_id', userId)
         .gte('log_completeness', 60)
         .order('log_date', ascending: false)
         .limit(60);
+
+    final countFuture = client
+        .from('daily_gut_rows')
+        .select('log_date')
+        .eq('user_id', userId);
+
+    final todayRow = await todayRowFuture;
+    final streakRows = await streakRowsFuture;
+    final countRows = await countFuture as List<dynamic>;
 
     if (!mounted) return;
     setState(() {
@@ -74,10 +84,13 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
           ? (todayRow['log_completeness'] as num?)?.toDouble()
           : null;
       _streak = _computeStreak(streakRows);
+      _totalLogs = countRows.length;
       _loading = false;
     });
-    _anim.forward();
+    if (animate) _anim.forward();
   }
+
+  Future<void> reload() => _load(animate: false);
 
   int _computeStreak(List<Map<String, dynamic>> rows) {
     if (rows.isEmpty) return 0;
@@ -239,7 +252,16 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
 
                   const SizedBox(height: 20),
 
+                  // ── Titles ────────────────────────────────────────
+                  if (_totalLogs > 0) ...[
+                    const SizedBox(height: 20),
+                    _Eyebrow('TITLES'),
+                    const SizedBox(height: 10),
+                    _TitlesRow(totalLogs: _totalLogs, streak: _streak),
+                  ],
+
                   // ── Insights teaser ───────────────────────────────
+                  const SizedBox(height: 20),
                   _Eyebrow('INSIGHTS'),
                   const SizedBox(height: 10),
                   _InsightsTeaser(streak: _streak),
@@ -286,7 +308,7 @@ class _TodayCard extends StatelessWidget {
     final streakWorthy = (dqs ?? 0) >= 60;
 
     return GestureDetector(
-      onTap: logged ? null : onTap,
+      onTap: streakWorthy ? null : onTap,
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -350,6 +372,17 @@ class _TodayCard extends StatelessWidget {
                             color: BiotopeColors.outline,
                           ),
                         ),
+                        if (!streakWorthy) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Complete →',
+                            style: GoogleFonts.manrope(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: BiotopeColors.primary,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -472,6 +505,103 @@ class _StreakCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TitlesRow extends StatelessWidget {
+  final int totalLogs;
+  final int streak;
+  const _TitlesRow({required this.totalLogs, required this.streak});
+
+  @override
+  Widget build(BuildContext context) {
+    final pioneer = totalLogs >= 1;
+    final committed = streak >= 7;
+
+    return Row(
+      children: [
+        Expanded(child: _TitleChip(
+          label: 'Pioneer',
+          subtitle: 'First log recorded',
+          icon: Icons.science_outlined,
+          earned: pioneer,
+        )),
+        const SizedBox(width: 10),
+        Expanded(child: _TitleChip(
+          label: 'Committed',
+          subtitle: '7-day streak',
+          icon: Icons.local_fire_department_rounded,
+          earned: committed,
+        )),
+      ],
+    );
+  }
+}
+
+class _TitleChip extends StatelessWidget {
+  final String label;
+  final String subtitle;
+  final IconData icon;
+  final bool earned;
+  const _TitleChip({
+    required this.label,
+    required this.subtitle,
+    required this.icon,
+    required this.earned,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: earned
+            ? BiotopeColors.primaryFixed
+            : BiotopeColors.surfaceLowest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: earned
+              ? BiotopeColors.primaryContainer
+              : BiotopeColors.outlineVariant,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: earned ? BiotopeColors.primary : BiotopeColors.outlineVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.manrope(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: earned
+                        ? BiotopeColors.primary
+                        : BiotopeColors.outlineVariant,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.manrope(
+                    fontSize: 10,
+                    color: earned
+                        ? BiotopeColors.onSurfaceVariant
+                        : BiotopeColors.outlineVariant,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
