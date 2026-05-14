@@ -84,4 +84,16 @@ class DailyLogService {
       onConflict: 'user_id,log_date',
     );
   }
+
+  Future<Map<String, dynamic>?> getTodayLog(
+    String userId,
+    String logDate,
+  ) async {
+    return await _client
+        .from('daily_gut_rows')
+        .select()
+        .eq('user_id', userId)
+        .eq('log_date', logDate)
+        .maybeSingle();
+  }
 }

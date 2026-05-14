@@ -66,6 +66,20 @@ class AntibioticService {
         .toList();
   }
 
+  Future<AntibioticCourse?> getActiveCourse(String userId) async {
+    final todayStr = _fmt(DateTime.now());
+    final data = await _client
+        .from('antibiotic_courses')
+        .select()
+        .eq('user_id', userId)
+        .lte('start_date', todayStr)
+        .gte('end_date', todayStr)
+        .order('start_date', ascending: false)
+        .limit(1) as List<dynamic>;
+    if (data.isEmpty) return null;
+    return AntibioticCourse.fromMap(data.first as Map<String, dynamic>);
+  }
+
   String _fmt(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme.dart';
+import '../../impl/antibiotic_service.dart';
 import '../../impl/logging_controller.dart';
 import 'antibiotic_course_screen.dart';
 import 'symptom_flags_screen.dart';
@@ -58,6 +59,8 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
   List<String> _symptomFlags = [];
   final _notesCtrl = TextEditingController();
   bool _isSaving = false;
+  bool _isInitialLoading = true;
+  AntibioticCourse? _activeCourse;
 
   // ── DQS (Data Quality Score) ───────────────────────────────────
   // Weights from m2-context.md
@@ -89,6 +92,43 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
   String get _logDate {
     final now = DateTime.now();
     return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTodayData();
+  }
+
+  Future<void> _loadTodayData() async {
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser!.id;
+    final date = _logDate;
+
+    final rowFuture = DailyLogService(client).getTodayLog(userId, date);
+    final courseFuture = AntibioticService(client).getActiveCourse(userId);
+    final row = await rowFuture;
+    final course = await courseFuture;
+
+    if (!mounted) return;
+    setState(() {
+      _isInitialLoading = false;
+      _activeCourse = course;
+      if (row != null) {
+        _urineColour = row['urine_colour'] as int?;
+        _stoolForm   = row['stool_form'] as int?;
+        _stoolCount  = row['stool_count'] as int?;
+        _outsideMeals  = row['outside_meals'] as int?;
+        _mosquitoBites = row['mosquito_bites'] as int?;
+        _energy     = row['energy_score'] as int?;
+        _mood       = row['mood_score'] as int?;
+        _gutComfort = row['gut_comfort_score'] as int?;
+        _symptomFlags = (row['symptom_flags'] as List<dynamic>?)
+            ?.map((e) => e as String)
+            .toList() ?? [];
+        _notesCtrl.text = row['notes'] as String? ?? '';
+      }
+    });
   }
 
   @override
@@ -125,6 +165,12 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const AntibioticCourseScreen()),
     );
+    if (!mounted) return;
+    final client = Supabase.instance.client;
+    final course = await AntibioticService(client)
+        .getActiveCourse(client.auth.currentUser!.id);
+    if (!mounted) return;
+    setState(() => _activeCourse = course);
   }
 
   // ── Save ───────────────────────────────────────────────────────
@@ -231,7 +277,9 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
 
             // ── Scrollable body ───────────────────────────────────
             Expanded(
-              child: SingleChildScrollView(
+              child: _isInitialLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : SingleChildScrollView(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -369,6 +417,8 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
 
                     // ── MEDICATIONS ──────────────────────────────
                     const _SectionLabel('MEDICATIONS'),
+                    if (_activeCourse != null)
+                      _ActiveCourseCard(course: _activeCourse!),
                     _NavigatorCard(
                       icon: Icons.medication_rounded,
                       label: 'Antibiotic course',
@@ -875,6 +925,70 @@ class _LikertCard extends StatelessWidget {
                 fontSize: 10, color: BiotopeColors.outline,
               )),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActiveCourseCard extends StatelessWidget {
+  final AntibioticCourse course;
+  const _ActiveCourseCard({required this.course});
+
+  @override
+  Widget build(BuildContext context) {
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final daysLeft = course.endDate.difference(todayDate).inDays + 1;
+    final dayOf = course.durationDays - daysLeft + 1;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: BiotopeColors.primaryContainer.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: BiotopeColors.primaryContainer),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.medication_rounded, size: 18, color: BiotopeColors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  course.drugName,
+                  style: GoogleFonts.manrope(
+                    fontSize: 13, fontWeight: FontWeight.w600,
+                    color: BiotopeColors.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Day $dayOf of ${course.durationDays} · $daysLeft day${daysLeft == 1 ? '' : 's'} remaining',
+                  style: GoogleFonts.manrope(
+                    fontSize: 11, color: BiotopeColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: BiotopeColors.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              'ACTIVE',
+              style: GoogleFonts.manrope(
+                fontSize: 9, fontWeight: FontWeight.w700,
+                letterSpacing: 1.2, color: BiotopeColors.primary,
+              ),
+            ),
           ),
         ],
       ),
