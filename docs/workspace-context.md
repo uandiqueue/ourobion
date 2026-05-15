@@ -41,8 +41,8 @@ Co-Authored-By: ...
 | **Phase 1 Stage 1 MVP** | **Repository Scaffolding** | ✅ Complete | - |
 | Phase 1 Stage 1 MVP | M1 Authentication & DB Models | 🔨 In Progress (copy polish remaining; app shell + tab nav ✅) | TBD |
 | Phase 1 Stage 1 MVP | M2 Self-Report Logging UI | ✅ Complete (all logging UI done, home tab wired, titles, reload fix) | - |
-| Phase 1 Stage 1 MVP | M5a Baseline Computation Engine | ⏳ Pending | TBD |
-| Phase 1 Stage 1 MVP | M5b Insight Generation | ⏳ Pending | TBD |
+| Phase 1 Stage 1 MVP | M5a Baseline Computation Engine | ✅ Complete | - |
+| Phase 1 Stage 1 MVP | M5b Insight Generation | ✅ Complete | - |
 | Phase 1 Stage 1 MVP | M6 Engagement Systems | ⏳ Pending | TBD |
 | Phase 1 Stage 2 | Passive Health (Wearables) | 🗓️ Planned | TBD |
 | Phase 1 Stage 3 | Environmental Modifiers | 🗓️ Planned | TBD |
@@ -73,23 +73,25 @@ Co-Authored-By: ...
 
 ### Member 2: [Alton]
 **Focus Area:** M2 (Self-Report Logging) + Flutter UI
-*   **Last Session Accomplished (2026-05-14):**
-    *   Home tab reload fix — `HomeTabState` made public, `reload()` method added; `AppShell` calls `reload()` via `GlobalKey` whenever user navigates back to Home tab, so DQS + streak always reflect latest saved log. ✅
-    *   Today card UX fix — partially logged card (< 60 pts) is now tappable with "Complete →" affordance; only streak-worthy (≥ 60 pts) is non-tappable. ✅
-    *   M6 early titles — Pioneer (first log) and Committed (7-day streak) badges on home screen; titles section hidden until first log; earned = coloured, locked = greyed. ✅
-    *   Tested on Android phone — all features working. ✅
+*   **Last Session Accomplished (2026-05-15):**
+    *   M5a complete — `baseline_snapshots` migration, `compute-baselines` edge function (30-day rolling stats, 10 metrics, trend/confidence), pg_cron at 18:00 UTC, Flutter `BaselineService`. ✅
+    *   M5b complete — `insight_cards` migration, `generate-insights` edge function (6 MVP descriptive rules), pg_cron at 18:30 UTC, Flutter `InsightService` + `InsightsTab` UI wired into app shell. ✅
+    *   Migration naming fixed — renamed to YYYYMMDDHHMMSS format to avoid duplicate version key errors. ✅
+    *   Backend tested end-to-end locally — 10 baseline snapshots + 3 insight cards generated correctly against test data. ✅
     *   `flutter analyze` passes with no issues. ✅
 *   **Next Session Goals:**
-    *   M5a: Baseline computation — migration for `baseline_snapshots` table + nightly Edge Function (pg_cron) computing 7-day rolling averages per metric from `daily_gut_rows`.
-    *   M5b: First descriptive insight card — read `baseline_snapshots`, write to `insight_cards`, display on Insights tab.
+    *   M6: Full engagement features (beyond early titles already done).
+    *   Test Insights tab UI on phone once nightly job has run against real account data.
 *   **Notes / Blocked by / Needs:**
     *   Note for Jayden: WiFi IP changes on network reconnect — remind team to check `src/.env.public` if Supabase connection fails.
+    *   pg_cron migrations require `app.supabase_url` and `app.service_role_key` set in Supabase dashboard (Settings → Database → Configuration) before applying to production.
     *   M2 UI follows Biotope design system — see `docs/ui-context/UI-DESIGN-CONTEXT.md`.
 
 ---
 
 ## 📝 Recent Change Log (Last 5 merged PRs/Sessions)
-1. **2026-05-14** - M6 titles + home tab reload + today card UX: Pioneer/Committed badges, `HomeTabState.reload()` via GlobalKey on tab switch, partially-logged card tappable. Tested on Android. `flutter analyze` clean. — *Alton*
+1. **2026-05-15** - M5a + M5b: baseline computation pipeline + insight engine. `baseline_snapshots` + `insight_cards` tables, `compute-baselines` + `generate-insights` edge functions, pg_cron schedules, `BaselineService` + `InsightService` + `InsightsTab` UI. Backend tested end-to-end locally. `flutter analyze` clean. — *Alton*
+2. **2026-05-14** - M6 titles + home tab reload + today card UX: Pioneer/Committed badges, `HomeTabState.reload()` via GlobalKey on tab switch, partially-logged card tappable. Tested on Android. `flutter analyze` clean. — *Alton*
 2. **2026-05-14** - M2 pre-populate + active antibiotic display: `getTodayLog` (logging_controller), `getActiveCourse` (antibiotic_service), `DailyLogScreen` initState pre-fill + spinner + `_ActiveCourseCard`. Fixed `src/.env.public` Supabase IP. `flutter analyze` clean. — *Alton*
 2. **2026-05-14** - M2 service extraction + symptom flags + antibiotic course flow: `DailyLogService` (region, on_antibiotics, gut_watch_active), `symptom_flags_screen.dart` (7 flags, multi-select), `antibiotic_course_screen.dart` + `AntibioticService`. `flutter analyze` clean. — *Jayden*
 3. **2026-05-13** - App shell (`app_shell.dart`) + Home dashboard (`home_tab.dart`): 5-tab NavigationBar, today's log card, streak card, insights teaser, sign-out dialog. `DailyLogScreen` wired into Log tab. `flutter analyze` clean. — *Alton*

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme.dart';
 import '../../../m2_self_report/ui/screens/daily_log_screen.dart';
+import '../../../m5b_insight_engine/ui/screens/insights_tab.dart';
 import 'home_tab.dart';
 
 class AppShell extends StatefulWidget {
@@ -28,11 +29,7 @@ class _AppShellState extends State<AppShell> {
         children: [
           HomeTab(key: _homeKey, onLogTodayTap: () => _switchTo(1)),
           const DailyLogScreen(),
-          const _PlaceholderTab(
-            label: 'Insights',
-            icon: Icons.lightbulb_outline_rounded,
-            subtitle: 'Pattern cards unlock after 7 streak-worthy days.',
-          ),
+          const InsightsTab(),
           const _PlaceholderTab(
             label: 'Squad',
             icon: Icons.group_outlined,
