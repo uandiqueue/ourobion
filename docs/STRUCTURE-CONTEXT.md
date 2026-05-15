@@ -10,12 +10,21 @@ This is a monolithic repository containing the frontend mobile application, back
 
 ```
 biotope/
-├── .github/                   # GitHub Actions CI/CD workflows
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml             # Flutter analyze + test + TypeScript type check
+│   │   └── pr-review.yml      # AI prelim PR reviewer (planned)
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.yml
+│   │   └── feature_request.yml
+│   └── PULL_REQUEST_TEMPLATE.md
 ├── docs/                      # General project documentation
+│   ├── AGENT-PROTOCOL.md      # AI agent routing table, non-negotiables, PR review checklist (constant)
 │   ├── ARCHITECTURE-CONTEXT.md# System architecture and data flow rules
+│   ├── dev-workflow.md        # Full dev cycle — what AI does vs what humans must do
 │   ├── PROJECT-CONTEXT.md     # Key project principles, goals, and phases
 │   ├── STRUCTURE-CONTEXT.md   # This document
-│   └── workspace-context.md   # Variable layer tracker for team sessions
+│   └── workspace-context.md   # Variable layer tracker for team sessions (RAG-tagged)
 ├── scripts/                   # Local setup and utility scripts
 ├── shared/                    # Code shared across frontend and backend boundaries
 │   ├── SHARED-CONTEXT.md      # Shared types and integration contracts

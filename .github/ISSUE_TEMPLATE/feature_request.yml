@@ -1,0 +1,60 @@
+name: Feature Request
+description: New feature or behaviour change
+labels: ["feat"]
+body:
+  - type: dropdown
+    id: module
+    attributes:
+      label: Module
+      description: Which module does this belong to?
+      options:
+        - M1 — Core & Compliance
+        - M2 — Self-Report
+        - M5a — Baselines
+        - M5b — Insight Engine
+        - M6 — Engagement
+        - CI / Workflow
+        - Shared types
+        - New module
+    validations:
+      required: true
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Phase scope
+      description: Is this in scope for the current phase?
+      options:
+        - Phase 1 Stage 1 — current MVP
+        - Phase 1 Stage 2 — wearables
+        - Phase 1 Stage 3 — environmental
+        - Phase 2+
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What do you want to build?
+      description: Describe the feature and why it is needed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How will we know it is done?
+      placeholder: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-checks
+      options:
+        - label: "This is within the current phase scope (see `docs/PROJECT-CONTEXT.md § Current Scope`)"
+        - label: "No shared types need to change — or the team has discussed it"

@@ -4,6 +4,30 @@
 
 ---
 
+<!-- [ai-entry] -->
+## AI Agent Entry Point
+
+> This section is for AI agents. Team members: skip to [Session & Commit Conventions](#-session--commit-conventions).
+
+**Read `docs/AGENT-PROTOCOL.md` first.** It contains the routing table, non-negotiables, and PR review checklist. Come back here for current team state only.
+
+This file is the **variable layer** — it changes every session. Do not treat it as authoritative for code interfaces or architecture. For those, follow the truth hierarchy in `AGENT-PROTOCOL.md`.
+
+**Section map for targeted retrieval:**
+
+| Section tag | What it contains | Read when |
+|---|---|---|
+| `[session-conventions]` | Commit format, session rules | Starting a session, preparing a commit |
+| `[phase-status]` | Milestone table, what is done vs pending | Scoping work, checking if a feature is in-phase |
+| `[blocked-items]` | Current blockers and cross-member notes | Triaging before starting work |
+| `[team-state]` | Per-member last session + next steps | Resuming work, handing off between members |
+| `[change-log]` | Last 5 sessions of work done | Understanding what changed recently, checking if module context is stale |
+
+---
+
+---
+
+<!-- [session-conventions] -->
 ## 📋 Session & Commit Conventions
 
 ### Session Rules
@@ -34,6 +58,9 @@ Co-Authored-By: ...
 
 ---
 
+---
+
+<!-- [phase-status] -->
 ## 📅 Phase Timeline Status
 
 | Phase | Milestone | Status | Target Date |
@@ -49,6 +76,21 @@ Co-Authored-By: ...
 
 ---
 
+---
+
+<!-- [blocked-items] -->
+## 🚧 Current Blocked Items
+
+> Extracted from team notes for fast triage. Update whenever a block appears or resolves.
+
+- **Env:** Supabase WiFi IP changes on network reconnect — if connection fails, check `src/.env.public`. *(Note from Alton → Jayden, 2026-05-14)*
+- **Auth:** Google/Apple OAuth deferred until Supabase dashboard redirect URLs and platform deep-link config are ready. *(Jayden)*
+- **M1 copy:** PDPA consent copy needs legal review before any release build. *(Jayden)*
+- Nothing else currently blocking.
+
+---
+
+<!-- [team-state] -->
 ## 👥 Team Workstreams
 
 > Instructions for team members: 
@@ -88,6 +130,9 @@ Co-Authored-By: ...
 
 ---
 
+---
+
+<!-- [change-log] -->
 ## 📝 Recent Change Log (Last 5 merged PRs/Sessions)
 1. **2026-05-14** - M6 titles + home tab reload + today card UX: Pioneer/Committed badges, `HomeTabState.reload()` via GlobalKey on tab switch, partially-logged card tappable. Tested on Android. `flutter analyze` clean. — *Alton*
 2. **2026-05-14** - M2 pre-populate + active antibiotic display: `getTodayLog` (logging_controller), `getActiveCourse` (antibiotic_service), `DailyLogScreen` initState pre-fill + spinner + `_ActiveCourseCard`. Fixed `src/.env.public` Supabase IP. `flutter analyze` clean. — *Alton*
