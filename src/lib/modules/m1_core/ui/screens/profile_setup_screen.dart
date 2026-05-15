@@ -2,7 +2,7 @@ import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../impl/profile_service.dart';
-import 'home_screen.dart';
+import 'app_shell.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -49,7 +49,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       });
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const AppShell()),
         (_) => false,
       );
     } catch (e) {

@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme.dart';
 import '../../impl/auth_service.dart';
 import '../../impl/profile_service.dart';
+import '../../../m6_engagement/index.dart';
 import 'sign_in_screen.dart';
 
 class HomeTab extends StatefulWidget {
@@ -21,8 +22,7 @@ class HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
 
   String _displayName = '';
   double? _todayDqs;
-  int _streak = 0;
-  int _totalLogs = 0;
+  EngagementState _engagement = EngagementState.zero;
   bool _loading = true;
 
   @override
@@ -60,22 +60,11 @@ class HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
         .eq('log_date', today)
         .maybeSingle();
 
-    final streakRowsFuture = client
-        .from('daily_gut_rows')
-        .select('log_date')
-        .eq('user_id', userId)
-        .gte('log_completeness', 60)
-        .order('log_date', ascending: false)
-        .limit(60);
-
-    final countFuture = client
-        .from('daily_gut_rows')
-        .select('log_date')
-        .eq('user_id', userId);
+    final engagementFuture =
+        EngagementService(client).getEngagementState(userId);
 
     final todayRow = await todayRowFuture;
-    final streakRows = await streakRowsFuture;
-    final countRows = await countFuture as List<dynamic>;
+    final engagement = await engagementFuture;
 
     if (!mounted) return;
     setState(() {
@@ -83,39 +72,13 @@ class HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
       _todayDqs = todayRow != null
           ? (todayRow['log_completeness'] as num?)?.toDouble()
           : null;
-      _streak = _computeStreak(streakRows);
-      _totalLogs = countRows.length;
+      _engagement = engagement ?? EngagementState.zero;
       _loading = false;
     });
     if (animate) _anim.forward();
   }
 
   Future<void> reload() => _load(animate: false);
-
-  int _computeStreak(List<Map<String, dynamic>> rows) {
-    if (rows.isEmpty) return 0;
-    final dates = rows.map((r) {
-      final d = DateTime.parse(r['log_date'] as String);
-      return DateTime(d.year, d.month, d.day);
-    }).toList();
-
-    final now = DateTime.now();
-    final todayNorm = DateTime(now.year, now.month, now.day);
-    var check = dates.contains(todayNorm)
-        ? todayNorm
-        : todayNorm.subtract(const Duration(days: 1));
-
-    int count = 0;
-    for (final date in dates) {
-      if (date == check) {
-        count++;
-        check = check.subtract(const Duration(days: 1));
-      } else if (date.isBefore(check)) {
-        break;
-      }
-    }
-    return count;
-  }
 
   String _dateStr(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -248,23 +211,25 @@ class HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
                   // ── Streak ────────────────────────────────────────
                   _Eyebrow('YOUR STREAK'),
                   const SizedBox(height: 10),
-                  _StreakCard(streak: _streak),
+                  _StreakCard(streak: _engagement.currentStreakDays),
 
                   const SizedBox(height: 20),
 
                   // ── Titles ────────────────────────────────────────
-                  if (_totalLogs > 0) ...[
+                  if (_engagement.totalLogs > 0) ...[
                     const SizedBox(height: 20),
                     _Eyebrow('TITLES'),
                     const SizedBox(height: 10),
-                    _TitlesRow(totalLogs: _totalLogs, streak: _streak),
+                    _TitlesRow(
+                      unlockedTitles: _engagement.unlockedTitles,
+                    ),
                   ],
 
                   // ── Insights teaser ───────────────────────────────
                   const SizedBox(height: 20),
                   _Eyebrow('INSIGHTS'),
                   const SizedBox(height: 10),
-                  _InsightsTeaser(streak: _streak),
+                  _InsightsTeaser(streak: _engagement.currentStreakDays),
 
                   const SizedBox(height: 32),
                 ],
@@ -513,30 +478,36 @@ class _StreakCard extends StatelessWidget {
 }
 
 class _TitlesRow extends StatelessWidget {
-  final int totalLogs;
-  final int streak;
-  const _TitlesRow({required this.totalLogs, required this.streak});
+  final List<String> unlockedTitles;
+  const _TitlesRow({required this.unlockedTitles});
 
   @override
   Widget build(BuildContext context) {
-    final pioneer = totalLogs >= 1;
-    final committed = streak >= 7;
+    final chips = kTitleRegistry
+        .map((t) => _TitleChip(
+              label: t.label,
+              subtitle: t.subtitle,
+              icon: t.icon,
+              earned: unlockedTitles.contains(t.id),
+            ))
+        .toList();
 
-    return Row(
+    return Column(
       children: [
-        Expanded(child: _TitleChip(
-          label: 'Pioneer',
-          subtitle: 'First log recorded',
-          icon: Icons.science_outlined,
-          earned: pioneer,
-        )),
-        const SizedBox(width: 10),
-        Expanded(child: _TitleChip(
-          label: 'Committed',
-          subtitle: '7-day streak',
-          icon: Icons.local_fire_department_rounded,
-          earned: committed,
-        )),
+        for (int i = 0; i < chips.length; i += 2)
+          Padding(
+            padding: EdgeInsets.only(bottom: i + 2 < chips.length ? 10 : 0),
+            child: Row(
+              children: [
+                Expanded(child: chips[i]),
+                const SizedBox(width: 10),
+                if (i + 1 < chips.length)
+                  Expanded(child: chips[i + 1])
+                else
+                  const Expanded(child: SizedBox()),
+              ],
+            ),
+          ),
       ],
     );
   }

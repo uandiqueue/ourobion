@@ -1,9 +1,11 @@
+import 'dart:async' show unawaited;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme.dart';
 import '../../impl/antibiotic_service.dart';
 import '../../impl/logging_controller.dart';
+import '../../../m6_engagement/index.dart';
 import 'antibiotic_course_screen.dart';
 import 'symptom_flags_screen.dart';
 import 'urine_color_screen.dart';
@@ -195,6 +197,9 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
           notes: _notesCtrl.text,
           logCompleteness: _dqs.toDouble(),
         ),
+      );
+      unawaited(
+        EngagementService(client).updateOnLogWrite(userId, _logDate, _dqs.toDouble()),
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
