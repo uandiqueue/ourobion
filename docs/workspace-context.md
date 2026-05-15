@@ -43,7 +43,7 @@ Co-Authored-By: ...
 | Phase 1 Stage 1 MVP | M2 Self-Report Logging UI | ✅ Complete (all logging UI done, home tab wired, titles, reload fix) | - |
 | Phase 1 Stage 1 MVP | M5a Baseline Computation Engine | ✅ Complete | - |
 | Phase 1 Stage 1 MVP | M5b Insight Generation | ✅ Complete | - |
-| Phase 1 Stage 1 MVP | M6 Engagement Systems | ⏳ Pending | TBD |
+| Phase 1 Stage 1 MVP | M6 Engagement Systems | ✅ Complete (streak, DQS, 4 titles, insights teaser; `dqs_7day_avg` + `longest_streak` display deferred) | - |
 | Phase 1 Stage 2 | Passive Health (Wearables) | 🗓️ Planned | TBD |
 | Phase 1 Stage 3 | Environmental Modifiers | 🗓️ Planned | TBD |
 
@@ -74,15 +74,18 @@ Co-Authored-By: ...
 ### Member 2: [Alton]
 **Focus Area:** M2 (Self-Report Logging) + Flutter UI
 *   **Last Session Accomplished (2026-05-15):**
+    *   M6 complete — `engagement_state` migration (RLS), `EngagementService` (streak computation, title unlock, DQS 7-day avg, total logs), `updateOnLogWrite` wired into `DailyLogScreen` save. ✅
+    *   Home tab updated — streak card, 4 title chips (Pioneer/Committed/Consistent/Explorer), insights teaser with progress bar, today card DQS display. ✅
     *   M5a complete — `baseline_snapshots` migration, `compute-baselines` edge function (30-day rolling stats, 10 metrics, trend/confidence), pg_cron at 18:00 UTC, Flutter `BaselineService`. ✅
     *   M5b complete — `insight_cards` migration, `generate-insights` edge function (6 MVP descriptive rules), pg_cron at 18:30 UTC, Flutter `InsightService` + `InsightsTab` UI wired into app shell. ✅
-    *   Migration naming fixed — renamed to YYYYMMDDHHMMSS format to avoid duplicate version key errors. ✅
-    *   Backend tested end-to-end locally — 10 baseline snapshots + 3 insight cards generated correctly against test data. ✅
     *   `flutter analyze` passes with no issues. ✅
 *   **Next Session Goals:**
-    *   M6: Full engagement features (beyond early titles already done).
-    *   Test Insights tab UI on phone once nightly job has run against real account data.
+    *   Test M6 on device — streak increments, title unlock, today card state transitions, home tab reload after save.
+    *   Test Insights tab UI once nightly pg_cron job has run against real account data.
+    *   Minor: surface `dqs_7day_avg` and `longest_streak_days` on home tab (computed + stored, not yet displayed).
+    *   M1: PDPA consent copy polish if Jayden hasn't completed it.
 *   **Notes / Blocked by / Needs:**
+    *   `updateOnLogWrite` is `unawaited` — engagement state update is fire-and-forget; silent failure on network loss will leave home tab stale until next reload.
     *   Note for Jayden: WiFi IP changes on network reconnect — remind team to check `src/.env.public` if Supabase connection fails.
     *   pg_cron migrations require `app.supabase_url` and `app.service_role_key` set in Supabase dashboard (Settings → Database → Configuration) before applying to production.
     *   M2 UI follows Biotope design system — see `docs/ui-context/UI-DESIGN-CONTEXT.md`.
@@ -90,7 +93,8 @@ Co-Authored-By: ...
 ---
 
 ## 📝 Recent Change Log (Last 5 merged PRs/Sessions)
-1. **2026-05-15** - M5a + M5b: baseline computation pipeline + insight engine. `baseline_snapshots` + `insight_cards` tables, `compute-baselines` + `generate-insights` edge functions, pg_cron schedules, `BaselineService` + `InsightService` + `InsightsTab` UI. Backend tested end-to-end locally. `flutter analyze` clean. — *Alton*
+1. **2026-05-15** - M6 engagement: `engagement_state` migration + RLS, `EngagementService` (streak, titles, DQS avg, total logs), `updateOnLogWrite` wired on save, home tab streak/titles/insights teaser UI. `flutter analyze` clean. — *Alton*
+2. **2026-05-15** - M5a + M5b: baseline computation pipeline + insight engine. `baseline_snapshots` + `insight_cards` tables, `compute-baselines` + `generate-insights` edge functions, pg_cron schedules, `BaselineService` + `InsightService` + `InsightsTab` UI. Backend tested end-to-end locally. `flutter analyze` clean. — *Alton*
 2. **2026-05-14** - M6 titles + home tab reload + today card UX: Pioneer/Committed badges, `HomeTabState.reload()` via GlobalKey on tab switch, partially-logged card tappable. Tested on Android. `flutter analyze` clean. — *Alton*
 2. **2026-05-14** - M2 pre-populate + active antibiotic display: `getTodayLog` (logging_controller), `getActiveCourse` (antibiotic_service), `DailyLogScreen` initState pre-fill + spinner + `_ActiveCourseCard`. Fixed `src/.env.public` Supabase IP. `flutter analyze` clean. — *Alton*
 2. **2026-05-14** - M2 service extraction + symptom flags + antibiotic course flow: `DailyLogService` (region, on_antibiotics, gut_watch_active), `symptom_flags_screen.dart` (7 flags, multi-select), `antibiotic_course_screen.dart` + `AntibioticService`. `flutter analyze` clean. — *Jayden*
