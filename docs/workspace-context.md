@@ -77,11 +77,12 @@ Co-Authored-By: ...
     *   Surfaced `longest_streak_days` and `dqs_7day_avg` on home tab streak card — expanded `_StreakCard` to show "Personal best" + "7-day avg" stat chips below a divider; stat row hidden for new users with no data. ✅
     *   Added `_StatChip` widget to `home_tab.dart`. ✅
     *   Fixed `src/.env.public` Supabase IP (192.168.4.53 → 192.168.4.52) — local only, gitignored. ✅
-    *   Partial device test on Samsung A165F — 7-day streak visible and rendering correctly. `flutter analyze` clean. ✅
+    *   M6 device test on Samsung A165F — streak display, title unlock, today card transitions, home tab reload after save. All passing. ✅
+    *   M1 PDPA consent copy polish — title, purpose statement, observational framing, "daily signals", user rights note. ✅
+    *   `flutter analyze` clean. ✅
 *   **Next Session Goals:**
-    *   Complete M6 device test — title unlock, today card state transitions, home tab reload after save.
-    *   Test Insights tab UI once nightly pg_cron job has run against real account data.
-    *   M1: PDPA consent copy polish if Jayden hasn't completed it.
+    *   Test Insights tab — back-fill 7 streak-worthy rows via Studio SQL, invoke `generate-insights` edge function manually, verify cards appear.
+    *   Stage 2 planning — M3 Passive Health / wearables (team discussion).
 *   **Notes / Blocked by / Needs:**
     *   `updateOnLogWrite` is `unawaited` — engagement state update is fire-and-forget; silent failure on network loss will leave home tab stale until next reload.
     *   Note for Jayden: WiFi IP changes on network reconnect — remind team to check `src/.env.public` if Supabase connection fails.
@@ -91,7 +92,8 @@ Co-Authored-By: ...
 ---
 
 ## 📝 Recent Change Log (Last 5 merged PRs/Sessions)
-1. **2026-05-27** - M6 home tab: surface `longest_streak_days` + `dqs_7day_avg` as stat chips in streak card (`_StatChip` widget, stat row hidden when no data). Partial device test on Samsung A165F. `flutter analyze` clean. — *Alton*
+1. **2026-05-27** - M1 PDPA consent copy polish: title, purpose + observational framing, "daily signals", user rights note. M6 device test passed. `flutter analyze` clean. — *Alton*
+2. **2026-05-27** - M6 home tab: surface `longest_streak_days` + `dqs_7day_avg` as stat chips in streak card (`_StatChip` widget, stat row hidden when no data). `flutter analyze` clean. — *Alton*
 2. **2026-05-15** - M6 engagement: `engagement_state` migration + RLS, `EngagementService` (streak, titles, DQS avg, total logs), `updateOnLogWrite` wired on save, home tab streak/titles/insights teaser UI. `flutter analyze` clean. — *Alton*
 3. **2026-05-15** - M5a + M5b: baseline computation pipeline + insight engine. `baseline_snapshots` + `insight_cards` tables, `compute-baselines` + `generate-insights` edge functions, pg_cron schedules, `BaselineService` + `InsightService` + `InsightsTab` UI. Backend tested end-to-end locally. `flutter analyze` clean. — *Alton*
 4. **2026-05-14** - M6 titles + home tab reload + today card UX: Pioneer/Committed badges, `HomeTabState.reload()` via GlobalKey on tab switch, partially-logged card tappable. Tested on Android. `flutter analyze` clean. — *Alton*
