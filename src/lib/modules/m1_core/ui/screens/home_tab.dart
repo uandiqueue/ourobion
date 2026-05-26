@@ -211,7 +211,11 @@ class HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
                   // ── Streak ────────────────────────────────────────
                   _Eyebrow('YOUR STREAK'),
                   const SizedBox(height: 10),
-                  _StreakCard(streak: _engagement.currentStreakDays),
+                  _StreakCard(
+                    streak: _engagement.currentStreakDays,
+                    longestStreak: _engagement.longestStreakDays,
+                    dqs7DayAvg: _engagement.dqs7DayAvg,
+                  ),
 
                   const SizedBox(height: 20),
 
@@ -409,10 +413,17 @@ class _TodayCard extends StatelessWidget {
 
 class _StreakCard extends StatelessWidget {
   final int streak;
-  const _StreakCard({required this.streak});
+  final int longestStreak;
+  final double? dqs7DayAvg;
+  const _StreakCard({
+    required this.streak,
+    required this.longestStreak,
+    required this.dqs7DayAvg,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final showStats = longestStreak > 0 || dqs7DayAvg != null;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -427,50 +438,80 @@ class _StreakCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: streak > 0
-                  ? BiotopeColors.primaryFixed
-                  : BiotopeColors.surfaceContainer,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.local_fire_department_rounded,
-              color: streak > 0 ? BiotopeColors.primary : BiotopeColors.outline,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Text(
-                streak > 0 ? '$streak day${streak == 1 ? '' : 's'}' : 'No streak yet',
-                style: GoogleFonts.manrope(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.2,
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
                   color: streak > 0
-                      ? BiotopeColors.onSurface
-                      : BiotopeColors.outline,
+                      ? BiotopeColors.primaryFixed
+                      : BiotopeColors.surfaceContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.local_fire_department_rounded,
+                  color: streak > 0 ? BiotopeColors.primary : BiotopeColors.outline,
+                  size: 22,
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                streak > 0
-                    ? 'consecutive streak-worthy days'
-                    : 'Log 60+ pts to start your streak',
-                style: GoogleFonts.manrope(
-                  fontSize: 12,
-                  color: BiotopeColors.outline,
-                ),
+              const SizedBox(width: 14),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    streak > 0 ? '$streak day${streak == 1 ? '' : 's'}' : 'No streak yet',
+                    style: GoogleFonts.manrope(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.2,
+                      color: streak > 0
+                          ? BiotopeColors.onSurface
+                          : BiotopeColors.outline,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    streak > 0
+                        ? 'consecutive streak-worthy days'
+                        : 'Log 60+ pts to start your streak',
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: BiotopeColors.outline,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
+          if (showStats) ...[
+            const SizedBox(height: 16),
+            const Divider(height: 1, color: BiotopeColors.outlineVariant),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                if (longestStreak > 0)
+                  Expanded(
+                    child: _StatChip(
+                      label: 'Personal best',
+                      value: '$longestStreak day${longestStreak == 1 ? '' : 's'}',
+                    ),
+                  ),
+                if (longestStreak > 0 && dqs7DayAvg != null)
+                  const SizedBox(width: 10),
+                if (dqs7DayAvg != null)
+                  Expanded(
+                    child: _StatChip(
+                      label: '7-day avg',
+                      value: '${dqs7DayAvg!.round()} pts',
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -572,6 +613,46 @@ class _TitleChip extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  final String label;
+  final String value;
+  const _StatChip({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: BiotopeColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: GoogleFonts.manrope(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: BiotopeColors.outline,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            value,
+            style: GoogleFonts.manrope(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: BiotopeColors.onSurface,
             ),
           ),
         ],
