@@ -44,7 +44,7 @@ Co-Authored-By: ...
 | Phase 1 Stage 1 MVP | M5a Baseline Computation Engine | ✅ Complete | - |
 | Phase 1 Stage 1 MVP | M5b Insight Generation | ✅ Complete | - |
 | Phase 1 Stage 1 MVP | M6 Engagement Systems | ✅ Complete (streak, DQS, 4 titles, insights teaser; `dqs_7day_avg` + `longest_streak` display deferred) | - |
-| Phase 1 Stage 2 | Passive Health (Wearables) | 🗓️ Planned | TBD |
+| Phase 1 Stage 2 | Passive Health (Wearables) | 🔨 In Progress (M3 planned: HealthKit + Health Connect; 6 signals: resting HR, HRV, sleep, SpO2, body temp, steps; pull-on-log-open; `wearable_daily` schema agreed) | TBD |
 | Phase 1 Stage 3 | Environmental Modifiers | 🗓️ Planned | TBD |
 
 ---
@@ -79,12 +79,14 @@ Co-Authored-By: ...
     *   Fixed `src/.env.public` Supabase IP (192.168.4.53 → 192.168.4.52) — local only, gitignored. ✅
     *   M6 device test on Samsung A165F — streak display, title unlock, today card transitions, home tab reload after save. All passing. ✅
     *   M1 PDPA consent copy polish — title, purpose statement, observational framing, "daily signals", user rights note. ✅
+    *   M3 Stage 2 planning complete — HealthKit + Health Connect; 6 signals (resting HR, HRV, sleep, SpO2, body temp, steps); pull-on-log-open sync; `wearable_daily` schema agreed; ownership split with Jayden. ✅
     *   `flutter analyze` clean. ✅
 *   **Next Session Goals:**
-    *   Test Insights tab — back-fill 7 streak-worthy rows via Studio SQL, invoke `generate-insights` edge function manually, verify cards appear.
-    *   Stage 2 planning — M3 Passive Health / wearables (team discussion).
+    *   M3 implementation — Flutter wearable integration (HealthKit + Health Connect), `wearable_daily` upsert on log screen open. Write `WearableService` + DB migration.
+    *   Fix `updateOnLogWrite` — make engagement state update awaited so silent network failures don't leave home tab stale.
 *   **Notes / Blocked by / Needs:**
     *   `updateOnLogWrite` is `unawaited` — engagement state update is fire-and-forget; silent failure on network loss will leave home tab stale until next reload.
+    *   M3 Stage 2 plan agreed (2026-05-27): HealthKit + Health Connect; 6 signals = resting_hr_bpm, hrv_sdnn_ms, sleep_duration_min, spo2_pct, body_temp_c, step_count; sync = pull on log screen open; schema = `wearable_daily` (user_id, date, [6 signal cols], source, synced_at) PK (user_id, date) upsert; all signals nullable; M5a compute-baselines to be extended for 6 new metrics; Jayden owns PDPA consent update (M1).
     *   Note for Jayden: WiFi IP changes on network reconnect — remind team to check `src/.env.public` if Supabase connection fails.
     *   pg_cron migrations require `app.supabase_url` and `app.service_role_key` set in Supabase dashboard (Settings → Database → Configuration) before applying to production.
     *   M2 UI follows Biotope design system — see `docs/ui-context/UI-DESIGN-CONTEXT.md`.
@@ -92,8 +94,9 @@ Co-Authored-By: ...
 ---
 
 ## 📝 Recent Change Log (Last 5 merged PRs/Sessions)
-1. **2026-05-27** - M1 PDPA consent copy polish: title, purpose + observational framing, "daily signals", user rights note. M6 device test passed. `flutter analyze` clean. — *Alton*
-2. **2026-05-27** - M6 home tab: surface `longest_streak_days` + `dqs_7day_avg` as stat chips in streak card (`_StatChip` widget, stat row hidden when no data). `flutter analyze` clean. — *Alton*
+1. **2026-05-27** - M3 Stage 2 planning: HealthKit + Health Connect; 6 signals (resting HR, HRV, sleep, SpO2, body temp, steps); pull-on-log-open; `wearable_daily` schema agreed; Alton owns Flutter integration, Jayden owns PDPA consent update. — *Alton*
+2. **2026-05-27** - M1 PDPA consent copy polish: title, purpose + observational framing, "daily signals", user rights note. M6 device test passed. `flutter analyze` clean. — *Alton*
+3. **2026-05-27** - M6 home tab: surface `longest_streak_days` + `dqs_7day_avg` as stat chips in streak card (`_StatChip` widget, stat row hidden when no data). `flutter analyze` clean. — *Alton*
 2. **2026-05-15** - M6 engagement: `engagement_state` migration + RLS, `EngagementService` (streak, titles, DQS avg, total logs), `updateOnLogWrite` wired on save, home tab streak/titles/insights teaser UI. `flutter analyze` clean. — *Alton*
 3. **2026-05-15** - M5a + M5b: baseline computation pipeline + insight engine. `baseline_snapshots` + `insight_cards` tables, `compute-baselines` + `generate-insights` edge functions, pg_cron schedules, `BaselineService` + `InsightService` + `InsightsTab` UI. Backend tested end-to-end locally. `flutter analyze` clean. — *Alton*
 4. **2026-05-14** - M6 titles + home tab reload + today card UX: Pioneer/Committed badges, `HomeTabState.reload()` via GlobalKey on tab switch, partially-logged card tappable. Tested on Android. `flutter analyze` clean. — *Alton*
