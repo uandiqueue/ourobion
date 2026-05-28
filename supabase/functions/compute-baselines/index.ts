@@ -3,7 +3,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-const METRIC_KEYS = [
+const GUT_METRIC_KEYS = [
   "urine_colour",
   "stool_form",
   "stool_count",
@@ -16,22 +16,14 @@ const METRIC_KEYS = [
   "log_completeness",
 ] as const
 
-type MetricKey = typeof METRIC_KEYS[number]
-
-interface GutRow {
-  user_id: string
-  log_date: string
-  urine_colour: number | null
-  stool_form: number | null
-  stool_count: number | null
-  stool_variability: number | null
-  outside_meals: number | null
-  mosquito_bites: number | null
-  energy_score: number | null
-  mood_score: number | null
-  gut_comfort_score: number | null
-  log_completeness: number
-}
+const WEARABLE_METRIC_KEYS = [
+  "resting_hr_bpm",
+  "hrv_sdnn_ms",
+  "sleep_duration_min",
+  "spo2_pct",
+  "body_temp_c",
+  "step_count",
+] as const
 
 type Trend = "rising" | "falling" | "stable" | null
 type Confidence = "insufficient" | "low" | "medium" | "high"
@@ -48,7 +40,7 @@ function stdDev(values: number[]): number {
   return Math.sqrt(values.reduce((sum, v) => sum + (v - mu) ** 2, 0) / values.length)
 }
 
-// Values arrive sorted oldest → newest (ordered by log_date asc).
+// Values arrive sorted oldest → newest (ordered by date asc).
 // Trend is significant when the shift between the early and late halves
 // exceeds half a standard deviation — scale-agnostic across all metrics.
 function computeTrend(values: number[]): Trend {
@@ -73,6 +65,50 @@ function round3(n: number): number {
   return Math.round(n * 1000) / 1000
 }
 
+function groupByUser(rows: Record<string, unknown>[]): Map<string, Record<string, unknown>[]> {
+  const map = new Map<string, Record<string, unknown>[]>()
+  for (const row of rows) {
+    const uid = row.user_id as string
+    const list = map.get(uid) ?? []
+    list.push(row)
+    map.set(uid, list)
+  }
+  return map
+}
+
+function buildSnapshots(
+  byUser: Map<string, Record<string, unknown>[]>,
+  metricKeys: readonly string[],
+  dataSource: string,
+  computedAt: string,
+): object[] {
+  const snapshots: object[] = []
+  for (const [userId, userRows] of byUser) {
+    for (const metric of metricKeys) {
+      const values = userRows
+        .map((r) => r[metric])
+        .filter((v): v is number => typeof v === "number")
+
+      if (values.length === 0) continue
+
+      snapshots.push({
+        user_id: userId,
+        metric_key: metric,
+        computed_at: computedAt,
+        days_of_data: values.length,
+        mean: round3(avg(values)),
+        std_dev: round3(stdDev(values)),
+        min: Math.min(...values),
+        max: Math.max(...values),
+        trend: computeTrend(values),
+        confidence: computeConfidence(values.length),
+        data_sources: [dataSource],
+      })
+    }
+  }
+  return snapshots
+}
+
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 // 30-day lookback gives users a path to 'medium' confidence after two weeks
@@ -90,61 +126,44 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey!)
 
-  // Fetch all gut rows across all users within the lookback window.
   const since = new Date()
   since.setDate(since.getDate() - LOOKBACK_DAYS)
   const sinceDate = since.toISOString().split("T")[0]
 
-  const { data: rows, error: fetchError } = await supabase
-    .from("daily_gut_rows")
-    .select(
-      "user_id, log_date, urine_colour, stool_form, stool_count, stool_variability, " +
-      "outside_meals, mosquito_bites, energy_score, mood_score, gut_comfort_score, log_completeness"
-    )
-    .gte("log_date", sinceDate)
-    .order("log_date", { ascending: true })
+  // Fetch gut and wearable rows in parallel.
+  const [gutResult, wearableResult] = await Promise.all([
+    supabase
+      .from("daily_gut_rows")
+      .select(
+        "user_id, log_date, urine_colour, stool_form, stool_count, stool_variability, " +
+        "outside_meals, mosquito_bites, energy_score, mood_score, gut_comfort_score, log_completeness"
+      )
+      .gte("log_date", sinceDate)
+      .order("log_date", { ascending: true }),
+    supabase
+      .from("wearable_daily")
+      .select("user_id, date, resting_hr_bpm, hrv_sdnn_ms, sleep_duration_min, spo2_pct, body_temp_c, step_count")
+      .gte("date", sinceDate)
+      .order("date", { ascending: true }),
+  ])
 
-  if (fetchError) {
-    console.error("fetch error", fetchError)
-    return new Response(JSON.stringify({ error: fetchError.message }), { status: 500 })
+  if (gutResult.error) {
+    console.error("gut fetch error", gutResult.error)
+    return new Response(JSON.stringify({ error: gutResult.error.message }), { status: 500 })
+  }
+  if (wearableResult.error) {
+    console.error("wearable fetch error", wearableResult.error)
+    return new Response(JSON.stringify({ error: wearableResult.error.message }), { status: 500 })
   }
 
-  // Group rows by user.
-  const byUser = new Map<string, GutRow[]>()
-  for (const row of rows ?? []) {
-    const list = byUser.get(row.user_id) ?? []
-    list.push(row as GutRow)
-    byUser.set(row.user_id, list)
-  }
+  const gutByUser = groupByUser(gutResult.data ?? [])
+  const wearableByUser = groupByUser(wearableResult.data ?? [])
 
-  // Build one snapshot record per (user, metric) that has at least one value.
-  const snapshots: object[] = []
   const computedAt = new Date().toISOString()
-
-  for (const [userId, userRows] of byUser) {
-    for (const metric of METRIC_KEYS) {
-      // Preserve chronological order (rows already sorted by log_date asc).
-      const values: number[] = userRows
-        .map((r) => r[metric as MetricKey])
-        .filter((v): v is number => v !== null && v !== undefined)
-
-      if (values.length === 0) continue
-
-      snapshots.push({
-        user_id: userId,
-        metric_key: metric,
-        computed_at: computedAt,
-        days_of_data: values.length,
-        mean: round3(avg(values)),
-        std_dev: round3(stdDev(values)),
-        min: Math.min(...values),
-        max: Math.max(...values),
-        trend: computeTrend(values),
-        confidence: computeConfidence(values.length),
-        data_sources: ["self_report"],
-      })
-    }
-  }
+  const snapshots = [
+    ...buildSnapshots(gutByUser, GUT_METRIC_KEYS, "self_report", computedAt),
+    ...buildSnapshots(wearableByUser, WEARABLE_METRIC_KEYS, "wearable", computedAt),
+  ]
 
   if (snapshots.length > 0) {
     const { error: upsertError } = await supabase
@@ -157,8 +176,9 @@ Deno.serve(async (req) => {
     }
   }
 
+  const uniqueUsers = new Set([...gutByUser.keys(), ...wearableByUser.keys()]).size
   return new Response(
-    JSON.stringify({ ok: true, users: byUser.size, snapshots: snapshots.length }),
+    JSON.stringify({ ok: true, users: uniqueUsers, snapshots: snapshots.length }),
     { headers: { "Content-Type": "application/json" } },
   )
 })

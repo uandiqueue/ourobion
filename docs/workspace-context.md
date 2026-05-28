@@ -79,12 +79,11 @@ Co-Authored-By: ...
     *   `wearable_daily` DB migration written + applied locally (`20260528100000_create_m3_wearable_daily.sql`); RLS policies set. ✅
     *   Platform config: `NSHealthShareUsageDescription` / `NSHealthUpdateUsageDescription` added to `Info.plist`; 6 Health Connect read permissions + rationale activity + `activity-alias` added to `AndroidManifest.xml`. ✅
     *   Wired `WearableService.syncToday` into `DailyLogScreen._loadTodayData` — fire-and-forget via `.ignore()`; does not block screen load. ✅
-    *   `m3_passive_health/index.dart` updated to export `WearableService`. ✅
+    *   M5a extended — `compute-baselines` edge function now fetches `wearable_daily` in parallel with gut rows; `buildSnapshots` + `groupByUser` helpers extracted; 6 wearable metrics compute mean/std_dev/trend/confidence with `data_sources: ['wearable']`. Tested locally — runs clean. ✅
     *   `flutter analyze` clean. ✅
 *   **Next Session Goals:**
     *   iOS: Add HealthKit capability in Xcode (Runner → Signing & Capabilities → + HealthKit) — required before iOS wearable sync can run.
     *   End-to-end wearable test on real device once wearable is paired and Health Connect / HealthKit has data.
-    *   M5a: Extend `compute-baselines` edge function to cover 6 new `wearable_daily` metrics.
 *   **Notes / Blocked by / Needs:**
     *   iOS HealthKit entitlement must be added manually in Xcode — Info.plist strings are in place but the capability is not active until the entitlement is toggled.
     *   HRV SDNN is iOS-only; Android Health Connect exposes RMSSD only, so `hrv_sdnn_ms` will stay null on Android.
@@ -96,7 +95,8 @@ Co-Authored-By: ...
 ---
 
 ## 📝 Recent Change Log (Last 5 merged PRs/Sessions)
-1. **2026-05-28** - M3 Flutter integration: `WearableService` (HealthKit + Health Connect, 6 signals), `wearable_daily` migration + RLS applied, platform config (Info.plist + AndroidManifest), wired into `DailyLogScreen`. Fixed `updateOnLogWrite` (unawaited → await). `flutter analyze` clean. — *Alton*
+1. **2026-05-28** - M5a extended: `compute-baselines` now fetches `wearable_daily` in parallel; `buildSnapshots` + `groupByUser` helpers; 6 wearable metrics → `baseline_snapshots` with `data_sources: ['wearable']`. Tested locally. — *Alton*
+2. **2026-05-28** - M3 Flutter integration: `WearableService` (HealthKit + Health Connect, 6 signals), `wearable_daily` migration + RLS applied, platform config (Info.plist + AndroidManifest), wired into `DailyLogScreen`. Fixed `updateOnLogWrite` (unawaited → await). `flutter analyze` clean. — *Alton*
 2. **2026-05-27** - M3 Stage 2 planning: HealthKit + Health Connect; 6 signals (resting HR, HRV, sleep, SpO2, body temp, steps); pull-on-log-open; `wearable_daily` schema agreed; Alton owns Flutter integration, Jayden owns PDPA consent update. — *Alton*
 3. **2026-05-27** - M1 PDPA consent copy polish: title, purpose + observational framing, "daily signals", user rights note. M6 device test passed. `flutter analyze` clean. — *Alton*
 4. **2026-05-27** - M6 home tab: surface `longest_streak_days` + `dqs_7day_avg` as stat chips in streak card (`_StatChip` widget, stat row hidden when no data). `flutter analyze` clean. — *Alton*
