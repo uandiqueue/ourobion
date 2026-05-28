@@ -1,10 +1,10 @@
-import 'dart:async' show unawaited;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme.dart';
 import '../../impl/antibiotic_service.dart';
 import '../../impl/logging_controller.dart';
+import '../../../m3_passive_health/index.dart';
 import '../../../m6_engagement/index.dart';
 import 'antibiotic_course_screen.dart';
 import 'symptom_flags_screen.dart';
@@ -109,6 +109,7 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
 
     final rowFuture = DailyLogService(client).getTodayLog(userId, date);
     final courseFuture = AntibioticService(client).getActiveCourse(userId);
+    WearableService(client).syncToday(userId).ignore();
     final row = await rowFuture;
     final course = await courseFuture;
 
@@ -198,9 +199,7 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
           logCompleteness: _dqs.toDouble(),
         ),
       );
-      unawaited(
-        EngagementService(client).updateOnLogWrite(userId, _logDate, _dqs.toDouble()),
-      );
+      await EngagementService(client).updateOnLogWrite(userId, _logDate, _dqs.toDouble());
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

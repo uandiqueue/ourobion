@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Biotope reads your resting heart rate, HRV, sleep, blood oxygen, body temperature, and step count to build personalised health patterns.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Biotope does not write health data.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

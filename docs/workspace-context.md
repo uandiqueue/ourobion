@@ -44,7 +44,7 @@ Co-Authored-By: ...
 | Phase 1 Stage 1 MVP | M5a Baseline Computation Engine | ✅ Complete | - |
 | Phase 1 Stage 1 MVP | M5b Insight Generation | ✅ Complete | - |
 | Phase 1 Stage 1 MVP | M6 Engagement Systems | ✅ Complete (streak, DQS, 4 titles, insights teaser; `dqs_7day_avg` + `longest_streak` display deferred) | - |
-| Phase 1 Stage 2 | Passive Health (Wearables) | 🔨 In Progress (M3 planned: HealthKit + Health Connect; 6 signals: resting HR, HRV, sleep, SpO2, body temp, steps; pull-on-log-open; `wearable_daily` schema agreed) | TBD |
+| Phase 1 Stage 2 | Passive Health (Wearables) | 🔨 In Progress (M3 Flutter integration done: `WearableService`, `wearable_daily` migration applied, platform config set; iOS HealthKit entitlement pending Xcode; end-to-end test pending real wearable) | TBD |
 | Phase 1 Stage 3 | Environmental Modifiers | 🗓️ Planned | TBD |
 
 ---
@@ -72,21 +72,23 @@ Co-Authored-By: ...
     *   Nothing blocking.
 
 ### Member 2: [Alton]
-**Focus Area:** M2 (Self-Report Logging) + Flutter UI
-*   **Last Session Accomplished (2026-05-27):**
-    *   Surfaced `longest_streak_days` and `dqs_7day_avg` on home tab streak card — expanded `_StreakCard` to show "Personal best" + "7-day avg" stat chips below a divider; stat row hidden for new users with no data. ✅
-    *   Added `_StatChip` widget to `home_tab.dart`. ✅
-    *   Fixed `src/.env.public` Supabase IP (192.168.4.53 → 192.168.4.52) — local only, gitignored. ✅
-    *   M6 device test on Samsung A165F — streak display, title unlock, today card transitions, home tab reload after save. All passing. ✅
-    *   M1 PDPA consent copy polish — title, purpose statement, observational framing, "daily signals", user rights note. ✅
-    *   M3 Stage 2 planning complete — HealthKit + Health Connect; 6 signals (resting HR, HRV, sleep, SpO2, body temp, steps); pull-on-log-open sync; `wearable_daily` schema agreed; ownership split with Jayden. ✅
+**Focus Area:** M2 (Self-Report Logging) + Flutter UI + M3 Wearables
+*   **Last Session Accomplished (2026-05-28):**
+    *   Fixed `updateOnLogWrite` — removed `unawaited()`, now properly `await`ed in `_save()`; dropped unused `dart:async` import. Silent engagement update failures will now surface to the user. ✅
+    *   M3 Flutter integration — `WearableService` + `WearableReading` model (`m3_passive_health/impl/wearable_service.dart`); HealthKit (6 signals) + Health Connect (5 signals, no HRV SDNN) per platform. ✅
+    *   `wearable_daily` DB migration written + applied locally (`20260528100000_create_m3_wearable_daily.sql`); RLS policies set. ✅
+    *   Platform config: `NSHealthShareUsageDescription` / `NSHealthUpdateUsageDescription` added to `Info.plist`; 6 Health Connect read permissions + rationale activity + `activity-alias` added to `AndroidManifest.xml`. ✅
+    *   Wired `WearableService.syncToday` into `DailyLogScreen._loadTodayData` — fire-and-forget via `.ignore()`; does not block screen load. ✅
+    *   `m3_passive_health/index.dart` updated to export `WearableService`. ✅
     *   `flutter analyze` clean. ✅
 *   **Next Session Goals:**
-    *   M3 implementation — Flutter wearable integration (HealthKit + Health Connect), `wearable_daily` upsert on log screen open. Write `WearableService` + DB migration.
-    *   Fix `updateOnLogWrite` — make engagement state update awaited so silent network failures don't leave home tab stale.
+    *   iOS: Add HealthKit capability in Xcode (Runner → Signing & Capabilities → + HealthKit) — required before iOS wearable sync can run.
+    *   End-to-end wearable test on real device once wearable is paired and Health Connect / HealthKit has data.
+    *   M5a: Extend `compute-baselines` edge function to cover 6 new `wearable_daily` metrics.
 *   **Notes / Blocked by / Needs:**
-    *   `updateOnLogWrite` is `unawaited` — engagement state update is fire-and-forget; silent failure on network loss will leave home tab stale until next reload.
-    *   M3 Stage 2 plan agreed (2026-05-27): HealthKit + Health Connect; 6 signals = resting_hr_bpm, hrv_sdnn_ms, sleep_duration_min, spo2_pct, body_temp_c, step_count; sync = pull on log screen open; schema = `wearable_daily` (user_id, date, [6 signal cols], source, synced_at) PK (user_id, date) upsert; all signals nullable; M5a compute-baselines to be extended for 6 new metrics; Jayden owns PDPA consent update (M1).
+    *   iOS HealthKit entitlement must be added manually in Xcode — Info.plist strings are in place but the capability is not active until the entitlement is toggled.
+    *   HRV SDNN is iOS-only; Android Health Connect exposes RMSSD only, so `hrv_sdnn_ms` will stay null on Android.
+    *   Wearable sync is best-effort (`.ignore()`) — permission denial or missing Health Connect silently no-ops; `wearable_daily` row is only written if at least one signal is available.
     *   Note for Jayden: WiFi IP changes on network reconnect — remind team to check `src/.env.public` if Supabase connection fails.
     *   pg_cron migrations require `app.supabase_url` and `app.service_role_key` set in Supabase dashboard (Settings → Database → Configuration) before applying to production.
     *   M2 UI follows Biotope design system — see `docs/ui-context/UI-DESIGN-CONTEXT.md`.
@@ -94,9 +96,10 @@ Co-Authored-By: ...
 ---
 
 ## 📝 Recent Change Log (Last 5 merged PRs/Sessions)
-1. **2026-05-27** - M3 Stage 2 planning: HealthKit + Health Connect; 6 signals (resting HR, HRV, sleep, SpO2, body temp, steps); pull-on-log-open; `wearable_daily` schema agreed; Alton owns Flutter integration, Jayden owns PDPA consent update. — *Alton*
-2. **2026-05-27** - M1 PDPA consent copy polish: title, purpose + observational framing, "daily signals", user rights note. M6 device test passed. `flutter analyze` clean. — *Alton*
-3. **2026-05-27** - M6 home tab: surface `longest_streak_days` + `dqs_7day_avg` as stat chips in streak card (`_StatChip` widget, stat row hidden when no data). `flutter analyze` clean. — *Alton*
+1. **2026-05-28** - M3 Flutter integration: `WearableService` (HealthKit + Health Connect, 6 signals), `wearable_daily` migration + RLS applied, platform config (Info.plist + AndroidManifest), wired into `DailyLogScreen`. Fixed `updateOnLogWrite` (unawaited → await). `flutter analyze` clean. — *Alton*
+2. **2026-05-27** - M3 Stage 2 planning: HealthKit + Health Connect; 6 signals (resting HR, HRV, sleep, SpO2, body temp, steps); pull-on-log-open; `wearable_daily` schema agreed; Alton owns Flutter integration, Jayden owns PDPA consent update. — *Alton*
+3. **2026-05-27** - M1 PDPA consent copy polish: title, purpose + observational framing, "daily signals", user rights note. M6 device test passed. `flutter analyze` clean. — *Alton*
+4. **2026-05-27** - M6 home tab: surface `longest_streak_days` + `dqs_7day_avg` as stat chips in streak card (`_StatChip` widget, stat row hidden when no data). `flutter analyze` clean. — *Alton*
 2. **2026-05-15** - M6 engagement: `engagement_state` migration + RLS, `EngagementService` (streak, titles, DQS avg, total logs), `updateOnLogWrite` wired on save, home tab streak/titles/insights teaser UI. `flutter analyze` clean. — *Alton*
 3. **2026-05-15** - M5a + M5b: baseline computation pipeline + insight engine. `baseline_snapshots` + `insight_cards` tables, `compute-baselines` + `generate-insights` edge functions, pg_cron schedules, `BaselineService` + `InsightService` + `InsightsTab` UI. Backend tested end-to-end locally. `flutter analyze` clean. — *Alton*
 4. **2026-05-14** - M6 titles + home tab reload + today card UX: Pioneer/Committed badges, `HomeTabState.reload()` via GlobalKey on tab switch, partially-logged card tappable. Tested on Android. `flutter analyze` clean. — *Alton*
