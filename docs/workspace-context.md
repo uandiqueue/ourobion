@@ -73,11 +73,14 @@ Co-Authored-By: ...
 
 ### Member 2: [Alton]
 **Focus Area:** M2 (Self-Report Logging) + Flutter UI + M3 Wearables
-*   **Last Session Accomplished (2026-05-30):**
-    *   iOS HealthKit capability added in Xcode (Runner → Signing & Capabilities → + HealthKit); `Runner.entitlements` now contains `com.apple.developer.healthkit = true`. ✅
+*   **Last Session Accomplished (2026-06-01):**
+    *   iOS environment set up for device testing: CocoaPods installed (v1.16.2 via Homebrew), Podfile iOS deployment target bumped to 14.0 (required by `health` plugin), Xcode iOS 26.5 platform SDK downloaded. ✅
+    *   `flutter build ios --debug` confirmed successful — app builds cleanly. ✅
+    *   **End-to-end device test (Xcode install + HealthKit read → `wearable_daily` write): TBC — deferred until Jayden is back.** ⏳
 *   **Next Session Goals:**
-    *   End-to-end wearable test on real device once wearable is paired and Health Connect / HealthKit has data.
+    *   Complete end-to-end wearable test on real iPhone: run app via Xcode (`Cmd + R`), open Daily Log, approve HealthKit permissions, verify `wearable_daily` row written in Supabase.
 *   **Notes / Blocked by / Needs:**
+    *   Bundle ID changed to `com.biotope.alton` for dev signing (free Apple ID team). May need updating before production distribution.
     *   HRV SDNN is iOS-only; Android Health Connect exposes RMSSD only, so `hrv_sdnn_ms` will stay null on Android.
     *   Wearable sync is best-effort (`.ignore()`) — permission denial or missing Health Connect silently no-ops; `wearable_daily` row is only written if at least one signal is available.
     *   Note for Jayden: WiFi IP changes on network reconnect — remind team to check `src/.env.public` if Supabase connection fails.
@@ -87,7 +90,8 @@ Co-Authored-By: ...
 ---
 
 ## 📝 Recent Change Log (Last 5 merged PRs/Sessions)
-1. **2026-05-30** - M3 iOS: HealthKit capability added in Xcode; `Runner.entitlements` now contains `com.apple.developer.healthkit = true`. iOS wearable sync unblocked. — *Alton*
+1. **2026-06-01** - M3 iOS dev environment: CocoaPods installed, Podfile iOS target bumped to 14.0, Xcode iOS 26.5 SDK downloaded, `flutter build ios --debug` confirmed clean. End-to-end device test (HealthKit → `wearable_daily`) TBC pending Jayden. — *Alton*
+2. **2026-05-30** - M3 iOS: HealthKit capability added in Xcode; `Runner.entitlements` now contains `com.apple.developer.healthkit = true`. iOS wearable sync unblocked. — *Alton*
 2. **2026-05-28** - M5a extended: `compute-baselines` now fetches `wearable_daily` in parallel; `buildSnapshots` + `groupByUser` helpers; 6 wearable metrics → `baseline_snapshots` with `data_sources: ['wearable']`. Tested locally. — *Alton*
 2. **2026-05-28** - M3 Flutter integration: `WearableService` (HealthKit + Health Connect, 6 signals), `wearable_daily` migration + RLS applied, platform config (Info.plist + AndroidManifest), wired into `DailyLogScreen`. Fixed `updateOnLogWrite` (unawaited → await). `flutter analyze` clean. — *Alton*
 2. **2026-05-27** - M3 Stage 2 planning: HealthKit + Health Connect; 6 signals (resting HR, HRV, sleep, SpO2, body temp, steps); pull-on-log-open; `wearable_daily` schema agreed; Alton owns Flutter integration, Jayden owns PDPA consent update. — *Alton*
