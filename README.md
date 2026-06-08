@@ -33,14 +33,16 @@ enforced by `tools/context_sync.mjs`. Full protocol in [`AGENTS.md`](AGENTS.md) 
 
 ### Prerequisites
 
-Install these before running the setup script:
-
-| Tool | Version | All platforms |
+| Tool | Version | Where |
 |---|---|---|
 | Node.js | 18+ | [nodejs.org](https://nodejs.org/) |
 | Docker Desktop | Latest | [docker.com](https://www.docker.com/products/docker-desktop/) |
 | Flutter | 3.11+ | [flutter.dev](https://docs.flutter.dev/get-started/install) |
 | Android Studio | Latest | [developer.android.com/studio](https://developer.android.com/studio) |
+
+> **Windows users:** install only **Docker Desktop + Git**, then run `.\scripts\setup.ps1` — it
+> installs Node, the JDK, Flutter, and the Android SDK *bounded to this project* (no global
+> installs, no WSL). See the [Windows](#windows) section. The table above applies to Linux/macOS.
 
 ---
 
@@ -107,90 +109,103 @@ cd src && flutter run
 
 ### Windows
 
-Windows uses a **split setup**: Flutter runs natively on Windows, Supabase runs inside WSL2 (via Docker). This avoids USB and port-forwarding complexity.
+Windows runs **natively — no WSL terminal, no port-forwarding.** Docker Desktop runs the
+Supabase stack and maps it to Windows `localhost`, and the **entire toolchain is installed
+bounded to this project** (in a sibling `..\biotope-toolchain\` folder, via Miniconda) so
+nothing touches your global PATH. One script does it all.
 
-#### Step 1 — WSL2: clone and start Supabase
+#### Prerequisites (install yourself first)
 
-> Run in WSL2 terminal
+- **Docker Desktop** — started. Runs local Supabase. [docker.com](https://www.docker.com/products/docker-desktop/)
+- **Git**.
 
-```bash
-# Clone
-git clone https://github.com/uandiqueue/biotope.git && cd biotope
+> That's it. Node, the JDK, Flutter, and the Android SDK are installed *bounded to biotope* by
+> the setup script below — you do **not** need a global Node, Flutter, or Android Studio install.
 
-# Run setup script (checks Node, Docker, Supabase CLI)
-chmod +x scripts/setup.sh && ./scripts/setup.sh
+#### Step 1 — Clone and run the bounded setup
 
-# Start Supabase and run migrations
-npx supabase start
-npx supabase db push
-
-# Note your WSL2 IP — you'll need it in Step 4
-hostname -I | awk '{print $1}'
-```
-
-#### Step 2 — Windows: install Flutter and Android Studio
-
-Download and install:
-- Flutter: [flutter.dev](https://docs.flutter.dev/get-started/install/windows) — extract and add to Windows PATH
-- Android Studio: [developer.android.com/studio](https://developer.android.com/studio) — let it install the Android SDK on first launch
-
-Then in **PowerShell**:
+In **PowerShell**, from the repo root:
 
 ```powershell
-# Point Flutter to Android SDK
-flutter config --android-sdk "$env:LOCALAPPDATA\Android\Sdk"
-
-# Accept Android licenses
-flutter doctor --android-licenses
-# Press y and Enter for each
-
-# Verify setup
-flutter doctor
-```
-
-#### Step 3 — Windows: port forward WSL2 → phone
-
-Your phone needs to reach Supabase running inside WSL2. Run this once in **PowerShell as Administrator** (replace `<WSL2_IP>` with the IP from Step 1):
-
-```powershell
-netsh interface portproxy add v4tov4 listenport=54321 listenaddress=0.0.0.0 connectport=54321 connectaddress=<WSL2_IP>
-```
-
-> To remove later: `netsh interface portproxy delete v4tov4 listenport=54321 listenaddress=0.0.0.0`
-> Note: WSL2 IP can change on reboot — re-run this command if Supabase becomes unreachable.
-
-#### Step 4 — Windows: clone repo and configure public local env
-
-```powershell
-# Clone the repo on the Windows side
 git clone https://github.com/uandiqueue/biotope.git
 cd biotope
 
-# Install Flutter dependencies
-cd src
-flutter pub get
-cd ..
+# Installs (into ..\biotope-toolchain): Miniconda -> conda env "biotope" (Node + JDK 17),
+# Flutter SDK, Android SDK + emulator + an AVD; configures Flutter; creates env files;
+# installs deps. Idempotent — safe to re-run. Takes a while on first run (large downloads).
+.\scripts\setup.ps1
 ```
 
-Find your Windows WiFi IP:
-```powershell
-ipconfig
-# Look for: Wireless LAN adapter Wi-Fi → IPv4 Address
-```
+#### Step 2 — Activate the toolchain (every new shell)
 
-Edit `src/.env.public`:
-```
-SUPABASE_URL=http://<windows-wifi-ip>:54321
-SUPABASE_ANON_KEY=<your-anon-key>
-```
-
-#### Step 5 — Run
+The toolchain is **session-scoped**: dot-source this in each new PowerShell window to put
+`node`, `flutter`, `adb`, the emulator, and the conda JDK on PATH for that session only.
 
 ```powershell
-cd src
-flutter devices    # confirm phone is listed
-flutter run
+. .\scripts\biotope-env.ps1
 ```
+
+> Override the toolchain location with `$env:BIOTOPE_TOOLCHAIN` before sourcing if you put it
+> elsewhere.
+
+#### Step 3 — Start Supabase (Docker Desktop)
+
+```powershell
+npx supabase start          # first run pulls the Docker images
+npx supabase db reset       # apply migrations to the local DB
+```
+
+`supabase start` prints an **anon key** — paste it into `src\.env.public` as `SUPABASE_ANON_KEY`.
+The URL is already set for the emulator:
+
+```
+SUPABASE_URL=http://10.0.2.2:54321
+SUPABASE_ANON_KEY=<anon key from supabase start>
+```
+
+> `10.0.2.2` is the Android emulator's alias for the host's `localhost`, where Docker Desktop
+> maps Supabase. **On a physical phone**, set it to your PC's LAN IP (from `ipconfig` →
+> Wireless LAN adapter Wi-Fi → IPv4) instead, and make sure phone + PC share a WiFi network.
+
+#### Step 4 — Run on the Android emulator
+
+```powershell
+flutter emulators --launch biotope_pixel   # boot the bundled AVD
+flutter devices                            # confirm it's listed
+cd src; flutter run                        # build + run (first Gradle build is slow)
+```
+
+---
+
+## 📦 Where dependencies live — dev toolchain vs. app
+
+A common question: *"the toolchain is in a sibling folder outside the repo — so what gets deployed?"*
+
+The sibling **`..\biotope-toolchain\`** (Miniconda env, Flutter SDK, Android SDK, JDK) is **only a
+local build/dev environment**. It is **build tooling, not runtime dependency** — it is never deployed,
+never committed, and is fully disposable (delete it and re-run `scripts/setup.ps1` to recreate it).
+Nothing on a server or in a release artifact reads from it.
+
+The dependencies that actually travel are all **declared inside the repo** and resolved fresh wherever
+they're needed:
+
+| Layer | Declared in (repo) | Where it ends up at deploy time |
+|---|---|---|
+| Flutter app (Dart) | `src/pubspec.yaml` + `pubspec.lock` | **Compiled into the build artifact** — `flutter build apk` / `appbundle` / `ipa` / `web`. The artifact is self-contained; the target device/host needs **no** Flutter SDK. |
+| Shared TS contracts | `shared/package.json` + lockfile | Type-checked in CI; bundled into edge functions that use them. |
+| Backend logic | `supabase/functions/*` (Deno/TS) | `supabase functions deploy` → runs on **Supabase's** managed infra (Deno runtime). No Node server of yours. |
+| Database schema | `supabase/migrations/*.sql` | `supabase db push` → applied to the **hosted Postgres**. |
+| Dev/build CLIs | `package.json` (`supabase` devDep) | Installed fresh by `npm ci` in CI; not shipped. |
+
+So **biotope has no "web server" hosting the app**: the **Android/iOS app is a compiled binary**
+(deps baked in), and the **backend is hosted by Supabase** (Postgres + Deno edge functions). If you
+ever serve the **Flutter *web*** build, `flutter build web` emits **static files** (`build/web/`) that
+any web server (nginx, Netlify, etc.) serves directly — again, the Flutter SDK stays on the build
+machine, not the server.
+
+**CI proves this:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) installs Node + Flutter
+from scratch each run (via `setup-node` / `flutter-action`) and `npm ci` / `flutter pub get` from the
+lockfiles — it never references the local toolchain folder.
 
 ---
 
@@ -219,21 +234,29 @@ Your phone should appear in the list before running `flutter run`.
 
 ### Option B — Android Emulator (macOS / Linux / Windows)
 
-> Recommended on **macOS** — no USB or port-forwarding needed.
+> Recommended for desktop dev — no USB needed.
+
+**Windows (bounded toolchain):** `scripts/setup.ps1` already created an AVD named `biotope_pixel`.
+After `. .\scripts\biotope-env.ps1`:
+
+```powershell
+flutter emulators --launch biotope_pixel   # boot it
+flutter devices                            # confirm it's listed
+cd src; flutter run
+```
+
+The emulator reaches the Docker-hosted Supabase at `http://10.0.2.2:54321` (already set in
+`src\.env.public`) — no WSL, no port-forwarding.
+
+**macOS / Linux (via Android Studio):**
 
 1. Open **Android Studio** → **More Actions → Virtual Device Manager**
-2. Click **Create Device** → pick a phone model (e.g. Pixel 8) → pick a system image (e.g. **API 34**) → Finish
-3. Click ▶️ to boot the emulator
-4. Verify Flutter sees it:
+2. **Create Device** → pick a phone (e.g. Pixel 8) → a system image (e.g. **API 35**) → Finish
+3. Click ▶️ to boot it, then:
    ```bash
-   flutter devices   # emulator should appear in the list
-   ```
-5. Run the app:
-   ```bash
+   flutter devices        # emulator should appear
    cd src && flutter run
    ```
-
-> **Windows note:** If using an emulator on Windows, you still need the WSL2 port-forward from Step 3 so the emulator can reach Supabase.
 
 ---
 
@@ -241,9 +264,10 @@ Your phone should appear in the list before running `flutter run`.
 
 | Problem | Fix |
 |---|---|
+| `flutter` / `node` / `adb` not recognized (Windows) | Dot-source the toolchain first: `. .\scripts\biotope-env.ps1` |
 | Phone not detected | Re-enable USB Debugging, try a different USB cable |
 | `flutter doctor` shows Android SDK missing | Re-run `flutter config --android-sdk` with correct path |
-| Supabase connection refused on phone | Check port forward (Windows Step 3), confirm phone and PC are on same WiFi |
-| WSL2 IP changed after reboot | Re-run the `netsh` port forward with the new IP from `hostname -I` |
-| `flutter pub get` fails | Check Flutter is installed and `src/pubspec.yaml` exists |
+| Emulator can't reach Supabase | Confirm `SUPABASE_URL=http://10.0.2.2:54321` in `src/.env.public` and that `npx supabase start` is running |
+| Supabase connection refused on physical phone | Set `SUPABASE_URL` to your PC's LAN IP (not `10.0.2.2`); confirm phone + PC on same WiFi |
+| `flutter pub get` fails | Check the toolchain is active (`. .\scripts\biotope-env.ps1`) and `src/pubspec.yaml` exists |
 | Docker not running | Start Docker Desktop before running `npx supabase start` |

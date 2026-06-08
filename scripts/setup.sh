@@ -26,6 +26,16 @@ esac
 echo "Detected environment: $OS"
 echo ""
 
+# ─── Windows: prefer the native, bounded PowerShell setup ────
+if [ "$OS" = "windows_bash" ] || [ "$OS" = "wsl" ]; then
+  echo "💡 On Windows, the recommended path is the native, project-bounded installer (no WSL):"
+  echo "     PowerShell>  .\\scripts\\setup.ps1"
+  echo "   It installs Node + JDK + Flutter + Android SDK into ..\\biotope-toolchain (nothing global),"
+  echo "   and the emulator reaches Supabase at http://10.0.2.2:54321 (no port-forwarding)."
+  echo "   This bash script still works for a Git Bash / WSL flow; continuing..."
+  echo ""
+fi
+
 # ─── Helper: print install hint per tool per OS ──────────────
 hint_node() {
   case $OS in

@@ -37,6 +37,9 @@ biotope/
 │   ├── memory/                # Durable one-fact-per-file memory + README index
 │   └── graph/                 # couplings.yaml (semantic couplings + guard tests) + README (deferred graph)
 ├── scripts/                   # Local setup and utility scripts
+│   ├── setup.sh               # Linux/macOS (+ Git Bash/WSL) env check + dep install
+│   ├── setup.ps1              # Windows-native bounded toolchain installer (Miniconda + Flutter + Android SDK)
+│   └── biotope-env.ps1        # Windows: per-shell activation of the bounded toolchain
 ├── shared/                    # Code shared across frontend and backend boundaries
 │   ├── SHARED-CONTEXT.md      # Shared types and integration contracts
 │   ├── types/                 # Shared data models (TypeScript + Dart)
@@ -64,6 +67,17 @@ biotope/
 - `supabase/.env` is local backend/Supabase config and may contain backend-only values.
   It is never bundled into the Flutter app.
 - `supabase/.env.example` is the committed template for Supabase/backend config.
+
+## Dev toolchain is OUTSIDE the repo (Windows-native setup)
+
+On Windows, `scripts/setup.ps1` installs the **entire build toolchain bounded to the project** in a
+**sibling folder of the repo** — `..\biotope-toolchain\` (Miniconda env `biotope` = Node + JDK 17,
+the Flutter SDK, and the Android SDK + emulator + an AVD). It is **build tooling, not a repo
+dependency**: machine-local, not committed, not deployed, and disposable (delete + re-run `setup.ps1`).
+`scripts/biotope-env.ps1` activates it per shell (no global PATH changes). The dependencies that
+actually ship are declared *in* the repo (`src/pubspec.yaml`, `shared/package.json`,
+`supabase/migrations`, `supabase/functions`) and are compiled into the app artifact or deployed to
+Supabase — see README "Where dependencies live". CI installs its own toolchain from scratch.
 
 ## Folder Conventions
 
