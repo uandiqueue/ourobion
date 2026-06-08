@@ -82,6 +82,14 @@ auto-generate a structural import graph yet — see §8 and [`docs/graph/README.
 biotope has **two toolchains**: **Flutter/Dart** (the app, in `src/`) and **Node + Supabase CLI** (the
 backend + these `tools/`). There is **no Python**.
 
+> **Windows-native dev (no WSL):** `scripts/setup.ps1` installs the whole toolchain **bounded to the
+> project** in a sibling `..\biotope-toolchain\` (Miniconda env = Node + JDK 17, Flutter SDK, Android
+> SDK + emulator/AVD). Activate it per shell with `. .\scripts\biotope-env.ps1` — no global PATH
+> changes. This folder is **build tooling, not a repo/runtime dependency**: machine-local, uncommitted,
+> never deployed (the app compiles to a self-contained artifact; the backend runs on Supabase). See
+> README → "Where dependencies live". macOS/Linux use `scripts/setup.sh`. The commands below assume the
+> toolchain is on PATH (activated on Windows, system-installed elsewhere).
+
 ### Flutter app (run from `src/`)
 
 | Command | What it does |

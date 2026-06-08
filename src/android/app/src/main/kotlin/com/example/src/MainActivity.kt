@@ -1,5 +1,8 @@
 package com.example.src
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+// The health plugin (M3 wearables / Health Connect) requires the host Activity to be a
+// FragmentActivity/ComponentActivity. Extending FlutterFragmentActivity (instead of the default
+// FlutterActivity) avoids the launch-time ClassCastException and lets the plugin attach.
+class MainActivity : FlutterFragmentActivity()
