@@ -4,20 +4,28 @@ Single-repository project — Flutter mobile app + Supabase backend.
 
 ## 📚 Documentation
 
-Read these before contributing:
+**Start with [`AGENTS.md`](AGENTS.md) — the single source of truth** for agents and humans. It points
+to everything else:
 
 - `docs/PROJECT-CONTEXT.md` — project principles, goals, phases
 - `docs/ARCHITECTURE-CONTEXT.md` — system architecture and data flows
 - `docs/STRUCTURE-CONTEXT.md` — repository layout rules
 - `shared/SHARED-CONTEXT.md` — shared TypeScript/Dart type contracts
 - `docs/ui-context/UI-DESIGN-CONTEXT.md` — design tokens, component specs
+- `docs/AGENT-PROTOCOL.md` — AI routing table, truth hierarchy, PR review checklist
+- `docs/dev-workflow.md` — the full human dev cycle (Issue → … → Merge)
 
 ## 👥 Session Workflow
 
-1. Open `docs/workspace-context.md` and review what others did last session
-2. Update your section with today's goals
-3. Update your module's context file (e.g. `m1-context.md`) as you work
-4. Record progress in `docs/workspace-context.md` before ending your session
+The team uses **append-only per-session logs** (`docs/sessions/`) + durable facts (`docs/memory/`),
+enforced by `tools/context_sync.mjs`. Full protocol in [`AGENTS.md`](AGENTS.md) §7.
+
+1. Enable the shared git hooks once per clone: `git config core.hooksPath .githooks`
+2. At session start: `node tools/context_sync.mjs --session-start`, then read the latest
+   `docs/sessions/` files
+3. Work on a branch + worktree off `dev-alton` (`node tools/setup_agent_worktree.mjs …`)
+4. Before pushing: write one `docs/sessions/<UTC>-<device>-<agent>-<slug>.md` log
+   (the pre-push hook + CI fail without it)
 
 ---
 
@@ -60,7 +68,7 @@ flutter doctor --android-licenses
 
 # Start Supabase and run migrations
 npx supabase start
-npx supabase db push
+npx supabase db push # use db reset if on docker
 
 # Run the app
 cd src && flutter run

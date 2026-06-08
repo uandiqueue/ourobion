@@ -1,6 +1,6 @@
 # STRUCTURE-CONTEXT.md — Biotope Repository Structure
 > **CONSTANT LAYER** — Update only when the repository structure changes.
-> Last updated: 2026-05-13
+> Last updated: 2026-06-08
 
 ---
 
@@ -10,12 +10,32 @@ This is a monolithic repository containing the frontend mobile application, back
 
 ```
 biotope/
-├── .github/                   # GitHub Actions CI/CD workflows
+├── AGENTS.md                  # SINGLE SOURCE OF TRUTH for agents + humans (points to everything)
+├── CLAUDE.md / GEMINI.md      # Thin pointers to AGENTS.md
+├── .githooks/
+│   └── pre-push               # Runs `node tools/context_sync.mjs --check` (core.hooksPath=.githooks)
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml             # context check + Flutter analyze/test + TypeScript type check
+│   │   └── pr-review.yml      # AI prelim PR reviewer (planned)
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.yml
+│   │   └── feature_request.yml
+│   └── PULL_REQUEST_TEMPLATE.md
+├── tools/                     # Node-stdlib enforcement + multi-agent helpers (no Python)
+│   ├── context_sync.mjs       # --session-start briefing / --check enforcement
+│   ├── setup_agent_worktree.mjs # create an isolated git worktree + configure hooks
+│   └── shared_memory.mjs      # task-claim coordinator (.agents/session-log.json, gitignored)
 ├── docs/                      # General project documentation
+│   ├── AGENT-PROTOCOL.md      # AI agent routing table, non-negotiables, PR review checklist (constant)
 │   ├── ARCHITECTURE-CONTEXT.md# System architecture and data flow rules
+│   ├── dev-workflow.md        # Full dev cycle — what AI does vs what humans must do
 │   ├── PROJECT-CONTEXT.md     # Key project principles, goals, and phases
 │   ├── STRUCTURE-CONTEXT.md   # This document
-│   └── workspace-context.md   # Variable layer tracker for team sessions
+│   ├── workspace-context.md   # SUPERSEDED — pointer to AGENTS.md + docs/sessions/
+│   ├── sessions/              # Append-only one-file-per-session logs (variable layer)
+│   ├── memory/                # Durable one-fact-per-file memory + README index
+│   └── graph/                 # couplings.yaml (semantic couplings + guard tests) + README (deferred graph)
 ├── scripts/                   # Local setup and utility scripts
 ├── shared/                    # Code shared across frontend and backend boundaries
 │   ├── SHARED-CONTEXT.md      # Shared types and integration contracts

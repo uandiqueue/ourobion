@@ -64,3 +64,20 @@ overwriting) biotope's existing CONSTANT-LAYER / VARIABLE-LAYER docs.
   session — CI is the first place they execute. `context_sync.mjs --check` / `--session-start` were
   smoke-tested with the Adobe-bundled `node`.
 - `.claude/settings.local.json` contains a machine-local auth token and is gitignored — left untouched.
+
+## Addendum — branch integration (same session)
+User directed: integrate all branches except `main` so **`dev-alton` is the latest, most-updated
+integration branch**, then push. Findings + actions:
+- `origin/dev-phase1` already fully contained in `dev-alton` (0 unique commits); `dev-alton` is 40
+  ahead of `main`.
+- `origin/dev-mvp1` (which had already merged `origin/dev-github-workflow`) carried the only
+  unintegrated content → **merged `origin/dev-mvp1` into `dev-alton`**. This surfaced a pre-existing
+  agent system that wasn't on `dev-alton`: `docs/AGENT-PROTOCOL.md`, `docs/dev-workflow.md`, a real
+  2-job CI (Flutter + TypeScript), issue/PR templates, `shared/tsconfig.json`.
+- **Harmonized** rather than clobbered: combined CI into one workflow with 3 jobs (context check +
+  Flutter analyze/test w/ env-from-secrets + TS `tsc --noEmit`), retargeted it + the templates +
+  AGENT-PROTOCOL + dev-workflow from `dev-mvp1` → `dev-alton`, repointed their `workspace-context.md`
+  references to `docs/sessions/`, made `AGENTS.md` the SSOT that points to AGENT-PROTOCOL/dev-workflow,
+  and updated STRUCTURE-CONTEXT + README for the new dirs. `claude-resume-code.txt` stays deleted
+  (user deleted it; `dev-mvp1` deleted it too — no conflict).
+- Re-ran `node tools/context_sync.mjs --check` after the merge → green. Pushed `dev-alton`.

@@ -1,15 +1,19 @@
 name: CI
 
-# The non-bypassable backstop: mirrors the local pre-push gate (which is skippable with --no-verify).
-# Runs the same context check, plus flutter analyze + flutter test.
+# The non-bypassable backstop: mirrors the local pre-push gate (skippable with --no-verify) and adds
+# the checks that can only run in CI. Three jobs:
+#   - context     : node tools/context_sync.mjs --check (sessions / memory / couplings)
+#   - flutter     : flutter analyze + flutter test (with the public env file built from secrets)
+#   - typescript  : tsc --noEmit over the shared/ contracts
 on:
   push:
-    branches: [ main ]
+    branches: [main, dev-alton]
   pull_request:
-    branches: [ main ]
+    branches: [main, dev-alton]
 
 jobs:
-  verify:
+  context:
+    name: Context — sessions / memory / couplings
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,24 +24,59 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20'
 
-      - name: Context check (sessions / memory / couplings)
+      - name: Context check
         run: node tools/context_sync.mjs --check
 
-      - name: Set up Flutter
+  flutter:
+    name: Flutter — Analyze & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.x'
           channel: stable
+          cache: true
 
-      - name: Flutter pub get
+      - name: Create public env file
+        working-directory: src
+        run: |
+          printf "SUPABASE_URL=%s\n" "${{ secrets.SUPABASE_URL }}" > .env.public
+          printf "SUPABASE_ANON_KEY=%s\n" "${{ secrets.SUPABASE_ANON_KEY }}" >> .env.public
+
+      - name: Install dependencies
         working-directory: src
         run: flutter pub get
 
-      - name: Flutter analyze
+      - name: Analyze
         working-directory: src
         run: flutter analyze
 
-      - name: Flutter test
+      - name: Test
         working-directory: src
         run: flutter test
+
+  typescript:
+    name: TypeScript — Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: shared/package-lock.json
+
+      - name: Install dependencies
+        working-directory: shared
+        run: npm ci
+
+      - name: Type check shared types
+        working-directory: shared
+        run: npx tsc --noEmit

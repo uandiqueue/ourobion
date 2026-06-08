@@ -64,6 +64,8 @@ auto-generate a structural import graph yet — see §8 and [`docs/graph/README.
 - **Repository directory layout + `shared/` vs `src/` rule + env files:** [`docs/STRUCTURE-CONTEXT.md`](docs/STRUCTURE-CONTEXT.md)
 - **The shared contract types (the connective tissue every boundary crosses):** [`shared/SHARED-CONTEXT.md`](shared/SHARED-CONTEXT.md)
 - **UI design system:** [`docs/ui-context/UI-DESIGN-CONTEXT.md`](docs/ui-context/UI-DESIGN-CONTEXT.md)
+- **AI routing table, truth hierarchy & PR review checklist:** [`docs/AGENT-PROTOCOL.md`](docs/AGENT-PROTOCOL.md)
+- **The human dev cycle (Issue → … → Merge):** [`docs/dev-workflow.md`](docs/dev-workflow.md)
 
 **Boundary rules that matter most** (full set in ARCHITECTURE-CONTEXT §"Module Interface Rules"):
 
@@ -169,6 +171,10 @@ Active gotchas captured as durable facts: HRV SDNN is iOS-only
 ([0006](docs/memory/0006-wearable-sync-best-effort.md)).
 
 ## 7. Agent collaboration protocol (MANDATORY)
+
+> The detailed **AI routing table, truth hierarchy, and PR review checklist** live in
+> [`docs/AGENT-PROTOCOL.md`](docs/AGENT-PROTOCOL.md); the **human-facing dev cycle** is in
+> [`docs/dev-workflow.md`](docs/dev-workflow.md). This section is the authoritative summary they defer to.
 
 ### Session start
 1. Run `node tools/context_sync.mjs --session-start` (the Claude Code SessionStart hook in

@@ -2,10 +2,14 @@
 
 > **This file is no longer the variable-layer tracker.** A single in-place file is merge-conflict-prone
 > for a 2-person team, so the rolling per-session editing here has been replaced by **append-only,
-> one-file-per-session logs**. Nothing was lost — see where each part went below.
+> one-file-per-session logs** under `docs/sessions/`. Nothing was lost — see where each part went below.
 
 ## Where its content went
 
+- **Single source of truth for agents/humans** → [`AGENTS.md`](../AGENTS.md).
+- **AI routing table, truth hierarchy, PR review checklist, non-negotiables** → [`docs/AGENT-PROTOCOL.md`](AGENT-PROTOCOL.md)
+  (still current; its old references to *this* file now point to `docs/sessions/`).
+- **Human dev cycle (Issue→Branch→…→Merge)** → [`docs/dev-workflow.md`](dev-workflow.md).
 - **Session & commit conventions** → [`AGENTS.md`](../AGENTS.md) §5 + [`docs/commit-conventions.md`](commit-conventions.md).
 - **Phase timeline + team workstreams (ownership)** → [`AGENTS.md`](../AGENTS.md) §6 (the durable parts).
 - **Recent Change Log** → backfilled into `docs/sessions/` as a historical session log
