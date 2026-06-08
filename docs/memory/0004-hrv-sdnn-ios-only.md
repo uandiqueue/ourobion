@@ -1,0 +1,13 @@
+# HRV SDNN is iOS-only
+
+**Gotcha (M3 wearables).** HRV measured as **SDNN** is available only from Apple HealthKit (iOS).
+Android Health Connect exposes **RMSSD** only. So `hrv_sdnn_ms` will stay **null on Android** by
+design — it is not a bug.
+
+**Why.** The two platforms expose different HRV statistics natively; there is no SDNN field on Health
+Connect, and deriving one from RMSSD would not be equivalent.
+
+**How to apply.** Treat `hrv_sdnn_ms` as a nullable, platform-dependent signal in M3 and downstream in
+M5a baselines — never gate a feature on it being present. This is one instance of the broader rule that
+wearable signals are best-effort and optional ([[0006-wearable-sync-best-effort]]). The shared
+`DailyPhysioRow` already keeps all wearable metrics nullable ([[0002-shared-contract-two-reviewers]]).

@@ -7,6 +7,10 @@
 !.env.public.example
 .env.keys
 .env.local
+.claude/settings.local.json
+
+# Multi-agent task-claim coordination state (machine-local; see tools/shared_memory.mjs).
+.agents/
 
 # ═══════════════════════════════════════════════════════════════
 # 2. DEPENDENCIES (Common)

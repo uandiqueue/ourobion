@@ -1,5 +1,7 @@
 name: CI
 
+# The non-bypassable backstop: mirrors the local pre-push gate (which is skippable with --no-verify).
+# Runs the same context check, plus flutter analyze + flutter test.
 on:
   push:
     branches: [ main ]
@@ -7,15 +9,35 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Run a one-line script
-        run: echo "Hello, world!"
-        
-      - name: Run a multi-line script
-        run: |
-          echo "Add other actions to build,"
-          echo "test, and deploy your project."
+        with:
+          # Full history so context_sync's session-coverage check can diff origin/main..HEAD.
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Context check (sessions / memory / couplings)
+        run: node tools/context_sync.mjs --check
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Flutter pub get
+        working-directory: src
+        run: flutter pub get
+
+      - name: Flutter analyze
+        working-directory: src
+        run: flutter analyze
+
+      - name: Flutter test
+        working-directory: src
+        run: flutter test
