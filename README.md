@@ -14,6 +14,8 @@ to everything else:
 - `docs/ui-context/UI-DESIGN-CONTEXT.md` — design tokens, component specs
 - `docs/AGENT-PROTOCOL.md` — AI routing table, truth hierarchy, PR review checklist
 - `docs/dev-workflow.md` — the full human dev cycle (Issue → … → Merge)
+- `docs/NEXT-PHASE-PLAN.md` — next-phase direction: clear the P1S2 backlog → deep health-metric analysis
+- `docs/human-briefs/` — plain-language stakeholder briefs of significant plans
 
 ## 👥 Session Workflow
 

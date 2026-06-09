@@ -20,3 +20,5 @@ quick-reference pointers, not a replacement for those source docs.
 - [0004 — HRV SDNN is iOS-only](0004-hrv-sdnn-ios-only.md) — `hrv_sdnn_ms` stays null on Android by design.
 - [0005 — pg_cron config prereqs](0005-pgcron-config-prereqs.md) — set `app.supabase_url` + `app.service_role_key` before applying cron migrations.
 - [0006 — Wearable sync is best-effort](0006-wearable-sync-best-effort.md) — missing wearable data silently no-ops; never a hard gate.
+- [0007 — Analysis rules become data (two-tier)](0007-rules-as-data-two-tier.md) — rules move from hardcoded TS to git-JSON blueprints → a `rules` table; engine last, AI summary later.
+- [0008 — graphify is the context tool](0008-graphify-context-tool.md) — semantic knowledge-graph skill for context/ingestion; complementary to the deferred structural graph.
