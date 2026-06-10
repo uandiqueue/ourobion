@@ -52,3 +52,17 @@ the seeder per that evaluation and wrote up the iOS/Apple-Health/local-auth cons
   analytics/Vector service wants Docker TCP on Windows — clear with `docker rm -f`, or disable analytics.
 - PowerShell execution policy blocked `biotope-env.ps1` until `Set-ExecutionPolicy -Scope CurrentUser
   RemoteSigned`; activation must be dot-sourced per shell.
+
+## Addendum — integration target changed main → dev-phase2 (same session)
+- **Checked the "artifacts":** the 7 modified desktop `*_plugin_registrant.*` (linux/macos/windows)
+  files were **EOL-only churn** (`git diff --ignore-cr-at-eol` empty; `core.autocrlf=true`) from Flutter
+  regenerating them with CRLF. **Not harmful** — discarded, not committed.
+- **Owner re-pointed the integration seam:** everything now PRs into **`dev-phase2`** (the phase-2
+  integration line), **never `main`**; **only `dev-phase2 → main`** at phase/milestone completion. The
+  old convention pointed daily PRs at `dev-alton`.
+- **Changed (docs):** `AGENTS.md` §5 (integration-seam bullet) + §7 (`gh pr create --base dev-phase2`);
+  `docs/dev-workflow.md` (steps 7 & 9, Branch Model diagram, "When … Merges to main" section);
+  `docs/AGENT-PROTOCOL.md` PR-destination/merge lines.
+- **Propagation:** applied as its own docs-only commit on **dev-jayden** and replicated on **dev-alton**
+  (independent identical commit, each with its own session log — conflict-free). `dev-phase2` inherits
+  the change when either branch's next PR merges in.

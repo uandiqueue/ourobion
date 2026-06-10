@@ -100,9 +100,10 @@ If any step fails, the PR shows a red ✗ and cannot be merged until fixed.
 ---
 
 ### 7. Pull Request
-Open a PR from your branch into `dev-alton`. Use the PR template. Link the issue it closes.
+Open a PR from your branch into `dev-phase2`. Use the PR template. Link the issue it closes.
 
-**PR destination is always `dev-alton`. Never open a PR directly to `main`.**
+**PR destination is always `dev-phase2` (the integration line). Never open a PR directly to `main` —
+only `dev-phase2` does, at phase/milestone completion.**
 
 | Who | What |
 |---|---|
@@ -122,7 +123,7 @@ A team member reads the diff and either approves or requests changes. For shared
 ---
 
 ### 9. Merge
-Approved PR is merged into `dev-alton`.
+Approved PR is merged into `dev-phase2`.
 
 | Who | What |
 |---|---|
@@ -133,14 +134,15 @@ Approved PR is merged into `dev-alton`.
 ## Branch Model
 
 ```
-main           ← always shippable; only receives PRs at milestone releases
-  └── dev-alton ← integration branch; all daily PRs target here
+main             ← always shippable; only receives PRs from dev-phase2 at phase/milestone releases
+  └── dev-phase2 ← integration branch; all daily PRs target here
+        ├── dev-alton   ← personal line; PRs into dev-phase2
+        ├── dev-jayden  ← personal line; PRs into dev-phase2
         ├── feat/m2-self-report/streak-counter
-        ├── fix/m1-core/supabase-ip-env
-        └── docs/update-workflow
+        └── fix/m1-core/supabase-ip-env
 ```
 
-`dev-alton → main` only happens when a milestone is complete and both team members sign off on a release build.
+`dev-phase2 → main` only happens when a phase/milestone is complete and both team members sign off on a release build.
 
 ---
 
@@ -172,11 +174,11 @@ These are checked by CI and will eventually also be checked by the AI prelim rev
 
 ---
 
-## When `dev-alton` Merges to `main`
+## When `dev-phase2` Merges to `main`
 
-Only at milestone completions. Both team members must agree. Steps:
-1. `dev-alton` is stable and CI-green
+Only at phase/milestone completions. Both team members must agree. Steps:
+1. `dev-phase2` is stable and CI-green
 2. Both members review the milestone summary
-3. Merge `dev-alton → main`
+3. Merge `dev-phase2 → main`
 4. Tag the release (e.g. `v0.1.0-mvp1`)
 5. Update `docs/ARCHITECTURE-CONTEXT.md` phase status

@@ -168,7 +168,10 @@ git config core.hooksPath .githooks
 - **`gh` for everything GitHub sees** (issues, PRs); **`git` only for local work `gh` can't do**
   (worktree, staging, commits, local branch rename). Never push a branch or open/merge a PR with raw
   `git` when a `gh` command exists.
-- **PRs are the integration seam.** `main` is always deployable; tests required before merge to `main`.
+- **PRs are the integration seam.** Feature/session branches and the personal `dev-<name>` lines
+  (incl. `dev-alton`, `dev-jayden`) PR into **`dev-phase2`**, the phase-2 integration line — **never
+  directly into `main`**. **Only `dev-phase2` PRs into `main`**, at phase/milestone completion. `main`
+  stays always-deployable; tests required before any merge to `main`.
 - **Non-diagnostic language** — every user-facing string must use observational phrasing and pass the
   copy rules in `shared/constants/copy_guidelines.{ts,dart}`. See SHARED-CONTEXT "Non-Diagnostic Copy
   Rules" and [`docs/memory/0003-non-diagnostic-copy.md`](docs/memory/0003-non-diagnostic-copy.md).
@@ -236,12 +239,13 @@ GitHub issue, branch, and **git worktree** (a separate working directory, not ju
    ```bash
    gh issue comment <n> --body "<what changed / decided / left>"
    ```
-2. **Open the PR with `gh`, linking the issue:**
+2. **Open the PR with `gh`, linking the issue — base it on `dev-phase2`, never `main`:**
    ```bash
-   gh pr create --title "..." --body "<summary>
+   gh pr create --base dev-phase2 --title "..." --body "<summary>
 
    Closes #<n>"
    ```
+   (Only `dev-phase2 → main` PRs target `main`, at phase/milestone completion.)
    This **supersedes** biotope's old "update `workspace-context.md` at session end" rule — the session
    log (below) + the issue summary replace it.
 

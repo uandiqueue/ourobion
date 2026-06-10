@@ -126,8 +126,8 @@ ci/{short-description}
 refactor/m{n}-{short-description}
 ```
 
-**PR destination:** Always `dev-alton` (the integration branch)
-**Merge to `main`:** Only at milestone completions — both team members must approve
+**PR destination:** Always `dev-phase2` (the integration branch)
+**Merge to `main`:** Only `dev-phase2` merges to `main`, at phase/milestone completions — both team members must approve
 
 **Commit format:** `type(scope): subject` — full spec in `docs/commit-conventions.md`
 
