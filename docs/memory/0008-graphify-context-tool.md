@@ -19,5 +19,14 @@ two-tier rule: a generated graph is a rebuildable projection, never hand-edited 
   promote `graph.json` to committed + add a regenerate/diff check to `tools/context_sync.mjs --check`.
   `graph.html` stays gitignored (heavy, regenerable).
 
+**Dart coverage — verified empirically (2026-06-10, graphifyy 0.1.14, disposable venv probe; not
+installed):** AST-only extraction (`graphify update --no-cluster`, local, no LLM) handles Dart despite
+`tree-sitter-dart` not being a declared dependency — real biotope files yielded full **structure**
+(classes, fields, methods incl. private, imports; e.g. `baseline_service.dart` → 23 nodes) — but **no
+`calls` edges for Dart** (TS got them) and **no raw cross-language Dart↔TS linking** (shared refs like
+`SupabaseClient` stay duplicate nodes; merging is presumably the semantic-LLM pass, untested). So: Dart
+structure yes, call flow no — adequate for the context-substrate role above, and confirms graphify does
+NOT substitute for the deferred structural import-graph on the Dart side.
+
 Part of the next-phase plan: `docs/NEXT-PHASE-PLAN.md` (step A). See
 [[0007-rules-as-data-two-tier]].
