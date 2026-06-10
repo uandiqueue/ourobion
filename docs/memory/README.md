@@ -22,3 +22,6 @@ quick-reference pointers, not a replacement for those source docs.
 - [0006 — Wearable sync is best-effort](0006-wearable-sync-best-effort.md) — missing wearable data silently no-ops; never a hard gate.
 - [0007 — Analysis rules become data (two-tier)](0007-rules-as-data-two-tier.md) — rules move from hardcoded TS to git-JSON blueprints → a `rules` table; engine last, AI summary later.
 - [0008 — graphify is the context tool](0008-graphify-context-tool.md) — semantic knowledge-graph skill for context/ingestion; complementary to the deferred structural graph.
+- [0009 — Local test data seeding](0009-local-test-data-seeding.md) — inject backdated rows + rebuild projections so the UI renders "weeks in"; don't log by hand for a week.
+- [0010 — iOS builds need a Mac; HealthKit needs a paid account](0010-ios-build-needs-mac-and-paid-account.md) — no iOS on Windows; Apple Developer Program ($99/yr) + real device for HealthKit.
+- [0011 — Local Supabase auth is email-only](0011-local-supabase-auth-email-only.md) — OAuth (Google/Apple) needs a hosted project; local DB persists across stop/start.

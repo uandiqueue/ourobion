@@ -116,6 +116,31 @@ backend + these `tools/`). There is **no Python**.
 > (Settings → Database → Configuration) **before** applying to production. See
 > [`docs/memory/0005-pgcron-config-prereqs.md`](docs/memory/0005-pgcron-config-prereqs.md).
 
+### Local testing — seed instead of logging for a week
+
+Time-based features (streaks, baselines, insights) read backdated `log_date` rows, not the wall clock,
+so you never log by hand for days. Tune the variables at the top and run:
+
+| Command | What it does |
+|---|---|
+| `.\scripts\seed-test-data.ps1` | inject N backdated days for one user, rebuild `engagement_state`, then invoke `compute-baselines` → `generate-insights` so every UI view renders |
+
+Requires `npx supabase start` running (Docker), and the target user to **already exist** — sign in once
+in the app first (RLS keys on `auth.uid() = user_id`; the seeder resolves the UUID from `auth.users` by
+email). Raw rows are truth, projections are rebuilt — the [[0001-two-tier-truth]] model in script form.
+See [`docs/memory/0009-local-test-data-seeding.md`](docs/memory/0009-local-test-data-seeding.md).
+
+### Platform & auth constraints (Windows-native dev)
+
+- **iOS can't be built on Windows** (Apple toolchain is macOS/Xcode only) — develop on the **Android
+  emulator**; iOS is a Mac / cloud-CI task. **HealthKit** needs the **paid Apple Developer Program
+  (US$99/yr) + a real iPhone**; so does **Apple Sign In**. Android/Health Connect, local Supabase, and
+  email/password auth are free. See [`docs/memory/0010-ios-build-needs-mac-and-paid-account.md`](docs/memory/0010-ios-build-needs-mac-and-paid-account.md).
+- **Local auth is email/password only** (`enable_confirmations = false` — instant signup). **OAuth
+  (Google/Apple) won't work against local Docker**; test it on a hosted (free-tier) Supabase project.
+  Local DB state persists across `supabase stop`/`start` (restores from a volume); only `db reset` or
+  `stop --no-backup` wipes it. See [`docs/memory/0011-local-supabase-auth-email-only.md`](docs/memory/0011-local-supabase-auth-email-only.md).
+
 ### Context enforcement (Node, repo root)
 
 | Command | What it does |
