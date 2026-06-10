@@ -25,7 +25,7 @@ enforced by `tools/context_sync.mjs`. Full protocol in [`AGENTS.md`](AGENTS.md) 
 1. Enable the shared git hooks once per clone: `git config core.hooksPath .githooks`
 2. At session start: `node tools/context_sync.mjs --session-start`, then read the latest
    `docs/sessions/` files
-3. Work on a branch + worktree off `dev-alton` (`node tools/setup_agent_worktree.mjs …`)
+3. Work on a short-lived session branch + worktree off `dev-phase2` (`node tools/setup_agent_worktree.mjs …`)
 4. Before pushing: write one `docs/sessions/<UTC>-<device>-<agent>-<slug>.md` log
    (the pre-push hook + CI fail without it)
 

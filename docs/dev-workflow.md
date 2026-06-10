@@ -3,7 +3,8 @@
 > Purpose: Explains the full development cycle, what AI handles, and what requires human judgment.
 >
 > The cross-tool source of truth is [`AGENTS.md`](../AGENTS.md); its §7 collaboration protocol is the
-> authoritative version of this cycle. `dev-alton` is the integration branch all daily PRs target.
+> authoritative version of this cycle. `dev-phase2` is the single working / integration branch all
+> session PRs target; it is the only branch that PRs into `main`.
 
 ---
 
@@ -31,9 +32,10 @@ Someone identifies work — a bug, a feature, or a task. Open a GitHub Issue usi
 ---
 
 ### 2. Branch + Worktree
-Create a branch off `dev-alton` **in its own git worktree** so two agents on one device never collide
-(`node tools/setup_agent_worktree.mjs --branch <name> --path <path>`). Name it following the convention
-below. Never work directly on `dev-alton`.
+Create a branch off `dev-phase2` **in its own git worktree** so two agents on one device never collide
+(`node tools/setup_agent_worktree.mjs --branch <name> --path <path>` — it cuts from `dev-phase2` by
+default). Name it following the convention below. The branch is short-lived: it lives only until its PR
+merges into `dev-phase2`. Never work directly on `dev-phase2`.
 
 **Naming:**
 ```
@@ -135,12 +137,13 @@ Approved PR is merged into `dev-phase2`.
 
 ```
 main             ← always shippable; only receives PRs from dev-phase2 at phase/milestone releases
-  └── dev-phase2 ← integration branch; all daily PRs target here
-        ├── dev-alton   ← personal line; PRs into dev-phase2
-        ├── dev-jayden  ← personal line; PRs into dev-phase2
-        ├── feat/m2-self-report/streak-counter
-        └── fix/m1-core/supabase-ip-env
+  └── dev-phase2 ← the single working / integration branch; every session PR targets here
+        ├── feat/m2-self-report/streak-counter   ← short-lived session branch; deleted after merge
+        └── fix/m1-core/supabase-ip-env          ← short-lived session branch; deleted after merge
 ```
+
+There are **no long-running personal branches** (`dev-<name>`). Each session cuts a fresh branch from
+`dev-phase2`, opens a PR back into `dev-phase2`, and the branch is deleted once merged.
 
 `dev-phase2 → main` only happens when a phase/milestone is complete and both team members sign off on a release build.
 

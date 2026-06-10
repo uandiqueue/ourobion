@@ -161,17 +161,18 @@ git config core.hooksPath .githooks
   Types: `feat` / `fix` / `docs` / `style` / `refactor` / `perf` / `test` / `build` / `ci` / `chore` /
   `revert`. **Scope = module or area:** `m1`/`m2`/`m3`/`m5a`/`m5b`/`m6`, or `db`/`ui`/`docs`/`auth`.
   (Recent history uses `m3`, `m5a`, `db`, `docs`.) Keep commits `flutter analyze`-green.
-- **Branches:** keep biotope's existing scheme — `feat/m<n>-<area>/<slug>` for module work (e.g.
-  `feat/m3-wearables/healthkit-read`); a developer's personal integration branch is `dev-<name>`
-  (e.g. `dev-alton`). One branch per session, inside its own worktree (§7). Refine the name **only
-  before the first push**.
+- **Branches:** `feat/m<n>-<area>/<slug>` for module work (e.g. `feat/m3-wearables/healthkit-read`),
+  or `fix/…`, `docs/…`, `ci/…`, `refactor/…`. **One short-lived branch per session, cut from
+  `dev-phase2`, inside its own worktree (§7).** There are **no personal `dev-<name>` lines** — every
+  session is its own session branch that lives only until its PR merges. Refine the name **only before
+  the first push**.
 - **`gh` for everything GitHub sees** (issues, PRs); **`git` only for local work `gh` can't do**
   (worktree, staging, commits, local branch rename). Never push a branch or open/merge a PR with raw
   `git` when a `gh` command exists.
-- **PRs are the integration seam.** Feature/session branches and the personal `dev-<name>` lines
-  (incl. `dev-alton`, `dev-jayden`) PR into **`dev-phase2`**, the phase-2 integration line — **never
-  directly into `main`**. **Only `dev-phase2` PRs into `main`**, at phase/milestone completion. `main`
-  stays always-deployable; tests required before any merge to `main`.
+- **PRs are the integration seam.** `dev-phase2` is the **single working / integration line** — every
+  session branch PRs into **`dev-phase2`** at session end, **never directly into `main`**. **Only
+  `dev-phase2` PRs into `main`**, at phase/milestone completion. `main` stays always-deployable; tests
+  required before any merge to `main`.
 - **Non-diagnostic language** — every user-facing string must use observational phrasing and pass the
   copy rules in `shared/constants/copy_guidelines.{ts,dart}`. See SHARED-CONTEXT "Non-Diagnostic Copy
   Rules" and [`docs/memory/0003-non-diagnostic-copy.md`](docs/memory/0003-non-diagnostic-copy.md).
@@ -226,11 +227,13 @@ GitHub issue, branch, and **git worktree** (a separate working directory, not ju
    ```bash
    gh issue create --title "<session goal>"        # note the issue number, e.g. 42
    ```
-2. **Create the isolated worktree + branch**, then work there:
+2. **Create the isolated worktree + branch (cut from `dev-phase2`)**, then work there:
    ```bash
    node tools/setup_agent_worktree.mjs --branch feat/m<n>-<area>/<slug> --path <absolute-path-outside-repo>
    cd <worktree-path>      # do ALL of this session's work inside this worktree
    ```
+   The branch is always cut from `dev-phase2` (the tool's default base) and is short-lived — it exists
+   only until its PR merges into `dev-phase2`. There are no long-running personal branches.
 3. **Refine names only before the first push.** Rename the issue with `gh issue edit <n> --title`
    and the branch with `git branch -m <old> <new>`. After a PR is open the branch is hard to rename.
 

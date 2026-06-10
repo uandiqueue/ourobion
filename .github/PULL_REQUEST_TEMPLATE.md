@@ -28,7 +28,7 @@ Closes #
 
 ### Process
 - [ ] CI is green
-- [ ] PR targets `dev-alton` (not `main`)
+- [ ] PR targets `dev-phase2` (not `main`)
 - [ ] A `docs/sessions/` log for this session is added (enforced by `context_sync --check`)
 - [ ] Linked issue number filled in above
 

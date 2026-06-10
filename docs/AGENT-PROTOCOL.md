@@ -90,7 +90,7 @@ Check every one of these before finishing any session or review. No exceptions.
 Used when reviewing a PR. Each item is pass / fail / not-applicable.
 
 **Scope**
-- [ ] PR targets `dev-alton` (the integration branch), not `main`
+- [ ] PR targets `dev-phase2` (the single integration branch), not `main`
 - [ ] Changes are within current phase scope (Phase 1 Stage 1 — see `docs/PROJECT-CONTEXT.md § Current Scope`)
 - [ ] No deferred module work (M3, M4, M7) has been activated without a phase decision
 

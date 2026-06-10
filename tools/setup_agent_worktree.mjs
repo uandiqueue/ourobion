@@ -7,6 +7,9 @@
 //
 //   node tools/setup_agent_worktree.mjs --branch feat/m3-wearables/healthkit-read --path ../biotope-wt-m3
 //
+// Session branches are always cut from dev-phase2 (the single integration line). Override with --base
+// only for exceptional cases (e.g. a hotfix off main).
+//
 // Node stdlib + `git` only — no third-party deps.
 
 import { spawnSync } from "node:child_process";
@@ -21,6 +24,7 @@ function parseArgs(argv) {
     const a = argv[i];
     if (a === "--branch") args.branch = argv[++i];
     else if (a === "--path") args.path = argv[++i];
+    else if (a === "--base") args.base = argv[++i];
     else if (a === "-h" || a === "--help") args.help = true;
   }
   return args;
@@ -31,7 +35,8 @@ function usage() {
     "usage: node tools/setup_agent_worktree.mjs --branch <branch-name> --path <worktree-path>\n" +
       "\n" +
       "  --branch  branch name to create and check out in the new worktree\n" +
-      "  --path    absolute or relative path at which to create the worktree (outside the repo)\n",
+      "  --path    absolute or relative path at which to create the worktree (outside the repo)\n" +
+      "  --base    start-point branch to cut from (default: dev-phase2)\n",
   );
 }
 
@@ -59,11 +64,14 @@ function main() {
 
   const worktreePath = resolve(args.path);
   const branchName = args.branch;
+  const baseBranch = args.base || "dev-phase2";
 
-  console.log(`Setting up isolated worktree for branch '${branchName}' at: ${worktreePath}`);
+  console.log(
+    `Setting up isolated worktree for branch '${branchName}' (cut from '${baseBranch}') at: ${worktreePath}`,
+  );
 
-  // 1. Create the worktree + branch.
-  runCmd("git", ["worktree", "add", "-b", branchName, worktreePath], REPO_ROOT);
+  // 1. Create the worktree + branch, cut from the integration line (dev-phase2 by default).
+  runCmd("git", ["worktree", "add", "-b", branchName, worktreePath, baseBranch], REPO_ROOT);
 
   // 2. Configure the shared hooks inside the new worktree so pre-push runs there too.
   runCmd("git", ["config", "core.hooksPath", ".githooks"], worktreePath);
