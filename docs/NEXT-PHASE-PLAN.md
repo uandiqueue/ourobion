@@ -1,5 +1,9 @@
 # biotope — Next-Phase Direction & Plan
 
+> **See first:** [`PHASE2-GOALS-AND-FEATURES.md`](PHASE2-GOALS-AND-FEATURES.md) (2026-06-11)
+> consolidates all goals into the Phase 2 feature list; its **W0 Foundations supersedes the
+> "Phase 0" section below**. This doc remains the detailed design for the analysis pipeline (W2).
+
 > The next phase of work: **clear the remaining P1S2 backlog first (Phase 0)**, then build the
 > **deep health-metric analysis pipeline** (PDF → structured rules → engine), engine **last**.
 >

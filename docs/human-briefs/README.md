@@ -12,3 +12,4 @@ direction without reading the engineering detail.
 | Brief | Summarizes |
 |---|---|
 | [2026-06-09-next-phase-direction.md](2026-06-09-next-phase-direction.md) | [`../NEXT-PHASE-PLAN.md`](../NEXT-PHASE-PLAN.md) — biotope's next-phase direction (clear P1S2 backlog → deep analysis) |
+| [2026-06-11-phase2-goals-and-features.md](2026-06-11-phase2-goals-and-features.md) | [`../PHASE2-GOALS-AND-FEATURES.md`](../PHASE2-GOALS-AND-FEATURES.md) — all past/present goals consolidated; the Phase 2 feature list |
