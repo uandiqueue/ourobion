@@ -72,10 +72,9 @@ Full dependency diagram: see `ARCHITECTURE-CONTEXT.md`
 | Phase | Focus | Status |
 |---|---|---|
 | Phase 1 Stage 1 | Easy collection MVP — self-report only, no wearables, no ext APIs | ✅ Complete |
-| **Phase 1 Stage 2** | Wearable integration (M3 activation) | 🔨 **CURRENT** |
-| Phase 1 Stage 3 | Environmental API integration (M4 activation) | ⏳ Future |
-| Phase 2 | Full insight engine, cross-metric rules, explanations | ⏳ Future |
-| Phase 3 | Community features, gamification expansion, Insight Lab | ⏳ Future |
+| **Phase 2** (re-baselined 2026-06-11, absorbs old P1S2/P1S3) | Integrated, 2 months, two tracks: foundations + graphify → env APIs (M4, SG-scoped) → Android health (M3) → community v1 + chat (M7 slice) ∥ insights engine (M5b data-driven, cross-metric) → merge → stress test | 🔨 **CURRENT** — see `docs/PHASE2-PLAN.md` |
+| Phase 2→3 gate | Stress test: insights engine actually working (7-day unattended cycle, cross-metric cards from real data). Apple/HealthKit decision here. | ⏳ Gate |
+| Phase 3 | Gamification **game** (open-world pixel, D&D playstyle — concept TBD) + UI redesign (Blender, AI-assisted); Insight Lab | ⏳ Future |
 
 ---
 
