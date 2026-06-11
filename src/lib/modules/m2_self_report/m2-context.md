@@ -1,6 +1,6 @@
 # m2-context.md — M2: Self-Report — Gut & Behaviour
-> Updated at end of every AI session.
-> Owner: [ASSIGN]
+> Module snapshot — session-by-session changes live in `docs/sessions/` (AGENTS.md §7).
+> Owner: Alton (Self-Report Logging + Flutter UI), Jayden assists (see AGENTS.md §6)
 > Phase 1 Stage 1 — MVP
 
 ---

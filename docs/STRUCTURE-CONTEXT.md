@@ -32,7 +32,6 @@ biotope/
 │   ├── dev-workflow.md        # Full dev cycle — what AI does vs what humans must do
 │   ├── PROJECT-CONTEXT.md     # Key project principles, goals, and phases
 │   ├── STRUCTURE-CONTEXT.md   # This document
-│   ├── workspace-context.md   # SUPERSEDED — pointer to AGENTS.md + docs/sessions/
 │   ├── sessions/              # Append-only one-file-per-session logs (variable layer)
 │   ├── memory/                # Durable one-fact-per-file memory + README index
 │   └── graph/                 # couplings.yaml (semantic couplings + guard tests) + README (deferred graph)

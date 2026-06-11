@@ -1,6 +1,6 @@
 # m1-context.md — M1: Core Platform & Compliance
-> Updated at end of every AI session.
-> Owner: [ASSIGN]
+> Module snapshot — session-by-session changes live in `docs/sessions/` (AGENTS.md §7).
+> Owner: Jayden (Core & Compliance + database rules; see AGENTS.md §6)
 > Phase 1 Stage 1 — MVP
 
 ---

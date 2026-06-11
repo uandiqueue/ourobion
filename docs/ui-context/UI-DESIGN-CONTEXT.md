@@ -243,5 +243,4 @@ Flutter: use `AnimationController` + `AnimatedBuilder` with `Transform.translate
 
 | File | Screen | Module |
 |---|---|---|
-| `ui-design-code` | Daily Log | M2 Self-Report |
-| `auth-screen` | Sign In / Sign Up | M1 Core |
+| `auth-screen.html` | Sign In / Sign Up | M1 Core |

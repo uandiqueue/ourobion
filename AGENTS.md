@@ -13,7 +13,7 @@ layers coexist:
   transitions. AGENTS.md **points** to them; it never duplicates them. See §1, §3, §5.
 - **VARIABLE LAYER** (what happened, what's next) — was the single in-place `docs/workspace-context.md`.
   It is **superseded** by append-only **one-file-per-session** logs under `docs/sessions/` plus durable
-  facts under `docs/memory/`. See §6, §7. The old file is now a thin pointer here.
+  facts under `docs/memory/`. See §6, §7. The old file has been removed (history in `docs/sessions/`).
 
 ---
 
