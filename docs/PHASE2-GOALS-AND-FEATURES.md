@@ -3,9 +3,10 @@
 > **Status:** CONSOLIDATION (issue #6, 2026-06-11). This doc gathers **every past and present goal**
 > scattered across `PROJECT-CONTEXT.md`, `ARCHITECTURE-CONTEXT.md`, the module context docs,
 > `shared/SHARED-CONTEXT.md` expansion hints, `docs/NEXT-PHASE-PLAN.md`, and `docs/memory/` into one
-> human-readable list, and proposes what "Phase 2" actually contains. It is the **anchor for the
-> Phase 2 plan** — sequencing/design stays in [`NEXT-PHASE-PLAN.md`](NEXT-PHASE-PLAN.md) (engine
-> pipeline detail, still valid) and the integrated plan that follows once this list is approved.
+> human-readable list, and defines what "Phase 2" contains. **Sequencing now lives in
+> [`PHASE2-PLAN.md`](PHASE2-PLAN.md)** (approved 2026-06-11, two tracks, 2 months); the engine
+> pipeline detail stays in [`NEXT-PHASE-PLAN.md`](NEXT-PHASE-PLAN.md). The open questions below
+> are **resolved** — see "Decisions resolved" at the end.
 >
 > Plain-language companion: [`human-briefs/2026-06-11-phase2-goals-and-features.md`](human-briefs/2026-06-11-phase2-goals-and-features.md).
 
@@ -29,10 +30,10 @@ kept agent-navigable via graphify.
 | # | Goal | Today | Phase 2 outcome |
 |---|---|---|---|
 | **G1** | **Stand on a solid floor** — close the MVP's loose ends so nothing downstream builds on stubs. | Dart contracts are stubs, guard tests are placeholders, M1 home screen is a `[DEV]` placeholder, three M2 flows unbuilt. | Contracts complete + parity-guarded; all MVP screens/flows real. |
-| **G2** | **The app sees your body, passively** — wearable data flows on both platforms without the user doing anything. | Flutter `WearableService` + `wearable_daily` exist; never proven end-to-end on a real device. | HealthKit (iOS) + Health Connect (Android) verified end-to-end; wearable confidence feeding insights. |
+| **G2** | **The app sees your body, passively** — wearable data flows without the user doing anything. | Flutter `WearableService` + `wearable_daily` exist; never proven end-to-end on a real device. | Health Connect (Android) verified end-to-end; wearable confidence feeding insights. Apple/HealthKit decided at end of Phase 2. |
 | **G3** | **Insights become an engine, not a hardcoded list** — evidence-backed, cross-metric, explainable. | 6 hardcoded single-metric TypeScript rules; editing a rule = redeploying a function. | Rules are reviewable data; engine evaluates trend/threshold/correlation; cards can say *why* they fired. |
-| **G4** | **Health is social and situated** — your patterns alongside your region's, privacy-safe. | M7 is an architectural placeholder; `region` is captured on every row but unused. | First community/global surface: regional aggregates behind minimum-user thresholds, opt-in. |
-| **G5** | **Logging stays worth it** — engagement grows beyond streaks. | Streak, DQS, 2 titles (and two computed stats not yet displayed). | Missions/challenges layer; insight-driven engagement; full stat surfacing. |
+| **G4** | **Health is social and situated** — your patterns alongside the community's, privacy-safe. | M7 is an architectural placeholder; `region` is captured on every row but unused. | First community surface: **global** aggregates (all users — testing stage; regional scoping later) + simple chat, opt-in. |
+| **G5** | **Logging stays worth it** — engagement grows beyond streaks. | Streak, DQS, 2 titles (and two computed stats not yet displayed). | Phase 2: stat surfacing only (W0). The gamification **game** (open-world pixel, D&D playstyle) + UI redesign are **Phase 3**, gated on the Phase 2 stress test. |
 | **G6** | **The repo stays understandable** — humans and agents navigate a growing codebase without context overload. | Curated docs + couplings.yaml only. | graphify semantic graph of the biotope repo as dev infrastructure (explicitly **not** part of the insights engine). |
 
 ## Feature inventory
@@ -62,7 +63,7 @@ The unfinished MVP work everything else builds on. ⛔ = hard prerequisite for t
 
 | Feature | What it is | Disposition | Source |
 |---|---|---|---|
-| ⛔ End-to-end device verification | Real device → `wearable_daily` rows, both platforms. Android emulator/device is free and unblocked; **iOS needs a Mac + paid Apple Developer account** (US$99/yr). | P2 (Android now, iOS when unblocked) | NEXT-PHASE-PLAN ⛔, memory 0010 |
+| ⛔ End-to-end device verification | Real device → `wearable_daily` rows. **Android (Health Connect) only in Phase 2**; Apple/HealthKit is decided at the end-of-Phase-2 gate and, if approved, built before Phase 3 (needs Mac + paid Apple Developer account, US$99/yr). | P2 (Android) / gate (Apple) | NEXT-PHASE-PLAN ⛔, memory 0010, PHASE2-PLAN |
 | Wearable confidence into insights | `confidence_sources[]` on insight cards populated from wearable presence; M5a baselines over `DailyPhysioRow` metrics (resting HR, HRV, sleep duration/fragmentation, respiratory rate, skin-temp delta). | P2 | SHARED-CONTEXT, ARCHITECTURE-CONTEXT |
 | Device-type tracking | Profile captures device platform + health-permission status. | P2 | m1-context expansion hint |
 | Known constraints | HRV SDNN is iOS-only (Android = RMSSD); sync is best-effort, never a hard gate (graceful degradation). | — (constraints, not features) | memory 0004, 0006 |
@@ -83,7 +84,7 @@ here as features, not steps.
 | Paper → rules extraction | LLM-assisted CLI drafting candidate rules from research PDFs, human-reviewed, budget-capped. Skeleton until the research paper arrives. | P2 (skeleton) | NEXT-PHASE-PLAN B4 |
 | AI weekly summary | Optional NL summary layer reading deterministic cards. Additive; engine ships without it. | Later | NEXT-PHASE-PLAN E |
 
-### W3 · Environment & outbreak context (M4) — *buried, decision needed*
+### W3 · Environment & outbreak context (M4) — *IN Phase 2 (resolved 2026-06-11)*
 
 The user-visible "One Health" differentiator (weather, vegetation, dengue case rates, outbreak
 alerts per region → `env_daily`). Old label: Phase 1 Stage 3, deferred. **It resurfaces now because
@@ -93,30 +94,36 @@ depends on M4 in the module map.
 
 | Feature | What it is | Disposition | Source |
 |---|---|---|---|
-| `env_daily` ingestion | External API fetch per region: temp, heat index, rainfall, UV, NDVI/green cover, dengue case rate, outbreak alert. | P2? | SHARED-CONTEXT (DailyEnvRow), ARCHITECTURE-CONTEXT |
-| Time-in-green logging | Optional user-logged minutes in green space. | P2? | SHARED-CONTEXT |
-| Env consent copy | Consent update explaining how open data combines with personal logs. | P2? (with M4) | m1-context expansion hint |
+| `env_daily` ingestion | External API fetch per region: temp, heat index, rainfall, UV, NDVI/green cover, dengue case rate, outbreak alert. **Scoped: Singapore, 2–3 sources.** | P2 | SHARED-CONTEXT (DailyEnvRow), ARCHITECTURE-CONTEXT |
+| Time-in-green logging | Optional user-logged minutes in green space. | P2 | SHARED-CONTEXT |
+| Env consent copy | Consent update explaining how open data combines with personal logs. | P2 (with M4) | m1-context expansion hint |
 
 ### W4 · Socials & globals (M7 first slice)
 
-Old label: Phase 3, dormant. Pulled forward per owner direction. Every M2 row already carries
-`region`, so a first slice can aggregate **self-report data by region without M4** — but the full
-eco-social vision (region env context next to community patterns) wants W3.
+Old label: Phase 3, dormant. Pulled forward per owner direction. **Resolved 2026-06-11: the first
+slice covers ALL users globally — no region scoping yet** (testing stage); regional thresholds
+(principle 5) return when the user base justifies per-region publishing.
 
 | Feature | What it is | Disposition | Source |
 |---|---|---|---|
-| Regional aggregates | Privacy-safe `community_aggregates`: publish per-region patterns only above a minimum-user threshold; individual data never exposed. | P2 | PROJECT-CONTEXT principle 5, ARCHITECTURE-CONTEXT |
-| Community surface | Opt-in screen: "your region this week" alongside the user's own patterns. | P2 | PROJECT-CONTEXT Phase 3 scope, pulled forward |
+| Global aggregates | Privacy-safe `community_aggregates` over **all users** (region split deferred); individual data never exposed. | P2 | PROJECT-CONTEXT principle 5 (adapted), ARCHITECTURE-CONTEXT, PHASE2-PLAN |
+| Community surface | Opt-in screen: "everyone this week" alongside the user's own patterns. | P2 | PROJECT-CONTEXT Phase 3 scope, pulled forward |
+| Simple chat | Text-only community chat: RLS per-user rows, report/delete, minimal moderation, feature-flagged. New `shared/` surface → 2-reviewer PR. | P2 | owner direction 2026-06-11, PHASE2-PLAN |
 | Insight Lab | Users correlate their own behaviour with their signals (the raw-rows-are-the-asset payoff). | Later | PROJECT-CONTEXT expansion hint |
 
-### W5 · Gamification (M6 expansion)
+### W5 · Gamification (M6 expansion) — *moved to Phase 3 (resolved 2026-06-11)*
+
+Owner direction: gamification is **not just a reward system** — conceptually an entire game inside
+the health app (**open-world, pixel-art, D&D playstyle; nothing confirmed yet**), paired with a UI
+redesign (Blender-rendered assets, AI-assisted). All of it is **Phase 3**, gated on the Phase 2
+stress test (insights engine actually working). The old expansion hints below fold into the game
+design rather than shipping standalone.
 
 | Feature | What it is | Disposition | Source |
 |---|---|---|---|
-| Missions & challenges | `missions[]` / `challenges[]` on `EngagementState` — time-boxed goals beyond the daily streak. | P2 | SHARED-CONTEXT expansion hint |
-| Insight-driven engagement | Track `insight_actions_taken`; reward engaging with insights, not just logging. | P2 | SHARED-CONTEXT expansion hint |
-| Title expansion | Grow beyond the 2 MVP titles. | P2 | M6 scope |
-| Leaderboards | Region-scoped, privacy-safe ranking. Depends on W4 aggregates + privacy thresholds. | P2? | SHARED-CONTEXT expansion hint |
+| Gamification game | Open-world pixel-art game with D&D playstyle, built into the health app. Concept phase — nothing confirmed. | Phase 3 | owner direction 2026-06-11 |
+| UI redesign | App-wide redesign with Blender-rendered assets, AI-assisted. | Phase 3 | owner direction 2026-06-11 |
+| Missions & challenges / `insight_actions_taken` / titles / leaderboards | The old M6 expansion hints — absorbed into the game design. | Phase 3 (in game) | SHARED-CONTEXT expansion hints |
 
 ### W6 · Dev infrastructure — context management (graphify)
 
@@ -164,18 +171,22 @@ The old phase names fragmented the same product direction across four labels. Ma
 - **iOS wall:** HealthKit e2e + Apple Sign-In both need a Mac + paid Apple Developer account; Android
   is fully unblocked on the current Windows setup.
 
-## Open questions (owner)
+## Decisions resolved (owner, 2026-06-11)
 
-1. **W3 (M4 environment) in or out of Phase 2?** In = the One Health differentiator + best
-   cross-metric rules + clean W4 dependency; out = smaller phase, W4 first slice limited to
-   self-report aggregates. *Recommendation: in, scoped to one region/country and 2–3 data sources.*
-2. **Apple Developer account (US$99/yr)** — buy now (unblocks iOS e2e + Apple Sign-In) or ship
-   Phase 2 Android-first?
-3. **W4 first slice** — read-only regional aggregates only, or also leaderboards (W5)?
-4. **Research paper(s)** for W2 extraction — still pending; W2-B4 stays a skeleton until provided.
+1. **W3 (M4 environment) is IN Phase 2** — sequenced right after graphify; the One Health
+   differentiator. Scoped small: Singapore, 2–3 data sources.
+2. **Android-first; Apple excluded from Phase 2.** The Apple decision (HealthKit + Sign-In, US$99/yr
+   + Mac path) is made at the **end-of-Phase-2 gate**; if approved, built before Phase 3.
+3. **W4 first slice = ALL users, global** (no region scoping yet — testing stage) + community
+   features (simple chat etc.). Leaderboards fold into the Phase 3 game.
+4. **Gamification re-scoped to Phase 3** as a full game (open-world pixel, D&D playstyle — nothing
+   confirmed) + UI redesign (Blender, AI-assisted). Phase 3 starts after the Phase 2 **stress test**
+   (insights engine actually working).
+5. **Phase 2 timeline: 2 months.** Research paper(s) for W2 extraction still pending — B4 stays a
+   skeleton; hand-author the first blueprints if needed.
 
 ---
 
-*Sequencing, milestones, and session breakdown belong to the integrated Phase 2 plan (next session,
-on approval of this list). `NEXT-PHASE-PLAN.md`'s A–E design remains the W2 detail; its "Phase 0" is
-superseded by W0 here.*
+*The sequencing — two parallel tracks branched after graphify, merge, stress-test gate, 9-week
+schedule — lives in [`PHASE2-PLAN.md`](PHASE2-PLAN.md). `NEXT-PHASE-PLAN.md`'s A–E design remains
+the W2 detail; its "Phase 0" is superseded by W0 here.*
