@@ -67,10 +67,12 @@ Full dependency diagram: see `ARCHITECTURE-CONTEXT.md`
 
 ## Phase & Stage Overview
 
+> Rolling status lives in `AGENTS.md` §6 (phase timeline) — this table is the phase definition only.
+
 | Phase | Focus | Status |
 |---|---|---|
-| **Phase 1 Stage 1** | Easy collection MVP — self-report only, no wearables, no ext APIs | ✅ **CURRENT** |
-| Phase 1 Stage 2 | Wearable integration (M3 activation) | ⏳ Next |
+| Phase 1 Stage 1 | Easy collection MVP — self-report only, no wearables, no ext APIs | ✅ Complete |
+| **Phase 1 Stage 2** | Wearable integration (M3 activation) | 🔨 **CURRENT** |
 | Phase 1 Stage 3 | Environmental API integration (M4 activation) | ⏳ Future |
 | Phase 2 | Full insight engine, cross-metric rules, explanations | ⏳ Future |
 | Phase 3 | Community features, gamification expansion, Insight Lab | ⏳ Future |
@@ -112,13 +114,16 @@ Defined in `shared/types/`. Changes require team discussion + PR with two review
 
 ## Team & Module Ownership
 
+> Ownership is maintained in `AGENTS.md` §6 (team workstreams) — summary below.
+
 | Module | Owner | Notes |
 |---|---|---|
-| M1 Core Platform | TBD | Foundation — first to build |
-| M2 Self-Report | TBD | Largest MVP surface |
-| M5a + M5b Intelligence | TBD | Depends on M2 being stable |
-| M6 Engagement | TBD | Depends on M2 completeness signal |
-| M3, M4, M7 | TBD (provisional) | Deferred/dormant — own the placeholder + schema |
+| M1 Core Platform | Jayden | + database rules, PDPA consent copy, copy-guidelines enforcement, auth/OAuth |
+| M2 Self-Report | Alton (Jayden assists) | Largest MVP surface; Flutter UI |
+| M3 Wearables | Alton | HealthKit / Health Connect → `wearable_daily` + M5a wearable extension |
+| M5a + M5b Intelligence | shared | Depends on M2 being stable |
+| M6 Engagement | shared | Depends on M2 completeness signal |
+| M4, M7 | TBD (provisional) | Deferred/dormant — own the placeholder + schema |
 
 ---
 
@@ -127,7 +132,7 @@ Defined in `shared/types/`. Changes require team discussion + PR with two review
 - Branch naming: `feat/m{n}-{module-name}/{short-description}`
 - No module imports from another module's `/impl` — public `index` only
 - All user-facing strings must pass the non-diagnostic language check
-- context.md updated at the end of every AI session (even 2–3 lines)
+- One append-only session log per session in `docs/sessions/` (enforced — see `AGENTS.md` §7)
 - Shared types changes require PR with 2 reviewers
 - Tests required before any PR merge to main
 - `main` is always deployable
