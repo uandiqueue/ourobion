@@ -279,14 +279,23 @@ small JSON file managed by the Shared Memory Coordinator (`tools/shared_memory.m
 
 ## 8. Code-relationship awareness (know a change's blast radius)
 
-Three layers — curate what isn't derivable, defer the auto-generated structural graph for now, enforce
-what we keep:
+Curate what isn't derivable, defer the auto-generated **structural** graph for now, run a **semantic**
+graph for agent context, and enforce what we keep:
 
 - **Structural import graph — DEFERRED.** biotope is Dart + TypeScript + SQL, so a single import-graph
   tool is awkward. The **curated** module graph + interface rules in
   [`docs/ARCHITECTURE-CONTEXT.md`](docs/ARCHITECTURE-CONTEXT.md) are the boundary reference today.
   [`docs/graph/README.md`](docs/graph/README.md) records exactly how to add a real generated graph
   later (and that, when added, it is a rebuildable projection — never hand-edited).
+- **Semantic context graph (graphify) — ADOPTED (2026-06-17).** [`graphify`](https://github.com/safishamsi/graphify)
+  indexes the repo into a queryable `graph.json` so an agent can pull only the relevant subgraph instead
+  of the whole tree. **Complementary to — not a substitute for — the deferred structural graph** (it is
+  semantic/multi-modal; AST coverage includes Dart). It is **build tooling, project-bounded** (a venv in
+  `..\biotope-toolchain`, never global, never committed); rebuild with **`scripts/graphify-build.ps1`**.
+  Output lands in repo-root **`graphify-out/` (gitignored** — a rebuildable projection, never hand-edited).
+  Per the thin-pointer rule we did **not** run graphify's native installer (it edits `CLAUDE.md` + adds a
+  hook); the cross-language semantic pass needs **no API key** — invoked inside Claude Code it uses the
+  host session model. See [`docs/graph/README.md`](docs/graph/README.md) and [`docs/memory/0008-graphify-context-tool.md`](docs/memory/0008-graphify-context-tool.md).
 - **Semantic / data couplings (curated + test-backed):** [`docs/graph/couplings.yaml`](docs/graph/couplings.yaml)
   records the cross-module/data contracts static analysis cannot see — e.g. a `shared/` contract type
   ↔ a Supabase table's columns ↔ the Flutter model, or the TS↔Dart parity of the shared types.

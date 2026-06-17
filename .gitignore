@@ -76,3 +76,12 @@ Thumbs.db
 # Supabase Local Dev
 .branches
 .temp
+
+# ═══════════════════════════════════════════════════════════════
+# 6. GENERATED CONTEXT GRAPH (graphify)
+# ═══════════════════════════════════════════════════════════════
+# graphify's output dir (graph.json + graph.html + AST cache + manifest) is a
+# rebuildable PROJECTION — regenerate with scripts/graphify-build.ps1, never
+# hand-edit (two-tier-truth rule). Gitignored until a path-normalizer makes
+# graph.json diff cleanly cross-machine; see docs/graph/README.md + memory 0008.
+graphify-out/

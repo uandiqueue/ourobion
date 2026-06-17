@@ -57,7 +57,7 @@ projection.
 | Step | Workstream | Key outputs | Notes |
 |---|---|---|---|
 | **0** | clear the P1S2 backlog (the "everything else") | see Phase 0 below | hard prereqs ⊂ this; engine cannot start until done |
-| **A** | graphify adoption (design-only) | `docs/memory/0008-*`; `docs/graph/` note | not on engine's critical path |
+| **A** | graphify adoption (**DONE 2026-06-17**) | `docs/memory/0008-*`; `docs/graph/README.md`; `scripts/graphify-build.ps1`; `graphify-out/` (gitignored) | installed + indexing; not on engine's critical path |
 | **B1** | rule-blueprint contract (types + Zod + AssertExact) | `shared/rules/**` | **`shared/` ⇒ 2-reviewer PR** (memory 0002) |
 | **B2** | `rules` table migration (projection) | `supabase/migrations/…_create_rules.sql` | rebuildable; mirrors `insight_cards` CHECK sets |
 | **B3** | loader (validate blueprints → upsert `rules`) | `tools/rules/load_rules.mjs` | Node; transactional upsert+prune; no LLM |
@@ -69,9 +69,9 @@ projection.
 
 **Ordering rationale:** the engine can't go data-driven until the rule contract exists + is
 parity-guarded (B1), the `rules` projection exists (B2), and the loader has populated it (B3) — so **B
-precedes C**. A (graphify) is design + docs only (cheapest, zero code) and is the context substrate the
-pipeline authors use. E (LLM summary) is deferred and additive — the engine ships fully functional
-without it.
+precedes C**. A (graphify) is the context substrate the pipeline authors use and is **now done**
+(installed + indexing, off the engine's critical path). E (LLM summary) is deferred and additive — the
+engine ships fully functional without it.
 
 ### Phase 0. Clear first — the "everything else" (precedes A–C)
 Undone P1S2 work to clear before the analysis engine. **Hard prerequisites** for the rules pipeline are
@@ -95,21 +95,31 @@ marked ⛔ (the pipeline builds on the same contracts + guard patterns); the res
 
 **Deferred by design — NOT prerequisites, leave as-is:** M4 `env_daily` + module (P1S3); M7 community
 (Phase 3); Google/Apple OAuth (awaits Supabase dashboard config); the deferred structural import-graph
-(`docs/graph/README.md` — graphify may later fill this role); the Gemini session-start hook.
+(`docs/graph/README.md` — still deferred; graphify is the **complementary semantic** graph, not a
+substitute for it); the Gemini session-start hook.
 
 > Each backlog item should become its own issue + session when picked up — Phase 0 is the *clear-list*,
 > not one mega-task. The analysis pipeline (A–E) starts once the ⛔ hard prerequisites are green.
 
-### A. graphify (DESIGN ONLY — do not install yet)
-graphify (github.com/safishamsi/graphify) is a **semantic knowledge-graph** skill, **complementary** to
-the structural import-graph that `docs/graph/README.md` marks DEFERRED. Decision (see
-[`memory/0008-graphify-context-tool.md`](memory/0008-graphify-context-tool.md)): index **biotope's own
-repo** as the primary graph (agent context-overload, role a); index the **research-paper corpus as a
-separate graph** (ingestion context, role b) once it arrives; **never index NUSPlan** (read-once
-reference — indexing pollutes biotope's graph). Files at `docs/graph/generated/graph.{json,html}`;
-**default gitignore both** until a path-normalizer (port NUSPlan `tools/normalize_deps_graph.mjs`) makes
-`graph.json` diff cleanly cross-machine, then promote to committed + add a regenerate/diff check to
-`tools/context_sync.mjs --check`.
+### A. graphify (ADOPTED — installed + indexing, 2026-06-17)
+graphify (github.com/safishamsi/graphify, PyPI `graphifyy`) is a **semantic knowledge-graph** skill,
+**complementary** to the structural import-graph that `docs/graph/README.md` marks DEFERRED. Decision +
+verified coverage in [`memory/0008-graphify-context-tool.md`](memory/0008-graphify-context-tool.md):
+index **biotope's own repo** as the primary graph (agent context-overload, role a); index the
+**research-paper corpus as a separate graph** (ingestion context, role b) once it arrives; **never index
+NUSPlan** (read-once reference — indexing pollutes biotope's graph).
+
+**As adopted (vs the original design sketch):**
+- Installed **project-bounded** (venv in `..\biotope-toolchain\graphify-venv`, never global); rebuild via
+  **`scripts/graphify-build.ps1`**. graphify's native `install` (edits `CLAUDE.md` + adds a hook) was
+  **not** run — `CLAUDE.md` stays a thin pointer; usage is documented in AGENTS.md §8 + `docs/graph/README.md`.
+- Artifacts at repo-root **`graphify-out/`** (graphify's native dir), **gitignored** — this
+  **supersedes the planned `docs/graph/generated/` path** (0.8.40 hard-defaults to `graphify-out/`).
+  Promote `graph.json` to committed + add a regenerate/diff check to `tools/context_sync.mjs --check`
+  once a path-normalizer (port NUSPlan `tools/normalize_deps_graph.mjs`) makes it diff cleanly cross-machine.
+- AST extraction is fully local (Dart + TS + more, no key). The cross-language **semantic pass needs no
+  API key** — invoked inside Claude Code it uses the host session model (resolves open-decision #1's key
+  concern for this step).
 
 ### B1. Rule-blueprint contract (TRUTH) — `shared/rules/`
 Mirror NUSPlan's types/schema split (`shared/` already depends on `zod@4`). New files: `_assert.ts`
@@ -212,7 +222,8 @@ leave room.
 
 ## Open decisions to confirm before/at implementation
 1. **Research-paper PDF** — needed to author real rules; B4 skeleton waits on it.
-2. **graphify** committed-vs-gitignored (default: gitignore until a normalizer exists).
+2. ~~**graphify** committed-vs-gitignored~~ **RESOLVED (2026-06-17): gitignored** (`graphify-out/`) until
+   a path-normalizer makes `graph.json` diff cleanly cross-machine, then promote. See memory 0008.
 3. **`shared/rules` Dart parity** — recommend **TS-only** (app renders `insight_cards`, already a shared
    contract; no need to render raw rule metadata). Confirm.
 4. **`rules` reload trigger** — recommend CI-on-`data/rules`-change + manual; **no cron**.
