@@ -153,6 +153,18 @@ Push-Location $RepoRoot;            npm install;  Pop-Location
 Push-Location "$RepoRoot\shared";   npm install;  Pop-Location
 Push-Location "$RepoRoot\src";      & $flutter pub get;  Pop-Location
 
+# ─── 10. graphify (semantic context graph — dev tooling) ─────────────────────
+# Installs graphify bounded to the toolchain (..\biotope-toolchain\graphify-venv) and builds the
+# initial graph. The Claude Code hook + the CLAUDE.md `## graphify` block that drive it are committed
+# in the repo, so only the CLI binary is installed here. Non-fatal: graphify is auxiliary dev tooling.
+Step "graphify (semantic context graph)"
+try {
+    & (Join-Path $PSScriptRoot 'graphify-build.ps1')
+} catch {
+    Write-Warning "graphify setup skipped: $($_.Exception.Message)"
+    Write-Warning "Run scripts\graphify-build.ps1 later to install + build the graph."
+}
+
 # ─── Done ───────────────────────────────────────────────────────────────────
 Step "Setup complete"
 Write-Host @"

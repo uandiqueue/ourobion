@@ -212,6 +212,56 @@ lockfiles — it never references the local toolchain folder.
 
 ---
 
+## 🧭 Code navigation — graphify (semantic context graph)
+
+biotope indexes its **own source** into a queryable semantic graph with
+[graphify](https://github.com/safishamsi/graphify), so an AI assistant (or you) can ask *"what connects
+auth to the database?"* and get a small, relevant slice instead of grepping the whole tree. It is **dev
+tooling** — not part of the app, and not part of the insights engine.
+
+### Install / rebuild
+
+graphify is **bounded to the project toolchain** (like Node/Flutter) — a venv in
+`..\biotope-toolchain\graphify-venv`, never global, never committed.
+
+- **Auto-installed** by `scripts/setup.ps1` (Windows) and `scripts/setup.sh` (macOS/Linux/Git Bash) —
+  no separate step on a new device.
+- **Rebuild after code changes:**
+  - Windows: `.\scripts\graphify-build.ps1`
+  - macOS/Linux: `bash scripts/graphify-build.sh`
+- Output lands in `graphify-out/` — **gitignored and rebuildable; never copy or commit it.**
+- On Windows, `graphify` is on PATH after `. .\scripts\biotope-env.ps1` (otherwise call the venv's
+  `graphify` directly).
+
+### Does it run automatically? Only with Claude Code
+
+The **automatic** behaviour — the assistant consulting the graph before grepping/reading source — is
+wired **only for Claude Code** in this repo (a committed PreToolUse hook in `.claude/settings.json` + the
+`## graphify` block in `CLAUDE.md`). Everyone else triggers graphify **manually** — it's just a CLI.
+
+| You are using… | How graphify works |
+|---|---|
+| **Claude Code** | Automatic. The hook reminds it to query the graph; the semantic pass uses the Claude Code session's model — **no API key**. Nothing to set up. |
+| **Another AI tool** (Gemini CLI, Cursor, Copilot, …) | Not wired here. Either **run it yourself** (CLI below), or install that tool's integration: `graphify <tool> install` (e.g. `graphify gemini install`) — that edits *that* tool's config (e.g. `GEMINI.md`), not `CLAUDE.md`. |
+| **No AI / plain terminal** | **Run it yourself** with the CLI below. |
+
+**Query it yourself (any platform):**
+
+```bash
+graphify query "<question>"      # the relevant subgraph for a question
+graphify path "<A>" "<B>"        # shortest relationship between two symbols
+graphify explain "<concept>"     # a node and its neighbours
+```
+
+**API keys / cost:** the local AST graph needs **no key** on any platform. The optional cross-language
+semantic pass is free inside Claude Code (host session model); run headless or under another backend it
+needs that provider's key (`ANTHROPIC_API_KEY` / `GEMINI_API_KEY` / `OPENAI_API_KEY`).
+
+More detail: [`docs/graph/README.md`](docs/graph/README.md) and
+[`docs/memory/0008-graphify-context-tool.md`](docs/memory/0008-graphify-context-tool.md).
+
+---
+
 ## 📱 Running on Android
 
 You can use either a **physical Android phone** or an **Android emulator** (AVD). Both work the same way with `flutter run`.

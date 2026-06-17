@@ -192,6 +192,20 @@ if [ -f "src/pubspec.yaml" ]; then
   echo "  ✅ Done"
 fi
 
+# ─── 8. graphify (semantic context graph — optional dev tooling) ─────────────
+# Installs graphify bounded to the project (../biotope-toolchain/graphify-venv) and builds the graph.
+# The Claude Code hook + CLAUDE.md block that drive it are committed in the repo. Non-fatal.
+echo ""
+echo "Setting up graphify (semantic context graph)..."
+SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if ! command -v python3 &> /dev/null; then
+  echo "  ⚠️  python3 not found — skipping. Install Python 3, then run ./scripts/graphify-build.sh."
+elif bash "$SETUP_DIR/graphify-build.sh"; then
+  echo "  ✅ graphify ready"
+else
+  echo "  ⚠️  graphify setup skipped — run ./scripts/graphify-build.sh later."
+fi
+
 # ─── Done ────────────────────────────────────────────────────
 echo ""
 echo "✅ Setup complete!"
