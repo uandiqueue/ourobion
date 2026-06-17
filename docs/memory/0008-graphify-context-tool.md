@@ -21,9 +21,12 @@ graph is a rebuildable projection, never hand-edited ([[0001-two-tier-truth]]).
   manifest) — a rebuildable projection. Promote `graph.json` to committed + add a regenerate/diff check
   to `tools/context_sync.mjs --check` once a path-normalizer (port NUSPlan's
   `tools/normalize_deps_graph.mjs`) makes it diff cleanly cross-machine. `graph.html` stays gitignored.
-- **Agent integration:** a Claude Code PreToolUse hook (`.claude/settings.json`) reminds agents to query
-  the graph before grepping/reading source; the `## graphify` block in `CLAUDE.md` holds the query
-  commands. AGENTS.md stays the single source of truth — that block is operational graphify usage only.
+- **Agent integration (pre-wired, committed):** PreToolUse hooks remind the agent to query the graph
+  before grepping/reading source for **Claude Code** (`.claude/settings.json` + `CLAUDE.md`), **Codex**
+  (`.codex/hooks.json` + `AGENTS.md`), and **Gemini CLI** (`.gemini/settings.json` + `GEMINI.md`). Any
+  other tool: `graphify <tool> install`, or run the CLI manually. The committed hook/`graphify hook-check`
+  path relies on `graphify` being on PATH (toolchain activated). AGENTS.md stays the single source of
+  truth — its graphify lines are operational usage only.
 - **No API key.** AST extraction is fully local (tree-sitter). graphify's cross-language semantic pass
   normally wants `ANTHROPIC_API_KEY` (or Gemini/OpenAI), but invoked inside Claude Code it uses the
   **host session model** — so it runs on demand via the local agent, no separate key.

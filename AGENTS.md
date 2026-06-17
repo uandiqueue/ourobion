@@ -280,16 +280,14 @@ graph for agent context, and enforce what we keep:
   semantic/multi-modal; AST coverage includes Dart). It is **build tooling, project-bounded** (a venv in
   `..\biotope-toolchain`, on PATH after `. .\scripts\biotope-env.ps1`, never global/committed); rebuild
   with **`scripts/graphify-build.ps1`**. Output is repo-root **`graphify-out/`** (gitignored — a
-  rebuildable projection, never hand-edited). A **Claude Code PreToolUse hook** (`.claude/settings.json`)
-  reminds agents to query the graph before grepping/reading source; the `## graphify` block in
-  `CLAUDE.md` holds the query commands. The cross-language semantic pass needs **no API key** — invoked
-  inside Claude Code it uses the host session model. Detail: [`docs/graph/README.md`](docs/graph/README.md),
+  rebuildable projection, never hand-edited). Query it with `graphify query "<question>"`,
+  `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"`; after code changes run
+  `graphify update .`. **Pre-wired PreToolUse hooks** remind the agent to consult the graph before
+  grepping/reading source for **Claude Code** (`.claude/settings.json` + `CLAUDE.md`), **Codex**
+  (`.codex/hooks.json`), and **Gemini CLI** (`.gemini/settings.json` + `GEMINI.md`); any other tool runs
+  the CLI manually. The semantic pass needs **no API key** inside an AI assistant (it uses the host
+  session model). Detail: [`docs/graph/README.md`](docs/graph/README.md),
   [`docs/memory/0008-graphify-context-tool.md`](docs/memory/0008-graphify-context-tool.md).
-- **Semantic / data couplings (curated + test-backed):** [`docs/graph/couplings.yaml`](docs/graph/couplings.yaml)
-  records the cross-module/data contracts static analysis cannot see — e.g. a `shared/` contract type
-  ↔ a Supabase table's columns ↔ the Flutter model, or the TS↔Dart parity of the shared types.
-  **Each edge names a `guard:` test that makes the coupling executable;** the check **fails** if a
-  named guard file is missing. Guard tests live in `src/test/guards/`.
 
 ## 9. Enforced context maintenance (automated, not trust-based)
 

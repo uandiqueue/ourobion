@@ -236,14 +236,21 @@ graphify is **bounded to the project toolchain** (like Node/Flutter) — a venv 
 ### Does it run automatically? Only with Claude Code
 
 The **automatic** behaviour — the assistant consulting the graph before grepping/reading source — is
-wired **only for Claude Code** in this repo (a committed PreToolUse hook in `.claude/settings.json` + the
-`## graphify` block in `CLAUDE.md`). Everyone else triggers graphify **manually** — it's just a CLI.
+**pre-wired (committed in the repo) for Claude Code, Codex, and Gemini CLI**. Each has a PreToolUse hook
+plus a graphify block in the file that tool reads. Any other tool runs graphify **manually** — it's just
+a CLI.
 
 | You are using… | How graphify works |
 |---|---|
-| **Claude Code** | Automatic. The hook reminds it to query the graph; the semantic pass uses the Claude Code session's model — **no API key**. Nothing to set up. |
-| **Another AI tool** (Gemini CLI, Cursor, Copilot, …) | Not wired here. Either **run it yourself** (CLI below), or install that tool's integration: `graphify <tool> install` (e.g. `graphify gemini install`) — that edits *that* tool's config (e.g. `GEMINI.md`), not `CLAUDE.md`. |
+| **Claude Code** | **Pre-wired.** Hook `.claude/settings.json` + `## graphify` block in `CLAUDE.md`. |
+| **Codex** (OpenAI / GPT) | **Pre-wired.** Hook `.codex/hooks.json` + graphify guidance in `AGENTS.md`. |
+| **Gemini CLI** | **Pre-wired.** Hook `.gemini/settings.json` + `## graphify` block in `GEMINI.md`. |
+| **Another AI tool** (Cursor, Copilot, …) | Not pre-wired. Either **run it yourself** (CLI below), or install that tool's integration: `graphify <tool> install` (e.g. `graphify cursor install`) — that edits *that* tool's config. |
 | **No AI / plain terminal** | **Run it yourself** with the CLI below. |
+
+In all pre-wired cases the semantic pass uses the **host assistant's session model — no API key** — and
+graphify must be on PATH (Windows: `. .\scripts\biotope-env.ps1`). The hooks/blocks travel with the repo,
+so a fresh clone is pre-wired after the toolchain is installed.
 
 **Query it yourself (any platform):**
 
