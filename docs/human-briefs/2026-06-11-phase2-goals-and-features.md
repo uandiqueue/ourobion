@@ -1,6 +1,6 @@
 # What Phase 2 of biotope is — in plain language
 
-**Date:** 2026-06-11 · **Detail:** [`../PHASE2-GOALS-AND-FEATURES.md`](../PHASE2-GOALS-AND-FEATURES.md)
+**Date:** 2026-06-11 · **Detail:** [`../PHASE2-PLAN.md`](../PHASE2-PLAN.md)
 
 ## The problem
 

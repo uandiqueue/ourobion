@@ -21,4 +21,4 @@ cost discipline. Phase-2 condition set is **core only**: `trend` + `threshold` +
 ([[0002-shared-contract-two-reviewers]]). All rule copy stays non-diagnostic
 ([[0003-non-diagnostic-copy]]), enforced at load, blueprint-guard, and render.
 
-Full roadmap: `docs/NEXT-PHASE-PLAN.md`. Context tool: [[0008-graphify-context-tool]].
+Engine design: `docs/INSIGHTS-ENGINE-DESIGN.md`; plan: `docs/PHASE2-PLAN.md`. Context tool: [[0008-graphify-context-tool]].

@@ -14,9 +14,8 @@ to everything else:
 - `docs/ui-context/UI-DESIGN-CONTEXT.md` — design tokens, component specs
 - `docs/AGENT-PROTOCOL.md` — AI routing table, truth hierarchy, PR review checklist
 - `docs/dev-workflow.md` — the full human dev cycle (Issue → … → Merge)
-- `docs/PHASE2-GOALS-AND-FEATURES.md` — all past/present goals consolidated; the Phase 2 feature list
-- `docs/PHASE2-PLAN.md` — the approved Phase 2 sequence: two tracks, 2 months, stress-test gate
-- `docs/NEXT-PHASE-PLAN.md` — next-phase direction: clear the P1S2 backlog → deep health-metric analysis
+- `docs/PHASE2-PLAN.md` — the Phase 2 plan: goals, workstreams, two-track sequence, stress-test gate
+- `docs/INSIGHTS-ENGINE-DESIGN.md` — the data-driven insights-engine contract (Phase 2 Track B)
 - `docs/human-briefs/` — plain-language stakeholder briefs of significant plans
 
 ## 👥 Session Workflow

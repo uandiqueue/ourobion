@@ -1,6 +1,5 @@
 # STRUCTURE-CONTEXT.md — Biotope Repository Structure
 > **CONSTANT LAYER** — Update only when the repository structure changes.
-> Last updated: 2026-06-08
 
 ---
 
@@ -32,13 +31,19 @@ biotope/
 │   ├── dev-workflow.md        # Full dev cycle — what AI does vs what humans must do
 │   ├── PROJECT-CONTEXT.md     # Key project principles, goals, and phases
 │   ├── STRUCTURE-CONTEXT.md   # This document
+│   ├── PHASE2-PLAN.md         # Current phase plan: goals, workstreams, sequence, gate
+│   ├── INSIGHTS-ENGINE-DESIGN.md # Data-driven insights-engine contract (Phase 2 Track B)
+│   ├── ui-context/            # UI design system (UI-DESIGN-CONTEXT.md + mockups)
+│   ├── human-briefs/          # Plain-language stakeholder briefs (dated snapshots)
 │   ├── sessions/              # Append-only one-file-per-session logs (variable layer)
 │   ├── memory/                # Durable one-fact-per-file memory + README index
-│   └── graph/                 # couplings.yaml (semantic couplings + guard tests) + README (deferred graph)
+│   └── graph/                 # couplings.yaml (semantic couplings + guard tests) + README (graphify + deferred structural graph)
 ├── scripts/                   # Local setup and utility scripts
 │   ├── setup.sh               # Linux/macOS (+ Git Bash/WSL) env check + dep install
 │   ├── setup.ps1              # Windows-native bounded toolchain installer (Miniconda + Flutter + Android SDK)
-│   └── biotope-env.ps1        # Windows: per-shell activation of the bounded toolchain
+│   ├── biotope-env.ps1        # Windows: per-shell activation of the bounded toolchain
+│   ├── graphify-build.ps1     # Rebuild the graphify semantic context graph (AST-only, local)
+│   └── seed-test-data.ps1     # Inject backdated rows + rebuild projections for local testing
 ├── shared/                    # Code shared across frontend and backend boundaries
 │   ├── SHARED-CONTEXT.md      # Shared types and integration contracts
 │   ├── types/                 # Shared data models (TypeScript + Dart)
@@ -54,8 +59,12 @@ biotope/
 │   │   ├── compute-baselines/ # M5a backend worker
 │   │   └── generate-insights/ # M5b backend worker
 │   └── migrations/            # Postgres schema definitions
-└── tests/                     # Integration and end-to-end tests outside the app boundary
+├── tests/                     # Integration and end-to-end tests outside the app boundary
+└── graphify-out/              # graphify's semantic context graph (gitignored, rebuildable projection)
 ```
+
+> `graphify-out/` and the `..\biotope-toolchain\graphify-venv` that produces it are machine-local and
+> uncommitted — rebuild with `scripts/graphify-build.ps1`. See [`graph/README.md`](graph/README.md).
 
 ## Environment Files
 

@@ -6,14 +6,12 @@
 > **not** travel — everything that must survive across machines and agents lives in the repo (this
 > file, the CONSTANT-LAYER docs it points to, `docs/sessions/`, `docs/memory/`, `docs/graph/`).
 
-This file **harmonizes** with biotope's pre-existing context-doc system; it does not replace it. Two
-layers coexist:
+biotope's context lives in two layers:
 
 - **CONSTANT LAYER** (architecture, contracts, conventions) — authored docs that change only at phase
   transitions. AGENTS.md **points** to them; it never duplicates them. See §1, §3, §5.
-- **VARIABLE LAYER** (what happened, what's next) — was the single in-place `docs/workspace-context.md`.
-  It is **superseded** by append-only **one-file-per-session** logs under `docs/sessions/` plus durable
-  facts under `docs/memory/`. See §6, §7. The old file has been removed (history in `docs/sessions/`).
+- **VARIABLE LAYER** (what happened, what's next) — append-only **one-file-per-session** logs under
+  `docs/sessions/` plus durable facts under `docs/memory/`. See §6, §7.
 
 ---
 
@@ -177,24 +175,14 @@ git config core.hooksPath .githooks
   copy rules in `shared/constants/copy_guidelines.{ts,dart}`. See SHARED-CONTEXT "Non-Diagnostic Copy
   Rules" and [`docs/memory/0003-non-diagnostic-copy.md`](docs/memory/0003-non-diagnostic-copy.md).
 
-## 6. Phase timeline & team workstreams
+## 6. Phase & team workstreams
 
-> Migrated here from the old `docs/workspace-context.md` (its durable content). The rolling
-> per-session status it used to hold now lives in `docs/sessions/`; canonical phase scope stays in
-> [`docs/PROJECT-CONTEXT.md`](docs/PROJECT-CONTEXT.md).
-
-### Phase timeline (as of the bootstrap, 2026-06-08)
-
-| Phase / Milestone | Status |
-|---|---|
-| P1S1 · Repository scaffolding | ✅ Complete |
-| P1S1 · M1 Auth & DB models | 🔨 In progress (app shell + tab nav done; copy/legal polish remaining) |
-| P1S1 · M2 Self-report logging UI | ✅ Complete |
-| P1S1 · M5a Baseline computation | ✅ Complete |
-| P1S1 · M5b Insight generation | ✅ Complete |
-| P1S1 · M6 Engagement (streak, DQS, titles) | ✅ Complete (`dqs_7day_avg` + `longest_streak` display deferred) |
-| **P1S2 · Passive health / wearables (M3)** | 🔨 In progress — Flutter integration done (`WearableService`, `wearable_daily` migration applied, platform config, iOS HealthKit entitlement); **end-to-end test on real device pending** |
-| P1S3 · Environmental modifiers (M4) | 🗓️ Planned |
+The repo is in **Phase 2** — turning the shipped MVP self-report loop (M1 auth, M2 logging, M5a
+baselines, M5b insights, M6 engagement) into the real product: Android passive health (M3), a
+data-driven insights engine (M5b), environmental context (M4), and the first community slice (M7).
+**Current scope, sequencing, and the Phase 2 → Phase 3 gate live in
+[`docs/PHASE2-PLAN.md`](docs/PHASE2-PLAN.md)** (the plan authority); per-session status lives in
+`docs/sessions/`.
 
 ### Team workstreams (ownership)
 
@@ -249,8 +237,7 @@ GitHub issue, branch, and **git worktree** (a separate working directory, not ju
    Closes #<n>"
    ```
    (Only `dev-phase2 → main` PRs target `main`, at phase/milestone completion.)
-   This **supersedes** biotope's old "update `workspace-context.md` at session end" rule — the session
-   log (below) + the issue summary replace it.
+   The session log (below) + the issue summary are the durable record of what shipped.
 
 ### Session log — `docs/sessions/` (REQUIRED — enforced)
 Every session writes **exactly one** append-only file (never edit a shared file — one-file-per-session
@@ -287,15 +274,17 @@ graph for agent context, and enforce what we keep:
   [`docs/ARCHITECTURE-CONTEXT.md`](docs/ARCHITECTURE-CONTEXT.md) are the boundary reference today.
   [`docs/graph/README.md`](docs/graph/README.md) records exactly how to add a real generated graph
   later (and that, when added, it is a rebuildable projection — never hand-edited).
-- **Semantic context graph (graphify) — ADOPTED (2026-06-17).** [`graphify`](https://github.com/safishamsi/graphify)
-  indexes the repo into a queryable `graph.json` so an agent can pull only the relevant subgraph instead
-  of the whole tree. **Complementary to — not a substitute for — the deferred structural graph** (it is
+- **Semantic context graph (graphify).** [`graphify`](https://github.com/safishamsi/graphify) indexes
+  the repo into a queryable `graph.json` so an agent pulls only the relevant subgraph instead of the
+  whole tree. **Complementary to — not a substitute for — the deferred structural graph** (it is
   semantic/multi-modal; AST coverage includes Dart). It is **build tooling, project-bounded** (a venv in
-  `..\biotope-toolchain`, never global, never committed); rebuild with **`scripts/graphify-build.ps1`**.
-  Output lands in repo-root **`graphify-out/` (gitignored** — a rebuildable projection, never hand-edited).
-  Per the thin-pointer rule we did **not** run graphify's native installer (it edits `CLAUDE.md` + adds a
-  hook); the cross-language semantic pass needs **no API key** — invoked inside Claude Code it uses the
-  host session model. See [`docs/graph/README.md`](docs/graph/README.md) and [`docs/memory/0008-graphify-context-tool.md`](docs/memory/0008-graphify-context-tool.md).
+  `..\biotope-toolchain`, on PATH after `. .\scripts\biotope-env.ps1`, never global/committed); rebuild
+  with **`scripts/graphify-build.ps1`**. Output is repo-root **`graphify-out/`** (gitignored — a
+  rebuildable projection, never hand-edited). A **Claude Code PreToolUse hook** (`.claude/settings.json`)
+  reminds agents to query the graph before grepping/reading source; the `## graphify` block in
+  `CLAUDE.md` holds the query commands. The cross-language semantic pass needs **no API key** — invoked
+  inside Claude Code it uses the host session model. Detail: [`docs/graph/README.md`](docs/graph/README.md),
+  [`docs/memory/0008-graphify-context-tool.md`](docs/memory/0008-graphify-context-tool.md).
 - **Semantic / data couplings (curated + test-backed):** [`docs/graph/couplings.yaml`](docs/graph/couplings.yaml)
   records the cross-module/data contracts static analysis cannot see — e.g. a `shared/` contract type
   ↔ a Supabase table's columns ↔ the Flutter model, or the TS↔Dart parity of the shared types.

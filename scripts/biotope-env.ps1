@@ -49,11 +49,13 @@ $env:FLUTTER_ROOT = $FlutterRoot
 $env:PUB_CACHE    = Join-Path $Toolchain 'pub-cache'
 
 # --- Prepend toolchain bins to PATH for this session only ---
+# graphify-venv\Scripts puts the `graphify` CLI on PATH (the semantic context graph; see docs/graph).
 $prepend = @(
     (Join-Path $FlutterRoot 'bin'),
     (Join-Path $AndroidSdk  'platform-tools'),
     (Join-Path $AndroidSdk  'emulator'),
-    (Join-Path $AndroidSdk  'cmdline-tools\latest\bin')
+    (Join-Path $AndroidSdk  'cmdline-tools\latest\bin'),
+    (Join-Path $Toolchain   'graphify-venv\Scripts')
 ) -join ';'
 $env:PATH = "$prepend;$($env:PATH)"
 

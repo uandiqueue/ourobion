@@ -1,6 +1,7 @@
 # PROJECT-CONTEXT.md — Biotope
-> **CONSTANT LAYER** — Change only at formal phase transitions or full team agreement.
-> Last updated: Phase 1 Stage 1 (MVP)
+> **CONSTANT LAYER** — product principles, tech stack, module map, and the shared contract. Change
+> only at formal phase transitions or full team agreement. Current phase scope + sequencing live in
+> [`PHASE2-PLAN.md`](PHASE2-PLAN.md).
 
 ---
 
@@ -53,46 +54,29 @@ The app surfaces descriptive patterns and insight cards. It never diagnoses.
 ```
 M1  Core Platform & Compliance      ← foundation, no dependencies
 M2  Self-Report: Gut & Behaviour    ← depends on M1
-M3  Passive Health & Wearable       ← depends on M1  [DEFERRED — Phase 1 Stage 2]
-M4  Environmental & Outbreak        ← depends on M1  [DEFERRED — Phase 1 Stage 3]
+M3  Passive Health & Wearable       ← depends on M1
+M4  Environmental & Outbreak        ← depends on M1
 M5a Baselines & Data Pipeline       ← depends on M2, M3, M4
 M5b Insight Engine                  ← depends on M5a, M1 (copy rules)
 M6  Engagement & Motivation         ← depends on M2 (completeness), M5b (InsightFiredEvent)
-M7  Community & Ecosystem           ← depends on M4, M2 aggregates  [DORMANT — Phase 3]
+M7  Community & Ecosystem           ← depends on M4, M2 aggregates
 ```
 
 Full dependency diagram: see `ARCHITECTURE-CONTEXT.md`
 
 ---
 
-## Phase & Stage Overview
+## Phases
 
-> Rolling status lives in `AGENTS.md` §6 (phase timeline) — this table is the phase definition only.
+> Phase definitions only. Current scope, sequencing, and the gate live in
+> [`PHASE2-PLAN.md`](PHASE2-PLAN.md); per-session status in `docs/sessions/`.
 
-| Phase | Focus | Status |
-|---|---|---|
-| Phase 1 Stage 1 | Easy collection MVP — self-report only, no wearables, no ext APIs | ✅ Complete |
-| **Phase 2** (re-baselined 2026-06-11, absorbs old P1S2/P1S3) | Integrated, 2 months, two tracks: foundations + graphify → env APIs (M4, SG-scoped) → Android health (M3) → community v1 + chat (M7 slice) ∥ insights engine (M5b data-driven, cross-metric) → merge → stress test | 🔨 **CURRENT** — see `docs/PHASE2-PLAN.md` |
-| Phase 2→3 gate | Stress test: insights engine actually working (7-day unattended cycle, cross-metric cards from real data). Apple/HealthKit decision here. | ⏳ Gate |
-| Phase 3 | Gamification **game** (open-world pixel, D&D playstyle — concept TBD) + UI redesign (Blender, AI-assisted); Insight Lab | ⏳ Future |
-
----
-
-## Current Scope (Phase 1 Stage 1 — MVP)
-
-**In scope:**
-- M1: Auth, profiles, consent, non-diagnostic copy framework
-- M2: All self-report logging (urine, stool, food, mosquito, antibiotics, daily check-in, symptoms, notes)
-- M5a: 7-day silent baseline computation on M2 data only
-- M5b: Descriptive discovery cards only (no threshold alerts)
-- M6: Data Quality Score, streak counter, 2 early titles
-
-**Explicitly out of scope for MVP:**
-- M3 (wearables) — store toggle only
-- M4 (environmental APIs) — store region/city only
-- M7 (community) — architectural placeholder only
-- Any alert that could be interpreted as diagnostic
-- Any cross-metric rule combining more than one signal
+| Phase | Focus |
+|---|---|
+| Phase 1 | Easy-collection MVP — the self-report loop end to end (M1 auth, M2 logging, M5a baselines, M5b discovery cards, M6 engagement); no wearables, no external APIs. |
+| Phase 2 | Turn the MVP loop into the real product, two tracks: foundations + graphify → env APIs (M4, SG-scoped) → Android health (M3) → community v1 + chat (M7 slice) ∥ data-driven cross-metric insights engine (M5b) → merge → stress test. |
+| Phase 2→3 gate | Stress test: the insights engine actually working (7-day unattended cycle, cross-metric cards from real data). Apple/HealthKit decision made here. |
+| Phase 3 | Gamification **game** (open-world pixel, D&D playstyle — concept TBD) + UI redesign (Blender, AI-assisted); Insight Lab. |
 
 ---
 
@@ -102,8 +86,8 @@ These types must be agreed by all team members before module work begins.
 Defined in `shared/types/`. Changes require team discussion + PR with two reviewers.
 
 - `DailyGutRow` — M2's normalised daily output
-- `DailyPhysioRow` — M3's normalised daily output (shape locked now, populated Phase 1 Stage 2)
-- `DailyEnvRow` — M4's normalised daily output (shape locked now, populated Phase 1 Stage 3)
+- `DailyPhysioRow` — M3's normalised daily output (populated by the wearable integration)
+- `DailyEnvRow` — M4's normalised daily output (populated by the env ingestion function)
 - `BaselineSnapshot` — M5a's output per metric per user
 - `InsightCard` — M5b's output consumed by frontend + M6
 - `InsightFiredEvent` — event M6 listens to (never reads M5b internals)
@@ -122,7 +106,8 @@ Defined in `shared/types/`. Changes require team discussion + PR with two review
 | M3 Wearables | Alton | HealthKit / Health Connect → `wearable_daily` + M5a wearable extension |
 | M5a + M5b Intelligence | shared | Depends on M2 being stable |
 | M6 Engagement | shared | Depends on M2 completeness signal |
-| M4, M7 | TBD (provisional) | Deferred/dormant — own the placeholder + schema |
+| M4 Environmental | Jayden | Env ingestion → `env_daily` (SG-scoped); see `PHASE2-PLAN.md` Track A |
+| M7 Community | shared | Global aggregates + chat first slice; see `PHASE2-PLAN.md` Track A |
 
 ---
 
@@ -138,17 +123,16 @@ Defined in `shared/types/`. Changes require team discussion + PR with two review
 
 ---
 
-## Expansion Hints (Do Not Build Yet)
+## Schema forethought (why these fields exist)
 
-> These exist so AI sessions don't accidentally design against them.
+> Contracts carry fields ahead of the feature that fills them, so later modules join in without a
+> migration. Don't remove them because they look unused.
 
-- M3 will add physiological confidence scores to every InsightCard — M5b must accommodate a
-  `confidence_sources` array on InsightCard from day one (even if empty in MVP).
-- M4 will add env context rows — M5a baseline tables must be keyed by `(user_id, date, region)`
-  not just `(user_id, date)` so env joins work without schema migration.
-- M7 will aggregate M2 fields at region level — M2 output rows must include `region` field
-  even in MVP so aggregation is a query, not a backfill.
-- Phase 2 will add "Why am I seeing this?" per insight — InsightCard should have a
-  `contributing_metrics: string[]` field from day one (empty array in MVP is fine).
-- Phase 3 Insight Lab will correlate behaviour with signals — store all raw daily rows,
-  never derive-only. Raw data is the asset.
+- **`InsightCard.confidence_sources[]`** — M3 attaches physiological confidence to each card; the
+  array exists on `InsightCard` so M5b accommodates it whether or not wearable data is present.
+- **Baselines keyed by `(user_id, date, region)`** — so M4 env rows join without a schema migration.
+- **`region` on every daily row** — so M7 community aggregation is a query, not a backfill.
+- **`InsightCard.contributing_metrics: string[]`** — powers "Why am I seeing this?"; present from the
+  start so the engine can fill it without a contract change.
+- **Store all raw daily rows, never derive-only** — raw data is the asset (the Insight Lab payoff).
+  See [`docs/memory/0001-two-tier-truth.md`](memory/0001-two-tier-truth.md).

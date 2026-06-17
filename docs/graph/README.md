@@ -14,7 +14,7 @@ auto-generated structural graph, run a semantic context graph for agents, and en
 The curated **module dependency graph and interface rules** are not duplicated here — they live in
 [`../ARCHITECTURE-CONTEXT.md`](../ARCHITECTURE-CONTEXT.md), which is the boundary reference today.
 
-## Semantic context graph — graphify (ADOPTED 2026-06-17)
+## Semantic context graph — graphify
 
 [`graphify`](https://github.com/safishamsi/graphify) (PyPI `graphifyy`) indexes the repo into a
 queryable `graph.json` so an agent pulls only the relevant subgraph instead of the whole tree. It is the
@@ -22,19 +22,20 @@ queryable `graph.json` so an agent pulls only the relevant subgraph instead of t
 structural import-graph below** (it is multi-modal/semantic; the deferred one is a strict import graph).
 
 - **Rebuild:** `scripts/graphify-build.ps1` (AST-only, local, no LLM, no network) — bootstraps a
-  project-bounded venv in `..\biotope-toolchain\graphify-venv` on first run. graphify is **build
-  tooling, not a repo/runtime dependency** (machine-local, uncommitted, never deployed).
+  project-bounded venv in `..\biotope-toolchain\graphify-venv` on first run, and is on PATH after
+  `. .\scripts\biotope-env.ps1`. graphify is **build tooling, not a repo/runtime dependency**
+  (machine-local, uncommitted, never deployed).
 - **Output:** repo-root **`graphify-out/`** (`graph.json` + `graph.html` + AST cache + manifest),
   **gitignored** — a rebuildable **projection**, never hand-edited ([two-tier-truth](../memory/0001-two-tier-truth.md)).
-  This is graphify's native output dir; it **supersedes the originally-planned `docs/graph/generated/`
-  path** (graphify 0.8.40 hard-defaults to `graphify-out/` and its incremental `update`/`query`/`watch`
-  assume it). Stays gitignored until a path-normalizer (port NUSPlan's `tools/normalize_deps_graph.mjs`)
-  makes `graph.json` diff cleanly cross-machine — then promote it to committed + add a regenerate/diff
-  check to `tools/context_sync.mjs --check`.
-- **No API key, no installer wiring:** AST extraction is fully local (tree-sitter; Dart + TS + more).
-  graphify's native `install` (which edits `CLAUDE.md` + adds a PreToolUse hook) is **deliberately not
-  run** — `CLAUDE.md` stays a thin pointer per AGENTS.md. The cross-language semantic pass uses the
-  **host Claude Code session model** when invoked inside the assistant, so it needs no separate key.
+  Gitignored until a path-normalizer (port NUSPlan's `tools/normalize_deps_graph.mjs`) makes `graph.json`
+  diff cleanly cross-machine — then promote it to committed + add a regenerate/diff check to
+  `tools/context_sync.mjs --check`.
+- **Agent integration:** a **Claude Code PreToolUse hook** (`.claude/settings.json`) reminds agents to
+  query the graph before grepping/reading source; the `## graphify` block in `CLAUDE.md` holds the query
+  commands (`graphify query|path|explain`). AGENTS.md stays the single source of truth — that block is
+  operational graphify usage only.
+- **No API key:** AST extraction is fully local (tree-sitter; Dart + TS + more). The cross-language
+  semantic pass uses the **host Claude Code session model** when invoked inside the assistant.
 
 Full rationale + verified coverage (680 Dart / 31 TS nodes): [`../memory/0008-graphify-context-tool.md`](../memory/0008-graphify-context-tool.md).
 

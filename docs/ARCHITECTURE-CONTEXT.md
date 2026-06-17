@@ -1,6 +1,6 @@
 # ARCHITECTURE-CONTEXT.md — Biotope
-> **CONSTANT LAYER** — Update only at phase transitions.
-> Last updated: Phase 1 Stage 1 (MVP)
+> **CONSTANT LAYER** — system structure, data flow, and module interface rules. Update only at phase
+> transitions. Current phase scope lives in [`PHASE2-PLAN.md`](PHASE2-PLAN.md).
 
 ---
 
@@ -25,7 +25,6 @@
     │     M2     │   │     M3     │   │     M4      │
     │Self-Report │   │  Passive   │   │Environment  │
     │Gut & Behav │   │  Health    │   │& Outbreak   │
-    │ [ACTIVE]   │   │[DEFERRED]  │   │ [DEFERRED]  │
     └─────┬──────┘   └─────┬──────┘   └──────┬──────┘
           │                │                  │
           └────────────────┼──────────────────┘
@@ -45,13 +44,13 @@
                     ┌──────▼──────┐        ┌─────────────┐
                     │     M6      │        │     M7      │
                     │ Engagement  │        │  Community  │
-                    │ Motivation  │        │ [DORMANT]   │
+                    │ Motivation  │        │             │
                     └─────────────┘        └─────────────┘
 ```
 
 ---
 
-## Data Flow — Phase 1 Stage 1 (MVP)
+## Data Flow — the self-report loop
 
 ```
 User taps logging UI
@@ -78,8 +77,7 @@ User taps logging UI
         │
         ▼
   M5b discovery card generator
-  (Phase 1: descriptive only,
-   reads baselines + raw rows)
+  (reads baselines + raw rows)
         │
         ▼
   insight_cards table
@@ -98,26 +96,25 @@ User taps logging UI
 
 > Full schema definitions in `shared/types/`. Tables listed here for orientation only.
 
-| Table | Owner Module | Phase Added |
-|---|---|---|
-| `profiles` | M1 | Stage 1 |
-| `consent_records` | M1 | Stage 1 |
-| `daily_gut_rows` | M2 | Stage 1 |
-| `antibiotic_courses` | M2 | Stage 1 |
-| `wearable_daily` | M3 | Stage 2 |
-| `env_daily` | M4 | Stage 3 |
-| `baseline_snapshots` | M5a | Stage 1 |
-| `insight_cards` | M5b | Stage 1 |
-| `engagement_state` | M6 | Stage 1 |
-| `community_aggregates` | M7 | Phase 3 |
+| Table | Owner Module |
+|---|---|
+| `profiles` | M1 |
+| `consent_records` | M1 |
+| `daily_gut_rows` | M2 |
+| `antibiotic_courses` | M2 |
+| `wearable_daily` | M3 |
+| `baseline_snapshots` | M5a |
+| `insight_cards` | M5b |
+| `engagement_state` | M6 |
+| `env_daily` | M4 — *planned (Phase 2 Track A); not yet migrated* |
+| `community_aggregates` | M7 — *planned (Phase 2 Track A); not yet migrated* |
 
 ---
 
 ## Module Interface Rules
 
-1. **M2 → M5a**: M5a reads `daily_gut_rows` directly from DB. No function call boundary needed
-   for MVP. In Phase 2, expose a `getMetricSeries(userId, metric, days)` function if M5b
-   needs programmatic access.
+1. **M2 → M5a**: M5a reads `daily_gut_rows` directly from DB — no function-call boundary. Expose a
+   `getMetricSeries(userId, metric, days)` function if M5b later needs programmatic access.
 
 2. **M5a → M5b**: M5b reads `baseline_snapshots` table. M5a also exposes
    `getBaseline(userId, metric): BaselineSnapshot` for synchronous lookups.
@@ -146,11 +143,11 @@ When moving between phases, update this file to:
 
 ---
 
-## Expansion Hints (Read-Only for MVP)
+## Design constraints (forethought baked into the schema)
 
-- Phase 2 will introduce cross-metric rules in M5b — M5a must support multi-metric
-  baseline queries, not just per-metric lookups.
-- Phase 3 M7 aggregation will GROUP BY region on `daily_gut_rows` — ensure `region`
-  column is present and indexed from Stage 1.
-- M3 wearable data will feed into M5a alongside M2 data — M5a's baseline logic
-  must treat data sources as pluggable, not hardcoded to M2 only.
+- **Cross-metric rules (M5b):** M5a must support multi-metric baseline queries, not just per-metric
+  lookups — the data-driven engine evaluates `correlation` over 2+ metrics.
+- **M7 region aggregation:** community aggregation GROUPs BY region on `daily_gut_rows` — the `region`
+  column is present and indexed so this stays a query, not a backfill.
+- **Pluggable baseline sources:** M3 wearable data feeds M5a alongside M2 data — M5a's baseline logic
+  treats data sources as pluggable, never hardcoded to M2 only.

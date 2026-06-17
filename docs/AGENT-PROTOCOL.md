@@ -1,12 +1,11 @@
 # AGENT-PROTOCOL.md — AI Agent Navigation Protocol
 > **CONSTANT LAYER** — Changes only at phase transitions or full team agreement.
-> Last updated: 2026-06-08 (context-system harmonization)
 > Written for: AI agents (Claude Code sessions, automated reviewers)
 >
 > **[`AGENTS.md`](../AGENTS.md) is the cross-tool single source of truth.** This file is the detailed
-> AI **routing table + truth hierarchy + PR review checklist** that AGENTS.md §3/§7 point to. The old
-> rolling tracker `docs/workspace-context.md` is **superseded** by append-only `docs/sessions/` logs +
-> `docs/memory/` facts (see AGENTS.md §7) — references below have been updated accordingly.
+> AI **routing table + truth hierarchy + PR review checklist** that AGENTS.md §3/§7 point to. The
+> variable layer (what happened / what's next) lives in append-only `docs/sessions/` logs +
+> `docs/memory/` facts (see AGENTS.md §7).
 
 ---
 
@@ -27,7 +26,7 @@ Do not read every context file. Read only what your task requires.
 
 | Task | Files to read |
 |---|---|
-| Starting any session | `node tools/context_sync.mjs --session-start`, then the latest `docs/sessions/` files + `AGENTS.md` §6 (phase timeline + workstreams) |
+| Starting any session | `node tools/context_sync.mjs --session-start`, then the latest `docs/sessions/` files + `AGENTS.md` §6 (phase + workstreams) + `docs/PHASE2-PLAN.md` |
 | Working on M1 | `src/lib/modules/m1_core/m1-context.md` + `docs/ARCHITECTURE-CONTEXT.md` |
 | Working on M2 | `src/lib/modules/m2_self_report/m2-context.md` + `shared/SHARED-CONTEXT.md` |
 | Touching `shared/types/` | `shared/SHARED-CONTEXT.md` — requires 2-reviewer PR |
@@ -75,7 +74,7 @@ Check every one of these before finishing any session or review. No exceptions.
 **Shared type rules:**
 - Any change to `shared/types/` requires a PR with 2 human reviewers
 - Add optional fields with defaults — never remove or rename without a migration plan
-- `region` field must be present on all daily row types (required for future M7 aggregation at query time)
+- `region` field must be present on all daily row types (required for M7 community aggregation at query time)
 
 **Session rules:**
 - Write exactly one `docs/sessions/<UTC-timestamp>-<device>-<agent>-<slug>.md` log per session
@@ -91,8 +90,8 @@ Used when reviewing a PR. Each item is pass / fail / not-applicable.
 
 **Scope**
 - [ ] PR targets `dev-phase2` (the single integration branch), not `main`
-- [ ] Changes are within current phase scope (Phase 1 Stage 1 — see `docs/PROJECT-CONTEXT.md § Current Scope`)
-- [ ] No deferred module work (M3, M4, M7) has been activated without a phase decision
+- [ ] Changes are within current phase scope (Phase 2 — see [`docs/PHASE2-PLAN.md`](PHASE2-PLAN.md))
+- [ ] Work maps to a Phase 2 workstream/track in `PHASE2-PLAN.md` (not pulled forward from Phase 3)
 
 **Code quality**
 - [ ] No imports from another module's `/impl` directory
