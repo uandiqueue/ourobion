@@ -22,11 +22,17 @@ graph is a rebuildable projection, never hand-edited ([[0001-two-tier-truth]]).
   to `tools/context_sync.mjs --check` once a path-normalizer (port NUSPlan's
   `tools/normalize_deps_graph.mjs`) makes it diff cleanly cross-machine. `graph.html` stays gitignored.
 - **Agent integration (pre-wired, committed):** PreToolUse hooks remind the agent to query the graph
-  before grepping/reading source for **Claude Code** (`.claude/settings.json` + `CLAUDE.md`), **Codex**
-  (`.codex/hooks.json` + `AGENTS.md`), and **Gemini CLI** (`.gemini/settings.json` + `GEMINI.md`). Any
-  other tool: `graphify <tool> install`, or run the CLI manually. The committed hook/`graphify hook-check`
-  path relies on `graphify` being on PATH (toolchain activated). AGENTS.md stays the single source of
-  truth — its graphify lines are operational usage only.
+  before grepping/reading source for **Claude Code** (`.claude/settings.json` + `CLAUDE.md` + a
+  `/graphify` skill in `.claude/skills/graphify/`), **Codex** (`.codex/hooks.json` + `AGENTS.md`), and
+  **Gemini CLI** (`.gemini/settings.json` + `GEMINI.md`). Any other tool: `graphify <tool> install`, or
+  run the CLI manually. The committed hook/`graphify hook-check` path relies on `graphify` being on PATH
+  (toolchain activated). AGENTS.md stays the single source of truth — its graphify lines are operational
+  usage only.
+- **Semantic pass:** AST extraction is local/no-key. The LLM semantic pass (cross-language inferred
+  edges, concept merge, doc/PDF ingest, community naming) runs via **`/graphify .` in Claude Code**
+  (session model, no key), or headless **`graphify extract --backend ollama`** (local) / `--backend
+  claude|gemini` (that provider's key). It is *inferred/probabilistic* — `couplings.yaml` remains the
+  enforced source for cross-language data contracts.
 - **No API key.** AST extraction is fully local (tree-sitter). graphify's cross-language semantic pass
   normally wants `ANTHROPIC_API_KEY` (or Gemini/OpenAI), but invoked inside Claude Code it uses the
   **host session model** — so it runs on demand via the local agent, no separate key.

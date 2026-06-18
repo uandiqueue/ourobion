@@ -32,9 +32,13 @@ structural import-graph below** (it is multi-modal/semantic; the deferred one is
   `tools/context_sync.mjs --check`.
 - **Agent integration (pre-wired, committed):** PreToolUse hooks remind the agent to query the graph
   (`graphify query|path|explain`) before grepping/reading source — for **Claude Code**
-  (`.claude/settings.json` + `CLAUDE.md`), **Codex** (`.codex/hooks.json` + `AGENTS.md`), and **Gemini
-  CLI** (`.gemini/settings.json` + `GEMINI.md`). Any other tool: `graphify <tool> install`, or run the
-  CLI manually. AGENTS.md stays the single source of truth — its graphify lines are operational usage only.
+  (`.claude/settings.json` + `CLAUDE.md` + a `/graphify` skill in `.claude/skills/graphify/`), **Codex**
+  (`.codex/hooks.json` + `AGENTS.md`), and **Gemini CLI** (`.gemini/settings.json` + `GEMINI.md`). Any
+  other tool: `graphify <tool> install`, or run the CLI manually. AGENTS.md stays the single source of
+  truth — its graphify lines are operational usage only.
+- **Semantic pass (LLM):** `/graphify .` in Claude Code (session model, no key) or headless
+  `graphify extract --backend ollama|claude|gemini` adds inferred cross-language edges + community names.
+  It is *probabilistic* — `couplings.yaml` stays the enforced source for cross-language data contracts.
 - **No API key:** AST extraction is fully local (tree-sitter; Dart + TS + more). The cross-language
   semantic pass uses the **host Claude Code session model** when invoked inside the assistant.
 

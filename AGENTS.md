@@ -283,9 +283,10 @@ graph for agent context, and enforce what we keep:
   rebuildable projection, never hand-edited). Query it with `graphify query "<question>"`,
   `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"`; after code changes run
   `graphify update .`. **Pre-wired PreToolUse hooks** remind the agent to consult the graph before
-  grepping/reading source for **Claude Code** (`.claude/settings.json` + `CLAUDE.md`), **Codex**
-  (`.codex/hooks.json`), and **Gemini CLI** (`.gemini/settings.json` + `GEMINI.md`); any other tool runs
-  the CLI manually. The semantic pass needs **no API key** inside an AI assistant (it uses the host
+  grepping/reading source for **Claude Code** (`.claude/settings.json` + `CLAUDE.md` + a `/graphify`
+  skill in `.claude/skills/graphify/`), **Codex** (`.codex/hooks.json`), and **Gemini CLI**
+  (`.gemini/settings.json` + `GEMINI.md`); any other tool runs the CLI manually. In Claude Code,
+  `/graphify .` runs the full pipeline (incl. the LLM semantic pass) using the session model — no key. The semantic pass needs **no API key** inside an AI assistant (it uses the host
   session model). Detail: [`docs/graph/README.md`](docs/graph/README.md),
   [`docs/memory/0008-graphify-context-tool.md`](docs/memory/0008-graphify-context-tool.md).
 

@@ -233,7 +233,7 @@ graphify is **bounded to the project toolchain** (like Node/Flutter) — a venv 
 - On Windows, `graphify` is on PATH after `. .\scripts\biotope-env.ps1` (otherwise call the venv's
   `graphify` directly).
 
-### Does it run automatically? Only with Claude Code
+### Does it run automatically?
 
 The **automatic** behaviour — the assistant consulting the graph before grepping/reading source — is
 **pre-wired (committed in the repo) for Claude Code, Codex, and Gemini CLI**. Each has a PreToolUse hook
@@ -242,7 +242,7 @@ a CLI.
 
 | You are using… | How graphify works |
 |---|---|
-| **Claude Code** | **Pre-wired.** Hook `.claude/settings.json` + `## graphify` block in `CLAUDE.md`. |
+| **Claude Code** | **Pre-wired.** Hook `.claude/settings.json` + `## graphify` block in `CLAUDE.md` + a **`/graphify` skill** (`.claude/skills/graphify/`). Type **`/graphify`** to build/query in-session (incl. the semantic pass — see below). |
 | **Codex** (OpenAI / GPT) | **Pre-wired.** Hook `.codex/hooks.json` + graphify guidance in `AGENTS.md`. |
 | **Gemini CLI** | **Pre-wired.** Hook `.gemini/settings.json` + `## graphify` block in `GEMINI.md`. |
 | **Another AI tool** (Cursor, Copilot, …) | Not pre-wired. Either **run it yourself** (CLI below), or install that tool's integration: `graphify <tool> install` (e.g. `graphify cursor install`) — that edits *that* tool's config. |
@@ -260,9 +260,23 @@ graphify path "<A>" "<B>"        # shortest relationship between two symbols
 graphify explain "<concept>"     # a node and its neighbours
 ```
 
-**API keys / cost:** the local AST graph needs **no key** on any platform. The optional cross-language
-semantic pass is free inside Claude Code (host session model); run headless or under another backend it
-needs that provider's key (`ANTHROPIC_API_KEY` / `GEMINI_API_KEY` / `OPENAI_API_KEY`).
+### Richer graph: the semantic pass (optional)
+
+The commands above build the **AST graph** (structure + call edges — local, deterministic, no key). A
+second **semantic pass** uses an LLM to add cross-file/cross-language *inferred* edges, merge concepts
+across Dart/TS, ingest docs/PDFs, and name communities. Run it either way:
+
+- **In Claude Code (no key):** type **`/graphify .`** — the skill runs the full pipeline using the
+  session model.
+- **Headless:** `graphify extract . --backend ollama` (local model, no key) or `--backend claude|gemini`
+  with that provider's API key (`--mode deep` for more aggressive inferred edges).
+
+The semantic layer is **inferred (probabilistic)** — for *enforced* cross-language data contracts (e.g.
+metric keys), rely on [`docs/graph/couplings.yaml`](docs/graph/couplings.yaml), not the graph.
+
+**API keys / cost:** the AST graph needs **no key** anywhere. The semantic pass is free in Claude Code
+(host session model) or local via `ollama`; other hosted backends need that provider's key
+(`ANTHROPIC_API_KEY` / `GEMINI_API_KEY` / `OPENAI_API_KEY`).
 
 More detail: [`docs/graph/README.md`](docs/graph/README.md) and
 [`docs/memory/0008-graphify-context-tool.md`](docs/memory/0008-graphify-context-tool.md).
