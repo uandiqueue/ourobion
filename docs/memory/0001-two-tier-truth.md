@@ -20,4 +20,4 @@ from them is a disposable projection.
 edge-function logic) and re-run the job. **Never hand-edit `baseline_snapshots` / `insight_cards` /
 `engagement_state` in the database** — the next job run overwrites them. Same idea applies to
 `docs/graph/`: the curated graph is truth; any future auto-generated graph is a rebuildable projection
-(see [[../graph/README]]).
+(see [../graph/README.md](../graph/README.md)).

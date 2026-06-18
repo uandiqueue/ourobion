@@ -10,4 +10,4 @@ multipliers, never hard gates**. The 30-second self-report flow must never block
 **How to apply.** Never treat a missing `wearable_daily` row (or any null wearable field) as an error.
 M5a baseline logic must treat data sources as pluggable — self-report works alone; wearable/env data
 augment confidence when present. Related platform caveat: HRV SDNN is iOS-only
-([[0004-hrv-sdnn-ios-only]]).
+([0004-hrv-sdnn-ios-only](0004-hrv-sdnn-ios-only.md)).

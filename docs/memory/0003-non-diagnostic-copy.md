@@ -11,5 +11,5 @@ diagnostic-sounding string undermines the whole positioning and could imply medi
 its Dart twin `shared/constants/copy_guidelines.dart` — keep the two in parity. M1 exposes
 `validateCopyString(text)` for enforcement; all M5b insight copy and M6 engagement copy must pass it.
 Severity labels are `info` / `notice` / `watch` — never "alert" or "warning". This contract crosses
-the Dart↔TS seam, so it is guarded by a coupling test (see [[../graph/couplings]]) and falls under the
-2-reviewer rule ([[0002-shared-contract-two-reviewers]]).
+the Dart↔TS seam, so it is guarded by a coupling test (see [../graph/couplings.yaml](../graph/couplings.yaml)) and falls under the
+2-reviewer rule ([0002-shared-contract-two-reviewers](0002-shared-contract-two-reviewers.md)).

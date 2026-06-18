@@ -8,8 +8,8 @@ PR with 2 team reviewers**, and breaking changes require notifying all module ow
 **Why.** A silent change to a contract type breaks other people's modules — and potentially production
 — because nothing imports across the Dart (app) ↔ TypeScript (backend) seam to catch the drift at
 compile time. The two-reviewer gate is the human guard; the TS↔Dart parity guard test is the
-executable one (see [[../graph/couplings]]).
+executable one (see [../graph/couplings.yaml](../graph/couplings.yaml)).
 
 **How to apply.** Add fields as **optional with a default**; never remove or rename a field without a
 migration plan. Keep `shared/types/index.ts` and `shared/types/index.dart` in lockstep. See also
-[[0003-non-diagnostic-copy]] for the copy-rule contract that crosses the same seam.
+[0003-non-diagnostic-copy](0003-non-diagnostic-copy.md) for the copy-rule contract that crosses the same seam.

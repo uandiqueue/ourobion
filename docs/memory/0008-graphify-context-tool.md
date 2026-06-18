@@ -8,7 +8,7 @@ for the analysis work.
 **It is complementary to, NOT a replacement for,** the structural import-graph that
 `docs/graph/README.md` marks **DEFERRED** (deferred because biotope is Dart+TS+SQL and one import tool
 sees only the TS half). graphify is semantic/multi-modal; the deferred graph is structural. A generated
-graph is a rebuildable projection, never hand-edited ([[0001-two-tier-truth]]).
+graph is a rebuildable projection, never hand-edited ([0001-two-tier-truth](0001-two-tier-truth.md)).
 
 ## How it's set up
 
@@ -49,4 +49,4 @@ job of the semantic pass (host session model), not the AST pass. This is adequat
 context-substrate role and confirms graphify does **not** substitute for the deferred structural
 import-graph — it is the complementary semantic layer.
 
-Plan: graphify is workstream W6 in `docs/PHASE2-PLAN.md`. Related: [[0007-rules-as-data-two-tier]].
+Plan: graphify is workstream W6 in `docs/PHASE2-PLAN.md`. Related: [0007-rules-as-data-two-tier](0007-rules-as-data-two-tier.md).

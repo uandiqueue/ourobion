@@ -10,7 +10,7 @@ adapted to Postgres:
 - **DERIVED PROJECTION:** a Postgres `rules` table, populated by a loader (`tools/rules/load_rules.mjs`)
   that validates blueprints and upsert/prunes the table. Never hand-edited — fix a blueprint and reload.
 
-This extends the existing two-tier-truth rule ([[0001-two-tier-truth]]): `rules` joins
+This extends the existing two-tier-truth rule ([0001-two-tier-truth](0001-two-tier-truth.md)): `rules` joins
 `baseline_snapshots`/`insight_cards` as a rebuildable projection.
 
 **Constraints locked:** the analysis **engine is sequenced LAST** (foundations first); the engine is
@@ -18,7 +18,7 @@ This extends the existing two-tier-truth rule ([[0001-two-tier-truth]]): `rules`
 The only LLM use is an offline, human-reviewed `extract` step (PDF research paper → candidate rules) with
 cost discipline. Phase-2 condition set is **core only**: `trend` + `threshold` + `correlation`
 (cross-metric). The `shared/rules` contract is a cross-language seam → **2-reviewer PR**
-([[0002-shared-contract-two-reviewers]]). All rule copy stays non-diagnostic
-([[0003-non-diagnostic-copy]]), enforced at load, blueprint-guard, and render.
+([0002-shared-contract-two-reviewers](0002-shared-contract-two-reviewers.md)). All rule copy stays non-diagnostic
+([0003-non-diagnostic-copy](0003-non-diagnostic-copy.md)), enforced at load, blueprint-guard, and render.
 
-Engine design: `docs/INSIGHTS-ENGINE-DESIGN.md`; plan: `docs/PHASE2-PLAN.md`. Context tool: [[0008-graphify-context-tool]].
+Engine design: `docs/INSIGHTS-ENGINE-DESIGN.md`; plan: `docs/PHASE2-PLAN.md`. Context tool: [0008-graphify-context-tool](0008-graphify-context-tool.md).

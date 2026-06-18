@@ -3,12 +3,12 @@
 **Gotcha (local dev).** Auth is Supabase Auth. Against the **local** Docker stack, only
 **email/password** works out of the box: `supabase/config.toml` has `enable_signup = true` and
 `enable_confirmations = false`, so you can sign up + sign in instantly with no email step. Use that for
-local feature work (and it's the account the test-data seeder targets — [[0009-local-test-data-seeding]]).
+local feature work (and it's the account the test-data seeder targets — [0009-local-test-data-seeding](0009-local-test-data-seeding.md)).
 
 **OAuth (Google / Apple) is effectively off locally.** `config.toml` ships them disabled
 (`[auth.external.apple] enabled = false`, Google likewise). Wiring them to `127.0.0.1` needs real
 provider client IDs/secrets + redirect URLs — fiddly, and **Apple Sign In requires the paid Apple
-Developer Program** to even create the credential ([[0010-ios-build-needs-mac-and-paid-account]]).
+Developer Program** to even create the credential ([0010-ios-build-needs-mac-and-paid-account](0010-ios-build-needs-mac-and-paid-account.md)).
 Google OAuth credentials are free but still awkward against localhost.
 
 **How to apply.** Test Google/Apple OAuth against a **hosted** Supabase project (a free-tier cloud

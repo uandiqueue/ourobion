@@ -125,7 +125,7 @@ so you never log by hand for days. Tune the variables at the top and run:
 
 Requires `npx supabase start` running (Docker), and the target user to **already exist** — sign in once
 in the app first (RLS keys on `auth.uid() = user_id`; the seeder resolves the UUID from `auth.users` by
-email). Raw rows are truth, projections are rebuilt — the [[0001-two-tier-truth]] model in script form.
+email). Raw rows are truth, projections are rebuilt — the [0001-two-tier-truth](docs/memory/0001-two-tier-truth.md) model in script form.
 See [`docs/memory/0009-local-test-data-seeding.md`](docs/memory/0009-local-test-data-seeding.md).
 
 ### Platform & auth constraints (Windows-native dev)

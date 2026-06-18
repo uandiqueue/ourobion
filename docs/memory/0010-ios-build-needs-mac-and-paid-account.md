@@ -17,5 +17,5 @@ macOS GitHub Actions / Codemagic runners).
   Supabase, email/password auth, and Google OAuth credentials.
 
 **How to apply.** This is why M3's "end-to-end wearable test on real device" stays pending on a
-Windows-only setup. Related: HRV SDNN is iOS-only ([[0004-hrv-sdnn-ios-only]]); wearable sync is
-best-effort ([[0006-wearable-sync-best-effort]]); local auth options ([[0011-local-supabase-auth-email-only]]).
+Windows-only setup. Related: HRV SDNN is iOS-only ([0004-hrv-sdnn-ios-only](0004-hrv-sdnn-ios-only.md)); wearable sync is
+best-effort ([0006-wearable-sync-best-effort](0006-wearable-sync-best-effort.md)); local auth options ([0011-local-supabase-auth-email-only](0011-local-supabase-auth-email-only.md)).

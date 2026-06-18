@@ -14,7 +14,7 @@ backdated rows** and the UI renders "weeks in" instantly. Tool: `scripts/seed-te
 | Baselines | `baseline_snapshots` | projection | `compute-baselines` edge fn (30-day lookback) |
 | Insights | `insight_cards` | projection | `generate-insights` edge fn — **reads `baseline_snapshots`** |
 
-**How to apply.** This is the [[0001-two-tier-truth]] model: inject truth, then rebuild projections.
+**How to apply.** This is the [0001-two-tier-truth](0001-two-tier-truth.md) model: inject truth, then rebuild projections.
 The seeder handles all of it — injects raw rows, replicates the M6 streak/title computation in SQL,
 then invokes `compute-baselines` **before** `generate-insights` (ordering matters). Constraints baked
 into the tool: (1) **RLS** keys on `auth.uid() = user_id`, so the target user must already exist — sign

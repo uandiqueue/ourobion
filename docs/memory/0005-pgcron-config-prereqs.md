@@ -14,4 +14,4 @@ unset when the migration runs, the scheduled job is created but fails silently a
 
 **How to apply.** Before `npx supabase db push` against production, confirm both settings are present.
 This is part of why the derived tables are rebuildable projections, not truth — a misconfigured cron
-just means re-running the job later ([[0001-two-tier-truth]]).
+just means re-running the job later ([0001-two-tier-truth](0001-two-tier-truth.md)).

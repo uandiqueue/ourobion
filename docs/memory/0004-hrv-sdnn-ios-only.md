@@ -9,5 +9,5 @@ Connect, and deriving one from RMSSD would not be equivalent.
 
 **How to apply.** Treat `hrv_sdnn_ms` as a nullable, platform-dependent signal in M3 and downstream in
 M5a baselines — never gate a feature on it being present. This is one instance of the broader rule that
-wearable signals are best-effort and optional ([[0006-wearable-sync-best-effort]]). The shared
-`DailyPhysioRow` already keeps all wearable metrics nullable ([[0002-shared-contract-two-reviewers]]).
+wearable signals are best-effort and optional ([0006-wearable-sync-best-effort](0006-wearable-sync-best-effort.md)). The shared
+`DailyPhysioRow` already keeps all wearable metrics nullable ([0002-shared-contract-two-reviewers](0002-shared-contract-two-reviewers.md)).
