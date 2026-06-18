@@ -18,17 +18,76 @@ to everything else:
 - `docs/INSIGHTS-ENGINE-DESIGN.md` — the data-driven insights-engine contract (Phase 2 Track B)
 - `docs/human-briefs/` — plain-language stakeholder briefs of significant plans
 
-## 👥 Session Workflow
+## 🧠 Context engineering — building biotope with AI agents
 
-The team uses **append-only per-session logs** (`docs/sessions/`) + durable facts (`docs/memory/`),
-enforced by `tools/context_sync.mjs`. Full protocol in [`AGENTS.md`](AGENTS.md) §7.
+biotope is built largely by **AI coding agents** (Claude Code, Codex, Gemini CLI) working alongside human
+teammates — sometimes several on the same machine. Agents start every session blank: their working memory
+is ephemeral, doesn't survive a restart, and doesn't travel between tools or laptops. Unmanaged, that
+produces the three failure modes of agent-driven development — **drift** (docs and code disagree),
+**duplicated or colliding work**, and **silent contract breakage** across the Dart / TypeScript / SQL
+seams.
 
-1. Enable the shared git hooks once per clone: `git config core.hooksPath .githooks`
-2. At session start: `node tools/context_sync.mjs --session-start`, then read the latest
-   `docs/sessions/` files
-3. Work on a short-lived session branch + worktree off `dev-phase2` (`node tools/setup_agent_worktree.mjs …`)
-4. Before pushing: write one `docs/sessions/<UTC>-<device>-<agent>-<slug>.md` log
-   (the pre-push hook + CI fail without it)
+So this repo treats **context as a first-class, version-controlled, automatically-enforced artifact**:
+the project carries its own durable memory, and the rules that keep it honest are checked by machines,
+not by trust. The human-facing *why* lives here; the agent-facing *how* is [`AGENTS.md`](AGENTS.md) — the
+single instruction file every AI tool reads, kept deliberately lean so it never overloads an agent.
+
+### Design principles
+
+1. **The repository is the single source of truth — nothing important lives in a tool's head.**
+   Device-local agent memory (`~/.claude`, `~/.gemini`) doesn't travel, so everything durable lives in
+   git. One file, `AGENTS.md`, is authoritative; the per-tool files (`CLAUDE.md`, `GEMINI.md`) are thin
+   pointers to it, so guidance can't drift between Claude, Codex, and Gemini.
+2. **Separate what's stable from what's in motion.** A *constant* layer (architecture, contracts,
+   conventions — changes only at phase boundaries) is kept apart from a *variable* layer (what happened,
+   what's next). Mixing the two is what makes documentation rot.
+3. **Distinguish truth from derived ("two-tier truth").** Hand-authored inputs — migrations, raw user
+   rows, shared contracts, rule blueprints — are **truth**. Anything a job can recompute — baselines,
+   insight cards, the knowledge graph — is a **rebuildable projection**, never hand-edited. To change a
+   derived value you fix the input and re-run.
+4. **Append-only, one file per session.** Parallel agents and teammates never edit a shared status file
+   (the road to merge conflicts and silent overwrites). Each session writes a single immutable log, so
+   history is conflict-free by construction.
+5. **Make implicit contracts executable.** The couplings a compiler can't see — a TypeScript type ↔ a
+   Postgres column ↔ a Dart model, or a metric key reused across the stack — are pinned by **guard
+   tests**, so drift fails a test instead of surfacing as a runtime bug.
+6. **Enforce automatically, don't rely on discipline.** People and agents forget, and local hooks can be
+   skipped — so a pre-push hook *and* CI re-run the same checks (a session was logged, the memory index
+   resolves, every coupling's guard exists) as a non-bypassable backstop.
+7. **Isolate concurrent work.** Every session runs in its own issue + branch + **git worktree**, so two
+   agents on the same laptop can't trip over each other's working tree.
+8. **Fight context overload.** A semantic knowledge graph (graphify — see *Code navigation* below) lets an
+   agent pull only the relevant slice of a growing codebase instead of re-reading everything.
+
+### How it's built
+
+| Piece | What it is | Principle |
+|---|---|---|
+| [`AGENTS.md`](AGENTS.md) | The single, tool-agnostic instruction file; `CLAUDE.md` / `GEMINI.md` are thin pointers | 1 |
+| `docs/*-CONTEXT.md` | The **constant** layer — product principles, module graph, contracts | 2 |
+| `docs/sessions/` | The **variable** layer — one append-only log per session (*Attempted / Changed / Decided / Left / Blockers*) | 2, 4 |
+| `docs/memory/` | Durable, one-fact-per-file decisions, indexed | 1, 2 |
+| `docs/graph/couplings.yaml` | Cross-language data contracts, each made executable by a named guard test | 5 |
+| `graphify-out/` (graphify) | A regenerated semantic graph of the repo for agent navigation | 3, 8 |
+| `tools/context_sync.mjs` | Session-start briefing + the pre-push/CI check that enforces all of the above | 6 |
+| `tools/setup_agent_worktree.mjs` | One isolated worktree + branch per session | 7 |
+
+### How a session runs
+
+1. **Start** — `node tools/context_sync.mjs --session-start` prints the latest sessions, the memory
+   index, and a staleness flag; the agent reads the recent `docs/sessions/` entries to resume.
+2. **Isolate** — open a GitHub issue and cut a short-lived branch in its own worktree off `dev-phase2`
+   (`tools/setup_agent_worktree.mjs`).
+3. **Work** — code, capturing durable decisions as `docs/memory/` facts and executable `couplings.yaml`
+   edges as you go.
+4. **Close** — write exactly one `docs/sessions/<UTC>-<device>-<agent>-<slug>.md` log and open a PR into
+   `dev-phase2`. The pre-push hook + CI refuse the push unless the session is logged, the memory index
+   resolves, and every coupling guard exists.
+
+`dev-phase2` is the **single integration line for this phase**: session branches merge into it, it stays
+continuously integrable, and only `dev-phase2` merges to `main` at phase completion — after which the
+next phase is cut fresh from `main`. `main` stays always-deployable. *(One-time per clone:*
+`git config core.hooksPath .githooks` *enables the shared hooks; the worktree tool does this automatically.)*
 
 ---
 
