@@ -33,6 +33,7 @@ biotope/
 │   ├── STRUCTURE-CONTEXT.md   # This document
 │   ├── PHASE2-PLAN.md         # Current phase plan: goals, workstreams, sequence, gate
 │   ├── INSIGHTS-ENGINE-DESIGN.md # Data-driven insights-engine contract (Phase 2 Track B)
+│   ├── METRICS-REGISTRY-DESIGN.md # Single-source metric registry (safe metric add/remove)
 │   ├── ui-context/            # UI design system (UI-DESIGN-CONTEXT.md + mockups)
 │   ├── human-briefs/          # Plain-language stakeholder briefs (dated snapshots)
 │   ├── sessions/              # Append-only one-file-per-session logs (variable layer)

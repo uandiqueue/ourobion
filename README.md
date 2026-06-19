@@ -16,6 +16,7 @@ to everything else:
 - `docs/dev-workflow.md` — the full human dev cycle (Issue → … → Merge)
 - `docs/PHASE2-PLAN.md` — the Phase 2 plan: goals, workstreams, two-track sequence, stress-test gate
 - `docs/INSIGHTS-ENGINE-DESIGN.md` — the data-driven insights-engine contract (Phase 2 Track B)
+- `docs/METRICS-REGISTRY-DESIGN.md` — single-source metric registry so adding/removing metrics can't silently break the app
 - `docs/human-briefs/` — plain-language stakeholder briefs of significant plans
 
 ## 🧠 Context engineering — building biotope with AI agents
