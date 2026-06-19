@@ -1,7 +1,7 @@
 # shared/SHARED-CONTEXT.md — Biotope Shared Contract
 > **CONSTANT LAYER** — All changes require PR with 2 team reviewers.
 > Breaking changes to any type below require notifying all module owners.
-> Last updated: Phase 1 Stage 1 (MVP)
+> Last updated: Phase 2 (metrics registry; M3 wearable contract corrected)
 
 ---
 
@@ -67,30 +67,27 @@ interface DailyGutRow {
 ---
 
 ## DailyPhysioRow
-> Produced by: M3 Passive Health [DEFERRED — Phase 1 Stage 2]
+> Produced by: M3 Passive Health (Wearables) — table `wearable_daily` shipped
 > Consumed by: M5a Baselines
-> Shape locked now so M5a is not rewritten at Stage 2.
+> Field keys derive from shared/metrics/registry.ts (the metrics registry is the single source of truth).
 
 ```typescript
 interface DailyPhysioRow {
-  id: string
   user_id: string
-  date: string
-  region: string
+  date: string                       // ISO date YYYY-MM-DD
 
-  // Wearable metrics (all nullable — wearables are optional confidence multipliers)
-  resting_hr: number | null          // bpm
-  hrv_rmssd: number | null           // ms
+  // Wearable metrics (all nullable — wearables are optional confidence multipliers).
+  // Keys are the single source of truth in shared/metrics/registry.ts (source: 'wearable').
+  resting_hr_bpm: number | null      // bpm
+  hrv_sdnn_ms: number | null         // ms — SDNN, iOS/HealthKit only; null on Android (see docs/memory/0004)
   sleep_duration_min: number | null  // total sleep minutes
-  sleep_fragmentation: number | null // awakenings per hour
-  respiratory_rate: number | null    // breaths per minute
-  skin_temp_delta: number | null     // deviation from baseline °C
+  spo2_pct: number | null            // blood oxygen %
+  body_temp_c: number | null         // °C
+  step_count: number | null          // steps that day
 
-  // Device metadata
-  device_type: 'apple_watch' | 'garmin' | 'fitbit' | 'other' | null
-  data_completeness: number          // 0–1, fraction of metrics available
-
-  created_at: string
+  // Provenance
+  source: string | null              // 'healthkit' | 'health_connect'
+  synced_at: string                  // ISO datetime of last upsert
 }
 ```
 
@@ -140,7 +137,7 @@ interface DailyEnvRow {
 interface BaselineSnapshot {
   id: string
   user_id: string
-  metric_key: string                 // e.g. 'urine_colour', 'stool_form', 'resting_hr'
+  metric_key: string                 // e.g. 'urine_colour', 'stool_form', 'resting_hr_bpm'
   computed_at: string                // ISO datetime of last computation
   days_of_data: number               // how many days fed into this baseline
 

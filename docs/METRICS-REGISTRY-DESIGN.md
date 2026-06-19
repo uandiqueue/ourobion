@@ -132,23 +132,37 @@ Each names a guard test (`status: active`), enforced by `context_sync --check` +
 3. After a deprecation window, a single migration drops the column **and** the entry is removed together
    (the schema guard keeps them in lockstep).
 
-## Fix-on-arrival
+## Fix-on-arrival — RESOLVED (registry seeded from deployed truth)
 
-Standing up the registry forces one canonical set of wearable keys, resolving the
-`DailyPhysioRow` ↔ `compute-baselines` drift shown above. Per
-[memory 0004](memory/0004-hrv-sdnn-ios-only.md), HRV on Android is **RMSSD** — the contract's
-`hrv_rmssd` is correct; `compute-baselines`' `hrv_sdnn_ms` is the stale literal to drop.
+Standing up the registry forced one canonical set of wearable keys, resolving the
+`DailyPhysioRow` ↔ `compute-baselines` drift shown above.
 
-## Implementation steps (proposed)
+**Correction to an earlier draft of this section.** An earlier version claimed the contract's
+`hrv_rmssd` was correct and `compute-baselines`' `hrv_sdnn_ms` was the stale literal to drop. That
+was **backwards.** The canonical, deployed truth is the `wearable_daily` migration
+(`supabase/migrations/20260528100000_create_m3_wearable_daily.sql`), which the running `WearableService`
+upserts to and `compute-baselines` reads from — all three use `resting_hr_bpm`, `hrv_sdnn_ms`,
+`sleep_duration_min`, `spo2_pct`, `body_temp_c`, `step_count`. [memory 0004](memory/0004-hrv-sdnn-ios-only.md)
+confirms `hrv_sdnn_ms` is the intended field (SDNN, iOS/HealthKit only; **null on Android** by design,
+which is *why* it is nullable — not a reason to drop it). The stale artifact was the **contract
+`DailyPhysioRow`** (the never-implemented placeholder fields `resting_hr`, `hrv_rmssd`,
+`sleep_fragmentation`, `respiratory_rate`, `skin_temp_delta`, `region`, `device_type`,
+`data_completeness`). The registry was seeded from the deployed columns, and `DailyPhysioRow`
+(TS + Dart) was rewritten to match.
 
-1. `shared/metrics/{registry.ts, registry.schema.ts, index.ts}` + `registry.dart` + `index.dart` + `README.md`.
-2. Seed it from the **current** contract (gut + corrected wearable + env), all `status: active`.
-3. Make the parity + schema guards real (this is the W0 ⛔ guard work — now load-bearing) and add the
-   `couplings.yaml` edges.
-4. Refactor `compute-baselines` to derive its metric list (and SELECT) from the registry.
-5. Point M6 DQS weighting at the registry.
+## Implementation steps
 
-Each is a small PR; the `shared/` ones are 2-reviewer.
+1. ✅ `shared/metrics/{registry.ts, registry.schema.ts, index.ts}` + `registry.dart` + `index.dart` + `README.md`.
+2. ✅ Seeded from the **deployed** schema (gut + corrected wearable), all `status: active`. Env (`env_daily`)
+   is deferred until the M4 migration lands — the runbook in `shared/metrics/README.md` shows the add flow.
+3. ✅ Parity + contract + schema + baselines + engine guards made real (`status: active` in
+   `couplings.yaml`, tests in `src/test/guards/`). The pre-existing `shared-types-ts-dart-parity` guard
+   was also flipped to `active` (the W0 ⛔ guard work — now load-bearing).
+4. ✅ `compute-baselines` derives its metric list **and** SELECT columns from the registry import.
+5. ⬜ Point M6 DQS weighting at `registry.dqs` (the registry already carries the weights;
+   wiring M6 to read them is the remaining step). Pending.
+
+The `shared/` changes are 2-reviewer per [memory 0002](memory/0002-shared-contract-two-reviewers.md).
 
 ## Alternatives considered
 

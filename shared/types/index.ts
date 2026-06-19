@@ -24,20 +24,20 @@ export interface DailyGutRow {
   updated_at: string;
 }
 
+// Wearable signals. Keys are the single source of truth in shared/metrics/registry.ts
+// (source: 'wearable') and match the wearable_daily table columns exactly. All metrics
+// nullable; hrv_sdnn_ms is SDNN, iOS/HealthKit only — null on Android (docs/memory/0004).
 export interface DailyPhysioRow {
-  id: string;
   user_id: string;
   date: string;
-  region: string;
-  resting_hr: number | null;
-  hrv_rmssd: number | null;
+  resting_hr_bpm: number | null;
+  hrv_sdnn_ms: number | null;
   sleep_duration_min: number | null;
-  sleep_fragmentation: number | null;
-  respiratory_rate: number | null;
-  skin_temp_delta: number | null;
-  device_type: 'apple_watch' | 'garmin' | 'fitbit' | 'other' | null;
-  data_completeness: number;
-  created_at: string;
+  spo2_pct: number | null;
+  body_temp_c: number | null;
+  step_count: number | null;
+  source: string | null;
+  synced_at: string;
 }
 
 export interface DailyEnvRow {

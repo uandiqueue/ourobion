@@ -24,7 +24,7 @@ couplings:
       the other does not, the app and backend silently disagree at runtime. Only a parity test holds
       the two declarations together. Governed by the 2-reviewer rule (docs/memory/0002).
     guard: src/test/guards/shared_types_parity_test.dart
-    status: planned
+    status: active
     phase: P1S2
 
   - id: copy-guidelines-ts-dart-parity
@@ -50,3 +50,62 @@ couplings:
     guard: src/test/guards/daily_gut_row_schema_test.dart
     status: planned
     phase: P1S2
+
+  # ─── Metrics registry (shared/metrics) — single source of truth for every metric ───────────────
+  # The registry makes add/remove of a metric a localized, guard-protected change. See
+  # docs/METRICS-REGISTRY-DESIGN.md and shared/metrics/README.md.
+
+  - id: metrics-registry-ts-dart-parity
+    from: shared/metrics/registry.ts
+    to: shared/metrics/registry.dart
+    why: >
+      The metrics registry is the single source of truth for every metric, duplicated across the
+      TS (backend) and Dart (app) seam with no import linking them. If one side adds/removes/retypes
+      a metric and the other does not, baselines, DQS and the contract silently disagree. Governed by
+      the 2-reviewer rule (docs/memory/0002).
+    guard: src/test/guards/metrics_registry_parity_test.dart
+    status: active
+    phase: P2
+
+  - id: metrics-registry-to-contract
+    from: shared/metrics/registry.ts
+    to: shared/types/index.ts + shared/types/index.dart (DailyGutRow / DailyPhysioRow)
+    why: >
+      Every active registry key for a table must be a field of that table's contract row (TS and
+      Dart), and every non-system row field must be a registry metric. This is the guard that would
+      have caught the DailyPhysioRow <-> wearable-key drift at build time.
+    guard: src/test/guards/metrics_registry_contract_test.dart
+    status: active
+    phase: P2
+
+  - id: metrics-registry-to-schema
+    from: shared/metrics/registry.ts
+    to: supabase/migrations (daily_gut_rows / wearable_daily columns)
+    why: >
+      Registry keys per table must equal the metric columns of that table's migration. A migration
+      that renames or adds a metric column without a matching registry entry (or vice versa) breaks
+      the write/read path with no compile-time error because the Supabase client speaks dynamic JSON.
+    guard: src/test/guards/metrics_registry_schema_test.dart
+    status: active
+    phase: P2
+
+  - id: metrics-registry-to-baselines
+    from: shared/metrics/registry.ts
+    to: supabase/functions/compute-baselines/index.ts
+    why: >
+      compute-baselines must derive its per-table metric lists (and SELECT columns) from the registry,
+      never from hardcoded key literals. The original wearable-key drift was exactly a hardcoded
+      WEARABLE_METRIC_KEYS array drifting from the contract; this guard makes that impossible.
+    guard: src/test/guards/metrics_registry_baselines_test.dart
+    status: active
+    phase: P2
+
+  - id: metrics-registry-to-engine
+    from: shared/metrics/registry.ts
+    to: supabase/functions/generate-insights/index.ts
+    why: >
+      Every rule's metricKey in the insight engine must resolve to an active registry metric, so a
+      rule can never read a metric that was never defined or has been removed.
+    guard: src/test/guards/metrics_registry_engine_test.dart
+    status: active
+    phase: P2
