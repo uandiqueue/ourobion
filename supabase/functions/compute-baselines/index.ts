@@ -1,29 +1,19 @@
 /// <reference types="jsr:@supabase/functions-js/edge-runtime.d.ts" />
 import { createClient } from "jsr:@supabase/supabase-js@2"
+import { METRICS } from "../../../shared/metrics/registry.ts"
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Metric keys (derived from the registry — never hardcoded) ──────────────────
+// shared/metrics/registry.ts is the single source of truth. The metrics-registry-to-baselines
+// guard (docs/graph/couplings.yaml) fails the build if this function reintroduces literal keys or
+// drifts from the registry — that drift is exactly the bug this registry was introduced to kill.
 
-const GUT_METRIC_KEYS = [
-  "urine_colour",
-  "stool_form",
-  "stool_count",
-  "stool_variability",
-  "outside_meals",
-  "mosquito_bites",
-  "energy_score",
-  "mood_score",
-  "gut_comfort_score",
-  "log_completeness",
-] as const
+const GUT_METRIC_KEYS = METRICS
+  .filter((m) => m.table === "daily_gut_rows" && m.status === "active" && m.baselineApplicable)
+  .map((m) => m.key)
 
-const WEARABLE_METRIC_KEYS = [
-  "resting_hr_bpm",
-  "hrv_sdnn_ms",
-  "sleep_duration_min",
-  "spo2_pct",
-  "body_temp_c",
-  "step_count",
-] as const
+const WEARABLE_METRIC_KEYS = METRICS
+  .filter((m) => m.table === "wearable_daily" && m.status === "active" && m.baselineApplicable)
+  .map((m) => m.key)
 
 type Trend = "rising" | "falling" | "stable" | null
 type Confidence = "insufficient" | "low" | "medium" | "high"
@@ -134,15 +124,12 @@ Deno.serve(async (req) => {
   const [gutResult, wearableResult] = await Promise.all([
     supabase
       .from("daily_gut_rows")
-      .select(
-        "user_id, log_date, urine_colour, stool_form, stool_count, stool_variability, " +
-        "outside_meals, mosquito_bites, energy_score, mood_score, gut_comfort_score, log_completeness"
-      )
+      .select(["user_id", "log_date", ...GUT_METRIC_KEYS].join(", "))
       .gte("log_date", sinceDate)
       .order("log_date", { ascending: true }),
     supabase
       .from("wearable_daily")
-      .select("user_id, date, resting_hr_bpm, hrv_sdnn_ms, sleep_duration_min, spo2_pct, body_temp_c, step_count")
+      .select(["user_id", "date", ...WEARABLE_METRIC_KEYS].join(", "))
       .gte("date", sinceDate)
       .order("date", { ascending: true }),
   ])

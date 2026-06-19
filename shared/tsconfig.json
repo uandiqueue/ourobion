@@ -9,6 +9,6 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["types/**/*.ts", "constants/**/*.ts"],
+  "include": ["types/**/*.ts", "constants/**/*.ts", "metrics/**/*.ts"],
   "exclude": ["node_modules"]
 }

@@ -48,7 +48,7 @@ The unfinished MVP work everything else builds on.
 | Feature | What it is |
 |---|---|
 | ⛔ End-to-end device verification | Real Android device (Health Connect) → `wearable_daily` rows. Apply the known M3 fix first: `MainActivity` must extend `FlutterFragmentActivity`. Apple/HealthKit is **gate-decided**, not in Phase 2. |
-| Wearable confidence into insights | `confidence_sources[]` on cards populated from wearable presence; M5a baselines over `DailyPhysioRow` metrics (resting HR, HRV, sleep, respiratory rate, skin-temp delta). |
+| Wearable confidence into insights | `confidence_sources[]` on cards populated from wearable presence; M5a baselines over `DailyPhysioRow` metrics (resting_hr_bpm, hrv_sdnn_ms, sleep_duration_min, spo2_pct, body_temp_c, step_count). |
 | Device-type tracking | Profile captures device platform + health-permission status. |
 | Stool/meal venue tags | Optional tags ('loose', 'painful'; 'hawker', 'restaurant'). |
 | Timestamped stool events → Later | Upgrade from one daily entry to timestamped events if variability proves meaningful. |
