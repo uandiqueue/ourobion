@@ -4,7 +4,7 @@
 class DailyGutRow {
   final String id;
   final String userId;
-  final String date;
+  final String logDate;
   final String region;
   final num? urineColour;
   final num? stoolCount;
@@ -27,7 +27,7 @@ class DailyGutRow {
   const DailyGutRow({
     required this.id,
     required this.userId,
-    required this.date,
+    required this.logDate,
     required this.region,
     this.urineColour,
     this.stoolCount,
@@ -52,7 +52,7 @@ class DailyGutRow {
     return DailyGutRow(
       id: json['id'] as String,
       userId: json['user_id'] as String,
-      date: json['date'] as String,
+      logDate: json['log_date'] as String,
       region: json['region'] as String,
       urineColour: json['urine_colour'] as num?,
       stoolCount: json['stool_count'] as num?,
@@ -78,7 +78,7 @@ class DailyGutRow {
     return {
       'id': id,
       'user_id': userId,
-      'date': date,
+      'log_date': logDate,
       'region': region,
       'urine_colour': urineColour,
       'stool_count': stoolCount,

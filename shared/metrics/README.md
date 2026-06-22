@@ -12,14 +12,20 @@ See [`docs/METRICS-REGISTRY-DESIGN.md`](../../docs/METRICS-REGISTRY-DESIGN.md) f
 | Field | Meaning |
 |---|---|
 | `key` | canonical snake_case id — **== DB column == `metric_key` == rule `metricKey`** |
-| `source` | `self_report` \| `wearable` \| `env` (which collector) |
-| `table` | `daily_gut_rows` \| `wearable_daily` \| `env_daily` |
+| `source` | source economy: `manual` \| `semi_passive` \| `sensor` \| `api` \| `derived` |
+| `table` | current storage location: `daily_gut_rows` \| `wearable_daily` \| `env_daily` (storage is migrating to continuity-based primitives — see PHASE2-PLAN) |
+| `tier` | collection tier (logging budget): `T0` passive · `T1` daily core · `T2` optional · `T3` event · `T4` state · `T5` profile |
+| `continuity` | `continuous` \| `episodic` \| `state` \| `static` — the data shape over time |
 | `type` | `numeric` \| `ordinal` \| `boolean` \| `enum` \| `multi_select` \| `text` |
 | `scale` | `{ min, max }` for numeric/ordinal, else `null` |
 | `unit` | optional display unit |
 | `enumValues` | allowed values for `enum` / `multi_select`, else `null` |
 | `baselineApplicable` | does M5a compute mean/std/trend? (true only for numeric/ordinal) |
-| `dqs` | `{ weight, countsTowardDailyCompleteness }` (M6 DQS contribution) |
+| `reliability` | confidence weight `4` device · `3` in-moment · `2` subjective/count · `1` free-text (Part F) |
+| `derivedFrom` | for `source: derived`, the input metric keys it is computed from (seeds the relationship graph); else `null` |
+| `availability` | `both` \| `ios_only` \| `android_only` \| `hardware_gated` (graceful degradation) |
+| `preferredSource` | semi-passive: fetch from this source first (health store), else `null` |
+| `dqs` | `{ weight, countsTowardDailyCompleteness }` — only the `T1` spine counts; weights sum to 100 |
 | `ui` | optional `{ label, inputType }` hint for M2 self-report screens |
 | `status` | `active` \| `deprecated` |
 | `introducedIn` / `deprecatedAt` | lifecycle stamps |
@@ -53,5 +59,7 @@ with tests in [`src/test/guards/`](../../src/test/guards/):
 
 - `metrics-registry-ts-dart-parity` — `registry.ts` == `registry.dart`
 - `metrics-registry-to-contract` — registry keys (per table) == contract row fields (TS + Dart)
+- `metrics-registry-to-schema` — registry keys (per table) == migration columns
 - `metrics-registry-to-baselines` — `compute-baselines` derives its list from the registry
 - `metrics-registry-to-engine` — every rule `metricKey` resolves to an active registry entry
+- `metrics-registry-to-dqs` — the M2 normaliser's daily-core DQS weights == the registry's `countsTowardDailyCompleteness` weights

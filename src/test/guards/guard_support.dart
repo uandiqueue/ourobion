@@ -153,3 +153,41 @@ Set<String> migrationColumns(String sql, String tableName) {
   }
   return cols;
 }
+
+/// The quoted string literals in the first `[ ... ]` array following [label] in [src].
+/// Strips `//` line comments first so a commented-out entry is not counted.
+List<String> quotedListAfter(String src, String label) {
+  final li = src.indexOf(label);
+  if (li < 0) throw StateError('label $label not found');
+  final open = src.indexOf('[', li);
+  final close = src.indexOf(']', open);
+  if (open < 0 || close < 0) throw StateError('array after $label not found');
+  var block = src.substring(open + 1, close).replaceAll(RegExp(r'//[^\n]*'), '');
+  return RegExp("['\"]([^'\"]+)['\"]").allMatches(block).map((m) => m.group(1)!).toList();
+}
+
+/// {key: dqs.weight} for registry metrics with countsTowardDailyCompleteness: true.
+Map<String, int> registryDailyCoreWeights(String registrySource) {
+  final keyRe = RegExp('''key:\\s*['"]([a-z0-9_]+)['"]''');
+  final matches = keyRe.allMatches(registrySource).toList();
+  final out = <String, int>{};
+  for (var i = 0; i < matches.length; i++) {
+    final end = (i + 1 < matches.length) ? matches[i + 1].start : registrySource.length;
+    final block = registrySource.substring(matches[i].start, end);
+    if (!RegExp(r'countsTowardDailyCompleteness:\s*true').hasMatch(block)) continue;
+    final w = RegExp(r'weight:\s*(\d+)').firstMatch(block);
+    if (w != null) out[matches[i].group(1)!] = int.parse(w.group(1)!);
+  }
+  return out;
+}
+
+/// Parse a Dart `const Map<String, int> <name> = { 'k': N, ... }` literal into a map.
+Map<String, int> dartIntMap(String src, String name) {
+  final li = src.indexOf(name);
+  if (li < 0) throw StateError('map $name not found');
+  final open = src.indexOf('{', li);
+  final close = src.indexOf('}', open);
+  final block = src.substring(open + 1, close);
+  final re = RegExp('''['"]([a-z0-9_]+)['"]\\s*:\\s*(\\d+)''');
+  return {for (final m in re.allMatches(block)) m.group(1)!: int.parse(m.group(2)!)};
+}
