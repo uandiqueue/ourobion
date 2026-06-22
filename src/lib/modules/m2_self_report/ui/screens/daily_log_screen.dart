@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme.dart';
 import '../../impl/antibiotic_service.dart';
 import '../../impl/logging_controller.dart';
+import '../../impl/normaliser.dart';
 import '../../../m3_passive_health/index.dart';
 import '../../../m6_engagement/index.dart';
 import 'antibiotic_course_screen.dart';
@@ -65,18 +66,17 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
   AntibioticCourse? _activeCourse;
 
   // ── DQS (Data Quality Score) ───────────────────────────────────
-  // Weights from m2-context.md
-  int get _dqs {
-    int pts = 0;
-    if (_urineColour != null) pts += 25;
-    if (_stoolForm != null) pts += 25;
-    if (_outsideMeals != null) pts += 20;
-    if (_energy != null) pts += 7;
-    if (_mood != null) pts += 7;
-    if (_gutComfort != null) pts += 6;
-    if (_mosquitoBites != null) pts += 10;
-    return pts;
-  }
+  // Pure logic lives in impl/normaliser.dart; weights are sourced from the
+  // metrics registry (shared/metrics/registry.ts). See kDailyCoreDqsWeights.
+  int get _dqs => computeDqs({
+        'urine_colour': _urineColour,
+        'stool_form': _stoolForm,
+        'outside_meals': _outsideMeals,
+        'mosquito_bites': _mosquitoBites,
+        'energy_score': _energy,
+        'mood_score': _mood,
+        'gut_comfort_score': _gutComfort,
+      });
 
   Color get _dqsColor {
     final pts = _dqs;

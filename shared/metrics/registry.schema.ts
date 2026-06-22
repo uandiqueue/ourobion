@@ -9,8 +9,10 @@
 import { z } from 'zod';
 import type { MetricDefinition } from './registry';
 
-export const metricSourceSchema = z.enum(['self_report', 'wearable', 'env']);
+export const metricSourceSchema = z.enum(['manual', 'semi_passive', 'sensor', 'api', 'derived']);
 export const metricTableSchema = z.enum(['daily_gut_rows', 'wearable_daily', 'env_daily']);
+export const metricTierSchema = z.enum(['T0', 'T1', 'T2', 'T3', 'T4', 'T5']);
+export const metricContinuitySchema = z.enum(['continuous', 'episodic', 'state', 'static']);
 export const metricTypeSchema = z.enum([
   'numeric',
   'ordinal',
@@ -19,17 +21,35 @@ export const metricTypeSchema = z.enum([
   'multi_select',
   'text',
 ]);
+export const metricReliabilitySchema = z.union([
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+  z.literal(4),
+]);
+export const metricAvailabilitySchema = z.enum([
+  'both',
+  'ios_only',
+  'android_only',
+  'hardware_gated',
+]);
 export const metricStatusSchema = z.enum(['active', 'deprecated']);
 
 export const metricDefinitionSchema = z.object({
   key: z.string().regex(/^[a-z][a-z0-9_]*$/, 'key must be snake_case'),
   source: metricSourceSchema,
   table: metricTableSchema,
+  tier: metricTierSchema,
+  continuity: metricContinuitySchema,
   type: metricTypeSchema,
   scale: z.object({ min: z.number(), max: z.number() }).nullable(),
   unit: z.string().nullable(),
   enumValues: z.array(z.string()).readonly().nullable(),
   baselineApplicable: z.boolean(),
+  reliability: metricReliabilitySchema,
+  derivedFrom: z.array(z.string()).readonly().nullable(),
+  availability: metricAvailabilitySchema,
+  preferredSource: metricSourceSchema.nullable(),
   dqs: z.object({
     weight: z.number(),
     countsTowardDailyCompleteness: z.boolean(),
@@ -63,6 +83,20 @@ export const registrySchema = z
       }
       if (!needsEnum && m.enumValues) {
         ctx.addIssue({ code: 'custom', message: `${m.key}: enumValues only for enum|multi_select` });
+      }
+      // A derived metric must declare its inputs; nothing else may.
+      if (m.source === 'derived' && (!m.derivedFrom || m.derivedFrom.length === 0)) {
+        ctx.addIssue({ code: 'custom', message: `${m.key}: source 'derived' needs derivedFrom` });
+      }
+      if (m.source !== 'derived' && m.derivedFrom) {
+        ctx.addIssue({ code: 'custom', message: `${m.key}: derivedFrom only for source 'derived'` });
+      }
+      // Only the T1 daily-core counts toward daily completeness, and only counted metrics carry weight.
+      if (m.dqs.countsTowardDailyCompleteness && m.tier !== 'T1') {
+        ctx.addIssue({ code: 'custom', message: `${m.key}: only T1 may count toward daily completeness` });
+      }
+      if (m.dqs.weight > 0 && !m.dqs.countsTowardDailyCompleteness) {
+        ctx.addIssue({ code: 'custom', message: `${m.key}: dqs.weight > 0 requires countsTowardDailyCompleteness` });
       }
     }
   });

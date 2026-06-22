@@ -36,7 +36,7 @@ couplings:
       backend accepts could be rejected by the app or vice versa, weakening Product Principle #1
       (docs/memory/0003). No import links them — a parity test is the only guard.
     guard: src/test/guards/copy_guidelines_parity_test.dart
-    status: planned
+    status: active
     phase: P1S2
 
   - id: daily-gut-row-to-schema
@@ -48,7 +48,7 @@ couplings:
       or a model field that drifts, breaks the write/read path with no compile-time error because the
       Supabase client speaks dynamic JSON. A schema/shape test is the only guard.
     guard: src/test/guards/daily_gut_row_schema_test.dart
-    status: planned
+    status: active
     phase: P1S2
 
   # ─── Metrics registry (shared/metrics) — single source of truth for every metric ───────────────
@@ -107,5 +107,17 @@ couplings:
       Every rule's metricKey in the insight engine must resolve to an active registry metric, so a
       rule can never read a metric that was never defined or has been removed.
     guard: src/test/guards/metrics_registry_engine_test.dart
+    status: active
+    phase: P2
+
+  - id: metrics-registry-to-dqs
+    from: shared/metrics/registry.ts (countsTowardDailyCompleteness weights)
+    to: src/lib/modules/m2_self_report/impl/normaliser.dart (kDailyCoreDqsWeights)
+    why: >
+      The M2 normaliser computes the Data Quality Score from the daily-core (T1) metric weights. Those
+      weights are owned by the registry (the metrics with countsTowardDailyCompleteness: true), but the
+      normaliser can't import shared/metrics (cross-language parity mirror), so without a guard the two
+      silently drift and the DQS stops reflecting the registry.
+    guard: src/test/guards/metrics_registry_dqs_test.dart
     status: active
     phase: P2
