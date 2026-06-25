@@ -1,12 +1,12 @@
 # Insights Engine — Design (Phase 2, W2 / Track B)
 
-The detailed design for biotope's **data-driven insights engine**: a PDF → structured-rules → engine
+The detailed design for ourobion's **data-driven insights engine**: a PDF → structured-rules → engine
 pipeline that replaces the MVP's hardcoded rules. Sequencing, ownership, and the gate live in
 [`PHASE2-PLAN.md`](PHASE2-PLAN.md); this doc is the **contract + step detail**.
 
 ## Why
 
-biotope's MVP analysis is shallow: `supabase/functions/generate-insights/index.ts` evaluates **6
+ourobion's MVP analysis is shallow: `supabase/functions/generate-insights/index.ts` evaluates **6
 hardcoded TypeScript rules** (`condition: (s: BaselineSnapshot) => boolean`, single-metric only). The
 rules are **code, not data**, so adding/editing one means redeploying an edge function, and cross-metric
 patterns are impossible. The engine makes rules **reviewable data**, adds **cross-metric** evaluation,
@@ -18,9 +18,9 @@ Git-tracked JSON **blueprints** = TRUTH (PR-reviewed, human-approved) → loaded
 rebuildable** Postgres `rules` table. Typed model + **Zod** mirror with compile-time drift guards.
 Batch **extract** (PDF → JSON via Claude API + human review) → **load/normalize** → **deterministic
 engine**; the LLM is confined to the offline extract step with cost discipline. (Pattern borrowed from
-sister repo NUSPlan; biotope targets Postgres instead of Neo4j and uses **no Python**.)
+sister repo NUSPlan; ourobion targets Postgres instead of Neo4j and uses **no Python**.)
 
-This maps onto biotope's [two-tier truth](memory/0001-two-tier-truth.md): `data/rules/**.json` join raw
+This maps onto ourobion's [two-tier truth](memory/0001-two-tier-truth.md): `data/rules/**.json` join raw
 rows + migrations + `shared/` as TRUTH; the `rules` table joins `baseline_snapshots` + `insight_cards`
 as rebuildable PROJECTIONS.
 
@@ -82,7 +82,7 @@ Batch, deterministic, **no LLM**.
 section/page) into `data/rules/_candidates/` for **human review** (candidates are NOT loadable until a
 human promotes them into `data/rules/{single,cross}/…` — the human-in-the-loop gate). `catalog.yaml`
 source manifest (paperId, title, trust tier, path/URL). **Cost discipline in code:** cheap-model default,
-hard `BIOTOPE_EXTRACT_BUDGET_USD` abort, append model+tokens+cost to
+hard `OUROBION_EXTRACT_BUDGET_USD` abort, append model+tokens+cost to
 `data/rules/_candidates/usage.jsonl`. **Confirm model id + pricing against the live Claude API reference
 at build time (use the `claude-api` skill) — never hardcode from memory.**
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Enforced context maintenance for the biotope repo. Node port of NUSPlan's tools/context_sync.py.
+// Enforced context maintenance for the ourobion repo. Node port of NUSPlan's tools/context_sync.py.
 //
 // Two modes, wired so the in-repo agent context (sessions, memory, couplings) can never silently
 // drift from reality:
@@ -18,7 +18,7 @@
 //                      c. Couplings         — every docs/graph/couplings.yaml `guard:` exists on disk.
 //
 // Node stdlib + `git` via child_process only — no third-party deps, so it runs anywhere Node 18+ is
-// present. The structural dependency graph is DEFERRED in biotope (see docs/graph/README.md), so —
+// present. The structural dependency graph is DEFERRED in ourobion (see docs/graph/README.md), so —
 // unlike the NUSPlan original — there is no deps.json check here.
 
 import { spawnSync } from "node:child_process";
@@ -87,7 +87,7 @@ function git(...args) {
 function sessionStart() {
   const bar = "=".repeat(72);
   console.log(bar);
-  console.log("biotope — session resume briefing (tools/context_sync.mjs --session-start)");
+  console.log("ourobion — session resume briefing (tools/context_sync.mjs --session-start)");
   console.log(bar);
 
   const sessions = sessionFiles();

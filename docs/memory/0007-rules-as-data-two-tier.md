@@ -1,6 +1,6 @@
 # 0007 — Analysis rules become data, via a two-tier blueprint→table pattern
 
-**Decision (Phase 2 plan, 2026-06-09):** biotope's insight rules move from **hardcoded TypeScript**
+**Decision (Phase 2 plan, 2026-06-09):** ourobion's insight rules move from **hardcoded TypeScript**
 (`supabase/functions/generate-insights/index.ts`, the `RULES: Rule[]` array with
 `condition: (s) => boolean`) to **data**, using the same two-tier pattern as sister repo **NUSPlan**,
 adapted to Postgres:

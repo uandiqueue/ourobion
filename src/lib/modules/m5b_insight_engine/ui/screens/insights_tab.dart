@@ -47,7 +47,7 @@ class _InsightsTabState extends State<InsightsTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BiotopeColors.surface,
+      backgroundColor: OurobionColors.surface,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,7 +60,7 @@ class _InsightsTabState extends State<InsightsTab> {
                   fontSize: 28,
                   fontWeight: FontWeight.w600,
                   letterSpacing: -0.4,
-                  color: BiotopeColors.onSurface,
+                  color: OurobionColors.onSurface,
                 ),
               ),
             ),
@@ -71,7 +71,7 @@ class _InsightsTabState extends State<InsightsTab> {
                       ? const _EmptyState()
                       : RefreshIndicator(
                           onRefresh: _load,
-                          color: BiotopeColors.primary,
+                          color: OurobionColors.primary,
                           child: ListView.separated(
                             padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
                             itemCount: _cards.length,
@@ -108,13 +108,13 @@ class _EmptyState extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: BiotopeColors.primaryFixed,
+                color: OurobionColors.primaryFixed,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Icon(
                 Icons.lightbulb_outline_rounded,
                 size: 32,
-                color: BiotopeColors.primary,
+                color: OurobionColors.primary,
               ),
             ),
             const SizedBox(height: 16),
@@ -124,7 +124,7 @@ class _EmptyState extends StatelessWidget {
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
                 letterSpacing: -0.2,
-                color: BiotopeColors.onSurface,
+                color: OurobionColors.onSurface,
               ),
             ),
             const SizedBox(height: 8),
@@ -133,7 +133,7 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: GoogleFonts.manrope(
                 fontSize: 13,
-                color: BiotopeColors.outline,
+                color: OurobionColors.outline,
                 height: 1.5,
               ),
             ),
@@ -160,19 +160,19 @@ class _InsightCardTile extends StatelessWidget {
       };
 
   static Color _iconColor(InsightCategory cat) => switch (cat) {
-        InsightCategory.hydration => BiotopeColors.secondary,
-        InsightCategory.gut => BiotopeColors.primary,
-        InsightCategory.behaviour => BiotopeColors.tertiary,
-        InsightCategory.vector => BiotopeColors.onSurfaceVariant,
-        InsightCategory.descriptive => BiotopeColors.onSurfaceVariant,
+        InsightCategory.hydration => OurobionColors.secondary,
+        InsightCategory.gut => OurobionColors.primary,
+        InsightCategory.behaviour => OurobionColors.tertiary,
+        InsightCategory.vector => OurobionColors.onSurfaceVariant,
+        InsightCategory.descriptive => OurobionColors.onSurfaceVariant,
       };
 
   static Color _iconBg(InsightCategory cat) => switch (cat) {
-        InsightCategory.hydration => BiotopeColors.secondaryContainer,
-        InsightCategory.gut => BiotopeColors.primaryFixed,
-        InsightCategory.behaviour => BiotopeColors.surfaceContainer,
-        InsightCategory.vector => BiotopeColors.surfaceContainer,
-        InsightCategory.descriptive => BiotopeColors.surfaceContainer,
+        InsightCategory.hydration => OurobionColors.secondaryContainer,
+        InsightCategory.gut => OurobionColors.primaryFixed,
+        InsightCategory.behaviour => OurobionColors.surfaceContainer,
+        InsightCategory.vector => OurobionColors.surfaceContainer,
+        InsightCategory.descriptive => OurobionColors.surfaceContainer,
       };
 
   static String _categoryLabel(InsightCategory cat) => switch (cat) {
@@ -197,9 +197,9 @@ class _InsightCardTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: BiotopeColors.surfaceLowest,
+        color: OurobionColors.surfaceLowest,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: BiotopeColors.outlineVariant),
+        border: Border.all(color: OurobionColors.outlineVariant),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0A191c1c),
@@ -243,7 +243,7 @@ class _InsightCardTile extends StatelessWidget {
                       style: GoogleFonts.manrope(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: BiotopeColors.onSurface,
+                        color: OurobionColors.onSurface,
                       ),
                     ),
                   ],
@@ -256,7 +256,7 @@ class _InsightCardTile extends StatelessWidget {
             card.body,
             style: GoogleFonts.manrope(
               fontSize: 13,
-              color: BiotopeColors.onSurfaceVariant,
+              color: OurobionColors.onSurfaceVariant,
               height: 1.5,
             ),
           ),
@@ -267,7 +267,7 @@ class _InsightCardTile extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: BiotopeColors.surfaceContainer,
+                  color: OurobionColors.surfaceContainer,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -275,7 +275,7 @@ class _InsightCardTile extends StatelessWidget {
                   style: GoogleFonts.manrope(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: BiotopeColors.onSurfaceVariant,
+                    color: OurobionColors.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -287,7 +287,7 @@ class _InsightCardTile extends StatelessWidget {
                   style: GoogleFonts.manrope(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: BiotopeColors.outline,
+                    color: OurobionColors.outline,
                   ),
                 ),
               ),

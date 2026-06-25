@@ -1,4 +1,4 @@
-# UI-DESIGN-CONTEXT.md — Biotope
+# UI-DESIGN-CONTEXT.md — Ourobion
 > **REFERENCE LAYER** — Read before implementing any UI screen.
 > Last updated: Phase 1 Stage 1 (MVP) — sourced from Claude Design bundle (Onboarding Flow)
 
@@ -6,7 +6,7 @@
 
 ## Design Identity
 
-Biotope blends **health (body)**, **science (precision)**, and **fun (play/social)**.
+Ourobion blends **health (body)**, **science (precision)**, and **fun (play/social)**.
 The visual language reflects a living ecosystem: organic, warm, precise, never clinical.
 Key metaphors: petri dish, biome, growing organism.
 

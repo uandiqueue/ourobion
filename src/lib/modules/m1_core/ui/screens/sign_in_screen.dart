@@ -72,21 +72,21 @@ class _SignInScreenState extends State<SignInScreen> {
                           gradient: const LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
-                            colors: [BiotopeColors.primaryFixed, BiotopeColors.primary],
+                            colors: [OurobionColors.primaryFixed, OurobionColors.primary],
                           ),
                         ),
                         child: const Icon(Icons.eco, color: Colors.white, size: 36),
                       ),
                     ),
                     const SizedBox(height: 14),
-                    Text('Biotope', style: GoogleFonts.manrope(
+                    Text('Ourobion', style: GoogleFonts.manrope(
                       fontSize: 28, fontWeight: FontWeight.w700,
-                      letterSpacing: -0.6, color: BiotopeColors.onSurface,
+                      letterSpacing: -0.6, color: OurobionColors.onSurface,
                     )),
                     const SizedBox(height: 4),
                     Text('Your health, your ecosystem.', style: GoogleFonts.manrope(
                       fontSize: 13, fontWeight: FontWeight.w400,
-                      color: BiotopeColors.outline,
+                      color: OurobionColors.outline,
                     )),
 
                     const SizedBox(height: 40),
@@ -94,7 +94,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     // ── Eyebrow ────────────────────────────────
                     Text('WELCOME BACK', style: GoogleFonts.manrope(
                       fontSize: 10, fontWeight: FontWeight.w700,
-                      letterSpacing: 1.6, color: BiotopeColors.primary,
+                      letterSpacing: 1.6, color: OurobionColors.primary,
                     )),
 
                     const SizedBox(height: 20),
@@ -122,7 +122,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                            color: BiotopeColors.outline,
+                            color: OurobionColors.outline,
                           ),
                           onPressed: () => setState(() => _obscure = !_obscure),
                         ),
@@ -137,7 +137,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         onPressed: () {},
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 8),
-                          foregroundColor: BiotopeColors.outline,
+                          foregroundColor: OurobionColors.outline,
                           textStyle: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600),
                         ),
                         child: const Text('Forgot password?'),
@@ -168,15 +168,15 @@ class _SignInScreenState extends State<SignInScreen> {
 
                     // ── Divider ────────────────────────────────
                     Row(children: [
-                      const Expanded(child: Divider(color: BiotopeColors.outlineVariant)),
+                      const Expanded(child: Divider(color: OurobionColors.outlineVariant)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 14),
                         child: Text('or', style: GoogleFonts.manrope(
                           fontSize: 12, fontWeight: FontWeight.w600,
-                          color: BiotopeColors.outline,
+                          color: OurobionColors.outline,
                         )),
                       ),
-                      const Expanded(child: Divider(color: BiotopeColors.outlineVariant)),
+                      const Expanded(child: Divider(color: OurobionColors.outlineVariant)),
                     ]),
 
                     const SizedBox(height: 20),
@@ -184,7 +184,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     // ── Sign up link ───────────────────────────
                     Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                       Text("No account? ", style: GoogleFonts.manrope(
-                        fontSize: 13, color: BiotopeColors.outline,
+                        fontSize: 13, color: OurobionColors.outline,
                       )),
                       GestureDetector(
                         onTap: () => Navigator.of(context).push(
@@ -193,7 +193,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         ),
                         child: Text('Create one →', style: GoogleFonts.manrope(
                           fontSize: 13, fontWeight: FontWeight.w600,
-                          color: BiotopeColors.primary,
+                          color: OurobionColors.primary,
                         )),
                       ),
                     ]),

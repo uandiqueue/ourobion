@@ -1,4 +1,4 @@
-# AGENTS.md — Biotope
+# AGENTS.md — Ourobion
 
 > **This file is the single source of truth for every agent and human working in this repo.**
 > `CLAUDE.md` and `GEMINI.md` are thin pointers here. Keep all durable, cross-tool instructions in
@@ -6,7 +6,7 @@
 > **not** travel — everything that must survive across machines and agents lives in the repo (this
 > file, the CONSTANT-LAYER docs it points to, `docs/sessions/`, `docs/memory/`, `docs/graph/`).
 
-biotope's context lives in two layers:
+ourobion's context lives in two layers:
 
 - **CONSTANT LAYER** (architecture, contracts, conventions) — authored docs that change only at phase
   transitions. AGENTS.md **points** to them; it never duplicates them. See §1, §3, §5.
@@ -17,7 +17,7 @@ biotope's context lives in two layers:
 
 ## 1. What this is
 
-Biotope is a **One Health personal ecological health monitor** for the ASEAN market — a Flutter mobile
+Ourobion is a **One Health personal ecological health monitor** for the ASEAN market — a Flutter mobile
 app + Supabase backend that connects human physiology, daily behaviour, and environmental context to
 surface **descriptive** patterns in gut health, hydration, and vector exposure. It is
 **non-diagnostic by construction**.
@@ -33,7 +33,7 @@ Supabase CLI and these `tools/`. **There is no Python in this repo — do not in
 
 ## 2. Core principle — TWO-TIER TRUTH (read this first)
 
-biotope has a source-of-truth tier and a derived tier. Treat them differently:
+ourobion has a source-of-truth tier and a derived tier. Treat them differently:
 
 - **TRUTH (git-tracked / user-authored, never reconstructable):**
   - **Supabase migrations** in `supabase/migrations/` — the schema is defined here, in PRs, diffable.
@@ -54,12 +54,12 @@ biotope has a source-of-truth tier and a derived tier. Treat them differently:
 **Rule:** to change a derived value, fix the **input** (a raw row or the edge-function logic) and
 re-run the job. **Never hand-edit `baseline_snapshots` / `insight_cards` / `engagement_state` in the
 database** — those are projections and the next job run will overwrite them. The two-tier analog of
-biotope's own data graph (`docs/graph/`): the curated graph is truth; any future auto-generated graph
+ourobion's own data graph (`docs/graph/`): the curated graph is truth; any future auto-generated graph
 file is a rebuildable projection (see §8). See [`docs/memory/0001-two-tier-truth.md`](docs/memory/0001-two-tier-truth.md).
 
 ## 3. Architecture & module boundaries
 
-biotope is organized as modules **M1–M7** with a strict dependency order. The **curated, hand-authored
+ourobion is organized as modules **M1–M7** with a strict dependency order. The **curated, hand-authored
 module graph and the enforced interface rules are the boundary reference** (we deliberately do *not*
 auto-generate a structural import graph yet — see §8 and [`docs/graph/README.md`](docs/graph/README.md)):
 
@@ -82,7 +82,7 @@ auto-generate a structural import graph yet — see §8 and [`docs/graph/README.
 
 ## 4. Environment & commands
 
-biotope has **two toolchains**: **Flutter/Dart** (the app, in `src/`) and **Node + Supabase CLI** (the
+ourobion has **two toolchains**: **Flutter/Dart** (the app, in `src/`) and **Node + Supabase CLI** (the
 backend + these `tools/`). There is **no Python**.
 
 > **Windows-native dev (no WSL):** `scripts/setup.ps1` installs the whole toolchain **bounded to the
@@ -274,7 +274,7 @@ small JSON file managed by the Shared Memory Coordinator (`tools/shared_memory.m
 Curate what isn't derivable, defer the auto-generated **structural** graph for now, run a **semantic**
 graph for agent context, and enforce what we keep:
 
-- **Structural import graph — DEFERRED.** biotope is Dart + TypeScript + SQL, so a single import-graph
+- **Structural import graph — DEFERRED.** ourobion is Dart + TypeScript + SQL, so a single import-graph
   tool is awkward. The **curated** module graph + interface rules in
   [`docs/ARCHITECTURE-CONTEXT.md`](docs/ARCHITECTURE-CONTEXT.md) are the boundary reference today.
   [`docs/graph/README.md`](docs/graph/README.md) records exactly how to add a real generated graph

@@ -38,7 +38,7 @@ class _LivingBackdropState extends State<LivingBackdrop>
         final t = _ctrl.value * 2 * pi;
         return SizedBox.expand(
           child: ColoredBox(
-            color: BiotopeColors.surface,
+            color: OurobionColors.surface,
             child: CustomPaint(
               painter: _OrbPainter(t),
             ),
@@ -54,10 +54,10 @@ class _OrbPainter extends CustomPainter {
   _OrbPainter(this.t);
 
   static const _orbs = [
-    _Orb(radius: 240, ax: -0.15, ay: -0.20, color: BiotopeColors.primaryFixedDim,  driftX: 40, driftY: 30, speed: 1.0,  phase: 0),
-    _Orb(radius: 180, ax:  0.80, ay:  0.40, color: BiotopeColors.secondaryFixedDim, driftX:-30, driftY:-40, speed: 0.82, phase: 2.4),
-    _Orb(radius: 150, ax:  0.20, ay:  0.85, color: BiotopeColors.tertiaryFixedDim,  driftX: 50, driftY:-30, speed: 0.92, phase: 4.4),
-    _Orb(radius: 110, ax:  0.75, ay:  0.15, color: BiotopeColors.primaryFixed,       driftX:-40, driftY: 40, speed: 1.07, phase: 1.2),
+    _Orb(radius: 240, ax: -0.15, ay: -0.20, color: OurobionColors.primaryFixedDim,  driftX: 40, driftY: 30, speed: 1.0,  phase: 0),
+    _Orb(radius: 180, ax:  0.80, ay:  0.40, color: OurobionColors.secondaryFixedDim, driftX:-30, driftY:-40, speed: 0.82, phase: 2.4),
+    _Orb(radius: 150, ax:  0.20, ay:  0.85, color: OurobionColors.tertiaryFixedDim,  driftX: 50, driftY:-30, speed: 0.92, phase: 4.4),
+    _Orb(radius: 110, ax:  0.75, ay:  0.15, color: OurobionColors.primaryFixed,       driftX:-40, driftY: 40, speed: 1.07, phase: 1.2),
   ];
 
   @override

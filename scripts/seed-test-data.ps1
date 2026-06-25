@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  biotope · local test-data seeder. Tune the variables below, run it, and the phone
+  ourobion · local test-data seeder. Tune the variables below, run it, and the phone
   UI renders "weeks in" — streak, baselines and insights included.
 
 .DESCRIPTION
@@ -29,7 +29,7 @@
 param(
   # ── TUNABLES ───────────────────────────────────────────────────────────────
   # The account you sign into the app with (must already exist in auth.users).
-  [string] $TestEmail       = 'test@biotope.local',
+  [string] $TestEmail       = 'test@ourobion.local',
 
   # How many consecutive days to fabricate, ending today.
   #   >=3 → baselines leave "insufficient"; >=7 → "medium"; >=14 → "high" confidence

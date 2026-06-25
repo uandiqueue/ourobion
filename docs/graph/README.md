@@ -1,6 +1,6 @@
 # docs/graph — code-relationship awareness
 
-biotope tracks a change's blast radius across layers: **curate what isn't derivable, defer the
+ourobion tracks a change's blast radius across layers: **curate what isn't derivable, defer the
 auto-generated structural graph, run a semantic context graph for agents, and enforce what we keep.**
 
 ## What lives here today
@@ -47,7 +47,7 @@ Full rationale + verified coverage (680 Dart / 31 TS nodes): [`../memory/0008-gr
 ## Why the structural import graph is DEFERRED (not built yet)
 
 NUSPlan (the reference project) auto-generates `docs/graph/deps.json` with **dependency-cruiser** (a
-JS-only tool) and enforces import boundaries from it. biotope is **Dart + TypeScript + SQL**, where a
+JS-only tool) and enforces import boundaries from it. ourobion is **Dart + TypeScript + SQL**, where a
 single import-graph tool is awkward: dependency-cruiser sees only the JS/TS side, and the bulk of the
 app is Dart. Rather than ship a half-graph that lies about coverage, we defer it. **Nothing in this
 repo claims a generated structural graph exists.**

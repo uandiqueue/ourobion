@@ -1,6 +1,6 @@
 # Two-tier truth
 
-**Decision (recorded 2026-06-08).** biotope has a **source-of-truth tier** and a **derived tier**, and
+**Decision (recorded 2026-06-08).** ourobion has a **source-of-truth tier** and a **derived tier**, and
 they must be treated differently.
 
 - **Truth (git-tracked or user-authored, not reconstructable):** Supabase **migrations**

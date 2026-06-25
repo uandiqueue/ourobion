@@ -47,7 +47,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         SnackBar(
           content: Text('Account created! Please sign in.',
               style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
-          backgroundColor: BiotopeColors.primary,
+          backgroundColor: OurobionColors.primary,
         ),
       );
       Navigator.of(context).pop();
@@ -83,21 +83,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           gradient: const LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
-                            colors: [BiotopeColors.primaryFixed, BiotopeColors.primary],
+                            colors: [OurobionColors.primaryFixed, OurobionColors.primary],
                           ),
                         ),
                         child: const Icon(Icons.eco, color: Colors.white, size: 36),
                       ),
                     ),
                     const SizedBox(height: 14),
-                    Text('Biotope', style: GoogleFonts.manrope(
+                    Text('Ourobion', style: GoogleFonts.manrope(
                       fontSize: 28, fontWeight: FontWeight.w700,
-                      letterSpacing: -0.6, color: BiotopeColors.onSurface,
+                      letterSpacing: -0.6, color: OurobionColors.onSurface,
                     )),
                     const SizedBox(height: 4),
                     Text('Start your journey.', style: GoogleFonts.manrope(
                       fontSize: 13, fontWeight: FontWeight.w400,
-                      color: BiotopeColors.outline,
+                      color: OurobionColors.outline,
                     )),
 
                     const SizedBox(height: 40),
@@ -105,7 +105,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     // ── Eyebrow ────────────────────────────────
                     Text('CREATE ACCOUNT', style: GoogleFonts.manrope(
                       fontSize: 10, fontWeight: FontWeight.w700,
-                      letterSpacing: 1.6, color: BiotopeColors.primary,
+                      letterSpacing: 1.6, color: OurobionColors.primary,
                     )),
 
                     const SizedBox(height: 20),
@@ -132,7 +132,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscurePass ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                            color: BiotopeColors.outline,
+                            color: OurobionColors.outline,
                           ),
                           onPressed: () => setState(() => _obscurePass = !_obscurePass),
                         ),
@@ -153,7 +153,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscureConf ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                            color: BiotopeColors.outline,
+                            color: OurobionColors.outline,
                           ),
                           onPressed: () => setState(() => _obscureConf = !_obscureConf),
                         ),
@@ -187,7 +187,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       textAlign: TextAlign.center,
                       style: GoogleFonts.manrope(
                         fontSize: 11, fontWeight: FontWeight.w400,
-                        color: BiotopeColors.outline, height: 1.6,
+                        color: OurobionColors.outline, height: 1.6,
                       ),
                     ),
 
@@ -196,13 +196,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     // ── Sign in link ───────────────────────────
                     Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                       Text('Already have an account? ', style: GoogleFonts.manrope(
-                        fontSize: 13, color: BiotopeColors.outline,
+                        fontSize: 13, color: OurobionColors.outline,
                       )),
                       GestureDetector(
                         onTap: () => Navigator.of(context).pop(),
                         child: Text('Sign In →', style: GoogleFonts.manrope(
                           fontSize: 13, fontWeight: FontWeight.w600,
-                          color: BiotopeColors.primary,
+                          color: OurobionColors.primary,
                         )),
                       ),
                     ]),

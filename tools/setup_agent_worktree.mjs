@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Worktree Isolation Manager for biotope's multi-agent workflow. Node port of NUSPlan's
+// Worktree Isolation Manager for ourobion's multi-agent workflow. Node port of NUSPlan's
 // tools/setup_agent_worktree.py.
 //
 // Creates an isolated git worktree for a parallel agent branch and configures the shared git hooks
 // (core.hooksPath=.githooks) inside the new worktree, so the pre-push context check runs there too.
 //
-//   node tools/setup_agent_worktree.mjs --branch feat/m3-wearables/healthkit-read --path ../biotope-wt-m3
+//   node tools/setup_agent_worktree.mjs --branch feat/m3-wearables/healthkit-read --path ../ourobion-wt-m3
 //
 // Session branches are always cut from dev-phase2 (the single integration line). Override with --base
 // only for exceptional cases (e.g. a hotfix off main).

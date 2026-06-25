@@ -2,7 +2,7 @@
 
 **Rule (Product Principle #1).** Every user-facing string must use **observational** language. Never
 "you may have X" / "condition" / "disease" / "diagnosed" / "treatment"; always "your data shows a
-pattern" / "signal" / "observation". biotope **never diagnoses**.
+pattern" / "signal" / "observation". ourobion **never diagnoses**.
 
 **Why.** It is the product's top non-negotiable principle and a regulatory/safety boundary — a single
 diagnostic-sounding string undermines the whole positioning and could imply medical claims.

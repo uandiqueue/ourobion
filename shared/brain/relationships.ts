@@ -1,6 +1,6 @@
 // shared/brain/relationships.ts
 //
-// THE shared contract for "the brain" — biotope's knowledge graph of scientifically-derived
+// THE shared contract for "the brain" — ourobion's knowledge graph of scientifically-derived
 // relationships between metrics. Two LLM passes produce every edge:
 //   1. SYNTHESIS  — an LLM scrapes papers and proposes an edge: a `RelationshipClaim`.
 //   2. VERIFICATION — a SECOND, independent LLM adversarially re-checks that claim against

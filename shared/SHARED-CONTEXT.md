@@ -1,4 +1,4 @@
-# shared/SHARED-CONTEXT.md — Biotope Shared Contract
+# shared/SHARED-CONTEXT.md — Ourobion Shared Contract
 > **CONSTANT LAYER** — All changes require PR with 2 team reviewers.
 > Breaking changes to any type below require notifying all module owners.
 > Last updated: Phase 2 (metrics registry; M3 wearable contract corrected; brain relationship contract)
@@ -7,7 +7,7 @@
 
 ## Why This File Exists
 
-These are the connective tissue of Biotope. Every module boundary crosses
+These are the connective tissue of Ourobion. Every module boundary crosses
 through one of these types. If you change a type here without coordinating,
 you break other people's AI sessions and potentially production.
 
@@ -249,7 +249,7 @@ interface EngagementState {
 > Authoritative shapes live in `shared/brain/relationships.ts` (TS-first). Full design:
 > [`docs/BRAIN-DESIGN.md`](../docs/BRAIN-DESIGN.md).
 
-The brain is biotope's knowledge graph of scientifically-derived relationships between metrics. Nodes
+The brain is ourobion's knowledge graph of scientifically-derived relationships between metrics. Nodes
 are metric keys (`shared/metrics/registry.ts`); edges are produced in **two LLM passes**, kept as two
 records so verification can re-run without re-synthesising:
 
