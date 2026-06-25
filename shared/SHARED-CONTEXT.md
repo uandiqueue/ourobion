@@ -1,7 +1,7 @@
 # shared/SHARED-CONTEXT.md — Biotope Shared Contract
 > **CONSTANT LAYER** — All changes require PR with 2 team reviewers.
 > Breaking changes to any type below require notifying all module owners.
-> Last updated: Phase 2 (metrics registry; M3 wearable contract corrected)
+> Last updated: Phase 2 (metrics registry; M3 wearable contract corrected; brain relationship contract)
 
 ---
 
@@ -240,6 +240,36 @@ interface EngagementState {
   // Expansion hint: Phase 3 adds missions[], challenges[], insight_actions_taken: number
 }
 ```
+
+---
+
+## The Brain — RelationshipClaim / EdgeVerification
+> Produced by: the brain ingestion pipeline (synthesis + verification LLM passes)
+> Consumed by: M5b Insight Engine (the "why" behind a surfaced pattern) [forthcoming]
+> Authoritative shapes live in `shared/brain/relationships.ts` (TS-first). Full design:
+> [`docs/BRAIN-DESIGN.md`](../docs/BRAIN-DESIGN.md).
+
+The brain is biotope's knowledge graph of scientifically-derived relationships between metrics. Nodes
+are metric keys (`shared/metrics/registry.ts`); edges are produced in **two LLM passes**, kept as two
+records so verification can re-run without re-synthesising:
+
+- **`RelationshipClaim`** — what the synthesis LLM proposes: `subject`/`object` (snake_case metric
+  keys), `relation` (`increases`/`decreases`/`modulates`/`correlates`/`confounds`/`no_effect`),
+  `claimKind` (`causal`/`correlational`/`mechanistic`), `effect`, `population`, `citations[]`, and
+  verbatim `quoteSpans[]`.
+- **`EdgeVerification`** — what a **second, independent** LLM emits after re-checking the claim against
+  freshly-retrieved evidence: a `verdict`, grounding (`quoteCheck`, `independentRetrieval`,
+  `corroboration`), the per-failure-mode checks (`directionCheck` / `claimKindCheck` / `scopeCheck` /
+  `effectSizeCheck`), and the rolled-up trust (`evidenceTier` 1–5, `confidence` 0..1, `dqs.weight`).
+
+A `supported`/`contradicted` verdict **requires `independentRetrieval.performed === true`** (a
+schema invariant) — that is what makes the second pass a grounded check, not a rubber stamp. Trust is
+a **graded score** (`edgeScore` / `servingBand` in `shared/brain/index.ts`), not a binary gate.
+
+**Two-tier:** the contract above is TRUTH (2-reviewer); the claims/verifications are a **rebuildable
+projection** ([memory 0001](../docs/memory/0001-two-tier-truth.md)) — never hand-edit a verdict; fix
+the input (corpus / prompt — bump `promptVersion`) and re-run. See
+[memory 0012](../docs/memory/0012-brain-adversarial-edge-verification.md).
 
 ---
 

@@ -1,0 +1,184 @@
+// shared/brain/relationships.ts
+//
+// THE shared contract for "the brain" — biotope's knowledge graph of scientifically-derived
+// relationships between metrics. Two LLM passes produce every edge:
+//   1. SYNTHESIS  — an LLM scrapes papers and proposes an edge: a `RelationshipClaim`.
+//   2. VERIFICATION — a SECOND, independent LLM adversarially re-checks that claim against
+//      freshly-retrieved evidence (it is prompted to REFUTE, defaults to "uncertain" when it can't
+//      ground the claim): an `EdgeVerification`.
+// This file defines the shape of both records. The pipeline that produces them and the stored graph
+// are a DERIVED, rebuildable projection (docs/memory/0001-two-tier-truth) — never hand-edited. To
+// change an edge or a verdict, fix the INPUT (paper corpus, synthesis/verifier prompt — bump
+// `promptVersion`) and re-run the job.
+//
+// TRUTH vs DERIVED: this *contract* (the types below) is TRUTH — git-tracked, 2-reviewer PR
+// (docs/memory/0002-shared-contract-two-reviewers). The *instances* (claims + verifications) are the
+// rebuildable projection.
+//
+// Edge endpoints (`subject` / `object`) are canonical snake_case metric keys from
+// shared/metrics/registry.ts — every endpoint must resolve to an active registry metric
+// (validate with `metrics.isActiveMetric`). The relationship graph is *seeded* by each derived
+// metric's `derivedFrom` (see registry.ts) and *grown* by synthesis from the literature.
+//
+// Why a second LLM (the safeguard): synthesis is generative (high hallucination surface);
+// verification is discriminative and grounded (a narrow, checkable task). A second pass earns its
+// cost ONLY when it (a) retrieves evidence INDEPENDENTLY rather than re-opining over the synthesis
+// context, and (b) is adversarial. Those two properties are encoded as schema invariants in
+// relationships.schema.ts. Full rationale: docs/BRAIN-DESIGN.md.
+//
+// TS-first: the brain ingestion pipeline is backend/tooling, so there is no registry.dart-style Dart
+// mirror yet, and no DB/parity guard couplings (the data isn't persisted or app-rendered yet). A Dart
+// mirror + ts-dart parity guard + a schema guard follow when the app renders edges and the graph is
+// persisted — the same deferral the registry used for env_daily. See docs/BRAIN-DESIGN.md
+// "Guards (deferred)".
+
+/** Canonical snake_case metric key — must resolve to an active shared/metrics registry entry. */
+export type MetricKey = string;
+
+/** How `subject` relates to `object`. `no_effect` records a studied NULL result (worth keeping). */
+export type RelationKind =
+  | 'increases'    // monotonic ↑ : more subject → more object
+  | 'decreases'    // monotonic ↓ : more subject → less object
+  | 'modulates'    // affects, but non-monotonic / conditional (e.g. inverted-U)
+  | 'correlates'   // associated, direction of causation not claimed
+  | 'confounds'    // subject is a third variable distorting object's other relationships
+  | 'no_effect';   // studied and found null — prevents re-proposing a dead edge
+
+/** The strongest claim the evidence licenses. The axis synthesis most often OVERSTATES. */
+export type ClaimKind = 'causal' | 'correlational' | 'mechanistic';
+
+/** Verifier verdict on a synthesised claim. */
+export type Verdict =
+  | 'supported'      // evidence backs the claim as stated
+  | 'partial'        // backed only with a narrower scope / weaker claim_kind / smaller effect
+  | 'unsupported'    // no evidence found either way (absence, not contradiction)
+  | 'contradicted'   // independent evidence points the other way
+  | 'uncertain';     // could not be grounded (e.g. no independent retrieval) — never served
+
+/**
+ * Study-design strength of the strongest SUPPORTING source — the causal-weight ladder, the brain's
+ * analog of the registry's `reliability`. Higher = more causal weight.
+ * 1 mechanistic / in-vitro · 2 cross-sectional / observational · 3 cohort / longitudinal
+ * 4 RCT · 5 meta-analysis / systematic review.
+ */
+export type EvidenceTier = 1 | 2 | 3 | 4 | 5;
+
+/** Venue / citation weight — kept SEPARATE from `evidenceTier` (a top venue can still run a weak design). */
+export type ImpactTier = 'high' | 'moderate' | 'low' | 'preprint';
+
+/** Lifecycle of a verification record. */
+export type VerificationStatus =
+  | 'active'       // current, serve per gating
+  | 'stale'        // promptVersion / corpus moved on — re-run pending
+  | 'superseded';  // replaced by a newer verification of the same edge
+
+/** A cited source, scored on the two independent axes (design strength × venue impact). */
+export interface Citation {
+  /** DOI when available, else a stable internal corpus id. */
+  paperId: string;
+  title: string;
+  year: number | null;
+  evidenceTier: EvidenceTier;
+  impactTier: ImpactTier;
+  /** What this source does to the edge. */
+  stance: 'supports' | 'refutes' | 'mixed' | 'mentions';
+}
+
+/** A verbatim span grounding a claim in a specific source — enables a near-free deterministic check. */
+export interface QuoteSpan {
+  /** Must match a `Citation.paperId` on the same claim. */
+  paperId: string;
+  /** Verbatim text from the source — checked for literal presence before the verifier LLM runs. */
+  quote: string;
+  /** Section / page / figure locator, when known. */
+  locator: string | null;
+}
+
+/**
+ * What the SYNTHESIS LLM proposes. One edge of the graph, pre-verification.
+ * `edgeId` is the deterministic identity of the edge (see `index.relationKey`) so re-synthesis and
+ * re-verification address the same edge rather than duplicating it.
+ */
+export interface RelationshipClaim {
+  /** Deterministic id: `${subject}|${relation}|${object}` (see index.relationKey). */
+  edgeId: string;
+  subject: MetricKey;
+  object: MetricKey;
+  relation: RelationKind;
+  claimKind: ClaimKind;
+  /** Quantified effect when the source gives one; nulls where only a direction is stated. */
+  effect: {
+    size: number | null;
+    unit: string | null;
+    ci: readonly [number, number] | null;
+  };
+  /** Claimed population / scope, verbatim (e.g. 'healthy adults 18–40') — the overgeneralisation axis. */
+  population: string | null;
+  /** Sources synthesis leaned on (≥1). */
+  citations: readonly Citation[];
+  /** Grounding spans (≥1) — exact text the claim rests on. */
+  quoteSpans: readonly QuoteSpan[];
+  /** Provenance — makes the claim a reproducible projection. */
+  synthesisModel: string;
+  promptVersion: string;
+  synthesisedAt: string; // ISO datetime, supplied by the job
+}
+
+/**
+ * What the VERIFICATION LLM emits for a claim. This is the record that feeds gating / confidence.
+ * Kept separate from the claim so verification can be re-run (cheaper, better verifier, new corpus)
+ * without re-running synthesis.
+ */
+export interface EdgeVerification {
+  /** FK to `RelationshipClaim.edgeId`. */
+  edgeId: string;
+  verdict: Verdict;
+
+  // ── grounding: the properties that make a second pass non-redundant ──
+  /** Deterministic, runs BEFORE the verifier LLM: are the claim's quote spans literally in the sources? */
+  quoteCheck: {
+    spansFound: number;
+    spansTotal: number;
+    allPresent: boolean;
+  };
+  /** The verifier's OWN retrieval — NOT the synthesis context. A grounded verdict requires this. */
+  independentRetrieval: {
+    performed: boolean;
+    sources: readonly Citation[];
+  };
+  /** Independent corroboration vs contradiction across retrieved sources. */
+  corroboration: {
+    supporting: number;
+    contradicting: number;
+  };
+
+  // ── the specific failure modes synthesis is bad at ──
+  /** A→B vs B→A. */
+  directionCheck: { matchesClaim: boolean };
+  /** causal-vs-correlational drift — the most-overstated axis. */
+  claimKindCheck: { matchesClaim: boolean; supportedKind: ClaimKind };
+  /** Overgeneralisation: does the evidence actually cover the claimed population? */
+  scopeCheck: { mismatch: boolean; supportedPopulation: string | null };
+  /** Effect-size inflation. */
+  effectSizeCheck: { matchesClaim: boolean; extractedSize: number | null };
+
+  // ── rolled-up trust that feeds gating ──
+  /** Study-design strength of the strongest supporting source. */
+  evidenceTier: EvidenceTier;
+  /** Verifier's calibrated belief, 0..1. */
+  confidence: number;
+  /** Edge's contribution to graph trust — the brain's analog of metric `dqs.weight`, 0..1. */
+  dqs: { weight: number };
+
+  // ── provenance ──
+  verifierModel: string;
+  promptVersion: string;
+  verifiedAt: string; // ISO datetime, supplied by the job
+  status: VerificationStatus;
+}
+
+/** A claim joined with its current verification — the servable unit of the graph. */
+export interface VerifiedEdge {
+  claim: RelationshipClaim;
+  verification: EdgeVerification;
+}

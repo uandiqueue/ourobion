@@ -17,6 +17,7 @@ to everything else:
 - `docs/PHASE2-PLAN.md` — the Phase 2 plan: goals, workstreams, two-track sequence, stress-test gate
 - `docs/INSIGHTS-ENGINE-DESIGN.md` — the data-driven insights-engine contract (Phase 2 Track B)
 - `docs/METRICS-REGISTRY-DESIGN.md` — single-source metric registry so adding/removing metrics can't silently break the app
+- `docs/BRAIN-DESIGN.md` — the brain: an evidence-tiered relationship graph whose edges are synthesised from papers by one LLM and adversarially verified by a second
 - `docs/human-briefs/` — plain-language stakeholder briefs of significant plans
 
 ## 🧠 Context engineering — building biotope with AI agents
@@ -89,6 +90,40 @@ single instruction file every AI tool reads, kept deliberately lean so it never 
 continuously integrable, and only `dev-phase2` merges to `main` at phase completion — after which the
 next phase is cut fresh from `main`. `main` stays always-deployable. *(One-time per clone:*
 `git config core.hooksPath .githooks` *enables the shared hooks; the worktree tool does this automatically.)*
+
+---
+
+## 🧬 The brain — an evidence-tiered, verified relationship graph
+
+biotope's insights need a *reason*, not just a correlation in one user's data. **The brain** is the
+reusable layer of "what relates to what, and how strongly the science backs it": a knowledge graph
+whose **nodes are metrics** (from the metrics registry) and whose **edges are relationships**
+synthesised from the scientific literature.
+
+Synthesising relationships from papers with an LLM is the highest-hallucination-surface step in the
+system, and an edge is written once but read forever — so the brain pays its quality cost at
+ingestion time, by design:
+
+- **Two passes, two records.** A synthesis LLM proposes an edge (`RelationshipClaim`); a **second,
+  independent LLM** re-checks it against **freshly-retrieved** evidence (`EdgeVerification`). The two
+  are separate records so verification can be re-run with a better verifier without re-synthesising.
+- **The verifier is grounded and adversarial — enforced, not just prompted.** A `supported` /
+  `contradicted` verdict *requires* that the verifier actually performed independent retrieval (a zod
+  schema invariant); with no fresh grounding the verdict can only be `uncertain`. This is what makes
+  the second pass a real check rather than a same-model rubber stamp.
+- **Trust is graded, not binary.** Verification emits structured evidence metadata — a study-design
+  ladder (`evidenceTier` 1–5, deliberately kept separate from a venue `impactTier`), corroboration
+  counts, and per-failure-mode checks (direction, causal-vs-correlational, population scope, effect
+  size) — which roll into a 0..1 `edgeScore` that gates whether and how an edge is served.
+- **Two-tier truth (Principle 3).** The *contract* (`shared/brain/`) is git-tracked truth; the
+  *edges* are a rebuildable projection — never hand-edited. To change a verdict you fix the input
+  (corpus or prompt) and re-run.
+- **Drift-guarded like the rest of the repo (Principle 5).** A compile-time `AssertExact<>` plus
+  runtime zod schemas hold the hand-written types and their validators together; cross-language /
+  DB guards follow the registry pattern when the graph is persisted and app-rendered.
+
+Full design — failure modes, the gating table, cheaper complementary checks, alternatives considered:
+[`docs/BRAIN-DESIGN.md`](docs/BRAIN-DESIGN.md). Contract + runbook: [`shared/brain/`](shared/brain/).
 
 ---
 
