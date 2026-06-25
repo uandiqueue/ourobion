@@ -31,18 +31,18 @@ Future<void> main() async {
     url: supabaseUrl,
     anonKey: supabaseAnonKey,
   );
-  runApp(const BiotopeApp());
+  runApp(const OurobionApp());
 }
 
-class BiotopeApp extends StatelessWidget {
-  const BiotopeApp({super.key});
+class OurobionApp extends StatelessWidget {
+  const OurobionApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Biotope',
+      title: 'Ourobion',
       debugShowCheckedModeBanner: false,
-      theme: biotopeTheme(),
+      theme: ourobionTheme(),
       home: const AuthGate(),
     );
   }

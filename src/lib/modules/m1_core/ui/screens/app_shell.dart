@@ -48,12 +48,12 @@ class _AppShellState extends State<AppShell> {
           const Divider(
             height: 1,
             thickness: 1,
-            color: BiotopeColors.outlineVariant,
+            color: OurobionColors.outlineVariant,
           ),
           NavigationBarTheme(
             data: NavigationBarThemeData(
-              backgroundColor: BiotopeColors.surfaceContainer,
-              indicatorColor: BiotopeColors.primaryFixed,
+              backgroundColor: OurobionColors.surfaceContainer,
+              indicatorColor: OurobionColors.primaryFixed,
               indicatorShape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(6),
               ),
@@ -63,16 +63,16 @@ class _AppShellState extends State<AppShell> {
                   fontSize: 11,
                   fontWeight: active ? FontWeight.w700 : FontWeight.w500,
                   color: active
-                      ? BiotopeColors.primary
-                      : BiotopeColors.onSurfaceVariant,
+                      ? OurobionColors.primary
+                      : OurobionColors.onSurfaceVariant,
                 );
               }),
               iconTheme: WidgetStateProperty.resolveWith((states) {
                 final active = states.contains(WidgetState.selected);
                 return IconThemeData(
                   color: active
-                      ? BiotopeColors.primary
-                      : BiotopeColors.onSurfaceVariant,
+                      ? OurobionColors.primary
+                      : OurobionColors.onSurfaceVariant,
                   size: 22,
                 );
               }),
@@ -132,7 +132,7 @@ class _PlaceholderTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BiotopeColors.surface,
+      backgroundColor: OurobionColors.surface,
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -144,10 +144,10 @@ class _PlaceholderTab extends StatelessWidget {
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
-                    color: BiotopeColors.primaryFixed,
+                    color: OurobionColors.primaryFixed,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Icon(icon, size: 32, color: BiotopeColors.primary),
+                  child: Icon(icon, size: 32, color: OurobionColors.primary),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -156,7 +156,7 @@ class _PlaceholderTab extends StatelessWidget {
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
                     letterSpacing: -0.2,
-                    color: BiotopeColors.onSurface,
+                    color: OurobionColors.onSurface,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -165,7 +165,7 @@ class _PlaceholderTab extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: GoogleFonts.manrope(
                     fontSize: 13,
-                    color: BiotopeColors.outline,
+                    color: OurobionColors.outline,
                     height: 1.5,
                   ),
                 ),
@@ -176,7 +176,7 @@ class _PlaceholderTab extends StatelessWidget {
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.2,
-                    color: BiotopeColors.outlineVariant,
+                    color: OurobionColors.outlineVariant,
                   ),
                 ),
               ],

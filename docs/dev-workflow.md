@@ -1,4 +1,4 @@
-# dev-workflow.md — Biotope Development Workflow
+# dev-workflow.md — Ourobion Development Workflow
 > **TEAM REFERENCE** — Written for Jayden and Alton. Human-readable, not AI context.
 > Purpose: Explains the full development cycle, what AI handles, and what requires human judgment.
 >

@@ -1,4 +1,4 @@
-# STRUCTURE-CONTEXT.md — Biotope Repository Structure
+# STRUCTURE-CONTEXT.md — Ourobion Repository Structure
 > **CONSTANT LAYER** — Update only when the repository structure changes.
 
 ---
@@ -8,7 +8,7 @@
 This is a monolithic repository containing the frontend mobile application, backend serverless functions, and shared libraries.
 
 ```
-biotope/
+ourobion/
 ├── AGENTS.md                  # SINGLE SOURCE OF TRUTH for agents + humans (points to everything)
 ├── CLAUDE.md / GEMINI.md      # Thin pointers to AGENTS.md
 ├── .githooks/

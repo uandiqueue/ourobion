@@ -1,6 +1,6 @@
 # The Brain — Design
 
-**The brain** is biotope's knowledge graph of scientifically-derived relationships between metrics.
+**The brain** is ourobion's knowledge graph of scientifically-derived relationships between metrics.
 Nodes are metric keys ([`shared/metrics/registry.ts`](../shared/metrics/registry.ts)); edges are
 relationships ("more X → less Y", "X modulates Y") synthesised from the scientific literature by an
 LLM and then independently verified by a second LLM before they can be served.

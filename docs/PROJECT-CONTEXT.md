@@ -1,4 +1,4 @@
-# PROJECT-CONTEXT.md — Biotope
+# PROJECT-CONTEXT.md — Ourobion
 > **CONSTANT LAYER** — product principles, tech stack, module map, and the shared contract. Change
 > only at formal phase transitions or full team agreement. Current phase scope + sequencing live in
 > [`PHASE2-PLAN.md`](PHASE2-PLAN.md).
@@ -7,7 +7,7 @@
 
 ## What We Are Building
 
-Biotope is a One Health personal ecological health monitor for the ASEAN market.
+Ourobion is a One Health personal ecological health monitor for the ASEAN market.
 It connects human physiology, daily behaviour, and environmental context to help users
 understand patterns in their gut health, hydration, vector exposure, and ecological
 wellbeing — without making diagnostic claims.

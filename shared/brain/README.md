@@ -1,6 +1,6 @@
 # The Brain — relationship contract
 
-`shared/brain/` is the cross-language contract for **the brain**: biotope's knowledge graph of
+`shared/brain/` is the cross-language contract for **the brain**: ourobion's knowledge graph of
 scientifically-derived relationships between metrics. Nodes are metric keys (from
 [`shared/metrics/registry.ts`](../metrics/registry.ts)); edges are relationships synthesised from the
 literature and then independently verified.

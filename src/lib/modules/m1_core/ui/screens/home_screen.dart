@@ -29,7 +29,7 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Biotope'),
+        title: const Text('Ourobion'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),

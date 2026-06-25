@@ -61,7 +61,7 @@ class _AntibioticCourseScreenState extends State<AntibioticCourseScreen> {
               color: Colors.white,
             ),
           ),
-          backgroundColor: BiotopeColors.primary,
+          backgroundColor: OurobionColors.primary,
           behavior: SnackBarBehavior.floating,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -94,9 +94,9 @@ class _AntibioticCourseScreenState extends State<AntibioticCourseScreen> {
   Widget build(BuildContext context) {
     final canSave = _drugCtrl.text.trim().isNotEmpty && !_isSaving;
     return Scaffold(
-      backgroundColor: BiotopeColors.surface,
+      backgroundColor: OurobionColors.surface,
       appBar: AppBar(
-        backgroundColor: BiotopeColors.surface,
+        backgroundColor: OurobionColors.surface,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
@@ -109,7 +109,7 @@ class _AntibioticCourseScreenState extends State<AntibioticCourseScreen> {
             fontSize: 12,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.4,
-            color: BiotopeColors.primary,
+            color: OurobionColors.primary,
           ),
         ),
       ),
@@ -133,7 +133,7 @@ class _AntibioticCourseScreenState extends State<AntibioticCourseScreen> {
                   decoration: InputDecoration(
                     hintText: 'e.g. Amoxicillin',
                     hintStyle: GoogleFonts.manrope(
-                      color: BiotopeColors.outline,
+                      color: OurobionColors.outline,
                     ),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(
@@ -154,7 +154,7 @@ class _AntibioticCourseScreenState extends State<AntibioticCourseScreen> {
                   leading: Icon(
                     Icons.calendar_today_rounded,
                     size: 18,
-                    color: BiotopeColors.primary,
+                    color: OurobionColors.primary,
                   ),
                   title: Text(
                     _fmt(_startDate),
@@ -165,7 +165,7 @@ class _AntibioticCourseScreenState extends State<AntibioticCourseScreen> {
                   ),
                   trailing: Icon(
                     Icons.chevron_right_rounded,
-                    color: BiotopeColors.outlineVariant,
+                    color: OurobionColors.outlineVariant,
                   ),
                   onTap: _pickDate,
                 ),
@@ -184,7 +184,7 @@ class _AntibioticCourseScreenState extends State<AntibioticCourseScreen> {
                       Icon(
                         Icons.schedule_rounded,
                         size: 18,
-                        color: BiotopeColors.primary,
+                        color: OurobionColors.primary,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -228,7 +228,7 @@ class _AntibioticCourseScreenState extends State<AntibioticCourseScreen> {
                 '14-day gut watch period begins automatically after the course ends.',
                 style: GoogleFonts.manrope(
                   fontSize: 11,
-                  color: BiotopeColors.onSurfaceVariant,
+                  color: OurobionColors.onSurfaceVariant,
                 ),
               ),
               const Spacer(),
@@ -258,15 +258,15 @@ class _AntibioticCourseScreenState extends State<AntibioticCourseScreen> {
           fontSize: 10,
           fontWeight: FontWeight.w700,
           letterSpacing: 1.4,
-          color: BiotopeColors.onSurfaceVariant,
+          color: OurobionColors.onSurfaceVariant,
         ),
       );
 
   Widget _box({required Widget child}) => Container(
         decoration: BoxDecoration(
-          color: BiotopeColors.surfaceLowest,
+          color: OurobionColors.surfaceLowest,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: BiotopeColors.outlineVariant),
+          border: Border.all(color: OurobionColors.outlineVariant),
         ),
         child: child,
       );
@@ -288,14 +288,14 @@ class _StepBtn extends StatelessWidget {
         height: 32,
         decoration: BoxDecoration(
           color: enabled
-              ? BiotopeColors.surfaceContainer
-              : BiotopeColors.surfaceLow,
+              ? OurobionColors.surfaceContainer
+              : OurobionColors.surfaceLow,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
           icon,
           size: 16,
-          color: enabled ? BiotopeColors.onSurface : BiotopeColors.outlineVariant,
+          color: enabled ? OurobionColors.onSurface : OurobionColors.outlineVariant,
         ),
       ),
     );

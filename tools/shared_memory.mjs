@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Shared Memory Coordinator for biotope's multi-agent workflow. Node port of NUSPlan's
+// Shared Memory Coordinator for ourobion's multi-agent workflow. Node port of NUSPlan's
 // tools/shared_memory.py.
 //
 // Manages the .agents/session-log.json file to coordinate task claims across agents on the same
@@ -51,7 +51,7 @@ function cmdList() {
   const db = loadDb();
   const bar = "=".repeat(60);
   console.log(bar);
-  console.log("biotope — current agent task claims & shared state");
+  console.log("ourobion — current agent task claims & shared state");
   console.log(bar);
   const tasks = Object.keys(db.claims);
   if (tasks.length === 0) {

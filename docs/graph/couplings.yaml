@@ -1,6 +1,6 @@
 # Semantic / data couplings — what static analysis CANNOT see.
 #
-# biotope spans Dart (app), TypeScript (edge functions) and SQL (migrations). Many contracts between
+# ourobion spans Dart (app), TypeScript (edge functions) and SQL (migrations). Many contracts between
 # these are runtime/data shapes that share an implicit structure but are NOT linked by any import, so
 # no structural graph (and none is auto-generated yet — see docs/graph/README.md) can catch them
 # drifting. To stop that, EVERY edge names a `guard:` — a test file that makes the coupling executable.

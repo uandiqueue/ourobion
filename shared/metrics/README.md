@@ -1,6 +1,6 @@
 # Metrics Registry
 
-`registry.ts` is **the single source of truth** for every metric biotope collects.
+`registry.ts` is **the single source of truth** for every metric ourobion collects.
 `registry.dart` is its faithful mirror for the Flutter app. The two are held in lockstep by
 guards — adding or removing a metric is a localized, guard-protected change, so incomplete
 propagation fails the build instead of silently breaking at runtime.

@@ -79,7 +79,7 @@ class _StoolFormScreenState extends State<StoolFormScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BiotopeColors.surface,
+      backgroundColor: OurobionColors.surface,
       body: SafeArea(
         child: FadeTransition(
           opacity: _opacity,
@@ -102,14 +102,14 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: BiotopeColors.surfaceLowest,
-                            border: Border.all(color: BiotopeColors.outlineVariant),
+                            color: OurobionColors.surfaceLowest,
+                            border: Border.all(color: OurobionColors.outlineVariant),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
                             Icons.arrow_back_rounded,
                             size: 18,
-                            color: BiotopeColors.onSurface,
+                            color: OurobionColors.onSurface,
                           ),
                         ),
                       ),
@@ -119,7 +119,7 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1.4,
-                          color: BiotopeColors.onSurfaceVariant,
+                          color: OurobionColors.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -134,7 +134,7 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.6,
-                      color: BiotopeColors.primary,
+                      color: OurobionColors.primary,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -147,7 +147,7 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                       fontWeight: FontWeight.w600,
                       letterSpacing: -0.4,
                       height: 1.2,
-                      color: BiotopeColors.onSurface,
+                      color: OurobionColors.onSurface,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -156,7 +156,7 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                     style: GoogleFonts.manrope(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
-                      color: BiotopeColors.outline,
+                      color: OurobionColors.outline,
                     ),
                   ),
 
@@ -166,9 +166,9 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: BiotopeColors.surfaceLowest,
+                        color: OurobionColors.surfaceLowest,
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: BiotopeColors.outlineVariant),
+                        border: Border.all(color: OurobionColors.outlineVariant),
                         boxShadow: const [
                           BoxShadow(
                             color: Color(0x0A000000),
@@ -197,7 +197,7 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                                     fontSize: 10,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: 1.4,
-                                    color: BiotopeColors.outline,
+                                    color: OurobionColors.outline,
                                   ),
                                 ),
                                 Text(
@@ -206,7 +206,7 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                                     fontSize: 10,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: 1.6,
-                                    color: BiotopeColors.onSurfaceVariant,
+                                    color: OurobionColors.onSurfaceVariant,
                                   ),
                                 ),
                                 Text(
@@ -215,13 +215,13 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                                     fontSize: 10,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: 1.4,
-                                    color: BiotopeColors.outline,
+                                    color: OurobionColors.outline,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const Divider(height: 1, color: BiotopeColors.outlineVariant),
+                          const Divider(height: 1, color: OurobionColors.outlineVariant),
                           Expanded(
                             child: ClipRRect(
                               borderRadius: const BorderRadius.vertical(
@@ -234,7 +234,7 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                                   height: 1,
                                   indent: 20,
                                   endIndent: 20,
-                                  color: BiotopeColors.outlineVariant,
+                                  color: OurobionColors.outlineVariant,
                                 ),
                                 itemBuilder: (context, i) {
                                   final type = i + 1;
@@ -245,7 +245,7 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                                       duration: const Duration(milliseconds: 180),
                                       curve: Curves.easeOut,
                                       color: isSelected
-                                          ? BiotopeColors.primaryFixed
+                                          ? OurobionColors.primaryFixed
                                               .withValues(alpha: 0.28)
                                           : Colors.transparent,
                                       padding: const EdgeInsets.symmetric(
@@ -262,8 +262,8 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
                                               color: isSelected
-                                                  ? BiotopeColors.primary
-                                                  : BiotopeColors.surfaceContainer,
+                                                  ? OurobionColors.primary
+                                                  : OurobionColors.surfaceContainer,
                                             ),
                                             child: Center(
                                               child: Text(
@@ -272,8 +272,8 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                                                   fontSize: 11,
                                                   fontWeight: FontWeight.w700,
                                                   color: isSelected
-                                                      ? BiotopeColors.onPrimary
-                                                      : BiotopeColors.onSurfaceVariant,
+                                                      ? OurobionColors.onPrimary
+                                                      : OurobionColors.onSurfaceVariant,
                                                 ),
                                               ),
                                             ),
@@ -285,8 +285,8 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                                             painter: _ShapePainter(
                                               type: type,
                                               color: isSelected
-                                                  ? BiotopeColors.primaryContainer
-                                                  : BiotopeColors.outlineVariant,
+                                                  ? OurobionColors.primaryContainer
+                                                  : OurobionColors.outlineVariant,
                                             ),
                                           ),
                                           const SizedBox(width: 12),
@@ -302,8 +302,8 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                                                     fontSize: 13,
                                                     fontWeight: FontWeight.w700,
                                                     color: isSelected
-                                                        ? BiotopeColors.onPrimaryContainer
-                                                        : BiotopeColors.onSurface,
+                                                        ? OurobionColors.onPrimaryContainer
+                                                        : OurobionColors.onSurface,
                                                   ),
                                                 ),
                                                 const SizedBox(height: 1),
@@ -312,7 +312,7 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                                                   style: GoogleFonts.manrope(
                                                     fontSize: 11,
                                                     fontWeight: FontWeight.w400,
-                                                    color: BiotopeColors.onSurfaceVariant,
+                                                    color: OurobionColors.onSurfaceVariant,
                                                   ),
                                                 ),
                                               ],
@@ -323,7 +323,7 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                                             const Icon(
                                               Icons.check_circle_rounded,
                                               size: 18,
-                                              color: BiotopeColors.primary,
+                                              color: OurobionColors.primary,
                                             ),
                                         ],
                                       ),
@@ -352,7 +352,7 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                               vertical: 12,
                             ),
                             decoration: BoxDecoration(
-                              color: BiotopeColors.primaryFixed.withValues(alpha: 0.28),
+                              color: OurobionColors.primaryFixed.withValues(alpha: 0.28),
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: Column(
@@ -363,7 +363,7 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                                   style: GoogleFonts.manrope(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
-                                    color: BiotopeColors.onPrimaryContainer,
+                                    color: OurobionColors.onPrimaryContainer,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -372,7 +372,7 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                                   style: GoogleFonts.manrope(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w400,
-                                    color: BiotopeColors.onSurfaceVariant,
+                                    color: OurobionColors.onSurfaceVariant,
                                   ),
                                 ),
                               ],

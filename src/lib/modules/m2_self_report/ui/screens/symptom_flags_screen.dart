@@ -40,9 +40,9 @@ class _SymptomFlagsScreenState extends State<SymptomFlagsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BiotopeColors.surface,
+      backgroundColor: OurobionColors.surface,
       appBar: AppBar(
-        backgroundColor: BiotopeColors.surface,
+        backgroundColor: OurobionColors.surface,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
@@ -55,7 +55,7 @@ class _SymptomFlagsScreenState extends State<SymptomFlagsScreen> {
             fontSize: 12,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.4,
-            color: BiotopeColors.primary,
+            color: OurobionColors.primary,
           ),
         ),
         actions: [
@@ -65,7 +65,7 @@ class _SymptomFlagsScreenState extends State<SymptomFlagsScreen> {
               'Done',
               style: GoogleFonts.manrope(
                 fontWeight: FontWeight.w600,
-                color: BiotopeColors.primary,
+                color: OurobionColors.primary,
               ),
             ),
           ),
@@ -80,7 +80,7 @@ class _SymptomFlagsScreenState extends State<SymptomFlagsScreen> {
               'Select signals you noticed today. Not selecting a signal does not mean it was absent.',
               style: GoogleFonts.manrope(
                 fontSize: 13,
-                color: BiotopeColors.onSurfaceVariant,
+                color: OurobionColors.onSurfaceVariant,
               ),
             ),
           ),
@@ -129,12 +129,12 @@ class _FlagChip extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? BiotopeColors.primary : BiotopeColors.surfaceLowest,
+          color: selected ? OurobionColors.primary : OurobionColors.surfaceLowest,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
             color: selected
-                ? BiotopeColors.primary
-                : BiotopeColors.outlineVariant,
+                ? OurobionColors.primary
+                : OurobionColors.outlineVariant,
           ),
         ),
         child: Row(
@@ -143,7 +143,7 @@ class _FlagChip extends StatelessWidget {
             Icon(
               icon,
               size: 16,
-              color: selected ? BiotopeColors.onPrimary : BiotopeColors.outline,
+              color: selected ? OurobionColors.onPrimary : OurobionColors.outline,
             ),
             const SizedBox(width: 6),
             Text(
@@ -152,8 +152,8 @@ class _FlagChip extends StatelessWidget {
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: selected
-                    ? BiotopeColors.onPrimary
-                    : BiotopeColors.onSurface,
+                    ? OurobionColors.onPrimary
+                    : OurobionColors.onSurface,
               ),
             ),
           ],

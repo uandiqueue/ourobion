@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// ─── Biotope color tokens (M3) ────────────────────────────────────────────────
+// ─── Ourobion color tokens (M3) ────────────────────────────────────────────────
 // Source of truth: docs/ui-context/UI-DESIGN-CONTEXT.md
-abstract final class BiotopeColors {
+abstract final class OurobionColors {
   static const primary             = Color(0xFF3c6752);
   static const onPrimary           = Color(0xFFffffff);
   static const primaryContainer    = Color(0xFF7daa92);
@@ -36,28 +36,28 @@ abstract final class BiotopeColors {
 }
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
-ThemeData biotopeTheme() {
+ThemeData ourobionTheme() {
   final base = ThemeData(
     useMaterial3: true,
     colorScheme: const ColorScheme(
       brightness: Brightness.light,
-      primary:              BiotopeColors.primary,
-      onPrimary:            BiotopeColors.onPrimary,
-      primaryContainer:     BiotopeColors.primaryContainer,
-      onPrimaryContainer:   BiotopeColors.onPrimaryContainer,
-      secondary:            BiotopeColors.secondary,
-      onSecondary:          BiotopeColors.onSecondary,
-      secondaryContainer:   BiotopeColors.secondaryContainer,
-      onSecondaryContainer: BiotopeColors.onSecondaryContainer,
-      tertiary:             BiotopeColors.tertiary,
-      onTertiary:           BiotopeColors.onTertiary,
-      tertiaryContainer:    BiotopeColors.tertiaryContainer,
-      onTertiaryContainer:  BiotopeColors.onTertiaryContainer,
-      surface:              BiotopeColors.surface,
-      onSurface:            BiotopeColors.onSurface,
-      onSurfaceVariant:     BiotopeColors.onSurfaceVariant,
-      outline:              BiotopeColors.outline,
-      outlineVariant:       BiotopeColors.outlineVariant,
+      primary:              OurobionColors.primary,
+      onPrimary:            OurobionColors.onPrimary,
+      primaryContainer:     OurobionColors.primaryContainer,
+      onPrimaryContainer:   OurobionColors.onPrimaryContainer,
+      secondary:            OurobionColors.secondary,
+      onSecondary:          OurobionColors.onSecondary,
+      secondaryContainer:   OurobionColors.secondaryContainer,
+      onSecondaryContainer: OurobionColors.onSecondaryContainer,
+      tertiary:             OurobionColors.tertiary,
+      onTertiary:           OurobionColors.onTertiary,
+      tertiaryContainer:    OurobionColors.tertiaryContainer,
+      onTertiaryContainer:  OurobionColors.onTertiaryContainer,
+      surface:              OurobionColors.surface,
+      onSurface:            OurobionColors.onSurface,
+      onSurfaceVariant:     OurobionColors.onSurfaceVariant,
+      outline:              OurobionColors.outline,
+      outlineVariant:       OurobionColors.outlineVariant,
       error:                Color(0xFFba1a1a),
       onError:              Color(0xFFffffff),
       errorContainer:       Color(0xFFffdad6),
@@ -69,23 +69,23 @@ ThemeData biotopeTheme() {
 
   return base.copyWith(
     textTheme: manrope,
-    scaffoldBackgroundColor: BiotopeColors.surface,
+    scaffoldBackgroundColor: OurobionColors.surface,
 
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: BiotopeColors.surfaceLowest,
+      fillColor: OurobionColors.surfaceLowest,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: BiotopeColors.outlineVariant, width: 1.5),
+        borderSide: const BorderSide(color: OurobionColors.outlineVariant, width: 1.5),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: BiotopeColors.outlineVariant, width: 1.5),
+        borderSide: const BorderSide(color: OurobionColors.outlineVariant, width: 1.5),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: BiotopeColors.primary, width: 1.5),
+        borderSide: const BorderSide(color: OurobionColors.primary, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
@@ -96,10 +96,10 @@ ThemeData biotopeTheme() {
         borderSide: const BorderSide(color: Color(0xFFba1a1a), width: 1.5),
       ),
       hintStyle: GoogleFonts.manrope(
-        fontSize: 16, fontWeight: FontWeight.w400, color: BiotopeColors.outline,
+        fontSize: 16, fontWeight: FontWeight.w400, color: OurobionColors.outline,
       ),
       labelStyle: GoogleFonts.manrope(
-        fontSize: 16, fontWeight: FontWeight.w500, color: BiotopeColors.onSurfaceVariant,
+        fontSize: 16, fontWeight: FontWeight.w500, color: OurobionColors.onSurfaceVariant,
       ),
     ),
 
@@ -107,13 +107,13 @@ ThemeData biotopeTheme() {
       style: ButtonStyle(
         backgroundColor: WidgetStateProperty.resolveWith((states) =>
           states.contains(WidgetState.disabled)
-            ? BiotopeColors.surfaceContainer
-            : BiotopeColors.primary,
+            ? OurobionColors.surfaceContainer
+            : OurobionColors.primary,
         ),
         foregroundColor: WidgetStateProperty.resolveWith((states) =>
           states.contains(WidgetState.disabled)
-            ? BiotopeColors.outline
-            : BiotopeColors.onPrimary,
+            ? OurobionColors.outline
+            : OurobionColors.onPrimary,
         ),
         minimumSize: const WidgetStatePropertyAll(Size(double.infinity, 56)),
         shape: const WidgetStatePropertyAll(
@@ -131,7 +131,7 @@ ThemeData biotopeTheme() {
 
     textButtonTheme: TextButtonThemeData(
       style: ButtonStyle(
-        foregroundColor: const WidgetStatePropertyAll(BiotopeColors.primary),
+        foregroundColor: const WidgetStatePropertyAll(OurobionColors.primary),
         textStyle: WidgetStatePropertyAll(GoogleFonts.manrope(
           fontSize: 13, fontWeight: FontWeight.w600,
         )),

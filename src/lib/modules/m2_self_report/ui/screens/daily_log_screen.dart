@@ -80,9 +80,9 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
 
   Color get _dqsColor {
     final pts = _dqs;
-    if (pts >= 60) return BiotopeColors.primary;
+    if (pts >= 60) return OurobionColors.primary;
     if (pts >= 40) return const Color(0xFFD4A018);
-    return BiotopeColors.outline;
+    return OurobionColors.outline;
   }
 
   // ── Helpers ────────────────────────────────────────────────────
@@ -207,7 +207,7 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
             'Log saved — $_dqs pts',
             style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: Colors.white),
           ),
-          backgroundColor: BiotopeColors.primary,
+          backgroundColor: OurobionColors.primary,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
@@ -231,7 +231,7 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BiotopeColors.surface,
+      backgroundColor: OurobionColors.surface,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,7 +252,7 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
                           'DAILY LOG',
                           style: GoogleFonts.manrope(
                             fontSize: 10, fontWeight: FontWeight.w700,
-                            letterSpacing: 1.6, color: BiotopeColors.primary,
+                            letterSpacing: 1.6, color: OurobionColors.primary,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -260,7 +260,7 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
                           _todayLabel,
                           style: GoogleFonts.manrope(
                             fontSize: 20, fontWeight: FontWeight.w600,
-                            letterSpacing: -0.2, color: BiotopeColors.onSurface,
+                            letterSpacing: -0.2, color: OurobionColors.onSurface,
                           ),
                         ),
                       ],
@@ -303,7 +303,7 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
                                 decoration: BoxDecoration(
                                   color: _kUrineColors[_urineColour! - 1],
                                   borderRadius: BorderRadius.circular(3),
-                                  border: Border.all(color: BiotopeColors.outlineVariant),
+                                  border: Border.all(color: OurobionColors.outlineVariant),
                                 ),
                               ),
                               const SizedBox(width: 6),
@@ -311,7 +311,7 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
                                 _kUrineLabels[_urineColour! - 1],
                                 style: GoogleFonts.manrope(
                                   fontSize: 12, fontWeight: FontWeight.w600,
-                                  color: BiotopeColors.onSurface,
+                                  color: OurobionColors.onSurface,
                                 ),
                               ),
                             ])
@@ -327,7 +327,7 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
                               'Type $_stoolForm — ${_kStoolLabels[_stoolForm! - 1]}',
                               style: GoogleFonts.manrope(
                                 fontSize: 12, fontWeight: FontWeight.w600,
-                                color: BiotopeColors.onSurface,
+                                color: OurobionColors.onSurface,
                               ),
                             )
                           : null,
@@ -372,7 +372,7 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
                               style: GoogleFonts.manrope(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: BiotopeColors.onSurface,
+                                color: OurobionColors.onSurface,
                               ),
                             )
                           : null,
@@ -497,9 +497,9 @@ class _ProgressCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: BiotopeColors.surfaceLowest,
+        color: OurobionColors.surfaceLowest,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: BiotopeColors.outlineVariant),
+        border: Border.all(color: OurobionColors.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -511,7 +511,7 @@ class _ProgressCard extends StatelessWidget {
                 'LOG COMPLETENESS',
                 style: GoogleFonts.manrope(
                   fontSize: 10, fontWeight: FontWeight.w700,
-                  letterSpacing: 1.4, color: BiotopeColors.onSurfaceVariant,
+                  letterSpacing: 1.4, color: OurobionColors.onSurfaceVariant,
                 ),
               ),
               AnimatedSwitcher(
@@ -536,7 +536,7 @@ class _ProgressCard extends StatelessWidget {
               builder: (_, value, child) => LinearProgressIndicator(
                 value: value,
                 minHeight: 6,
-                backgroundColor: BiotopeColors.surfaceContainer,
+                backgroundColor: OurobionColors.surfaceContainer,
                 valueColor: AlwaysStoppedAnimation<Color>(color),
               ),
             ),
@@ -559,7 +559,7 @@ class _SectionLabel extends StatelessWidget {
         label,
         style: GoogleFonts.manrope(
           fontSize: 10, fontWeight: FontWeight.w700,
-          letterSpacing: 1.6, color: BiotopeColors.primary,
+          letterSpacing: 1.6, color: OurobionColors.primary,
         ),
       ),
     );
@@ -589,16 +589,16 @@ class _NavigatorCard extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: BiotopeColors.surfaceLowest,
+          color: OurobionColors.surfaceLowest,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: logged ? BiotopeColors.primaryContainer : BiotopeColors.outlineVariant,
+            color: logged ? OurobionColors.primaryContainer : OurobionColors.outlineVariant,
           ),
         ),
         child: Row(
           children: [
             Icon(icon, size: 18,
-                color: logged ? BiotopeColors.primary : BiotopeColors.outline),
+                color: logged ? OurobionColors.primary : OurobionColors.outline),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -608,7 +608,7 @@ class _NavigatorCard extends StatelessWidget {
                     label,
                     style: GoogleFonts.manrope(
                       fontSize: 13, fontWeight: FontWeight.w600,
-                      color: BiotopeColors.onSurface,
+                      color: OurobionColors.onSurface,
                     ),
                   ),
                   if (logged) ...[
@@ -619,7 +619,7 @@ class _NavigatorCard extends StatelessWidget {
                     Text(
                       'Tap to log',
                       style: GoogleFonts.manrope(
-                        fontSize: 11, color: BiotopeColors.outline,
+                        fontSize: 11, color: OurobionColors.outline,
                       ),
                     ),
                   ],
@@ -629,7 +629,7 @@ class _NavigatorCard extends StatelessWidget {
             Icon(
               logged ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
               size: 20,
-              color: logged ? BiotopeColors.primary : BiotopeColors.outlineVariant,
+              color: logged ? OurobionColors.primary : OurobionColors.outlineVariant,
             ),
           ],
         ),
@@ -661,23 +661,23 @@ class _StepperCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: BiotopeColors.surfaceLowest,
+        color: OurobionColors.surfaceLowest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: logged ? BiotopeColors.primaryContainer : BiotopeColors.outlineVariant,
+          color: logged ? OurobionColors.primaryContainer : OurobionColors.outlineVariant,
         ),
       ),
       child: Row(
         children: [
           Icon(icon, size: 18,
-              color: logged ? BiotopeColors.primary : BiotopeColors.outline),
+              color: logged ? OurobionColors.primary : OurobionColors.outline),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               label,
               style: GoogleFonts.manrope(
                 fontSize: 13, fontWeight: FontWeight.w600,
-                color: BiotopeColors.onSurface,
+                color: OurobionColors.onSurface,
               ),
             ),
           ),
@@ -701,8 +701,8 @@ class _StepperCard extends StatelessWidget {
                 style: GoogleFonts.manrope(
                   fontSize: 16, fontWeight: FontWeight.w700,
                   color: logged
-                      ? BiotopeColors.onSurface
-                      : BiotopeColors.outlineVariant,
+                      ? OurobionColors.onSurface
+                      : OurobionColors.outlineVariant,
                 ),
               ),
             ),
@@ -736,16 +736,16 @@ class _StepBtn extends StatelessWidget {
         height: 32,
         decoration: BoxDecoration(
           color: enabled
-              ? BiotopeColors.surfaceContainer
-              : BiotopeColors.surfaceLow,
+              ? OurobionColors.surfaceContainer
+              : OurobionColors.surfaceLow,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
           icon,
           size: 16,
           color: enabled
-              ? BiotopeColors.onSurface
-              : BiotopeColors.outlineVariant,
+              ? OurobionColors.onSurface
+              : OurobionColors.outlineVariant,
         ),
       ),
     );
@@ -775,10 +775,10 @@ class _SegmentCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: BiotopeColors.surfaceLowest,
+        color: OurobionColors.surfaceLowest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: logged ? BiotopeColors.primaryContainer : BiotopeColors.outlineVariant,
+          color: logged ? OurobionColors.primaryContainer : OurobionColors.outlineVariant,
         ),
       ),
       child: Column(
@@ -786,13 +786,13 @@ class _SegmentCard extends StatelessWidget {
         children: [
           Row(children: [
             Icon(icon, size: 18,
-                color: logged ? BiotopeColors.primary : BiotopeColors.outline),
+                color: logged ? OurobionColors.primary : OurobionColors.outline),
             const SizedBox(width: 12),
             Text(
               label,
               style: GoogleFonts.manrope(
                 fontSize: 13, fontWeight: FontWeight.w600,
-                color: BiotopeColors.onSurface,
+                color: OurobionColors.onSurface,
               ),
             ),
           ]),
@@ -812,8 +812,8 @@ class _SegmentCard extends StatelessWidget {
                     height: 36,
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? BiotopeColors.primary
-                          : BiotopeColors.surfaceContainer,
+                          ? OurobionColors.primary
+                          : OurobionColors.surfaceContainer,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Center(
@@ -822,8 +822,8 @@ class _SegmentCard extends StatelessWidget {
                         style: GoogleFonts.manrope(
                           fontSize: 14, fontWeight: FontWeight.w700,
                           color: isSelected
-                              ? BiotopeColors.onPrimary
-                              : BiotopeColors.onSurfaceVariant,
+                              ? OurobionColors.onPrimary
+                              : OurobionColors.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -863,10 +863,10 @@ class _LikertCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: BiotopeColors.surfaceLowest,
+        color: OurobionColors.surfaceLowest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: logged ? BiotopeColors.primaryContainer : BiotopeColors.outlineVariant,
+          color: logged ? OurobionColors.primaryContainer : OurobionColors.outlineVariant,
         ),
       ),
       child: Column(
@@ -874,13 +874,13 @@ class _LikertCard extends StatelessWidget {
         children: [
           Row(children: [
             Icon(icon, size: 18,
-                color: logged ? BiotopeColors.primary : BiotopeColors.outline),
+                color: logged ? OurobionColors.primary : OurobionColors.outline),
             const SizedBox(width: 12),
             Text(
               label,
               style: GoogleFonts.manrope(
                 fontSize: 13, fontWeight: FontWeight.w600,
-                color: BiotopeColors.onSurface,
+                color: OurobionColors.onSurface,
               ),
             ),
           ]),
@@ -898,8 +898,8 @@ class _LikertCard extends StatelessWidget {
                     height: 36,
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? BiotopeColors.primary
-                          : BiotopeColors.surfaceContainer,
+                          ? OurobionColors.primary
+                          : OurobionColors.surfaceContainer,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Center(
@@ -908,8 +908,8 @@ class _LikertCard extends StatelessWidget {
                         style: GoogleFonts.manrope(
                           fontSize: 14, fontWeight: FontWeight.w700,
                           color: isSelected
-                              ? BiotopeColors.onPrimary
-                              : BiotopeColors.onSurfaceVariant,
+                              ? OurobionColors.onPrimary
+                              : OurobionColors.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -923,10 +923,10 @@ class _LikertCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(lowLabel, style: GoogleFonts.manrope(
-                fontSize: 10, color: BiotopeColors.outline,
+                fontSize: 10, color: OurobionColors.outline,
               )),
               Text(highLabel, style: GoogleFonts.manrope(
-                fontSize: 10, color: BiotopeColors.outline,
+                fontSize: 10, color: OurobionColors.outline,
               )),
             ],
           ),
@@ -951,13 +951,13 @@ class _ActiveCourseCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: BiotopeColors.primaryContainer.withValues(alpha: 0.25),
+        color: OurobionColors.primaryContainer.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: BiotopeColors.primaryContainer),
+        border: Border.all(color: OurobionColors.primaryContainer),
       ),
       child: Row(
         children: [
-          const Icon(Icons.medication_rounded, size: 18, color: BiotopeColors.primary),
+          const Icon(Icons.medication_rounded, size: 18, color: OurobionColors.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -967,14 +967,14 @@ class _ActiveCourseCard extends StatelessWidget {
                   course.drugName,
                   style: GoogleFonts.manrope(
                     fontSize: 13, fontWeight: FontWeight.w600,
-                    color: BiotopeColors.onSurface,
+                    color: OurobionColors.onSurface,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'Day $dayOf of ${course.durationDays} · $daysLeft day${daysLeft == 1 ? '' : 's'} remaining',
                   style: GoogleFonts.manrope(
-                    fontSize: 11, color: BiotopeColors.primary,
+                    fontSize: 11, color: OurobionColors.primary,
                   ),
                 ),
               ],
@@ -983,14 +983,14 @@ class _ActiveCourseCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: BiotopeColors.primary.withValues(alpha: 0.12),
+              color: OurobionColors.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               'ACTIVE',
               style: GoogleFonts.manrope(
                 fontSize: 9, fontWeight: FontWeight.w700,
-                letterSpacing: 1.2, color: BiotopeColors.primary,
+                letterSpacing: 1.2, color: OurobionColors.primary,
               ),
             ),
           ),
@@ -1031,12 +1031,12 @@ class _NotesCardState extends State<_NotesCard> {
       duration: const Duration(milliseconds: 180),
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
       decoration: BoxDecoration(
-        color: BiotopeColors.surfaceLowest,
+        color: OurobionColors.surfaceLowest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: hasText
-              ? BiotopeColors.primaryContainer
-              : BiotopeColors.outlineVariant,
+              ? OurobionColors.primaryContainer
+              : OurobionColors.outlineVariant,
         ),
       ),
       child: Column(
@@ -1067,7 +1067,7 @@ class _NotesCardState extends State<_NotesCard> {
                 fontSize: 10, fontWeight: FontWeight.w600,
                 color: len > 120
                     ? Theme.of(context).colorScheme.error
-                    : BiotopeColors.outline,
+                    : OurobionColors.outline,
               ),
             ),
           ),
