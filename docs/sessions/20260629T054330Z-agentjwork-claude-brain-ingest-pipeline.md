@@ -38,8 +38,20 @@ Owner asked to (1) provision all ingestion prereqs (API keys, object storage), (
 - `PaperRecord` stays a local `types.ts` interface until a DB/app consumes the manifest (§9 deferral).
 
 ## Left
-- Owner to run live smoke runs (10.3/10.5 "Done when") with the real `.env` keys.
+- **Track C — Europe PMC / PubMed full-id capture**: discovery adapters should grab DOI+PMID+PMCID
+  together so reconciliation doesn't depend on the rate-strict NCBI ID Converter. Next task, this branch.
+- Owner to run live smoke runs (10.3/10.5 "Done when") with the real `.env` keys (NCBI was IP-throttling
+  us during testing — let it cool down first).
 - Open PR into `dev-phase2` (not `main`) after review, linking #23.
+
+## Update — merge, metadata, reconciliation, brand assets (same session)
+- Added bibliometric **metadata** (citations / journal / type / concepts) + an **R2 metadata store**
+  (`manifest/papers.jsonl` index + per-paper `meta/<uid>.json`); `data/corpus/` is now a git-untracked
+  local cache, **R2 is canonical**. Added **R2-hydrated resume** and a **corpus-wide identifier
+  reconciliation** pass (NCBI ID Converter crosswalk) so each paper has exactly one `paper_uid`.
+- **Merged `feat/rebrand-ourobion`** into this branch (rebrand + `shared/brain/` contract + `BRAIN-DESIGN.md`).
+- Committed the `assets/ourobion-brand/` **brand kit**; documented both `assets/` locations + `tools/brain-ingest/`
+  in `STRUCTURE-CONTEXT.md`. Pushed; **deleted the merged `feat/rebrand-ourobion`** (local + remote).
 
 ## Blockers
 - None. All required keys present (OpenAlex + R2); S2/Lens absent → those sources run anonymous/skipped.

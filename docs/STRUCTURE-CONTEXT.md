@@ -11,6 +11,8 @@ This is a monolithic repository containing the frontend mobile application, back
 ourobion/
 ├── AGENTS.md                  # SINGLE SOURCE OF TRUTH for agents + humans (points to everything)
 ├── CLAUDE.md / GEMINI.md      # Thin pointers to AGENTS.md
+├── assets/                    # Brand assets (design reference, NOT app-bundled)
+│   └── ourobion-brand/        # Logos (PNG/SVG, light/dark), favicon, colors, brand DESIGN.md
 ├── .githooks/
 │   └── pre-push               # Runs `node tools/context_sync.mjs --check` (core.hooksPath=.githooks)
 ├── .github/
@@ -22,6 +24,7 @@ ourobion/
 │   │   └── feature_request.yml
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── tools/                     # Node-stdlib enforcement + multi-agent helpers (no Python)
+│   ├── brain-ingest/          # TS paper-corpus ingestion pipeline (see docs/BRAIN-INGESTION-DESIGN.md)
 │   ├── context_sync.mjs       # --session-start briefing / --check enforcement
 │   ├── setup_agent_worktree.mjs # create an isolated git worktree + configure hooks
 │   └── shared_memory.mjs      # task-claim coordinator (.agents/session-log.json, gitignored)
@@ -95,4 +98,4 @@ Supabase — see README "Where dependencies live". CI installs its own toolchain
 
 - **`shared/` vs `src/`:** Any logic, types, or constants that must be duplicated across Dart (app) and TypeScript (backend) belong in `shared/`. The frontend codebase should not reference backend specific scripts, and vice versa.
 - **Context files:** Constant, architectural constraints are capitalized and suffixed with `-CONTEXT` (e.g. `PROJECT-CONTEXT.md`). Variable context documents (such as module to-do lists/state files) are lowercase and suffixed with `-context` (e.g. `m1-context.md`).
-- **Assets:** `src/assets/` holds the app's bundled assets — `fonts/` (the Manrope family) and `images/` (e.g. `logo.png`). Every asset must be declared in `src/pubspec.yaml` (`flutter: assets:` / `fonts:`) to be bundled and available at runtime; adding a file to the folder alone is not enough.
+- **Assets:** two distinct locations. `src/assets/` holds the app's **bundled** assets — `fonts/` (the Manrope family) and `images/` (e.g. `logo.png`); every file must be declared in `src/pubspec.yaml` (`flutter: assets:` / `fonts:`) to be bundled and available at runtime (adding the file alone is not enough). The repo-root `assets/ourobion-brand/` is the **brand kit** (source logos, favicon, colors, brand `DESIGN.md`) — a design reference, **not** shipped in the app; app-facing images are derived from it into `src/assets/`.
