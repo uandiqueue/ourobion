@@ -1,0 +1,172 @@
+#!/usr/bin/env tsx
+/**
+ * brain-ingest CLI entrypoint (design §10.1, §10.6).
+ *
+ * Ships `--help`, `--check-config`, and the pipeline verbs `ingest` / `status`
+ * / `resume`, which delegate to `run.ts` (the §10.6 orchestrator).
+ */
+
+import { inspectConfig, sourceEnablement, REQUIRED_VARS } from './config.js';
+import { run, statusReport, type RunResult } from './run.js';
+import { SEED_TOPICS } from './seeds.js';
+
+const USAGE = `ourobion brain-ingest — open-access-first paper-corpus fetcher
+
+Usage:
+  brain-ingest <command> [options]
+  brain-ingest --help
+  brain-ingest --check-config
+
+Commands:
+  ingest [--seed <topic>] [--limit N] [--dry-run]  discover → resolve → retrieve → extract → store
+  status                                           manifest + budget summary
+  resume                                           continue an interrupted multi-day run (skip 'fetched')
+
+Seed topics:
+  ${SEED_TOPICS.join(', ')}
+
+Global options:
+  --check-config   print which sources are enabled (keyless/keyed/disabled);
+                   exit 0 if all required keys present, non-zero otherwise.
+  --help, -h       show this help.
+
+Required env (tools/brain-ingest/.env):
+  ${REQUIRED_VARS.join(', ')}
+`;
+
+/** Parsed CLI invocation. */
+interface ParsedArgs {
+  command: string | undefined;
+  flags: Set<string>;
+  options: Map<string, string>;
+}
+
+/** Tiny arg parser: first non-flag token is the command; `--k v` / `--k=v` / bare `--flag`. */
+export function parseArgs(argv: string[]): ParsedArgs {
+  const flags = new Set<string>();
+  const options = new Map<string, string>();
+  let command: string | undefined;
+
+  for (let i = 0; i < argv.length; i++) {
+    const tok = argv[i];
+    if (tok === undefined) continue;
+    if (tok.startsWith('--')) {
+      const body = tok.slice(2);
+      const eq = body.indexOf('=');
+      if (eq !== -1) {
+        options.set(body.slice(0, eq), body.slice(eq + 1));
+      } else {
+        const next = argv[i + 1];
+        if (next !== undefined && !next.startsWith('-')) {
+          options.set(body, next);
+          i++;
+        } else {
+          flags.add(body);
+        }
+      }
+    } else if (tok === '-h') {
+      flags.add('help');
+    } else if (command === undefined) {
+      command = tok;
+    }
+  }
+
+  return { command, flags, options };
+}
+
+/** Print the enablement summary and return the process exit code. */
+function runCheckConfig(): number {
+  const inspection = inspectConfig();
+  process.stdout.write(sourceEnablement(inspection) + '\n');
+  if (inspection.ok) {
+    process.stdout.write('\nconfig OK — all required keys present.\n');
+    return 0;
+  }
+  process.stderr.write(
+    `\nconfig INVALID — missing required: ${inspection.missingRequired.join(', ')}\n`,
+  );
+  return 1;
+}
+
+/** Print the tallies of a completed run. */
+function printRunResult(result: RunResult): void {
+  process.stdout.write(
+    `\ningest done: discovered=${result.discovered} fetched=${result.fetched} ` +
+      `skipped=${result.skipped} deferred=${result.deferred}` +
+      (result.budgetStopped ? ' (budget hard-stop)' : '') +
+      '\n',
+  );
+}
+
+/**
+ * Parse the optional `--limit N` into a positive integer, or `undefined` when
+ * absent. Throws on a non-numeric / non-positive value so the CLI fails loudly.
+ */
+function parseLimit(options: Map<string, string>): number | undefined {
+  const raw = options.get('limit');
+  if (raw === undefined) return undefined;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n <= 0) {
+    throw new Error(`--limit must be a positive integer (got '${raw}')`);
+  }
+  return n;
+}
+
+/** CLI main — returns the process exit code. Async: the pipeline verbs await `run`. */
+export async function main(argv: string[]): Promise<number> {
+  const { command, flags, options } = parseArgs(argv);
+
+  if (flags.has('help') || command === 'help') {
+    process.stdout.write(USAGE);
+    return 0;
+  }
+
+  if (flags.has('check-config') || command === 'check-config') {
+    return runCheckConfig();
+  }
+
+  try {
+    switch (command) {
+      case undefined:
+        process.stdout.write(USAGE);
+        return 0;
+
+      case 'ingest': {
+        const result = await run({
+          seed: options.get('seed'),
+          limit: parseLimit(options),
+          dryRun: flags.has('dry-run'),
+        });
+        printRunResult(result);
+        return 0;
+      }
+
+      case 'resume': {
+        // Resume is `ingest` without a dry-run: already-'fetched' papers are
+        // skipped (run() resumes from the manifest), so this picks up where an
+        // interrupted multi-day run stopped.
+        const result = await run({
+          seed: options.get('seed'),
+          limit: parseLimit(options),
+          dryRun: false,
+        });
+        printRunResult(result);
+        return 0;
+      }
+
+      case 'status':
+        process.stdout.write(statusReport() + '\n');
+        return 0;
+
+      default:
+        process.stderr.write(`unknown command: ${command}\n\n` + USAGE);
+        return 2;
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`error: ${msg}\n`);
+    return 1;
+  }
+}
+
+main(process.argv.slice(2)).then((code) => process.exit(code));

@@ -1,0 +1,57 @@
+{
+  "total": 4,
+  "offset": 0,
+  "next": 50,
+  "data": [
+    {
+      "paperId": "649def34f8be52c8b66281af98ae884c09aef38b",
+      "externalIds": {
+        "DOI": "10.1038/s41586-020-2649-2",
+        "PubMed": "32939066",
+        "PubMedCentral": "PMC7759461",
+        "MAG": "3045285833"
+      },
+      "title": "Array programming with NumPy",
+      "year": 2020,
+      "venue": "Nature",
+      "abstract": "Array programming provides a powerful, compact and expressive syntax.",
+      "authors": [
+        { "authorId": "2064160", "name": "Charles R. Harris" },
+        { "authorId": "144750942", "name": "K. Jarrod Millman" }
+      ]
+    },
+    {
+      "paperId": "df2b0e26d0599ce3e70df8a9da02e51594e0e992",
+      "externalIds": {
+        "ArXiv": "2103.00020",
+        "DOI": "10.48550/arXiv.2103.00020"
+      },
+      "title": "  Learning Transferable Visual Models From Natural Language Supervision  ",
+      "year": 2021,
+      "venue": "",
+      "abstract": null,
+      "authors": [
+        { "authorId": "2108860615", "name": "Alec Radford" },
+        { "authorId": null, "name": "  " }
+      ]
+    },
+    {
+      "paperId": "0000s2onlypaperidnoexternalids0000",
+      "externalIds": null,
+      "title": "A preprint with no external identifiers",
+      "year": null,
+      "venue": "bioRxiv",
+      "abstract": "Some abstract text.",
+      "authors": []
+    },
+    {
+      "paperId": "stubrowmissingtitle",
+      "externalIds": { "DOI": "10.0000/stub" },
+      "title": null,
+      "year": 2019,
+      "venue": "Stub Journal",
+      "abstract": null,
+      "authors": [{ "authorId": "1", "name": "Nobody" }]
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "doi": "10.1371/journal.pone.0000000",
+  "doi_url": "https://doi.org/10.1371/journal.pone.0000000",
+  "title": "An open-access example article",
+  "genre": "journal-article",
+  "is_paratext": false,
+  "published_date": "2021-03-04",
+  "year": 2021,
+  "journal_name": "PLOS ONE",
+  "journal_issns": "1932-6203",
+  "journal_is_oa": true,
+  "journal_is_in_doaj": true,
+  "publisher": "Public Library of Science",
+  "is_oa": true,
+  "oa_status": "gold",
+  "has_repository_copy": true,
+  "best_oa_location": {
+    "updated": "2021-03-05T00:00:00",
+    "url": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0000000",
+    "url_for_pdf": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0000000&type=printable",
+    "url_for_landing_page": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0000000",
+    "license": "cc-by",
+    "version": "publishedVersion",
+    "host_type": "publisher",
+    "is_best": true
+  },
+  "first_oa_location": {
+    "url_for_pdf": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0000000&type=printable",
+    "license": "cc-by",
+    "version": "publishedVersion",
+    "host_type": "publisher"
+  },
+  "oa_locations": [
+    {
+      "url_for_pdf": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0000000&type=printable",
+      "license": "cc-by",
+      "version": "publishedVersion",
+      "host_type": "publisher"
+    }
+  ]
+}

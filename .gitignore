@@ -85,3 +85,11 @@ Thumbs.db
 # hand-edit (two-tier-truth rule). Gitignored until a path-normalizer makes
 # graph.json diff cleanly cross-machine; see docs/graph/README.md + memory 0008.
 graphify-out/
+
+# ═══════════════════════════════════════════════════════════════
+# 7. BRAIN-INGEST LOCAL CORPUS CACHE
+# ═══════════════════════════════════════════════════════════════
+# The paper manifest (papers.jsonl), usage.json, and browser-captured html are
+# now a LOCAL CACHE — R2 is the canonical metadata + binary store (manifest/
+# papers.jsonl + meta/<uid>.json + pdf|jats|text). See BRAIN-INGESTION-DESIGN §1/§6.
+data/corpus/

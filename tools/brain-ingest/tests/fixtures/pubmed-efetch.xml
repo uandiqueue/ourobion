@@ -1,0 +1,104 @@
+<?xml version="1.0" ?>
+<!DOCTYPE PubmedArticleSet PUBLIC "-//NLM//DTD PubMedArticle, 1st January 2024//EN" "https://dtd.nlm.nih.gov/ncbi/pubmed/out/pubmed_240101.dtd">
+<PubmedArticleSet>
+  <PubmedArticle>
+    <MedlineCitation Status="MEDLINE" Owner="NLM">
+      <PMID Version="1">38000001</PMID>
+      <Article PubModel="Print">
+        <Journal>
+          <ISSN IssnType="Electronic">1474-1733</ISSN>
+          <JournalIssue CitedMedium="Internet">
+            <Volume>23</Volume>
+            <PubDate>
+              <Year>2024</Year>
+              <Month>Mar</Month>
+            </PubDate>
+          </JournalIssue>
+          <Title>Nature Reviews Immunology</Title>
+          <ISOAbbreviation>Nat Rev Immunol</ISOAbbreviation>
+        </Journal>
+        <ArticleTitle>The gut microbiome shapes systemic immune responses.</ArticleTitle>
+        <Abstract>
+          <AbstractText Label="BACKGROUND">The intestinal microbiota influences host immunity.</AbstractText>
+          <AbstractText Label="RESULTS">Microbial metabolites modulate T-cell differentiation.</AbstractText>
+        </Abstract>
+        <AuthorList CompleteYN="Y">
+          <Author ValidYN="Y">
+            <LastName>Smith</LastName>
+            <ForeName>Jane A</ForeName>
+            <Initials>JA</Initials>
+          </Author>
+          <Author ValidYN="Y">
+            <LastName>Doe</LastName>
+            <ForeName>Richard</ForeName>
+            <Initials>R</Initials>
+          </Author>
+        </AuthorList>
+      </Article>
+    </MedlineCitation>
+    <PubmedData>
+      <ArticleIdList>
+        <ArticleId IdType="pubmed">38000001</ArticleId>
+        <ArticleId IdType="doi">10.1038/S41577-024-00001-2</ArticleId>
+        <ArticleId IdType="pmc">PMC11000001</ArticleId>
+      </ArticleIdList>
+    </PubmedData>
+  </PubmedArticle>
+  <PubmedArticle>
+    <MedlineCitation Status="MEDLINE" Owner="NLM">
+      <PMID Version="1">38000002</PMID>
+      <Article PubModel="Electronic">
+        <Journal>
+          <JournalIssue CitedMedium="Internet">
+            <PubDate>
+              <MedlineDate>2023 Winter</MedlineDate>
+            </PubDate>
+          </JournalIssue>
+          <Title>Cell Host &amp; Microbe</Title>
+        </Journal>
+        <ArticleTitle>Hydration status and microbial diversity: a cohort study.</ArticleTitle>
+        <Abstract>
+          <AbstractText>A single unlabelled abstract paragraph with no structure.</AbstractText>
+        </Abstract>
+        <AuthorList CompleteYN="Y">
+          <Author ValidYN="Y">
+            <CollectiveName>The MICRO Study Consortium</CollectiveName>
+          </Author>
+        </AuthorList>
+      </Article>
+    </MedlineCitation>
+    <PubmedData>
+      <ArticleIdList>
+        <ArticleId IdType="pubmed">38000002</ArticleId>
+        <ArticleId IdType="doi">10.1016/j.chom.2023.00002</ArticleId>
+      </ArticleIdList>
+    </PubmedData>
+  </PubmedArticle>
+  <PubmedArticle>
+    <MedlineCitation Status="In-Process" Owner="NLM">
+      <PMID Version="1">38000003</PMID>
+      <Article PubModel="Print">
+        <Journal>
+          <JournalIssue CitedMedium="Print">
+            <PubDate>
+              <Year>2022</Year>
+            </PubDate>
+          </JournalIssue>
+          <ISOAbbreviation>J Infect Dis</ISOAbbreviation>
+        </Journal>
+        <ArticleTitle>Dengue vector control: no DOI assigned.</ArticleTitle>
+        <AuthorList CompleteYN="Y">
+          <Author ValidYN="Y">
+            <LastName>Tan</LastName>
+            <ForeName>Wei</ForeName>
+          </Author>
+        </AuthorList>
+      </Article>
+    </MedlineCitation>
+    <PubmedData>
+      <ArticleIdList>
+        <ArticleId IdType="pubmed">38000003</ArticleId>
+      </ArticleIdList>
+    </PubmedData>
+  </PubmedArticle>
+</PubmedArticleSet>

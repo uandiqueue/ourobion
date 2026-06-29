@@ -1,0 +1,50 @@
+{
+  "_comment": "Canned discovery output: the SAME paper surfaced by two APIs (Crossref carries the DOI; PubMed carries only PMID+PMCID but shares the DOI), plus a third distinct paper, plus a fourth id-less preprint candidate. Used by tests/identity.test.ts to prove the uid scheme and that variants collapse to one paper_uid. No network.",
+  "candidates": [
+    {
+      "identifiers": { "doi": "https://doi.org/10.1099/MIC.0.001234", "openalex": "W123" },
+      "title": "Gut Microbiome Diversity and Host Hydration: A Cohort Study",
+      "authors": ["Jane Q. Doe", "Robert Smith"],
+      "year": 2021,
+      "venue": "Microbiology",
+      "abstract": "A short abstract from Crossref.",
+      "discoveredVia": "crossref"
+    },
+    {
+      "identifiers": { "doi": "10.1099/mic.0.001234", "pmid": "PMID:34567890", "pmcid": "8123456" },
+      "title": "Gut microbiome diversity and host hydration: a cohort study",
+      "authors": ["J Q Doe", "R Smith", "A Third Author"],
+      "year": 2021,
+      "venue": "Microbiology",
+      "abstract": "A noticeably longer abstract surfaced via PubMed/Europe PMC, with more detail about the cohort, the methods, and the headline finding so the dedup picks this as the richer canonical record.",
+      "discoveredVia": "pubmed"
+    },
+    {
+      "identifiers": { "pmid": "34567890" },
+      "title": "Gut microbiome diversity and host hydration — a cohort study",
+      "authors": ["Jane Doe"],
+      "year": 2021,
+      "venue": null,
+      "abstract": null,
+      "discoveredVia": "europepmc"
+    },
+    {
+      "identifiers": { "arxiv": "arXiv:2401.01234v2" },
+      "title": "Heart-Rate Variability During Sleep: A Preprint",
+      "authors": ["Chen Wei", "Lin Hao"],
+      "year": 2024,
+      "venue": "arXiv",
+      "abstract": "Preprint abstract.",
+      "discoveredVia": "arxiv"
+    },
+    {
+      "identifiers": {},
+      "title": "Antibiotics & the   Vector: Field Notes (Dengue)!",
+      "authors": ["María García López", "Other Person"],
+      "year": 2019,
+      "venue": "Unindexed Workshop",
+      "abstract": "No external identifier at all — gets a corpus:ULID pinned by fingerprint.",
+      "discoveredVia": "doaj"
+    }
+  ]
+}
