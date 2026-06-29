@@ -1,5 +1,5 @@
 {
-  "name": "biotope",
+  "name": "ourobion",
   "private": true,
   "scripts": {
     "context:start": "node tools/context_sync.mjs --session-start",

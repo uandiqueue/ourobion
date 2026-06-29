@@ -1,15 +1,26 @@
 // shared/metrics/registry.ts
 //
-// THE single source of truth for every metric biotope collects.
+// THE single source of truth for every metric ourobion collects.
 // Adding or removing a metric is a localized, guard-protected change: the parity / schema /
-// baselines / engine guards (src/test/guards/, docs/graph/couplings.yaml) fail the build if any
+// baselines / engine / dqs guards (src/test/guards/, docs/graph/couplings.yaml) fail the build if any
 // consumer drifts from this list. See shared/metrics/README.md for the add / remove runbook.
 //
 // TRUTH tier (git-tracked, 2-reviewer PR per docs/memory/0002). Keep registry.ts and registry.dart
 // in lockstep — the metrics-registry-ts-dart-parity guard enforces it.
+//
+// v2 (the metric platform): each metric carries the scale dimensions PHASE2-PLAN's platform needs —
+// source economy, collection tier, continuity, reliability, derivation inputs, platform availability,
+// and the semi-passive preferred source. `table` is retained as the current storage location; storage
+// is migrating to continuity-based primitives (daily_log / events / state_bands / signals /
+// derived_metrics) per PHASE2-PLAN, with the existing tables as the first instances.
 
-export type MetricSource = 'self_report' | 'wearable' | 'env';
+/** Source economy — what it costs the user and where the value originates. */
+export type MetricSource = 'manual' | 'semi_passive' | 'sensor' | 'api' | 'derived';
 export type MetricTable = 'daily_gut_rows' | 'wearable_daily' | 'env_daily';
+/** Collection tier (logging budget): T0 passive · T1 daily core · T2 optional · T3 event · T4 state · T5 profile. */
+export type MetricTier = 'T0' | 'T1' | 'T2' | 'T3' | 'T4' | 'T5';
+/** Data shape over time — drives the storage primitive a metric lands in. */
+export type MetricContinuity = 'continuous' | 'episodic' | 'state' | 'static';
 export type MetricType =
   | 'numeric'
   | 'ordinal'
@@ -17,13 +28,21 @@ export type MetricType =
   | 'enum'
   | 'multi_select'
   | 'text';
+/** Confidence weight (Part F reliability ladder): 4 device-measured · 3 in-moment/observation · 2 subjective/count · 1 free-text. */
+export type MetricReliability = 1 | 2 | 3 | 4;
+/** Platform availability — graceful-degradation tier. */
+export type MetricAvailability = 'both' | 'ios_only' | 'android_only' | 'hardware_gated';
 export type MetricStatus = 'active' | 'deprecated';
 
 export interface MetricDefinition {
   /** Canonical snake_case id — == DB column == BaselineSnapshot.metric_key == rule metricKey. */
   key: string;
   source: MetricSource;
+  /** Current storage location. Storage is migrating to continuity-based primitives — see file header. */
   table: MetricTable;
+  /** Collection tier (logging budget). Only T1 (daily core) counts toward daily completeness. */
+  tier: MetricTier;
+  continuity: MetricContinuity;
   type: MetricType;
   /** { min, max } for numeric/ordinal; null otherwise. */
   scale: { min: number; max: number } | null;
@@ -33,7 +52,14 @@ export interface MetricDefinition {
   enumValues: readonly string[] | null;
   /** Does M5a compute mean/std/trend for it? (true only for numeric/ordinal). */
   baselineApplicable: boolean;
-  /** M6 Data-Quality-Score contribution. */
+  /** Confidence weight for the engine — see MetricReliability. */
+  reliability: MetricReliability;
+  /** For source:'derived' — the metric keys it is computed from (seeds the relationship graph). null otherwise. */
+  derivedFrom: readonly string[] | null;
+  availability: MetricAvailability;
+  /** Semi-passive: fetch from this source first (health store), falling back to `source`. null = collected directly. */
+  preferredSource: MetricSource | null;
+  /** M6 Data-Quality-Score contribution. countsTowardDailyCompleteness is true only for the T1 spine. */
   dqs: { weight: number; countsTowardDailyCompleteness: boolean };
   /** Optional hint for the M2 self-report screens. */
   ui: { label: string; inputType: string } | null;
@@ -43,17 +69,25 @@ export interface MetricDefinition {
 }
 
 // ─── Self-report (daily_gut_rows) ───────────────────────────────────────────────
+// dqs weights for the T1 daily-core sum to 100 (urine 25 + stool_form 25 + outside_meals 20 +
+// mosquito_bites 10 + energy 7 + mood 7 + gut_comfort 6) — the canonical DQS the normaliser reads.
 const SELF_REPORT: MetricDefinition[] = [
   {
     key: 'urine_colour',
-    source: 'self_report',
+    source: 'manual',
     table: 'daily_gut_rows',
+    tier: 'T1',
+    continuity: 'continuous',
     type: 'ordinal',
     scale: { min: 1, max: 8 },
     unit: null,
     enumValues: null,
     baselineApplicable: true,
-    dqs: { weight: 1, countsTowardDailyCompleteness: true },
+    reliability: 3,
+    derivedFrom: null,
+    availability: 'both',
+    preferredSource: null,
+    dqs: { weight: 25, countsTowardDailyCompleteness: true },
     ui: { label: 'Urine colour', inputType: 'armstrong_1_8' },
     status: 'active',
     introducedIn: 'phase1',
@@ -61,14 +95,20 @@ const SELF_REPORT: MetricDefinition[] = [
   },
   {
     key: 'stool_form',
-    source: 'self_report',
+    source: 'manual',
     table: 'daily_gut_rows',
+    tier: 'T1',
+    continuity: 'continuous',
     type: 'ordinal',
     scale: { min: 1, max: 7 },
     unit: null,
     enumValues: null,
     baselineApplicable: true,
-    dqs: { weight: 1, countsTowardDailyCompleteness: true },
+    reliability: 3,
+    derivedFrom: null,
+    availability: 'both',
+    preferredSource: null,
+    dqs: { weight: 25, countsTowardDailyCompleteness: true },
     ui: { label: 'Stool form', inputType: 'bristol_1_7' },
     status: 'active',
     introducedIn: 'phase1',
@@ -76,14 +116,20 @@ const SELF_REPORT: MetricDefinition[] = [
   },
   {
     key: 'stool_count',
-    source: 'self_report',
+    source: 'manual',
     table: 'daily_gut_rows',
+    tier: 'T2',
+    continuity: 'continuous',
     type: 'numeric',
     scale: { min: 0, max: 10 },
     unit: null,
     enumValues: null,
     baselineApplicable: true,
-    dqs: { weight: 1, countsTowardDailyCompleteness: true },
+    reliability: 2,
+    derivedFrom: null,
+    availability: 'both',
+    preferredSource: null,
+    dqs: { weight: 0, countsTowardDailyCompleteness: false },
     ui: { label: 'Stool count', inputType: 'stepper_0_10' },
     status: 'active',
     introducedIn: 'phase1',
@@ -92,13 +138,19 @@ const SELF_REPORT: MetricDefinition[] = [
   {
     // Derived by M2 (max - min Bristol of the day); stored, baselined, not user-entered.
     key: 'stool_variability',
-    source: 'self_report',
+    source: 'derived',
     table: 'daily_gut_rows',
+    tier: 'T0',
+    continuity: 'continuous',
     type: 'numeric',
     scale: { min: 0, max: 6 },
     unit: null,
     enumValues: null,
     baselineApplicable: true,
+    reliability: 3,
+    derivedFrom: ['stool_form'],
+    availability: 'both',
+    preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
     ui: null,
     status: 'active',
@@ -107,14 +159,20 @@ const SELF_REPORT: MetricDefinition[] = [
   },
   {
     key: 'outside_meals',
-    source: 'self_report',
+    source: 'manual',
     table: 'daily_gut_rows',
+    tier: 'T1',
+    continuity: 'continuous',
     type: 'ordinal',
     scale: { min: 0, max: 3 },
     unit: null,
     enumValues: null,
     baselineApplicable: true,
-    dqs: { weight: 1, countsTowardDailyCompleteness: true },
+    reliability: 2,
+    derivedFrom: null,
+    availability: 'both',
+    preferredSource: null,
+    dqs: { weight: 20, countsTowardDailyCompleteness: true },
     ui: { label: 'Meals outside home', inputType: 'segmented_0_3' },
     status: 'active',
     introducedIn: 'phase1',
@@ -122,14 +180,20 @@ const SELF_REPORT: MetricDefinition[] = [
   },
   {
     key: 'mosquito_bites',
-    source: 'self_report',
+    source: 'manual',
     table: 'daily_gut_rows',
+    tier: 'T1',
+    continuity: 'episodic',
     type: 'numeric',
     scale: { min: 0, max: 20 },
     unit: null,
     enumValues: null,
     baselineApplicable: true,
-    dqs: { weight: 1, countsTowardDailyCompleteness: true },
+    reliability: 2,
+    derivedFrom: null,
+    availability: 'both',
+    preferredSource: null,
+    dqs: { weight: 10, countsTowardDailyCompleteness: true },
     ui: { label: 'Mosquito bites', inputType: 'stepper_0_20' },
     status: 'active',
     introducedIn: 'phase1',
@@ -137,14 +201,20 @@ const SELF_REPORT: MetricDefinition[] = [
   },
   {
     key: 'energy_score',
-    source: 'self_report',
+    source: 'manual',
     table: 'daily_gut_rows',
+    tier: 'T1',
+    continuity: 'continuous',
     type: 'ordinal',
     scale: { min: 1, max: 5 },
     unit: null,
     enumValues: null,
     baselineApplicable: true,
-    dqs: { weight: 1, countsTowardDailyCompleteness: true },
+    reliability: 2,
+    derivedFrom: null,
+    availability: 'both',
+    preferredSource: null,
+    dqs: { weight: 7, countsTowardDailyCompleteness: true },
     ui: { label: 'Energy', inputType: 'likert_1_5' },
     status: 'active',
     introducedIn: 'phase1',
@@ -152,14 +222,20 @@ const SELF_REPORT: MetricDefinition[] = [
   },
   {
     key: 'mood_score',
-    source: 'self_report',
+    source: 'manual',
     table: 'daily_gut_rows',
+    tier: 'T1',
+    continuity: 'continuous',
     type: 'ordinal',
     scale: { min: 1, max: 5 },
     unit: null,
     enumValues: null,
     baselineApplicable: true,
-    dqs: { weight: 1, countsTowardDailyCompleteness: true },
+    reliability: 2,
+    derivedFrom: null,
+    availability: 'both',
+    preferredSource: null,
+    dqs: { weight: 7, countsTowardDailyCompleteness: true },
     ui: { label: 'Mood', inputType: 'likert_1_5' },
     status: 'active',
     introducedIn: 'phase1',
@@ -167,14 +243,20 @@ const SELF_REPORT: MetricDefinition[] = [
   },
   {
     key: 'gut_comfort_score',
-    source: 'self_report',
+    source: 'manual',
     table: 'daily_gut_rows',
+    tier: 'T1',
+    continuity: 'continuous',
     type: 'ordinal',
     scale: { min: 1, max: 5 },
     unit: null,
     enumValues: null,
     baselineApplicable: true,
-    dqs: { weight: 1, countsTowardDailyCompleteness: true },
+    reliability: 2,
+    derivedFrom: null,
+    availability: 'both',
+    preferredSource: null,
+    dqs: { weight: 6, countsTowardDailyCompleteness: true },
     ui: { label: 'Gut comfort', inputType: 'likert_1_5' },
     status: 'active',
     introducedIn: 'phase1',
@@ -182,8 +264,10 @@ const SELF_REPORT: MetricDefinition[] = [
   },
   {
     key: 'symptom_flags',
-    source: 'self_report',
+    source: 'manual',
     table: 'daily_gut_rows',
+    tier: 'T3',
+    continuity: 'episodic',
     type: 'multi_select',
     scale: null,
     unit: null,
@@ -197,6 +281,10 @@ const SELF_REPORT: MetricDefinition[] = [
       'headache',
     ],
     baselineApplicable: false,
+    reliability: 2,
+    derivedFrom: null,
+    availability: 'both',
+    preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
     ui: { label: 'Symptoms', inputType: 'multi_select' },
     status: 'active',
@@ -205,13 +293,19 @@ const SELF_REPORT: MetricDefinition[] = [
   },
   {
     key: 'standing_water_present',
-    source: 'self_report',
+    source: 'manual',
     table: 'daily_gut_rows',
+    tier: 'T3',
+    continuity: 'episodic',
     type: 'boolean',
     scale: null,
     unit: null,
     enumValues: null,
     baselineApplicable: false,
+    reliability: 2,
+    derivedFrom: null,
+    availability: 'both',
+    preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
     ui: { label: 'Standing water nearby', inputType: 'toggle' },
     status: 'active',
@@ -220,13 +314,19 @@ const SELF_REPORT: MetricDefinition[] = [
   },
   {
     key: 'notes',
-    source: 'self_report',
+    source: 'manual',
     table: 'daily_gut_rows',
+    tier: 'T2',
+    continuity: 'continuous',
     type: 'text',
     scale: null,
     unit: null,
     enumValues: null,
     baselineApplicable: false,
+    reliability: 1,
+    derivedFrom: null,
+    availability: 'both',
+    preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
     ui: { label: 'Notes', inputType: 'text' },
     status: 'active',
@@ -236,13 +336,27 @@ const SELF_REPORT: MetricDefinition[] = [
   {
     // The DQS itself, persisted per row and baselined for trend display.
     key: 'log_completeness',
-    source: 'self_report',
+    source: 'derived',
     table: 'daily_gut_rows',
+    tier: 'T0',
+    continuity: 'continuous',
     type: 'numeric',
     scale: { min: 0, max: 100 },
     unit: null,
     enumValues: null,
     baselineApplicable: true,
+    reliability: 4,
+    derivedFrom: [
+      'urine_colour',
+      'stool_form',
+      'outside_meals',
+      'mosquito_bites',
+      'energy_score',
+      'mood_score',
+      'gut_comfort_score',
+    ],
+    availability: 'both',
+    preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
     ui: null,
     status: 'active',
@@ -251,19 +365,25 @@ const SELF_REPORT: MetricDefinition[] = [
   },
 ];
 
-// ─── Wearable (wearable_daily) ──────────────────────────────────────────────────
+// ─── Wearable (wearable_daily) — sensor source ──────────────────────────────────
 // Canonical keys == wearable_daily columns == WearableService upsert == compute-baselines.
 // hrv_sdnn_ms is SDNN, iOS/HealthKit only (null on Android by design — docs/memory/0004).
 const WEARABLE: MetricDefinition[] = [
   {
     key: 'resting_hr_bpm',
-    source: 'wearable',
+    source: 'sensor',
     table: 'wearable_daily',
+    tier: 'T0',
+    continuity: 'continuous',
     type: 'numeric',
     scale: null,
     unit: 'bpm',
     enumValues: null,
     baselineApplicable: true,
+    reliability: 4,
+    derivedFrom: null,
+    availability: 'hardware_gated',
+    preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
     ui: null,
     status: 'active',
@@ -272,13 +392,19 @@ const WEARABLE: MetricDefinition[] = [
   },
   {
     key: 'hrv_sdnn_ms',
-    source: 'wearable',
+    source: 'sensor',
     table: 'wearable_daily',
+    tier: 'T0',
+    continuity: 'continuous',
     type: 'numeric',
     scale: null,
     unit: 'ms',
     enumValues: null,
     baselineApplicable: true,
+    reliability: 4,
+    derivedFrom: null,
+    availability: 'ios_only',
+    preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
     ui: null,
     status: 'active',
@@ -287,13 +413,19 @@ const WEARABLE: MetricDefinition[] = [
   },
   {
     key: 'sleep_duration_min',
-    source: 'wearable',
+    source: 'sensor',
     table: 'wearable_daily',
+    tier: 'T0',
+    continuity: 'continuous',
     type: 'numeric',
     scale: null,
     unit: 'min',
     enumValues: null,
     baselineApplicable: true,
+    reliability: 4,
+    derivedFrom: null,
+    availability: 'hardware_gated',
+    preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
     ui: null,
     status: 'active',
@@ -302,13 +434,19 @@ const WEARABLE: MetricDefinition[] = [
   },
   {
     key: 'spo2_pct',
-    source: 'wearable',
+    source: 'sensor',
     table: 'wearable_daily',
+    tier: 'T0',
+    continuity: 'continuous',
     type: 'numeric',
     scale: { min: 0, max: 100 },
     unit: '%',
     enumValues: null,
     baselineApplicable: true,
+    reliability: 4,
+    derivedFrom: null,
+    availability: 'hardware_gated',
+    preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
     ui: null,
     status: 'active',
@@ -317,13 +455,19 @@ const WEARABLE: MetricDefinition[] = [
   },
   {
     key: 'body_temp_c',
-    source: 'wearable',
+    source: 'sensor',
     table: 'wearable_daily',
+    tier: 'T0',
+    continuity: 'continuous',
     type: 'numeric',
     scale: null,
     unit: '°C',
     enumValues: null,
     baselineApplicable: true,
+    reliability: 4,
+    derivedFrom: null,
+    availability: 'hardware_gated',
+    preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
     ui: null,
     status: 'active',
@@ -332,13 +476,19 @@ const WEARABLE: MetricDefinition[] = [
   },
   {
     key: 'step_count',
-    source: 'wearable',
+    source: 'sensor',
     table: 'wearable_daily',
+    tier: 'T0',
+    continuity: 'continuous',
     type: 'numeric',
     scale: null,
     unit: 'steps',
     enumValues: null,
     baselineApplicable: true,
+    reliability: 4,
+    derivedFrom: null,
+    availability: 'hardware_gated',
+    preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
     ui: null,
     status: 'active',

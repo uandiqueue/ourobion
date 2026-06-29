@@ -83,7 +83,7 @@ class _UrineColorScreenState extends State<UrineColorScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BiotopeColors.surface,
+      backgroundColor: OurobionColors.surface,
       body: SafeArea(
         child: FadeTransition(
           opacity: _opacity,
@@ -106,14 +106,14 @@ class _UrineColorScreenState extends State<UrineColorScreen>
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: BiotopeColors.surfaceLowest,
-                            border: Border.all(color: BiotopeColors.outlineVariant),
+                            color: OurobionColors.surfaceLowest,
+                            border: Border.all(color: OurobionColors.outlineVariant),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
                             Icons.arrow_back_rounded,
                             size: 18,
-                            color: BiotopeColors.onSurface,
+                            color: OurobionColors.onSurface,
                           ),
                         ),
                       ),
@@ -123,7 +123,7 @@ class _UrineColorScreenState extends State<UrineColorScreen>
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1.4,
-                          color: BiotopeColors.onSurfaceVariant,
+                          color: OurobionColors.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -138,7 +138,7 @@ class _UrineColorScreenState extends State<UrineColorScreen>
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.6,
-                      color: BiotopeColors.primary,
+                      color: OurobionColors.primary,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -151,7 +151,7 @@ class _UrineColorScreenState extends State<UrineColorScreen>
                       fontWeight: FontWeight.w600,
                       letterSpacing: -0.4,
                       height: 1.2,
-                      color: BiotopeColors.onSurface,
+                      color: OurobionColors.onSurface,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -160,7 +160,7 @@ class _UrineColorScreenState extends State<UrineColorScreen>
                     style: GoogleFonts.manrope(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
-                      color: BiotopeColors.outline,
+                      color: OurobionColors.outline,
                     ),
                   ),
 
@@ -170,9 +170,9 @@ class _UrineColorScreenState extends State<UrineColorScreen>
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: BiotopeColors.surfaceLowest,
+                      color: OurobionColors.surfaceLowest,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: BiotopeColors.outlineVariant),
+                      border: Border.all(color: OurobionColors.outlineVariant),
                       boxShadow: const [
                         BoxShadow(
                           color: Color(0x0A000000),
@@ -199,7 +199,7 @@ class _UrineColorScreenState extends State<UrineColorScreen>
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 1.4,
-                                color: BiotopeColors.outline,
+                                color: OurobionColors.outline,
                               ),
                             ),
                             Text(
@@ -208,7 +208,7 @@ class _UrineColorScreenState extends State<UrineColorScreen>
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 1.6,
-                                color: BiotopeColors.onSurfaceVariant,
+                                color: OurobionColors.onSurfaceVariant,
                               ),
                             ),
                             Text(
@@ -217,7 +217,7 @@ class _UrineColorScreenState extends State<UrineColorScreen>
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 1.4,
-                                color: BiotopeColors.outline,
+                                color: OurobionColors.outline,
                               ),
                             ),
                           ],
@@ -285,7 +285,7 @@ class _UrineColorScreenState extends State<UrineColorScreen>
                               vertical: 12,
                             ),
                             decoration: BoxDecoration(
-                              color: BiotopeColors.primaryFixed.withValues(alpha: 0.28),
+                              color: OurobionColors.primaryFixed.withValues(alpha: 0.28),
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: Column(
@@ -296,7 +296,7 @@ class _UrineColorScreenState extends State<UrineColorScreen>
                                   style: GoogleFonts.manrope(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
-                                    color: BiotopeColors.onPrimaryContainer,
+                                    color: OurobionColors.onPrimaryContainer,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -305,7 +305,7 @@ class _UrineColorScreenState extends State<UrineColorScreen>
                                   style: GoogleFonts.manrope(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w400,
-                                    color: BiotopeColors.onSurfaceVariant,
+                                    color: OurobionColors.onSurfaceVariant,
                                   ),
                                 ),
                               ],

@@ -1,10 +1,10 @@
-# What Phase 2 of biotope is — in plain language
+# What Phase 2 of ourobion is — in plain language
 
 **Date:** 2026-06-11 · **Detail:** [`../PHASE2-PLAN.md`](../PHASE2-PLAN.md)
 
 ## The problem
 
-Biotope's goals were scattered across a dozen technical documents using four different phase
+Ourobion's goals were scattered across a dozen technical documents using four different phase
 labels ("Phase 1 Stage 2", "Phase 2", "Phase 3", "Phase 0 backlog"). Nobody could read one page
 and know what we're building next. This brief and its detail doc fix that: every past and present
 goal is now consolidated in one place, and "Phase 2" has a clear shape.

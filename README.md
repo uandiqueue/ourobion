@@ -1,4 +1,4 @@
-# Biotope
+# Ourobion
 
 Single-repository project — Flutter mobile app + Supabase backend.
 
@@ -17,11 +17,12 @@ to everything else:
 - `docs/PHASE2-PLAN.md` — the Phase 2 plan: goals, workstreams, two-track sequence, stress-test gate
 - `docs/INSIGHTS-ENGINE-DESIGN.md` — the data-driven insights-engine contract (Phase 2 Track B)
 - `docs/METRICS-REGISTRY-DESIGN.md` — single-source metric registry so adding/removing metrics can't silently break the app
+- `docs/BRAIN-DESIGN.md` — the brain: an evidence-tiered relationship graph whose edges are synthesised from papers by one LLM and adversarially verified by a second
 - `docs/human-briefs/` — plain-language stakeholder briefs of significant plans
 
-## 🧠 Context engineering — building biotope with AI agents
+## 🧠 Context engineering — building ourobion with AI agents
 
-biotope is built largely by **AI coding agents** (Claude Code, Codex, Gemini CLI) working alongside human
+ourobion is built largely by **AI coding agents** (Claude Code, Codex, Gemini CLI) working alongside human
 teammates — sometimes several on the same machine. Agents start every session blank: their working memory
 is ephemeral, doesn't survive a restart, and doesn't travel between tools or laptops. Unmanaged, that
 produces the three failure modes of agent-driven development — **drift** (docs and code disagree),
@@ -92,6 +93,40 @@ next phase is cut fresh from `main`. `main` stays always-deployable. *(One-time 
 
 ---
 
+## 🧬 The brain — an evidence-tiered, verified relationship graph
+
+ourobion's insights need a *reason*, not just a correlation in one user's data. **The brain** is the
+reusable layer of "what relates to what, and how strongly the science backs it": a knowledge graph
+whose **nodes are metrics** (from the metrics registry) and whose **edges are relationships**
+synthesised from the scientific literature.
+
+Synthesising relationships from papers with an LLM is the highest-hallucination-surface step in the
+system, and an edge is written once but read forever — so the brain pays its quality cost at
+ingestion time, by design:
+
+- **Two passes, two records.** A synthesis LLM proposes an edge (`RelationshipClaim`); a **second,
+  independent LLM** re-checks it against **freshly-retrieved** evidence (`EdgeVerification`). The two
+  are separate records so verification can be re-run with a better verifier without re-synthesising.
+- **The verifier is grounded and adversarial — enforced, not just prompted.** A `supported` /
+  `contradicted` verdict *requires* that the verifier actually performed independent retrieval (a zod
+  schema invariant); with no fresh grounding the verdict can only be `uncertain`. This is what makes
+  the second pass a real check rather than a same-model rubber stamp.
+- **Trust is graded, not binary.** Verification emits structured evidence metadata — a study-design
+  ladder (`evidenceTier` 1–5, deliberately kept separate from a venue `impactTier`), corroboration
+  counts, and per-failure-mode checks (direction, causal-vs-correlational, population scope, effect
+  size) — which roll into a 0..1 `edgeScore` that gates whether and how an edge is served.
+- **Two-tier truth (Principle 3).** The *contract* (`shared/brain/`) is git-tracked truth; the
+  *edges* are a rebuildable projection — never hand-edited. To change a verdict you fix the input
+  (corpus or prompt) and re-run.
+- **Drift-guarded like the rest of the repo (Principle 5).** A compile-time `AssertExact<>` plus
+  runtime zod schemas hold the hand-written types and their validators together; cross-language /
+  DB guards follow the registry pattern when the graph is persisted and app-rendered.
+
+Full design — failure modes, the gating table, cheaper complementary checks, alternatives considered:
+[`docs/BRAIN-DESIGN.md`](docs/BRAIN-DESIGN.md). Contract + runbook: [`shared/brain/`](shared/brain/).
+
+---
+
 ## 🛠 Development Setup
 
 ### Prerequisites
@@ -113,7 +148,7 @@ next phase is cut fresh from `main`. `main` stays always-deployable. *(One-time 
 
 ```bash
 # Clone
-git clone https://github.com/uandiqueue/biotope.git && cd biotope
+git clone https://github.com/uandiqueue/ourobion.git && cd ourobion
 
 # Install Node.js (if not installed)
 sudo apt install nodejs npm
@@ -145,7 +180,7 @@ cd src && flutter run
 
 ```bash
 # Clone
-git clone https://github.com/uandiqueue/biotope.git && cd biotope
+git clone https://github.com/uandiqueue/ourobion.git && cd ourobion
 
 # Install prerequisites via Homebrew (if not installed)
 brew install node
@@ -182,7 +217,7 @@ nothing touches your global PATH. One script does it all.
 - **Docker Desktop** — started. Runs local Supabase. [docker.com](https://www.docker.com/products/docker-desktop/)
 - **Git**.
 
-> That's it. Node, the JDK, Flutter, and the Android SDK are installed *bounded to biotope* by
+> That's it. Node, the JDK, Flutter, and the Android SDK are installed *bounded to ourobion* by
 > the setup script below — you do **not** need a global Node, Flutter, or Android Studio install.
 
 #### Step 1 — Clone and run the bounded setup
@@ -190,8 +225,8 @@ nothing touches your global PATH. One script does it all.
 In **PowerShell**, from the repo root:
 
 ```powershell
-git clone https://github.com/uandiqueue/biotope.git
-cd biotope
+git clone https://github.com/uandiqueue/ourobion.git
+cd ourobion
 
 # Installs (into ..\biotope-toolchain): Miniconda -> conda env "biotope" (Node + JDK 17),
 # Flutter SDK, Android SDK + emulator + an AVD; configures Flutter; creates env files;
@@ -260,7 +295,7 @@ they're needed:
 | Database schema | `supabase/migrations/*.sql` | `supabase db push` → applied to the **hosted Postgres**. |
 | Dev/build CLIs | `package.json` (`supabase` devDep) | Installed fresh by `npm ci` in CI; not shipped. |
 
-So **biotope has no "web server" hosting the app**: the **Android/iOS app is a compiled binary**
+So **ourobion has no "web server" hosting the app**: the **Android/iOS app is a compiled binary**
 (deps baked in), and the **backend is hosted by Supabase** (Postgres + Deno edge functions). If you
 ever serve the **Flutter *web*** build, `flutter build web` emits **static files** (`build/web/`) that
 any web server (nginx, Netlify, etc.) serves directly — again, the Flutter SDK stays on the build
@@ -274,7 +309,7 @@ lockfiles — it never references the local toolchain folder.
 
 ## 🧭 Code navigation — graphify (semantic context graph)
 
-biotope indexes its **own source** into a queryable semantic graph with
+ourobion indexes its **own source** into a queryable semantic graph with
 [graphify](https://github.com/safishamsi/graphify), so an AI assistant (or you) can ask *"what connects
 auth to the database?"* and get a small, relevant slice instead of grepping the whole tree. It is **dev
 tooling** — not part of the app, and not part of the insights engine.

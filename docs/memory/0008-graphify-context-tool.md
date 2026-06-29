@@ -1,12 +1,12 @@
 # 0008 — graphify is the semantic context tool; complementary to the deferred structural graph
 
-biotope uses **graphify** (github.com/safishamsi/graphify, PyPI `graphifyy`) — a semantic
+ourobion uses **graphify** (github.com/safishamsi/graphify, PyPI `graphifyy`) — a semantic
 knowledge-graph tool for AI assistants that indexes code/docs into a queryable `graph.json` and feeds an
 agent only the relevant subgraph, to fight **context overload** and hold **ingestion-pipeline context**
 for the analysis work.
 
 **It is complementary to, NOT a replacement for,** the structural import-graph that
-`docs/graph/README.md` marks **DEFERRED** (deferred because biotope is Dart+TS+SQL and one import tool
+`docs/graph/README.md` marks **DEFERRED** (deferred because ourobion is Dart+TS+SQL and one import tool
 sees only the TS half). graphify is semantic/multi-modal; the deferred graph is structural. A generated
 graph is a rebuildable projection, never hand-edited ([0001-two-tier-truth](0001-two-tier-truth.md)).
 
@@ -36,9 +36,9 @@ graph is a rebuildable projection, never hand-edited ([0001-two-tier-truth](0001
 - **No API key.** AST extraction is fully local (tree-sitter). graphify's cross-language semantic pass
   normally wants `ANTHROPIC_API_KEY` (or Gemini/OpenAI), but invoked inside Claude Code it uses the
   **host session model** — so it runs on demand via the local agent, no separate key.
-- **What to index:** biotope's own repo (agent context) and, separately, the research-paper corpus
+- **What to index:** ourobion's own repo (agent context) and, separately, the research-paper corpus
   (ingestion context) once a paper arrives. **Never index NUSPlan** — it's a read-once reference and
-  indexing it would pollute biotope's graph.
+  indexing it would pollute ourobion's graph.
 
 ## Dart coverage
 

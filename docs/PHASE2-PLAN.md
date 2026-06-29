@@ -1,11 +1,11 @@
 # Phase 2 — Plan
 
-Biotope's MVP self-report loop is in place: M1 auth, M2 logging, M5a baselines, M5b discovery cards,
+Ourobion's MVP self-report loop is in place: M1 auth, M2 logging, M5a baselines, M5b discovery cards,
 M6 engagement. **Phase 2 turns that loop into the real product** over ~2 months (~2026-06-15 →
 ~2026-08-15), in **two parallel tracks** that branch after foundations and **merge for a stress test
 that gates Phase 3**.
 
-Phase 2 also makes one architectural commitment everything else rides on: biotope stops being a fixed
+Phase 2 also makes one architectural commitment everything else rides on: ourobion stops being a fixed
 set of ~20 metrics in wide daily tables and becomes a **modifiable metric platform** that scales to
 hundreds of metrics across five sources, where **adding or removing a metric is a localized,
 guard-protected change — never a schema-wide rewrite.** The metric *catalog* (which metrics, exact
@@ -172,13 +172,13 @@ First slice covers **all users globally — no region scoping yet** (testing sta
 |---|---|
 | Global aggregates | Privacy-safe `community_aggregates` over all users; individual data never exposed. |
 | Community surface | Opt-in screen: "everyone this week" alongside the user's own patterns. |
-| Simple chat | Text-only community chat: RLS per-user rows, report/delete, minimal moderation, feature-flagged. New `shared/` surface → 2-reviewer PR. Biotope strings stay non-diagnostic; user content gets a disclaimer, not the copy gate. |
+| Simple chat | Text-only community chat: RLS per-user rows, report/delete, minimal moderation, feature-flagged. New `shared/` surface → 2-reviewer PR. Ourobion strings stay non-diagnostic; user content gets a disclaimer, not the copy gate. |
 | Insight Lab → Later | Users correlate their own behaviour with their signals (the raw-rows-are-the-asset payoff; the per-user-graph surface). |
 
 ### W6 · Context tooling — graphify
 
 Repo infrastructure so agents/humans keep navigating the codebase as it grows. **Not a product
-feature and not part of the insights engine.** In place today: graphify indexes biotope's own repo into
+feature and not part of the insights engine.** In place today: graphify indexes ourobion's own repo into
 a semantic graph (`graphify-out/`, gitignored; rebuild with `scripts/graphify-build.ps1`). A separate
 paper-corpus graph supports W2 extraction (rules **and brain relationships**) once papers arrive. See
 [`graph/README.md`](graph/README.md) and [`memory/0008-graphify-context-tool.md`](memory/0008-graphify-context-tool.md).

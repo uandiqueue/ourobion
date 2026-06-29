@@ -131,12 +131,12 @@ class HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
-        backgroundColor: BiotopeColors.surface,
+        backgroundColor: OurobionColors.surface,
         body: Center(child: CircularProgressIndicator()),
       );
     }
     return Scaffold(
-      backgroundColor: BiotopeColors.surface,
+      backgroundColor: OurobionColors.surface,
       body: SafeArea(
         child: FadeTransition(
           opacity: _opacity,
@@ -163,7 +163,7 @@ class HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 1.6,
-                                color: BiotopeColors.primary,
+                                color: OurobionColors.primary,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -173,7 +173,7 @@ class HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
                                 fontSize: 28,
                                 fontWeight: FontWeight.w600,
                                 letterSpacing: -0.4,
-                                color: BiotopeColors.onSurface,
+                                color: OurobionColors.onSurface,
                               ),
                             ),
                           ],
@@ -185,14 +185,14 @@ class HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: BiotopeColors.surfaceLowest,
-                            border: Border.all(color: BiotopeColors.outlineVariant),
+                            color: OurobionColors.surfaceLowest,
+                            border: Border.all(color: OurobionColors.outlineVariant),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
                             Icons.person_outline_rounded,
                             size: 20,
-                            color: BiotopeColors.onSurfaceVariant,
+                            color: OurobionColors.onSurfaceVariant,
                           ),
                         ),
                       ),
@@ -260,7 +260,7 @@ class _Eyebrow extends StatelessWidget {
         fontSize: 10,
         fontWeight: FontWeight.w700,
         letterSpacing: 1.6,
-        color: BiotopeColors.primary,
+        color: OurobionColors.primary,
       ),
     );
   }
@@ -281,12 +281,12 @@ class _TodayCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: BiotopeColors.surfaceLowest,
+          color: OurobionColors.surfaceLowest,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: streakWorthy
-                ? BiotopeColors.primaryContainer
-                : BiotopeColors.outlineVariant,
+                ? OurobionColors.primaryContainer
+                : OurobionColors.outlineVariant,
           ),
           boxShadow: const [
             BoxShadow(
@@ -304,8 +304,8 @@ class _TodayCard extends StatelessWidget {
                     height: 44,
                     decoration: BoxDecoration(
                       color: streakWorthy
-                          ? BiotopeColors.primaryFixed
-                          : BiotopeColors.surfaceContainer,
+                          ? OurobionColors.primaryFixed
+                          : OurobionColors.surfaceContainer,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -313,8 +313,8 @@ class _TodayCard extends StatelessWidget {
                           ? Icons.check_circle_rounded
                           : Icons.edit_note_rounded,
                       color: streakWorthy
-                          ? BiotopeColors.primary
-                          : BiotopeColors.outline,
+                          ? OurobionColors.primary
+                          : OurobionColors.outline,
                       size: 22,
                     ),
                   ),
@@ -328,7 +328,7 @@ class _TodayCard extends StatelessWidget {
                           style: GoogleFonts.manrope(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: BiotopeColors.onSurface,
+                            color: OurobionColors.onSurface,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -338,7 +338,7 @@ class _TodayCard extends StatelessWidget {
                               : '${dqs!.toInt()} / 100 pts — log more to reach 60',
                           style: GoogleFonts.manrope(
                             fontSize: 12,
-                            color: BiotopeColors.outline,
+                            color: OurobionColors.outline,
                           ),
                         ),
                         if (!streakWorthy) ...[
@@ -348,7 +348,7 @@ class _TodayCard extends StatelessWidget {
                             style: GoogleFonts.manrope(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: BiotopeColors.primary,
+                              color: OurobionColors.primary,
                             ),
                           ),
                         ],
@@ -363,12 +363,12 @@ class _TodayCard extends StatelessWidget {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: BiotopeColors.primaryFixed,
+                      color: OurobionColors.primaryFixed,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
                       Icons.edit_note_rounded,
-                      color: BiotopeColors.primary,
+                      color: OurobionColors.primary,
                       size: 22,
                     ),
                   ),
@@ -382,7 +382,7 @@ class _TodayCard extends StatelessWidget {
                           style: GoogleFonts.manrope(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: BiotopeColors.onSurface,
+                            color: OurobionColors.onSurface,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -390,7 +390,7 @@ class _TodayCard extends StatelessWidget {
                           'Takes under 30 seconds',
                           style: GoogleFonts.manrope(
                             fontSize: 12,
-                            color: BiotopeColors.outline,
+                            color: OurobionColors.outline,
                           ),
                         ),
                       ],
@@ -401,7 +401,7 @@ class _TodayCard extends StatelessWidget {
                     style: GoogleFonts.manrope(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: BiotopeColors.primary,
+                      color: OurobionColors.primary,
                     ),
                   ),
                 ],
@@ -427,9 +427,9 @@ class _StreakCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: BiotopeColors.surfaceLowest,
+        color: OurobionColors.surfaceLowest,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: BiotopeColors.outlineVariant),
+        border: Border.all(color: OurobionColors.outlineVariant),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0A191c1c),
@@ -448,13 +448,13 @@ class _StreakCard extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   color: streak > 0
-                      ? BiotopeColors.primaryFixed
-                      : BiotopeColors.surfaceContainer,
+                      ? OurobionColors.primaryFixed
+                      : OurobionColors.surfaceContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   Icons.local_fire_department_rounded,
-                  color: streak > 0 ? BiotopeColors.primary : BiotopeColors.outline,
+                  color: streak > 0 ? OurobionColors.primary : OurobionColors.outline,
                   size: 22,
                 ),
               ),
@@ -469,8 +469,8 @@ class _StreakCard extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.2,
                       color: streak > 0
-                          ? BiotopeColors.onSurface
-                          : BiotopeColors.outline,
+                          ? OurobionColors.onSurface
+                          : OurobionColors.outline,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -480,7 +480,7 @@ class _StreakCard extends StatelessWidget {
                         : 'Log 60+ pts to start your streak',
                     style: GoogleFonts.manrope(
                       fontSize: 12,
-                      color: BiotopeColors.outline,
+                      color: OurobionColors.outline,
                     ),
                   ),
                 ],
@@ -489,7 +489,7 @@ class _StreakCard extends StatelessWidget {
           ),
           if (showStats) ...[
             const SizedBox(height: 16),
-            const Divider(height: 1, color: BiotopeColors.outlineVariant),
+            const Divider(height: 1, color: OurobionColors.outlineVariant),
             const SizedBox(height: 14),
             Row(
               children: [
@@ -572,13 +572,13 @@ class _TitleChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: earned
-            ? BiotopeColors.primaryFixed
-            : BiotopeColors.surfaceLowest,
+            ? OurobionColors.primaryFixed
+            : OurobionColors.surfaceLowest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: earned
-              ? BiotopeColors.primaryContainer
-              : BiotopeColors.outlineVariant,
+              ? OurobionColors.primaryContainer
+              : OurobionColors.outlineVariant,
         ),
       ),
       child: Row(
@@ -586,7 +586,7 @@ class _TitleChip extends StatelessWidget {
           Icon(
             icon,
             size: 18,
-            color: earned ? BiotopeColors.primary : BiotopeColors.outlineVariant,
+            color: earned ? OurobionColors.primary : OurobionColors.outlineVariant,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -599,8 +599,8 @@ class _TitleChip extends StatelessWidget {
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: earned
-                        ? BiotopeColors.primary
-                        : BiotopeColors.outlineVariant,
+                        ? OurobionColors.primary
+                        : OurobionColors.outlineVariant,
                   ),
                 ),
                 Text(
@@ -608,8 +608,8 @@ class _TitleChip extends StatelessWidget {
                   style: GoogleFonts.manrope(
                     fontSize: 10,
                     color: earned
-                        ? BiotopeColors.onSurfaceVariant
-                        : BiotopeColors.outlineVariant,
+                        ? OurobionColors.onSurfaceVariant
+                        : OurobionColors.outlineVariant,
                   ),
                 ),
               ],
@@ -631,7 +631,7 @@ class _StatChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: BiotopeColors.surfaceContainer,
+        color: OurobionColors.surfaceContainer,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -643,7 +643,7 @@ class _StatChip extends StatelessWidget {
               fontSize: 9,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.2,
-              color: BiotopeColors.outline,
+              color: OurobionColors.outline,
             ),
           ),
           const SizedBox(height: 3),
@@ -652,7 +652,7 @@ class _StatChip extends StatelessWidget {
             style: GoogleFonts.manrope(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: BiotopeColors.onSurface,
+              color: OurobionColors.onSurface,
             ),
           ),
         ],
@@ -674,9 +674,9 @@ class _InsightsTeaser extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: BiotopeColors.surfaceLowest,
+        color: OurobionColors.surfaceLowest,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: BiotopeColors.outlineVariant),
+        border: Border.all(color: OurobionColors.outlineVariant),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0A191c1c),
@@ -695,8 +695,8 @@ class _InsightsTeaser extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   color: unlocked
-                      ? BiotopeColors.primaryFixed
-                      : BiotopeColors.surfaceContainer,
+                      ? OurobionColors.primaryFixed
+                      : OurobionColors.surfaceContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -704,8 +704,8 @@ class _InsightsTeaser extends StatelessWidget {
                       ? Icons.lightbulb_rounded
                       : Icons.lock_outline_rounded,
                   color: unlocked
-                      ? BiotopeColors.primary
-                      : BiotopeColors.outline,
+                      ? OurobionColors.primary
+                      : OurobionColors.outline,
                   size: 20,
                 ),
               ),
@@ -719,7 +719,7 @@ class _InsightsTeaser extends StatelessWidget {
                       style: GoogleFonts.manrope(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: BiotopeColors.onSurface,
+                        color: OurobionColors.onSurface,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -729,7 +729,7 @@ class _InsightsTeaser extends StatelessWidget {
                           : '$streak / $kGoal streak-worthy days',
                       style: GoogleFonts.manrope(
                         fontSize: 12,
-                        color: BiotopeColors.outline,
+                        color: OurobionColors.outline,
                       ),
                     ),
                   ],
@@ -748,9 +748,9 @@ class _InsightsTeaser extends StatelessWidget {
                 builder: (context, value, child) => LinearProgressIndicator(
                   value: value,
                   minHeight: 5,
-                  backgroundColor: BiotopeColors.surfaceContainer,
+                  backgroundColor: OurobionColors.surfaceContainer,
                   valueColor: const AlwaysStoppedAnimation<Color>(
-                    BiotopeColors.secondary,
+                    OurobionColors.secondary,
                   ),
                 ),
               ),

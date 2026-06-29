@@ -1,4 +1,4 @@
-# Human Brief — biotope Next-Phase Direction
+# Human Brief — ourobion Next-Phase Direction
 
 **Date:** 2026-06-09 · **Status:** Approved plan, not yet built · **Tracking:** issue #3 ·
 **Detail:** [`../INSIGHTS-ENGINE-DESIGN.md`](../INSIGHTS-ENGINE-DESIGN.md) (engine design) + [`../PHASE2-PLAN.md`](../PHASE2-PLAN.md) (current plan)
@@ -7,7 +7,7 @@
 pipeline. This brief focuses on the analysis pipeline, the headline of the phase.)*
 
 ## The problem in one line
-Biotope's health "analysis" today is shallow: only **6 fixed rules**, each looking at **one metric at a
+Ourobion's health "analysis" today is shallow: only **6 fixed rules**, each looking at **one metric at a
 time**, hard-coded into the backend. Adding or changing a rule means a developer editing and redeploying
 code, and we **cannot** yet spot patterns that span two metrics (e.g. "energy down **and** gut comfort
 down together").
@@ -24,9 +24,9 @@ A pipeline that turns **health research into rules the app can apply**, in three
 
 Think of it like the sister project **NUSPlan**: it reads official requirement documents into structured,
 reviewable rules, then a deterministic engine applies them. We're reusing that proven shape, adapted to
-biotope's database.
+ourobion's database.
 
-## What stays true to biotope's principles
+## What stays true to ourobion's principles
 - **Still non-diagnostic.** Every rule's wording passes the existing "observational language only" check
   in three places. No diagnoses, ever.
 - **The engine is deterministic — no AI in the live path.** Same data + same rules = same result, every

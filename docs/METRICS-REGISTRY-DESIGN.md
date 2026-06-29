@@ -1,6 +1,6 @@
 # Metrics Registry — Design
 
-A single source of truth for every metric biotope collects, so **adding or removing a metric is a
+A single source of truth for every metric ourobion collects, so **adding or removing a metric is a
 localized, guard-protected change** — incomplete propagation fails a test (`flutter test` /
 `context_sync --check` / CI) instead of silently breaking at runtime.
 

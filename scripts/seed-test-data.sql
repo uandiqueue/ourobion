@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- biotope · LOCAL TEST DATA SEEDER (raw rows + engagement projection)
+-- ourobion · LOCAL TEST DATA SEEDER (raw rows + engagement projection)
 -- ════════════════════════════════════════════════════════════════════════════
 --
 -- WHAT THIS IS
@@ -27,7 +27,7 @@
 --   Preferred:  scripts\seed-test-data.ps1   (sets the variables below + runs edge fns)
 --   Standalone: pipe this file into psql in the local db container and override vars:
 --     Get-Content scripts\seed-test-data.sql -Raw |
---       docker exec -i supabase_db_biotope psql -U postgres -d postgres `
+--       docker exec -i supabase_db_ourobion psql -U postgres -d postgres `
 --         -v email=you@example.com -v days=14
 --   Or paste it into Supabase Studio's SQL editor (edit the defaults below first).
 --
@@ -36,7 +36,7 @@
 -- them via `psql -v`. (`\if :{?x}` = "only set a default if not passed on the CLI".)
 -- ════════════════════════════════════════════════════════════════════════════
 
-\if :{?email}            \else \set email            'test@biotope.local' \endif
+\if :{?email}            \else \set email            'test@ourobion.local' \endif
 \if :{?days}             \else \set days             14                   \endif
 \if :{?base_dqs}         \else \set base_dqs         78                   \endif
 \if :{?include_wearable} \else \set include_wearable 1                    \endif

@@ -1,6 +1,6 @@
-# Biotope Flutter App
+# Ourobion Flutter App
 
-This directory contains the Biotope Flutter frontend.
+This directory contains the Ourobion Flutter frontend.
 
 ## Local Config
 

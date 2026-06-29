@@ -3,7 +3,7 @@
 export interface DailyGutRow {
   id: string;
   user_id: string;
-  date: string;
+  log_date: string;
   region: string;
   urine_colour: number | null;
   stool_count: number | null;

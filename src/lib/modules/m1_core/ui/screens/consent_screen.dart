@@ -51,7 +51,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   const Text(
-                    'Biotope uses your logged data to surface patterns in your gut health and hydration. Your data shows observations only — we never diagnose.',
+                    'Ourobion uses your logged data to surface patterns in your gut health and hydration. Your data shows observations only — we never diagnose.',
                     style: TextStyle(fontSize: 15),
                   ),
                   const SizedBox(height: 8),

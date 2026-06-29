@@ -25,3 +25,4 @@ quick-reference pointers, not a replacement for those source docs.
 - [0009 — Local test data seeding](0009-local-test-data-seeding.md) — inject backdated rows + rebuild projections so the UI renders "weeks in"; don't log by hand for a week.
 - [0010 — iOS builds need a Mac; HealthKit needs a paid account](0010-ios-build-needs-mac-and-paid-account.md) — no iOS on Windows; Apple Developer Program ($99/yr) + real device for HealthKit.
 - [0011 — Local Supabase auth is email-only](0011-local-supabase-auth-email-only.md) — OAuth (Google/Apple) needs a hosted project; local DB persists across stop/start.
+- [0012 — The brain verifies edges with a second, grounded, adversarial LLM](0012-brain-adversarial-edge-verification.md) — synthesis proposes; an independent verifier re-checks against fresh evidence; invariants enforce grounding; trust is a graded score.

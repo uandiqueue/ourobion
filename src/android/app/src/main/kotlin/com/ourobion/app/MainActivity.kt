@@ -1,4 +1,4 @@
-package com.example.src
+package com.ourobion.app
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

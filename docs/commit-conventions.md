@@ -1,6 +1,6 @@
 # Commit Message Guidelines
 
-To ensure a clear, readable, and automated history for the Biotope project, we follow the [Conventional Commits](https://www.conventionalcommits.org/) specification.
+To ensure a clear, readable, and automated history for the Ourobion project, we follow the [Conventional Commits](https://www.conventionalcommits.org/) specification.
 
 ## Commit Message Format
 
