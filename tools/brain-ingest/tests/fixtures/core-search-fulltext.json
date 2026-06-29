@@ -1,0 +1,14 @@
+{
+  "totalHits": 1,
+  "limit": 5,
+  "offset": 0,
+  "results": [
+    {
+      "id": 123456789,
+      "doi": "10.1371/journal.pone.0123456",
+      "title": "Gut microbiome diversity and host metabolic health: a cohort study",
+      "downloadUrl": "https://core.ac.uk/download/123456789.pdf",
+      "fullText": "Abstract\n\nThe human gut microbiome is a dense microbial community whose composition has been repeatedly linked to host metabolic phenotypes. In this prospective cohort we profiled the faecal microbiota of 412 adults by 16S rRNA gene sequencing and related alpha-diversity to fasting insulin and HbA1c.\n\nIntroduction\n\nMicrobial diversity is widely treated as a proxy for ecosystem resilience. Lower diversity has been associated with obesity, type 2 diabetes and inflammatory bowel disease, though causal direction remains contested.\n\nMethods\n\nParticipants were recruited between 2019 and 2021. DNA was extracted from frozen stool, the V3-V4 region amplified, and reads denoised into amplicon sequence variants. Shannon diversity was computed per sample and regressed against metabolic markers with adjustment for age, sex, BMI and diet.\n\nResults\n\nHigher Shannon diversity was associated with lower fasting insulin after full adjustment. The effect persisted in the subgroup not taking antibiotics in the preceding six months.\n\nDiscussion\n\nThese observational associations are consistent with a protective role for a diverse gut community, but residual confounding by diet cannot be excluded and interventional work is needed."
+    }
+  ]
+}
