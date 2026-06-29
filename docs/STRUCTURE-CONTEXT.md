@@ -50,6 +50,9 @@ ourobion/
 │   ├── types/                 # Shared data models (TypeScript + Dart)
 │   └── constants/             # Shared constants (e.g., non-diagnostic copy rules)
 ├── src/                       # Frontend application (Flutter codebase)
+│   ├── assets/                # Bundled app assets (declared in src/pubspec.yaml)
+│   │   ├── fonts/             # Manrope font family (Regular → ExtraBold)
+│   │   └── images/            # App images (e.g. logo.png)
 │   └── lib/
 │       └── modules/           # Modularized application code (M1-M7)
 │           ├── m1_core/       # Auth, Profile, Compliance (Contains m1-context.md)
@@ -92,3 +95,4 @@ Supabase — see README "Where dependencies live". CI installs its own toolchain
 
 - **`shared/` vs `src/`:** Any logic, types, or constants that must be duplicated across Dart (app) and TypeScript (backend) belong in `shared/`. The frontend codebase should not reference backend specific scripts, and vice versa.
 - **Context files:** Constant, architectural constraints are capitalized and suffixed with `-CONTEXT` (e.g. `PROJECT-CONTEXT.md`). Variable context documents (such as module to-do lists/state files) are lowercase and suffixed with `-context` (e.g. `m1-context.md`).
+- **Assets:** `src/assets/` holds the app's bundled assets — `fonts/` (the Manrope family) and `images/` (e.g. `logo.png`). Every asset must be declared in `src/pubspec.yaml` (`flutter: assets:` / `fonts:`) to be bundled and available at runtime; adding a file to the folder alone is not enough.
