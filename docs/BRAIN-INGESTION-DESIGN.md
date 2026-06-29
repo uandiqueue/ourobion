@@ -90,8 +90,12 @@ the deferred NUS/TDM decision.)*
 ```
 
 1. **Discover** by topic seed (gut microbiome, hydration, antibiotics, sleep/HRV, dengue/vector,
-   environmental health) → candidate works + identifiers.
-2. **Resolve & dedup** to one canonical paper → assign `paper_uid` (§4).
+   environmental health) → candidate works + identifiers. Adapters capture the **full id set**
+   (DOI + PMID + PMCID, where the source exposes it — e.g. Europe PMC `result[]`, PubMed efetch
+   `ArticleIdList`) so a paper arrives already cross-linked.
+2. **Resolve & dedup** to one canonical paper → assign `paper_uid` (§4). Because discovery carries the
+   full id set, `resolveDedup` links disjoint-id variants of one paper up front; the NCBI ID Converter
+   crosswalk (§4) is the backstop for the rest.
 3. **OA-location:** Unpaywall / OpenAlex `best_oa_location` → an OA PDF URL + license + version, or
    "no OA copy."
 4. **Classify retrievability** → `pdf` (OA binary available) · `html` (full text only as HTML/JATS) ·

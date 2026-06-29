@@ -158,9 +158,12 @@ test('parseEfetchXml maps articles → Candidates with full identifiers', () => 
 
   const [a, b, c] = cands;
 
-  // Article 1: structured abstract, two named authors, DOI + PMCID, Year.
+  // Article 1: structured abstract, two named authors, the FULL id set, Year.
   assert.ok(a);
   assert.equal(a.discoveredVia, 'pubmed');
+  // Track C: pubmed/doi/pmc are ALL parsed off the ArticleIdList so dedup can link
+  // disjoint-id variants up front (the PMCID was previously the gap).
+  assert.deepEqual(Object.keys(a.identifiers).sort(), ['doi', 'pmcid', 'pmid']);
   assert.equal(a.identifiers.pmid, '38000001');
   assert.equal(a.identifiers.doi, '10.1038/s41577-024-00001-2'); // lowercased
   assert.equal(a.identifiers.pmcid, 'PMC11000001'); // canonical PMC form

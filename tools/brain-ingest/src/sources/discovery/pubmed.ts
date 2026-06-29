@@ -23,6 +23,7 @@
 
 import { XMLParser } from 'fast-xml-parser';
 import type { Candidate, DiscoverFn, Identifiers, SourceCtx, Seed } from '../../types.js';
+import { normalizeIdentifiers } from '../../identity.js';
 
 /** NCBI E-utilities base (https; all endpoints share it). */
 const EUTILS_BASE = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
@@ -155,7 +156,14 @@ function abstractText(
   return joined.length > 0 ? joined : null;
 }
 
-/** Map an ArticleIdList into our Identifiers, seeding `pmid` from the citation. */
+/**
+ * Map an ArticleIdList into our Identifiers, capturing the FULL id set —
+ * `IdType="pubmed"` (PMID), `IdType="doi"` (DOI), and `IdType="pmc"`/`"pmcid"`
+ * (PMCID) — so dedup can link disjoint-id variants at discovery time (design §3,
+ * §4). `pmid` is seeded from the `<PMID>` citation. Final canonicalization is
+ * delegated to identity's {@link normalizeIdentifiers} (the same normalizer
+ * dedup/paperUid use): DOI lowercased/stripped, PMID bare digits, PMCID `PMC…`.
+ */
 function identifiersOf(citationPmid: string, ids: ArticleId[]): Identifiers {
   const out: Identifiers = {};
   if (citationPmid) out.pmid = citationPmid;
@@ -165,12 +173,11 @@ function identifiersOf(citationPmid: string, ids: ArticleId[]): Identifiers {
     if (!value) continue;
     switch (type) {
       case 'doi':
-        out.doi = value.toLowerCase();
+        out.doi = value;
         break;
       case 'pmc':
       case 'pmcid':
-        // Normalize to the canonical `PMC…` form.
-        out.pmcid = value.toUpperCase().startsWith('PMC') ? value : `PMC${value}`;
+        out.pmcid = value;
         break;
       case 'pubmed':
         if (!out.pmid) out.pmid = value;
@@ -179,7 +186,7 @@ function identifiersOf(citationPmid: string, ids: ArticleId[]): Identifiers {
         break;
     }
   }
-  return out;
+  return normalizeIdentifiers(out);
 }
 
 /** Map one parsed `<PubmedArticle>` to a Candidate, or null if it has no PMID. */

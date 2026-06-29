@@ -21,6 +21,7 @@ import type {
   DiscoverFn,
   Identifiers,
 } from '../../types.js';
+import { normalizeIdentifiers } from '../../identity.js';
 
 const EUROPEPMC_SEARCH_URL =
   'https://www.ebi.ac.uk/europepmc/webservices/rest/search';
@@ -83,13 +84,20 @@ function normalizePmcid(raw: string): string {
   return /^PMC/i.test(t) ? t.toUpperCase() : `PMC${t}`;
 }
 
-/** Build the `Identifiers` map from one result, omitting empty values. */
+/**
+ * Build the `Identifiers` map from one result, capturing the FULL id set
+ * (DOI + PMID + PMCID) that Europe PMC exposes so dedup can link disjoint-id
+ * variants at discovery time (design §3, §4). Final canonicalization is delegated
+ * to identity's {@link normalizeIdentifiers} (the same normalizer dedup/paperUid
+ * use) so the forms are consistent across the pipeline; the local pre-normalizers
+ * just trim/strip before that. Empty values are dropped by the normalizer.
+ */
 function toIdentifiers(r: EpmcResult): Identifiers {
-  const ids: Identifiers = {};
-  if (r.doi && r.doi.trim()) ids.doi = normalizeDoi(r.doi);
-  if (r.pmid && r.pmid.trim()) ids.pmid = r.pmid.trim();
-  if (r.pmcid && r.pmcid.trim()) ids.pmcid = normalizePmcid(r.pmcid);
-  return ids;
+  const raw: Identifiers = {};
+  if (r.doi && r.doi.trim()) raw.doi = normalizeDoi(r.doi);
+  if (r.pmid && r.pmid.trim()) raw.pmid = r.pmid.trim();
+  if (r.pmcid && r.pmcid.trim()) raw.pmcid = normalizePmcid(r.pmcid);
+  return normalizeIdentifiers(raw);
 }
 
 /** One author block → a display name, preferring `fullName`. */

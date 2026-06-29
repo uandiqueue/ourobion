@@ -47,9 +47,12 @@ test('mapSearchResponse drops the id-less, title-less result', () => {
   }
 });
 
-test('journal article maps all identifiers, normalizing the DOI', () => {
+test('journal article captures the FULL id set (doi+pmid+pmcid), normalized', () => {
   const [article] = mapSearchResponse(fixture);
   assert.ok(article);
+  // Track C: a result exposing all three ids must arrive with all three captured
+  // so resolveDedup can link disjoint-id variants up front.
+  assert.deepEqual(Object.keys(article.identifiers).sort(), ['doi', 'pmcid', 'pmid']);
   assert.deepEqual(article.identifiers, {
     doi: '10.1016/j.cell.2024.01.001',
     pmid: '38123456',

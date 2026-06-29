@@ -38,8 +38,8 @@ Owner asked to (1) provision all ingestion prereqs (API keys, object storage), (
 - `PaperRecord` stays a local `types.ts` interface until a DB/app consumes the manifest (§9 deferral).
 
 ## Left
-- **Track C — Europe PMC / PubMed full-id capture**: discovery adapters should grab DOI+PMID+PMCID
-  together so reconciliation doesn't depend on the rate-strict NCBI ID Converter. Next task, this branch.
+- **Track C — DONE** (see Update below): Europe PMC + PubMed discovery now canonicalize the full
+  DOI+PMID+PMCID set, so dedup links variants up front; idconv is the backstop.
 - Owner to run live smoke runs (10.3/10.5 "Done when") with the real `.env` keys (NCBI was IP-throttling
   us during testing — let it cool down first).
 - Open PR into `dev-phase2` (not `main`) after review, linking #23.
