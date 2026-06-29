@@ -62,7 +62,7 @@ M6  Engagement & Motivation         ← depends on M2 (completeness), M5b (Insig
 M7  Community & Ecosystem           ← depends on M4, M2 aggregates
 ```
 
-Full dependency diagram: see `ARCHITECTURE-CONTEXT.md`
+Full dependency diagram: see `biotope/ARCHITECTURE-CONTEXT.md`
 
 ---
 

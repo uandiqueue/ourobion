@@ -247,7 +247,7 @@ interface EngagementState {
 > Produced by: the brain ingestion pipeline (synthesis + verification LLM passes)
 > Consumed by: M5b Insight Engine (the "why" behind a surfaced pattern) [forthcoming]
 > Authoritative shapes live in `shared/brain/relationships.ts` (TS-first). Full design:
-> [`docs/BRAIN-DESIGN.md`](../docs/BRAIN-DESIGN.md).
+> [`docs/nao/BRAIN-DESIGN.md`](../docs/nao/BRAIN-DESIGN.md).
 
 The brain is ourobion's knowledge graph of scientifically-derived relationships between metrics. Nodes
 are metric keys (`shared/metrics/registry.ts`); edges are produced in **two LLM passes**, kept as two

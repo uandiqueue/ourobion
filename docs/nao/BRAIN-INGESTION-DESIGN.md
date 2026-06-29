@@ -4,7 +4,7 @@ How ourobion **acquires the scientific literature** that the brain's edges are s
 doc covers the *front of the pipeline only* — discovering papers, fetching them, giving each a stable
 identity, and storing them — up to the point where a paper's text is ready for synthesis. The
 synthesis → verification → graph steps are [`BRAIN-DESIGN.md`](BRAIN-DESIGN.md); the edge/claim
-contract is [`shared/brain/`](../shared/brain/). The brain's runtime *schema* (how edges are stored
+contract is [`shared/brain/`](../../shared/brain/). The brain's runtime *schema* (how edges are stored
 and served) is **not yet designed** — this doc deliberately stops at "text + a `paper_uid` ready to
 cite."
 
@@ -15,7 +15,7 @@ cite."
 
 ## 1 · Two-tier placement
 
-A clean instance of the repo's core principle ([memory 0001](memory/0001-two-tier-truth.md)):
+A clean instance of the repo's core principle ([memory 0001](../memory/0001-two-tier-truth.md)):
 
 - **TRUTH (the asset — "raw data is the asset"):** the **paper corpus** (the fetched PDFs / HTML /
   JATS) and the **paper manifest** (the per-paper metadata records) — the record of *what we have and
@@ -152,7 +152,7 @@ guarantees one uid per paper even when discovery sources expose disjoint identif
 ## 5 · Tooling — fetch, capture, extract (TypeScript, no Python)
 
 Lives in a new **`tools/brain-ingest/`** (Node/TS, run on the project toolchain — Node 26). No Python
-([AGENTS.md](../AGENTS.md) hard rule).
+([AGENTS.md](../../AGENTS.md) hard rule).
 
 | Concern | Choice | Why |
 |---|---|---|

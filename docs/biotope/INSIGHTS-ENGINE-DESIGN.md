@@ -2,7 +2,7 @@
 
 The detailed design for ourobion's **data-driven insights engine**: a PDF → structured-rules → engine
 pipeline that replaces the MVP's hardcoded rules. Sequencing, ownership, and the gate live in
-[`PHASE2-PLAN.md`](PHASE2-PLAN.md); this doc is the **contract + step detail**.
+[`PHASE2-PLAN.md`](../PHASE2-PLAN.md); this doc is the **contract + step detail**.
 
 ## Why
 
@@ -20,7 +20,7 @@ Batch **extract** (PDF → JSON via Claude API + human review) → **load/normal
 engine**; the LLM is confined to the offline extract step with cost discipline. (Pattern borrowed from
 sister repo NUSPlan; ourobion targets Postgres instead of Neo4j and uses **no Python**.)
 
-This maps onto ourobion's [two-tier truth](memory/0001-two-tier-truth.md): `data/rules/**.json` join raw
+This maps onto ourobion's [two-tier truth](../memory/0001-two-tier-truth.md): `data/rules/**.json` join raw
 rows + migrations + `shared/` as TRUTH; the `rules` table joins `baseline_snapshots` + `insight_cards`
 as rebuildable PROJECTIONS.
 
@@ -54,7 +54,7 @@ citation}, `effectiveFrom`/`effectiveTo`, `deprecatedAt`, `condition` (union bel
 
 `minConfidence` generalizes the scattered `notInsufficient(s)` checks.
 
-**B1 is a new `shared/` contract surface → 2-reviewer PR** (AGENTS.md §3 / [memory 0002](memory/0002-shared-contract-two-reviewers.md)).
+**B1 is a new `shared/` contract surface → 2-reviewer PR** (AGENTS.md §3 / [memory 0002](../memory/0002-shared-contract-two-reviewers.md)).
 
 ### B2. `rules` table (DERIVED PROJECTION) — new migration
 

@@ -48,7 +48,7 @@ ourobion has a source-of-truth tier and a derived tier. Treat them differently:
   - **the brain's edges** (`RelationshipClaim` + `EdgeVerification`) — synthesised from papers by one
     LLM and verified by a second; rebuilt by re-running the ingestion pipeline. The *contract*
     (`shared/brain/`) is truth; the *instances* are the projection. See
-    [`docs/BRAIN-DESIGN.md`](docs/BRAIN-DESIGN.md) and
+    [`docs/nao/BRAIN-DESIGN.md`](docs/nao/BRAIN-DESIGN.md) and
     [`docs/memory/0012-brain-adversarial-edge-verification.md`](docs/memory/0012-brain-adversarial-edge-verification.md).
 
 **Rule:** to change a derived value, fix the **input** (a raw row or the edge-function logic) and
@@ -63,10 +63,10 @@ ourobion is organized as modules **M1–M7** with a strict dependency order. The
 module graph and the enforced interface rules are the boundary reference** (we deliberately do *not*
 auto-generate a structural import graph yet — see §8 and [`docs/graph/README.md`](docs/graph/README.md)):
 
-- **Module dependency graph + data flow + table overview + interface rules:** [`docs/ARCHITECTURE-CONTEXT.md`](docs/ARCHITECTURE-CONTEXT.md)
+- **Module dependency graph + data flow + table overview + interface rules:** [`docs/biotope/ARCHITECTURE-CONTEXT.md`](docs/biotope/ARCHITECTURE-CONTEXT.md)
 - **Repository directory layout + `shared/` vs `src/` rule + env files:** [`docs/STRUCTURE-CONTEXT.md`](docs/STRUCTURE-CONTEXT.md)
-- **The shared contract types (the connective tissue every boundary crosses):** [`shared/SHARED-CONTEXT.md`](shared/SHARED-CONTEXT.md) — incl. the metrics registry (`shared/metrics/`) and the brain relationship contract (`shared/brain/`, design in [`docs/BRAIN-DESIGN.md`](docs/BRAIN-DESIGN.md))
-- **UI design system:** [`docs/ui-context/UI-DESIGN-CONTEXT.md`](docs/ui-context/UI-DESIGN-CONTEXT.md)
+- **The shared contract types (the connective tissue every boundary crosses):** [`shared/SHARED-CONTEXT.md`](shared/SHARED-CONTEXT.md) — incl. the metrics registry (`shared/metrics/`) and the brain relationship contract (`shared/brain/`, design in [`docs/nao/BRAIN-DESIGN.md`](docs/nao/BRAIN-DESIGN.md))
+- **UI design system:** [`docs/biotope/ui-context/UI-DESIGN-CONTEXT.md`](docs/biotope/ui-context/UI-DESIGN-CONTEXT.md)
 - **AI routing table, truth hierarchy & PR review checklist:** [`docs/AGENT-PROTOCOL.md`](docs/AGENT-PROTOCOL.md)
 - **The human dev cycle (Issue → … → Merge):** [`docs/dev-workflow.md`](docs/dev-workflow.md)
 
@@ -276,7 +276,7 @@ graph for agent context, and enforce what we keep:
 
 - **Structural import graph — DEFERRED.** ourobion is Dart + TypeScript + SQL, so a single import-graph
   tool is awkward. The **curated** module graph + interface rules in
-  [`docs/ARCHITECTURE-CONTEXT.md`](docs/ARCHITECTURE-CONTEXT.md) are the boundary reference today.
+  [`docs/biotope/ARCHITECTURE-CONTEXT.md`](docs/biotope/ARCHITECTURE-CONTEXT.md) are the boundary reference today.
   [`docs/graph/README.md`](docs/graph/README.md) records exactly how to add a real generated graph
   later (and that, when added, it is a rebuildable projection — never hand-edited).
 - **Semantic context graph (graphify).** [`graphify`](https://github.com/safishamsi/graphify) indexes

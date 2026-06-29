@@ -14,9 +14,9 @@ honest vertical slice on it.
 
 This doc is the **plan authority**: goals, what Phase 2 contains, the sequence, and the gate. The
 metric-platform detail (registry schema, storage primitives, add/remove runbook) lives in
-[`METRICS-REGISTRY-DESIGN.md`](METRICS-REGISTRY-DESIGN.md) and [`shared/metrics/README.md`](../shared/metrics/README.md);
+[`METRICS-REGISTRY-DESIGN.md`](biotope/METRICS-REGISTRY-DESIGN.md) and [`shared/metrics/README.md`](../shared/metrics/README.md);
 the insights-engine contract detail (rule blueprints, `rules` table, evaluators) lives in
-[`INSIGHTS-ENGINE-DESIGN.md`](INSIGHTS-ENGINE-DESIGN.md). Plain-language companion:
+[`INSIGHTS-ENGINE-DESIGN.md`](biotope/INSIGHTS-ENGINE-DESIGN.md). Plain-language companion:
 [`human-briefs/2026-06-11-phase2-integrated-plan.md`](human-briefs/2026-06-11-phase2-integrated-plan.md).
 
 ## The metric platform (the floor everything else stands on)
@@ -48,7 +48,7 @@ rationed economy; the other four are maximized — breadth is the product, not t
   rule/insight referencing the key keep resolving; the store is dropped only after a deprecation
   window.
 - **No add or remove touches more than the registry and its generated/guarded edges.** This is the
-  whole point — see [`METRICS-REGISTRY-DESIGN.md`](METRICS-REGISTRY-DESIGN.md) and the
+  whole point — see [`METRICS-REGISTRY-DESIGN.md`](biotope/METRICS-REGISTRY-DESIGN.md) and the
   `metrics-registry-*` guards.
 
 ### 3 · Storage follows *continuity*, not body system
@@ -135,7 +135,7 @@ The unfinished MVP work, **plus the metric platform** everything else builds on.
 *Constraints (not features): HRV is RMSSD on Android (SDNN is iOS-only); wearable sync is best-effort,
 never a hard gate (graceful degradation).*
 
-### W2 · Insights engine (M5b) + the brain — see [`INSIGHTS-ENGINE-DESIGN.md`](INSIGHTS-ENGINE-DESIGN.md)
+### W2 · Insights engine (M5b) + the brain — see [`INSIGHTS-ENGINE-DESIGN.md`](biotope/INSIGHTS-ENGINE-DESIGN.md)
 
 | Feature | What it is |
 |---|---|
@@ -225,7 +225,7 @@ test proves it.
 | **3–4** | **A1 · Environment / `api` source (W3)** | `env_daily` migration + ingestion edge function + pg_cron onto `signals`/`derived_metrics`; Singapore, 2–3 sources; env consent scope; optional time-in-green. |
 | **5** | **A2 · Sensor + semi-passive health (W1)** | Health Connect → `wearable_daily` verified end-to-end on a real device; **semi-passive fetch path**; device-type + permission status on profile. |
 | **6–7** | **A3 · Community (W4)** | M7 activation, feature-flagged: global `community_aggregates` + community surface + simple chat. PDPA consent extended. |
-| **3–7** | **B · Brain + insights engine (W2)** | B1 rule + relationship contract (2-reviewer) → B2 `rules` table + brain projection → B3 loader → B4 extract skeleton → B5 guards/couplings → C engine refactor (deterministic, reliability-weighted) + grounded LLM synthesis → D verify on seeded data (see [`INSIGHTS-ENGINE-DESIGN.md`](INSIGHTS-ENGINE-DESIGN.md)). Runs against M2 + seeded data; does not wait for Track A. |
+| **3–7** | **B · Brain + insights engine (W2)** | B1 rule + relationship contract (2-reviewer) → B2 `rules` table + brain projection → B3 loader → B4 extract skeleton → B5 guards/couplings → C engine refactor (deterministic, reliability-weighted) + grounded LLM synthesis → D verify on seeded data (see [`INSIGHTS-ENGINE-DESIGN.md`](biotope/INSIGHTS-ENGINE-DESIGN.md)). Runs against M2 + seeded data; does not wait for Track A. |
 | **8** | **MERGE** | Extend M5a baselines over the `signals` (wearable + env) sources; author the first cross-metric rules incl. env (rainfall × mosquito sightings, heat × hydration); community aggregates fed by the full dataset. |
 | **9** | **STRESS TEST → gate** | See gate below. Phase 3 GO/NO-GO + Apple decision happen here. |
 
