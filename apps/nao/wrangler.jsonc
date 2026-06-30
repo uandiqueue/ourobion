@@ -1,0 +1,27 @@
+{
+  // ourobion nao — Cloudflare Workers config (deploy via @opennextjs/cloudflare).
+  // Bindings live HERE, not in .env: the deployed Worker reads R2 via the native
+  // CORPUS binding (no S3 creds) and the search index via the DB (D1) binding.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ourobion-nao",
+  "compatibility_date": "2024-12-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": ".open-next/worker.js",
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "r2_buckets": [
+    {
+      "binding": "CORPUS",
+      "bucket_name": "ourobion-corpus"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ourobion-nao-index",
+      "database_id": "PLACEHOLDER_RUN_wrangler_d1_create"
+    }
+  ]
+}

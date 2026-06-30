@@ -1,0 +1,7 @@
+# ourobion nao — app-local ignores (the repo-root .gitignore already covers
+# .env, .env.local, .dev.vars, node_modules/, .next/, out/).
+/.next/
+/.open-next/
+/.wrangler/
+next-env.d.ts
+*.tsbuildinfo

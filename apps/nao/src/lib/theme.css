@@ -1,0 +1,70 @@
+/*
+ * ourobion nao — design tokens ("bio-neo-mythical", dark).
+ *
+ * Derived from assets/ourobion-brand/color/colors.json (the `dark` palette) and
+ * NAO-DESIGN.md §7. Imported once by src/app/globals.css. Font family vars
+ * (--font-ui, --font-display) are bound to the next/font/google CSS variables set
+ * on <html> in src/app/layout.tsx (Manrope = UI/body, Outfit = display/headers).
+ *
+ * Naming: --bg / --surface for canvas; --accent-N is the 5-stop coil ramp
+ * (cyan → blue, the data-viz gradient); --eyebrow for uppercase labels; --text-*
+ * for typography; --border-glow for the glowing 1px borders on dark surfaces.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* ── Canvas & surfaces ─────────────────────────────────────────────── */
+  --bg: #0b1d24;
+  --surface: #0f2730;
+  --surface-raised: #143240;
+
+  /* ── Accent coil ramp (cyan → blue): the data-viz gradient ─────────── */
+  --accent-1: #2bc4be;
+  --accent-2: #2fb7d6;
+  --accent-3: #3fa2e6;
+  --accent-4: #5e8df0;
+  --accent-5: #7c86f2;
+  /* Primary accent + a ready-made gradient across the ramp. */
+  --accent: var(--accent-1);
+  --accent-gradient: linear-gradient(
+    90deg,
+    var(--accent-1),
+    var(--accent-2),
+    var(--accent-3),
+    var(--accent-4),
+    var(--accent-5)
+  );
+
+  /* ── Brand mark roles (from colors.json dark) ──────────────────────── */
+  --ring: #2a6b78;
+  --nucleus-core: #2bc4be;
+  --nucleus-envelope: #3fa2e6;
+  --wordmark: #2bc4be;
+
+  /* ── Eyebrow (uppercase, letter-spaced labels) ─────────────────────── */
+  --eyebrow: #2bc4be;
+
+  /* ── Text on dark ──────────────────────────────────────────────────── */
+  --text-primary: #e8f4f6;
+  --text-secondary: #a9c2c8;
+  --text-muted: #6f8a91;
+
+  /* ── Glowing 1px borders on dark surfaces (not soft shadows) ───────── */
+  --border: #1e3a44;
+  --border-glow: 0 0 0 1px rgba(43, 196, 190, 0.35), 0 0 12px rgba(43, 196, 190, 0.18);
+
+  /* ── State colours (quality grammar; NAO-DESIGN §7) ────────────────── */
+  --state-high: #2bc4be; /* servingBand high */
+  --state-mid: #f0b34a;  /* limited evidence / mid */
+  --state-hold: #6f8a91; /* hold / muted */
+
+  /* ── Radii (inherit biotope 14–24px, slightly more technical) ──────── */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+
+  /* ── Typography families (bound to next/font CSS vars from layout) ──── */
+  --font-ui: var(--font-manrope, system-ui, sans-serif);
+  --font-display: var(--font-outfit, var(--font-ui));
+}
