@@ -171,7 +171,7 @@ npx supabase start
 npx supabase db push # use db reset if on docker
 
 # Run the app
-cd src && flutter run
+cd apps/biotope && flutter run
 ```
 
 ---
@@ -200,7 +200,7 @@ npx supabase start
 npx supabase db push # use db reset if on docker
 
 # Run the app
-cd src && flutter run
+cd apps/biotope && flutter run
 ```
 
 ---
@@ -253,7 +253,7 @@ npx supabase start          # first run pulls the Docker images
 npx supabase db reset       # apply migrations to the local DB
 ```
 
-`supabase start` prints an **anon key** — paste it into `src\.env.public` as `SUPABASE_ANON_KEY`.
+`supabase start` prints an **anon key** — paste it into `apps\biotope\.env.public` as `SUPABASE_ANON_KEY`.
 The URL is already set for the emulator:
 
 ```
@@ -270,7 +270,7 @@ SUPABASE_ANON_KEY=<anon key from supabase start>
 ```powershell
 flutter emulators --launch biotope_pixel   # boot the bundled AVD
 flutter devices                            # confirm it's listed
-cd src; flutter run                        # build + run (first Gradle build is slow)
+cd apps\biotope; flutter run               # build + run (first Gradle build is slow)
 ```
 
 ---
@@ -289,7 +289,7 @@ they're needed:
 
 | Layer | Declared in (repo) | Where it ends up at deploy time |
 |---|---|---|
-| Flutter app (Dart) | `src/pubspec.yaml` + `pubspec.lock` | **Compiled into the build artifact** — `flutter build apk` / `appbundle` / `ipa` / `web`. The artifact is self-contained; the target device/host needs **no** Flutter SDK. |
+| Flutter app (Dart) | `apps/biotope/pubspec.yaml` + `pubspec.lock` | **Compiled into the build artifact** — `flutter build apk` / `appbundle` / `ipa` / `web`. The artifact is self-contained; the target device/host needs **no** Flutter SDK. |
 | Shared TS contracts | `shared/package.json` + lockfile | Type-checked in CI; bundled into edge functions that use them. |
 | Backend logic | `supabase/functions/*` (Deno/TS) | `supabase functions deploy` → runs on **Supabase's** managed infra (Deno runtime). No Node server of yours. |
 | Database schema | `supabase/migrations/*.sql` | `supabase db push` → applied to the **hosted Postgres**. |
@@ -411,11 +411,11 @@ After `. .\scripts\biotope-env.ps1`:
 ```powershell
 flutter emulators --launch biotope_pixel   # boot it
 flutter devices                            # confirm it's listed
-cd src; flutter run
+cd apps\biotope; flutter run
 ```
 
 The emulator reaches the Docker-hosted Supabase at `http://10.0.2.2:54321` (already set in
-`src\.env.public`) — no WSL, no port-forwarding.
+`apps\biotope\.env.public`) — no WSL, no port-forwarding.
 
 **macOS / Linux (via Android Studio):**
 
@@ -424,7 +424,7 @@ The emulator reaches the Docker-hosted Supabase at `http://10.0.2.2:54321` (alre
 3. Click ▶️ to boot it, then:
    ```bash
    flutter devices        # emulator should appear
-   cd src && flutter run
+   cd apps/biotope && flutter run
    ```
 
 ---
@@ -436,7 +436,7 @@ The emulator reaches the Docker-hosted Supabase at `http://10.0.2.2:54321` (alre
 | `flutter` / `node` / `adb` not recognized (Windows) | Dot-source the toolchain first: `. .\scripts\biotope-env.ps1` |
 | Phone not detected | Re-enable USB Debugging, try a different USB cable |
 | `flutter doctor` shows Android SDK missing | Re-run `flutter config --android-sdk` with correct path |
-| Emulator can't reach Supabase | Confirm `SUPABASE_URL=http://10.0.2.2:54321` in `src/.env.public` and that `npx supabase start` is running |
+| Emulator can't reach Supabase | Confirm `SUPABASE_URL=http://10.0.2.2:54321` in `apps/biotope/.env.public` and that `npx supabase start` is running |
 | Supabase connection refused on physical phone | Set `SUPABASE_URL` to your PC's LAN IP (not `10.0.2.2`); confirm phone + PC on same WiFi |
-| `flutter pub get` fails | Check the toolchain is active (`. .\scripts\biotope-env.ps1`) and `src/pubspec.yaml` exists |
+| `flutter pub get` fails | Check the toolchain is active (`. .\scripts\biotope-env.ps1`) and `apps/biotope/pubspec.yaml` exists |
 | Docker not running | Start Docker Desktop before running `npx supabase start` |

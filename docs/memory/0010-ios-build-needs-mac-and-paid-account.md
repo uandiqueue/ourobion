@@ -1,6 +1,6 @@
 # iOS builds need a Mac; HealthKit needs a paid Apple account + real device
 
-**Constraint (dev environment).** The iOS target exists and is configured — `src/ios/` is present
+**Constraint (dev environment).** The iOS target exists and is configured — `apps/biotope/ios/` is present
 with HealthKit wired (`Runner.entitlements` has `com.apple.developer.healthkit`; `Info.plist` has the
 `NSHealthShareUsageDescription` / `NSHealthUpdateUsageDescription` strings). But **iOS cannot be built
 or run on Windows** — Apple's toolchain is macOS + Xcode only. On the Windows-native dev box, do all

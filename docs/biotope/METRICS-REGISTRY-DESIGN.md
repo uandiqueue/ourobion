@@ -156,7 +156,7 @@ which is *why* it is nullable — not a reason to drop it). The stale artifact w
 2. ✅ Seeded from the **deployed** schema (gut + corrected wearable), all `status: active`. Env (`env_daily`)
    is deferred until the M4 migration lands — the runbook in `shared/metrics/README.md` shows the add flow.
 3. ✅ Parity + contract + schema + baselines + engine guards made real (`status: active` in
-   `couplings.yaml`, tests in `src/test/guards/`). The pre-existing `shared-types-ts-dart-parity` guard
+   `couplings.yaml`, tests in `apps/biotope/test/guards/`). The pre-existing `shared-types-ts-dart-parity` guard
    was also flipped to `active` (the W0 ⛔ guard work — now load-bearing).
 4. ✅ `compute-baselines` derives its metric list **and** SELECT columns from the registry import.
 5. ⬜ Point M6 DQS weighting at `registry.dqs` (the registry already carries the weights;

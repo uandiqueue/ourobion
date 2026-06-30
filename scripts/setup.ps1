@@ -136,10 +136,10 @@ $env:PUB_CACHE = Join-Path $Toolchain 'pub-cache'
 
 # ─── 8. Env files from templates ────────────────────────────────────────────
 Step "Environment files"
-if (-not (Test-Path "$RepoRoot\src\.env.public")) {
-    Copy-Item "$RepoRoot\src\.env.public.example" "$RepoRoot\src\.env.public"
-    Write-Host "Created src\.env.public — set SUPABASE_URL=http://10.0.2.2:54321 and the anon key from 'npx supabase start'."
-} else { Write-Host "src\.env.public exists" }
+if (-not (Test-Path "$RepoRoot\apps\biotope\.env.public")) {
+    Copy-Item "$RepoRoot\apps\biotope\.env.public.example" "$RepoRoot\apps\biotope\.env.public"
+    Write-Host "Created apps\biotope\.env.public — set SUPABASE_URL=http://10.0.2.2:54321 and the anon key from 'npx supabase start'."
+} else { Write-Host "apps\biotope\.env.public exists" }
 if (-not (Test-Path "$RepoRoot\supabase\.env")) {
     Copy-Item "$RepoRoot\supabase\.env.example" "$RepoRoot\supabase\.env"
     Write-Host "Created supabase\.env"
@@ -151,7 +151,7 @@ $node = Join-Path $Toolchain 'miniconda\envs\biotope'
 $env:PATH = "$node;$(Join-Path $node 'Scripts');$($env:PATH)"
 Push-Location $RepoRoot;            npm install;  Pop-Location
 Push-Location "$RepoRoot\shared";   npm install;  Pop-Location
-Push-Location "$RepoRoot\src";      & $flutter pub get;  Pop-Location
+Push-Location "$RepoRoot\apps\biotope";      & $flutter pub get;  Pop-Location
 
 # ─── 10. graphify (semantic context graph — dev tooling) ─────────────────────
 # Installs graphify bounded to the toolchain (..\biotope-toolchain\graphify-venv) and builds the
@@ -171,10 +171,10 @@ Write-Host @"
 Next steps (each new PowerShell session):
   1. . .\scripts\biotope-env.ps1              # activate the bounded toolchain
   2. npx supabase start                       # start local Supabase (Docker Desktop)
-     -> copy the printed 'anon key' into src\.env.public (SUPABASE_ANON_KEY)
+     -> copy the printed 'anon key' into apps\biotope\.env.public (SUPABASE_ANON_KEY)
   3. npx supabase db reset                    # apply migrations to the local DB
   4. flutter emulators --launch biotope_pixel # boot the Android emulator
-  5. cd src; flutter run                      # build + run the app on the emulator
+  5. cd apps\biotope; flutter run             # build + run the app on the emulator
 
 The emulator reaches local Supabase at http://10.0.2.2:54321 (no WSL / port-forward needed).
 "@ -ForegroundColor Green

@@ -68,4 +68,4 @@ Write-Host ("  java     {0}" -f $javaLine)
 Write-Host ("  flutter  {0}" -f $flutterLine)
 Write-Host ("  android  {0}" -f $AndroidSdk)
 Write-Host ""
-Write-Host "Backend: 'npx supabase start' (Docker Desktop). App: 'cd src; flutter run'." -ForegroundColor DarkGray
+Write-Host "Backend: 'npx supabase start' (Docker Desktop). App: 'cd apps\biotope; flutter run'." -ForegroundColor DarkGray

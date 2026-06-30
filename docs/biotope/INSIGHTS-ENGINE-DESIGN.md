@@ -92,7 +92,7 @@ at build time (use the `claude-api` skill) — never hardcode from memory.**
   QUARANTINE + every template passes `validateCopyString`.
 - `tests/rules/engine_condition_coverage.test.ts`: every `condition_type` used by a blueprint has an
   evaluator branch (prevents an unevaluatable rule).
-- `src/test/guards/rules_table_contract_test.dart`: asserts the `rules` migration's `category`/`severity`
+- `apps/biotope/test/guards/rules_table_contract_test.dart`: asserts the `rules` migration's `category`/`severity`
   CHECK sets are identical to `insight_cards`'.
 - Add edges to `docs/graph/couplings.yaml` (each names a guard file; `context_sync.mjs --check` fails if
   missing): blueprint↔schema, schema↔rules-table, rules-table↔insight_cards parity, templates↔copy
@@ -154,4 +154,4 @@ leave room.
 - `supabase/functions/compute-baselines/index.ts` + `migrations/20260515100000_create_m5a_baseline_snapshots.sql` — M5a, **unchanged**.
 - `migrations/20260515110000_create_m5b_insight_cards.sql` — the `category`/`severity`/`rule_id` sets the new `rules` table mirrors.
 - `shared/types/index.ts`, `shared/constants/copy_guidelines.{ts,dart}` — contracts + the non-diagnostic gate reused at load/render.
-- `docs/graph/couplings.yaml`, `src/test/guards/` — where new parity guards register (`context_sync.mjs --check` enforces them).
+- `docs/graph/couplings.yaml`, `apps/biotope/test/guards/` — where new parity guards register (`context_sync.mjs --check` enforces them).

@@ -9,7 +9,7 @@ auto-generated structural graph, run a semantic context graph for agents, and en
   analysis cannot see (a `shared/` type ↔ a Supabase table's columns ↔ a Flutter model; TS↔Dart
   parity of the shared types and copy rules). Each edge names a **`guard:` test** that makes the
   coupling executable. `node tools/context_sync.mjs --check` fails if a named guard file is missing.
-  Guard tests live in `src/test/guards/` and run with `flutter test`.
+  Guard tests live in `apps/biotope/test/guards/` and run with `flutter test`.
 
 The curated **module dependency graph and interface rules** are not duplicated here — they live in
 [`../biotope/ARCHITECTURE-CONTEXT.md`](../biotope/ARCHITECTURE-CONTEXT.md), which is the boundary reference today.
@@ -59,7 +59,7 @@ deps.json (regenerate + diff in the pre-push hook and CI; add a `deps.json`-styl
 check to `tools/context_sync.mjs`). Treat the generated file as a **rebuildable projection — never
 hand-edit it** (the two-tier-truth rule, [`../memory/0001-two-tier-truth.md`](../memory/0001-two-tier-truth.md)).
 
-- **Dart side (`src/`):** `dart pub deps --json` + a small Node parser, **or** the
+- **Dart side (`apps/biotope/`):** `dart pub deps --json` + a small Node parser, **or** the
   [`import_lint`](https://pub.dev/packages/import_lint) / `layer_lint` Dart packages to declare and
   enforce layer rules directly (no JSON intermediary).
 - **TypeScript side (`shared/` + `supabase/functions`):** dependency-cruiser scoped to just those

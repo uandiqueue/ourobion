@@ -55,4 +55,4 @@ body:
       label: Pre-checks
       options:
         - label: "`flutter analyze` passes on the current branch"
-        - label: "Supabase connection is healthy (check `src/.env.public` IP if on WiFi)"
+        - label: "Supabase connection is healthy (check `apps/biotope/.env.public` IP if on WiFi)"

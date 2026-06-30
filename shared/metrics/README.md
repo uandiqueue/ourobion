@@ -55,7 +55,7 @@ Typed accessors live in `index.ts` / `index.dart` (`activeMetrics`, `metricByKey
 ## Guard couplings
 
 These edges enforce the registry, defined in [`docs/graph/couplings.yaml`](../../docs/graph/couplings.yaml)
-with tests in [`src/test/guards/`](../../src/test/guards/):
+with tests in [`apps/biotope/test/guards/`](../../apps/biotope/test/guards/):
 
 - `metrics-registry-ts-dart-parity` — `registry.ts` == `registry.dart`
 - `metrics-registry-to-contract` — registry keys (per table) == contract row fields (TS + Dart)

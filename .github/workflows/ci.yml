@@ -43,21 +43,21 @@ jobs:
           cache: true
 
       - name: Create public env file
-        working-directory: src
+        working-directory: apps/biotope
         run: |
           printf "SUPABASE_URL=%s\n" "${{ secrets.SUPABASE_URL }}" > .env.public
           printf "SUPABASE_ANON_KEY=%s\n" "${{ secrets.SUPABASE_ANON_KEY }}" >> .env.public
 
       - name: Install dependencies
-        working-directory: src
+        working-directory: apps/biotope
         run: flutter pub get
 
       - name: Analyze
-        working-directory: src
+        working-directory: apps/biotope
         run: flutter analyze
 
       - name: Test
-        working-directory: src
+        working-directory: apps/biotope
         run: flutter test
 
   typescript:
