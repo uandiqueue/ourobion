@@ -67,6 +67,7 @@ auto-generate a structural import graph yet — see §8 and [`docs/graph/README.
 - **Repository directory layout + `shared/` vs `apps/biotope/` rule + env files:** [`docs/STRUCTURE-CONTEXT.md`](docs/STRUCTURE-CONTEXT.md)
 - **The shared contract types (the connective tissue every boundary crosses):** [`shared/SHARED-CONTEXT.md`](shared/SHARED-CONTEXT.md) — incl. the metrics registry (`shared/metrics/`) and the brain relationship contract (`shared/brain/`, design in [`docs/nao/BRAIN-DESIGN.md`](docs/nao/BRAIN-DESIGN.md))
 - **UI design system:** [`docs/biotope/ui-context/UI-DESIGN-CONTEXT.md`](docs/biotope/ui-context/UI-DESIGN-CONTEXT.md)
+- **Per-feature design docs:** the **nao** brain surface in [`docs/nao/`](docs/nao/) — product design [`NAO-DESIGN.md`](docs/nao/NAO-DESIGN.md), plus [`BRAIN-DESIGN.md`](docs/nao/BRAIN-DESIGN.md) + [`BRAIN-INGESTION-DESIGN.md`](docs/nao/BRAIN-INGESTION-DESIGN.md); the **biotope** app in [`docs/biotope/`](docs/biotope/). Cross-cutting docs stay at `docs/` root.
 - **AI routing table, truth hierarchy & PR review checklist:** [`docs/AGENT-PROTOCOL.md`](docs/AGENT-PROTOCOL.md)
 - **The human dev cycle (Issue → … → Merge):** [`docs/dev-workflow.md`](docs/dev-workflow.md)
 
