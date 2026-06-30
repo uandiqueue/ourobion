@@ -1,0 +1,86 @@
+/* ourobion nao — global styles. Imports the design tokens, then the per-area
+   stylesheets (shell, overview, papers/detail). Keep this thin. */
+@import '../lib/theme.css';
+@import './shell.css';
+@import './overview.css';
+@import './dashboard.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  background-color: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 300;
+  letter-spacing: -0.01em;
+}
+
+a {
+  color: var(--accent-3);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--accent-2);
+}
+
+/* Custom scrollbar (matches the mock). */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 150, 160, 0.22);
+  border-radius: 6px;
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Uppercase, letter-spaced eyebrow labels — mono, per the approved design. */
+.eyebrow {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--eyebrow);
+}
+
+/* Ambient bioluminescent glows behind the brain (NAO-DESIGN §7). */
+@keyframes ouroGlow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 14px rgba(43, 196, 190, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 26px rgba(63, 162, 230, 0.45));
+  }
+}
+@keyframes spinSlow {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1,0 +1,96 @@
+/*
+ * ourobion nao — design tokens ("bio-neo-mythical", dark).
+ *
+ * Calibrated to the approved Claude Design mock ("Ourobion Nao.dc.html"): dark
+ * teal canvas, panel surfaces, the cyan→blue coil ramp as the data-viz gradient,
+ * mono (JetBrains) eyebrows/labels/numbers over Outfit body. Font-family vars are
+ * bound to the next/font CSS variables set on <html> in src/app/layout.tsx.
+ *
+ * Naming:
+ *   --bg / --panel / --panel-inset  canvas + card surfaces (exact mock hexes)
+ *   --accent-N                       5-stop coil ramp (cyan → blue)
+ *   --deep-N                         deeper teal stops used for bars/funnels
+ *   --text-*                         typography shades
+ *   --hairline*                      the faint borders on dark surfaces
+ *   --chart-muted                    the neutral slate used for "closed/unknown"
+ *   legacy aliases (--surface, --border, --border-glow, --eyebrow, --radius-*,
+ *   --state-*) are kept so existing classes keep resolving.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* ── Canvas & surfaces (exact mock values) ─────────────────────────── */
+  --bg: #0b1d24;
+  --panel: #102832;        /* primary card */
+  --panel-inset: #0e222b;  /* inset tiles / secondary surfaces / failed cards */
+
+  /* legacy aliases → map onto the mock surfaces */
+  --surface: #102832;
+  --surface-raised: #0e222b;
+
+  /* ── Accent coil ramp (cyan → blue): the data-viz gradient ─────────── */
+  --accent-1: #2bc4be; /* teal */
+  --accent-2: #2fb7d6; /* cyan */
+  --accent-3: #3fa2e6; /* blue */
+  --accent-4: #5e8df0; /* indigo */
+  --accent-5: #7c86f2; /* violet */
+  --accent: var(--accent-1);
+  --accent-gradient: linear-gradient(
+    90deg,
+    var(--accent-1),
+    var(--accent-2),
+    var(--accent-3),
+    var(--accent-4),
+    var(--accent-5)
+  );
+
+  /* ── Deep teal stops (funnel / topic bars) ─────────────────────────── */
+  --deep-1: #0a5160;
+  --deep-2: #11788b;
+  --deep-3: #1c9fb0;
+  --deep-4: #2d93c6;
+  --deep-5: #2e66b2;
+
+  /* neutral slate for closed / unknown / no-data segments */
+  --chart-muted: #46606b;
+
+  /* ── Brand mark roles ──────────────────────────────────────────────── */
+  --ring: #2a6b78;
+  --wordmark: #e7f1f3;
+
+  /* ── Eyebrow (uppercase, letter-spaced, mono) ──────────────────────── */
+  --eyebrow: #2bc4be;
+
+  /* ── Text on dark (mock values) ────────────────────────────────────── */
+  --text-primary: #e7f1f3;
+  --text-bright: #cfe0e4;
+  --text-secondary: #93aab1;
+  --text-muted: #647c84;
+  --text-ghost: #5b727a;
+
+  /* ── Borders / glow on dark surfaces ───────────────────────────────── */
+  --hairline: rgba(99, 150, 160, 0.16);
+  --hairline-soft: rgba(99, 150, 160, 0.12);
+  --hairline-strong: rgba(99, 150, 160, 0.25);
+  --border: var(--hairline);
+  --border-glow: 0 0 0 1px rgba(43, 196, 190, 0.35), 0 0 12px rgba(43, 196, 190, 0.18);
+  --glow-teal: 0 0 30px -12px rgba(43, 196, 190, 0.5);
+  --glow-blue: 0 0 30px -12px rgba(63, 162, 230, 0.42);
+
+  /* ── State colours ─────────────────────────────────────────────────── */
+  --state-high: #2bc4be;
+  --state-mid: #f0b34a;
+  --state-hold: #6f8a91;
+
+  /* ── Radii ─────────────────────────────────────────────────────────── */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* ── Typography families (bound to next/font CSS vars in layout.tsx) ── */
+  --font-ui: var(--font-outfit, system-ui, sans-serif);
+  --font-display: var(--font-outfit, var(--font-ui));
+  --font-mono: var(--font-jetbrains, ui-monospace, 'SFMono-Regular', monospace);
+}
