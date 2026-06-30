@@ -5,7 +5,7 @@ scientifically-derived relationships between metrics. Nodes are metric keys (fro
 [`shared/metrics/registry.ts`](../metrics/registry.ts)); edges are relationships synthesised from the
 literature and then independently verified.
 
-See [`docs/BRAIN-DESIGN.md`](../../docs/BRAIN-DESIGN.md) for the full design (why a second LLM, the
+See [`docs/nao/BRAIN-DESIGN.md`](../../docs/nao/BRAIN-DESIGN.md) for the full design (why a second LLM, the
 evidence ladder, gating, the two-tier placement).
 
 ## Two records, two LLM passes
@@ -85,6 +85,6 @@ TS-first, like the registry was before its env metrics landed:
 - **A `brain-endpoint-to-registry` guard** — asserting every edge endpoint resolves to an active
   registry metric (`metrics.isActiveMetric`).
 
-These follow the `couplings.yaml` pattern in [`docs/METRICS-REGISTRY-DESIGN.md`](../../docs/METRICS-REGISTRY-DESIGN.md);
+These follow the `couplings.yaml` pattern in [`docs/biotope/METRICS-REGISTRY-DESIGN.md`](../../docs/biotope/METRICS-REGISTRY-DESIGN.md);
 they aren't added yet because there's no Dart consumer or DB table to hold honest. See
-`docs/BRAIN-DESIGN.md` → "Guards (deferred)".
+`docs/nao/BRAIN-DESIGN.md` → "Guards (deferred)".

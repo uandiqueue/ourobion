@@ -8,16 +8,16 @@ Single-repository project — Flutter mobile app + Supabase backend.
 to everything else:
 
 - `docs/PROJECT-CONTEXT.md` — project principles, goals, phases
-- `docs/ARCHITECTURE-CONTEXT.md` — system architecture and data flows
+- `docs/biotope/ARCHITECTURE-CONTEXT.md` — system architecture and data flows
 - `docs/STRUCTURE-CONTEXT.md` — repository layout rules
 - `shared/SHARED-CONTEXT.md` — shared TypeScript/Dart type contracts
-- `docs/ui-context/UI-DESIGN-CONTEXT.md` — design tokens, component specs
+- `docs/biotope/ui-context/UI-DESIGN-CONTEXT.md` — design tokens, component specs
 - `docs/AGENT-PROTOCOL.md` — AI routing table, truth hierarchy, PR review checklist
 - `docs/dev-workflow.md` — the full human dev cycle (Issue → … → Merge)
 - `docs/PHASE2-PLAN.md` — the Phase 2 plan: goals, workstreams, two-track sequence, stress-test gate
-- `docs/INSIGHTS-ENGINE-DESIGN.md` — the data-driven insights-engine contract (Phase 2 Track B)
-- `docs/METRICS-REGISTRY-DESIGN.md` — single-source metric registry so adding/removing metrics can't silently break the app
-- `docs/BRAIN-DESIGN.md` — the brain: an evidence-tiered relationship graph whose edges are synthesised from papers by one LLM and adversarially verified by a second
+- `docs/biotope/INSIGHTS-ENGINE-DESIGN.md` — the data-driven insights-engine contract (Phase 2 Track B)
+- `docs/biotope/METRICS-REGISTRY-DESIGN.md` — single-source metric registry so adding/removing metrics can't silently break the app
+- `docs/nao/BRAIN-DESIGN.md` — the brain: an evidence-tiered relationship graph whose edges are synthesised from papers by one LLM and adversarially verified by a second
 - `docs/human-briefs/` — plain-language stakeholder briefs of significant plans
 
 ## 🧠 Context engineering — building ourobion with AI agents
@@ -123,7 +123,7 @@ ingestion time, by design:
   DB guards follow the registry pattern when the graph is persisted and app-rendered.
 
 Full design — failure modes, the gating table, cheaper complementary checks, alternatives considered:
-[`docs/BRAIN-DESIGN.md`](docs/BRAIN-DESIGN.md). Contract + runbook: [`shared/brain/`](shared/brain/).
+[`docs/nao/BRAIN-DESIGN.md`](docs/nao/BRAIN-DESIGN.md). Contract + runbook: [`shared/brain/`](shared/brain/).
 
 ---
 

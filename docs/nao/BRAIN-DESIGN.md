@@ -1,12 +1,12 @@
 # The Brain — Design
 
 **The brain** is ourobion's knowledge graph of scientifically-derived relationships between metrics.
-Nodes are metric keys ([`shared/metrics/registry.ts`](../shared/metrics/registry.ts)); edges are
+Nodes are metric keys ([`shared/metrics/registry.ts`](../../shared/metrics/registry.ts)); edges are
 relationships ("more X → less Y", "X modulates Y") synthesised from the scientific literature by an
 LLM and then independently verified by a second LLM before they can be served.
 
 This doc records *why* the brain is built the way it is. The contract shapes live in
-[`shared/brain/`](../shared/brain/); the runbook is [`shared/brain/README.md`](../shared/brain/README.md).
+[`shared/brain/`](../../shared/brain/); the runbook is [`shared/brain/README.md`](../../shared/brain/README.md).
 
 ## Why
 
@@ -40,7 +40,7 @@ evidence** before it can be served. The pivotal design decision is *what makes t
 > refute, defaults to "not supported" when it can't ground the claim).
 
 Those two properties are not left to prompt discipline — they are **schema invariants** in
-[`relationships.schema.ts`](../shared/brain/relationships.schema.ts):
+[`relationships.schema.ts`](../../shared/brain/relationships.schema.ts):
 
 - A verdict of `supported` / `contradicted` **requires `independentRetrieval.performed === true`**. No
   independent retrieval ⇒ the verdict can only be `uncertain`. This single invariant is what
@@ -77,7 +77,7 @@ claim.
 
 ## Gating — where trust becomes behaviour
 
-Trust is a graded score, not a gate. [`shared/brain/index.ts`](../shared/brain/index.ts) is the single
+Trust is a graded score, not a gate. [`shared/brain/index.ts`](../../shared/brain/index.ts) is the single
 home for it (pure, testable functions):
 
 `edgeScore(v)` rolls `confidence` × evidence-tier × net-corroboration into 0..1, and `servingBand(v)`
@@ -109,10 +109,10 @@ dollar and are encoded or recommended:
 ## Two-tier truth
 
 This is a clean instance of the repo's core principle
-([memory 0001](memory/0001-two-tier-truth.md)):
+([memory 0001](../memory/0001-two-tier-truth.md)):
 
 - **TRUTH** — the *contract* (`shared/brain/relationships.ts`): git-tracked, 2-reviewer
-  ([memory 0002](memory/0002-shared-contract-two-reviewers.md)).
+  ([memory 0002](../memory/0002-shared-contract-two-reviewers.md)).
 - **DERIVED / rebuildable** — the *instances* (claims + verifications) and the stored graph. Never
   hand-edit a verdict; to change one, fix the input (paper corpus, synthesis/verifier prompt — bump
   `promptVersion`) and re-run. Re-running verification with a better verifier later is legitimate
@@ -133,7 +133,7 @@ guards land with their first real consumer rather than as empty placeholders:
 Today's guard is the in-file `AssertExact<>` (compile-time, via `tsc`) plus the runtime zod schemas —
 self-contained and honest for a TS-only contract. Adding `couplings.yaml` edges now would mean
 shipping placeholder guard files with nothing real to assert, which the enforcement model
-([`docs/graph/couplings.yaml`](graph/couplings.yaml) header) treats as a smell.
+([`docs/graph/couplings.yaml`](../graph/couplings.yaml) header) treats as a smell.
 
 ## Alternatives considered
 

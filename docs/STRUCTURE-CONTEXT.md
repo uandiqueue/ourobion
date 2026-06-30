@@ -24,20 +24,24 @@ ourobion/
 │   │   └── feature_request.yml
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── tools/                     # Node-stdlib enforcement + multi-agent helpers (no Python)
-│   ├── brain-ingest/          # TS paper-corpus ingestion pipeline (see docs/BRAIN-INGESTION-DESIGN.md)
+│   ├── brain-ingest/          # TS paper-corpus ingestion pipeline (see docs/nao/BRAIN-INGESTION-DESIGN.md)
 │   ├── context_sync.mjs       # --session-start briefing / --check enforcement
 │   ├── setup_agent_worktree.mjs # create an isolated git worktree + configure hooks
 │   └── shared_memory.mjs      # task-claim coordinator (.agents/session-log.json, gitignored)
 ├── docs/                      # General project documentation
 │   ├── AGENT-PROTOCOL.md      # AI agent routing table, non-negotiables, PR review checklist (constant)
-│   ├── ARCHITECTURE-CONTEXT.md# System architecture and data flow rules
 │   ├── dev-workflow.md        # Full dev cycle — what AI does vs what humans must do
 │   ├── PROJECT-CONTEXT.md     # Key project principles, goals, and phases
 │   ├── STRUCTURE-CONTEXT.md   # This document
 │   ├── PHASE2-PLAN.md         # Current phase plan: goals, workstreams, sequence, gate
-│   ├── INSIGHTS-ENGINE-DESIGN.md # Data-driven insights-engine contract (Phase 2 Track B)
-│   ├── METRICS-REGISTRY-DESIGN.md # Single-source metric registry (safe metric add/remove)
-│   ├── ui-context/            # UI design system (UI-DESIGN-CONTEXT.md + mockups)
+│   ├── nao/                   # The brain feature (knowledge graph of metric relationships)
+│   │   ├── BRAIN-DESIGN.md        # Brain design: evidence-tiered edges, second-LLM verification
+│   │   └── BRAIN-INGESTION-DESIGN.md # Paper-corpus ingestion → synthesis → verification pipeline
+│   ├── biotope/               # The app feature (architecture, insights engine, metrics, UI)
+│   │   ├── ARCHITECTURE-CONTEXT.md   # System architecture and data flow rules
+│   │   ├── INSIGHTS-ENGINE-DESIGN.md # Data-driven insights-engine contract (Phase 2 Track B)
+│   │   ├── METRICS-REGISTRY-DESIGN.md # Single-source metric registry (safe metric add/remove)
+│   │   └── ui-context/            # UI design system (UI-DESIGN-CONTEXT.md + mockups)
 │   ├── human-briefs/          # Plain-language stakeholder briefs (dated snapshots)
 │   ├── sessions/              # Append-only one-file-per-session logs (variable layer)
 │   ├── memory/                # Durable one-fact-per-file memory + README index

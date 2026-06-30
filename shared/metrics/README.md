@@ -5,7 +5,7 @@
 guards — adding or removing a metric is a localized, guard-protected change, so incomplete
 propagation fails the build instead of silently breaking at runtime.
 
-See [`docs/METRICS-REGISTRY-DESIGN.md`](../../docs/METRICS-REGISTRY-DESIGN.md) for the full design.
+See [`docs/biotope/METRICS-REGISTRY-DESIGN.md`](../../docs/biotope/METRICS-REGISTRY-DESIGN.md) for the full design.
 
 ## `MetricDefinition` fields
 

@@ -53,8 +53,8 @@ shared/metrics/
 cross-language mechanism (parity guards are how `shared/` already holds TS and Dart together), gives
 compile-time typing on both sides, and the rules engine already uses zod + `AssertExact` the same way.
 (A JSON-single-file alternative is under *Alternatives*.) Registry = **TRUTH** tier (git-tracked,
-2-reviewer PR per [memory 0002](memory/0002-shared-contract-two-reviewers.md)); baselines / `insight_cards` /
-the `rules` table stay rebuildable projections ([memory 0001](memory/0001-two-tier-truth.md)).
+2-reviewer PR per [memory 0002](../memory/0002-shared-contract-two-reviewers.md)); baselines / `insight_cards` /
+the `rules` table stay rebuildable projections ([memory 0001](../memory/0001-two-tier-truth.md)).
 
 ## The `MetricDefinition` shape
 
@@ -142,7 +142,7 @@ Standing up the registry forced one canonical set of wearable keys, resolving th
 was **backwards.** The canonical, deployed truth is the `wearable_daily` migration
 (`supabase/migrations/20260528100000_create_m3_wearable_daily.sql`), which the running `WearableService`
 upserts to and `compute-baselines` reads from — all three use `resting_hr_bpm`, `hrv_sdnn_ms`,
-`sleep_duration_min`, `spo2_pct`, `body_temp_c`, `step_count`. [memory 0004](memory/0004-hrv-sdnn-ios-only.md)
+`sleep_duration_min`, `spo2_pct`, `body_temp_c`, `step_count`. [memory 0004](../memory/0004-hrv-sdnn-ios-only.md)
 confirms `hrv_sdnn_ms` is the intended field (SDNN, iOS/HealthKit only; **null on Android** by design,
 which is *why* it is nullable — not a reason to drop it). The stale artifact was the **contract
 `DailyPhysioRow`** (the never-implemented placeholder fields `resting_hr`, `hrv_rmssd`,
@@ -162,7 +162,7 @@ which is *why* it is nullable — not a reason to drop it). The stale artifact w
 5. ⬜ Point M6 DQS weighting at `registry.dqs` (the registry already carries the weights;
    wiring M6 to read them is the remaining step). Pending.
 
-The `shared/` changes are 2-reviewer per [memory 0002](memory/0002-shared-contract-two-reviewers.md).
+The `shared/` changes are 2-reviewer per [memory 0002](../memory/0002-shared-contract-two-reviewers.md).
 
 ## Alternatives considered
 

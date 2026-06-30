@@ -5,7 +5,7 @@ it travels across machines and agent CLIs — the in-repo equivalent of device-l
 `~/.gemini` memory, which does **not** travel.
 
 These facts are **decomposed from the CONSTANT-LAYER docs** (`docs/PROJECT-CONTEXT.md`,
-`docs/ARCHITECTURE-CONTEXT.md`, `shared/SHARED-CONTEXT.md`) and from session learnings — they are
+`docs/biotope/ARCHITECTURE-CONTEXT.md`, `shared/SHARED-CONTEXT.md`) and from session learnings — they are
 quick-reference pointers, not a replacement for those source docs.
 
 > **Enforcement:** `node tools/context_sync.mjs --check` (run by the pre-push hook + CI) fails on a
