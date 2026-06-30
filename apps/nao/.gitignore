@@ -5,3 +5,6 @@
 /.wrangler/
 next-env.d.ts
 *.tsbuildinfo
+
+# ETL scratch output (generated SQL; derived from the R2 manifest, rebuild via `npm run etl`)
+/scratch/

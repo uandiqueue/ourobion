@@ -37,3 +37,7 @@ Scaffold `apps/nao` and build the v1 corpus dashboard via an ultracode multi-age
 
 ## Blockers
 - None for the build; the above are deploy-time provisioning.
+
+## Follow-up
+- Gitignored `apps/nao/scratch/` — the ETL's generated `etl.sql` (~0.5 MB, derived from the R2 manifest;
+  rebuilt by `npm run etl`), so it never gets committed.
