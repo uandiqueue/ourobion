@@ -39,6 +39,9 @@ export interface PaperRow {
   pmid: string | null;
   pmcid: string | null;
   status: PaperStatus;
+  discoveredVia: string | null;
+  fullTextExtracted: boolean;
+  fullTextMethod: string | null;
 }
 
 /** Raw shape D1 returns for a `papers` row (JSON columns still strings). */
@@ -60,6 +63,9 @@ interface PaperRowRaw {
   pmid: string | null;
   pmcid: string | null;
   status: string;
+  discovered_via: string | null;
+  full_text_extracted: number;
+  full_text_method: string | null;
 }
 
 /** Filters accepted by searchPapers — each maps to an equality / membership clause. */
@@ -71,13 +77,20 @@ export interface SearchFilters {
   /** match papers whose topic_tags JSON array contains this tag */
   topicTag?: string;
   status?: string;
+  discoveredVia?: string;
+  /** full_text_method (jats|core|pdf|html) */
+  method?: string;
 }
+
+/** Sort orders the Papers list offers. */
+export type SortKey = 'citedByCount' | 'year' | 'title' | 'fetchedAt';
 
 export interface SearchParams {
   q?: string;
   filters?: SearchFilters;
   page?: number;
   pageSize?: number;
+  sort?: SortKey;
 }
 
 export interface SearchResult {
@@ -99,6 +112,37 @@ export interface FacetCounts {
   workType: FacetBucket[];
   year: FacetBucket[];
   topicTags: FacetBucket[];
+  status: FacetBucket[];
+  discoveredVia: FacetBucket[];
+  method: FacetBucket[];
+}
+
+/** Corpus-wide aggregates that power the Overview dashboard (what the pipeline did). */
+export interface CorpusStats {
+  total: number;
+  discovered: number;
+  fetched: number;
+  failed: number;
+  /** papers with retrievability in (pdf, html) */
+  retrievable: number;
+  /** papers with full text extracted */
+  extracted: number;
+  /** Σ full_text_char_count */
+  totalCharCount: number;
+  /** Σ storage_size_bytes */
+  storageBytes: number;
+  /** # objects physically stored (storage_kind = 'object') */
+  storedObjects: number;
+  /** MAX(fetched_at) ISO string, or null */
+  lastFetchedAt: string | null;
+  retrievability: FacetBucket[];
+  oaStatus: FacetBucket[];
+  topicTags: FacetBucket[];
+  discoveredVia: FacetBucket[];
+  year: FacetBucket[];
+  /** extraction method counts (full_text_method, extracted papers only) */
+  method: FacetBucket[];
+  workType: FacetBucket[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -146,6 +190,9 @@ function mapRow(r: PaperRowRaw): PaperRow {
     pmid: r.pmid,
     pmcid: r.pmcid,
     status: r.status as PaperStatus,
+    discoveredVia: r.discovered_via,
+    fullTextExtracted: r.full_text_extracted === 1,
+    fullTextMethod: r.full_text_method,
   };
 }
 
@@ -175,7 +222,8 @@ export function buildFtsMatchQuery(q: string): string | null {
 const PAPER_COLUMNS = `
   p.paper_uid, p.title, p.authors_json, p.year, p.venue, p.abstract, p.oa_status,
   p.retrievability, p.work_type, p.cited_by_count, p.journal_publisher, p.topic_tags,
-  p.concepts, p.doi, p.pmid, p.pmcid, p.status
+  p.concepts, p.doi, p.pmid, p.pmcid, p.status,
+  p.discovered_via, p.full_text_extracted, p.full_text_method
 `;
 
 /**
@@ -211,6 +259,14 @@ function buildFilterClauses(
     clauses.push(`${alias}.status = ?`);
     binds.push(filters.status);
   }
+  if (filters.discoveredVia !== undefined) {
+    clauses.push(`${alias}.discovered_via = ?`);
+    binds.push(filters.discoveredVia);
+  }
+  if (filters.method !== undefined) {
+    clauses.push(`${alias}.full_text_method = ?`);
+    binds.push(filters.method);
+  }
   if (filters.topicTag !== undefined) {
     clauses.push(
       `EXISTS (SELECT 1 FROM json_each(${alias}.topic_tags) WHERE json_each.value = ?)`,
@@ -218,6 +274,28 @@ function buildFilterClauses(
     binds.push(filters.topicTag);
   }
   return { clauses, binds };
+}
+
+/**
+ * Build the ORDER BY clause for a sort key. Fixed column literals only (no user
+ * input). When no sort is given: FTS ranks by bm25 relevance, the plain list by
+ * citations. NULLs sort last under DESC in SQLite, which is what we want.
+ */
+function orderByFor(sort: SortKey | undefined, isFts: boolean): string {
+  switch (sort) {
+    case 'year':
+      return `ORDER BY p.year DESC, p.cited_by_count DESC`;
+    case 'title':
+      return `ORDER BY p.title COLLATE NOCASE ASC`;
+    case 'fetchedAt':
+      return `ORDER BY p.fetched_at DESC, p.cited_by_count DESC`;
+    case 'citedByCount':
+      return `ORDER BY p.cited_by_count DESC, p.year DESC, p.rowid DESC`;
+    default:
+      return isFts
+        ? `ORDER BY bm25(papers_fts), p.cited_by_count DESC`
+        : `ORDER BY p.cited_by_count DESC, p.year DESC, p.rowid DESC`;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -246,18 +324,20 @@ export async function searchPapers(
 
   let baseFrom: string;
   const leadingBinds: Array<string | number> = [];
-  let orderBy: string;
 
   if (match !== null) {
-    // FTS branch: join papers_fts (MATCH) back to papers by rowid, rank by bm25.
+    // FTS branch: join papers_fts (MATCH) back to papers by rowid.
     baseFrom = `FROM papers_fts f JOIN papers p ON p.rowid = f.rowid`;
     clauses.unshift(`papers_fts MATCH ?`);
     leadingBinds.push(match);
-    orderBy = `ORDER BY bm25(papers_fts), p.cited_by_count DESC`;
   } else {
     baseFrom = `FROM papers p`;
-    orderBy = `ORDER BY p.cited_by_count DESC, p.year DESC, p.rowid DESC`;
   }
+
+  // Sort: an explicit sort key wins; otherwise FTS ranks by relevance and the
+  // plain list ranks by citations. Column names are fixed literals (not user
+  // input), so they are safe to interpolate.
+  const orderBy = orderByFor(params.sort, match !== null);
 
   const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
   const whereBinds = [...leadingBinds, ...binds];
@@ -283,47 +363,123 @@ export async function searchPapers(
 }
 
 /**
+ * Grouped COUNT over one scalar column (NULLs excluded), ordered by count desc.
+ * `column` is a fixed literal supplied by this module — never user input.
+ */
+async function scalarFacet(database: D1Database, column: string): Promise<FacetBucket[]> {
+  const sql = `
+    SELECT ${column} AS value, COUNT(*) AS count
+    FROM papers
+    WHERE ${column} IS NOT NULL
+    GROUP BY ${column}
+    ORDER BY count DESC, value ASC
+  `;
+  const res = await database.prepare(sql).all<{ value: string | number; count: number }>();
+  return (res.results ?? []).map((r) => ({ value: String(r.value), count: r.count }));
+}
+
+/** Grouped COUNT over the unnested topic_tags JSON array (each tag counted once). */
+async function topicTagsFacet(database: D1Database): Promise<FacetBucket[]> {
+  const sql = `
+    SELECT json_each.value AS value, COUNT(*) AS count
+    FROM papers, json_each(papers.topic_tags)
+    GROUP BY json_each.value
+    ORDER BY count DESC, value ASC
+  `;
+  const res = await database.prepare(sql).all<{ value: string; count: number }>();
+  return (res.results ?? []).map((r) => ({ value: String(r.value), count: r.count }));
+}
+
+/**
  * Facet counts across the whole indexed corpus. One grouped query per facet
  * dimension; topic_tags is unnested via json_each so each tag is counted.
- * Buckets are ordered by descending count (year ascending for chronological axes
- * is handled at render time if desired).
+ * Buckets are ordered by descending count.
  */
 export async function facetCounts(injectedDb?: D1Database): Promise<FacetCounts> {
   const database = db(injectedDb);
+  const [oaStatus, retrievability, workType, year, topicTags, status, discoveredVia, method] =
+    await Promise.all([
+      scalarFacet(database, 'oa_status'),
+      scalarFacet(database, 'retrievability'),
+      scalarFacet(database, 'work_type'),
+      scalarFacet(database, 'year'),
+      topicTagsFacet(database),
+      scalarFacet(database, 'status'),
+      scalarFacet(database, 'discovered_via'),
+      scalarFacet(database, 'full_text_method'),
+    ]);
 
-  const scalarFacet = async (column: string): Promise<FacetBucket[]> => {
-    const sql = `
-      SELECT ${column} AS value, COUNT(*) AS count
-      FROM papers
-      WHERE ${column} IS NOT NULL
-      GROUP BY ${column}
-      ORDER BY count DESC, value ASC
-    `;
-    const res = await database.prepare(sql).all<{ value: string | number; count: number }>();
-    return (res.results ?? []).map((r) => ({ value: String(r.value), count: r.count }));
+  return { oaStatus, retrievability, workType, year, topicTags, status, discoveredVia, method };
+}
+
+/** Raw shape the corpus-totals query returns. */
+interface TotalsRaw {
+  total: number;
+  discovered: number;
+  fetched: number;
+  failed: number;
+  retrievable: number;
+  extracted: number;
+  chars: number;
+  bytes: number;
+  objects: number;
+  last_fetched: string | null;
+}
+
+/**
+ * Corpus-wide aggregates for the Overview dashboard: one scalar-totals query plus
+ * the grouped breakdowns (reusing the facet helpers). All column names are fixed
+ * literals — no user input reaches the SQL.
+ */
+export async function corpusStats(injectedDb?: D1Database): Promise<CorpusStats> {
+  const database = db(injectedDb);
+
+  const totalsSql = `
+    SELECT
+      COUNT(*)                                                        AS total,
+      SUM(CASE WHEN status = 'discovered' THEN 1 ELSE 0 END)          AS discovered,
+      SUM(CASE WHEN status = 'fetched'    THEN 1 ELSE 0 END)          AS fetched,
+      SUM(CASE WHEN status = 'failed'     THEN 1 ELSE 0 END)          AS failed,
+      SUM(CASE WHEN retrievability IN ('pdf','html') THEN 1 ELSE 0 END) AS retrievable,
+      SUM(full_text_extracted)                                       AS extracted,
+      SUM(COALESCE(full_text_char_count, 0))                         AS chars,
+      SUM(COALESCE(storage_size_bytes, 0))                           AS bytes,
+      SUM(CASE WHEN storage_kind = 'object' THEN 1 ELSE 0 END)       AS objects,
+      MAX(fetched_at)                                                AS last_fetched
+    FROM papers
+  `;
+
+  const [totals, retrievability, oaStatus, topicTags, discoveredVia, year, method, workType] =
+    await Promise.all([
+      database.prepare(totalsSql).first<TotalsRaw>(),
+      scalarFacet(database, 'retrievability'),
+      scalarFacet(database, 'oa_status'),
+      topicTagsFacet(database),
+      scalarFacet(database, 'discovered_via'),
+      scalarFacet(database, 'year'),
+      scalarFacet(database, 'full_text_method'),
+      scalarFacet(database, 'work_type'),
+    ]);
+
+  return {
+    total: totals?.total ?? 0,
+    discovered: totals?.discovered ?? 0,
+    fetched: totals?.fetched ?? 0,
+    failed: totals?.failed ?? 0,
+    retrievable: totals?.retrievable ?? 0,
+    extracted: totals?.extracted ?? 0,
+    totalCharCount: totals?.chars ?? 0,
+    storageBytes: totals?.bytes ?? 0,
+    storedObjects: totals?.objects ?? 0,
+    lastFetchedAt: totals?.last_fetched ?? null,
+    retrievability,
+    oaStatus,
+    topicTags,
+    discoveredVia,
+    year,
+    method,
+    workType,
   };
-
-  const topicTagsFacet = async (): Promise<FacetBucket[]> => {
-    const sql = `
-      SELECT json_each.value AS value, COUNT(*) AS count
-      FROM papers, json_each(papers.topic_tags)
-      GROUP BY json_each.value
-      ORDER BY count DESC, value ASC
-    `;
-    const res = await database.prepare(sql).all<{ value: string; count: number }>();
-    return (res.results ?? []).map((r) => ({ value: String(r.value), count: r.count }));
-  };
-
-  // Note: column names here are fixed literals (not user input) — safe to interpolate.
-  const [oaStatus, retrievability, workType, year, topicTags] = await Promise.all([
-    scalarFacet('oa_status'),
-    scalarFacet('retrievability'),
-    scalarFacet('work_type'),
-    scalarFacet('year'),
-    topicTagsFacet(),
-  ]);
-
-  return { oaStatus, retrievability, workType, year, topicTags };
 }
 
 /** Fetch a single paper row by paperUid (parameterized). Null when absent. */

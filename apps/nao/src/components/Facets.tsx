@@ -1,42 +1,22 @@
 'use client';
 
-// ourobion nao — Facets (Client Component).
+// ourobion nao — facet rail (Client Component).
 //
-// Renders the facet filter rail from server-computed FacetCounts. Each bucket is
-// a toggle: clicking sets (or clears) the matching URL search param, resets to
-// page 1, and navigates so the server component re-queries D1. Active buckets get
-// the cyan high-state + glow. Search text (`q`) is always preserved.
-//
-// URL param ↔ SearchFilters mapping (see app/page.tsx):
-//   oa=<oaStatus> · retr=<retrievability> · type=<workType> · year=<year> · topic=<topicTag>
+// Renders the seven facet dimensions (FACET_DIMS) from server-computed
+// FacetCounts. Each value is a single-select toggle: clicking sets (or clears)
+// its URL search param, resets to page 1, and navigates so the /papers server
+// component re-queries D1. Search text (q) and sort are preserved. Single-select
+// per dimension matches the D1 equality filters (one value per dimension).
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { FacetBucket, FacetCounts } from '@/lib/d1';
-
-/** The five facet dimensions, in display order, with their URL param + label. */
-const DIMENSIONS: ReadonlyArray<{
-  key: keyof FacetCounts;
-  param: string;
-  label: string;
-}> = [
-  { key: 'oaStatus', param: 'oa', label: 'OA status' },
-  { key: 'retrievability', param: 'retr', label: 'Retrievability' },
-  { key: 'workType', param: 'type', label: 'Work type' },
-  { key: 'year', param: 'year', label: 'Year' },
-  { key: 'topicTags', param: 'topic', label: 'Topic tags' },
-];
+import { FACET_DIMS } from '@/lib/facets';
 
 /** Max buckets shown per dimension before collapsing the long tail. */
-const BUCKET_LIMIT = 8;
+const BUCKET_LIMIT = 10;
 
 export function Facets({ facets }: { facets: FacetCounts }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  function navigate(next: URLSearchParams) {
-    next.delete('page'); // any facet change → page 1
-    const qs = next.toString();
-    router.push(qs ? `/?${qs}` : '/');
-  }
 
   function toggle(param: string, value: string) {
     const next = new URLSearchParams(searchParams.toString());
@@ -45,56 +25,37 @@ export function Facets({ facets }: { facets: FacetCounts }) {
     } else {
       next.set(param, value);
     }
-    navigate(next);
+    next.delete('page');
+    const qs = next.toString();
+    router.push(qs ? `/papers?${qs}` : '/papers');
   }
-
-  function clearAll() {
-    const next = new URLSearchParams();
-    const q = searchParams.get('q');
-    if (q) next.set('q', q); // keep the search text, drop every facet + page
-    navigate(next);
-  }
-
-  const anyActive = DIMENSIONS.some((d) => searchParams.get(d.param) !== null);
 
   return (
-    <aside className="facets" aria-label="Filters">
-      <div className="facets__head">
-        <span className="eyebrow">Filters</span>
-        {anyActive ? (
-          <button type="button" className="facets__clear" onClick={clearAll}>
-            Clear all
-          </button>
-        ) : null}
-      </div>
-
-      {DIMENSIONS.map((dim) => {
+    <aside className="facetrail" aria-label="Filters">
+      {FACET_DIMS.map((dim) => {
         const buckets: FacetBucket[] = facets[dim.key] ?? [];
         if (buckets.length === 0) return null;
         const active = searchParams.get(dim.param);
-        // Year reads better newest-first; the rest stay count-ordered from D1.
-        const ordered =
-          dim.key === 'year'
-            ? [...buckets].sort((a, b) => Number(b.value) - Number(a.value))
-            : buckets;
-        const shown = ordered.slice(0, BUCKET_LIMIT);
-
+        const shown = buckets.slice(0, BUCKET_LIMIT);
         return (
-          <div key={dim.param} className="facets__group">
-            <h4 className="facets__group-title">{dim.label}</h4>
-            <ul className="facets__list">
+          <div key={dim.param} className="facetgroup">
+            <div className="facetgroup__title">{dim.label}</div>
+            <ul className="facetgroup__list">
               {shown.map((b) => {
-                const isActive = active === b.value;
+                const on = active === b.value;
                 return (
                   <li key={b.value}>
                     <button
                       type="button"
-                      aria-pressed={isActive}
-                      className={`facet ${isActive ? 'facet--active' : ''}`}
+                      aria-pressed={on}
+                      className={`facetopt ${on ? 'facetopt--on' : ''}`}
                       onClick={() => toggle(dim.param, b.value)}
                     >
-                      <span className="facet__value">{b.value}</span>
-                      <span className="facet__count">{b.count}</span>
+                      <span className="facetopt__box" aria-hidden>
+                        {on ? '✓' : ''}
+                      </span>
+                      <span className="facetopt__label">{b.value}</span>
+                      <span className="facetopt__count">{b.count.toLocaleString()}</span>
                     </button>
                   </li>
                 );

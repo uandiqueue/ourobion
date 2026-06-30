@@ -1,20 +1,25 @@
 // ourobion nao — root layout. Applies the dark "bio-neo-mythical" theme and loads
-// the brand fonts via next/font/google: Manrope (UI/body) + Outfit (display/headers).
-// Each font exposes a CSS variable consumed by src/lib/theme.css (--font-ui / --font-display).
+// the brand fonts via next/font/google to match the approved design:
+//   Outfit         → UI + display (body, headings, the wordmark)
+//   JetBrains Mono → eyebrows, labels, numbers, identifiers
+// Each font exposes a CSS variable consumed by src/lib/theme.css
+// (--font-outfit / --font-jetbrains).
 import type { Metadata } from 'next';
-import { Manrope, Outfit } from 'next/font/google';
+import { Outfit, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
-
-const manrope = Manrope({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-manrope',
-});
 
 const outfit = Outfit({
   subsets: ['latin'],
   display: 'swap',
+  weight: ['200', '300', '400', '500', '600', '700'],
   variable: '--font-outfit',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  display: 'swap',
+  weight: ['400', '500', '600'],
+  variable: '--font-jetbrains',
 });
 
 export const metadata: Metadata = {
@@ -28,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${manrope.variable} ${outfit.variable}`}>
+    <html lang="en" className={`${outfit.variable} ${jetbrainsMono.variable}`}>
       <body>{children}</body>
     </html>
   );

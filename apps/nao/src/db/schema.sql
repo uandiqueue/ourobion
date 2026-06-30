@@ -39,7 +39,16 @@ CREATE TABLE IF NOT EXISTS papers (
   doi               TEXT,                           -- identifiers.doi
   pmid              TEXT,                           -- identifiers.pmid
   pmcid             TEXT,                           -- identifiers.pmcid
-  status            TEXT NOT NULL DEFAULT 'discovered' -- PaperStatus
+  status            TEXT NOT NULL DEFAULT 'discovered', -- PaperStatus
+  -- Pipeline-provenance / conversion columns (power the Overview dashboard +
+  -- the discovery-source / extraction-method facets + the "recently fetched" sort).
+  discovered_via      TEXT,                            -- PaperRecord.discoveredVia
+  full_text_extracted INTEGER NOT NULL DEFAULT 0,      -- fullText.extracted (0/1)
+  full_text_method    TEXT,                            -- fullText.method (jats|core|pdf|html)
+  full_text_char_count INTEGER,                        -- fullText.charCount
+  storage_kind        TEXT,                            -- storage.kind (object|local|none)
+  storage_size_bytes  INTEGER,                         -- storage.sizeBytes
+  fetched_at          TEXT                             -- PaperRecord.fetchedAt (ISO)
 );
 
 -- Facet / sort indexes (GROUP BY oa_status, year, etc. and ORDER BY cited_by_count).
@@ -49,6 +58,9 @@ CREATE INDEX IF NOT EXISTS idx_papers_work_type      ON papers(work_type);
 CREATE INDEX IF NOT EXISTS idx_papers_year           ON papers(year);
 CREATE INDEX IF NOT EXISTS idx_papers_status         ON papers(status);
 CREATE INDEX IF NOT EXISTS idx_papers_cited_by_count ON papers(cited_by_count);
+CREATE INDEX IF NOT EXISTS idx_papers_discovered_via ON papers(discovered_via);
+CREATE INDEX IF NOT EXISTS idx_papers_ft_method      ON papers(full_text_method);
+CREATE INDEX IF NOT EXISTS idx_papers_fetched_at     ON papers(fetched_at);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- FTS5 — contentless full-text index over (title, authors, abstract, concepts)

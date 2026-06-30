@@ -1,11 +1,10 @@
 'use client';
 
-// ourobion nao — SearchBar (Client Component).
+// ourobion nao — Papers search box (Client Component).
 //
-// An interactive search box that drives the dashboard via URL search params. On
-// submit it pushes `?q=...` (preserving any active facet filters, resetting to
-// page 1) so the server component re-queries D1/FTS5. The actual search runs
-// server-side; this is just the control.
+// The in-page search on /papers. On submit it pushes ?q=… (preserving active
+// facets + sort, resetting to page 1) so the server component re-queries
+// D1/FTS5. Search runs server-side; this is just the control.
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
@@ -16,8 +15,6 @@ export function SearchBar() {
   const current = searchParams.get('q') ?? '';
   const [value, setValue] = useState(current);
 
-  // Keep the input in sync if the URL changes from elsewhere (e.g. a facet click
-  // that preserves q, or back/forward navigation).
   useEffect(() => {
     setValue(current);
   }, [current]);
@@ -26,44 +23,26 @@ export function SearchBar() {
     e.preventDefault();
     const params = new URLSearchParams(searchParams.toString());
     const trimmed = value.trim();
-    if (trimmed) {
-      params.set('q', trimmed);
-    } else {
-      params.delete('q');
-    }
-    params.delete('page'); // new query → back to page 1
-    const qs = params.toString();
-    router.push(qs ? `/?${qs}` : '/');
-  }
-
-  function clear() {
-    setValue('');
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete('q');
+    if (trimmed) params.set('q', trimmed);
+    else params.delete('q');
     params.delete('page');
     const qs = params.toString();
-    router.push(qs ? `/?${qs}` : '/');
+    router.push(qs ? `/papers?${qs}` : '/papers');
   }
 
   return (
-    <form onSubmit={submit} role="search" className="searchbar">
+    <form className="searchbox" role="search" onSubmit={submit}>
+      <span className="searchbox__icon" aria-hidden>
+        ⌕
+      </span>
       <input
         type="search"
         name="q"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="Search title, author, topic, concept…"
+        placeholder="Search title, authors, concepts, topic tags…"
         aria-label="Search the corpus"
-        className="searchbar__input"
       />
-      {value ? (
-        <button type="button" onClick={clear} className="searchbar__clear" aria-label="Clear search">
-          ×
-        </button>
-      ) : null}
-      <button type="submit" className="searchbar__submit">
-        Search
-      </button>
     </form>
   );
 }

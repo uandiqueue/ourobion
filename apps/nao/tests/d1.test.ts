@@ -213,6 +213,13 @@ test('recordToRow: maps nested PaperRecord fields to flat columns', () => {
   assert.equal(row.pmid, '12345');
   assert.equal(row.pmcid, 'PMC9');
   assert.equal(row.status, 'fetched');
+  // pipeline-provenance / conversion columns
+  assert.equal(row.discovered_via, 'openalex');
+  assert.equal(row.full_text_extracted, 1);
+  assert.equal(row.full_text_method, 'pdf');
+  assert.equal(row.full_text_char_count, 1000);
+  assert.equal(row.storage_kind, 'object');
+  assert.equal(row.fetched_at, '2026-06-02T00:00:00Z');
 });
 
 test('recordToRow: tolerates missing optional fields (defaults, nulls)', () => {
@@ -228,6 +235,13 @@ test('recordToRow: tolerates missing optional fields (defaults, nulls)', () => {
   assert.equal(row.topic_tags, '[]');
   assert.equal(row.concepts, '[]');
   assert.equal(row.status, 'discovered');
+  assert.equal(row.discovered_via, null);
+  assert.equal(row.full_text_extracted, 0);
+  assert.equal(row.full_text_method, null);
+  assert.equal(row.full_text_char_count, null);
+  assert.equal(row.storage_kind, null);
+  assert.equal(row.storage_size_bytes, null);
+  assert.equal(row.fetched_at, null);
 });
 
 test('sqlValue: escapes single quotes and handles null/number', () => {

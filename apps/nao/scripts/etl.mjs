@@ -136,6 +136,8 @@ export function recordToRow(rec) {
   const oa = rec.oa ?? {};
   const metrics = rec.metrics ?? undefined;
   const journal = rec.journal ?? undefined;
+  const fullText = rec.fullText ?? {};
+  const storage = rec.storage ?? {};
   return {
     paper_uid: String(rec.paperUid),
     title: rec.title ?? '',
@@ -155,6 +157,14 @@ export function recordToRow(rec) {
     pmid: ids.pmid ?? null,
     pmcid: ids.pmcid ?? null,
     status: rec.status ?? 'discovered',
+    discovered_via: rec.discoveredVia ?? null,
+    full_text_extracted: fullText.extracted === true ? 1 : 0,
+    full_text_method: fullText.method ?? null,
+    full_text_char_count:
+      typeof fullText.charCount === 'number' ? fullText.charCount : null,
+    storage_kind: storage.kind ?? null,
+    storage_size_bytes: typeof storage.sizeBytes === 'number' ? storage.sizeBytes : null,
+    fetched_at: rec.fetchedAt ?? null,
   };
 }
 
@@ -169,6 +179,8 @@ const ROW_COLUMNS = [
   'paper_uid', 'title', 'authors_json', 'year', 'venue', 'abstract', 'oa_status',
   'retrievability', 'work_type', 'cited_by_count', 'journal_publisher', 'topic_tags',
   'concepts', 'doi', 'pmid', 'pmcid', 'status',
+  'discovered_via', 'full_text_extracted', 'full_text_method', 'full_text_char_count',
+  'storage_kind', 'storage_size_bytes', 'fetched_at',
 ];
 
 /** One idempotent UPSERT statement for a mapped row (string-literal values). */
