@@ -7,6 +7,8 @@
 !.env.public.example
 .env.keys
 .env.local
+.dev.vars
+.dev.vars.*
 .claude/settings.local.json
 
 # Multi-agent task-claim coordination state (machine-local; see tools/shared_memory.mjs).

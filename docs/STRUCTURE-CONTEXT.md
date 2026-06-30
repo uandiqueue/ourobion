@@ -66,7 +66,7 @@ ourobion/
 │   │           ├── m1_core/       # Auth, Profile, Compliance (Contains m1-context.md)
 │   │           ├── m2_self_report/# Daily logging UI and normalizers (Contains m2-context.md)
 │   │           └── ...            # Other M* modules
-│   └── nao/                   # Brain-ingestion app config (.env.example template)
+│   └── nao/                   # Brain-inspection web app (Next.js/Cloudflare; see docs/nao/NAO-DESIGN.md)
 ├── supabase/                  # Backend infrastructure
 │   ├── functions/             # TypeScript Edge Functions
 │   │   ├── compute-baselines/ # M5a backend worker
@@ -81,13 +81,26 @@ ourobion/
 
 ## Environment Files
 
-- `apps/biotope/.env.public` is local frontend config and is intentionally bundled by Flutter.
-  It may contain client-visible values only, such as `SUPABASE_URL` and
-  `SUPABASE_ANON_KEY`.
-- `apps/biotope/.env.public.example` is the committed template for frontend config.
-- `supabase/.env` is local backend/Supabase config and may contain backend-only values.
-  It is never bundled into the Flutter app.
-- `supabase/.env.example` is the committed template for Supabase/backend config.
+**One convention across every package:** a committed `*.example` template that you copy to a gitignored
+real file. Two tiers:
+
+- **Secrets — `.env`** (template `.env.example`): backend/server-only values; never bundled or exposed.
+- **Public client config — `.env.public`** (template `.env.public.example`): client-visible values only
+  (e.g. a Supabase URL + anon/publishable key).
+
+Per package:
+
+- `apps/biotope/.env.public` (template `.env.public.example`) — Flutter client config, bundled by Flutter;
+  client-visible values only (`SUPABASE_URL`, `SUPABASE_ANON_KEY`).
+- `apps/nao/.env.public` (template `.env.public.example`) — nao (Next.js) client config
+  (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`; Next.js requires the `NEXT_PUBLIC_` prefix
+  to expose a var to the browser). `apps/nao/.env` (template `.env.example`) — nao server secrets.
+- `supabase/.env` (template `.env.example`) — backend/Supabase config; never bundled.
+- `tools/brain-ingest/.env` (template `.env.example`) — the ingestion tool's backend secrets.
+
+> **nao on Cloudflare Workers:** R2 + D1 are wired as `wrangler.jsonc` **bindings**, not env. Wrangler's
+> local-runtime secrets file `.dev.vars` is **generated from `.env`** by a predev step and is gitignored —
+> you only ever edit `.env` / `.env.public`, the same as every other package.
 
 ## Dev toolchain is OUTSIDE the repo (Windows-native setup)
 
