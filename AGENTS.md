@@ -27,7 +27,7 @@ surface **descriptive** patterns in gut health, hydration, and vector exposure. 
   degradation; PDPA; privacy-safe community) live there — read them before touching user-facing copy
   or data isolation.
 
-Repo shape: a Flutter (Dart) app in `src/`, a Supabase backend in `supabase/` (Postgres migrations +
+Repo shape: a Flutter (Dart) app in `apps/biotope/`, a Supabase backend in `supabase/` (Postgres migrations +
 TypeScript edge functions), and shared Dart/TS contracts in `shared/`. Node is present only for the
 Supabase CLI and these `tools/`. **There is no Python in this repo — do not introduce any.**
 
@@ -64,7 +64,7 @@ module graph and the enforced interface rules are the boundary reference** (we d
 auto-generate a structural import graph yet — see §8 and [`docs/graph/README.md`](docs/graph/README.md)):
 
 - **Module dependency graph + data flow + table overview + interface rules:** [`docs/biotope/ARCHITECTURE-CONTEXT.md`](docs/biotope/ARCHITECTURE-CONTEXT.md)
-- **Repository directory layout + `shared/` vs `src/` rule + env files:** [`docs/STRUCTURE-CONTEXT.md`](docs/STRUCTURE-CONTEXT.md)
+- **Repository directory layout + `shared/` vs `apps/biotope/` rule + env files:** [`docs/STRUCTURE-CONTEXT.md`](docs/STRUCTURE-CONTEXT.md)
 - **The shared contract types (the connective tissue every boundary crosses):** [`shared/SHARED-CONTEXT.md`](shared/SHARED-CONTEXT.md) — incl. the metrics registry (`shared/metrics/`) and the brain relationship contract (`shared/brain/`, design in [`docs/nao/BRAIN-DESIGN.md`](docs/nao/BRAIN-DESIGN.md))
 - **UI design system:** [`docs/biotope/ui-context/UI-DESIGN-CONTEXT.md`](docs/biotope/ui-context/UI-DESIGN-CONTEXT.md)
 - **Per-feature design docs:** the **nao** brain surface in [`docs/nao/`](docs/nao/) — product design [`NAO-DESIGN.md`](docs/nao/NAO-DESIGN.md), plus [`BRAIN-DESIGN.md`](docs/nao/BRAIN-DESIGN.md) + [`BRAIN-INGESTION-DESIGN.md`](docs/nao/BRAIN-INGESTION-DESIGN.md); the **biotope** app in [`docs/biotope/`](docs/biotope/). Cross-cutting docs stay at `docs/` root.
@@ -83,7 +83,7 @@ auto-generate a structural import graph yet — see §8 and [`docs/graph/README.
 
 ## 4. Environment & commands
 
-ourobion has **two toolchains**: **Flutter/Dart** (the app, in `src/`) and **Node + Supabase CLI** (the
+ourobion has **two toolchains**: **Flutter/Dart** (the app, in `apps/biotope/`) and **Node + Supabase CLI** (the
 backend + these `tools/`). There is **no Python**.
 
 > **Windows-native dev (no WSL):** `scripts/setup.ps1` installs the whole toolchain **bounded to the
@@ -94,18 +94,18 @@ backend + these `tools/`). There is **no Python**.
 > README → "Where dependencies live". macOS/Linux use `scripts/setup.sh`. The commands below assume the
 > toolchain is on PATH (activated on Windows, system-installed elsewhere).
 
-### Flutter app (run from `src/`)
+### Flutter app (run from `apps/biotope/`)
 
 | Command | What it does |
 |---|---|
 | `flutter pub get` | install Dart/Flutter deps |
 | `flutter analyze` | static analysis — **part of the verify gate; must be clean** |
-| `flutter test` | run the widget + guard tests in `src/test/` |
+| `flutter test` | run the widget + guard tests in `apps/biotope/test/` |
 | `flutter run` | launch the app on a connected device/emulator |
 
-> Flutter tests live in `src/test/` (Flutter requires tests inside the package). The repo-root
+> Flutter tests live in `apps/biotope/test/` (Flutter requires tests inside the package). The repo-root
 > `tests/` directory is reserved for out-of-app integration/e2e harnesses. Coupling **guard tests**
-> live in `src/test/guards/` (see §8).
+> live in `apps/biotope/test/guards/` (see §8).
 
 ### Supabase backend (run from repo root; the CLI is the `supabase` devDependency)
 

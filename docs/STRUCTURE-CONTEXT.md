@@ -56,15 +56,17 @@ ourobion/
 │   ├── SHARED-CONTEXT.md      # Shared types and integration contracts
 │   ├── types/                 # Shared data models (TypeScript + Dart)
 │   └── constants/             # Shared constants (e.g., non-diagnostic copy rules)
-├── src/                       # Frontend application (Flutter codebase)
-│   ├── assets/                # Bundled app assets (declared in src/pubspec.yaml)
-│   │   ├── fonts/             # Manrope font family (Regular → ExtraBold)
-│   │   └── images/            # App images (e.g. logo.png)
-│   └── lib/
-│       └── modules/           # Modularized application code (M1-M7)
-│           ├── m1_core/       # Auth, Profile, Compliance (Contains m1-context.md)
-│           ├── m2_self_report/# Daily logging UI and normalizers (Contains m2-context.md)
-│           └── ...            # Other M* modules
+├── apps/                      # Application packages (both apps live here)
+│   ├── biotope/               # Frontend application (Flutter codebase)
+│   │   ├── assets/            # Bundled app assets (declared in apps/biotope/pubspec.yaml)
+│   │   │   ├── fonts/         # Manrope font family (Regular → ExtraBold)
+│   │   │   └── images/        # App images (e.g. logo.png)
+│   │   └── lib/
+│   │       └── modules/       # Modularized application code (M1-M7)
+│   │           ├── m1_core/       # Auth, Profile, Compliance (Contains m1-context.md)
+│   │           ├── m2_self_report/# Daily logging UI and normalizers (Contains m2-context.md)
+│   │           └── ...            # Other M* modules
+│   └── nao/                   # Brain-ingestion app config (.env.example template)
 ├── supabase/                  # Backend infrastructure
 │   ├── functions/             # TypeScript Edge Functions
 │   │   ├── compute-baselines/ # M5a backend worker
@@ -79,10 +81,10 @@ ourobion/
 
 ## Environment Files
 
-- `src/.env.public` is local frontend config and is intentionally bundled by Flutter.
+- `apps/biotope/.env.public` is local frontend config and is intentionally bundled by Flutter.
   It may contain client-visible values only, such as `SUPABASE_URL` and
   `SUPABASE_ANON_KEY`.
-- `src/.env.public.example` is the committed template for frontend config.
+- `apps/biotope/.env.public.example` is the committed template for frontend config.
 - `supabase/.env` is local backend/Supabase config and may contain backend-only values.
   It is never bundled into the Flutter app.
 - `supabase/.env.example` is the committed template for Supabase/backend config.
@@ -94,12 +96,12 @@ On Windows, `scripts/setup.ps1` installs the **entire build toolchain bounded to
 the Flutter SDK, and the Android SDK + emulator + an AVD). It is **build tooling, not a repo
 dependency**: machine-local, not committed, not deployed, and disposable (delete + re-run `setup.ps1`).
 `scripts/biotope-env.ps1` activates it per shell (no global PATH changes). The dependencies that
-actually ship are declared *in* the repo (`src/pubspec.yaml`, `shared/package.json`,
+actually ship are declared *in* the repo (`apps/biotope/pubspec.yaml`, `shared/package.json`,
 `supabase/migrations`, `supabase/functions`) and are compiled into the app artifact or deployed to
 Supabase — see README "Where dependencies live". CI installs its own toolchain from scratch.
 
 ## Folder Conventions
 
-- **`shared/` vs `src/`:** Any logic, types, or constants that must be duplicated across Dart (app) and TypeScript (backend) belong in `shared/`. The frontend codebase should not reference backend specific scripts, and vice versa.
+- **`shared/` vs `apps/biotope/`:** Any logic, types, or constants that must be duplicated across Dart (app) and TypeScript (backend) belong in `shared/`. The frontend codebase should not reference backend specific scripts, and vice versa.
 - **Context files:** Constant, architectural constraints are capitalized and suffixed with `-CONTEXT` (e.g. `PROJECT-CONTEXT.md`). Variable context documents (such as module to-do lists/state files) are lowercase and suffixed with `-context` (e.g. `m1-context.md`).
-- **Assets:** two distinct locations. `src/assets/` holds the app's **bundled** assets — `fonts/` (the Manrope family) and `images/` (e.g. `logo.png`); every file must be declared in `src/pubspec.yaml` (`flutter: assets:` / `fonts:`) to be bundled and available at runtime (adding the file alone is not enough). The repo-root `assets/ourobion-brand/` is the **brand kit** (source logos, favicon, colors, brand `DESIGN.md`) — a design reference, **not** shipped in the app; app-facing images are derived from it into `src/assets/`.
+- **Assets:** two distinct locations. `apps/biotope/assets/` holds the app's **bundled** assets — `fonts/` (the Manrope family) and `images/` (e.g. `logo.png`); every file must be declared in `apps/biotope/pubspec.yaml` (`flutter: assets:` / `fonts:`) to be bundled and available at runtime (adding the file alone is not enough). The repo-root `assets/ourobion-brand/` is the **brand kit** (source logos, favicon, colors, brand `DESIGN.md`) — a design reference, **not** shipped in the app; app-facing images are derived from it into `apps/biotope/assets/`.

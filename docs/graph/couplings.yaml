@@ -23,7 +23,7 @@ couplings:
       (app). Nothing imports across the language seam, so if one side adds/renames/retypes a field and
       the other does not, the app and backend silently disagree at runtime. Only a parity test holds
       the two declarations together. Governed by the 2-reviewer rule (docs/memory/0002).
-    guard: src/test/guards/shared_types_parity_test.dart
+    guard: apps/biotope/test/guards/shared_types_parity_test.dart
     status: active
     phase: P1S2
 
@@ -35,7 +35,7 @@ couplings:
       and Dart so M5b/M6 can enforce them on both sides. If the two word lists diverge, a string the
       backend accepts could be rejected by the app or vice versa, weakening Product Principle #1
       (docs/memory/0003). No import links them — a parity test is the only guard.
-    guard: src/test/guards/copy_guidelines_parity_test.dart
+    guard: apps/biotope/test/guards/copy_guidelines_parity_test.dart
     status: active
     phase: P1S2
 
@@ -47,7 +47,7 @@ couplings:
       daily_gut_rows table columns the app writes and M5a/M6 read. A migration that renames a column,
       or a model field that drifts, breaks the write/read path with no compile-time error because the
       Supabase client speaks dynamic JSON. A schema/shape test is the only guard.
-    guard: src/test/guards/daily_gut_row_schema_test.dart
+    guard: apps/biotope/test/guards/daily_gut_row_schema_test.dart
     status: active
     phase: P1S2
 
@@ -63,7 +63,7 @@ couplings:
       TS (backend) and Dart (app) seam with no import linking them. If one side adds/removes/retypes
       a metric and the other does not, baselines, DQS and the contract silently disagree. Governed by
       the 2-reviewer rule (docs/memory/0002).
-    guard: src/test/guards/metrics_registry_parity_test.dart
+    guard: apps/biotope/test/guards/metrics_registry_parity_test.dart
     status: active
     phase: P2
 
@@ -74,7 +74,7 @@ couplings:
       Every active registry key for a table must be a field of that table's contract row (TS and
       Dart), and every non-system row field must be a registry metric. This is the guard that would
       have caught the DailyPhysioRow <-> wearable-key drift at build time.
-    guard: src/test/guards/metrics_registry_contract_test.dart
+    guard: apps/biotope/test/guards/metrics_registry_contract_test.dart
     status: active
     phase: P2
 
@@ -85,7 +85,7 @@ couplings:
       Registry keys per table must equal the metric columns of that table's migration. A migration
       that renames or adds a metric column without a matching registry entry (or vice versa) breaks
       the write/read path with no compile-time error because the Supabase client speaks dynamic JSON.
-    guard: src/test/guards/metrics_registry_schema_test.dart
+    guard: apps/biotope/test/guards/metrics_registry_schema_test.dart
     status: active
     phase: P2
 
@@ -96,7 +96,7 @@ couplings:
       compute-baselines must derive its per-table metric lists (and SELECT columns) from the registry,
       never from hardcoded key literals. The original wearable-key drift was exactly a hardcoded
       WEARABLE_METRIC_KEYS array drifting from the contract; this guard makes that impossible.
-    guard: src/test/guards/metrics_registry_baselines_test.dart
+    guard: apps/biotope/test/guards/metrics_registry_baselines_test.dart
     status: active
     phase: P2
 
@@ -106,18 +106,18 @@ couplings:
     why: >
       Every rule's metricKey in the insight engine must resolve to an active registry metric, so a
       rule can never read a metric that was never defined or has been removed.
-    guard: src/test/guards/metrics_registry_engine_test.dart
+    guard: apps/biotope/test/guards/metrics_registry_engine_test.dart
     status: active
     phase: P2
 
   - id: metrics-registry-to-dqs
     from: shared/metrics/registry.ts (countsTowardDailyCompleteness weights)
-    to: src/lib/modules/m2_self_report/impl/normaliser.dart (kDailyCoreDqsWeights)
+    to: apps/biotope/lib/modules/m2_self_report/impl/normaliser.dart (kDailyCoreDqsWeights)
     why: >
       The M2 normaliser computes the Data Quality Score from the daily-core (T1) metric weights. Those
       weights are owned by the registry (the metrics with countsTowardDailyCompleteness: true), but the
       normaliser can't import shared/metrics (cross-language parity mirror), so without a guard the two
       silently drift and the DQS stops reflecting the registry.
-    guard: src/test/guards/metrics_registry_dqs_test.dart
+    guard: apps/biotope/test/guards/metrics_registry_dqs_test.dart
     status: active
     phase: P2

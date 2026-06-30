@@ -153,16 +153,16 @@ fi
 echo ""
 echo "Checking environment files..."
 
-if [ ! -f "src/.env.public" ]; then
-  if [ -f "src/.env.public.example" ]; then
-    cp src/.env.public.example src/.env.public
-    echo "✅ src/.env.public created from template — fill in your local Supabase values."
+if [ ! -f "apps/biotope/.env.public" ]; then
+  if [ -f "apps/biotope/.env.public.example" ]; then
+    cp apps/biotope/.env.public.example apps/biotope/.env.public
+    echo "✅ apps/biotope/.env.public created from template — fill in your local Supabase values."
     echo "   This file is intentionally bundled as public Flutter client config."
   else
-    echo "❌ src/.env.public.example not found. Create src/.env.public manually."
+    echo "❌ apps/biotope/.env.public.example not found. Create apps/biotope/.env.public manually."
   fi
 else
-  echo "✅ src/.env.public found"
+  echo "✅ apps/biotope/.env.public found"
 fi
 
 if [ ! -f "supabase/.env" ]; then
@@ -186,9 +186,9 @@ if [ -f "shared/package.json" ]; then
   echo "  ✅ Done"
 fi
 
-if [ -f "src/pubspec.yaml" ]; then
+if [ -f "apps/biotope/pubspec.yaml" ]; then
   echo "→ Flutter packages..."
-  (cd src && flutter pub get)
+  (cd apps/biotope && flutter pub get)
   echo "  ✅ Done"
 fi
 
@@ -211,10 +211,10 @@ echo ""
 echo "✅ Setup complete!"
 echo ""
 echo "Next steps:"
-echo "  1. Fill in src/.env.public with your local Supabase values (if not done)."
+echo "  1. Fill in apps/biotope/.env.public with your local Supabase values (if not done)."
 echo "  2. npx supabase start        — start the local Supabase backend"
 echo "  3. npx supabase db push      — run database migrations"
-echo "  4. cd src && flutter run     — launch the app"
+echo "  4. cd apps/biotope && flutter run     — launch the app"
 echo ""
 if [ "$OS" = "wsl" ]; then
   echo "WSL2 users: run Flutter from Windows PowerShell for Android device testing."

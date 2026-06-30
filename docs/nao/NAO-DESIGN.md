@@ -49,8 +49,8 @@ A clean instance of the repo's core principle ([memory 0001](../memory/0001-two-
   **Cloudflare Pages** (already on Cloudflare for R2). A thin **server data layer** (server routes /
   Cloudflare Workers) holds all credentials: **R2 keys, Neo4j keys, and LLM keys are server-side only —
   never shipped in the client bundle.**
-- **Monorepo:** nao is a *sibling* of the Flutter app. The main app conceptually becomes **biotope**; a
-  physical `src/ → apps/biotope/` move is deferred housekeeping, not required to build nao.
+- **Monorepo:** nao is a *sibling* of the Flutter app, which now lives at `apps/biotope/` (the
+  `src/ → apps/biotope/` move is done; both apps sit under `apps/`).
 - **Shared contracts:** nao imports the brain contract from [`shared/brain/`](../../shared/brain/)
   (`relationships.ts`, `relationships.schema.ts`, and the gating helpers in `index.ts`) and
   [`shared/types/`](../../shared/types/) via a repo-root npm workspace
@@ -66,7 +66,7 @@ A clean instance of the repo's core principle ([memory 0001](../memory/0001-two-
   wants in-app roles and a path to external users; **not** Firebase, which would add a third cloud.)
 - **Hosted Supabase only** for real auth — local Docker can't do OAuth
   ([memory 0011]; biotope's `auth_service` patterns in
-  [`src/lib/modules/m1_core/impl/auth_service.dart`](../../src/lib/modules/m1_core/impl/auth_service.dart)
+  [`apps/biotope/lib/modules/m1_core/impl/auth_service.dart`](../../apps/biotope/lib/modules/m1_core/impl/auth_service.dart)
   are the reference). A `nao_role` claim (app_metadata or a `nao_members` table) gates access; **v1
   requires an authenticated, authorised user even to load** (the brain is a shared asset, not per-user
   data, so this is access-gating + edit-attribution, not per-row RLS).

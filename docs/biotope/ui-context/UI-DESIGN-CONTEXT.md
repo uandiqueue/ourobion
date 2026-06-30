@@ -219,12 +219,12 @@ Flutter: use `AnimationController` + `AnimatedBuilder` with `Transform.translate
 
 | Screen | Flutter module path |
 |---|---|
-| Auth / Sign-in / Onboarding | `src/lib/modules/m1_core/ui/` |
-| Daily Log / Gut / Behaviour | `src/lib/modules/m2_self_report/ui/` |
-| Passive Health / Wearables | `src/lib/modules/m3_passive_health/ui/` |
-| Environment / Outbreak | `src/lib/modules/m4_environmental/ui/` |
-| Insights / Discovery Cards | `src/lib/modules/m5b_insight_engine/ui/` |
-| Streaks / Rewards | `src/lib/modules/m6_engagement/ui/` |
+| Auth / Sign-in / Onboarding | `apps/biotope/lib/modules/m1_core/ui/` |
+| Daily Log / Gut / Behaviour | `apps/biotope/lib/modules/m2_self_report/ui/` |
+| Passive Health / Wearables | `apps/biotope/lib/modules/m3_passive_health/ui/` |
+| Environment / Outbreak | `apps/biotope/lib/modules/m4_environmental/ui/` |
+| Insights / Discovery Cards | `apps/biotope/lib/modules/m5b_insight_engine/ui/` |
+| Streaks / Rewards | `apps/biotope/lib/modules/m6_engagement/ui/` |
 
 ---
 

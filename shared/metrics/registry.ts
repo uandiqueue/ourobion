@@ -2,7 +2,7 @@
 //
 // THE single source of truth for every metric ourobion collects.
 // Adding or removing a metric is a localized, guard-protected change: the parity / schema /
-// baselines / engine / dqs guards (src/test/guards/, docs/graph/couplings.yaml) fail the build if any
+// baselines / engine / dqs guards (apps/biotope/test/guards/, docs/graph/couplings.yaml) fail the build if any
 // consumer drifts from this list. See shared/metrics/README.md for the add / remove runbook.
 //
 // TRUTH tier (git-tracked, 2-reviewer PR per docs/memory/0002). Keep registry.ts and registry.dart

@@ -27,8 +27,8 @@ Do not read every context file. Read only what your task requires.
 | Task | Files to read |
 |---|---|
 | Starting any session | `node tools/context_sync.mjs --session-start`, then the latest `docs/sessions/` files + `AGENTS.md` §6 (phase + workstreams) + `docs/PHASE2-PLAN.md` |
-| Working on M1 | `src/lib/modules/m1_core/m1-context.md` + `docs/biotope/ARCHITECTURE-CONTEXT.md` |
-| Working on M2 | `src/lib/modules/m2_self_report/m2-context.md` + `shared/SHARED-CONTEXT.md` |
+| Working on M1 | `apps/biotope/lib/modules/m1_core/m1-context.md` + `docs/biotope/ARCHITECTURE-CONTEXT.md` |
+| Working on M2 | `apps/biotope/lib/modules/m2_self_report/m2-context.md` + `shared/SHARED-CONTEXT.md` |
 | Touching `shared/types/` | `shared/SHARED-CONTEXT.md` — requires 2-reviewer PR |
 | Writing user-facing strings | `shared/constants/copy_guidelines.ts` + `shared/constants/copy_guidelines.dart` |
 | Reviewing a PR | This file `§ PR Review Checklist` + module context for the PR scope |
@@ -44,7 +44,7 @@ Do not read every context file. Read only what your task requires.
 When files appear to contradict each other, trust in this order:
 
 1. The latest `docs/sessions/` files + `docs/memory/` facts — most recent session state and durable decisions
-2. `src/lib/modules/m*/m*-context.md` — module-level state (may lag the latest session)
+2. `apps/biotope/lib/modules/m*/m*-context.md` — module-level state (may lag the latest session)
 3. `shared/SHARED-CONTEXT.md` — shared types (locked contract, authoritative for interfaces)
 4. `docs/biotope/ARCHITECTURE-CONTEXT.md` — system structure
 5. `docs/PROJECT-CONTEXT.md` — product principles (most stable, least likely to change)
