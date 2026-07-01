@@ -159,7 +159,7 @@ return when the user base justifies per-region publishing.
 
 | Feature | What it is |
 |---|---|
-| Global aggregates | Privacy-safe `community_aggregates` over all users; individual data never exposed. |
+| Global aggregates | `community_aggregates` over all users — aggregates only, no individual rows surfaced. |
 | Community surface | Opt-in screen: "everyone this week" alongside the user's own patterns. |
 | Simple chat | Text-only community chat: RLS per-user rows, report/delete, minimal moderation, feature-flagged. New `shared/` surface → 2-reviewer PR. Ourobion strings stay non-diagnostic; user content gets a disclaimer, not the copy gate. |
 | Insight Lab → Later | Users correlate their own behaviour with their signals (the raw-rows-are-the-asset payoff). |

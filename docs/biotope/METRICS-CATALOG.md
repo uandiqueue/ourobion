@@ -761,7 +761,7 @@ The tiers tell you what's **cheap to collect**; reliability tells you **how much
 - **Rotate to preserve budget.** Sample T2 items a few times a week; EMA validity comes from repetition over time, not daily completeness.
 - **Lag windows are configurable.** Food↔symptom (D-55), allergen↔symptom (D-92), weather↔pain (D-98), stress↔sleep (D-120) — biology isn't instantaneous.
 - **Baselines beat absolutes.** Illness onset, fever, autonomic shifts work off personal-baseline deviation (D-103/104/16), not population thresholds.
-- **Privacy by design.** Mic, continuous location, BT/Wi-Fi, keystrokes → keep raw signals on-device, store only the derived metric.
+- **Privacy by design (deferred past the demo).** The demo stores all data in Supabase; on-device raw-signal handling (mic, continuous location, BT/Wi-Fi, keystrokes → store only the derived metric) is re-instated when scaling.
 - **Graceful degradation.** Tag each metric by minimum hardware (phone-only → watch → ring → CGM → scale); the passive layer should light up as users connect devices, never block the core.
 - **Don't surface clinical numbers as targets.** Weight, calories, glucose → trends and ranges, not goals (you'll calibrate health relevance in later research).
 - **States as covariates.** Feed T4 period bands (fasting, antibiotics, illness, travel, pregnancy) into D-150 as conditioning variables so the trend engine reads anomalies correctly.

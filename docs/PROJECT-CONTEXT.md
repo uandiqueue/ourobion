@@ -25,10 +25,11 @@ The app surfaces descriptive patterns and insight cards. It never diagnoses.
 3. **Graceful degradation** — Features that depend on wearables or external APIs must have
    wearable-free and offline-safe fallbacks. Wearables and env data are confidence multipliers,
    never hard gates.
-4. **PDPA compliance** — Personal health data is isolated from environmental/community data.
-   Consent is granular and captured at onboarding. See M1.
-5. **Privacy-safe community** — Aggregated community data only published at minimum user
-   thresholds per region. Individual data never exposed.
+4. **PDPA compliance — deferred past the demo.** The current build is a **demo with all user data in
+   Supabase**; PDPA data-isolation, granular per-source consent, and on-device raw-signal processing are
+   re-instated when we move past the basics / start scaling — not built now.
+5. **Privacy-safe community — aggregates only.** Community surfaces publish **aggregates only, never
+   individual rows**. Regional minimum-threshold publishing returns when the user base justifies it.
 
 ---
 
@@ -101,7 +102,7 @@ Defined in `shared/types/`. Changes require team discussion + PR with two review
 
 | Module | Owner | Notes |
 |---|---|---|
-| M1 Core Platform | Jayden | + database rules, PDPA consent copy, copy-guidelines enforcement, auth/OAuth |
+| M1 Core Platform | Jayden | + database rules, copy-guidelines enforcement, auth/OAuth (PDPA/consent deferred past demo) |
 | M2 Self-Report | Alton (Jayden assists) | Largest MVP surface; Flutter UI |
 | M3 Wearables | Alton | HealthKit / Health Connect → `wearable_daily` + M5a wearable extension |
 | M5a + M5b Intelligence | shared | Depends on M2 being stable |

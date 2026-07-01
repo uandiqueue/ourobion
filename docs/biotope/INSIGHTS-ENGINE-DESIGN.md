@@ -18,7 +18,8 @@ Git-tracked JSON **blueprints** = TRUTH (PR-reviewed, human-approved) → loaded
 rebuildable** Postgres `rules` table. Typed model + **Zod** mirror with compile-time drift guards.
 Batch **extract** (PDF → JSON via Claude API + human review) → **load/normalize** → **deterministic
 engine**; the LLM is confined to the offline extract step with cost discipline. (Pattern borrowed from
-sister repo NUSPlan; ourobion targets Postgres instead of Neo4j and uses **no Python**.)
+sister repo NUSPlan; the **rules engine** targets Postgres — the **brain's graph is a separate Neo4j
+projection**, see [`../nao/BRAIN-DESIGN.md`](../nao/BRAIN-DESIGN.md) — and ourobion uses **no Python**.)
 
 This maps onto ourobion's [two-tier truth](../memory/0001-two-tier-truth.md): `data/rules/**.json` join raw
 rows + migrations + `shared/` as TRUTH; the `rules` table joins `baseline_snapshots` + `insight_cards`

@@ -1,6 +1,6 @@
 # The Phase 2 plan — in plain language
 
-**Date:** 2026-06-11 · **Detail:** [`../PHASE2-PLAN.md`](../PHASE2-PLAN.md)
+**Date:** 2026-06-11 · **Status:** ⛔ **Superseded snapshot** — the current plan is [`../PHASE2-PLAN.md`](../PHASE2-PLAN.md) (demo scope; 100-metric expansion; brain pipeline + nao). Kept as a dated snapshot.
 
 ## The shape
 
