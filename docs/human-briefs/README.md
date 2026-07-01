@@ -17,3 +17,5 @@ direction without reading the engineering detail.
 | [2026-06-09-next-phase-direction.md](2026-06-09-next-phase-direction.md) | the insights-engine direction → now [`../INSIGHTS-ENGINE-DESIGN.md`](../INSIGHTS-ENGINE-DESIGN.md) |
 | [2026-06-11-phase2-goals-and-features.md](2026-06-11-phase2-goals-and-features.md) | the Phase 2 goals/features → now folded into [`../PHASE2-PLAN.md`](../PHASE2-PLAN.md) |
 | [2026-06-11-phase2-integrated-plan.md](2026-06-11-phase2-integrated-plan.md) | [`../PHASE2-PLAN.md`](../PHASE2-PLAN.md) — the Phase 2 plan: two tracks, stress-test gate |
+| [2026-06-30-nao-architecture-research.md](2026-06-30-nao-architecture-research.md) | nao web-app architecture research & options → [`../nao/NAO-DESIGN.md`](../nao/NAO-DESIGN.md) |
+| [2026-07-01-brain-pipeline-and-training-eval.md](2026-07-01-brain-pipeline-and-training-eval.md) | **DECISION (anchor)** — brain pipeline (agents + 4 support models) + training data. Design docs reconciled to it; durable record [`../memory/0013-brain-pipeline-and-support-models-decision.md`](../memory/0013-brain-pipeline-and-support-models-decision.md). |

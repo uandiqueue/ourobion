@@ -122,12 +122,17 @@ Refactor from hardcoded `RULES: Rule[]` to load `rules` rows and evaluate generi
 `insight_cards` populate (cross card has 2 `contributing_metrics`) → dismiss + re-invoke → not
 regenerated → `flutter analyze` + `flutter test` + `node tools/context_sync.mjs --check`.
 
-### E. (Later, out of scope) AI-summary additive layer
+### E. (Later, additive) Presentation agent — the runtime NL layer
 
-A separate batch/edge step could read already-generated deterministic `insight_cards` and emit an
-optional NL weekly summary (cheap model, budgeted, usage-logged — same discipline as B4). It consumes
-engine output and changes nothing about deterministic generation. Named only so the engine's interfaces
-leave room.
+Per the [pipeline decision](../human-briefs/2026-07-01-brain-pipeline-and-training-eval.md), the runtime
+NL layer is a **presentation agent** (haiku-tier): it reads already-generated deterministic
+`insight_cards` / trend packages + the retrieved brain subgraph and emits curated summaries + template
+copy. It is **grounded** (introduces no relationship or number not in its input), **copy-gated** (runs
+`validateCopyString` at render), **cached + fire-triggered** (generate on insight-fire, not per render —
+cheap model, budgeted, usage-logged, same discipline as B4), and **degradable** (falls back to
+deterministic templated copy). It consumes engine output and changes nothing about deterministic
+generation — the engine stays the authority for *what is true and the numbers*; the agent only phrases
+*how it reads*.
 
 ## Determinism + non-diagnostic, end to end
 

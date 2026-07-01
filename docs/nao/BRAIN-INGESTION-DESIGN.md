@@ -89,8 +89,11 @@ the deferred NUS/TDM decision.)*
                                                                          HTML / content   ──► local cache
 ```
 
-1. **Discover** by topic seed (gut microbiome, hydration, antibiotics, sleep/HRV, dengue/vector,
-   environmental health) → candidate works + identifiers. Adapters capture the **full id set**
+1. **Discover** by research query. Per the [pipeline decision](../human-briefs/2026-07-01-brain-pipeline-and-training-eval.md)
+   an **agentic seeder** (reads the metric registry `derivedFrom[]` + biotope's insight needs) generates
+   the queries; the static topic-seed list (gut microbiome, hydration, antibiotics, sleep/HRV,
+   dengue/vector, environmental health) remains the **bootstrap/fallback**. Either way → candidate works +
+   identifiers. Adapters capture the **full id set**
    (DOI + PMID + PMCID, where the source exposes it — e.g. Europe PMC `result[]`, PubMed efetch
    `ArticleIdList`) so a paper arrives already cross-linked.
 2. **Resolve & dedup** to one canonical paper → assign `paper_uid` (§4). Because discovery carries the
