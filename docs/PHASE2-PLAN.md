@@ -9,8 +9,9 @@ Phase 2 also makes one architectural commitment everything else rides on: ourobi
 set of ~20 metrics in wide daily tables and becomes a **modifiable metric platform** that scales to
 hundreds of metrics across five sources, where **adding or removing a metric is a localized,
 guard-protected change — never a schema-wide rewrite.** The metric *catalog* (which metrics, exact
-definitions, clinical weighting) is later research; Phase 2 builds the *platform* and lights up a thin,
-honest vertical slice on it.
+definitions, clinical weighting) is later research; Phase 2 builds the *platform* and — per the adopted
+[100-metric decision](human-briefs/2026-07-01-metric-catalog-100-promotion.md) — grows the registry to
+**100 metrics in collector-gated waves** on it (the full ~360-metric catalog stays reference).
 
 This doc is the **plan authority**: goals, what Phase 2 contains, the sequence, and the gate. The
 metric-platform detail (registry schema, storage primitives, add/remove runbook) lives in
@@ -80,10 +81,13 @@ A multi-source platform pulls in location, mic, camera, BLE/Wi-Fi. The rule: **r
 on-device; only the derived metric is stored**, behind **granular per-source consent scopes** the user
 grants independently. This is an M1 platform capability, not a copy review.
 
-> **Scope discipline.** Phase 2 builds this platform and populates a **thin vertical slice** — the
-> ~9-touch daily spine + ~a dozen high-value passive signals + a handful of derived metrics. It does
-> **not** attempt to ship hundreds of metrics. The platform is what makes growing the catalog later a
-> cheap, safe, per-metric change.
+> **Scope discipline (updated 2026-07-01).** Phase 2 builds this platform **and grows the registry to
+> 100 metrics** in collector-gated waves — the adopted
+> [100-metric decision](human-briefs/2026-07-01-metric-catalog-100-promotion.md) ([memory 0014](memory/0014-metric-catalog-100-expansion-decision.md)),
+> a deliberate step past the original "thin slice", managed by **phasing** (a wave ships only when its
+> collector lands) and **manual-forward weighting** (the daily spine stays ~9 touches). It still does
+> **not** ship the full ~360-metric catalog ([`METRICS-CATALOG.md`](biotope/METRICS-CATALOG.md)) — that
+> stays the reference. Add/remove remains a localized, guard-protected, per-metric change.
 
 ## Goals
 
@@ -286,9 +290,9 @@ and Phase 3. Then Phase 3 opens: the gamification game + UI redesign + Insight L
   primitives), which both tracks depend on. If it slips, the branch point slips; protect it.
 - **Platform scope creep** — Phase 2 builds the *platform + a thin slice*, **not** hundreds of metrics.
   Resist populating the full catalog; that's later research. Guard the slice boundary explicitly.
-  **⚠️ Under revision (2026-07-01):** the [metric-catalog 100-expansion brief](human-briefs/2026-07-01-metric-catalog-100-promotion.md)
-  proposes going *past* this thin slice to 100 metrics — an unresolved contradiction pending an owner
-  call; see the 2026-07-01 integrated update.
+  **✅ Resolved (2026-07-01):** the owner **adopted the 100-metric expansion** — the plan now grows the
+  registry to 100 in collector-gated waves (still not the full ~360 catalog). See the
+  [metric-catalog decision](human-briefs/2026-07-01-metric-catalog-100-promotion.md) + [memory 0014](memory/0014-metric-catalog-100-expansion-decision.md).
 - **Registry v2 migration** — extending the shipped v1 registry + generalizing storage touches `shared/`
   and migrations; keep each a small, guarded, 2-reviewer PR and migrate existing tables in place (no
   rewrite of `daily_gut_rows` / `wearable_daily`).
@@ -366,9 +370,10 @@ Metric waves **A1 → A2/A3/A4** are *sequenced* behind A0 and each wave's colle
 
 ### Contradictions flagged (per the ask)
 
-- **Thin-slice vs 100 metrics** — this plan's "resist populating the full catalog" (Risks) is **directly
-  contradicted** by the 100-expansion brief. **Unresolved — owner call required** (the brief's "Decisions
-  needed #2"). Until confirmed, treat A1–A4 as *proposed*, not committed.
+- **Thin-slice → 100 metrics: RESOLVED (2026-07-01).** The owner **adopted** the 100-metric expansion
+  ([decision](human-briefs/2026-07-01-metric-catalog-100-promotion.md) · [memory 0014](memory/0014-metric-catalog-100-expansion-decision.md)).
+  A1–A4 are **committed** (phased, collector-gated); the earlier "thin slice / resist the full catalog"
+  guidance is superseded (the full ~360 catalog stays reference-only).
 - **"Train (a)/(c) now" superseded** — the anchor brief's original sequencing said fine-tune on public
   data immediately; **constraint 1 defers training** until GMI/GPU. Design + data-prep stand.
 - **Stale snapshot** — the plain-language [2026-06-11 integrated-plan brief](human-briefs/2026-06-11-phase2-integrated-plan.md)

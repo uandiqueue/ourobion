@@ -40,10 +40,15 @@ export function collapseWhitespace(text: string): string {
  * `mergePages: true` concatenates every page into one string; we then collapse
  * whitespace so the result is directly comparable to the JATS path.
  *
+ * `unpdf`/pdfjs takes ownership of the buffer it is given and detaches it once
+ * parsing finishes, so we hand it a copy — callers (notably `run.ts`, which
+ * uploads these same `bytes` to R2 right after extracting) still own an intact
+ * `ArrayBuffer` afterward.
+ *
  * @param bytes raw PDF bytes (as fetched by a retrieval adapter — never here).
  */
 export async function extractFromPdf(bytes: Uint8Array): Promise<ExtractResult> {
-  const { text } = await extractText(bytes, { mergePages: true });
+  const { text } = await extractText(bytes.slice(), { mergePages: true });
   const collapsed = collapseWhitespace(text);
   return { method: 'pdf', text: collapsed, charCount: collapsed.length };
 }

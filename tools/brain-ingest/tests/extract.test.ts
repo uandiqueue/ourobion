@@ -9,10 +9,11 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { extractFromJats, collapseWhitespace } from '../src/extract.js';
+import { extractFromJats, extractFromPdf, collapseWhitespace } from '../src/extract.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const jatsXml = readFileSync(join(here, 'fixtures', 'jats-sample.xml'), 'utf8');
+const pdfBytes = new Uint8Array(readFileSync(join(here, 'fixtures', 'arxiv-2401.12345.pdf')));
 
 test('collapseWhitespace collapses runs and trims', () => {
   assert.equal(collapseWhitespace('  a\n\n  b\t c  '), 'a b c');
@@ -62,4 +63,17 @@ test('extractFromJats falls back to whole tree when no <body>', () => {
   const { text, method } = extractFromJats(noBody);
   assert.equal(method, 'jats');
   assert.match(text, /only front prose here/);
+});
+
+test('extractFromPdf does not detach the caller\'s ArrayBuffer (regression)', async () => {
+  // unpdf/pdfjs takes ownership of whatever buffer it's handed and detaches it
+  // once parsing finishes. run.ts extracts text and THEN uploads the same
+  // `bytes` to R2 — if extractFromPdf doesn't defensively copy, the upload's
+  // `new Uint8Array(bytes)` (inside sha256 / the S3 SDK) throws
+  // "Cannot perform Construct on a detached ArrayBuffer".
+  const before = pdfBytes.byteLength;
+  const result = await extractFromPdf(pdfBytes);
+  assert.equal(result.method, 'pdf');
+  assert.equal(pdfBytes.byteLength, before, 'input bytes length must survive extraction');
+  assert.doesNotThrow(() => new Uint8Array(pdfBytes), 'input buffer must not be detached');
 });
