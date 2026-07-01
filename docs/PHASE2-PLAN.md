@@ -274,6 +274,11 @@ and Phase 3. Then Phase 3 opens: the gamification game + UI redesign + Insight L
 - **`shared/` changes = 2-reviewer PRs** (W0 registry v2 + contracts, W2-B1, any W4 contract additions).
 - **iOS wall:** HealthKit e2e + Apple Sign-In both need a Mac + paid Apple Developer account; Android is
   fully unblocked on the current Windows setup.
+- **No GPU / GMI credits yet** — support-model *training* is deferred (design + data-prep only); the local
+  Windows box can't fine-tune. See the [2026-07-01 integrated update](#2026-07-01-integrated-update--brain-pipeline-metric-expansion-work-tracks--new-constraints).
+- **Dual-route LLMs** — every LLM step supports a *local-agent* route (host Opus inside Claude Code, no
+  API) and an *API-worker* route (OpenAI **or** Anthropic model, id in config); build the LLM-router
+  first. See the 2026-07-01 integrated update.
 
 ## Risks / watch items
 
@@ -281,6 +286,9 @@ and Phase 3. Then Phase 3 opens: the gamification game + UI redesign + Insight L
   primitives), which both tracks depend on. If it slips, the branch point slips; protect it.
 - **Platform scope creep** — Phase 2 builds the *platform + a thin slice*, **not** hundreds of metrics.
   Resist populating the full catalog; that's later research. Guard the slice boundary explicitly.
+  **⚠️ Under revision (2026-07-01):** the [metric-catalog 100-expansion brief](human-briefs/2026-07-01-metric-catalog-100-promotion.md)
+  proposes going *past* this thin slice to 100 metrics — an unresolved contradiction pending an owner
+  call; see the 2026-07-01 integrated update.
 - **Registry v2 migration** — extending the shipped v1 registry + generalizing storage touches `shared/`
   and migrations; keep each a small, guarded, 2-reviewer PR and migrate existing tables in place (no
   rewrite of `daily_gut_rows` / `wearable_daily`).
@@ -297,3 +305,71 @@ and Phase 3. Then Phase 3 opens: the gamification game + UI redesign + Insight L
   email/password proves too high-friction for testers.
 - **Stress test needs real users on hosted Supabase** — plan the tester group + hosted config (pg_cron
   settings per memory 0005) during week 7, not week 9.
+
+## 2026-07-01 integrated update — brain pipeline, metric expansion, work tracks & new constraints
+
+Folds in the **brain-pipeline + support-models DECISION** ([anchor](human-briefs/2026-07-01-brain-pipeline-and-training-eval.md)
+· [memory 0013](memory/0013-brain-pipeline-and-support-models-decision.md) · [`BRAIN-MODELS-TRAINING`](nao/BRAIN-MODELS-TRAINING.md))
+and the **metric-catalog 100-expansion** proposal ([brief](human-briefs/2026-07-01-metric-catalog-100-promotion.md)
+· [`METRICS-CATALOG`](biotope/METRICS-CATALOG.md)), and records two new constraints that reorder the work.
+
+### Two new constraints (they change sequencing)
+
+1. **No GPU / GMI credits yet.** Support-model *training* can't start — GMI credits aren't provisioned
+   and the local Windows box can't run GPU fine-tuning. The support models are **design + data-prep only
+   for now** (done — `BRAIN-MODELS-TRAINING`); **training is deferred until GMI lands.** Exception:
+   **(b2) venue weight** is a deterministic SJR/OpenAlex lookup — no training, ships anytime.
+2. **Every LLM step supports two routes** (model ids coded in, both OpenAI and Anthropic):
+   - **Local-agent route** — inside Claude Code, the host generalist model (Opus) runs the step
+     directly; **no API key, no specialised worker** (the graphify "host session model" pattern).
+   - **API-worker route** — headless/scaled runs call **specialised workers** via API, using **either an
+     OpenAI or an Anthropic model** (id in config); synthesis and verifier resolve to **different model
+     families**.
+   This is a small **LLM-router foundation** every LLM node (synthesis, verifier, presentation agent,
+   seeder, paper→rules extract) calls through — **build it before the LLM-heavy tracks.**
+
+### Work tracks — two independent families (disjoint file surfaces)
+
+**Family A — biotope (app · metrics · insights).** Critical path = **A0 storage primitives.**
+
+| Track | Depends on | Effort | Notes |
+|---|---|:--:|---|
+| **A0** storage primitives + registry v2 | — | L | biotope longest pole; unblocks all waves |
+| **A1** metric Wave 1 self-report (~45) | A0 | L | the discovery-value slice; thin ~9-touch spine |
+| **A2** Wave 2 phone sensors | A0 | M | |
+| **A3** Wave 3 env/API (M4) | A0 + GPS | L | |
+| **A4** Wave 4 wearable/CGM (M3) | A0 + **device** | M | hardware-gated |
+| **A5** insights engine refactor (B1–C) | rule contract; seeded data | L | independent of the waves |
+| **A6** presentation agent | A5 cards + **B0 router** | M | dual-route |
+
+**Family B — brain / nao (knowledge graph).** Critical path = **B0 router → B4 edge pipeline.**
+
+| Track | Depends on | Effort | Notes |
+|---|---|:--:|---|
+| **B0** LLM-router (dual-route) | — | M | **NEW foundation**; precedes every LLM node |
+| **B1** nao v1 ship | — | S | deploy + auth-test fix |
+| **B2** support-model training (a/c/b1) | **GMI credits + GPU** | L (GPU) | **DEFERRED**; design done |
+| **B2′** (b2) venue lookup | — | S | no training; ships now |
+| **B3** agentic seeder | registry + B0 | M | new files (brain-ingest is live) |
+| **B4** edge pipeline (synth/verify/store/Neo4j) | corpus + contract + **B0** | XL | brain critical path; unblocks nao v2 + grounded insights |
+
+Metric waves **A1 → A2/A3/A4** are *sequenced* behind A0 and each wave's collector — not parallel.
+
+### Sequencing (given the constraints)
+
+- **Start now, parallel (disjoint files):** **A0** (biotope foundation), **B0** (LLM-router), **B1**
+  (cheap nao ship), **A5** (insights refactor on seeded data), **B2′** (b2 lookup).
+- **Then:** **B3** and **B4 scaffolding** (edge-store schema + orchestration) once B0 exists; **B4's LLM
+  runs** (synthesis/verifier) begin once B0 is in.
+- **Deferred:** **B2 training** → waits for GMI credits. **A6** → behind A5. Metric waves → behind A0.
+- The two critical paths (**A0** and **B0→B4**) touch disjoint files → **push both at once.**
+
+### Contradictions flagged (per the ask)
+
+- **Thin-slice vs 100 metrics** — this plan's "resist populating the full catalog" (Risks) is **directly
+  contradicted** by the 100-expansion brief. **Unresolved — owner call required** (the brief's "Decisions
+  needed #2"). Until confirmed, treat A1–A4 as *proposed*, not committed.
+- **"Train (a)/(c) now" superseded** — the anchor brief's original sequencing said fine-tune on public
+  data immediately; **constraint 1 defers training** until GMI/GPU. Design + data-prep stand.
+- **Stale snapshot** — the plain-language [2026-06-11 integrated-plan brief](human-briefs/2026-06-11-phase2-integrated-plan.md)
+  predates all of the above; **this section is the current integrated view.**

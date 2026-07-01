@@ -29,3 +29,10 @@ recipes in BRAIN-MODELS-TRAINING): (a) NLI claim-support → `verdict` pre-filte
 [0012](0012-brain-adversarial-edge-verification.md) (adversarial verification); follows
 [0001](0001-two-tier-truth.md) (truth vs projection) + [0002](0002-shared-contract-two-reviewers.md)
 (shared-contract 2-reviewer rule). Non-commercial demo → dataset licences are not a constraint.
+
+**Execution (2026-07-01 constraints).** Every LLM node supports **two routes** — *local-agent* (host
+Opus inside Claude Code, no API/no specialised worker) and *API-worker* (specialised worker via API,
+**OpenAI or Anthropic**, model id in config; synthesis + verifier different families). Build the
+**LLM-router first**. Support-model **training is deferred until GMI credits + GPU** (no local GPU) —
+only the (b2) lookup + the design proceed now. Sequencing:
+[`PHASE2-PLAN.md` 2026-07-01 integrated update](../PHASE2-PLAN.md).

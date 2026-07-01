@@ -192,6 +192,15 @@ Two kinds of model appear below: **LLM-1 / LLM-2** are the two decorrelated brai
 verifier); **model (a)/(b1)/(b2)/(c)** are the small fine-tuned support models from §3 (b2 is a lookup,
 not trained). The support models tag papers and cross-check the LLM so the expensive LLM does less.
 
+> **Execution routing (2026-07-01 constraint).** Every LLM node runs via one of two routes: a
+> **local-agent route** — inside Claude Code, the host generalist (Opus) runs it, **no API key / no
+> specialised worker** (the graphify host-model pattern) — or an **API-worker route** — headless/scaled,
+> a specialised worker via API using **OpenAI *or* Anthropic** (model id in config; synthesis + verifier
+> stay different families). Build this **LLM-router** before the LLM nodes. Separately, support-model
+> **training is deferred until GMI credits + GPU exist** (no local GPU) — only the (b2) lookup and the
+> design/data-prep proceed now. Both constraints are sequenced in
+> [`PHASE2-PLAN.md` §2026-07-01 integrated update](../PHASE2-PLAN.md).
+
 ```
 [planner/seeder AGENT]  reads metric registry (derivedFrom[]) + biotope needs → research queries
         │
