@@ -147,13 +147,21 @@ shipping placeholder guard files with nothing real to assert, which the enforcem
 - **Human-in-the-loop on every edge.** Highest precision, doesn't scale to a literature corpus.
   Retained only for the `needsReview` set (contradicted / grounded-but-low), where volume is small.
 
-## Open decisions
+## Decisions (resolved 2026-07-01) & open items
 
-1. **Verifier model choice** — same family as synthesis (cheaper, simpler) vs a different model
-   (better error decorrelation). Recommendation: different model or at least different prompt framing;
-   decorrelation is the whole point.
-2. **Persistence** — a Supabase table vs a rebuildable generated artifact under the (deferred)
-   structural-graph location. Recommendation: table, once M5b consumes edges; until then, a generated
-   file is enough.
+Resolved by the pipeline decision ([memory 0013](../memory/0013-brain-pipeline-and-support-models-decision.md);
+anchor [`../human-briefs/2026-07-01-brain-pipeline-and-training-eval.md`](../human-briefs/2026-07-01-brain-pipeline-and-training-eval.md)):
+
+1. **Verifier model choice — DECIDED: a different model family from synthesis.** Synthesis uses the
+   strongest available model; the verifier a different family, for error decorrelation (the whole point
+   of the second pass). Small trained **support models** additionally pre-check the claim before the
+   verifier LLM spends a token — an NLI verdict pre-filter and a relation/direction/claim-kind
+   cross-check that feed `directionCheck` / `claimKindCheck`; the study-design + venue models feed
+   `evidenceTier` / `impactTier`. See [`BRAIN-MODELS-TRAINING.md`](BRAIN-MODELS-TRAINING.md).
+2. **Persistence — DECIDED: a truth-tier `verified_edges` store (Supabase table or R2 JSONL), projected
+   into Neo4j by a deterministic sync job.** The store is TRUTH; Neo4j is a rebuildable projection.
+
+Still open:
+
 3. **Re-verification cadence** — on `promptVersion` bump only, vs periodic re-runs as the corpus
    grows. Recommendation: on bump + on new corroborating/contradicting source for an existing edge.

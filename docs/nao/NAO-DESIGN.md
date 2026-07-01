@@ -194,7 +194,11 @@ deep, glowing *brain*. Tokens come from
 
 - **Brain synthesis + verification pipeline** (Track B) — the real critical path for everything past v1;
   nao v2 cannot render a real graph until edges exist. See [`BRAIN-DESIGN.md`](BRAIN-DESIGN.md).
-- **Truth-tier `verified_edges` store + Neo4j projection sync** — define when v2 begins.
-- **Source-reliability grading standard** — the `impactTier` extension (§6).
+- **Truth-tier `verified_edges` store + Neo4j projection sync** — **shape now decided** (Supabase table
+  or R2 JSONL = truth; deterministic sync → Neo4j projection) per the
+  [pipeline decision](../human-briefs/2026-07-01-brain-pipeline-and-training-eval.md); build lands with v2.
+- **Source-reliability grading standard** — **decided**: an `evidenceTier` study-design classifier + an
+  `impactTier` venue lookup (SJR + OpenAlex; JCR dropped as paid), per
+  [`BRAIN-MODELS-TRAINING.md`](BRAIN-MODELS-TRAINING.md). Extends `impactTier` (§6) — no new evidence model.
 - **`apps/biotope/` move** — relocating the Flutter app under `apps/` is optional housekeeping.
 - **External users / richer roles** — Supabase Auth was chosen partly to keep this open.
