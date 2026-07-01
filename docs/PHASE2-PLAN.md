@@ -25,7 +25,7 @@ pipeline in [`nao/BRAIN-DESIGN.md`](nao/BRAIN-DESIGN.md) + [`nao/BRAIN-MODELS-TR
 
 The discovery engine's job is to surface overlooked correlations, which means a **wide, cheap passive
 layer correlated against a thin, reliable self-report spine.** That only works if metrics are cheap to
-add, safe to remove, and uniformly described. Five properties define the platform.
+add, safe to remove, and uniformly described. Four properties define the platform.
 
 ### 1 · Five sources, one registry
 
@@ -74,16 +74,14 @@ in-moment event > subjective rating > manual count). Baselines and insights conf
 and **triangulate** — a self-report agreeing with its passive correlate raises confidence; divergence
 flags bad data. Low-reliability metrics surface as personal trends only, never cross-user absolutes.
 
-### 5 · Privacy scales with the sensor surface
-
-A multi-source platform pulls in location, mic, camera, BLE/Wi-Fi. The rule: **raw signals stay
-on-device; only the derived metric is stored**, behind **granular per-source consent scopes** the user
-grants independently. This is an M1 platform capability, not a copy review.
-
 > **Scope.** The registry grows to **100 metrics in collector-gated waves** — a wave promotes only when
 > its collector ships (or the guards go red), and the manual spine stays a thin ~9 daily touches
 > (breadth lives in the free passive/derived layers). It does **not** ship the full ~360-metric catalog;
 > that stays reference. Add/remove remains a localized, guard-protected, per-metric change.
+>
+> **Demo storage.** All user data lives in **Supabase** for now. PDPA/data-isolation and privacy
+> hardening (on-device processing of raw mic/location/camera, granular per-source consent) are
+> **deferred until past the demo / scaling** — not built in Phase 2.
 
 ## Goals
 
@@ -92,7 +90,7 @@ grants independently. This is an M1 platform capability, not a copy review.
 | **G1** | Stand on a solid floor — no downstream work builds on stubs or hardcoded metric lists. | Dart contracts complete + parity-guarded; **the modifiable metric platform** (registry v2 + continuity-based storage) is the single source of truth; add/remove a metric is a localized change. |
 | **G2** | The app sees your body, passively. | Health Connect (Android) verified end-to-end; **semi-passive fetch** from the health store; wearable confidence feeding insights. Apple/HealthKit decided at the gate. |
 | **G3** | Insights become an engine, not a hardcoded list. | Rules are reviewable data; a **relationship graph (the brain)** makes cross-metric evaluation tractable at scale; engine evaluates trend/threshold/correlation; cards can say *why* they fired. |
-| **G4** | Health is social and situated. | First community surface: **global** aggregates (all users — testing stage) + simple chat, opt-in, privacy-safe. |
+| **G4** | Health is social and situated. | First community surface: **global** aggregates (all users — testing stage) + simple chat, opt-in (aggregates only). |
 | **G5** | Logging stays worth it. | Phase 2 surfaces the two computed stats; the gamification **game** + UI redesign are Phase 3. |
 | **G6** | The repo stays understandable as it grows. | graphify semantic graph of the repo as dev infrastructure (not part of the insights engine). |
 
@@ -110,11 +108,7 @@ The unfinished MVP work, **plus the metric platform** everything else builds on.
 | ⛔ **Metric platform — registry v2** | Extend the registry with the scale dimensions: `tier`, `continuity`, the 5-source economy, `reliability` weight, `derivedFrom[]` (inputs of a derived metric — seeds the brain), `platform` availability, `preferredSource`/`fallback` (semi-passive). Guarded; 2-reviewer `shared/` PR. |
 | ⛔ **Metric platform — storage primitives** | Generalize storage to `daily_log` / `events` / `state_bands` / `signals` / `derived_metrics` (migrations + schema guards). `daily_gut_rows`, `antibiotic_courses`, `wearable_daily`, `baseline_snapshots` become the first instances — no rewrite. |
 | ⛔ Dart shared contracts | `shared/types/index.dart` (`BaselineSnapshot`, `InsightCard`, `InsightFiredEvent`, `EngagementState`, `DailyPhysioRow`, `DailyEnvRow` + `fromJson`/`toJson`) and `getCopyRule()`. 2-reviewer PR. |
-| ⛔ Real parity guard tests | `shared_types_parity`, `copy_guidelines_parity`, `daily_gut_row_schema` + their `couplings.yaml` edges `planned → active`. (`shared_types_parity` + the `metrics-registry-*` guards are active; `copy_guidelines` + `daily_gut_row` remain.) |
-| ⛔ **Granular consent + on-device processing** | Per-source consent scopes (location, mic, camera, BLE, health-store) granted independently; raw mic/location/camera never leaves the device — only the derived metric is stored. An architecture item, not a copy review. |
-| M1 app shell | Replace the `[DEV]` home screen with real Home / Log / Insights / Profile tab navigation. |
-| PDPA consent legal review | Singapore-law review of consent copy before any release build. |
-| M2 logic extraction | Pull inline DQS/save logic into `normaliser.dart` + `logging_controller.dart` + tests. **DQS becomes tier-aware** — only the daily-core (T1) spine counts toward completeness; events / periods / passive never penalize it. |
+| ⛔ Real parity guard tests | `shared_types_parity`, `copy_guidelines_parity`, `daily_gut_row_schema` + their `couplings.yaml` edges `planned → active`. (`shared_types_parity` + the `metrics-registry-*` guards are active; `copy_guidelines` + `daily_gut_row` remain.) || M1 app shell | Replace the `[DEV]` home screen with real Home / Log / Insights / Profile tab navigation. || M2 logic extraction | Pull inline DQS/save logic into `normaliser.dart` + `logging_controller.dart` + tests. **DQS becomes tier-aware** — only the daily-core (T1) spine counts toward completeness; events / periods / passive never penalize it. |
 | M2 standing-water weekly audit | Weekly "standing water present?" prompt with re-ask suppression — a periodic event, not a daily column. |
 | M2 symptom flags | Multi-select symptom logging surfaced via a daily "anything feel off?" gateway that opens symptom **events**. |
 | M2 antibiotic course tracker | Set up a course (drug, start, duration); app derives `on_antibiotics`/`gut_watch_active`; dose reminders. The exemplar `state_bands` instance. |
@@ -139,7 +133,7 @@ never a hard gate (graceful degradation).*
 | Feature | What it is |
 |---|---|
 | Rules as reviewable data | Git-tracked JSON rule blueprints (`data/rules/**`) → Postgres `rules` projection + loader. Adding a rule = a PR, not a redeploy. |
-| **Metric-relationship graph (the brain)** | Relationships-as-data (TRUTH tier), seeded from the registry's `derivedFrom[]` + curated priors, projected to a runtime store. **Prunes the correlation search space** and is the **retrieval substrate** for explanation. Centralised, server-side, shared by all users. Built by the brain pipeline (below + [`BRAIN-DESIGN.md`](nao/BRAIN-DESIGN.md)). |
+| **Metric-relationship graph (the brain)** | Relationships-as-data (TRUTH tier): the `verified_edges` store, **projected to Neo4j** for traversal. Bootstrapped from the registry's `derivedFrom[]` + curated priors and grown by the **brain pipeline** (paper corpus → synthesis → adversarial verification → verified edges — [`BRAIN-DESIGN.md`](nao/BRAIN-DESIGN.md)). **Prunes the correlation search space** and is the **retrieval substrate** for explanation. Centralised, server-side, shared by all users. |
 | Cross-metric rules | `correlation` condition over 2+ metrics, **scoped to brain neighbours with configurable lag windows** — the headline analytical upgrade. |
 | Data-driven engine | `generate-insights` refactored to pure evaluators (trend / threshold / correlation), deterministic, non-diagnostic gates at load + render. **The brain decides *what* fires; the engine stays deterministic.** |
 | Reliability weighting + triangulation | Engine confidence-weights inputs by source reliability and cross-checks self-report against its passive correlate before firing. |
@@ -156,8 +150,6 @@ first build-out of the `api` source economy onto the `signals` / `derived_metric
 |---|---|
 | `env_daily` ingestion | External API fetch per region: temp, heat index, rainfall, UV, NDVI/green cover, dengue case rate, outbreak alert. **Scoped: Singapore, 2–3 sources** (data.gov.sg weather/UV, NEA dengue clusters). |
 | Time-in-green logging | Optional user-logged minutes in green space. |
-| Env consent copy | Consent scope explaining how open data combines with personal logs. |
-
 *Raw `env_daily` rows are truth; env is a confidence multiplier, never a gate.*
 
 ### W4 · Community & globals (M7 first slice)
@@ -172,13 +164,22 @@ return when the user base justifies per-region publishing.
 | Simple chat | Text-only community chat: RLS per-user rows, report/delete, minimal moderation, feature-flagged. New `shared/` surface → 2-reviewer PR. Ourobion strings stay non-diagnostic; user content gets a disclaimer, not the copy gate. |
 | Insight Lab → Later | Users correlate their own behaviour with their signals (the raw-rows-are-the-asset payoff). |
 
-### W5 · nao — the brain's human surface — see [`nao/NAO-DESIGN.md`](nao/NAO-DESIGN.md)
+### W5 · nao — the brain's human surface
 
-| Feature | What it is |
+nao is the expert web app for inspecting and curating the brain (biotope's sibling). It ships in phases
+gated on how much of the brain exists. Detail: [`nao/NAO-DESIGN.md`](nao/NAO-DESIGN.md) (product +
+phasing) · [`nao/BRAIN-DESIGN.md`](nao/BRAIN-DESIGN.md) (edge synthesis + verification) ·
+[`nao/BRAIN-INGESTION-DESIGN.md`](nao/BRAIN-INGESTION-DESIGN.md) (paper corpus) ·
+[`nao/BRAIN-MODELS-TRAINING.md`](nao/BRAIN-MODELS-TRAINING.md) (support models). Pipeline decision:
+[memory 0013](memory/0013-brain-pipeline-and-support-models-decision.md). Stack: Next.js/OpenNext on
+Cloudflare Workers, D1 + R2, Supabase-auth-gated.
+
+| Phase | What it is |
 |---|---|
-| v1 corpus dashboard | Shipped (PR #36): search / facet / inspect the paper corpus. Deploy-time provisioning remains (remote D1 rebuild, login user, bind domain). |
-| v2 graph + evidence → Later | Force-directed graph of verified edges + evidence panel — unblocked once the brain edge pipeline produces servable edges. |
-| v3 human-in-the-loop curation → Later | A curator approves LLM-proposed edges into the truth store — the strongest agentic-app surface. |
+| **v1 corpus dashboard** | Shipped (PR #36): search / facet / inspect the paper corpus (Overview / Papers / Detail). Deploy-time provisioning remains (remote D1 rebuild, real `database_id`, login user, bind domain). |
+| **v2 graph + evidence** → Later | Force-directed graph of `verified_edges` + an evidence panel (quote spans + citations + quality markers) — unblocked once the brain **edge pipeline** (Track B) produces servable edges. |
+| **v3 human-in-the-loop curation** → Later | A curator approves LLM-proposed edges into the truth store (`provenance:'human'`) — the strongest agentic-app surface. |
+| **v4 LLM query** → Later | Natural-language questions over a *retrieved* brain subgraph, constrained to introduce no relationship outside the retrieved set. |
 
 ### W6 · Context tooling — graphify
 
@@ -224,7 +225,7 @@ Critical path: **storage primitives** (the longest pole; every metric wave rides
 | Work | Depends on | Effort |
 |---|---|:--:|
 | **Storage primitives + registry v2** (W0) | — | L |
-| Other W0 foundations — M1 shell, PDPA/consent scopes, M2 extraction, M6 stat | — (parallel) | M |
+| Other W0 foundations — M1 shell, M2 extraction, M6 stat | — (parallel) | M |
 | Metric **Wave 1** — self-report (~45) | storage primitives | L |
 | Metric **Wave 2** — phone sensors | storage + GPS | M |
 | Metric **Wave 3** — env/API (M4, W3) | storage + GPS | L |
@@ -289,7 +290,7 @@ All must hold, on the live (hosted) stack, before Phase 3 starts:
 4. Copy gates green at all three layers (load / blueprint guard / render) **including any LLM-phrased
    text**; `flutter analyze` + `flutter test` + `deno test` + `context_sync --check` + CI all green.
 5. Engine runs the nightly pg_cron cycle for **7 consecutive days** without manual intervention.
-6. Community layer + chat live behind the flag with no privacy incident (no individual data exposed).
+6. Community aggregates + chat live behind the flag (aggregates only — no individual rows surfaced).
 7. **Platform modifiability proven:** a metric added via a single registry entry passes all guards
    end-to-end, and a metric **soft-deprecated** leaves historical baselines/cards still resolving — no
    schema-wide edit required for either.
@@ -300,7 +301,7 @@ and Phase 3. Then Phase 3 opens: the gamification game + UI redesign + Insight L
 ## Ownership
 
 - **Track A (biotope)** leans **Alton** (Flutter UI, M3 sensors/semi-passive) with Jayden on the M4
-  ingestion/db side and all consent-scope/copy work (M1 ownership).
+  ingestion/db side and copy/compliance work (M1 ownership).
 - **Track B (brain/nao)** leans **Jayden** (db rules, the brain, copy-guidelines enforcement path) with
   Alton as second reviewer on the `shared/` PRs (registry v2, brain/rule contracts, chat contract).
 - The shared foundations (registry v2, storage primitives, brain + rule contracts) are **`shared/`
@@ -308,11 +309,11 @@ and Phase 3. Then Phase 3 opens: the gamification game + UI redesign + Insight L
 
 ## Constraints that shape the plan
 
-- **Non-diagnostic always; 30-second logging; graceful degradation; PDPA isolation; privacy-safe
-  community minimums** (PROJECT-CONTEXT principles — W4 leans hardest on the last two).
+- **Non-diagnostic always; 30-second logging; graceful degradation** (PROJECT-CONTEXT principles).
+  *(PDPA/data-isolation and on-device privacy are **deferred past the demo** — all user data is in
+  Supabase for now.)*
 - **Metric platform invariants:** the registry is the single source of truth; **storage follows
-  continuity, not body system**; add/remove a metric is localized; reliability is a per-metric weight;
-  raw sensor data stays on-device.
+  continuity, not body system**; add/remove a metric is localized; reliability is a per-metric weight.
 - **Two-tier truth:** raw rows / events / state bands / migrations / `shared/` / `data/rules` are TRUTH;
   baselines, cards, engagement, the `rules` table, the runtime brain projection (Neo4j), and graphify
   output are rebuildable projections.

@@ -40,3 +40,18 @@ document.
 
 ## Blockers
 - None.
+
+## Addendum — demo scope: drop PDPA/privacy; expand nao; flag stale artifacts
+- **Removed from PHASE2-PLAN** (demo stores everything in Supabase): metric-platform §5 "Privacy scales
+  with the sensor surface"; the W0 "Granular consent + on-device processing" + "PDPA consent legal review"
+  rows; the W3 env-consent row; "raw sensor data stays on-device" + "PDPA isolation / privacy-safe
+  community minimums" from Constraints; softened G4 + gate-6 privacy language. Left a one-line **"Demo
+  storage"** deferral note (PDPA + on-device privacy → past the demo / scaling).
+- **Reconciled the brain row** with the new pipeline: `verified_edges` → Neo4j projection, bootstrapped
+  from `derivedFrom[]`+priors and grown by the synthesis→verification pipeline.
+- **Expanded W5 · nao**: v1–v4 phasing + stack + pointers to NAO-DESIGN / BRAIN-DESIGN / BRAIN-INGESTION /
+  BRAIN-MODELS-TRAINING / memory 0013.
+- **Flagged (not edited) stale artifacts in other docs** for owner decision: INSIGHTS-ENGINE-DESIGN "targets
+  Postgres instead of Neo4j" (brain now uses Neo4j); PROJECT-CONTEXT PDPA principle #4 + M1 PDPA ownership
+  (diverges from demo scope); the two 2026-06-11 human-brief snapshots (stale); METRICS-CATALOG "privacy
+  by design / on-device" reference notes.
