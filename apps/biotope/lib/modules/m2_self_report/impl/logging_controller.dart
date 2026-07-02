@@ -11,6 +11,7 @@ class DailyLogInput {
   final int? gutComfort;
   final List<String> symptomFlags;
   final String? notes;
+  final bool? standingWaterPresent;
   final double logCompleteness;
 
   const DailyLogInput({
@@ -24,6 +25,7 @@ class DailyLogInput {
     this.gutComfort,
     this.symptomFlags = const [],
     this.notes,
+    this.standingWaterPresent,
     required this.logCompleteness,
   });
 }
@@ -76,6 +78,7 @@ class DailyLogService {
         'gut_comfort_score': input.gutComfort,
         'symptom_flags': input.symptomFlags,
         'notes': (notes == null || notes.isEmpty) ? null : notes,
+        'standing_water_present': input.standingWaterPresent,
         'on_antibiotics': onAntibiotics,
         'gut_watch_active': gutWatchActive,
         'log_completeness': input.logCompleteness,
