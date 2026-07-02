@@ -12,14 +12,28 @@
  *   7. store      — bytes/JATS + extracted text → R2; finalise manifest record
  *
  * Guardrails honoured:
- *  - **Budget fail-closed (§5.1):** before retrieving a paper we ask the budget
- *    guard `wouldExceed95` for the sources we are about to touch; if any metered
- *    source is at its hard-stop line we STOP CLEANLY — the current and all
- *    remaining papers stay `status:'discovered'` (NEVER `'failed'`), a clear line
- *    is logged, and the run exits 0. The next day's run resumes from the manifest.
+ *  - **Budget fail-closed (§5.1), PER SOURCE not per run:** each metered adapter
+ *    (currently only CORE, `src/retrieval/core.ts`) asks its own budget guard
+ *    `wouldExceed95` before dispatching and returns `null` — never throws — once
+ *    at its hard-stop line, so a paper stays `status:'discovered'` (NEVER
+ *    `'failed'`) rather than being marked unretrievable. Deliberately NOT a
+ *    whole-run early-exit: the free, unmetered steps ahead of CORE (PMC JATS,
+ *    Europe PMC, arXiv, the direct-OA-URL fetch) never touch CORE's budget, so a
+ *    capped CORE must not stop the run from still serving those papers — only
+ *    CORE itself declines. The run finishes its `--limit` batch normally; the
+ *    tallies below report whether any metered source ended the run at its cap
+ *    (`budgetStopped`) and how many papers are left `discovered` (`deferred`),
+ *    purely informational — resume tomorrow to pick up whatever CORE couldn't
+ *    reach today.
  *  - **Resumable:** a paper already `status:'fetched'` is skipped on re-run.
  *  - **Dry run:** `--dry-run` plans (discover + resolve + classify) and writes the
  *    `discovered` records, but issues no retrieval / R2 calls.
+ *  - **Host-memory guard (opt-in via `opts.memoryGuard`, `limits/memoryGuard.ts`):**
+ *    before each retrieval attempt, pause briefly if the HOST MACHINE (not this
+ *    process) is critically low on free RAM, then proceed regardless — a
+ *    considerate pause, never a reason to leave a paper unfetched. The CLI
+ *    enables this for real `ingest`/`resume` runs; `run()` callers (tests) that
+ *    omit it get no memory checking at all.
  *
  * Network discipline: all HTTP routes through a {@link SourceCtx} whose fetch
  * helpers run inside the per-source rate limiter; adapters charge the budget
@@ -79,6 +93,8 @@ import { retrieveJats as retrievePmcJats } from './retrieval/pmcJats.js';
 import { fetchEuropePmcJats, jatsToText } from './retrieval/europepmcFulltext.js';
 import { retrieve as retrieveCore } from './retrieval/core.js';
 import { fetchArxivPdf, arxivIdFromRecord } from './retrieval/arxivPdf.js';
+import { fetchBestOaUrl } from './retrieval/directOa.js';
+import { waitForMemory, type MemoryGuardOptions } from './limits/memoryGuard.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Options + result
@@ -100,6 +116,13 @@ export interface RunOptions {
   store?: R2Store;
   /** Where to write log lines; default `process.stdout.write`. */
   log?: (line: string) => void;
+  /**
+   * Enable the host-memory guard (`limits/memoryGuard.ts`) before each
+   * retrieval attempt. Opt-in and `undefined` by default (a no-op) so
+   * existing/test callers of `run()` are unaffected — the CLI (`cli.ts`)
+   * passes `{}` (all defaults) for real `ingest`/`resume` invocations.
+   */
+  memoryGuard?: MemoryGuardOptions;
 }
 
 /** Outcome of a {@link run} — the numbers the CLI prints. */
@@ -375,8 +398,8 @@ type RetrievedPayload =
       /** the raw bytes to store under `contentKey` */
       bytes: Uint8Array;
       contentType: string;
-      /** the extraction method that produced the text */
-      method: 'jats' | 'pdf';
+      /** the extraction method that produced the text (source-tagged for directOa; see FullTextInfo.method) */
+      method: 'jats' | 'pdf' | 'directOa';
       /** extracted plain text (from JATS walk or `unpdf`) */
       text: string;
     }
@@ -387,13 +410,17 @@ type RetrievedPayload =
     };
 
 /**
- * The metered sources a retrieval attempt for `record` may touch — used to
- * decide whether a §5.1 hard-stop should defer the whole paper. We over-include
- * (cheap): if any is at its hard-stop line we defer rather than risk a denial
- * mid-paper. OpenAlex is not retrieved-through; CORE is the only metered one.
+ * The metered-with-a-daily-cap sources a retrieval attempt may touch — used
+ * only for the post-loop informational `budgetStopped` check (§5.1), never to
+ * gate the loop itself. Empty: CORE (the only retrieval-time source that was
+ * ever in this list) turned out, on live verification, to have no confirmed
+ * daily cap — just a ~10-req/60s bucket, which `limits/rateLimiter.ts` paces
+ * to directly (see `retrieval/core.ts`'s docstring). OpenAlex is genuinely
+ * metered ($1/day) but is never retrieved-through (only touched during the
+ * earlier OA-location phase), so it doesn't belong in this retrieval-scoped list.
  */
 function meteredSourcesForRetrieval(): SourceName[] {
-  return ['core'];
+  return [];
 }
 
 /**
@@ -401,9 +428,13 @@ function meteredSourcesForRetrieval(): SourceName[] {
  * first {@link RetrievedPayload} produced (or `null` if none can serve it).
  * Extraction is done here so the orchestrator owns the single text artifact (§5):
  *  - PMC JATS / Europe PMC JATS → `extractFromJats`,
- *  - arXiv PDF → `extractFromPdf` (unpdf),
+ *  - arXiv PDF / direct OA URL → `extractFromPdf` (unpdf),
  *  - CORE → its own `retrieve` already yields extracted text (`method:'core'`) or
  *    a stored-PDF descriptor; we re-fetch nothing it didn't hand back.
+ *
+ * The direct-OA-URL step (before CORE) fetches `record.oa.bestOaUrl` — a link
+ * OpenAlex/Unpaywall already resolved for free during OA-location — so a
+ * record doesn't cost a metered CORE token for content we'd already located.
  */
 async function retrieveRecord(
   ctx: SourceCtx,
@@ -465,7 +496,28 @@ async function retrieveRecord(
     /* try next source */
   }
 
-  // 4) CORE aggregator — returns its own self-describing `{storage, fullText}`
+  // 4) Direct OA-URL fetch — `record.oa.bestOaUrl`, resolved for free during
+  //    OA-location. Only serves records where that URL turns out to actually
+  //    be a PDF (`fetchBestOaUrl` returns null otherwise); we hold the bytes →
+  //    extract + upload, same shape as the arXiv step above.
+  try {
+    const bytes = await fetchBestOaUrl(ctx, record);
+    if (bytes !== null) {
+      const text = (await extractFromPdf(bytes)).text;
+      return {
+        kind: 'upload',
+        contentKey: pdfKey(record.paperUid),
+        bytes,
+        contentType: 'application/pdf',
+        method: 'directOa',
+        text,
+      };
+    }
+  } catch {
+    /* try next source */
+  }
+
+  // 5) CORE aggregator — returns its own self-describing `{storage, fullText}`
   //    patch (its pre-extracted `text/<uid>.txt` is asserted present, or a PDF
   //    descriptor it has already addressed). The bytes aren't surfaced through
   //    `RetrieveFn`, so we apply CORE's patch as-is rather than re-uploading.
@@ -765,21 +817,13 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
         continue;
       }
 
-      // §5.1 fail-closed: if any metered retrieval source is at its hard-stop,
-      // STOP CLEANLY. The current + remaining papers stay 'discovered'.
-      const blocked = meteredSourcesForRetrieval().find((src) =>
-        budget.wouldExceed95(src, costFor(src)),
-      );
-      if (blocked) {
-        budgetStopped = true;
-        // Everything from here on (including this record) stays discovered.
-        deferred = limited.filter((r) => r.status !== 'fetched').length - fetched;
-        log(
-          `BUDGET HARD-STOP: '${blocked}' at/over 95% of daily cap (spent ${budget.spent(
-            blocked,
-          )}). Stopping cleanly — ${deferred} paper(s) left as 'discovered'. Resume tomorrow.`,
-        );
-        break;
+      // §5.1 fail-closed is now PER METERED SOURCE (inside that source's own
+      // adapter, e.g. core.ts's own `wouldExceed95` check before it dispatches)
+      // rather than a whole-run early-exit here — see the module docstring for
+      // why: the free steps ahead of CORE must still get a chance even once
+      // CORE itself is capped for the day.
+      if (opts.memoryGuard !== undefined) {
+        await waitForMemory(opts.memoryGuard, log);
       }
 
       const { record: finalised, stored } = await fetchAndStore(ctx, store, rec, now);
@@ -792,6 +836,22 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
       } else {
         log(`  unretrieved ${finalised.paperUid} [${finalised.retrievability}] — left 'discovered'`);
       }
+    }
+
+    // Informational only (never gated the loop above): did a metered source end
+    // this run at/over its hard-stop, and how many papers are left `discovered`
+    // for a future run to pick up? `deferred` counts every still-unfetched paper
+    // in this batch, not only budget-caused ones — paywalled/unknown records look
+    // the same as budget-capped ones from here, and that's an honest number either way.
+    // Currently always false (see meteredSourcesForRetrieval's docstring) — kept
+    // as the hook for a future retrieval-time source with a genuine daily cap.
+    budgetStopped = meteredSourcesForRetrieval().some((src) => budget.wouldExceed95(src, costFor(src)));
+    deferred = limited.filter((r) => r.status !== 'fetched').length - fetched;
+    if (budgetStopped) {
+      log(
+        `budget note: a metered source is at/over its 95% daily cap — ${deferred} paper(s) ` +
+          `in this batch remain 'discovered'; resume tomorrow for whatever needed it.`,
+      );
     }
   }
 
@@ -909,7 +969,9 @@ export function statusReport(opts: { config?: Config; corpusDir?: string } = {})
   }
   lines.push('budget (today):');
   lines.push(`  openalex: $${budget.spent('openalex').toFixed(4)} / $1.00`);
-  lines.push(`  core:     ${budget.spent('core')} / 1000 tokens`);
+  // CORE has no confirmed daily cap (verified live 2026-07-01) — it's paced by
+  // limits/rateLimiter.ts's ~10-req/60s profile instead, not tracked here.
+  lines.push('  core:     unmetered (rate-limited to ~10 req/60s, no daily cap)');
   void config; // config validated above (fails fast on a bad .env)
   return lines.join('\n');
 }

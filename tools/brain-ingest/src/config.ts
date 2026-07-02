@@ -105,6 +105,7 @@ const KEYLESS_SOURCES: SourceName[] = [
   'biorxiv',
   'unpaywall',
   'pmc',
+  'directOa',
 ];
 
 /**
@@ -131,6 +132,7 @@ export function inspectConfig(envPath: string = defaultEnvPath()): ConfigInspect
     biorxiv: true,
     unpaywall: true,
     pmc: true,
+    directOa: true,
     openalex: hasOpenalex, // required, but reflect actual presence
     s2: hasS2,
     core: hasCore,

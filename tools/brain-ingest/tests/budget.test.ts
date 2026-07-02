@@ -6,8 +6,16 @@
  *  - the charge that would cross 95% is refused (wouldExceed95 true + charge throws);
  *  - counters persist across a fresh instance pointed at the same usage.json;
  *  - a counter whose windowStart is a previous UTC day resets;
- *  - unmetered sources (NCBI/pubmed) are a no-op;
+ *  - unmetered sources (NCBI/pubmed, and CORE — see below) are a no-op;
  *  - OpenAlex per-request cost model matches §5.1.
+ *
+ * OpenAlex is the only real metered source now (verified live 2026-07-01 — its
+ * `X-RateLimit-*` response headers report exactly `Limit-USD: 1`, resetting at
+ * UTC midnight). These generic hard-stop/persistence/reset tests use OpenAlex's
+ * real $1.00/$0.95 scale throughout — they used to use CORE's `daily:1000`
+ * scale before CORE turned out to have no real daily cap at all (see
+ * `limits/budget.ts` and `retrieval/core.ts`'s docstrings) and was removed
+ * from `BUDGETS` entirely.
  */
 
 import { test } from 'node:test';
@@ -34,32 +42,32 @@ function freshUsagePath(): { dir: string; usagePath: string } {
   return { dir, usagePath: join(dir, 'usage.json') };
 }
 
-test('CORE: charges up to <95% allowed; the charge crossing 95% is refused', () => {
+test('OpenAlex: charges up to <95% allowed; the charge crossing 95% is refused', () => {
   const { dir, usagePath } = freshUsagePath();
   try {
     const g = new FileBudgetGuard({ usagePath, now: () => DAY1_NOON });
-    // CORE daily = 1000 tokens → hard stop = 950.
-    const hardStop = BUDGETS.core!.daily * HARD_STOP_FRACTION;
-    assert.equal(hardStop, 950);
+    // OpenAlex daily = $1.00 → hard stop = $0.95.
+    const hardStop = BUDGETS.openalex!.daily * HARD_STOP_FRACTION;
+    assert.equal(hardStop, 0.95);
 
-    // Charge 900 → total 900, below 950: allowed.
-    assert.equal(g.wouldExceed95('core', 900), false);
-    g.charge('core', 900);
-    assert.equal(g.spent('core'), 900);
+    // Charge $0.90 → total $0.90, below $0.95: allowed.
+    assert.equal(g.wouldExceed95('openalex', 0.9), false);
+    g.charge('openalex', 0.9);
+    assert.equal(g.spent('openalex'), 0.9);
 
-    // Next 49 → total 949 (< 950): still allowed.
-    assert.equal(g.wouldExceed95('core', 49), false);
-    g.charge('core', 49);
-    assert.equal(g.spent('core'), 949);
+    // Next $0.049 → total $0.949 (< $0.95): still allowed.
+    assert.equal(g.wouldExceed95('openalex', 0.049), false);
+    g.charge('openalex', 0.049);
+    assert.ok(Math.abs(g.spent('openalex') - 0.949) < 1e-9);
 
-    // Next 1 → total 950 == hard stop: this CROSSES the line → refused.
-    assert.equal(g.wouldExceed95('core', 1), true);
-    assert.throws(() => g.charge('core', 1), /95% hard stop/);
+    // Next $0.001 → total $0.95 == hard stop: this CROSSES the line → refused.
+    assert.equal(g.wouldExceed95('openalex', 0.001), true);
+    assert.throws(() => g.charge('openalex', 0.001), /95% hard stop/);
     // Spend unchanged after a denied charge.
-    assert.equal(g.spent('core'), 949);
+    assert.ok(Math.abs(g.spent('openalex') - 0.949) < 1e-9);
 
     // A larger charge that overshoots is also refused.
-    assert.equal(g.wouldExceed95('core', 100), true);
+    assert.equal(g.wouldExceed95('openalex', 0.1), true);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -69,10 +77,24 @@ test('boundary: charge landing just below hard stop is allowed', () => {
   const { dir, usagePath } = freshUsagePath();
   try {
     const g = new FileBudgetGuard({ usagePath, now: () => DAY1_NOON });
-    // 949.999 < 950 → allowed; 950 → refused.
-    assert.equal(g.wouldExceed95('core', 949.999), false);
-    g.charge('core', 949.999);
-    assert.equal(g.wouldExceed95('core', 0.001), true); // 950.0 crosses
+    // 0.949999 < 0.95 → allowed; 0.95 → refused.
+    assert.equal(g.wouldExceed95('openalex', 0.949999), false);
+    g.charge('openalex', 0.949999);
+    assert.equal(g.wouldExceed95('openalex', 0.000001), true); // 0.95 crosses
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('CORE is intentionally unmetered (no confirmed daily cap — see limits/budget.ts)', () => {
+  const { dir, usagePath } = freshUsagePath();
+  try {
+    assert.equal(BUDGETS.core, undefined, 'CORE must not be in BUDGETS');
+    const g = new FileBudgetGuard({ usagePath, now: () => DAY1_NOON });
+    // Even an enormous charge never blocks or gets tracked.
+    assert.equal(g.wouldExceed95('core', 1e9), false);
+    assert.doesNotThrow(() => g.charge('core', 1e9));
+    assert.equal(g.spent('core'), 0);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -118,26 +140,26 @@ test('a windowStart in a previous UTC day resets the counter', () => {
       usagePath,
       JSON.stringify({
         version: 1,
-        counters: { core: { windowStart: day1Iso, spent: 940 } },
+        counters: { openalex: { windowStart: day1Iso, spent: 0.94 } },
       }),
       'utf8',
     );
 
     // Open the guard "the next day" → counter must reset to 0 for the new window.
     const g = new FileBudgetGuard({ usagePath, now: () => DAY2_NOON });
-    assert.equal(g.spent('core'), 0);
+    assert.equal(g.spent('openalex'), 0);
     // And so a full charge is allowed again in the new window.
-    assert.equal(g.wouldExceed95('core', 900), false);
-    g.charge('core', 900);
-    assert.equal(g.spent('core'), 900);
+    assert.equal(g.wouldExceed95('openalex', 0.9), false);
+    g.charge('openalex', 0.9);
+    assert.equal(g.spent('openalex'), 0.9);
 
     // The persisted window now reflects DAY2.
     const onDisk = JSON.parse(readFileSync(usagePath, 'utf8')) as {
-      counters: { core?: { windowStart: string; spent: number } };
+      counters: { openalex?: { windowStart: string; spent: number } };
     };
     const day2Iso = new Date(Date.UTC(2026, 5, 30)).toISOString();
-    assert.equal(onDisk.counters.core?.windowStart, day2Iso);
-    assert.equal(onDisk.counters.core?.spent, 900);
+    assert.equal(onDisk.counters.openalex?.windowStart, day2Iso);
+    assert.equal(onDisk.counters.openalex?.spent, 0.9);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -149,9 +171,9 @@ test('same-UTC-day at a different time keeps the counter (no spurious reset)', (
     const morning = Date.UTC(2026, 5, 29, 1, 0, 0);
     const evening = Date.UTC(2026, 5, 29, 23, 59, 0);
     const g1 = new FileBudgetGuard({ usagePath, now: () => morning });
-    g1.charge('core', 500);
+    g1.charge('openalex', 0.5);
     const g2 = new FileBudgetGuard({ usagePath, now: () => evening });
-    assert.equal(g2.spent('core'), 500); // same UTC day → not reset
+    assert.equal(g2.spent('openalex'), 0.5); // same UTC day → not reset
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

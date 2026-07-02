@@ -136,6 +136,10 @@ export async function main(argv: string[]): Promise<number> {
           seed: options.get('seed'),
           limit: parseLimit(options),
           dryRun: flags.has('dry-run'),
+          // Real CLI runs get the host-memory guard (limits/memoryGuard.ts) —
+          // `{}` uses its sensible defaults. `run()` callers that omit this
+          // (tests) get no memory checking at all.
+          memoryGuard: {},
         });
         printRunResult(result);
         return 0;
@@ -149,6 +153,7 @@ export async function main(argv: string[]): Promise<number> {
           seed: options.get('seed'),
           limit: parseLimit(options),
           dryRun: false,
+          memoryGuard: {},
         });
         printRunResult(result);
         return 0;

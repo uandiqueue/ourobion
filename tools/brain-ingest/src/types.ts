@@ -70,7 +70,15 @@ export interface StorageInfo {
 /** Text-extraction outcome (design §8 `fullText{}`). */
 export interface FullTextInfo {
   extracted: boolean;
-  method: 'jats' | 'core' | 'pdf' | 'html' | null;
+  /**
+   * Which adapter served the bytes. Mostly extraction-technique-tagged
+   * (`'jats'` / `'pdf'`) except where the SOURCE matters for observability:
+   * `'core'` (CORE's pre-extracted text) and `'directOa'` (the free direct
+   * fetch of `oa.bestOaUrl`, ahead of CORE) are tagged by source specifically
+   * so a `directOa` hit is distinguishable from CORE's own PDF-download
+   * fallback — both would otherwise look identical as a generic `'pdf'`.
+   */
+  method: 'jats' | 'core' | 'pdf' | 'html' | 'directOa' | null;
   charCount: number | null;
 }
 
@@ -153,7 +161,8 @@ export type SourceName =
   | 'openalex'
   | 'unpaywall'
   | 'pmc'
-  | 'core';
+  | 'core'
+  | 'directOa';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Runtime context handed to every adapter (design §5, §5.1)

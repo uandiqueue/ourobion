@@ -55,7 +55,7 @@ export interface StorageInfo {
 /** Text-extraction outcome. */
 export interface FullTextInfo {
   extracted: boolean;
-  method: 'jats' | 'core' | 'pdf' | 'html' | null;
+  method: 'jats' | 'core' | 'pdf' | 'html' | 'directOa' | null;
   charCount: number | null;
 }
 

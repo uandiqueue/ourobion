@@ -59,6 +59,7 @@ function fakeConfig(): Config {
     openalex: true,
     unpaywall: false,
     pmc: false,
+    directOa: false,
     core: false,
   } satisfies Record<SourceName, boolean>;
   return {

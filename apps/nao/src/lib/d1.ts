@@ -78,7 +78,7 @@ export interface SearchFilters {
   topicTag?: string;
   status?: string;
   discoveredVia?: string;
-  /** full_text_method (jats|core|pdf|html) */
+  /** full_text_method (jats|core|pdf|html|directOa) */
   method?: string;
 }
 
