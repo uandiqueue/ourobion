@@ -1,0 +1,129 @@
+/*
+ * ourobion nao — Ingestion control page ("steer the pipeline").
+ * Reuses .panel/.eyebrow/.fmt__cap from overview.css; only the layout + form
+ * controls specific to this page live here.
+ */
+
+.ingest {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 30px 26px 70px;
+}
+
+.ingest__head {
+  margin-bottom: 24px;
+}
+
+.ingest__title {
+  margin: 9px 0 0;
+  font-weight: 300;
+  font-size: 34px;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.ingest-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.ingest-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Pause / resume ──────────────────────────────────────────────────────── */
+.ingest-pause {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ingest-pause__badge {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 6px 12px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.ingest-pause__badge--running {
+  color: #2bc4be;
+  background: rgba(43, 196, 190, 0.12);
+  border: 1px solid rgba(43, 196, 190, 0.3);
+}
+.ingest-pause__badge--paused {
+  color: var(--text-muted);
+  background: var(--panel-inset);
+  border: 1px solid var(--hairline-strong);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.ingest-btn {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-primary);
+  background: var(--accent-3);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ingest-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.ingest-btn--ghost {
+  background: transparent;
+  border: 1px solid var(--hairline-strong);
+  color: var(--text-secondary);
+}
+
+/* ── Forms ───────────────────────────────────────────────────────────────── */
+.ingest-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ingest-form select,
+.ingest-form input {
+  background: var(--panel-inset);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 7px 10px;
+  min-width: 0;
+}
+.ingest-form input[type='number'] {
+  width: 80px;
+}
+.ingest-form__prefix {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.ingest-queued {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ingest-error {
+  grid-column: 1 / -1;
+  color: #e0655a;
+  font-size: 13px;
+  margin: 0;
+}
+
+@media (max-width: 920px) {
+  .ingest-grid {
+    grid-template-columns: 1fr;
+  }
+}

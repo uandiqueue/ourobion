@@ -18,17 +18,22 @@ Usage:
   brain-ingest --check-config
 
 Commands:
-  ingest [--seed <topic>] [--limit N] [--dry-run]  discover → resolve → retrieve → extract → store
+  ingest [--seed <topic>] [--limit N] [--dry-run] [--remote-control]
+                                                    discover → resolve → retrieve → extract → store
   status                                           manifest + budget summary
-  resume                                           continue an interrupted multi-day run (skip 'fetched')
+  resume [--remote-control]                        continue an interrupted multi-day run (skip 'fetched')
 
 Seed topics:
   ${SEED_TOPICS.join(', ')}
 
 Global options:
-  --check-config   print which sources are enabled (keyless/keyed/disabled);
-                   exit 0 if all required keys present, non-zero otherwise.
-  --help, -h       show this help.
+  --check-config    print which sources are enabled (keyless/keyed/disabled);
+                    exit 0 if all required keys present, non-zero otherwise.
+  --remote-control  read control/ingest-config.json from R2 before running: honor a
+                    remote pause, a queued seed/limit request, and any budget-limit
+                    override (see docs/nao/BRAIN-INGESTION-DESIGN.md). A --seed/--limit
+                    passed on this command line always wins over a queued request.
+  --help, -h        show this help.
 
 Required env (tools/brain-ingest/.env):
   ${REQUIRED_VARS.join(', ')}
@@ -140,6 +145,8 @@ export async function main(argv: string[]): Promise<number> {
           // `{}` uses its sensible defaults. `run()` callers that omit this
           // (tests) get no memory checking at all.
           memoryGuard: {},
+          // Opt-in: read control/ingest-config.json from R2 (src/control.ts).
+          controlFromR2: flags.has('remote-control'),
         });
         printRunResult(result);
         return 0;
@@ -154,6 +161,7 @@ export async function main(argv: string[]): Promise<number> {
           limit: parseLimit(options),
           dryRun: false,
           memoryGuard: {},
+          controlFromR2: flags.has('remote-control'),
         });
         printRunResult(result);
         return 0;

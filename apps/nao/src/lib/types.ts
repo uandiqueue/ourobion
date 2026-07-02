@@ -98,3 +98,65 @@ export interface PaperRecord {
   /** ISO; null until fetched */
   fetchedAt: string | null;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Remote control plane (this app ↔ R2 ↔ tools/brain-ingest's CLI)
+// Mirrors tools/brain-ingest/src/types.ts's IngestControlConfig/RequestedRun/
+// IngestLimits/DEFAULT_INGEST_CONTROL — same duplication pattern as the rest of
+// this file (no shared cross-app module; keep both copies in sync by hand).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** A queued one-shot run request, consumed by the next `--remote-control` CLI run. */
+export interface RequestedRun {
+  seed?: string;
+  limit?: number;
+  requestedAt: string; // ISO
+  requestedBy: string; // the nao user's email/id who queued it
+}
+
+/** Overridable ceilings the UI can adjust without redeploying the CLI. */
+export interface IngestLimits {
+  /** OpenAlex daily USD budget override (design §5.1). */
+  openalexDailyUsd?: number;
+}
+
+/** The full remote-control document at `control/ingest-config.json` in the corpus bucket. */
+export interface IngestControlConfig {
+  paused: boolean;
+  requestedRun?: RequestedRun | null;
+  limits: IngestLimits;
+  updatedAt: string; // ISO
+  updatedBy: string;
+}
+
+/** What the API returns when no control document exists yet in R2. */
+export const DEFAULT_INGEST_CONTROL: IngestControlConfig = {
+  paused: false,
+  requestedRun: null,
+  limits: {},
+  updatedAt: new Date(0).toISOString(),
+  updatedBy: 'system:default',
+};
+
+/** The six seed topics `tools/brain-ingest/src/seeds.ts` knows about (kept in sync by hand). */
+export const INGEST_SEED_TOPICS = [
+  'gut_microbiome',
+  'hydration',
+  'antibiotics',
+  'sleep_hrv',
+  'dengue_vector',
+  'environmental_health',
+] as const;
+
+/**
+ * The body `POST /api/ingest-control` accepts — three independent actions,
+ * any subset may be sent in one request (see `lib/ingestControl.ts`'s
+ * `applyIngestControlPatch`).
+ */
+export interface IngestControlPatch {
+  paused?: boolean;
+  requestSeed?: string;
+  requestLimit?: number;
+  clearRequest?: true;
+  openalexDailyUsd?: number | null;
+}

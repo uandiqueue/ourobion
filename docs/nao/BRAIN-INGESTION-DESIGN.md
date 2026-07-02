@@ -344,6 +344,37 @@ The brain's synthesis step reads `text/<paper_uid>.txt` (or `jats/…`), emits `
 `citations[].paperId` / `quoteSpans[].paperId` are these `paperUid`s — closing the trace loop from any
 served edge back to its sources.
 
+## 8.1 · Remote control plane (nao UI ↔ R2 ↔ this CLI)
+
+The CLI is normally invoked by a human on their own machine — there was no way to pause it, queue a
+run, or adjust a budget limit from anywhere else. `control/ingest-config.json` (same R2 bucket, §6
+layout) is the one shared surface both sides already read/write:
+
+```ts
+interface IngestControlConfig {
+  paused: boolean;                 // a controlled run does no work and exits
+  requestedRun?: { seed?: string; limit?: number; requestedAt: string; requestedBy: string } | null;
+  limits: { openalexDailyUsd?: number };  // overrides limits/budget.ts's compiled-in $1.00
+  updatedAt: string;
+  updatedBy: string;
+}
+```
+
+- **CLI side** (`tools/brain-ingest/src/control.ts`): opt-in via `ingest --remote-control` /
+  `resume --remote-control` (`run.ts`'s `RunOptions.controlFromR2`). Read once at the START of a run —
+  `paused` skips discovery too, not just retrieval. A queued `requestedRun` only fills in a seed/limit
+  the command line didn't already specify (explicit CLI intent always wins) and is cleared (one-shot)
+  once actually honored. Best-effort throughout: a missing/unreadable document behaves exactly like an
+  uncontrolled run — nothing here is required for local/offline use.
+- **nao side** (`apps/nao/src/lib/ingestControl.ts` + `app/(app)/api/ingest-control/route.ts` +
+  `app/(app)/ingest/page.tsx`): an authenticated GET/POST route (gated by the existing Supabase
+  middleware — no new auth code needed) and a small panel to pause/resume, queue a run, and adjust the
+  OpenAlex budget. Both sides keep independently-typed copies of the shape (same duplication pattern as
+  `PaperRecord`/`FullTextInfo` elsewhere in this doc — no shared cross-app module).
+- **Budget override plumbing** (`limits/budget.ts`'s `BudgetOptions.budgetOverrides`): per-instance,
+  merged over the module-level `BUDGETS` — a control-document override never mutates the compiled-in
+  default, so an unrelated `run()` call without `controlFromR2` is completely unaffected.
+
 ## 9 · Deferred / open
 
 - **NUS institutional proxy + publisher TDM APIs** (Elsevier/Springer/Wiley) + the **Singapore 2021 TDM

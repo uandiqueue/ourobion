@@ -280,3 +280,56 @@ export type RetrieveFn = (
   ctx: SourceCtx,
   record: PaperRecord,
 ) => Promise<{ storage: StorageInfo; fullText: FullTextInfo } | null>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Remote control plane (nao UI ↔ R2 ↔ this CLI) — see src/control.ts
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A one-shot "please run this" request, queued by the nao UI and consumed
+ * (cleared) by the next CLI invocation that honors it. `undefined`/`null` ⇒
+ * nothing queued.
+ */
+export interface RequestedRun {
+  seed?: string;
+  limit?: number;
+  requestedAt: string; // ISO
+  requestedBy: string; // the nao user's email/id who queued it
+}
+
+/**
+ * Overridable ceilings the nao UI can adjust without redeploying the CLI.
+ * Absent fields fall back to the CLI's own compiled-in defaults
+ * (`limits/budget.ts`'s `BUDGETS.openalex.daily` = $1.00).
+ */
+export interface IngestLimits {
+  /** OpenAlex daily USD budget override (design §5.1). */
+  openalexDailyUsd?: number;
+}
+
+/**
+ * The full remote-control document, stored at `control/ingest-config.json` in
+ * the SAME R2 bucket the corpus lives in (§6) — the one shared surface both
+ * `tools/brain-ingest` (S3 credentials) and `apps/nao` (native R2 binding)
+ * already read/write. Read at the start of a CLI run when `--remote-control`
+ * is set (opt-in — see `run.ts`'s `RunOptions.controlFromR2`); never required
+ * for local/offline use.
+ */
+export interface IngestControlConfig {
+  /** When true, a controlled run does no discovery/retrieval work and exits. */
+  paused: boolean;
+  /** A queued one-shot run request, or null/absent if none is pending. */
+  requestedRun?: RequestedRun | null;
+  limits: IngestLimits;
+  updatedAt: string; // ISO
+  updatedBy: string;
+}
+
+/** The config a controlled run uses when `control/ingest-config.json` is missing/unreadable. */
+export const DEFAULT_INGEST_CONTROL: IngestControlConfig = {
+  paused: false,
+  requestedRun: null,
+  limits: {},
+  updatedAt: new Date(0).toISOString(),
+  updatedBy: 'system:default',
+};

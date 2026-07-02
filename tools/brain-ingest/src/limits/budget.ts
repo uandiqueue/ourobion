@@ -94,6 +94,13 @@ export interface BudgetOptions {
   usagePath?: string;
   /** Injectable clock for deterministic tests; default `Date.now`. */
   now?: () => number;
+  /**
+   * Per-instance overrides merged over the module-level {@link BUDGETS}
+   * (e.g. the nao UI's `IngestLimits.openalexDailyUsd`, applied by `run.ts`
+   * when `opts.controlFromR2` is set). A `daily` override still uses the
+   * SAME `HARD_STOP_FRACTION` — only the ceiling moves, not the safety margin.
+   */
+  budgetOverrides?: Partial<Record<SourceName, SourceBudget>>;
 }
 
 /** Default corpus dir: `<repoRoot>/data/corpus` (design §6). */
@@ -124,13 +131,20 @@ function utcMidnightIso(ms: number): string {
 export class FileBudgetGuard implements BudgetGuard {
   private readonly usagePath: string;
   private readonly now: () => number;
+  private readonly budgetOverrides: Partial<Record<SourceName, SourceBudget>>;
   private counters: Partial<Record<SourceName, Counter>>;
 
   constructor(opts: BudgetOptions = {}) {
     this.now = opts.now ?? Date.now;
     this.usagePath =
       opts.usagePath ?? resolve(opts.corpusDir ?? defaultCorpusDir(), 'usage.json');
+    this.budgetOverrides = opts.budgetOverrides ?? {};
     this.counters = this.load();
+  }
+
+  /** The effective budget for `source`: an instance override, else the module default. */
+  private budgetFor(source: SourceName): SourceBudget | undefined {
+    return this.budgetOverrides[source] ?? BUDGETS[source];
   }
 
   /** Re-read counters from disk (crash-safe startup). */
@@ -163,7 +177,7 @@ export class FileBudgetGuard implements BudgetGuard {
    * unmetered sources.
    */
   private currentCounter(source: SourceName): Counter | undefined {
-    if (BUDGETS[source] === undefined) return undefined;
+    if (this.budgetFor(source) === undefined) return undefined;
     const todayWindow = utcMidnightIso(this.now());
     const existing = this.counters[source];
     if (existing === undefined || existing.windowStart !== todayWindow) {
@@ -180,7 +194,7 @@ export class FileBudgetGuard implements BudgetGuard {
   }
 
   wouldExceed95(source: SourceName, cost: number): boolean {
-    const budget = BUDGETS[source];
+    const budget = this.budgetFor(source);
     if (budget === undefined) return false; // unmetered → never blocks
     const hardStop = budget.daily * HARD_STOP_FRACTION;
     const projected = this.spent(source) + cost;
@@ -190,7 +204,7 @@ export class FileBudgetGuard implements BudgetGuard {
   }
 
   charge(source: SourceName, cost: number): void {
-    const budget = BUDGETS[source];
+    const budget = this.budgetFor(source);
     if (budget === undefined) return; // unmetered → no-op (NCBI etc.)
     if (this.wouldExceed95(source, cost)) {
       throw new Error(

@@ -217,3 +217,37 @@ test('OpenAlex per-request cost model matches §5.1', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('budgetOverrides: a per-instance override replaces the compiled-in daily cap (nao UI control)', () => {
+  const { dir, usagePath } = freshUsagePath();
+  try {
+    // A much stricter override than the real $1.00 default — as the nao UI's
+    // IngestLimits.openalexDailyUsd would set via src/control.ts.
+    const g = new FileBudgetGuard({
+      usagePath,
+      now: () => DAY1_NOON,
+      budgetOverrides: { openalex: { unit: 'usd', daily: 0.01 } },
+    });
+
+    // Hard stop is now 0.01 * 0.95 = 0.0095, not the real $0.95.
+    assert.equal(g.wouldExceed95('openalex', 0.009), false);
+    g.charge('openalex', 0.009);
+    assert.equal(g.wouldExceed95('openalex', 0.001), true, 'the OVERRIDE cap trips, not the real $0.95 one');
+    assert.throws(() => g.charge('openalex', 0.001), /95% hard stop/);
+
+    // A source with no override still uses the module default (unaffected).
+    assert.equal(BUDGETS.openalex?.daily, 1.0, 'the module default is untouched by the override');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('budgetOverrides: omitted uses the compiled-in default exactly as before', () => {
+  const { dir, usagePath } = freshUsagePath();
+  try {
+    const g = new FileBudgetGuard({ usagePath, now: () => DAY1_NOON });
+    assert.equal(g.wouldExceed95('openalex', 0.009), false, 'nowhere near the real $0.95 hard stop');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

@@ -15,6 +15,7 @@ const TABS: ReadonlyArray<{ href: string; label: string; match: (p: string) => b
     label: 'Papers',
     match: (p) => p === '/papers' || p.startsWith('/papers/') || p.startsWith('/paper/'),
   },
+  { href: '/ingest', label: 'Ingestion', match: (p) => p === '/ingest' || p.startsWith('/ingest/') },
 ];
 
 export function SubNav() {

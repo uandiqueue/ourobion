@@ -20,7 +20,8 @@ import { dirname, join, resolve } from 'node:path';
 import { run, classifyRetrievability, statusReport } from '../src/run.js';
 import { Manifest } from '../src/manifest.js';
 import { R2Store } from '../src/storage/r2.js';
-import type { Config, OaInfo, PaperRecord, SourceEnablement } from '../src/types.js';
+import { CONTROL_KEY } from '../src/control.js';
+import type { Config, OaInfo, PaperRecord, SourceEnablement, IngestControlConfig } from '../src/types.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Doubles
@@ -703,6 +704,198 @@ test('memoryGuard: omitted (the default) means zero memory checks — no log, no
     });
     assert.equal(result.discovered, 0); // all sources disabled — nothing to find anyway
     assert.ok(!logs.some((l) => l.includes('memory guard')));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Remote control plane (controlFromR2, src/control.ts) — nao UI ↔ R2 ↔ this CLI
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Like memStore(), but GetObjectCommand actually round-trips what was put/seeded. */
+function controlStore(seed?: Record<string, string>): { store: R2Store; puts: string[] } {
+  const objects = new Map<string, Uint8Array>(
+    Object.entries(seed ?? {}).map(([k, v]) => [k, new TextEncoder().encode(v)]),
+  );
+  const puts: string[] = [];
+  const client = {
+    async send(command: unknown): Promise<unknown> {
+      const c = command as { constructor: { name: string }; input: Record<string, unknown> };
+      const name = c.constructor.name;
+      const key = c.input['Key'] as string;
+      if (name === 'HeadObjectCommand') {
+        if (!objects.has(key)) {
+          const err = new Error('NotFound') as Error & { name: string };
+          err.name = 'NotFound';
+          throw err;
+        }
+        return { Metadata: {} };
+      }
+      if (name === 'PutObjectCommand') {
+        objects.set(key, c.input['Body'] as Uint8Array);
+        puts.push(key);
+        return {};
+      }
+      if (name === 'GetObjectCommand') {
+        const body = objects.get(key);
+        if (body === undefined) {
+          const err = new Error('NoSuchKey') as Error & { name: string };
+          err.name = 'NoSuchKey';
+          throw err;
+        }
+        return { Body: { transformToString: async () => new TextDecoder().decode(body) } };
+      }
+      return {};
+    },
+  };
+  return { store: new R2Store(makeConfig(), { client }), puts };
+}
+
+test('controlFromR2: paused does zero work and returns immediately', async () => {
+  const dir = tmpCorpus();
+  const control: IngestControlConfig = {
+    paused: true,
+    requestedRun: null,
+    limits: {},
+    updatedAt: '2026-07-02T00:00:00.000Z',
+    updatedBy: 'ops@ourobion.com',
+  };
+  const { store } = controlStore({ [CONTROL_KEY]: JSON.stringify(control) });
+  const logs: string[] = [];
+  try {
+    const result = await run({
+      config: makeConfig({ ...allDisabled(), crossref: true }), // would discover if it ran
+      corpusDir: dir,
+      store,
+      controlFromR2: true,
+      log: (l) => logs.push(l),
+    });
+    assert.equal(result.discovered, 0);
+    assert.equal(result.fetched, 0);
+    assert.deepEqual(result.seedsRun, []);
+    assert.ok(logs.some((l) => l.includes('paused via remote control')));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('controlFromR2: omitted (the default) ignores a paused control document entirely', async () => {
+  // Same paused document as above, but controlFromR2 is NOT set — must behave
+  // exactly like an uncontrolled run (no R2 read at all, no pause).
+  const dir = tmpCorpus();
+  const control: IngestControlConfig = {
+    paused: true,
+    requestedRun: null,
+    limits: {},
+    updatedAt: '2026-07-02T00:00:00.000Z',
+    updatedBy: 'ops@ourobion.com',
+  };
+  const { store } = controlStore({ [CONTROL_KEY]: JSON.stringify(control) });
+  try {
+    const result = await run({
+      config: makeConfig(),
+      corpusDir: dir,
+      store,
+      seed: 'gut_microbiome',
+      // controlFromR2 omitted
+    });
+    // All discovery sources disabled by makeConfig()'s default, so this just
+    // proves the run proceeded normally (didn't short-circuit on "paused").
+    assert.deepEqual(result.seedsRun, ['gut_microbiome']);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('controlFromR2: a queued requestedRun supplies seed/limit when the caller passes neither', async () => {
+  const dir = tmpCorpus();
+  const control: IngestControlConfig = {
+    paused: false,
+    requestedRun: {
+      seed: 'hydration',
+      limit: 5,
+      requestedAt: '2026-07-02T00:00:00.000Z',
+      requestedBy: 'researcher@ourobion.com',
+    },
+    limits: {},
+    updatedAt: '2026-07-02T00:00:00.000Z',
+    updatedBy: 'researcher@ourobion.com',
+  };
+  const { store } = controlStore({ [CONTROL_KEY]: JSON.stringify(control) });
+  try {
+    // Caller passes NO seed/limit — the queued request should fill them in.
+    const result = await run({
+      config: makeConfig(), // all discovery disabled → 0 candidates, but seed selection still matters
+      corpusDir: dir,
+      store,
+      controlFromR2: true,
+      log: () => {},
+    });
+    assert.deepEqual(result.seedsRun, ['hydration'], 'used the queued seed, not "all six"');
+
+    // One-shot: the request is cleared from R2 after being honored.
+    const after = JSON.parse(await store.getObjectText(CONTROL_KEY)) as IngestControlConfig;
+    assert.equal(after.requestedRun, null);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('controlFromR2: an explicit --seed on the command line wins over a queued request', async () => {
+  const dir = tmpCorpus();
+  const control: IngestControlConfig = {
+    paused: false,
+    requestedRun: { seed: 'hydration', requestedAt: '2026-07-02T00:00:00.000Z', requestedBy: 'x@y.com' },
+    limits: {},
+    updatedAt: '2026-07-02T00:00:00.000Z',
+    updatedBy: 'x@y.com',
+  };
+  const { store } = controlStore({ [CONTROL_KEY]: JSON.stringify(control) });
+  try {
+    const result = await run({
+      config: makeConfig(),
+      corpusDir: dir,
+      store,
+      seed: 'antibiotics', // explicit — must win
+      controlFromR2: true,
+      log: () => {},
+    });
+    assert.deepEqual(result.seedsRun, ['antibiotics']);
+
+    // Explicit intent wins, but that also means the queued request was never
+    // "used" by this run — it must survive for a future controlFromR2 run to pick up.
+    const after = JSON.parse(await store.getObjectText(CONTROL_KEY)) as IngestControlConfig;
+    assert.notEqual(after.requestedRun, null);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('controlFromR2: limits.openalexDailyUsd reaches createBudgetGuard without breaking the run', async () => {
+  // The override mechanism itself (a stricter cap actually trips sooner) is
+  // unit-tested precisely in limits/budget.test.ts's `budgetOverrides` tests.
+  // This just proves control.limits → run() → createBudgetGuard is wired
+  // correctly end-to-end and doesn't throw.
+  const dir = tmpCorpus();
+  const control: IngestControlConfig = {
+    paused: false,
+    requestedRun: null,
+    limits: { openalexDailyUsd: 0.01 },
+    updatedAt: '2026-07-02T00:00:00.000Z',
+    updatedBy: 'ops@ourobion.com',
+  };
+  const { store } = controlStore({ [CONTROL_KEY]: JSON.stringify(control) });
+  try {
+    const result = await run({
+      config: makeConfig(),
+      corpusDir: dir,
+      store,
+      seed: 'antibiotics',
+      controlFromR2: true,
+      log: () => {},
+    });
+    assert.deepEqual(result.seedsRun, ['antibiotics']);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

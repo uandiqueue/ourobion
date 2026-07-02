@@ -95,6 +95,7 @@ import { retrieve as retrieveCore } from './retrieval/core.js';
 import { fetchArxivPdf, arxivIdFromRecord } from './retrieval/arxivPdf.js';
 import { fetchBestOaUrl } from './retrieval/directOa.js';
 import { waitForMemory, type MemoryGuardOptions } from './limits/memoryGuard.js';
+import { loadIngestControl, clearRequestedRun } from './control.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Options + result
@@ -123,6 +124,15 @@ export interface RunOptions {
    * passes `{}` (all defaults) for real `ingest`/`resume` invocations.
    */
   memoryGuard?: MemoryGuardOptions;
+  /**
+   * Read `control/ingest-config.json` from R2 (`src/control.ts`) before doing
+   * any work: honor `paused`, fall back to a queued `requestedRun`'s seed/limit
+   * when the caller didn't pass its own, and apply any `limits` override to the
+   * budget guard. Opt-in and `undefined` by default (no R2 read, no behavior
+   * change) so existing/test callers are unaffected; the CLI's `--remote-control`
+   * flag turns this on.
+   */
+  controlFromR2?: boolean;
 }
 
 /** Outcome of a {@link run} — the numbers the CLI prints. */
@@ -689,10 +699,38 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
 
   const now = Date.now;
   const limiter = createRateLimiter({ ncbiKeyed: config.keys.ncbi !== undefined });
-  const budget = createBudgetGuard({ corpusDir });
-  const ctx = createSourceCtx(config, limiter, budget);
   const manifest = Manifest.open(corpusDir);
   const store = opts.store ?? new R2Store(config);
+
+  // ── Remote control plane (opt-in, src/control.ts) ───────────────────────────
+  // Read BEFORE anything else: `paused` must skip discovery/OA-location too, not
+  // just retrieval. Best-effort (loadIngestControl never throws) — a missing or
+  // unreadable control document behaves exactly like an uncontrolled run.
+  const control = opts.controlFromR2 ? await loadIngestControl(store) : undefined;
+  if (control?.paused) {
+    log(
+      `ingest: paused via remote control (control/ingest-config.json, set by ${control.updatedBy} ` +
+        `at ${control.updatedAt}) — no work done this run.`,
+    );
+    return {
+      seedsRun: [],
+      discovered: 0,
+      fetched: 0,
+      skipped: 0,
+      deferred: 0,
+      budgetStopped: false,
+      summary: manifest.summary(),
+    };
+  }
+
+  const budget = createBudgetGuard({
+    corpusDir,
+    budgetOverrides:
+      control?.limits.openalexDailyUsd !== undefined
+        ? { openalex: { unit: 'usd', daily: control.limits.openalexDailyUsd } }
+        : undefined,
+  });
+  const ctx = createSourceCtx(config, limiter, budget);
 
   // R2 is canonical (design §6): if the local manifest cache is empty (fresh clone,
   // or wiped), hydrate it from R2's manifest/papers.jsonl so "already explored /
@@ -702,7 +740,15 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
     await hydrateManifestFromR2(manifest, store, log);
   }
 
-  const seeds = selectSeeds(opts.seed);
+  // A queued remote run request (from the nao UI) only fills in a seed/limit the
+  // caller didn't already specify — explicit CLI intent always wins. One-shot:
+  // cleared once this run actually uses it (see the end of the function).
+  const requestedRun = control?.requestedRun ?? null;
+  const usedRequestedRun = opts.seed === undefined && opts.limit === undefined && requestedRun !== null;
+  const effectiveSeed = opts.seed ?? requestedRun?.seed;
+  const effectiveLimit = opts.limit ?? requestedRun?.limit;
+
+  const seeds = selectSeeds(effectiveSeed);
   log(`ingest: seeds=[${seeds.map((s) => s.topic).join(', ')}]${opts.dryRun ? ' (dry-run)' : ''}`);
 
   // ── Steps 1–4: discover → dedup → record → OA-locate → classify ─────────────
@@ -795,10 +841,10 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
   // skipping paywalled records. Discovery order is preserved within a rank (stable
   // sort, V8). No limit ⇒ process every record in discovery order.
   const ordered =
-    opts.limit !== undefined
+    effectiveLimit !== undefined
       ? [...records].sort((a, b) => fetchabilityRank(a) - fetchabilityRank(b))
       : records;
-  const limited = opts.limit !== undefined ? ordered.slice(0, Math.max(0, opts.limit)) : ordered;
+  const limited = effectiveLimit !== undefined ? ordered.slice(0, Math.max(0, effectiveLimit)) : ordered;
 
   let fetched = 0;
   let skipped = 0;
@@ -888,6 +934,14 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
   // Idempotent; skipped under --dry-run.
   if (!opts.dryRun) {
     await syncMetadata(store, manifest.all(), log);
+  }
+
+  // A queued remote run request is one-shot: clear it once actually honored
+  // (not on a dry-run — a plan shouldn't consume the request). Best-effort —
+  // see clearRequestedRun's docstring for what happens if this write fails.
+  if (usedRequestedRun && !opts.dryRun && control) {
+    await clearRequestedRun(store, control);
+    log(`remote control: cleared the consumed run request from ${requestedRun?.requestedBy ?? 'unknown'}`);
   }
 
   const summary = manifest.summary();
