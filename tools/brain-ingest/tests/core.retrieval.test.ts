@@ -4,11 +4,19 @@
  * NO network: the adapter is driven through a fake SourceCtx whose fetch helpers
  * return the canned fixtures in tests/fixtures/. Proves:
  *  - pure selection prefers an exact DOI match and rejects short/empty fullText;
- *  - the preferred path returns method:'core' from pre-extracted fullText with
- *    exactly ONE token charged (no download request);
- *  - the fallback path downloads the PDF (method:'pdf') with TWO tokens charged;
+ *  - the preferred path returns method:'core' from pre-extracted fullText (no
+ *    download request);
+ *  - the fallback path downloads the PDF (method:'pdf');
  *  - a disabled source / missing key / unlookupable record returns null cleanly;
- *  - the 95% budget hard stop refuses the call before dispatch (no fetch made).
+ *  - `retrievability:'paywalled'` skips CORE entirely (no query/call), while
+ *    `'unknown'` still gets a real attempt;
+ *  - a 429 is retried once (honoring the confirmed ~60s bucket-refill window)
+ *    and a second 429 gives up cleanly — see `fetchJsonWithRetry`/
+ *    `fetchBytesWithRetry`, verified live 2026-07-01 (module docstring).
+ *
+ * NOTE: CORE is deliberately NOT budget-guard-metered (see `limits/budget.ts`)
+ * — these tests don't exercise `ctx.budget` at all beyond providing a
+ * type-satisfying stub `retrieve()` never actually calls.
  */
 
 import { test } from 'node:test';
@@ -27,7 +35,8 @@ import {
   buildSearchQuery,
   fulltextOutcome,
   pdfOutcome,
-  CORE_TOKENS_PER_REQUEST,
+  fetchJsonWithRetry,
+  fetchBytesWithRetry,
   type CoreSearchResponse,
 } from '../src/retrieval/core.js';
 import type {
@@ -68,6 +77,7 @@ function makeConfig(opts: { coreKey?: string; coreEnabled?: boolean } = {}): Con
     openalex: true,
     unpaywall: true,
     pmc: true,
+    directOa: true,
     core: coreEnabled,
   } satisfies Record<SourceName, boolean>;
   return {
@@ -90,30 +100,41 @@ interface FetchLog {
   lastJsonOpts?: FetchOptions;
 }
 
-/** A fake ctx that serves a canned search response and a canned PDF, logging calls. */
+/**
+ * A fake ctx that serves a canned search response and a canned PDF, logging
+ * calls. `budget` is a type-satisfying stub only — CORE is deliberately not
+ * budget-guard-metered (see `limits/budget.ts`), so `retrieve()` never calls it.
+ * `searchThrows`/`bytesThrows` make EVERY call throw a non-retryable error (a
+ * malformed-response style failure, not a transient network/429 one — see
+ * `isRetryableError` in `retrieval/capture.ts`, which treats "network" itself
+ * as a retryable substring, so this deliberately avoids that word);
+ * `search429Then`/`bytes429Then` make only the FIRST call throw a 429 (the
+ * confirmed-live CORE rate-limit response) and subsequent calls succeed, to
+ * exercise the retry.
+ */
 function makeCtx(opts: {
   config?: Config;
   searchResponse?: CoreSearchResponse;
   pdfBytes?: Uint8Array;
-  budgetSpent?: number; // pre-existing CORE token spend (out of 1000)
   searchThrows?: boolean;
   bytesThrows?: boolean;
-}): { ctx: SourceCtx; log: FetchLog; spentRef: () => number } {
+  search429Then?: boolean;
+  bytes429Then?: boolean;
+}): { ctx: SourceCtx; log: FetchLog } {
   const config = opts.config ?? makeConfig();
   const log: FetchLog = { jsonUrls: [], byteUrls: [] };
-  let spent = opts.budgetSpent ?? 0;
-  const HARD_STOP = 950;
+  let jsonCalls = 0;
+  let byteCalls = 0;
 
   const budget = {
-    wouldExceed95(_source: SourceName, cost: number): boolean {
-      return spent + cost >= HARD_STOP;
+    wouldExceed95(): boolean {
+      return false;
     },
-    charge(_source: SourceName, cost: number): void {
-      if (spent + cost >= HARD_STOP) throw new Error('95% hard stop');
-      spent += cost;
+    charge(): void {
+      /* CORE is unmetered — no-op */
     },
-    spent(_source: SourceName): number {
-      return spent;
+    spent(): number {
+      return 0;
     },
   };
 
@@ -124,7 +145,9 @@ function makeCtx(opts: {
     async fetchJson<T>(_s: SourceName, url: string, o?: FetchOptions): Promise<T> {
       log.jsonUrls.push(url);
       log.lastJsonOpts = o;
-      if (opts.searchThrows) throw new Error('network');
+      jsonCalls++;
+      if (opts.search429Then && jsonCalls === 1) throw new Error('HTTP 429 Too Many Requests');
+      if (opts.searchThrows) throw new Error('unexpected token in JSON response');
       return (opts.searchResponse ?? EMPTY) as T;
     },
     async fetchText(): Promise<string> {
@@ -132,11 +155,13 @@ function makeCtx(opts: {
     },
     async fetchBytes(_s: SourceName, url: string): Promise<Uint8Array> {
       log.byteUrls.push(url);
-      if (opts.bytesThrows) throw new Error('network');
+      byteCalls++;
+      if (opts.bytes429Then && byteCalls === 1) throw new Error('HTTP 429 Too Many Requests');
+      if (opts.bytesThrows) throw new Error('unexpected token in JSON response');
       return opts.pdfBytes ?? new Uint8Array([0x25, 0x50, 0x44, 0x46]); // %PDF
     },
   };
-  return { ctx, log, spentRef: () => spent };
+  return { ctx, log };
 }
 
 function makeRecord(identifiers: Identifiers, title = 'A paper'): PaperRecord {
@@ -237,9 +262,9 @@ test('pdfOutcome maps to method:pdf under pdf/<uid>.pdf, text not yet extracted'
 // Full adapter (fake ctx, no network)
 // ─────────────────────────────────────────────────────────────────────────────
 
-test('preferred path: returns fullText (method:core) charging exactly one token', async () => {
+test('preferred path: returns fullText (method:core), no download request', async () => {
   const rec = makeRecord({ doi: '10.1371/journal.pone.0123456' });
-  const { ctx, log, spentRef } = makeCtx({ searchResponse: FULLTEXT });
+  const { ctx, log } = makeCtx({ searchResponse: FULLTEXT });
 
   const result = await retrieve(ctx, rec);
   assert.ok(result);
@@ -249,21 +274,20 @@ test('preferred path: returns fullText (method:core) charging exactly one token'
   assert.equal(result.storage.kind, 'object');
   assert.equal(result.storage.key, `text/${rec.paperUid}.txt`);
 
-  // Exactly one search request, NO download, one token charged.
+  // Exactly one search request, NO download.
   assert.equal(log.jsonUrls.length, 1);
   assert.match(log.jsonUrls[0]!, /\/v3\/search\/works$/);
   assert.equal(log.byteUrls.length, 0);
-  assert.equal(spentRef(), CORE_TOKENS_PER_REQUEST);
 
   // Auth + query were passed through.
   assert.equal(log.lastJsonOpts?.headers?.['Authorization'], 'Bearer CORE_TEST_KEY');
   assert.equal(log.lastJsonOpts?.query?.['q'], 'doi:"10.1371/journal.pone.0123456"');
 });
 
-test('fallback path: no usable fullText → downloads PDF (method:pdf), two tokens', async () => {
+test('fallback path: no usable fullText → downloads PDF (method:pdf)', async () => {
   const rec = makeRecord({ doi: '10.1016/j.example.2022.07.014' }, 'Oral rehydration');
   const pdf = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d]); // %PDF-
-  const { ctx, log, spentRef } = makeCtx({ searchResponse: NOFULLTEXT, pdfBytes: pdf });
+  const { ctx, log } = makeCtx({ searchResponse: NOFULLTEXT, pdfBytes: pdf });
 
   const result = await retrieve(ctx, rec);
   assert.ok(result);
@@ -272,22 +296,20 @@ test('fallback path: no usable fullText → downloads PDF (method:pdf), two toke
   assert.equal(result.storage.key, `pdf/${rec.paperUid}.pdf`);
   assert.equal(result.storage.sizeBytes, pdf.byteLength);
 
-  // One search + one download = two tokens.
+  // One search + one download.
   assert.equal(log.jsonUrls.length, 1);
   assert.equal(log.byteUrls.length, 1);
   assert.match(log.byteUrls[0]!, /\/v3\/outputs\/987654321\/download$/);
-  assert.equal(spentRef(), 2 * CORE_TOKENS_PER_REQUEST);
 });
 
-test('disabled source returns null without any call or charge', async () => {
+test('disabled source returns null without any call', async () => {
   const rec = makeRecord({ doi: '10.1/x' });
-  const { ctx, log, spentRef } = makeCtx({
+  const { ctx, log } = makeCtx({
     config: makeConfig({ coreEnabled: false }),
     searchResponse: FULLTEXT,
   });
   assert.equal(await retrieve(ctx, rec), null);
   assert.equal(log.jsonUrls.length, 0);
-  assert.equal(spentRef(), 0);
 });
 
 test('missing CORE key returns null without any call', async () => {
@@ -307,37 +329,79 @@ test('record with nothing to look up by returns null without a call', async () =
   assert.equal(log.jsonUrls.length, 0);
 });
 
-test('empty search results returns null (one token already charged for the search)', async () => {
+test('empty search results returns null', async () => {
   const rec = makeRecord({ doi: '10.1/none' });
-  const { ctx, log, spentRef } = makeCtx({ searchResponse: EMPTY });
+  const { ctx, log } = makeCtx({ searchResponse: EMPTY });
   assert.equal(await retrieve(ctx, rec), null);
   assert.equal(log.jsonUrls.length, 1);
   assert.equal(log.byteUrls.length, 0);
-  assert.equal(spentRef(), CORE_TOKENS_PER_REQUEST);
 });
 
-test('budget hard stop refuses the search before dispatch (no fetch)', async () => {
-  const rec = makeRecord({ doi: '10.1371/journal.pone.0123456' });
-  // Pre-spend 950 → at the hard stop; the next 1-token charge would cross it.
-  const { ctx, log, spentRef } = makeCtx({ searchResponse: FULLTEXT, budgetSpent: 950 });
-  assert.equal(await retrieve(ctx, rec), null);
-  assert.equal(log.jsonUrls.length, 0); // never dispatched
-  assert.equal(spentRef(), 950); // unchanged
-});
-
-test('budget allows the search but blocks the download fallback', async () => {
-  const rec = makeRecord({ doi: '10.1016/j.example.2022.07.014' }, 'Oral rehydration');
-  // 948 spent: search (→949) ok; download (→950) would cross → refused.
-  const { ctx, log, spentRef } = makeCtx({ searchResponse: NOFULLTEXT, budgetSpent: 948 });
-  const result = await retrieve(ctx, rec);
-  assert.equal(result, null); // could not complete the PDF fallback
-  assert.equal(log.jsonUrls.length, 1); // search happened
-  assert.equal(log.byteUrls.length, 0); // download refused before dispatch
-  assert.equal(spentRef(), 949); // only the search token charged
-});
-
-test('a thrown search is swallowed → null', async () => {
+test('a thrown search (non-retryable) is swallowed → null, no retry delay', async () => {
   const rec = makeRecord({ doi: '10.1/x' });
-  const { ctx } = makeCtx({ searchThrows: true });
+  const { ctx, log } = makeCtx({ searchThrows: true });
   assert.equal(await retrieve(ctx, rec), null);
+  // A plain "network" message isn't classified retryable (no HTTP status, no
+  // known transient substring) — exactly one attempt, no ~61s wait.
+  assert.equal(log.jsonUrls.length, 1);
+});
+
+test('paywalled retrievability skips CORE entirely — no query, no call', async () => {
+  const rec = { ...makeRecord({ doi: '10.1/paywalled' }), retrievability: 'paywalled' as const };
+  const { ctx, log } = makeCtx({ searchResponse: FULLTEXT });
+  assert.equal(await retrieve(ctx, rec), null);
+  assert.equal(log.jsonUrls.length, 0, 'no search request issued');
+  assert.equal(log.byteUrls.length, 0);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 429 retry-after (verified live 2026-07-01 — see module docstring)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test('fetchJsonWithRetry: a 429 is retried once and succeeds', async () => {
+  const { ctx, log } = makeCtx({ searchResponse: FULLTEXT, search429Then: true });
+  const result = await fetchJsonWithRetry<CoreSearchResponse>(
+    ctx,
+    'https://api.core.ac.uk/v3/search/works',
+    { query: { q: 'x' } },
+    { attempts: 2, baseDelayMs: 0, sleep: async () => {} }, // instant for the test
+  );
+  assert.deepEqual(result, FULLTEXT);
+  assert.equal(log.jsonUrls.length, 2, 'first 429, second succeeds');
+});
+
+test('fetchJsonWithRetry: a second consecutive 429 gives up (only 2 attempts)', async () => {
+  const { ctx, log } = makeCtx({ searchResponse: FULLTEXT, searchThrows: true });
+  await assert.rejects(
+    () =>
+      fetchJsonWithRetry(
+        ctx,
+        'https://api.core.ac.uk/v3/search/works',
+        { query: { q: 'x' } },
+        { attempts: 2, baseDelayMs: 0, sleep: async () => {}, isRetryable: () => true },
+      ),
+    /unexpected token/,
+  );
+  assert.equal(log.jsonUrls.length, 2, 'exactly 2 attempts, then gives up');
+});
+
+test('fetchBytesWithRetry: a 429 on the PDF download is retried once and succeeds', async () => {
+  const pdf = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+  const { ctx, log } = makeCtx({ pdfBytes: pdf, bytes429Then: true });
+  const result = await fetchBytesWithRetry(
+    ctx,
+    'https://api.core.ac.uk/v3/outputs/1/download',
+    {},
+    { attempts: 2, baseDelayMs: 0, sleep: async () => {} },
+  );
+  assert.deepEqual(result, pdf);
+  assert.equal(log.byteUrls.length, 2);
+});
+
+test('unknown retrievability still queries CORE (unresolved, not confirmed closed)', async () => {
+  const rec = { ...makeRecord({ doi: '10.1371/journal.pone.0123456' }), retrievability: 'unknown' as const };
+  const { ctx, log } = makeCtx({ searchResponse: FULLTEXT });
+  const result = await retrieve(ctx, rec);
+  assert.ok(result, 'unknown records get a real CORE attempt');
+  assert.equal(log.jsonUrls.length, 1);
 });

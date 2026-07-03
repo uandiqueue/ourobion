@@ -70,7 +70,15 @@ export interface StorageInfo {
 /** Text-extraction outcome (design §8 `fullText{}`). */
 export interface FullTextInfo {
   extracted: boolean;
-  method: 'jats' | 'core' | 'pdf' | 'html' | null;
+  /**
+   * Which adapter served the bytes. Mostly extraction-technique-tagged
+   * (`'jats'` / `'pdf'`) except where the SOURCE matters for observability:
+   * `'core'` (CORE's pre-extracted text) and `'directOa'` (the free direct
+   * fetch of `oa.bestOaUrl`, ahead of CORE) are tagged by source specifically
+   * so a `directOa` hit is distinguishable from CORE's own PDF-download
+   * fallback — both would otherwise look identical as a generic `'pdf'`.
+   */
+  method: 'jats' | 'core' | 'pdf' | 'html' | 'directOa' | null;
   charCount: number | null;
 }
 
@@ -153,7 +161,8 @@ export type SourceName =
   | 'openalex'
   | 'unpaywall'
   | 'pmc'
-  | 'core';
+  | 'core'
+  | 'directOa';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Runtime context handed to every adapter (design §5, §5.1)
@@ -271,3 +280,50 @@ export type RetrieveFn = (
   ctx: SourceCtx,
   record: PaperRecord,
 ) => Promise<{ storage: StorageInfo; fullText: FullTextInfo } | null>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Remote control plane (nao UI ↔ R2 ↔ this CLI) — see src/control.ts
+//
+// nao triggers a run DIRECTLY via a GitHub Actions `workflow_dispatch` call
+// (seed/limit passed as workflow inputs, executed immediately on a GitHub
+// runner — see .github/workflows/brain-ingest.yml) rather than queuing a
+// request here for some later CLI invocation to notice. What's left for THIS
+// document to carry is state that should apply no matter how/where a run gets
+// triggered: a remote pause (a safety switch nao's trigger route itself
+// checks before dispatching, and any `--remote-control` run also honors) and
+// a budget override.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Overridable ceilings the nao UI can adjust without redeploying the CLI.
+ * Absent fields fall back to the CLI's own compiled-in defaults
+ * (`limits/budget.ts`'s `BUDGETS.openalex.daily` = $1.00).
+ */
+export interface IngestLimits {
+  /** OpenAlex daily USD budget override (design §5.1). */
+  openalexDailyUsd?: number;
+}
+
+/**
+ * The full remote-control document, stored at `control/ingest-config.json` in
+ * the SAME R2 bucket the corpus lives in (§6) — the one shared surface both
+ * `tools/brain-ingest` (S3 credentials) and `apps/nao` (native R2 binding)
+ * already read/write. Read at the start of a CLI run when `--remote-control`
+ * is set (opt-in — see `run.ts`'s `RunOptions.controlFromR2`); never required
+ * for local/offline use.
+ */
+export interface IngestControlConfig {
+  /** When true, a controlled run does no discovery/retrieval work and exits. */
+  paused: boolean;
+  limits: IngestLimits;
+  updatedAt: string; // ISO
+  updatedBy: string;
+}
+
+/** The config a controlled run uses when `control/ingest-config.json` is missing/unreadable. */
+export const DEFAULT_INGEST_CONTROL: IngestControlConfig = {
+  paused: false,
+  limits: {},
+  updatedAt: new Date(0).toISOString(),
+  updatedBy: 'system:default',
+};

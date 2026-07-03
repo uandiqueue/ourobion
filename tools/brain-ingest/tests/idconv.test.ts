@@ -58,6 +58,7 @@ function makeConfig(ncbi?: string): Config {
       openalex: true,
       unpaywall: true,
       pmc: true,
+      directOa: true,
       core: false,
     },
   };

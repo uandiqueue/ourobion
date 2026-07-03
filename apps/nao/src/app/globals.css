@@ -4,6 +4,7 @@
 @import './shell.css';
 @import './overview.css';
 @import './dashboard.css';
+@import './ingest.css';
 
 *,
 *::before,

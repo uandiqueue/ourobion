@@ -83,8 +83,8 @@ the deferred NUS/TDM decision.)*
 ```
  discovery API ──► resolve DOI ──► OA-location lookup ──► classify ──┬─► [downloadable]  fetch PDF      ──► object storage
  (Crossref,        (canonical      (Unpaywall /          retriev-    │                  / PMC JATS / arXiv
-  Europe PMC,       paper id)       OpenAlex             ability     │                  / CORE fullText
-  PubMed, arXiv,                    best_oa_location)                │
+  Europe PMC,       paper id)       OpenAlex             ability     │                  / direct bestOaUrl
+  PubMed, arXiv,                    best_oa_location)                │                  / CORE (last resort)
   bioRxiv)                                                          └─► [non-downloadable] browser-capture
                                                                          HTML / content   ──► local cache
 ```
@@ -103,15 +103,19 @@ the deferred NUS/TDM decision.)*
    "no OA copy."
 4. **Classify retrievability** → `pdf` (OA binary available) · `html` (full text only as HTML/JATS) ·
    `paywalled` (no free full text — defer to NUS/TDM) · `unknown`.
-5a. **Downloadable →** fetch the PDF (or PMC JATS / CORE `fullText`) → **object storage** (§6); record
-   checksum, size, license, source URL.
+5a. **Downloadable →** fetch the PDF — preferring PMC JATS / Europe PMC JATS, then a **direct fetch of
+   the OA-location step's own `best_oa_location` URL** (free, keyless — the pointer step 3 already
+   resolved), then arXiv, and only as a last resort CORE's own search+download (metered, §5.1) — →
+   **object storage** (§6); record checksum, size, license, source URL.
 5b. **Non-downloadable →** hand to the **browser-capture tool** (§5) → save HTML / rendered content →
    **local cache**; record locator.
 6. **Extract text** (§5) — once, store the result.
 7. **Finalise the manifest record** — status, license, storage location, text-extraction result.
 
-**Three sources serve full text directly** — PMC OA, CORE, arXiv (+ Europe PMC for its OA subset).
-Everything else hands you a *pointer* the OA-location step turns into a URL.
+**Four sources serve full text directly** — PMC OA, arXiv, CORE, and the OA-location step's own resolved
+URL fetched as-is (+ Europe PMC for its OA subset). Fetching that URL directly (rather than only using it
+to classify `retrievability`) is what lets CORE's metered quota be a last resort instead of the default
+catch-all for anything without a PMCID/arXiv id.
 
 ## 4 · Paper identity — the `paper_uid` (the spine)
 
@@ -164,7 +168,7 @@ Lives in a new **`tools/brain-ingest/`** (Node/TS, run on the project toolchain 
 | PDF → text | `unpdf` (pref.) or `pdfjs-dist` | `unpdf` is dependency-light & Deno/edge-safe; `pdfjs-dist` if we need layout. Prefer **PMC JATS / CORE `fullText`** over re-parsing a PDF when available — cleaner text. |
 | Object-storage client | `@aws-sdk/client-s3` (or tiny `aws4fetch`) | S3-compatible → one client works for R2 / B2 / Supabase. |
 | **Browser capture** (non-downloadable) | **Playwright (Chromium)** | Renders JS-heavy publisher pages; saves full **HTML / MHTML**, can print-to-PDF + screenshot for an archival copy. The cache tool for §3-5b. |
-| Rate limiting | `p-limit` + per-source token bucket | Respect arXiv 3 s, NCBI 3/s (10/s keyed), CORE/S2 caps. |
+| Rate limiting | `p-limit` + per-source token bucket | Respect arXiv 3 s, NCBI 3/s (10/s keyed), CORE ~10/60s bucket, S2 ~1/s. |
 
 **Browser-capture note:** without the (deferred) NUS session, capture only reaches what renders
 publicly — which is still valuable: it grabs **OA HTML full text** (PMC, PLoS, Frontiers, MDPI render
@@ -181,9 +185,9 @@ best-effort. The 5% headroom absorbs in-flight/concurrent calls so we never actu
 | Source | Daily budget | Hard stop (95%) | Unit tracked |
 |---|---|---|---|
 | **OpenAlex** | $1.00 / day | **$0.95** | summed per-request cost — list/filter $0.0001 · search $0.001 · singleton $0 (we don't use the $0.01 content/semantic/text endpoints). At ~$0.004 for the whole corpus this cap is a safety net, not a bottleneck |
-| **CORE** | 1000 tokens / day (personal key) | **950 tokens** | tokens consumed |
 | **NCBI E-utils** | *rate only* (10 req/s keyed) | n/a | throttle, not a daily cap → handled by the token bucket |
-| Crossref / Europe PMC / PMC OA / arXiv / Unpaywall / DOAJ | unmetered (free, keyless) | n/a | rate-limited only |
+| Crossref / Europe PMC / PMC OA / arXiv / Unpaywall / DOAJ / direct OA-URL fetch | unmetered (free, keyless) | n/a | rate-limited only |
+| **CORE** | **NOT a daily budget** — corrected 2026-07-01 after live verification. Its `X-RateLimit-*` response headers showed a **~10-request bucket that fully refills ~60s after exhaustion**, not the `1000/day` this table previously (wrongly) claimed. No evidence of any coarser daily cap on a free personal key. | n/a | rate-limited only — `limits/rateLimiter.ts`'s `core` profile is paced to the real ~10/60s bucket, with a 429-aware retry (~61s wait, matching the confirmed refill window) in `retrieval/core.ts` as a backstop. Also **skipped entirely (no query) for `retrievability:'paywalled'` records** — OA-location already confirmed no OA copy exists, and live corpus data showed paywalled/unknown records as the single largest category of CORE calls that came back empty. `'unknown'` records still get a real query. |
 | Semantic Scholar / Lens | *no key configured* | n/a | S2 runs anonymous-rate; Lens skipped |
 
 Rules:
@@ -191,12 +195,29 @@ Rules:
   source of truth, re-read at startup).
 - **Reset at the provider's window** — UTC midnight unless the provider documents a rolling window;
   store the window start with the counter.
-- **Stop cleanly, resume tomorrow** — on hitting a threshold the run finishes the current paper, then
-  **leaves remaining work as `discovered` (never `failed`)** and exits with a clear log line; the next
-  day's run picks up where it stopped. A multi-day ingest of the ~2000-paper corpus is the expected
-  mode, not an error.
+- **Per-source self-guard, not a whole-run stop** — each metered adapter (CORE) checks its own
+  `wouldExceed95` before dispatching and declines gracefully (no network call, never throws) once at its
+  hard-stop line, so a paper it can't reach stays `discovered` (never `failed`). This is deliberately
+  **not** a whole-run early-exit: the free, unmetered steps ahead of CORE in the retrieval order (PMC
+  JATS, Europe PMC, arXiv, the direct OA-URL fetch, §3) never touch CORE's budget, so a capped CORE must
+  not stop the run from still serving those papers for free — only CORE itself declines. The run finishes
+  its `--limit` batch normally; a resulting run summary reports (informationally) whether a metered
+  source ended the run at its cap and how many papers are left `discovered`. A multi-day ingest of the
+  ~2000-paper corpus is the expected mode, not an error — resume tomorrow for whatever still needed CORE.
 - **OpenAlex cost is deterministic, not estimated** — each request type has a fixed price (above), so
   the tracker sums actual per-call costs rather than guessing; the $0.95 line stays as a hard safety net.
+
+**Host-memory guard (`src/limits/memoryGuard.ts`, added 2026-07-02).** A different kind of guard from
+the two above — it protects the **host machine**, not an external API quota. Before each retrieval
+attempt (when enabled — the CLI turns it on by default; `run()` callers that omit it get no checking at
+all), it reads system-wide free memory (`os.freemem()`/`os.totalmem()`) and, if the machine is critically
+low (default: under 10% free **or** under 512MB free, whichever trips first), pauses for a few seconds
+before rechecking (up to 3 times) rather than piling more network + PDF-parsing work onto an already
+struggling system. Motivated by a real incident: the dev machine was down to ~5% free RAM (many
+concurrent editor/agent processes, unrelated to ingestion) and background runs were getting killed
+unpredictably. Deliberately **soft-fail**: after its wait budget, it always lets the run proceed anyway —
+ingestion's own per-paper footprint is small (a few MB, fully sequential, no local file writes for the
+corpus itself — see §6), so pausing is a courtesy, never a reason to leave a paper unfetched.
 
 **OA-location strategy — bulk batched queries (the efficient "bulk", not the snapshot).** Resolve OA
 locations by **batching up to 50 DOIs per OpenAlex list call** (`filter=doi:<a>|<b>|…`, `$0.0001`/call →
@@ -312,7 +333,7 @@ interface PaperRecord {
     sizeBytes?: number;
     sha256?: string;
   };
-  fullText: { extracted: boolean; method: 'jats'|'core'|'pdf'|'html'|null; charCount: number | null };
+  fullText: { extracted: boolean; method: 'jats'|'core'|'pdf'|'html'|'directOa'|null; charCount: number | null };
   status: 'discovered'|'fetched'|'failed';
   errors: string[];
   fetchedAt: string | null;        // ISO; null until fetched
@@ -322,6 +343,61 @@ interface PaperRecord {
 The brain's synthesis step reads `text/<paper_uid>.txt` (or `jats/…`), emits `RelationshipClaim`s whose
 `citations[].paperId` / `quoteSpans[].paperId` are these `paperUid`s — closing the trace loop from any
 served edge back to its sources.
+
+## 8.1 · Invoking a run from nao (GitHub Actions) + the remote control plane
+
+The CLI is normally invoked by a human on their own machine. nao (a Cloudflare Worker) **cannot run it
+directly** — a single seed's worth of discovery + retrieval routinely takes minutes to hours (CORE's
+own ~10-req/60s bucket alone paces a 100-paper batch to ~10 minutes before any actual work), and every
+Worker invocation has a hard CPU-time ceiling far short of that. There is no way to make ingestion
+"just run inside the Worker" regardless of how deterministic the pipeline is — it's a platform
+execution-time constraint, not a code design choice.
+
+**So nao triggers a real, persistent compute environment instead: a GitHub Actions workflow.**
+`.github/workflows/brain-ingest.yml` is a `workflow_dispatch` job — nao's "Run now" button calls
+GitHub's REST API (`apps/nao/src/lib/githubDispatch.ts`) to fire that event with the chosen `seed`/
+`limit` as **workflow inputs**, and the job runs immediately on a GitHub-hosted runner (checkout →
+`npm ci` → `.env` from repo secrets → `npx tsx src/cli.ts ingest --remote-control`). No polling, no
+queued mailbox — the seed/limit go straight into the dispatch call.
+
+What's left in `control/ingest-config.json` (same R2 bucket, §6 layout — the one shared surface both
+`tools/brain-ingest` and `apps/nao` already read/write) is state that should apply **regardless of how
+a run was triggered**:
+
+```ts
+interface IngestControlConfig {
+  paused: boolean;                       // blocks BOTH "Run now" and any --remote-control CLI run
+  limits: { openalexDailyUsd?: number }; // overrides limits/budget.ts's compiled-in $1.00
+  updatedAt: string;
+  updatedBy: string;
+}
+```
+
+- **CLI side** (`tools/brain-ingest/src/control.ts`): opt-in via `ingest --remote-control` /
+  `resume --remote-control` (`run.ts`'s `RunOptions.controlFromR2`). Read once at the START of a run —
+  `paused` skips discovery too, not just retrieval. Best-effort throughout: a missing/unreadable
+  document behaves exactly like an uncontrolled run — nothing here is required for local/offline use.
+- **nao side**:
+  - `app/(app)/api/ingest-control/route.ts` — GET/POST for **settings** (`paused`, budget override)
+    against the R2 document. Gated by the existing Supabase middleware, no new auth code needed.
+  - `app/(app)/api/ingest-control/trigger/route.ts` — POST to **actually start a run**. Checks
+    `paused` FIRST (a real safety switch for the button, not just a hypothetical scheduler) then calls
+    `dispatchIngestWorkflow` (`lib/githubDispatch.ts`), which needs a fine-grained GitHub PAT scoped to
+    this repo with `Actions: Read and write`, stored as the `GH_ACTIONS_TOKEN` Worker secret (never
+    committed), plus `GH_REPO` (`owner/repo`) and optionally `GH_ACTIONS_REF` (defaults to
+    `dev-phase2`).
+  - `app/(app)/ingest/page.tsx` + `components/IngestControlPanel.tsx` — pause/resume, "Run now"
+    (seed + limit → the trigger route), and the budget override.
+  - Both sides keep independently-typed copies of `IngestControlConfig`/`IngestLimits` (same
+    duplication pattern as `PaperRecord`/`FullTextInfo` elsewhere in this doc — no shared cross-app
+    module).
+- **Budget override plumbing** (`limits/budget.ts`'s `BudgetOptions.budgetOverrides`): per-instance,
+  merged over the module-level `BUDGETS` — a control-document override never mutates the compiled-in
+  default, so an unrelated `run()` call without `controlFromR2` is completely unaffected.
+- **Repo secrets the workflow needs** (set manually in GitHub repo settings — never pushed by an
+  agent): `INGEST_CONTACT_EMAIL`, `OPENALEX_API_KEY`, `NCBI_API_KEY`, `S2_API_KEY`, `CORE_API_KEY`,
+  `LENS_API_KEY`, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` — same values
+  as `tools/brain-ingest/.env` (§10.1's env template).
 
 ## 9 · Deferred / open
 
@@ -397,7 +473,7 @@ plan that lives on the session issue + `docs/sessions/` log (AGENTS §7).
 | | |
 |---|---|
 | **Goal** | Turn a `pdf`/`html` classification into stored bytes + extracted text. |
-| **Creates** | `src/retrieval/{pmcJats,core,arxivPdf,europepmc}.ts` (prefer JATS / CORE `fullText` over re-parsing a PDF, §5), `src/extract.ts` (`unpdf` for PDFs; JATS→text), `src/storage/r2.ts` (`@aws-sdk/client-s3`; `put/get/head`; `sha256` per binary; idempotent re-sync; layout from §6). Browser-capture (Playwright, §5-5b) is a **stub interface here, implemented in 10.7**. |
+| **Creates** | `src/retrieval/{pmcJats,core,arxivPdf,europepmc,directOa}.ts` (prefer JATS / the free direct OA-URL fetch over CORE's metered search, §5), `src/extract.ts` (`unpdf` for PDFs; JATS→text), `src/storage/r2.ts` (`@aws-sdk/client-s3`; `put/get/head`; `sha256` per binary; idempotent re-sync; layout from §6). Browser-capture (Playwright, §5-5b) is a **stub interface here, implemented in 10.7**. `directOa.ts` (added post-launch) fetches the OA-location step's already-resolved `oa.bestOaUrl` directly — unmetered, keyless — so CORE is a last resort rather than the default catch-all for anything without a PMCID/arXiv id. |
 | **Depends on** | 10.4. |
 | **Done when** | A known OA DOI flows end-to-end: PDF/JATS fetched → uploaded to R2 under `pdf/<uid>` or `jats/<uid>` → `text/<uid>.txt` written → manifest `storage{}` + `fullText{}` filled → re-running skips the already-synced binary (sha256 match). |
 
@@ -408,7 +484,7 @@ plan that lives on the session issue + `docs/sessions/` log (AGENTS §7).
 | **Goal** | One command: seeds → discover → resolve → retrieve → extract → manifest, honoring all guardrails, resumable across days. |
 | **Creates** | `src/run.ts` (the pipeline of §3 steps 1–7 wired together), `src/manifest.ts` (append/update `papers.jsonl`, read-back for resume), CLI verbs: `ingest --seed <topic> [--limit N] [--dry-run]`, `status` (manifest + budget summary), `resume`. |
 | **Depends on** | 10.5. |
-| **Done when** | `ingest --seed dengue --limit 20 --dry-run` plans without calls; the live run fetches ≤20 papers, **stops cleanly at the 95% line if hit** leaving the remainder as `discovered`, and a second invocation resumes without re-fetching. |
+| **Done when** | `ingest --seed dengue --limit 20 --dry-run` plans without calls; the live run fetches ≤20 papers, **a capped metered source (CORE) declines gracefully per-record rather than stopping the run** (§5.1 — the free steps ahead of it still serve what they can) leaving whatever it alone would have needed as `discovered`, and a second invocation resumes without re-fetching. |
 
 ### 10.7 · Browser capture (non-downloadable) + hardening
 

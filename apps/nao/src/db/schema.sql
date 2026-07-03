@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS papers (
   -- the discovery-source / extraction-method facets + the "recently fetched" sort).
   discovered_via      TEXT,                            -- PaperRecord.discoveredVia
   full_text_extracted INTEGER NOT NULL DEFAULT 0,      -- fullText.extracted (0/1)
-  full_text_method    TEXT,                            -- fullText.method (jats|core|pdf|html)
+  full_text_method    TEXT,                            -- fullText.method (jats|core|pdf|html|directOa)
   full_text_char_count INTEGER,                        -- fullText.charCount
   storage_kind        TEXT,                            -- storage.kind (object|local|none)
   storage_size_bytes  INTEGER,                         -- storage.sizeBytes

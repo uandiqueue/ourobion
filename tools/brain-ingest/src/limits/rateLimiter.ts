@@ -4,11 +4,14 @@
  * Two layers of restraint per source, both enforced before a network call runs:
  *  1. **Concurrency** — `p-limit` caps how many calls to a source are in flight.
  *  2. **Pacing** — a token bucket spaces calls so we honour each source's RPS:
- *       arXiv  1 req / 3 s          (~0.33/s)
- *       NCBI   3/s anonymous, 10/s with a key
- *       CORE   ~1/s (conservative)
- *       S2     ~1/s (conservative)
- *       Crossref / OpenAlex / Europe PMC — polite ~5/s
+ *       arXiv      1 req / 3 s (~0.33/s)                — verified live 2026-07-01 (docs)
+ *       NCBI       3/s anonymous, 10/s with a key        — verified live 2026-07-01 (docs)
+ *       Crossref   10/s, concurrency 3                  — verified live 2026-07-01 (response headers)
+ *       CORE       ~10 req / 60s bucket (~0.167/s)       — verified live 2026-07-01 (response headers);
+ *                  corrected from an earlier WRONG ~1/s guess that was 6x too fast
+ *       S2         ~1/s (conservative; not independently verified — no key configured)
+ *       OpenAlex / Europe PMC / Unpaywall — polite ~5/s (not independently verified;
+ *                  OpenAlex's $-budget IS separately verified, see limits/budget.ts)
  *       everything else — a sane default
  *
  * The bucket refills continuously at `ratePerSec`; `schedule` waits (without
@@ -56,11 +59,22 @@ function defaultRates(ncbiKeyed: boolean): Record<SourceName, SourceRate> {
     pubmed: { ratePerSec: ncbiRate, concurrency: ncbiKeyed ? 4 : 2, burst: ncbiRate },
     // PMC is also NCBI infrastructure → share the NCBI rate.
     pmc: { ratePerSec: ncbiRate, concurrency: ncbiKeyed ? 4 : 2, burst: ncbiRate },
-    // CORE + S2 — conservative ~1/s.
-    core: { ratePerSec: 1, concurrency: 1, burst: 1 },
+    // CORE: verified live 2026-07-01 via `X-RateLimit-*` response headers — a
+    // 10-request bucket that fully refills ~60s after exhaustion (confirmed by
+    // driving it to a real 429, then observing `remaining` back at 9/10 exactly
+    // 65s later). Modeled as a continuous refill at the same average rate
+    // (10/60s) with burst 10, so a steady caller never gets throttled and a
+    // cold-start burst can still use the full bucket. The PREVIOUS `ratePerSec:
+    // 1` here was an unverified guess — 6x faster than reality, which is
+    // exactly the kind of mismatch that produces real (silently-swallowed) 429s.
+    core: { ratePerSec: 10 / 60, concurrency: 2, burst: 10 },
+    // S2 — conservative ~1/s (not independently verified; no key configured).
     s2: { ratePerSec: 1, concurrency: 1, burst: 1 },
-    // Polite pool: Crossref / OpenAlex / Europe PMC — keep it gentle (~5/s).
-    crossref: { ratePerSec: 5, concurrency: 2, burst: 5 },
+    // Crossref: verified live 2026-07-01 via `X-Rate-Limit-*` response headers
+    // (`X-Rate-Limit-Limit: 10`, `X-Rate-Limit-Interval: 1s`, `X-Concurrency-Limit: 3`).
+    crossref: { ratePerSec: 10, concurrency: 3, burst: 10 },
+    // Polite pool: OpenAlex / Europe PMC — keep it gentle (~5/s; not independently
+    // verified beyond OpenAlex's separately-confirmed $-budget, see limits/budget.ts).
     openalex: { ratePerSec: 5, concurrency: 2, burst: 5 },
     europepmc: { ratePerSec: 5, concurrency: 2, burst: 5 },
     unpaywall: { ratePerSec: 5, concurrency: 2, burst: 5 },
@@ -68,6 +82,11 @@ function defaultRates(ncbiKeyed: boolean): Record<SourceName, SourceRate> {
     doaj: { ratePerSec: 2, concurrency: 1, burst: 2 },
     biorxiv: { ratePerSec: 2, concurrency: 1, burst: 2 },
     lens: { ratePerSec: 1, concurrency: 1, burst: 1 },
+    // Direct OA-URL fetch (§bestOaUrl short-circuit ahead of CORE): spread
+    // across many independent publisher/repository hosts, so a per-source
+    // cap this modest is about politeness to any single slow host, not a
+    // shared-endpoint courtesy like the others above.
+    directOa: { ratePerSec: 3, concurrency: 3, burst: 3 },
   };
 }
 

@@ -7,13 +7,24 @@
  * call that would cross 95% of a source's budget. The 5% headroom absorbs
  * in-flight/concurrent calls so the cap is never actually exceeded.
  *
- * Metered sources (design §5.1):
+ * Metered sources (design §5.1) — confirmed by live verification, not just docs:
  *  - OpenAlex — unit = USD, daily budget $1.00, hard stop $0.95. Per-request
  *    costs: singleton $0 · list/filter $0.0001 · search $0.001 ·
- *    semantic/content/text $0.01.
- *  - CORE — unit = tokens, daily budget 1000, hard stop 950.
- *  - Everything else (Crossref, Europe PMC, PMC, arXiv, Unpaywall, DOAJ, S2,
- *    Lens, NCBI/pubmed) — unmetered → charge/wouldExceed95 are no-ops.
+ *    semantic/content/text $0.01. Verified live 2026-07-01: `X-RateLimit-*`
+ *    response headers report `Limit-USD: 1`, resetting at UTC midnight —
+ *    matches this model exactly.
+ *  - Everything else (CORE, Crossref, Europe PMC, PMC, arXiv, Unpaywall, DOAJ,
+ *    S2, Lens, NCBI/pubmed) — unmetered here → charge/wouldExceed95 are no-ops.
+ *    CORE in particular was WRONGLY modeled as a 1000-token/day budget in an
+ *    earlier version of this file; live verification (2026-07-01) showed its
+ *    real `X-RateLimit-*` headers report a ~10-request bucket that fully
+ *    refills ~60s after exhaustion — a short rate-limit window, not a daily
+ *    quota, with no evidence of any coarser daily cap on a free personal key.
+ *    That real constraint is now enforced by `limits/rateLimiter.ts`'s `'core'`
+ *    profile (paced to match) plus a 429-aware retry in `retrieval/core.ts` —
+ *    the wrong tool (a daily budget) has been removed rather than given a
+ *    "more correct" number, since no daily-scoped constraint actually exists
+ *    to model.
  *
  * Crash-safe + resumable: counters live on disk, are re-read at construction,
  * and reset at the provider's UTC-midnight window (the `windowStart` stored
@@ -40,16 +51,19 @@ export const OPENALEX_COST = {
 
 /** Daily caps + hard-stop fraction, per metered source. */
 export interface SourceBudget {
-  /** unit tracked (USD for OpenAlex, tokens for CORE) — informational */
+  /** unit tracked (USD for OpenAlex; 'tokens' kept for any future metered source) — informational */
   unit: 'usd' | 'tokens';
   /** full daily budget */
   daily: number;
 }
 
-/** Metered sources only; absent ⇒ unmetered (charge/guard are no-ops). */
+/**
+ * Metered sources only; absent ⇒ unmetered (charge/guard are no-ops). CORE is
+ * deliberately NOT here — see the module docstring; it has no confirmed daily
+ * cap, only a short rate-limit window handled by `limits/rateLimiter.ts`.
+ */
 export const BUDGETS: Partial<Record<SourceName, SourceBudget>> = {
   openalex: { unit: 'usd', daily: 1.0 },
-  core: { unit: 'tokens', daily: 1000 },
 };
 
 /** The hard-stop line: stop BEFORE crossing 95% of the daily budget. */
@@ -80,6 +94,13 @@ export interface BudgetOptions {
   usagePath?: string;
   /** Injectable clock for deterministic tests; default `Date.now`. */
   now?: () => number;
+  /**
+   * Per-instance overrides merged over the module-level {@link BUDGETS}
+   * (e.g. the nao UI's `IngestLimits.openalexDailyUsd`, applied by `run.ts`
+   * when `opts.controlFromR2` is set). A `daily` override still uses the
+   * SAME `HARD_STOP_FRACTION` — only the ceiling moves, not the safety margin.
+   */
+  budgetOverrides?: Partial<Record<SourceName, SourceBudget>>;
 }
 
 /** Default corpus dir: `<repoRoot>/data/corpus` (design §6). */
@@ -110,13 +131,20 @@ function utcMidnightIso(ms: number): string {
 export class FileBudgetGuard implements BudgetGuard {
   private readonly usagePath: string;
   private readonly now: () => number;
+  private readonly budgetOverrides: Partial<Record<SourceName, SourceBudget>>;
   private counters: Partial<Record<SourceName, Counter>>;
 
   constructor(opts: BudgetOptions = {}) {
     this.now = opts.now ?? Date.now;
     this.usagePath =
       opts.usagePath ?? resolve(opts.corpusDir ?? defaultCorpusDir(), 'usage.json');
+    this.budgetOverrides = opts.budgetOverrides ?? {};
     this.counters = this.load();
+  }
+
+  /** The effective budget for `source`: an instance override, else the module default. */
+  private budgetFor(source: SourceName): SourceBudget | undefined {
+    return this.budgetOverrides[source] ?? BUDGETS[source];
   }
 
   /** Re-read counters from disk (crash-safe startup). */
@@ -149,7 +177,7 @@ export class FileBudgetGuard implements BudgetGuard {
    * unmetered sources.
    */
   private currentCounter(source: SourceName): Counter | undefined {
-    if (BUDGETS[source] === undefined) return undefined;
+    if (this.budgetFor(source) === undefined) return undefined;
     const todayWindow = utcMidnightIso(this.now());
     const existing = this.counters[source];
     if (existing === undefined || existing.windowStart !== todayWindow) {
@@ -166,7 +194,7 @@ export class FileBudgetGuard implements BudgetGuard {
   }
 
   wouldExceed95(source: SourceName, cost: number): boolean {
-    const budget = BUDGETS[source];
+    const budget = this.budgetFor(source);
     if (budget === undefined) return false; // unmetered → never blocks
     const hardStop = budget.daily * HARD_STOP_FRACTION;
     const projected = this.spent(source) + cost;
@@ -176,7 +204,7 @@ export class FileBudgetGuard implements BudgetGuard {
   }
 
   charge(source: SourceName, cost: number): void {
-    const budget = BUDGETS[source];
+    const budget = this.budgetFor(source);
     if (budget === undefined) return; // unmetered → no-op (NCBI etc.)
     if (this.wouldExceed95(source, cost)) {
       throw new Error(

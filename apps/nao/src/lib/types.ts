@@ -55,7 +55,7 @@ export interface StorageInfo {
 /** Text-extraction outcome. */
 export interface FullTextInfo {
   extracted: boolean;
-  method: 'jats' | 'core' | 'pdf' | 'html' | null;
+  method: 'jats' | 'core' | 'pdf' | 'html' | 'directOa' | null;
   charCount: number | null;
 }
 
@@ -97,4 +97,67 @@ export interface PaperRecord {
   errors: string[];
   /** ISO; null until fetched */
   fetchedAt: string | null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Remote control plane (this app ↔ R2 ↔ tools/brain-ingest's CLI)
+// Mirrors tools/brain-ingest/src/types.ts's IngestControlConfig/IngestLimits/
+// DEFAULT_INGEST_CONTROL — same duplication pattern as the rest of this file
+// (no shared cross-app module; keep both copies in sync by hand).
+//
+// A real run is triggered DIRECTLY via a GitHub Actions `workflow_dispatch`
+// call (lib/githubDispatch.ts) with seed/limit as workflow inputs — not queued
+// here for later pickup. This document only carries state that should apply
+// regardless of how/where a run was triggered: a remote pause (also checked
+// before dispatching — see the /api/ingest-control/trigger route) and a
+// budget override.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Overridable ceilings the UI can adjust without redeploying the CLI. */
+export interface IngestLimits {
+  /** OpenAlex daily USD budget override (design §5.1). */
+  openalexDailyUsd?: number;
+}
+
+/** The full remote-control document at `control/ingest-config.json` in the corpus bucket. */
+export interface IngestControlConfig {
+  paused: boolean;
+  limits: IngestLimits;
+  updatedAt: string; // ISO
+  updatedBy: string;
+}
+
+/** What the API returns when no control document exists yet in R2. */
+export const DEFAULT_INGEST_CONTROL: IngestControlConfig = {
+  paused: false,
+  limits: {},
+  updatedAt: new Date(0).toISOString(),
+  updatedBy: 'system:default',
+};
+
+/** The six seed topics `tools/brain-ingest/src/seeds.ts` knows about (kept in sync by hand). */
+export const INGEST_SEED_TOPICS = [
+  'gut_microbiome',
+  'hydration',
+  'antibiotics',
+  'sleep_hrv',
+  'dengue_vector',
+  'environmental_health',
+] as const;
+
+/**
+ * The body `POST /api/ingest-control` accepts — settings only (pause, budget).
+ * Triggering a run is a SEPARATE endpoint (`/api/ingest-control/trigger`) since
+ * it calls out to GitHub rather than just reading/writing R2 — see
+ * `lib/ingestControl.ts`'s `applyIngestControlPatch`.
+ */
+export interface IngestControlPatch {
+  paused?: boolean;
+  openalexDailyUsd?: number | null;
+}
+
+/** The body `POST /api/ingest-control/trigger` accepts. */
+export interface IngestTriggerBody {
+  seed?: string;
+  limit?: number;
 }
