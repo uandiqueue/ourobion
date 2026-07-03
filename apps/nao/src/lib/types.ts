@@ -101,18 +101,17 @@ export interface PaperRecord {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Remote control plane (this app ↔ R2 ↔ tools/brain-ingest's CLI)
-// Mirrors tools/brain-ingest/src/types.ts's IngestControlConfig/RequestedRun/
-// IngestLimits/DEFAULT_INGEST_CONTROL — same duplication pattern as the rest of
-// this file (no shared cross-app module; keep both copies in sync by hand).
+// Mirrors tools/brain-ingest/src/types.ts's IngestControlConfig/IngestLimits/
+// DEFAULT_INGEST_CONTROL — same duplication pattern as the rest of this file
+// (no shared cross-app module; keep both copies in sync by hand).
+//
+// A real run is triggered DIRECTLY via a GitHub Actions `workflow_dispatch`
+// call (lib/githubDispatch.ts) with seed/limit as workflow inputs — not queued
+// here for later pickup. This document only carries state that should apply
+// regardless of how/where a run was triggered: a remote pause (also checked
+// before dispatching — see the /api/ingest-control/trigger route) and a
+// budget override.
 // ─────────────────────────────────────────────────────────────────────────────
-
-/** A queued one-shot run request, consumed by the next `--remote-control` CLI run. */
-export interface RequestedRun {
-  seed?: string;
-  limit?: number;
-  requestedAt: string; // ISO
-  requestedBy: string; // the nao user's email/id who queued it
-}
 
 /** Overridable ceilings the UI can adjust without redeploying the CLI. */
 export interface IngestLimits {
@@ -123,7 +122,6 @@ export interface IngestLimits {
 /** The full remote-control document at `control/ingest-config.json` in the corpus bucket. */
 export interface IngestControlConfig {
   paused: boolean;
-  requestedRun?: RequestedRun | null;
   limits: IngestLimits;
   updatedAt: string; // ISO
   updatedBy: string;
@@ -132,7 +130,6 @@ export interface IngestControlConfig {
 /** What the API returns when no control document exists yet in R2. */
 export const DEFAULT_INGEST_CONTROL: IngestControlConfig = {
   paused: false,
-  requestedRun: null,
   limits: {},
   updatedAt: new Date(0).toISOString(),
   updatedBy: 'system:default',
@@ -149,14 +146,18 @@ export const INGEST_SEED_TOPICS = [
 ] as const;
 
 /**
- * The body `POST /api/ingest-control` accepts — three independent actions,
- * any subset may be sent in one request (see `lib/ingestControl.ts`'s
- * `applyIngestControlPatch`).
+ * The body `POST /api/ingest-control` accepts — settings only (pause, budget).
+ * Triggering a run is a SEPARATE endpoint (`/api/ingest-control/trigger`) since
+ * it calls out to GitHub rather than just reading/writing R2 — see
+ * `lib/ingestControl.ts`'s `applyIngestControlPatch`.
  */
 export interface IngestControlPatch {
   paused?: boolean;
-  requestSeed?: string;
-  requestLimit?: number;
-  clearRequest?: true;
   openalexDailyUsd?: number | null;
+}
+
+/** The body `POST /api/ingest-control/trigger` accepts. */
+export interface IngestTriggerBody {
+  seed?: string;
+  limit?: number;
 }

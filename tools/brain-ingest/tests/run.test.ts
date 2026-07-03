@@ -756,7 +756,6 @@ test('controlFromR2: paused does zero work and returns immediately', async () =>
   const dir = tmpCorpus();
   const control: IngestControlConfig = {
     paused: true,
-    requestedRun: null,
     limits: {},
     updatedAt: '2026-07-02T00:00:00.000Z',
     updatedBy: 'ops@ourobion.com',
@@ -786,7 +785,6 @@ test('controlFromR2: omitted (the default) ignores a paused control document ent
   const dir = tmpCorpus();
   const control: IngestControlConfig = {
     paused: true,
-    requestedRun: null,
     limits: {},
     updatedAt: '2026-07-02T00:00:00.000Z',
     updatedBy: 'ops@ourobion.com',
@@ -808,70 +806,6 @@ test('controlFromR2: omitted (the default) ignores a paused control document ent
   }
 });
 
-test('controlFromR2: a queued requestedRun supplies seed/limit when the caller passes neither', async () => {
-  const dir = tmpCorpus();
-  const control: IngestControlConfig = {
-    paused: false,
-    requestedRun: {
-      seed: 'hydration',
-      limit: 5,
-      requestedAt: '2026-07-02T00:00:00.000Z',
-      requestedBy: 'researcher@ourobion.com',
-    },
-    limits: {},
-    updatedAt: '2026-07-02T00:00:00.000Z',
-    updatedBy: 'researcher@ourobion.com',
-  };
-  const { store } = controlStore({ [CONTROL_KEY]: JSON.stringify(control) });
-  try {
-    // Caller passes NO seed/limit — the queued request should fill them in.
-    const result = await run({
-      config: makeConfig(), // all discovery disabled → 0 candidates, but seed selection still matters
-      corpusDir: dir,
-      store,
-      controlFromR2: true,
-      log: () => {},
-    });
-    assert.deepEqual(result.seedsRun, ['hydration'], 'used the queued seed, not "all six"');
-
-    // One-shot: the request is cleared from R2 after being honored.
-    const after = JSON.parse(await store.getObjectText(CONTROL_KEY)) as IngestControlConfig;
-    assert.equal(after.requestedRun, null);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
-
-test('controlFromR2: an explicit --seed on the command line wins over a queued request', async () => {
-  const dir = tmpCorpus();
-  const control: IngestControlConfig = {
-    paused: false,
-    requestedRun: { seed: 'hydration', requestedAt: '2026-07-02T00:00:00.000Z', requestedBy: 'x@y.com' },
-    limits: {},
-    updatedAt: '2026-07-02T00:00:00.000Z',
-    updatedBy: 'x@y.com',
-  };
-  const { store } = controlStore({ [CONTROL_KEY]: JSON.stringify(control) });
-  try {
-    const result = await run({
-      config: makeConfig(),
-      corpusDir: dir,
-      store,
-      seed: 'antibiotics', // explicit — must win
-      controlFromR2: true,
-      log: () => {},
-    });
-    assert.deepEqual(result.seedsRun, ['antibiotics']);
-
-    // Explicit intent wins, but that also means the queued request was never
-    // "used" by this run — it must survive for a future controlFromR2 run to pick up.
-    const after = JSON.parse(await store.getObjectText(CONTROL_KEY)) as IngestControlConfig;
-    assert.notEqual(after.requestedRun, null);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
-
 test('controlFromR2: limits.openalexDailyUsd reaches createBudgetGuard without breaking the run', async () => {
   // The override mechanism itself (a stricter cap actually trips sooner) is
   // unit-tested precisely in limits/budget.test.ts's `budgetOverrides` tests.
@@ -880,7 +814,6 @@ test('controlFromR2: limits.openalexDailyUsd reaches createBudgetGuard without b
   const dir = tmpCorpus();
   const control: IngestControlConfig = {
     paused: false,
-    requestedRun: null,
     limits: { openalexDailyUsd: 0.01 },
     updatedAt: '2026-07-02T00:00:00.000Z',
     updatedBy: 'ops@ourobion.com',

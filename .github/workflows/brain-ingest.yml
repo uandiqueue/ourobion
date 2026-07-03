@@ -1,0 +1,79 @@
+name: Brain ingest
+
+# On-demand paper-corpus ingestion, triggered from the nao "Run now" button
+# (apps/nao/src/lib/githubDispatch.ts calls this workflow's `workflow_dispatch`
+# REST endpoint) or manually from the Actions tab. Runs on a GitHub-hosted
+# runner because the CLI does long-running network fetches + PDF parsing that
+# cannot run inside nao's own Cloudflare Worker (see docs/nao/BRAIN-INGESTION-DESIGN.md
+# §8.1 for why). `--remote-control` makes the run honor a remote pause / budget
+# override from control/ingest-config.json regardless of how it was triggered.
+on:
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: "Seed topic (blank = all six)"
+        required: false
+        type: choice
+        default: ""
+        options:
+          - ""
+          - gut_microbiome
+          - hydration
+          - antibiotics
+          - sleep_hrv
+          - dengue_vector
+          - environmental_health
+      limit:
+        description: "Max papers to process this run (blank = no limit)"
+        required: false
+        type: string
+
+jobs:
+  ingest:
+    name: Ingest
+    runs-on: ubuntu-latest
+    # A single seed with a generous limit has taken well under an hour in
+    # practice; this is a backstop, not an expected duration.
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: tools/brain-ingest/package-lock.json
+
+      - name: Install dependencies
+        working-directory: tools/brain-ingest
+        run: npm ci
+
+      - name: Write .env from secrets
+        working-directory: tools/brain-ingest
+        run: |
+          {
+            printf "INGEST_CONTACT_EMAIL=%s\n" "${{ secrets.INGEST_CONTACT_EMAIL }}"
+            printf "OPENALEX_API_KEY=%s\n" "${{ secrets.OPENALEX_API_KEY }}"
+            printf "NCBI_API_KEY=%s\n" "${{ secrets.NCBI_API_KEY }}"
+            printf "S2_API_KEY=%s\n" "${{ secrets.S2_API_KEY }}"
+            printf "CORE_API_KEY=%s\n" "${{ secrets.CORE_API_KEY }}"
+            printf "LENS_API_KEY=%s\n" "${{ secrets.LENS_API_KEY }}"
+            printf "R2_ENDPOINT=%s\n" "${{ secrets.R2_ENDPOINT }}"
+            printf "R2_ACCESS_KEY_ID=%s\n" "${{ secrets.R2_ACCESS_KEY_ID }}"
+            printf "R2_SECRET_ACCESS_KEY=%s\n" "${{ secrets.R2_SECRET_ACCESS_KEY }}"
+            printf "R2_BUCKET=%s\n" "${{ secrets.R2_BUCKET }}"
+          } > .env
+
+      - name: Run ingestion
+        working-directory: tools/brain-ingest
+        env:
+          SEED: ${{ inputs.seed }}
+          LIMIT: ${{ inputs.limit }}
+        run: |
+          set -eu
+          ARGS=(ingest --remote-control)
+          if [ -n "${SEED:-}" ]; then ARGS+=(--seed "$SEED"); fi
+          if [ -n "${LIMIT:-}" ]; then ARGS+=(--limit "$LIMIT"); fi
+          echo "Running: npx tsx src/cli.ts ${ARGS[*]}"
+          npx tsx src/cli.ts "${ARGS[@]}"

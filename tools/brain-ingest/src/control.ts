@@ -11,6 +11,12 @@
  * a missing/unreadable/malformed document never blocks a local/offline run —
  * it just falls back to `DEFAULT_INGEST_CONTROL` (unpaused, no overrides).
  *
+ * nao triggers a run DIRECTLY via GitHub Actions `workflow_dispatch` (seed/limit
+ * as workflow inputs — see `.github/workflows/brain-ingest.yml`), so there is no
+ * queued-request mailbox here anymore; this document only carries state that
+ * should apply regardless of how a run was triggered (a remote pause, a budget
+ * override).
+ *
  * ESM / NodeNext — imports use explicit `.js` extensions.
  */
 
@@ -32,7 +38,6 @@ export function normalizeIngestControl(
   if (partial == null || typeof partial !== 'object') return { ...DEFAULT_INGEST_CONTROL };
   return {
     paused: partial.paused === true,
-    requestedRun: partial.requestedRun ?? null,
     limits: partial.limits != null && typeof partial.limits === 'object' ? partial.limits : {},
     updatedAt: typeof partial.updatedAt === 'string' ? partial.updatedAt : DEFAULT_INGEST_CONTROL.updatedAt,
     updatedBy: typeof partial.updatedBy === 'string' ? partial.updatedBy : DEFAULT_INGEST_CONTROL.updatedBy,
@@ -51,21 +56,5 @@ export async function loadIngestControl(store: R2Store): Promise<IngestControlCo
     return normalizeIngestControl(JSON.parse(text) as Partial<IngestControlConfig>);
   } catch {
     return { ...DEFAULT_INGEST_CONTROL };
-  }
-}
-
-/**
- * Clear a consumed one-shot `requestedRun` and persist. Best-effort: a failed
- * write here must not fail the run — a stale request just gets honored again
- * next time, which is harmless (same seed/limit, and `run()` is idempotent —
- * already-`fetched` papers are skipped either way).
- */
-export async function clearRequestedRun(store: R2Store, current: IngestControlConfig): Promise<void> {
-  const next: IngestControlConfig = { ...current, requestedRun: null };
-  try {
-    const body = new TextEncoder().encode(JSON.stringify(next, null, 2));
-    await store.sync(CONTROL_KEY, body, 'application/json');
-  } catch {
-    // Best-effort — see docstring.
   }
 }

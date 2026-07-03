@@ -1,19 +1,17 @@
 /**
  * Remote control-plane tests (`src/control.ts`) — node:test, via tsx. NO network:
  * a fake R2 client backs a real `R2Store` with an in-memory object map so
- * `getObjectText`/`sync` round-trip for real. Proves:
+ * `getObjectText` round-trips for real. Proves:
  *  - `loadIngestControl` reads back exactly what was written;
  *  - a missing/malformed/empty control document degrades to
  *    `DEFAULT_INGEST_CONTROL` rather than throwing;
- *  - `normalizeIngestControl` fills in missing fields from a partial/older doc;
- *  - `clearRequestedRun` persists a `requestedRun: null` patch, leaving
- *    everything else untouched, and never throws even if the write fails.
+ *  - `normalizeIngestControl` fills in missing fields from a partial/older doc.
  */
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { loadIngestControl, normalizeIngestControl, clearRequestedRun, CONTROL_KEY } from '../src/control.js';
+import { loadIngestControl, normalizeIngestControl, CONTROL_KEY } from '../src/control.js';
 import { R2Store } from '../src/storage/r2.js';
 import { DEFAULT_INGEST_CONTROL } from '../src/types.js';
 import type { Config, IngestControlConfig } from '../src/types.js';
@@ -86,7 +84,6 @@ function memStore(seed?: Record<string, string>): R2Store {
 test('loadIngestControl: round-trips a real control document', async () => {
   const doc: IngestControlConfig = {
     paused: true,
-    requestedRun: { seed: 'dengue_vector', limit: 40, requestedAt: '2026-07-02T00:00:00.000Z', requestedBy: 'a@b.com' },
     limits: { openalexDailyUsd: 0.5 },
     updatedAt: '2026-07-02T00:00:00.000Z',
     updatedBy: 'a@b.com',
@@ -111,7 +108,6 @@ test('loadIngestControl: malformed JSON degrades to DEFAULT_INGEST_CONTROL, neve
 test('normalizeIngestControl: fills in missing fields from a partial/older document', () => {
   const normalized = normalizeIngestControl({ paused: true });
   assert.equal(normalized.paused, true);
-  assert.equal(normalized.requestedRun, null);
   assert.deepEqual(normalized.limits, {});
   assert.equal(typeof normalized.updatedAt, 'string');
 });
@@ -119,31 +115,4 @@ test('normalizeIngestControl: fills in missing fields from a partial/older docum
 test('normalizeIngestControl: null/non-object input degrades to defaults', () => {
   assert.deepEqual(normalizeIngestControl(null), DEFAULT_INGEST_CONTROL);
   assert.deepEqual(normalizeIngestControl(undefined), DEFAULT_INGEST_CONTROL);
-});
-
-test('clearRequestedRun: persists requestedRun:null, leaves everything else untouched', async () => {
-  const doc: IngestControlConfig = {
-    paused: false,
-    requestedRun: { seed: 'hydration', limit: 10, requestedAt: '2026-07-02T00:00:00.000Z', requestedBy: 'x@y.com' },
-    limits: { openalexDailyUsd: 0.25 },
-    updatedAt: '2026-07-02T00:00:00.000Z',
-    updatedBy: 'x@y.com',
-  };
-  const store = memStore({ [CONTROL_KEY]: JSON.stringify(doc) });
-  await clearRequestedRun(store, doc);
-
-  const after = await loadIngestControl(store);
-  assert.equal(after.requestedRun, null);
-  assert.equal(after.paused, false);
-  assert.deepEqual(after.limits, { openalexDailyUsd: 0.25 });
-});
-
-test('clearRequestedRun: a write failure is swallowed, never throws', async () => {
-  const doc: IngestControlConfig = { ...DEFAULT_INGEST_CONTROL, requestedRun: { seed: 'x', requestedAt: 'now', requestedBy: 'a' } };
-  const throwingStore = {
-    async sync(): Promise<never> {
-      throw new Error('network down');
-    },
-  } as unknown as R2Store;
-  await assert.doesNotReject(() => clearRequestedRun(throwingStore, doc));
 });

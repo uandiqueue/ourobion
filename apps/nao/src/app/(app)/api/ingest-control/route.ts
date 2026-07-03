@@ -1,16 +1,20 @@
-// ourobion nao — ingestion remote-control API.
+// ourobion nao — ingestion control SETTINGS API (pause, budget).
 //
 // GET  → the current control/ingest-config.json (or DEFAULT_INGEST_CONTROL if
 //        none exists yet).
-// POST → validate + merge a patch over the current document and persist it
-//        (see lib/ingestControl.ts's validatePatchBody/applyIngestControlPatch
-//        for the pure logic — this handler is just I/O + auth glue).
+// POST → validate + merge a settings patch (paused, openalexDailyUsd) over the
+//        current document and persist it (see lib/ingestControl.ts's
+//        validatePatchBody/applyIngestControlPatch for the pure logic — this
+//        handler is just I/O + auth glue).
+//
+// Triggering an actual run is a SEPARATE endpoint: POST /api/ingest-control/trigger
+// (it calls out to GitHub, not just R2).
 //
 // Auth: every route under (app) is already gated by src/middleware.ts (a valid
 // Supabase session is required to reach this handler at all). We still read
 // the session here (via the SAME cookie the middleware already validated)
-// purely to stamp `updatedBy`/`requestedBy` with the actual user's email, not
-// to re-authorize the request.
+// purely to stamp `updatedBy` with the actual user's email, not to
+// re-authorize the request.
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { getIngestControl, putIngestControl, validatePatchBody, applyIngestControlPatch } from '@/lib/ingestControl';
 import type { IngestControlPatch } from '@/lib/types';

@@ -109,10 +109,8 @@
   font-size: 13px;
 }
 
-.ingest-queued {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.ingest-success {
+  color: #2bc4be;
 }
 
 .ingest-error {

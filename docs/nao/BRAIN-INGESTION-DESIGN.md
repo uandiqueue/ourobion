@@ -344,17 +344,30 @@ The brain's synthesis step reads `text/<paper_uid>.txt` (or `jats/…`), emits `
 `citations[].paperId` / `quoteSpans[].paperId` are these `paperUid`s — closing the trace loop from any
 served edge back to its sources.
 
-## 8.1 · Remote control plane (nao UI ↔ R2 ↔ this CLI)
+## 8.1 · Invoking a run from nao (GitHub Actions) + the remote control plane
 
-The CLI is normally invoked by a human on their own machine — there was no way to pause it, queue a
-run, or adjust a budget limit from anywhere else. `control/ingest-config.json` (same R2 bucket, §6
-layout) is the one shared surface both sides already read/write:
+The CLI is normally invoked by a human on their own machine. nao (a Cloudflare Worker) **cannot run it
+directly** — a single seed's worth of discovery + retrieval routinely takes minutes to hours (CORE's
+own ~10-req/60s bucket alone paces a 100-paper batch to ~10 minutes before any actual work), and every
+Worker invocation has a hard CPU-time ceiling far short of that. There is no way to make ingestion
+"just run inside the Worker" regardless of how deterministic the pipeline is — it's a platform
+execution-time constraint, not a code design choice.
+
+**So nao triggers a real, persistent compute environment instead: a GitHub Actions workflow.**
+`.github/workflows/brain-ingest.yml` is a `workflow_dispatch` job — nao's "Run now" button calls
+GitHub's REST API (`apps/nao/src/lib/githubDispatch.ts`) to fire that event with the chosen `seed`/
+`limit` as **workflow inputs**, and the job runs immediately on a GitHub-hosted runner (checkout →
+`npm ci` → `.env` from repo secrets → `npx tsx src/cli.ts ingest --remote-control`). No polling, no
+queued mailbox — the seed/limit go straight into the dispatch call.
+
+What's left in `control/ingest-config.json` (same R2 bucket, §6 layout — the one shared surface both
+`tools/brain-ingest` and `apps/nao` already read/write) is state that should apply **regardless of how
+a run was triggered**:
 
 ```ts
 interface IngestControlConfig {
-  paused: boolean;                 // a controlled run does no work and exits
-  requestedRun?: { seed?: string; limit?: number; requestedAt: string; requestedBy: string } | null;
-  limits: { openalexDailyUsd?: number };  // overrides limits/budget.ts's compiled-in $1.00
+  paused: boolean;                       // blocks BOTH "Run now" and any --remote-control CLI run
+  limits: { openalexDailyUsd?: number }; // overrides limits/budget.ts's compiled-in $1.00
   updatedAt: string;
   updatedBy: string;
 }
@@ -362,18 +375,29 @@ interface IngestControlConfig {
 
 - **CLI side** (`tools/brain-ingest/src/control.ts`): opt-in via `ingest --remote-control` /
   `resume --remote-control` (`run.ts`'s `RunOptions.controlFromR2`). Read once at the START of a run —
-  `paused` skips discovery too, not just retrieval. A queued `requestedRun` only fills in a seed/limit
-  the command line didn't already specify (explicit CLI intent always wins) and is cleared (one-shot)
-  once actually honored. Best-effort throughout: a missing/unreadable document behaves exactly like an
-  uncontrolled run — nothing here is required for local/offline use.
-- **nao side** (`apps/nao/src/lib/ingestControl.ts` + `app/(app)/api/ingest-control/route.ts` +
-  `app/(app)/ingest/page.tsx`): an authenticated GET/POST route (gated by the existing Supabase
-  middleware — no new auth code needed) and a small panel to pause/resume, queue a run, and adjust the
-  OpenAlex budget. Both sides keep independently-typed copies of the shape (same duplication pattern as
-  `PaperRecord`/`FullTextInfo` elsewhere in this doc — no shared cross-app module).
+  `paused` skips discovery too, not just retrieval. Best-effort throughout: a missing/unreadable
+  document behaves exactly like an uncontrolled run — nothing here is required for local/offline use.
+- **nao side**:
+  - `app/(app)/api/ingest-control/route.ts` — GET/POST for **settings** (`paused`, budget override)
+    against the R2 document. Gated by the existing Supabase middleware, no new auth code needed.
+  - `app/(app)/api/ingest-control/trigger/route.ts` — POST to **actually start a run**. Checks
+    `paused` FIRST (a real safety switch for the button, not just a hypothetical scheduler) then calls
+    `dispatchIngestWorkflow` (`lib/githubDispatch.ts`), which needs a fine-grained GitHub PAT scoped to
+    this repo with `Actions: Read and write`, stored as the `GH_ACTIONS_TOKEN` Worker secret (never
+    committed), plus `GH_REPO` (`owner/repo`) and optionally `GH_ACTIONS_REF` (defaults to
+    `dev-phase2`).
+  - `app/(app)/ingest/page.tsx` + `components/IngestControlPanel.tsx` — pause/resume, "Run now"
+    (seed + limit → the trigger route), and the budget override.
+  - Both sides keep independently-typed copies of `IngestControlConfig`/`IngestLimits` (same
+    duplication pattern as `PaperRecord`/`FullTextInfo` elsewhere in this doc — no shared cross-app
+    module).
 - **Budget override plumbing** (`limits/budget.ts`'s `BudgetOptions.budgetOverrides`): per-instance,
   merged over the module-level `BUDGETS` — a control-document override never mutates the compiled-in
   default, so an unrelated `run()` call without `controlFromR2` is completely unaffected.
+- **Repo secrets the workflow needs** (set manually in GitHub repo settings — never pushed by an
+  agent): `INGEST_CONTACT_EMAIL`, `OPENALEX_API_KEY`, `NCBI_API_KEY`, `S2_API_KEY`, `CORE_API_KEY`,
+  `LENS_API_KEY`, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` — same values
+  as `tools/brain-ingest/.env` (§10.1's env template).
 
 ## 9 · Deferred / open
 

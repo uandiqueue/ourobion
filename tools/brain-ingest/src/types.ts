@@ -283,19 +283,16 @@ export type RetrieveFn = (
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Remote control plane (nao UI ↔ R2 ↔ this CLI) — see src/control.ts
+//
+// nao triggers a run DIRECTLY via a GitHub Actions `workflow_dispatch` call
+// (seed/limit passed as workflow inputs, executed immediately on a GitHub
+// runner — see .github/workflows/brain-ingest.yml) rather than queuing a
+// request here for some later CLI invocation to notice. What's left for THIS
+// document to carry is state that should apply no matter how/where a run gets
+// triggered: a remote pause (a safety switch nao's trigger route itself
+// checks before dispatching, and any `--remote-control` run also honors) and
+// a budget override.
 // ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * A one-shot "please run this" request, queued by the nao UI and consumed
- * (cleared) by the next CLI invocation that honors it. `undefined`/`null` ⇒
- * nothing queued.
- */
-export interface RequestedRun {
-  seed?: string;
-  limit?: number;
-  requestedAt: string; // ISO
-  requestedBy: string; // the nao user's email/id who queued it
-}
 
 /**
  * Overridable ceilings the nao UI can adjust without redeploying the CLI.
@@ -318,8 +315,6 @@ export interface IngestLimits {
 export interface IngestControlConfig {
   /** When true, a controlled run does no discovery/retrieval work and exits. */
   paused: boolean;
-  /** A queued one-shot run request, or null/absent if none is pending. */
-  requestedRun?: RequestedRun | null;
   limits: IngestLimits;
   updatedAt: string; // ISO
   updatedBy: string;
@@ -328,7 +323,6 @@ export interface IngestControlConfig {
 /** The config a controlled run uses when `control/ingest-config.json` is missing/unreadable. */
 export const DEFAULT_INGEST_CONTROL: IngestControlConfig = {
   paused: false,
-  requestedRun: null,
   limits: {},
   updatedAt: new Date(0).toISOString(),
   updatedBy: 'system:default',

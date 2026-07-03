@@ -2,11 +2,10 @@
 
 // ourobion nao — ingestion remote-control panel (Client Component).
 //
-// Reads/writes control/ingest-config.json via /api/ingest-control. Three
-// independent controls: pause/resume the CLI, queue a one-shot run request,
-// and override OpenAlex's daily budget cap — all optional, all merged
-// server-side (see the route handler) so this panel never needs to know the
-// full document shape to change one field.
+// Three independent controls: pause/resume the CLI (settings, /api/ingest-control),
+// override OpenAlex's daily budget cap (same settings endpoint), and trigger a
+// real run right now via GitHub Actions (/api/ingest-control/trigger — see
+// lib/githubDispatch.ts for why this can't just run inside nao itself).
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { INGEST_SEED_TOPICS, DEFAULT_INGEST_CONTROL } from '@/lib/types';
@@ -25,6 +24,7 @@ export function IngestControlPanel() {
   const [control, setControl] = useState<IngestControlConfig>(DEFAULT_INGEST_CONTROL);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [triggerMessage, setTriggerMessage] = useState<string | null>(null);
 
   const [seed, setSeed] = useState<string>(INGEST_SEED_TOPICS[0]);
   const [limit, setLimit] = useState('20');
@@ -47,7 +47,7 @@ export function IngestControlPanel() {
     void refresh();
   }, []);
 
-  async function patch(body: Record<string, unknown>): Promise<void> {
+  async function patchSettings(body: Record<string, unknown>): Promise<void> {
     setBusy(true);
     setError(null);
     try {
@@ -66,10 +66,26 @@ export function IngestControlPanel() {
     }
   }
 
-  function submitRequest(e: FormEvent<HTMLFormElement>): void {
+  async function submitRun(e: FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
+    setBusy(true);
+    setError(null);
+    setTriggerMessage(null);
     const n = Number.parseInt(limit, 10);
-    void patch({ requestSeed: seed, requestLimit: Number.isFinite(n) && n > 0 ? n : undefined });
+    try {
+      const res = await fetch('/api/ingest-control/trigger', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ seed, limit: Number.isFinite(n) && n > 0 ? n : undefined }),
+      });
+      const data = (await res.json()) as { ok: true } | { error: string };
+      if (!res.ok || !('ok' in data)) throw new Error('error' in data ? data.error : `HTTP ${res.status}`);
+      setTriggerMessage(`Triggered — ${seed}${limit ? `, limit ${limit}` : ''}. Check the repo's Actions tab for progress.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
   }
 
   function submitBudget(e: FormEvent<HTMLFormElement>): void {
@@ -80,7 +96,7 @@ export function IngestControlPanel() {
       setError('OpenAlex daily budget must be a positive number, or blank to use the default ($1.00).');
       return;
     }
-    void patch({ openalexDailyUsd: n });
+    void patchSettings({ openalexDailyUsd: n });
   }
 
   if (state === 'loading') {
@@ -111,57 +127,45 @@ export function IngestControlPanel() {
             type="button"
             className="ingest-btn"
             disabled={busy}
-            onClick={() => void patch({ paused: !control.paused })}
+            onClick={() => void patchSettings({ paused: !control.paused })}
           >
             {control.paused ? 'Resume ingestion' : 'Pause ingestion'}
           </button>
         </div>
         <p className="fmt__cap">
-          A paused CLI (run with <code>--remote-control</code>) does no discovery or retrieval work and
-          exits immediately. Last changed by {control.updatedBy} at {fmtWhen(control.updatedAt)}.
+          Paused blocks both &quot;Run now&quot; below and any <code>--remote-control</code> CLI run. Last
+          changed by {control.updatedBy} at {fmtWhen(control.updatedAt)}.
         </p>
       </div>
 
-      {/* Queue a run */}
+      {/* Run now */}
       <div className="panel ingest-panel">
-        <div className="eyebrow panel__label">Queue a run</div>
-        {control.requestedRun ? (
-          <div className="ingest-queued">
-            <p className="fmt__cap">
-              Queued: <strong>{control.requestedRun.seed ?? 'all seeds'}</strong>
-              {control.requestedRun.limit ? `, limit ${control.requestedRun.limit}` : ''} — by{' '}
-              {control.requestedRun.requestedBy} at {fmtWhen(control.requestedRun.requestedAt)}
-            </p>
-            <button type="button" className="ingest-btn ingest-btn--ghost" disabled={busy} onClick={() => void patch({ clearRequest: true })}>
-              Cancel request
-            </button>
-          </div>
-        ) : (
-          <form className="ingest-form" onSubmit={submitRequest}>
-            <select value={seed} onChange={(e) => setSeed(e.target.value)} aria-label="Seed topic">
-              {INGEST_SEED_TOPICS.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-            <input
-              type="number"
-              min={1}
-              value={limit}
-              onChange={(e) => setLimit(e.target.value)}
-              aria-label="Paper limit"
-              placeholder="limit"
-            />
-            <button type="submit" className="ingest-btn" disabled={busy}>
-              Request run
-            </button>
-          </form>
-        )}
+        <div className="eyebrow panel__label">Run now</div>
+        <form className="ingest-form" onSubmit={submitRun}>
+          <select value={seed} onChange={(e) => setSeed(e.target.value)} aria-label="Seed topic">
+            {INGEST_SEED_TOPICS.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            min={1}
+            value={limit}
+            onChange={(e) => setLimit(e.target.value)}
+            aria-label="Paper limit"
+            placeholder="limit"
+          />
+          <button type="submit" className="ingest-btn" disabled={busy || control.paused}>
+            Run now
+          </button>
+        </form>
         <p className="fmt__cap">
-          Consumed one-shot by the next <code>--remote-control</code> CLI invocation that runs without its
-          own <code>--seed</code>/<code>--limit</code>.
+          Triggers a real ingestion run immediately on GitHub Actions ({' '}
+          <code>.github/workflows/brain-ingest.yml</code>) with this seed/limit.
         </p>
+        {triggerMessage ? <p className="fmt__cap ingest-success">{triggerMessage}</p> : null}
       </div>
 
       {/* Budget override */}
