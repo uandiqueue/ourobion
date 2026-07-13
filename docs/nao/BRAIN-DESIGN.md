@@ -1,5 +1,7 @@
 # The Brain — Design
 
+> **Authoritative integrated architecture:** [`../shared/INSIGHT-ENGINE-ARCHITECTURE.md`](../shared/INSIGHT-ENGINE-ARCHITECTURE.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the brain-scoped (edge synthesis + verification) view; where it differs, the architecture doc wins.
+
 **The brain** is ourobion's knowledge graph of scientifically-derived relationships between metrics.
 Nodes are metric keys ([`shared/metrics/registry.ts`](../../shared/metrics/registry.ts)); edges are
 relationships ("more X → less Y", "X modulates Y") synthesised from the scientific literature by an
@@ -150,7 +152,7 @@ shipping placeholder guard files with nothing real to assert, which the enforcem
 ## Decisions (resolved 2026-07-01) & open items
 
 Resolved by the pipeline decision ([memory 0013](../memory/0013-brain-pipeline-and-support-models-decision.md);
-anchor [`../human-briefs/2026-07-01-brain-pipeline-and-training-eval.md`](../human-briefs/2026-07-01-brain-pipeline-and-training-eval.md)):
+anchor [`../human-briefs/2026-07-01-brain-pipeline-and-training-eval.md`](../temp/human-brief/2026-07-01-brain-pipeline-and-training-eval.md)):
 
 1. **Verifier model choice — DECIDED: a different model family from synthesis.** Synthesis uses the
    strongest available model; the verifier a different family, for error decorrelation (the whole point
@@ -158,8 +160,11 @@ anchor [`../human-briefs/2026-07-01-brain-pipeline-and-training-eval.md`](../hum
    verifier LLM spends a token — an NLI verdict pre-filter and a relation/direction/claim-kind
    cross-check that feed `directionCheck` / `claimKindCheck`; the study-design + venue models feed
    `evidenceTier` / `impactTier`. See [`BRAIN-MODELS-TRAINING.md`](BRAIN-MODELS-TRAINING.md).
-2. **Persistence — DECIDED: a truth-tier `verified_edges` store (Supabase table or R2 JSONL), projected
-   into Neo4j by a deterministic sync job.** The store is TRUTH; Neo4j is a rebuildable projection.
+2. **Persistence — DECIDED: truth-tier edge artifacts (R2 JSONL + the contract), projected by a
+   deterministic loader into the relational Postgres serving tables (`relationship_claims` +
+   `edge_verifications`, read through the `verified_edges` view).** The artifacts + contract are TRUTH;
+   `verified_edges` is a rebuildable relational projection served as a 1-hop lookup (`where subject = $k
+   or object = $k`), **no graph DB**.
 
 Still open:
 

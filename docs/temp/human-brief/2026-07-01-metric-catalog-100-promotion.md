@@ -1,13 +1,13 @@
 # Growing the metric registry to 100 — which metrics, and why
 
-**Date:** 2026-07-01 · **Status:** ✅ **DECISION — adopted 2026-07-01 (the 100-metric expansion; supersedes PHASE2-PLAN's thin-slice stance).** · **Source catalog:** [`../biotope/METRICS-CATALOG.md`](../biotope/METRICS-CATALOG.md) · **Platform detail:** [`../biotope/METRICS-REGISTRY-DESIGN.md`](../biotope/METRICS-REGISTRY-DESIGN.md) · **Plan:** [`../PHASE2-PLAN.md`](../PHASE2-PLAN.md) · **Record:** [`../memory/0014-metric-catalog-100-expansion-decision.md`](../memory/0014-metric-catalog-100-expansion-decision.md)
+**Date:** 2026-07-01 · **Status:** ✅ **DECISION — adopted 2026-07-01 (the 100-metric expansion; supersedes PHASE2-PLAN's thin-slice stance).** · **Source catalog:** [`../biotope/METRICS-CATALOG.md`](../../biotope/METRICS-CATALOG.md) · **Platform detail:** [`../biotope/METRICS-REGISTRY-DESIGN.md`](../../biotope/METRICS-REGISTRY-DESIGN.md) · **Plan:** [`../PHASE2-PLAN.md`](../../shared/PHASE2-PLAN.md) · **Record:** [`../memory/0014-metric-catalog-100-expansion-decision.md`](../../memory/0014-metric-catalog-100-expansion-decision.md)
 
 ## The problem
 
 The Phase 2 metric platform is built: the registry (`shared/metrics/registry.{ts,dart}`) is the single
 source of truth, adding a metric is a localized guard-protected change, and storage follows a metric's
 *continuity*. But the registry only holds **19 metrics** today — the gut/hydration self-report spine
-plus six wearable signals. Meanwhile the research catalog [`METRICS-CATALOG.md`](../biotope/METRICS-CATALOG.md) describes **360** candidate
+plus six wearable signals. Meanwhile the research catalog [`METRICS-CATALOG.md`](../../biotope/METRICS-CATALOG.md) describes **360** candidate
 metrics (110 manual · 100 passive sensor/API · 150 derived). We want to prove the platform at scale and
 give the insights engine real breadth to work with by growing the registry to **100 metrics**.
 

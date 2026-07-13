@@ -2,7 +2,7 @@
 
 **Audience:** stakeholders deciding how to build **ourobion nao** (the brain-inspection web app).
 **Question this brief answers:** are the architecture decisions in the nao plan (see
-[`../nao/NAO-DESIGN.md`](../nao/NAO-DESIGN.md)) sound, or are there better ways — and which stack fits
+[`../nao/NAO-DESIGN.md`](../../nao/NAO-DESIGN.md)) sound, or are there better ways — and which stack fits
 which end-goal? **Method:** current-best-practice web research, mid-2026 (sources at the end). This is a
 decision aid, not a commitment; nothing here changes the two-tier-truth rule (R2 stays canonical).
 

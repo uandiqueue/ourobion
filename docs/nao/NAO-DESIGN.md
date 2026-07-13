@@ -1,5 +1,7 @@
 # Ourobion nao — Design (brain inspection & curation)
 
+> **Authoritative integrated architecture:** [`../shared/INSIGHT-ENGINE-ARCHITECTURE.md`](../shared/INSIGHT-ENGINE-ARCHITECTURE.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the nao-scoped (brain inspection & curation) view; where it differs, the architecture doc wins.
+
 **nao** (脑 — "brain") is ourobion's human-facing **window into the brain**: query and visualise the
 metric-relationship graph, inspect the *evidence* behind every relationship, and curate the brain — by
 hand and, later, with an LLM. It is the **first product surface split out from the main app** (now
@@ -9,7 +11,7 @@ knowledge graph that powers biotope's insights.
 This doc is the durable design. The brain *contract* it renders lives in [`shared/brain/`](../../shared/brain/);
 how edges are synthesised + verified is [`BRAIN-DESIGN.md`](BRAIN-DESIGN.md); how the paper corpus is
 acquired is [`BRAIN-INGESTION-DESIGN.md`](BRAIN-INGESTION-DESIGN.md); how biotope *consumes* the brain is
-[`../biotope/INSIGHTS-ENGINE-DESIGN.md`](../biotope/INSIGHTS-ENGINE-DESIGN.md) and [`../PHASE2-PLAN.md`](../PHASE2-PLAN.md) (Track B/W2).
+[`../biotope/INSIGHTS-ENGINE-DESIGN.md`](../biotope/INSIGHTS-ENGINE-DESIGN.md) and [`../PHASE2-PLAN.md`](../shared/PHASE2-PLAN.md) (Track B/W2).
 
 > **Status (current reality).** The brain has a **contract** (`shared/brain/`, TRUTH, 2-reviewer-guarded)
 > and a **paper corpus** (on Cloudflare R2, see ingestion design) — but **no edges yet**: the synthesis
@@ -39,16 +41,18 @@ A clean instance of the repo's core principle ([memory 0001](../memory/0001-two-
   §1/§6) and the **canonical `VerifiedEdge` records** — both the machine-made ones (LLM synthesis +
   verification) **and human-curated ones authored in nao**. Human curation is truth: a rebuild must
   never clobber it.
-- **DERIVED (rebuildable):** the **Neo4j graph** nao renders, and biotope's served insights. Neo4j is a
-  *projection* of the truth-tier edges, rebuilt by a sync job (§4). This is why Neo4j is **not** the
-  source of truth — losing it costs only a re-projection.
+- **DERIVED (rebuildable):** the relational **`verified_edges` view** nao renders (as a client-side
+  force-graph projection), and biotope's served insights. `verified_edges` is a *projection* of the
+  truth-tier edges — a relational 1-hop lookup over Postgres (no graph DB), rebuilt by the edge loader
+  (§4). This is why the served graph is **not** the source of truth — losing it costs only a
+  re-projection.
 
 ## 3 · Where nao sits (architecture)
 
 - **App:** `apps/nao/` in this monorepo — TypeScript **Next.js (App Router, React)**, hosted on
   **Cloudflare Pages** (already on Cloudflare for R2). A thin **server data layer** (server routes /
-  Cloudflare Workers) holds all credentials: **R2 keys, Neo4j keys, and LLM keys are server-side only —
-  never shipped in the client bundle.**
+  Cloudflare Workers) holds all credentials: **R2 keys and LLM keys are server-side only — never
+  shipped in the client bundle.**
 - **Monorepo:** nao is a *sibling* of the Flutter app, which now lives at `apps/biotope/` (the
   `src/ → apps/biotope/` move is done; both apps sit under `apps/`).
 - **Shared contracts:** nao imports the brain contract from [`shared/brain/`](../../shared/brain/)
@@ -87,7 +91,7 @@ the `PaperRecord` in [`tools/brain-ingest/src/types.ts`](../../tools/brain-inges
   (title, authors, venue, OA status + license, journal/ISSN/publisher, citation count, all identifiers).
 - Mirrors what `brain-ingest status` reports. **Full text (`text/<uid>.txt`) is never fetched or served.**
 
-### v2 — Graph + evidence *(after the synthesis/verification pipeline + edge store + Neo4j)*
+### v2 — Graph + evidence *(after the synthesis/verification pipeline + edge store + relational projection)*
 
 A force-directed graph of **servable `VerifiedEdge`s** (nodes = metrics, edges = relations). Click an
 edge → an **evidence panel**: the `QuoteSpan.quote` **snippets** (+ `locator`) and the `Citation`s
@@ -98,21 +102,24 @@ straight from the contract** (§6). *(Pillar 1.)*
 
 A curator attaches a paper + metadata directly (writes a `PaperRecord` into the R2 corpus) and/or
 authors a relationship by hand → written to the **truth-tier edge store with `provenance:'human'`**, so
-a Neo4j rebuild never clobbers it. *(Pillar 2.)*
+a projection rebuild never clobbers it. *(Pillar 2.)*
 
 ### v4 — LLM query + modification *(extension)*
 
 Natural-language query over a *retrieved* brain subgraph — constrained so it introduces **no
 relationship not in the retrieved set** (the same guardrail as biotope's grounded synthesis,
-[`../PHASE2-PLAN.md`](../PHASE2-PLAN.md) W2) — plus LLM-*proposed* edges that require **human approval**
+[`../PHASE2-PLAN.md`](../shared/PHASE2-PLAN.md) W2) — plus LLM-*proposed* edges that require **human approval**
 before entering the truth store. *(Pillar 3.)*
 
 ### The edge store (v2+)
 
-Canonical `VerifiedEdge`s live in an auditable **truth-tier store** — a Supabase table `verified_edges`
-(or R2 JSONL) — each tagged `provenance: 'llm' | 'human' | 'seed'`. A small **sync job projects them into
-Neo4j Aura (free tier)** for traversal + visualisation. nao reads **Neo4j** for the graph and the
-**truth store** for editing/audit. Rebuilding Neo4j from the truth store is always safe.
+Canonical `VerifiedEdge`s live in auditable **truth-tier edge artifacts** (R2 JSONL + the
+`shared/brain/` contract), each tagged `provenance: 'llm' | 'human' | 'seed'`. A deterministic **edge
+loader projects them into the relational Postgres serving tables** (`relationship_claims` +
+`edge_verifications`, read through the `verified_edges` view) — a 1-hop lookup (`where subject = $k or
+object = $k`), **no graph DB**. nao renders the graph as a **client-side force-graph projection over
+`verified_edges`** and reads the **truth store directly** for editing/audit. Rebuilding
+`verified_edges` from the truth store is always safe.
 
 ## 6 · Evidence & quality markers — reuse the contract, don't reinvent
 
@@ -150,7 +157,7 @@ deep, glowing *brain*. Tokens come from
   gradient strands (thickness/opacity by `confidence`/`edgeScore`; colour/style by `relation` kind);
   **bioluminescent glow on hover/active**. `react-force-graph` (WebGL) or Cytoscape.js are the candidate
   libs — both render arbitrary data, so they fit the "project from the truth tier" model and aren't
-  locked to Neo4j's own viz.
+  tied to any graph database's own viz.
 - **Quality visual grammar:** `evidenceTier` → a 1–5 pip bar; `servingBand` → a colour state (cyan =
   high, amber = "limited evidence"/mid, muted = hold); `confidence` → a ring meter; contradicted /
   needs-review edges flagged (per `needsReview`).
@@ -179,7 +186,7 @@ deep, glowing *brain*. Tokens come from
 - A repo-root `package.json` with workspaces so `apps/nao` can import `shared/`.
 - `apps/nao/` — the Next.js app: an R2 reader in a server route, Supabase auth + role gate, the corpus
   dashboard UI, and a design-token module derived from the brand palette.
-- (v2+) `verified_edges` truth store + the Neo4j projection sync job.
+- (v2+) the truth-tier edge store + the edge loader that builds the relational `verified_edges` projection.
 
 ## 9 · Verification (v1 acceptance)
 
@@ -194,9 +201,10 @@ deep, glowing *brain*. Tokens come from
 
 - **Brain synthesis + verification pipeline** (Track B) — the real critical path for everything past v1;
   nao v2 cannot render a real graph until edges exist. See [`BRAIN-DESIGN.md`](BRAIN-DESIGN.md).
-- **Truth-tier `verified_edges` store + Neo4j projection sync** — **shape now decided** (Supabase table
-  or R2 JSONL = truth; deterministic sync → Neo4j projection) per the
-  [pipeline decision](../human-briefs/2026-07-01-brain-pipeline-and-training-eval.md); build lands with v2.
+- **Truth-tier edge store + relational `verified_edges` projection** — **shape now decided** (R2 JSONL
+  edge artifacts + the contract = truth; a deterministic edge loader → the relational Postgres
+  `verified_edges` projection, a 1-hop lookup, no graph DB) per the
+  [pipeline decision](../temp/human-brief/2026-07-01-brain-pipeline-and-training-eval.md); build lands with v2.
 - **Source-reliability grading standard** — **decided**: an `evidenceTier` study-design classifier + an
   `impactTier` venue lookup (SJR + OpenAlex; JCR dropped as paid), per
   [`BRAIN-MODELS-TRAINING.md`](BRAIN-MODELS-TRAINING.md). Extends `impactTier` (§6) — no new evidence model.

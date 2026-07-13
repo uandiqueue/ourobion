@@ -12,7 +12,7 @@
        the M5 projections (baseline_snapshots, insight_cards).
 
   This is LOCAL-ONLY. It relies on `npx supabase start` already running (Docker), which
-  also serves the edge functions. See AGENTS.md §4 and docs/memory/0007-local-testing-seeding.md.
+  also serves the edge functions. See AGENTS.md §4 and docs/memory/0009-local-test-data-seeding.md.
 
 .NOTES
   RLS keys on auth.uid() = user_id, so the user must already exist: sign in once in the

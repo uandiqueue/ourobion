@@ -1,10 +1,10 @@
 # nao brain pipeline & self-trained models — DECISION
 
 **Date:** 2026-07-01 · **Status:** ✅ **DECISION — adopted 2026-07-01; this brief is the anchor (source of truth).**
-**Detail:** [`../nao/BRAIN-DESIGN.md`](../nao/BRAIN-DESIGN.md) ·
-[`../nao/BRAIN-INGESTION-DESIGN.md`](../nao/BRAIN-INGESTION-DESIGN.md) ·
-[`../biotope/INSIGHTS-ENGINE-DESIGN.md`](../biotope/INSIGHTS-ENGINE-DESIGN.md) ·
-[`../nao/BRAIN-MODELS-TRAINING.md`](../nao/BRAIN-MODELS-TRAINING.md)
+**Detail:** [`../nao/BRAIN-DESIGN.md`](../../nao/BRAIN-DESIGN.md) ·
+[`../nao/BRAIN-INGESTION-DESIGN.md`](../../nao/BRAIN-INGESTION-DESIGN.md) ·
+[`../biotope/INSIGHTS-ENGINE-DESIGN.md`](../../biotope/INSIGHTS-ENGINE-DESIGN.md) ·
+[`../nao/BRAIN-MODELS-TRAINING.md`](../../nao/BRAIN-MODELS-TRAINING.md)
 
 **Audience:** whoever is deciding how ourobion's brain pipeline is built and how the hackathon's GMI
 training credits get spent.
@@ -18,7 +18,7 @@ datasets for scientific claim verification and biomedical relation extraction (m
 > (agentic seeder; two decorrelated LLMs: synthesis + verifier; a runtime presentation agent), the four
 > small support models, and the **`verified_edges` truth store → Neo4j projection**. Where a design doc
 > disagreed, the doc was reconciled to this anchor. Durable record:
-> [memory 0013](../memory/0013-brain-pipeline-and-support-models-decision.md).
+> [memory 0013](../../memory/0013-brain-pipeline-and-support-models-decision.md).
 >
 > **Docs reconciled (2026-07-01):** BRAIN-DESIGN (verifier-model + persistence open-decisions resolved),
 > BRAIN-INGESTION-DESIGN (agentic seeder supersedes the static seed list), NAO-DESIGN (edge-store shape +
@@ -118,7 +118,7 @@ fine-tunes of small biomedical encoders on existing public labelled datasets**; 
 become a held-out eval set + a late-stage fine-tune as they accrue.
 
 > **The concrete training recipe — real data shapes, label-mapping tables, and how each model plugs into
-> the pipeline — is in [`../nao/BRAIN-MODELS-TRAINING.md`](../nao/BRAIN-MODELS-TRAINING.md)** (grounded in
+> the pipeline — is in [`../nao/BRAIN-MODELS-TRAINING.md`](../../nao/BRAIN-MODELS-TRAINING.md)** (grounded in
 > live samples pulled 2026-07-01). Summary of the data-fit per model below.
 
 ### Model (a) — Claim-support / NLI  *(highest leverage)*
@@ -199,7 +199,7 @@ not trained). The support models tag papers and cross-check the LLM so the expen
 > stay different families). Build this **LLM-router** before the LLM nodes. Separately, support-model
 > **training is deferred until GMI credits + GPU exist** (no local GPU) — only the (b2) lookup and the
 > design/data-prep proceed now. Both constraints are sequenced in
-> [`PHASE2-PLAN.md` §2026-07-01 integrated update](../PHASE2-PLAN.md).
+> [`PHASE2-PLAN.md` §2026-07-01 integrated update](../../shared/PHASE2-PLAN.md).
 
 ```
 [planner/seeder AGENT]  reads metric registry (derivedFrom[]) + biotope needs → research queries

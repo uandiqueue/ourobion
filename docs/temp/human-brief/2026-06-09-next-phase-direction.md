@@ -1,7 +1,7 @@
 # Human Brief — ourobion Next-Phase Direction
 
 **Date:** 2026-06-09 · **Status:** Approved plan, not yet built · **Tracking:** issue #3 ·
-**Detail:** [`../INSIGHTS-ENGINE-DESIGN.md`](../INSIGHTS-ENGINE-DESIGN.md) (engine design) + [`../PHASE2-PLAN.md`](../PHASE2-PLAN.md) (current plan)
+**Detail:** [`../INSIGHTS-ENGINE-DESIGN.md`](../../biotope/INSIGHTS-ENGINE-DESIGN.md) (engine design) + [`../PHASE2-PLAN.md`](../../shared/PHASE2-PLAN.md) (current plan)
 
 *(The next phase = clear the remaining P1S2 backlog first, then the deep health-metric analysis
 pipeline. This brief focuses on the analysis pipeline, the headline of the phase.)*

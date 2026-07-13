@@ -136,4 +136,4 @@ Defined in `shared/types/`. Changes require team discussion + PR with two review
 - **`InsightCard.contributing_metrics: string[]`** — powers "Why am I seeing this?"; present from the
   start so the engine can fill it without a contract change.
 - **Store all raw daily rows, never derive-only** — raw data is the asset (the Insight Lab payoff).
-  See [`docs/memory/0001-two-tier-truth.md`](memory/0001-two-tier-truth.md).
+  See [`docs/memory/0001-two-tier-truth.md`](../memory/0001-two-tier-truth.md).

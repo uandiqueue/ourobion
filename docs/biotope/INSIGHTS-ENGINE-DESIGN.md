@@ -1,8 +1,10 @@
 # Insights Engine — Design (Phase 2, W2 / Track B)
 
+> **Authoritative integrated architecture:** [`../shared/INSIGHT-ENGINE-ARCHITECTURE.md`](../shared/INSIGHT-ENGINE-ARCHITECTURE.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the biotope-scoped (insights-engine) view; where it differs, the architecture doc wins.
+
 The detailed design for ourobion's **data-driven insights engine**: a PDF → structured-rules → engine
 pipeline that replaces the MVP's hardcoded rules. Sequencing, ownership, and the gate live in
-[`PHASE2-PLAN.md`](../PHASE2-PLAN.md); this doc is the **contract + step detail**.
+[`PHASE2-PLAN.md`](../shared/PHASE2-PLAN.md); this doc is the **contract + step detail**.
 
 ## Why
 
@@ -18,8 +20,9 @@ Git-tracked JSON **blueprints** = TRUTH (PR-reviewed, human-approved) → loaded
 rebuildable** Postgres `rules` table. Typed model + **Zod** mirror with compile-time drift guards.
 Batch **extract** (PDF → JSON via Claude API + human review) → **load/normalize** → **deterministic
 engine**; the LLM is confined to the offline extract step with cost discipline. (Pattern borrowed from
-sister repo NUSPlan; the **rules engine** targets Postgres — the **brain's graph is a separate Neo4j
-projection**, see [`../nao/BRAIN-DESIGN.md`](../nao/BRAIN-DESIGN.md) — and ourobion uses **no Python**.)
+sister repo NUSPlan; the **rules engine** targets Postgres — the **brain's graph is served as a
+relational 1-hop lookup over the Postgres `verified_edges` view** (no graph DB), see
+[`../nao/BRAIN-DESIGN.md`](../nao/BRAIN-DESIGN.md) — and ourobion uses **no Python**.)
 
 This maps onto ourobion's [two-tier truth](../memory/0001-two-tier-truth.md): `data/rules/**.json` join raw
 rows + migrations + `shared/` as TRUTH; the `rules` table joins `baseline_snapshots` + `insight_cards`
@@ -125,7 +128,7 @@ regenerated → `flutter analyze` + `flutter test` + `node tools/context_sync.mj
 
 ### E. (Later, additive) Presentation agent — the runtime NL layer
 
-Per the [pipeline decision](../human-briefs/2026-07-01-brain-pipeline-and-training-eval.md), the runtime
+Per the [pipeline decision](../temp/human-brief/2026-07-01-brain-pipeline-and-training-eval.md), the runtime
 NL layer is a **presentation agent** (haiku-tier): it reads already-generated deterministic
 `insight_cards` / trend packages + the retrieved brain subgraph and emits curated summaries + template
 copy. It is **grounded** (introduces no relationship or number not in its input), **copy-gated** (runs

@@ -1,5 +1,7 @@
 # The Brain — Ingestion (paper corpus) Design
 
+> **Authoritative integrated architecture:** [`../shared/INSIGHT-ENGINE-ARCHITECTURE.md`](../shared/INSIGHT-ENGINE-ARCHITECTURE.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the ingestion-scoped (paper-corpus acquisition) view; where it differs, the architecture doc wins.
+
 How ourobion **acquires the scientific literature** that the brain's edges are synthesised from. This
 doc covers the *front of the pipeline only* — discovering papers, fetching them, giving each a stable
 identity, and storing them — up to the point where a paper's text is ready for synthesis. The
@@ -89,7 +91,7 @@ the deferred NUS/TDM decision.)*
                                                                          HTML / content   ──► local cache
 ```
 
-1. **Discover** by research query. Per the [pipeline decision](../human-briefs/2026-07-01-brain-pipeline-and-training-eval.md)
+1. **Discover** by research query. Per the [pipeline decision](../temp/human-brief/2026-07-01-brain-pipeline-and-training-eval.md)
    an **agentic seeder** (reads the metric registry `derivedFrom[]` + biotope's insight needs) generates
    the queries; the static topic-seed list (gut microbiome, hydration, antibiotics, sleep/HRV,
    dengue/vector, environmental health) remains the **bootstrap/fallback**. Either way → candidate works +

@@ -22,7 +22,7 @@ app + Supabase backend that connects human physiology, daily behaviour, and envi
 surface **descriptive** patterns in gut health, hydration, and vector exposure. It is
 **non-diagnostic by construction**.
 
-- **Full product brief, principles, scope, module map, expansion hints:** [`docs/PROJECT-CONTEXT.md`](docs/PROJECT-CONTEXT.md)
+- **Full product brief, principles, scope, module map, expansion hints:** [`docs/shared/PROJECT-CONTEXT.md`](docs/shared/PROJECT-CONTEXT.md)
 - **Non-negotiable product principles** (non-diagnostic always; 30-second logging; graceful
   degradation; PDPA; privacy-safe community) live there — read them before touching user-facing copy
   or data isolation.
@@ -64,12 +64,12 @@ module graph and the enforced interface rules are the boundary reference** (we d
 auto-generate a structural import graph yet — see §8 and [`docs/graph/README.md`](docs/graph/README.md)):
 
 - **Module dependency graph + data flow + table overview + interface rules:** [`docs/biotope/ARCHITECTURE-CONTEXT.md`](docs/biotope/ARCHITECTURE-CONTEXT.md)
-- **Repository directory layout + `shared/` vs `apps/biotope/` rule + env files:** [`docs/STRUCTURE-CONTEXT.md`](docs/STRUCTURE-CONTEXT.md)
+- **Repository directory layout + `shared/` vs `apps/biotope/` rule + env files:** [`docs/shared/STRUCTURE-CONTEXT.md`](docs/shared/STRUCTURE-CONTEXT.md)
 - **The shared contract types (the connective tissue every boundary crosses):** [`shared/SHARED-CONTEXT.md`](shared/SHARED-CONTEXT.md) — incl. the metrics registry (`shared/metrics/`) and the brain relationship contract (`shared/brain/`, design in [`docs/nao/BRAIN-DESIGN.md`](docs/nao/BRAIN-DESIGN.md))
 - **UI design system:** [`docs/biotope/ui-context/UI-DESIGN-CONTEXT.md`](docs/biotope/ui-context/UI-DESIGN-CONTEXT.md)
-- **Per-feature design docs:** the **nao** brain surface in [`docs/nao/`](docs/nao/) — product design [`NAO-DESIGN.md`](docs/nao/NAO-DESIGN.md), plus [`BRAIN-DESIGN.md`](docs/nao/BRAIN-DESIGN.md) + [`BRAIN-INGESTION-DESIGN.md`](docs/nao/BRAIN-INGESTION-DESIGN.md) + [`BRAIN-MODELS-TRAINING.md`](docs/nao/BRAIN-MODELS-TRAINING.md); the **brain pipeline + support-model DECISION** (anchor) in [`docs/human-briefs/2026-07-01-brain-pipeline-and-training-eval.md`](docs/human-briefs/2026-07-01-brain-pipeline-and-training-eval.md) ([memory 0013](docs/memory/0013-brain-pipeline-and-support-models-decision.md)); the **biotope** app in [`docs/biotope/`](docs/biotope/). Cross-cutting docs stay at `docs/` root.
-- **AI routing table, truth hierarchy & PR review checklist:** [`docs/AGENT-PROTOCOL.md`](docs/AGENT-PROTOCOL.md)
-- **The human dev cycle (Issue → … → Merge):** [`docs/dev-workflow.md`](docs/dev-workflow.md)
+- **Per-feature design docs:** the **nao** brain surface in [`docs/nao/`](docs/nao/) — product design [`NAO-DESIGN.md`](docs/nao/NAO-DESIGN.md), plus [`BRAIN-DESIGN.md`](docs/nao/BRAIN-DESIGN.md) + [`BRAIN-INGESTION-DESIGN.md`](docs/nao/BRAIN-INGESTION-DESIGN.md) + [`BRAIN-MODELS-TRAINING.md`](docs/nao/BRAIN-MODELS-TRAINING.md); the **brain pipeline + support-model DECISION** (anchor) in [`docs/temp/human-brief/2026-07-01-brain-pipeline-and-training-eval.md`](docs/temp/human-brief/2026-07-01-brain-pipeline-and-training-eval.md) ([memory 0013](docs/memory/0013-brain-pipeline-and-support-models-decision.md)); the **biotope** app in [`docs/biotope/`](docs/biotope/); the **authoritative insight-engine architecture** (spans both apps, the promoted doc-12 design) in [`docs/shared/INSIGHT-ENGINE-ARCHITECTURE.md`](docs/shared/INSIGHT-ENGINE-ARCHITECTURE.md) with granular ADRs in [`docs/shared/decisions/`](docs/shared/decisions/) and the runtime seam in [`docs/shared/BIOTOPE-NAO-LINK.md`](docs/shared/BIOTOPE-NAO-LINK.md). **Cross-cutting / shared ground truth now lives in [`docs/shared/`](docs/shared/)**; temporary research output in [`docs/temp/human-brief/`](docs/temp/human-brief/).
+- **AI routing table, truth hierarchy & PR review checklist:** [`docs/shared/AGENT-PROTOCOL.md`](docs/shared/AGENT-PROTOCOL.md)
+- **The human dev cycle (Issue → … → Merge):** [`docs/shared/dev-workflow.md`](docs/shared/dev-workflow.md)
 
 **Boundary rules that matter most** (full set in ARCHITECTURE-CONTEXT §"Module Interface Rules"):
 
@@ -161,7 +161,7 @@ git config core.hooksPath .githooks
 
 ## 5. Conventions
 
-- **Commits:** Conventional Commits — full spec in [`docs/commit-conventions.md`](docs/commit-conventions.md).
+- **Commits:** Conventional Commits — full spec in [`docs/shared/commit-conventions.md`](docs/shared/commit-conventions.md).
   Types: `feat` / `fix` / `docs` / `style` / `refactor` / `perf` / `test` / `build` / `ci` / `chore` /
   `revert`. **Scope = module or area:** `m1`/`m2`/`m3`/`m5a`/`m5b`/`m6`, or `db`/`ui`/`docs`/`auth`.
   (Recent history uses `m3`, `m5a`, `db`, `docs`.) Keep commits `flutter analyze`-green.
@@ -187,7 +187,7 @@ The repo is in **Phase 2** — turning the shipped MVP self-report loop (M1 auth
 baselines, M5b insights, M6 engagement) into the real product: Android passive health (M3), a
 data-driven insights engine (M5b), environmental context (M4), and the first community slice (M7).
 **Current scope, sequencing, and the Phase 2 → Phase 3 gate live in
-[`docs/PHASE2-PLAN.md`](docs/PHASE2-PLAN.md)** (the plan authority); per-session status lives in
+[`docs/shared/PHASE2-PLAN.md`](docs/shared/PHASE2-PLAN.md)** (the plan authority); per-session status lives in
 `docs/sessions/`.
 
 ### Team workstreams (ownership)
@@ -204,8 +204,8 @@ Active gotchas captured as durable facts: HRV SDNN is iOS-only
 ## 7. Agent collaboration protocol (MANDATORY)
 
 > The detailed **AI routing table, truth hierarchy, and PR review checklist** live in
-> [`docs/AGENT-PROTOCOL.md`](docs/AGENT-PROTOCOL.md); the **human-facing dev cycle** is in
-> [`docs/dev-workflow.md`](docs/dev-workflow.md). This section is the authoritative summary they defer to.
+> [`docs/shared/AGENT-PROTOCOL.md`](docs/shared/AGENT-PROTOCOL.md); the **human-facing dev cycle** is in
+> [`docs/shared/dev-workflow.md`](docs/shared/dev-workflow.md). This section is the authoritative summary they defer to.
 
 ### Session start
 1. Run `node tools/context_sync.mjs --session-start` (the Claude Code SessionStart hook in

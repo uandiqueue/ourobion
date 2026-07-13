@@ -2,7 +2,7 @@
 > **TEAM REFERENCE** — Written for Jayden and Alton. Human-readable, not AI context.
 > Purpose: Explains the full development cycle, what AI handles, and what requires human judgment.
 >
-> The cross-tool source of truth is [`AGENTS.md`](../AGENTS.md); its §7 collaboration protocol is the
+> The cross-tool source of truth is [`AGENTS.md`](../../AGENTS.md); its §7 collaboration protocol is the
 > authoritative version of this cycle. `dev-phase2` is the single working / integration branch all
 > session PRs target; it is the only branch that PRs into `main`.
 

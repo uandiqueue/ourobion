@@ -2,7 +2,7 @@
 > **CONSTANT LAYER** — Changes only at phase transitions or full team agreement.
 > Written for: AI agents (Claude Code sessions, automated reviewers)
 >
-> **[`AGENTS.md`](../AGENTS.md) is the cross-tool single source of truth.** This file is the detailed
+> **[`AGENTS.md`](../../AGENTS.md) is the cross-tool single source of truth.** This file is the detailed
 > AI **routing table + truth hierarchy + PR review checklist** that AGENTS.md §3/§7 point to. The
 > variable layer (what happened / what's next) lives in append-only `docs/sessions/` logs +
 > `docs/memory/` facts (see AGENTS.md §7).
@@ -12,7 +12,7 @@
 ## How to Use This File
 
 If you are an AI agent starting work on this repo, read in this order:
-1. [`AGENTS.md`](../AGENTS.md) — the single source of truth (architecture, commands, protocol)
+1. [`AGENTS.md`](../../AGENTS.md) — the single source of truth (architecture, commands, protocol)
 2. This file — orientation and routing
 3. The latest few `docs/sessions/` files (run `node tools/context_sync.mjs --session-start`) —
    current team state: what was done last session, what is next
@@ -134,6 +134,6 @@ refactor/m{n}-{short-description}
 
 ## Module Status
 
-The live phase timeline + per-module status and ownership are maintained in **[`AGENTS.md`](../AGENTS.md) §6**
+The live phase timeline + per-module status and ownership are maintained in **[`AGENTS.md`](../../AGENTS.md) §6**
 (kept in one place to avoid drift). For detailed per-module state, read the respective `m*-context.md`
 and cross-check with the latest `docs/sessions/` files.

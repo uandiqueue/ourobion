@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Insight engine — architecture flow graph</title>
+<style>
+  :root{
+    --surface:#fcfcfb; --page:#f9f9f7; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --border:rgba(11,11,11,0.12); --card:#ffffff; --cardShadow:rgba(11,11,11,0.09);
+    --det:#2a78d6; --rules:#1baf7a; --tm:#4a3aa7; --llm:#eb6834;
+    --serve:#2a78d6; --loop:#e34948; --start:#0f8a3c; --muted-edge:#a7a59c;
+    --chipbg:#f2f1ec;
+    --haiku:#1baf7a; --sonnet:#eb6834; --verifier:#e34948; --trained:#4a3aa7;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --surface:#1a1a19; --page:#0d0d0d; --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+    --border:rgba(255,255,255,0.14); --card:#242422; --cardShadow:rgba(0,0,0,0.5);
+    --det:#3987e5; --rules:#199e70; --tm:#9085e9; --llm:#d95926;
+    --serve:#3987e5; --loop:#e66767; --start:#3fc593; --muted-edge:#6b6a63;
+    --chipbg:#2c2c2a; --haiku:#3fc593; --sonnet:#eb8a63; --verifier:#e66767; --trained:#b3aaf0;
+  }}
+  :root[data-theme="dark"]{
+    --surface:#1a1a19; --page:#0d0d0d; --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+    --border:rgba(255,255,255,0.14); --card:#242422; --cardShadow:rgba(0,0,0,0.5);
+    --det:#3987e5; --rules:#199e70; --tm:#9085e9; --llm:#d95926;
+    --serve:#3987e5; --loop:#e66767; --start:#3fc593; --muted-edge:#6b6a63;
+    --chipbg:#2c2c2a; --haiku:#3fc593; --sonnet:#eb8a63; --verifier:#e66767; --trained:#b3aaf0;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--page); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    line-height:1.4; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1200px; margin:0 auto; padding:24px 16px 56px}
+  header.top{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap}
+  h1{font-size:24px; margin:0 0 4px; letter-spacing:-0.01em}
+  .sub{color:var(--ink2); font-size:13px; margin:0; max-width:80ch}
+  .toggle{border:1px solid var(--border); background:var(--card); color:var(--ink2); border-radius:8px;
+    padding:7px 11px; font-size:12.5px; cursor:pointer; font-family:inherit}
+  .toggle:hover{color:var(--ink)}
+
+  .legend{display:flex; flex-wrap:wrap; gap:10px 20px; align-items:center; background:var(--surface);
+    border:1px solid var(--border); border-radius:12px; padding:12px 15px; margin:16px 0 6px; font-size:11.5px; color:var(--ink2)}
+  .legend b{color:var(--ink); font-weight:600}
+  .lg{display:flex; align-items:center; gap:7px}
+  .swb{width:13px;height:13px;border-radius:3px;border-left:4px solid var(--muted); background:var(--card); flex:none}
+  .eline{width:26px;height:0;border-top:3px solid; flex:none}
+  .eline.dash{border-top-style:dashed}
+  .mdot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
+  .cap{font-size:11.5px; color:var(--muted); margin:8px 2px 0}
+  .cap b{color:var(--ink2)}
+
+  .gscroll{overflow:auto; border:1px solid var(--border); border-radius:12px; background:
+     repeating-linear-gradient(0deg,transparent,transparent 39px,var(--border) 39px,var(--border) 40px),
+     repeating-linear-gradient(90deg,transparent,transparent 39px,var(--border) 39px,var(--border) 40px),
+     var(--surface);
+    background-blend-mode:normal; margin-top:8px; -webkit-overflow-scrolling:touch}
+  .gstage{position:relative; width:1680px; height:880px}
+  svg.edges{position:absolute; inset:0; width:1680px; height:880px; overflow:visible; z-index:1}
+  .elabel{font-size:10.5px; fill:var(--ink2); paint-order:stroke; stroke:var(--surface); stroke-width:3px; font-family:inherit; font-weight:600}
+
+  .gnode{position:absolute; width:160px; height:54px; z-index:2; background:var(--card);
+    border:1px solid var(--border); border-left:5px solid var(--muted); border-radius:9px;
+    box-shadow:0 1px 3px var(--cardShadow); padding:6px 8px; display:flex; flex-direction:column; gap:2px; overflow:hidden}
+  .gnode.det{border-left-color:var(--det)} .gnode.rules{border-left-color:var(--rules)}
+  .gnode.tm{border-left-color:var(--tm)} .gnode.llm{border-left-color:var(--llm)}
+  .gh{display:flex; align-items:center; gap:5px}
+  .gid{font-size:10px; font-weight:800; font-variant-numeric:tabular-nums; background:var(--chipbg); color:var(--ink2); border-radius:4px; padding:1px 5px}
+  .ggm{font-size:8.5px; font-weight:700; border-radius:3px; padding:1px 4px; border:1px solid var(--border); color:var(--muted)}
+  .ggm.M{color:var(--llm); border-color:color-mix(in srgb,var(--llm) 45%,transparent)}
+  .gmd{margin-left:auto; width:9px;height:9px;border-radius:50%}
+  .gtt{font-size:11px; font-weight:600; line-height:1.18}
+  .gnode .gsub{font-size:8.5px; color:var(--muted); line-height:1.1}
+
+  .gnode.term{border-radius:999px; border-width:2px; border-left-width:2px; justify-content:center; align-items:center; text-align:center; padding:6px 10px}
+  .gnode.start{border-color:var(--start); border-left-color:var(--start)}
+  .gnode.end{border-color:var(--llm); border-left-color:var(--llm)}
+  .gnode.dash{border-style:dashed}
+  .gnode.term .gcap{font-size:8px; font-weight:800; letter-spacing:.05em; text-transform:uppercase}
+  .gnode.start .gcap{color:var(--start)} .gnode.end .gcap{color:var(--llm)}
+  .gnode.term .gtt{font-size:11px}
+
+  footer{margin-top:22px; padding-top:14px; border-top:1px solid var(--border); font-size:11.5px; color:var(--muted)}
+  footer code{background:var(--chipbg); padding:1px 5px; border-radius:4px}
+  @media (max-width:640px){ .wrap{padding:18px 10px 44px} h1{font-size:20px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1>Insight engine — architecture flow graph</h1>
+      <p class="sub">A 2-D flow. The <b style="color:var(--serve)">blue spine</b> is the linear serve pipeline
+        (your data → the report). The <b style="color:var(--loop)">red circuit</b> is the self-improving loop
+        — it leaves the spine at <b>S7</b> and returns at <b>S6→S7</b>, a closed cycle. Rounded nodes are
+        entry/exit points; the dashed green one (prepopulation seed) is a one-time start, not part of the loop.
+        Scroll the canvas. Companion to <code>12-system-architecture.md</code>.</p>
+    </div>
+    <button class="toggle" id="themeBtn" type="button">◐ Theme</button>
+  </header>
+
+  <div class="legend">
+    <div class="lg"><b>Edges</b></div>
+    <div class="lg"><span class="eline" style="border-color:var(--serve)"></span> serve (linear)</div>
+    <div class="lg"><span class="eline" style="border-color:var(--loop)"></span> the loop (cycle)</div>
+    <div class="lg"><span class="eline" style="border-color:var(--start)"></span> entry (one-time / bootstrap)</div>
+    <div class="lg"><span class="eline dash" style="border-color:var(--muted-edge)"></span> feedback</div>
+    <div class="lg"><b>Compute</b></div>
+    <div class="lg"><span class="swb" style="border-left-color:var(--det)"></span>DET</div>
+    <div class="lg"><span class="swb" style="border-left-color:var(--rules)"></span>Rules</div>
+    <div class="lg"><span class="swb" style="border-left-color:var(--tm)"></span>Trained</div>
+    <div class="lg"><span class="swb" style="border-left-color:var(--llm)"></span>LLM</div>
+    <div class="lg"><span class="mdot" style="background:var(--haiku)"></span>Haiku 4.5</div>
+    <div class="lg"><span class="mdot" style="background:var(--sonnet)"></span>Sonnet 5</div>
+    <div class="lg"><span class="mdot" style="background:var(--verifier)"></span>Verifier (decorrelated)</div>
+    <div class="lg"><span class="mdot" style="background:var(--trained)"></span>Trained model</div>
+  </div>
+
+  <div class="gscroll">
+    <div class="gstage" id="stage">
+      <svg class="edges" id="edges" viewBox="0 0 1680 880"></svg>
+    </div>
+  </div>
+
+  <p class="cap"><b>Reading it:</b> follow blue down the left = the serve pipeline (user data → report).
+    At S7 the red loop branches right (gaps), runs across the top row, drops at A6, returns along the bottom
+    row to S6, and the thick red arrow carries new relationships back up into S7 — the cycle. Two green
+    starts feed the loop without being in it (prepopulation seed → retrieval A3; registry bootstrap → gap
+    ledger A1). <b>Not drawn</b> to keep it clean: U1 applicability (an LLM feeder cached into S7) and the
+    "held / not served" terminal off S6 — both noted in <code>12-system-architecture.md</code>.</p>
+
+  <footer>
+    The red loop is the offline authoring factory (ingest CLI / prepopulation terminal); the blue spine runs
+    on the app backend and only <i>reads</i> what the loop produced, so the user never waits for it. Node
+    accent = highest-cost compute; corner dot = the model. Full per-stage schemas, §8 models, §9
+    hyperparameters in <code>12-system-architecture.md</code>.
+  </footer>
+</div>
+
+<script>
+  var W=160, H=54;
+  // node: id -> {x,y, c(compute), t(title), gm, md(model color), kind, dash, cap, sub}
+  var N = {
+    userData:{x:30,y:40,  kind:'start', t:'User logs / syncs data', cap:'▶ start'},
+    S1 :{x:30,y:118, c:'det',   t:'Capture', gm:'M', sub:'daily_gut_rows · wearable_daily'},
+    S2 :{x:30,y:196, c:'det',   t:'Joint-series view', gm:'G'},
+    S3 :{x:30,y:274, c:'det',   t:'Baseline', gm:'G'},
+    S4 :{x:30,y:352, c:'rules', t:'Signal + anomaly', gm:'M'},
+    S5 :{x:30,y:430, c:'det',   t:'Co-movement (n=1)', gm:'G'},
+    S7 :{x:30,y:560, c:'rules', t:'Composer', gm:'G', sub:'+ U1 applicability'},
+    S8 :{x:30,y:638, c:'llm',   t:'Card + phrasing', gm:'G', md:'var(--haiku)'},
+    S9 :{x:30,y:716, c:'llm',   t:'Report', gm:'G', md:'var(--sonnet)'},
+    userReads:{x:30,y:794, kind:'end', t:'User reads report', cap:'■ end'},
+
+    registry:{x:250,y:150, kind:'start', t:'Registry derivedFrom', cap:'▶ start · bootstrap'},
+    prepop  :{x:650,y:150, kind:'start', dash:true, t:'Prepopulation seed', cap:'▶ start · one-time, off-API'},
+
+    A1 :{x:250, y:560, c:'rules', t:'Gap ledger', gm:'G', sub:'gap_ledger'},
+    A2 :{x:450, y:560, c:'det',   t:'Query gen', gm:'M'},
+    A3 :{x:650, y:560, c:'det',   t:'Retrieve', gm:'G'},
+    A4 :{x:850, y:560, c:'tm',    t:'Segment + role-tag', gm:'G', md:'var(--trained)'},
+    A4b:{x:1050,y:560, c:'rules', t:'Citation blocks', gm:'G'},
+    A5 :{x:1250,y:560, c:'llm',   t:'Tiering', gm:'G', md:'var(--trained)'},
+    A6 :{x:1450,y:560, c:'det',   t:'Tag + co-occur + refs', gm:'M'},
+
+    A7 :{x:1450,y:690, c:'rules', t:'Assertion gate', gm:'G'},
+    A8 :{x:1250,y:690, c:'llm',   t:'Synthesis', gm:'G', md:'var(--sonnet)'},
+    A9 :{x:1050,y:690, c:'det',   t:'Quote check', gm:'G'},
+    A10:{x:850, y:690, c:'llm',   t:'Verify', gm:'G', md:'var(--verifier)'},
+    A11:{x:650, y:690, c:'det',   t:'Edge loader', gm:'G'},
+    S6 :{x:450, y:690, c:'det',   t:'Relationship store', gm:'G', sub:'verified_edges'},
+
+    A12:{x:450, y:800, c:'det',   t:'Coverage', gm:'G'}
+  };
+  function P(id,side){var n=N[id]; var x=n.x,y=n.y;
+    if(side==='L')return[x,y+H/2]; if(side==='R')return[x+W,y+H/2];
+    if(side==='T')return[x+W/2,y]; if(side==='B')return[x+W/2,y+H]; return[x+W/2,y+H/2];}
+
+  // edges: [from,fromSide, to,toSide, colorKey, {dash,thick,ctrl:[x,y],label,lx,ly}]
+  var E = [
+    ['userData','B','S1','T','serve'],
+    ['S1','B','S2','T','serve'], ['S2','B','S3','T','serve'], ['S3','B','S4','T','serve'],
+    ['S4','B','S5','T','serve'], ['S5','B','S7','T','serve'], ['S7','B','S8','T','serve'],
+    ['S8','B','S9','T','serve'], ['S9','B','userReads','T','serve'],
+
+    ['S7','R','A1','L','loop',{label:'gaps',lx:205,ly:578}],
+    ['A1','R','A2','L','loop'], ['A2','R','A3','L','loop'], ['A3','R','A4','L','loop'],
+    ['A4','R','A4b','L','loop'], ['A4b','R','A5','L','loop'], ['A5','R','A6','L','loop'],
+    ['A6','B','A7','T','loop'],
+    ['A7','L','A8','R','loop'], ['A8','L','A9','R','loop'], ['A9','L','A10','R','loop'],
+    ['A10','L','A11','R','loop'], ['A11','L','S6','R','loop'],
+    ['S6','L','S7','R','loop',{thick:true, ctrl:[315,672], label:'new relationships ↩ loop closes', lx:250,ly:660}],
+
+    ['registry','B','A1','T','start'],
+    ['prepop','B','A3','T','start',{dash:true}],
+
+    ['A11','B','A12','T','fb',{dash:true, ctrl:[640,792]}],
+    ['A12','L','A1','B','fb',{dash:true, ctrl:[250,730], label:'coverage → priority', lx:120,ly:700}]
+  ];
+
+  function pathD(a,b,ctrl){
+    if(ctrl) return 'M'+a[0]+' '+a[1]+' Q'+ctrl[0]+' '+ctrl[1]+' '+b[0]+' '+b[1];
+    return 'M'+a[0]+' '+a[1]+' L'+b[0]+' '+b[1];
+  }
+
+  var svg=document.getElementById('edges');
+  var NS='http://www.w3.org/2000/svg';
+  // arrowhead markers per color
+  var defs=document.createElementNS(NS,'defs');
+  [['serve','var(--serve)'],['loop','var(--loop)'],['start','var(--start)'],['fb','var(--muted-edge)']].forEach(function(c){
+    var m=document.createElementNS(NS,'marker');
+    m.setAttribute('id','ah-'+c[0]); m.setAttribute('viewBox','0 0 10 10');
+    m.setAttribute('refX','8.5'); m.setAttribute('refY','5'); m.setAttribute('markerWidth','7'); m.setAttribute('markerHeight','7');
+    m.setAttribute('orient','auto-start-reverse');
+    var p=document.createElementNS(NS,'path'); p.setAttribute('d','M0 0 L10 5 L0 10 z'); p.setAttribute('fill',c[1]);
+    m.appendChild(p); defs.appendChild(m);
+  });
+  svg.appendChild(defs);
+
+  var colorVar={serve:'var(--serve)',loop:'var(--loop)',start:'var(--start)',fb:'var(--muted-edge)'};
+  E.forEach(function(e){
+    var o=e[5]||{};
+    var a=P(e[0],e[1]), b=P(e[2],e[3]);
+    var path=document.createElementNS(NS,'path');
+    path.setAttribute('d', pathD(a,b,o.ctrl));
+    path.setAttribute('fill','none');
+    path.setAttribute('stroke', colorVar[e[4]]);
+    path.setAttribute('stroke-width', o.thick?3.4:2);
+    if(o.dash) path.setAttribute('stroke-dasharray','6 5');
+    path.setAttribute('marker-end','url(#ah-'+e[4]+')');
+    if(o.thick) path.setAttribute('opacity','1');
+    svg.appendChild(path);
+    if(o.label){
+      var t=document.createElementNS(NS,'text');
+      t.setAttribute('x',o.lx); t.setAttribute('y',o.ly); t.setAttribute('class','elabel');
+      t.textContent=o.label; svg.appendChild(t);
+    }
+  });
+
+  // render nodes
+  var stage=document.getElementById('stage');
+  Object.keys(N).forEach(function(id){
+    var n=N[id]; var d=document.createElement('div');
+    var cls='gnode';
+    if(n.kind==='start') cls+=' term start'+(n.dash?' dash':'');
+    else if(n.kind==='end') cls+=' term end';
+    else cls+=' '+n.c;
+    d.className=cls; d.style.left=n.x+'px'; d.style.top=n.y+'px';
+    if(n.kind){
+      d.innerHTML='<div class="gcap">'+n.cap+'</div><div class="gtt">'+n.t+'</div>';
+    } else {
+      var gm = n.gm ? '<span class="ggm '+n.gm+'" title="'+(n.gm==='M'?'per-metric config':'all metrics')+'">'+n.gm+'</span>' : '';
+      var md = n.md ? '<span class="gmd" style="background:'+n.md+'"></span>' : '';
+      var sub = n.sub ? '<div class="gsub">'+n.sub+'</div>' : '';
+      d.innerHTML='<div class="gh"><span class="gid">'+id+'</span>'+gm+md+'</div><div class="gtt">'+n.t+'</div>'+sub;
+    }
+    stage.appendChild(d);
+  });
+
+  (function(){
+    var root=document.documentElement,b=document.getElementById('themeBtn');
+    var order=['auto','light','dark'],i=0,label={auto:'◐ Auto',light:'☀ Light',dark:'☾ Dark'};
+    function apply(){var m=order[i];if(m==='auto')root.removeAttribute('data-theme');else root.setAttribute('data-theme',m);b.textContent=label[m];}
+    apply(); b.addEventListener('click',function(){i=(i+1)%order.length;apply();});
+  })();
+</script>
+</body>
+</html>
