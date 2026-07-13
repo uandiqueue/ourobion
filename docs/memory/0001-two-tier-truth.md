@@ -1,3 +1,13 @@
+---
+id: "0001"
+title: Two-tier truth
+summary: Raw rows + migrations + shared contracts are truth; baselines/insights/engagement are rebuildable projections — fix the input and re-run, never hand-edit derived tables.
+type: memory
+status: accepted
+decided: 2026-06-08
+updated: 2026-07-13
+---
+
 # Two-tier truth
 
 **Decision (recorded 2026-06-08).** ourobion has a **source-of-truth tier** and a **derived tier**, and
@@ -11,7 +21,7 @@ they must be treated differently.
   `compute-baselines`), `insight_cards` (rebuilt by `generate-insights`), `engagement_state` (rebuilt
   by M6 from raw completeness).
 
-**Why.** PROJECT-CONTEXT states it outright: *"store all raw daily rows, never derive-only. Raw data
+**Why.** project-context states it outright: *"store all raw daily rows, never derive-only. Raw data
 is the asset."* The descriptive insights are only as trustworthy as the raw inputs, and they must be
 regenerable when rules change — so the raw rows + migrations are the asset, and everything computed
 from them is a disposable projection.

@@ -1,3 +1,12 @@
+---
+title: Development Workflow
+summary: Human-facing walk-through of the full dev cycle (issue → branch/worktree → code → commit+session-log → push → CI → PR → review → merge) and the AI-does vs human-must split at each step. Mechanics are authoritative in AGENTS.md §7; this is the team-reference view.
+type: process
+scope: repo
+status: canonical
+updated: 2026-07-13
+---
+
 # dev-workflow.md — Ourobion Development Workflow
 > **TEAM REFERENCE** — Written for Jayden and Alton. Human-readable, not AI context.
 > Purpose: Explains the full development cycle, what AI handles, and what requires human judgment.

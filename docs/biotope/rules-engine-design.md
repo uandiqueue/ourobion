@@ -1,6 +1,16 @@
+---
+title: Rules-Engine — Design (Phase 2, W2 / Track B)
+summary: The deterministic PDF → JSON-blueprint → Postgres rules pipeline that replaces biotope's hardcoded insight rules (one of the engine's card producers); agents read this for the rule-blueprint contract, the rules table, the loader/extract steps, and the engine refactor. The full 23-stage engine lives in insight-engine-architecture.
+type: design
+scope: biotope
+status: canonical
+updated: 2026-07-13
+---
 # Insights Engine — Design (Phase 2, W2 / Track B)
 
 > **Authoritative integrated architecture:** [`../shared/insight-engine-architecture.md`](../shared/insight-engine-architecture.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the biotope-scoped (insights-engine) view; where it differs, the architecture doc wins.
+
+**Scope.** This doc covers the deterministic rules-engine card producer (one producer among the engine's several). The end-to-end 23-stage insight engine and its inter-stage contracts live in [`insight-engine-architecture`](../shared/insight-engine-architecture.md); this doc does not restate them.
 
 The detailed design for ourobion's **data-driven insights engine**: a PDF → structured-rules → engine
 pipeline that replaces the MVP's hardcoded rules. Sequencing, ownership, and the gate live in
@@ -128,7 +138,7 @@ regenerated → `flutter analyze` + `flutter test` + `node tools/context_sync.mj
 
 ### E. (Later, additive) Presentation agent — the runtime NL layer
 
-Per the [pipeline decision](../temp/human-brief/2026-07-01-brain-pipeline-and-training-eval.md), the runtime
+Per the [pipeline decision](../memory/0013-brain-pipeline-and-support-models-decision.md), the runtime
 NL layer is a **presentation agent** (haiku-tier): it reads already-generated deterministic
 `insight_cards` / trend packages + the retrieved brain subgraph and emits curated summaries + template
 copy. It is **grounded** (introduces no relationship or number not in its input), **copy-gated** (runs

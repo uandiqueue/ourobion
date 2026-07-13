@@ -1,3 +1,13 @@
+---
+id: "0002"
+title: Shared contract changes need 2 reviewers
+summary: Any change to a shared/ contract type crosses the Dart↔TS seam and requires a PR with 2 reviewers; add fields as optional-with-default, never remove/rename without a migration plan.
+type: memory
+status: accepted
+decided: 2026-07-13
+updated: 2026-07-13
+---
+
 # Shared contract changes need 2 reviewers
 
 **Rule (from `shared/SHARED-CONTEXT.md`).** The types in `shared/` are the connective tissue every

@@ -1,5 +1,8 @@
 # Insight-engine architecture decisions (ADRs)
 Granular decisions that pin down rules the top-level [architecture](../insight-engine-architecture.md) left open.
-- [Citation extraction & reference-graph](citation-extraction.md) — how A4b detects citation style, parses references, and clusters corroboration by independent root.
-- [Anomaly & personal-signal definition](anomaly-definition.md) — what counts as an anomaly / personal co-movement (S4/S5), with literature-justified thresholds.
-- [Paper-reliability scoring](paper-reliability.md) — evidence tiering & the reliability axis (A5/edgeScore), grounded in GRADE/CEBM; why notability ≠ trust.
+
+<!-- BEGIN GENERATED -->
+- [Citation Extraction & Reference-Graph Construction](0001-citation-extraction.md) — How stage A4b detects citation style, parses reference lists, maps in-text markers to citing claims, and clusters corroboration by independent root; pins down what insight-engine-architecture.md leaves open for A4b/A4/A6.
+- [Anomaly & Personal-Signal Definition](0002-anomaly-definition.md) — Defines what counts as an observation insight at serve time — a single-metric daily anomaly (S4) or an unexplained n=1 pairwise co-movement (S5) — as deterministic functions over the user's own series, with literature-justified (provisional) thresholds.
+- [Paper-Reliability Scoring](0003-paper-reliability.md) — The evidence-tier ladder and reliability axis behind A5 tiering and edgeScore/EDGE_GATES — grounded in GRADE/CEBM, keeping study-design trust (evidenceTier) and venue notability (impactTier) as separate axes because notability ≠ trust.
+<!-- END GENERATED -->

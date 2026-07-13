@@ -1,3 +1,11 @@
+---
+title: biotope UI — Design Context
+summary: The source-of-truth visual system for biotope's Flutter app (M3 color tokens, Manrope typography, radii, component specs, living backdrop, motion, layout); agents read this before implementing any UI screen. nao's dark expert sibling system is described in nao-app-design §7.
+type: context
+scope: biotope
+status: canonical
+updated: 2026-07-13
+---
 # ui-design-context.md — Ourobion
 > **REFERENCE LAYER** — Read before implementing any UI screen.
 > Last updated: Phase 1 Stage 1 (MVP) — sourced from Claude Design bundle (Onboarding Flow)

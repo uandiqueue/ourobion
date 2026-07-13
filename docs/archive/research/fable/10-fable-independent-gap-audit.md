@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-07-13 — superseded / historical. Do not build from this; kept for provenance.** Current source of truth: [insight-engine-architecture.md](../../../shared/insight-engine-architecture.md).
+
 # Independent gap audit — pressure-testing `08`/`09` against the target UX
 
 **Date:** 2026-07-05 · **Status:** Fable research — independent systems-architecture gap analysis.

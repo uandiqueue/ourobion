@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-07-13 — superseded / historical. Do not build from this; kept for provenance.** Current source of truth: [insight-engine-architecture.md](../../../shared/insight-engine-architecture.md).
+
 # The self-recursive brain — prepopulation, the gap ledger, and the ingestion loop
 
 **Date:** 2026-07-05 · **Status:** Fable research — **Wave 2, part 3 of 3.** Defines the internal engine

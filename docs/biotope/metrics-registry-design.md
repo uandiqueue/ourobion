@@ -1,3 +1,11 @@
+---
+title: Metrics Registry — Design
+summary: Why the metric registry (shared/metrics/) is a code-registry-plus-parity-guard so adding/removing a metric is a localized, guard-protected change; agents read this for the rationale, the derive-from-registry consumers, the guards, and the add/remove runbook. The MetricDefinition shape itself is owned by shared/metrics/README.md.
+type: design
+scope: biotope
+status: canonical
+updated: 2026-07-13
+---
 # Metrics Registry — Design
 
 A single source of truth for every metric ourobion collects, so **adding or removing a metric is a
@@ -58,39 +66,12 @@ the `rules` table stay rebuildable projections ([memory 0001](../memory/0001-two
 
 ## The `MetricDefinition` shape
 
-Per metric:
-
-| Field | Meaning |
-|---|---|
-| `key` | canonical snake_case id — **== column == `metric_key` == rule `metricKeys`** |
-| `source` | `self_report` \| `wearable` \| `env` (which collector) |
-| `table` | `daily_gut_rows` \| `wearable_daily` \| `env_daily` |
-| `type` | `numeric` \| `ordinal` \| `boolean` \| `enum` \| `multi_select` \| `text` |
-| `scale` | `{ min, max }` for numeric/ordinal, else `null` |
-| `unit` | optional display unit |
-| `enumValues` | for `enum` / `multi_select` (e.g. the symptom flags) |
-| `baselineApplicable` | does M5a compute mean/std/trend? (true only for numeric/ordinal) |
-| `dqs` | `{ weight, countsTowardDailyCompleteness }` (M6) |
-| `ui` | optional `{ label, inputType }` hint for M2 self-report screens |
-| `status` | `active` \| `deprecated` |
-| `introducedIn` / `deprecatedAt` | lifecycle stamps |
-
-Example entry (TS):
-
-```ts
-{
-  key: "gut_comfort_score",
-  source: "self_report",
-  table: "daily_gut_rows",
-  type: "ordinal",
-  scale: { min: 1, max: 5 },
-  baselineApplicable: true,
-  dqs: { weight: 1, countsTowardDailyCompleteness: true },
-  ui: { label: "Gut comfort", inputType: "likert_1_5" },
-  status: "active",
-  introducedIn: "phase1",
-}
-```
+The `MetricDefinition` shape (fields, enums, an example entry) is defined in
+[`shared/metrics/README.md`](../../shared/metrics/README.md) **and only there** — it is the canonical
+owner of the shape. Do not restate it here; a table in this doc would drift (an earlier draft's
+`source: self_report | wearable | env` is already stale against the shipped
+`manual | semi_passive | sensor | api | derived`). This doc keeps the *rationale, guards, and history*;
+the README keeps the *shape*.
 
 ## What derives from the registry
 

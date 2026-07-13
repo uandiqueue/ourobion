@@ -1,5 +1,7 @@
 # Metrics Registry
 
+**This file is the ONLY definition of the `MetricDefinition` shape; [`docs/biotope/metrics-registry-design.md`](../../docs/biotope/metrics-registry-design.md) carries rationale only.**
+
 `registry.ts` is **the single source of truth** for every metric ourobion collects.
 `registry.dart` is its faithful mirror for the Flutter app. The two are held in lockstep by
 guards — adding or removing a metric is a localized, guard-protected change, so incomplete
@@ -13,7 +15,7 @@ See [`docs/biotope/metrics-registry-design.md`](../../docs/biotope/metrics-regis
 |---|---|
 | `key` | canonical snake_case id — **== DB column == `metric_key` == rule `metricKey`** |
 | `source` | source economy: `manual` \| `semi_passive` \| `sensor` \| `api` \| `derived` |
-| `table` | current storage location: `daily_gut_rows` \| `wearable_daily` \| `env_daily` (storage is migrating to continuity-based primitives — see PHASE2-PLAN) |
+| `table` | current storage location: `daily_gut_rows` \| `wearable_daily` \| `env_daily` (storage is migrating to continuity-based primitives — see phase-2-plan) |
 | `tier` | collection tier (logging budget): `T0` passive · `T1` daily core · `T2` optional · `T3` event · `T4` state · `T5` profile |
 | `continuity` | `continuous` \| `episodic` \| `state` \| `static` — the data shape over time |
 | `type` | `numeric` \| `ordinal` \| `boolean` \| `enum` \| `multi_select` \| `text` |

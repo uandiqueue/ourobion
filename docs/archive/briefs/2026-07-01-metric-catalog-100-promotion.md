@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-07-13 — superseded / historical. Do not build from this; kept for provenance.** Current source of truth: [0014-metric-catalog-100-expansion-decision.md](../../memory/0014-metric-catalog-100-expansion-decision.md).
+
 # Growing the metric registry to 100 — which metrics, and why
 
 **Date:** 2026-07-01 · **Status:** ✅ **DECISION — adopted 2026-07-01 (the 100-metric expansion; supersedes PHASE2-PLAN's thin-slice stance).** · **Source catalog:** [`../biotope/METRICS-CATALOG.md`](../../biotope/METRICS-CATALOG.md) · **Platform detail:** [`../biotope/METRICS-REGISTRY-DESIGN.md`](../../biotope/METRICS-REGISTRY-DESIGN.md) · **Plan:** [`../PHASE2-PLAN.md`](../../shared/PHASE2-PLAN.md) · **Record:** [`../memory/0014-metric-catalog-100-expansion-decision.md`](../../memory/0014-metric-catalog-100-expansion-decision.md)

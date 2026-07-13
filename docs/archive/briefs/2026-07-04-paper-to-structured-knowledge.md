@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-07-13 — superseded / historical. Do not build from this; kept for provenance.** Current source of truth: [insight-engine-architecture.md](../../shared/insight-engine-architecture.md).
+
 # Turning a chaotic paper corpus into graph-ready knowledge — RESEARCH BRIEF
 
 **Date:** 2026-07-04 · **Status:** 🔬 **Research brief / options** — not yet a decision.

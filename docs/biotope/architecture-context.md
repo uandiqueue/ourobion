@@ -1,6 +1,20 @@
+---
+title: biotope Architecture Context (module map)
+summary: The constant-layer module map for biotope's Flutter app (M1–M7 dependency graph, self-report data flow, table ownership, module-interface rules); the canonical owner of the module map. Contract types live in SHARED-CONTEXT.md; the v2 engine + brain flow live in insight-engine-architecture.md.
+type: context
+scope: biotope
+status: canonical
+updated: 2026-07-13
+---
 # architecture-context.md — Ourobion
 > **CONSTANT LAYER** — system structure, data flow, and module interface rules. Update only at phase
 > transitions. Current phase scope lives in [`phase-2-plan.md`](../shared/phase-2-plan.md).
+
+> **Engine v2 / brain flow.** The module map and self-report loop below are the *constant structure* of
+> the biotope app. The end-to-end **insight-engine v2** (deterministic serve path + offline authoring/
+> brain edge flow) — which extends the MVP self-report loop diagrammed below — is owned by
+> [`insight-engine-architecture`](../shared/insight-engine-architecture.md). Contract **types** are
+> enumerated in [`SHARED-CONTEXT`](../../shared/SHARED-CONTEXT.md), not here.
 
 ---
 
@@ -9,8 +23,7 @@
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    SHARED / TYPES                           │
-│  DailyGutRow  DailyPhysioRow  DailyEnvRow  InsightCard      │
-│  BaselineSnapshot  InsightFiredEvent  EngagementState        │
+│   contract types enumerated in SHARED-CONTEXT.md (not here) │
 └──────────────────────────┬──────────────────────────────────┘
                            │ all modules read from here
           ┌────────────────┼────────────────┐

@@ -1,3 +1,13 @@
+---
+id: "0003"
+title: Non-diagnostic language is mandatory for all user-facing copy
+summary: Every user-facing string must be observational (signal/pattern/observation, never diagnose); enforce with validateCopyString and the copy_guidelines TS/Dart parity lists; severity is info/notice/watch.
+type: memory
+status: accepted
+decided: 2026-07-13
+updated: 2026-07-13
+---
+
 # Non-diagnostic language is mandatory for all user-facing copy
 
 **Rule (Product Principle #1).** Every user-facing string must use **observational** language. Never

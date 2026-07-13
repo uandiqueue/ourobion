@@ -1,6 +1,16 @@
+---
+title: Ourobion nao — Design (brain inspection & curation)
+summary: nao is ourobion's expert web window into the brain (query/visualise the graph, inspect evidence, curate edges); agents building nao read this for its capability pillars, phasing, auth, and build map — the end-to-end engine lives in insight-engine-architecture.
+type: design
+scope: nao
+status: canonical
+updated: 2026-07-13
+---
 # Ourobion nao — Design (brain inspection & curation)
 
 > **Authoritative integrated architecture:** [`../shared/insight-engine-architecture.md`](../shared/insight-engine-architecture.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the nao-scoped (brain inspection & curation) view; where it differs, the architecture doc wins.
+
+**Scope.** This doc covers nao's product surface — inspecting, visualising, and curating the brain. The end-to-end 23-stage insight engine and its inter-stage contracts live in [`insight-engine-architecture`](../shared/insight-engine-architecture.md); this doc does not restate them.
 
 **nao** (脑 — "brain") is ourobion's human-facing **window into the brain**: query and visualise the
 metric-relationship graph, inspect the *evidence* behind every relationship, and curate the brain — by
@@ -204,7 +214,7 @@ deep, glowing *brain*. Tokens come from
 - **Truth-tier edge store + relational `verified_edges` projection** — **shape now decided** (R2 JSONL
   edge artifacts + the contract = truth; a deterministic edge loader → the relational Postgres
   `verified_edges` projection, a 1-hop lookup, no graph DB) per the
-  [pipeline decision](../temp/human-brief/2026-07-01-brain-pipeline-and-training-eval.md); build lands with v2.
+  [pipeline decision](../memory/0013-brain-pipeline-and-support-models-decision.md); build lands with v2.
 - **Source-reliability grading standard** — **decided**: an `evidenceTier` study-design classifier + an
   `impactTier` venue lookup (SJR + OpenAlex; JCR dropped as paid), per
   [`brain-support-models-design.md`](brain-support-models-design.md). Extends `impactTier` (§6) — no new evidence model.

@@ -1,3 +1,12 @@
+---
+title: Project Context
+summary: Constant-layer product brief — what Ourobion is (One Health monitor for ASEAN), the non-negotiable principles (non-diagnostic, 30-second logging, PDPA), tech stack, and a pointer to the module map; changes only at phase transitions.
+type: context
+scope: repo
+status: canonical
+updated: 2026-07-13
+---
+
 # project-context.md — Ourobion
 > **CONSTANT LAYER** — product principles, tech stack, module map, and the shared contract. Change
 > only at formal phase transitions or full team agreement. Current phase scope + sequencing live in

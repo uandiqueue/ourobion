@@ -1,3 +1,12 @@
+---
+title: biotope ↔ nao Runtime Link
+summary: The seam view of how biotope (consumer app) and nao (brain curation surface) connect at runtime — they never call each other; everything is shared indirectly via Supabase identity, shared/ code contracts, and the verified_edges Postgres view. Agents read this to understand the app-to-brain boundary; stage detail lives in insight-engine-architecture.md.
+type: architecture
+scope: shared
+status: canonical
+updated: 2026-07-13
+---
+
 # biotope ↔ nao — the runtime link
 
 > **Status: authoritative ground truth (cross-app).** How **biotope** (the consumer app) and **nao**

@@ -1,3 +1,13 @@
+---
+id: "0011"
+title: "Local Supabase auth: email/password works; OAuth needs a hosted project"
+summary: Against local Docker Supabase only email/password auth works (instant signup, no confirmation); test Google/Apple OAuth against a hosted project instead; local DB state persists across stop/start unless db reset or --no-backup.
+type: memory
+status: accepted
+decided: 2026-07-13
+updated: 2026-07-13
+---
+
 # Local Supabase auth: email/password works; OAuth needs a hosted project
 
 **Gotcha (local dev).** Auth is Supabase Auth. Against the **local** Docker stack, only

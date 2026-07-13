@@ -1,3 +1,13 @@
+---
+id: "0005"
+title: pg_cron migrations need app config set in the Supabase dashboard first
+summary: Before pushing pg_cron migrations to production, set app.supabase_url and app.service_role_key in the Supabase dashboard or the scheduled jobs are created but fail silently at run time.
+type: memory
+status: accepted
+decided: 2026-07-13
+updated: 2026-07-13
+---
+
 # pg_cron migrations need app config set in the Supabase dashboard first
 
 **Gotcha (backend / M5a / M5b).** Migrations that schedule `pg_cron` jobs (the nightly

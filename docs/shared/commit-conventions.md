@@ -1,3 +1,12 @@
+---
+title: Commit Message Guidelines
+summary: The Conventional Commits spec for Ourobion — the allowed type/scope/subject header format, body/footer rules, and examples. Reference this when drafting any commit message; AGENTS.md §7 points here.
+type: reference
+scope: repo
+status: canonical
+updated: 2026-07-13
+---
+
 # Commit Message Guidelines
 
 To ensure a clear, readable, and automated history for the Ourobion project, we follow the [Conventional Commits](https://www.conventionalcommits.org/) specification.

@@ -1,3 +1,12 @@
+---
+title: Insight-Engine Architecture
+summary: The single authoritative end-to-end insight-engine spec — every stage (S1-S9, U1, A1-A12), wire, and store across biotope's deterministic serve path and the offline authoring pipeline; canonical owner of all stage definitions and inter-stage contracts. Index source; child design docs point here.
+type: architecture
+scope: shared
+status: canonical
+updated: 2026-07-13
+---
+
 # Insight-engine architecture — ground truth
 
 **Purpose:** the single authoritative description of the insight engine end-to-end — the

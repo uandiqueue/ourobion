@@ -1,3 +1,11 @@
+---
+title: Metrics Catalog — Candidate Metrics, Reorganized Around a Logging Budget (SG/MY)
+summary: The full ~360-metric candidate catalog reorganized around "manual logging is a scarce budget; passive data is free" — the reference superset agents browse when choosing what to collect, not the ship target (which is the 100-metric wave plan in memory 0014). Stable IDs (L-/E-/D-) map 1:1 onto the collectibility audit.
+type: reference
+scope: biotope
+status: canonical
+updated: 2026-07-13
+---
 # Metrics Catalog — Candidate Metrics, Reorganized Around a Logging Budget (SG/MY)
 
 A full rebuild of the metrics catalog around one organizing idea: **manual logging is a scarce budget; passive data is free.** The earlier catalog asked *"can an app collect this?"* This version asks the harder product question: *"is it worth spending the user's attention on, and if so, how do we ask so they actually answer — and answer accurately — day after day, in Singapore and Malaysia?"*

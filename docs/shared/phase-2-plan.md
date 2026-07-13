@@ -1,3 +1,12 @@
+---
+title: Phase 2 Plan
+summary: The plan authority for Phase 2 — goals, workstreams (W0-W7), the two parallel tracks (biotope app · brain/nao), sequencing, and the Phase 2→3 stress-test gate. Agents read this for current scope and what's in/out of Phase 2 before starting work.
+type: plan
+scope: shared
+status: canonical
+updated: 2026-07-13
+---
+
 # Phase 2 — Plan
 
 Ourobion's MVP self-report loop is in place: M1 auth, M2 logging, M5a baselines, M5b discovery cards,
@@ -11,7 +20,7 @@ set of ~20 metrics in wide daily tables and becomes a **modifiable metric platfo
 hundreds of metrics across five sources, where **adding or removing a metric is a localized,
 guard-protected change — never a schema-wide rewrite.** On that platform Phase 2 **grows the registry to
 100 metrics in collector-gated waves** (the adopted
-[100-metric decision](../temp/human-brief/2026-07-01-metric-catalog-100-promotion.md) · [memory 0014](../memory/0014-metric-catalog-100-expansion-decision.md));
+[100-metric decision · memory 0014](../memory/0014-metric-catalog-100-expansion-decision.md));
 the full ~360-metric [`metrics-catalog.md`](../biotope/metrics-catalog.md) stays the reference, not the ship target.
 
 This doc is the **plan authority**: goals, what Phase 2 contains, the tracks + sequence, and the gate.
@@ -19,7 +28,7 @@ Detail lives in the design docs it points to — the metric platform in
 [`metrics-registry-design.md`](../biotope/metrics-registry-design.md) + [`shared/metrics/README.md`](../../shared/metrics/README.md);
 the insights engine in [`rules-engine-design.md`](../biotope/rules-engine-design.md); the brain
 pipeline in [`nao/brain-synthesis-design.md`](../nao/brain-synthesis-design.md) + [`nao/brain-support-models-design.md`](../nao/brain-support-models-design.md)
-(anchor decision: [`human-briefs/2026-07-01-brain-pipeline-and-training-eval.md`](../temp/human-brief/2026-07-01-brain-pipeline-and-training-eval.md) · [memory 0013](../memory/0013-brain-pipeline-and-support-models-decision.md)).
+(anchor decision: [memory 0013](../memory/0013-brain-pipeline-and-support-models-decision.md); design in [`../nao/brain-synthesis-design.md`](../nao/brain-synthesis-design.md)).
 
 ## The metric platform (the floor everything else stands on)
 
@@ -138,7 +147,7 @@ never a hard gate (graceful degradation).*
 | Data-driven engine | `generate-insights` refactored to pure evaluators (trend / threshold / correlation), deterministic, non-diagnostic gates at load + render. **The brain decides *what* fires; the engine stays deterministic.** |
 | Reliability weighting + triangulation | Engine confidence-weights inputs by source reliability and cross-checks self-report against its passive correlate before firing. |
 | "Why am I seeing this?" | Per-card explanation from `contributing_metrics[]`, path-traced over the brain. |
-| Presentation agent (grounded NL) | On demand, the server retrieves the relevant brain subgraph and a **constrained** LLM phrases the wording — introducing **no relationship or number** outside the retrieved set, **copy-gated at render, cached, and degradable** to templated copy. The deterministic engine stays the authority for *what is true*; the agent only phrases *how it reads*. See [`INSIGHTS-ENGINE-DESIGN §E`](../biotope/rules-engine-design.md). |
+| Presentation agent (grounded NL) | On demand, the server retrieves the relevant brain subgraph and a **constrained** LLM phrases the wording — introducing **no relationship or number** outside the retrieved set, **copy-gated at render, cached, and degradable** to templated copy. The deterministic engine stays the authority for *what is true*; the agent only phrases *how it reads*. See [`rules-engine-design §E`](../biotope/rules-engine-design.md). |
 | Paper → rules/edge extraction | The brain's ingestion + synthesis + adversarial verification pipeline turns the paper corpus into verified relationships; human-reviewed, budget-capped. See [`brain-synthesis-design.md`](../nao/brain-synthesis-design.md) + [`brain-support-models-design.md`](../nao/brain-support-models-design.md). |
 
 ### W3 · Environment & outbreak context (M4) — the `api` source
@@ -309,7 +318,7 @@ and Phase 3. Then Phase 3 opens: the gamification game + UI redesign + Insight L
 
 ## Constraints that shape the plan
 
-- **Non-diagnostic always; 30-second logging; graceful degradation** (PROJECT-CONTEXT principles).
+- **Non-diagnostic always; 30-second logging; graceful degradation** (project-context principles).
   *(PDPA/data-isolation and on-device privacy are **deferred past the demo** — all user data is in
   Supabase for now.)*
 - **Metric platform invariants:** the registry is the single source of truth; **storage follows

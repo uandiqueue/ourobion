@@ -1,6 +1,16 @@
+---
+title: The Brain — Ingestion (paper corpus) Design
+summary: How ourobion acquires the scientific-literature corpus edges are synthesised from (discover → fetch → identify → store to R2); agents read this for the source-API catalog, paper_uid scheme, budget guardrails, and the tools/brain-ingest build sequence — the downstream engine stages live in insight-engine-architecture.
+type: design
+scope: nao
+status: canonical
+updated: 2026-07-13
+---
 # The Brain — Ingestion (paper corpus) Design
 
 > **Authoritative integrated architecture:** [`../shared/insight-engine-architecture.md`](../shared/insight-engine-architecture.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the ingestion-scoped (paper-corpus acquisition) view; where it differs, the architecture doc wins.
+
+**Scope.** This doc covers the front of the pipeline only — paper-corpus acquisition, up to "text + a `paper_uid` ready to cite." The end-to-end 23-stage insight engine and its inter-stage contracts (the A-stages that extend this CLI) live in [`insight-engine-architecture`](../shared/insight-engine-architecture.md); this doc does not restate them.
 
 How ourobion **acquires the scientific literature** that the brain's edges are synthesised from. This
 doc covers the *front of the pipeline only* — discovering papers, fetching them, giving each a stable
@@ -91,7 +101,7 @@ the deferred NUS/TDM decision.)*
                                                                          HTML / content   ──► local cache
 ```
 
-1. **Discover** by research query. Per the [pipeline decision](../temp/human-brief/2026-07-01-brain-pipeline-and-training-eval.md)
+1. **Discover** by research query. Per the [pipeline decision](../memory/0013-brain-pipeline-and-support-models-decision.md)
    an **agentic seeder** (reads the metric registry `derivedFrom[]` + biotope's insight needs) generates
    the queries; the static topic-seed list (gut microbiome, hydration, antibiotics, sleep/HRV,
    dengue/vector, environmental health) remains the **bootstrap/fallback**. Either way → candidate works +
@@ -499,8 +509,8 @@ plan that lives on the session issue + `docs/sessions/` log (AGENTS §7).
 
 ### Milestone mapping & deferrals
 
-- This sequence is the paper-ingestion front end that PHASE2-PLAN's **Track B / W2** assumes "once papers
-  arrive" (PHASE2-PLAN line 183) — it is the **prerequisite** to B4 (extract skeleton), not part of it.
+- This sequence is the paper-ingestion front end that phase-2-plan's **Track B / W2** assumes "once papers
+  arrive" (phase-2-plan line 183) — it is the **prerequisite** to B4 (extract skeleton), not part of it.
 - `PaperRecord` stays a **local `types.ts` interface** until a DB or the app consumes the manifest, at
   which point it promotes to a `shared/` contract with guards (the §9 deferral, registry/brain pattern).
 - Authenticated NUS/TDM capture, the brain runtime schema, and the synthesis/verifier passes remain

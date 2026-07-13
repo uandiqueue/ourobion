@@ -206,6 +206,7 @@ toolchain folder.
 
 ---
 
+**Doc map (start here):** [`docs/INDEX.md`](../../docs/INDEX.md).
 **Product / architecture / UI rationale:** [`docs/shared/project-context.md`](../../docs/shared/project-context.md),
 [`docs/biotope/architecture-context.md`](../../docs/biotope/architecture-context.md),
 [`docs/biotope/ui/ui-design-context.md`](../../docs/biotope/ui/ui-design-context.md).

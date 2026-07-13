@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-07-13 — superseded / historical. Do not build from this; kept for provenance.** Current source of truth: [insight-engine-architecture.md](../../../shared/insight-engine-architecture.md).
+
 # PHASE2-PLAN research pack (parts 1–4) — independent audit
 
 **Date:** 2026-07-05 · **Status:** Fable independent audit of parts 1–4.

@@ -5,6 +5,8 @@
 - **Branch:** docs/consolidate-ground-truth-hackathon
 - **Issue:** #39
 
+memory: added 0015 (docs taxonomy + enforcement)
+
 ## Attempted
 Consolidate `docs/` into clear app-scoped ground truth and prepare for the Launchpad 2026 hackathon:
 reorganise the folder tree, promote the fable_research architecture (doc 12) to ground truth, author
@@ -54,3 +56,35 @@ references, and run a graphify pass.
 
 ## Blockers
 - None. (Windows dir-rename hit a transient lock during the reorg; used copy+remove fallback.)
+
+---
+
+## Update — full taxonomy reorg (Fable-planned, same session)
+
+Went deeper on hygiene per user follow-up. Fable produced the taxonomy/naming/enforcement plan
+(inventory + online best-practice research → synthesis); executed it:
+
+- **Naming:** every doc renamed to lowercase kebab-case with a type suffix
+  (`-architecture`/`-design`/`-context`/`-plan`/`-protocol`/`-catalog`); status + dates moved into
+  **YAML front-matter** (added to every active doc), not filenames; `NNNN-` numbering kept only in
+  `memory/` and `decisions/`. `SHARED-CONTEXT.md` kept as the one declared sentinel.
+- **Archive vs temp split:** `docs/archive/` = frozen/superseded (fable research pack, dated briefs,
+  criteria-judge + narrative research) — every file banner + forward-link, excluded from agent crawl
+  via a new root `.aiignore`; `docs/temp/` = WIP/promotable (lifecycle README + empty `briefs/`).
+- **De-duplication (canonical owner):** the architecture doc owns all stage definitions; app docs got
+  a Scope header + pointers; deleted the stale v1 MetricDefinition table (→ shared/metrics) and the
+  contract enumeration in architecture-context (→ SHARED-CONTEXT); merged the hackathon narrative into
+  hackathon-direction; deleted the doc-12 twin.
+- **`docs/memory` robustness (enforced):** `context_sync.mjs` gained `--fix-index` (generates the
+  `docs/INDEX.md` + memory + decisions indexes from front-matter) and checks **d–j** — front-matter
+  validity, supersede reciprocity, index freshness, `updated:` bump on edits, accepted-decision
+  immutability, session `memory:` line, INDEX coverage, archive-containment. Each was **deliberately
+  tripped to confirm it fires**. Added [`docs/INDEX.md`] (the doc map) + memory record 0015.
+- **Verification:** retired-name sweep = 0 in active docs; link-check = 0 broken active links;
+  `--check` green except session-coverage (this log).
+
+## Decided (reorg)
+- Kebab + type-suffix + front-matter naming; status/dates in metadata, never filenames.
+- Two buckets: `temp/` (promotable) vs `archive/` (frozen); active docs never link into archive.
+- Memory is enforced, not trust-based: front-matter + generated indexes + push-gate checks d–j.
+- The insight-engine architecture doc is the sole owner of stage definitions; app docs point to it.

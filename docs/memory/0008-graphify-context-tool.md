@@ -1,3 +1,13 @@
+---
+id: "0008"
+title: graphify is the semantic context tool; complementary to the deferred structural graph
+summary: graphify indexes repo + paper corpus into a gitignored graphify-out/ subgraph (project-bounded venv, Claude Code hook pre-wired) to fight context overload; it is a rebuildable projection and complements — never replaces — the deferred structural import-graph or couplings.yaml.
+type: memory
+status: accepted
+decided: 2026-07-13
+updated: 2026-07-13
+---
+
 # 0008 — graphify is the semantic context tool; complementary to the deferred structural graph
 
 ourobion uses **graphify** (github.com/safishamsi/graphify, PyPI `graphifyy`) — a semantic

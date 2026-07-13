@@ -1,3 +1,12 @@
+---
+title: Repository Structure
+summary: The authoritative repo directory layout (apps/, shared/, supabase/, tools/, docs/), the env-file two-tier convention, the out-of-repo Windows toolchain, and the doc naming convention (kebab-case + type suffix + front-matter). Agents read this to locate any file or understand where new files belong.
+type: context
+scope: repo
+status: canonical
+updated: 2026-07-13
+---
+
 # structure-context.md — Ourobion Repository Structure
 > **CONSTANT LAYER** — Update only when the repository structure changes.
 
@@ -29,6 +38,7 @@ ourobion/
 │   ├── setup_agent_worktree.mjs # create an isolated git worktree + configure hooks
 │   └── shared_memory.mjs      # task-claim coordinator (.agents/session-log.json, gitignored)
 ├── docs/                      # General project documentation
+│   ├── INDEX.md               # Generated doc map — every active doc + one-line summary (read first)
 │   ├── shared/                # Cross-app ground truth + process docs
 │   │   ├── insight-engine-architecture.md # AUTHORITATIVE end-to-end insight-engine (serve + authoring)
 │   │   ├── biotope-nao-link.md        # How biotope & nao connect at runtime (the seam)
@@ -51,8 +61,13 @@ ourobion/
 │   │   ├── metrics-catalog.md         # Candidate-metrics catalog
 │   │   ├── metrics-registry-design.md # Single-source metric registry (safe metric add/remove)
 │   │   └── ui/                # UI design system (ui-design-context.md + mockups)
-│   ├── temp/                  # Temporary research output — NOT ground truth
-│   │   └── human-brief/               # Plain-language + research briefs; fable_research/ = archived design pack
+│   ├── temp/                  # WIP drafts, promotable to ground truth — NOT authoritative
+│   │   ├── README.md                  # temp lifecycle (draft → promote → archive)
+│   │   └── briefs/                     # dated research/options briefs (YYYY-MM-DD-slug.md)
+│   ├── archive/               # FROZEN: superseded / historical — never build from it (see root .aiignore)
+│   │   ├── briefs/                     # historical dated briefs
+│   │   ├── research/fable/             # the fable research design pack (doc-12 promoted out)
+│   │   └── hackathon/                  # dated evaluation / narrative research
 │   ├── sessions/              # Append-only one-file-per-session logs (variable layer)
 │   ├── memory/                # Durable one-fact-per-file memory + README index
 │   └── graph/                 # couplings.yaml (semantic couplings + guard tests) + README (graphify + deferred structural graph)
@@ -128,3 +143,22 @@ Supabase — see README "Where dependencies live". CI installs its own toolchain
 - **`shared/` vs `apps/biotope/`:** Any logic, types, or constants that must be duplicated across Dart (app) and TypeScript (backend) belong in `shared/`. The frontend codebase should not reference backend specific scripts, and vice versa.
 - **Context files:** Constant, architectural constraints are capitalized and suffixed with `-CONTEXT` (e.g. `project-context.md`). Variable context documents (such as module to-do lists/state files) are lowercase and suffixed with `-context` (e.g. `m1-context.md`).
 - **Assets:** two distinct locations. `apps/biotope/assets/` holds the app's **bundled** assets — `fonts/` (the Manrope family) and `images/` (e.g. `logo.png`); every file must be declared in `apps/biotope/pubspec.yaml` (`flutter: assets:` / `fonts:`) to be bundled and available at runtime (adding the file alone is not enough). The repo-root `assets/ourobion-brand/` is the **brand kit** (source logos, favicon, colors, brand `DESIGN.md`) — a design reference, **not** shipped in the app; app-facing images are derived from it into `apps/biotope/assets/`.
+
+## Naming convention (docs)
+
+Active docs under `docs/shared`, `docs/nao`, `docs/biotope`, and `docs/temp` follow one convention so
+files are locatable and machine-checkable:
+
+- **kebab-case filenames** — lowercase, hyphen-separated (e.g. `insight-engine-architecture.md`,
+  `brain-synthesis-design.md`). No spaces, no `CamelCase`, no `SCREAMING_CASE`.
+- **type suffix** — the filename ends in the document's kind: `-architecture` (reserved for the ONE
+  cross-app engine doc), `-design`, `-context`, `-plan`, `-protocol`, `-catalog`/`-rules`. The suffix
+  matches the `type:` field in the front-matter.
+- **YAML front-matter** — every active doc opens with a front-matter block
+  (`title`, `summary`, `type`, `scope`, `status`, `updated`); any existing `> banner` blockquote follows
+  it. Memory facts (`docs/memory/*.md`) and decisions (`docs/shared/decisions/*.md`) use the id-carrying
+  memory/decision schema instead (`id`, `title`, `summary`, `type`, `status`, `decided`, `updated`).
+- **excluded** — `docs/sessions/` (append-only logs), `docs/archive/**` (kept verbatim behind an archive
+  banner), and code READMEs under `shared/` are **not** renamed or front-mattered under this convention.
+- **numbered facts** — memory and decision files are `NNNN-<kebab-slug>.md` with a zero-padded prefix
+  that MUST match the `id:` in their front-matter.

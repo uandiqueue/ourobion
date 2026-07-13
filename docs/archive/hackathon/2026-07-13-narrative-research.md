@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-07-13 — superseded / historical. Do not build from this; kept for provenance.** Current source of truth: [hackathon-direction.md](../../shared/hackathon/hackathon-direction.md).
+
 # HACKATHON_NARRATIVE.md — the submission story (research-backed)
 
 > **Status:** recommendation, 2026-07-13 · Refines the framing in

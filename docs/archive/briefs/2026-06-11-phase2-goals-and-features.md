@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-07-13 — superseded / historical. Do not build from this; kept for provenance.** Current source of truth: [phase-2-plan.md](../../shared/phase-2-plan.md).
+
 # What Phase 2 of ourobion is — in plain language
 
 **Date:** 2026-06-11 · **Status:** ⛔ **Superseded snapshot** — the current plan is [`../PHASE2-PLAN.md`](../../shared/PHASE2-PLAN.md) (demo scope; 100-metric expansion; brain pipeline + nao). Kept as a dated snapshot.

@@ -71,7 +71,7 @@ Design + rationale: [`docs/nao/brain-synthesis-design.md`](docs/nao/brain-synthe
 | **Insights engine (biotope serve) / metrics registry** | [`docs/biotope/rules-engine-design.md`](docs/biotope/rules-engine-design.md) · [`docs/biotope/metrics-registry-design.md`](docs/biotope/metrics-registry-design.md) |
 | **Hackathon** (Launchpad 2026 strategy) | [`docs/shared/hackathon/`](docs/shared/hackathon/) — direction, narrative, judging self-review |
 | **Shared contracts** (TypeScript ↔ Dart) | [`shared/SHARED-CONTEXT.md`](shared/SHARED-CONTEXT.md) |
-| **Decisions & rationale** | [`docs/memory/`](docs/memory/) (indexed decisions) · [`docs/shared/decisions/`](docs/shared/decisions/) (architecture ADRs) · [`docs/temp/human-brief/`](docs/temp/human-brief/) (plain-language + research briefs) · [`docs/sessions/`](docs/sessions/) (per-session logs) |
+| **Decisions & rationale** | [`docs/memory/`](docs/memory/) (indexed decisions) · [`docs/shared/decisions/`](docs/shared/decisions/) (architecture ADRs) · [`docs/sessions/`](docs/sessions/) (per-session logs) |
 | **Dev workflow** (Issue → PR → merge) | [`docs/shared/dev-workflow.md`](docs/shared/dev-workflow.md) · [`docs/shared/commit-conventions.md`](docs/shared/commit-conventions.md) |
 
 ### 🤖 AI agents — start at [`AGENTS.md`](AGENTS.md)

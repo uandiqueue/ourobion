@@ -1,3 +1,12 @@
+---
+title: Launchpad 2026 AI Challenge — Rules (raw)
+summary: The verbatim event rules for the Launchpad 2026 AI Challenge — tracks, timeline, deliverables, the five judging pillars, green/red flags, prizes and sponsor-judges. Reference only, never submitted; the strategy derived from it lives in hackathon-direction.md.
+type: reference
+scope: repo
+status: canonical
+updated: 2026-07-13
+---
+
 Launchpad 2026 AI Challenge
 Show us your best work. Why you should get hired should be self-justified.
 You might not win the challenge. You might win a job interview.

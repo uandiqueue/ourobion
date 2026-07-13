@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-07-13 — superseded / historical. Do not build from this; kept for provenance.** Current source of truth: [phase-2-plan.md](../../shared/phase-2-plan.md).
+
 # Human Brief — ourobion Next-Phase Direction
 
 **Date:** 2026-06-09 · **Status:** Approved plan, not yet built · **Tracking:** issue #3 ·

@@ -68,5 +68,5 @@ hand-edit it** (the two-tier-truth rule, [`../memory/0001-two-tier-truth.md`](..
 - **SQL side (`supabase/migrations`):** no import graph; keep relying on `couplings.yaml` guard tests
   to tie table shapes to the contracts and models that read/write them.
 
-Until then, `couplings.yaml` + the curated ARCHITECTURE-CONTEXT graph + `flutter analyze` are the
+Until then, `couplings.yaml` + the curated architecture-context graph + `flutter analyze` are the
 enforced relationship layer.

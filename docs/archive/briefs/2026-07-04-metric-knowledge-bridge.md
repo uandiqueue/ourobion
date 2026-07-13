@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-07-13 — superseded / historical. Do not build from this; kept for provenance.** Current source of truth: [insight-engine-architecture.md](../../shared/insight-engine-architecture.md).
+
 # Bridging single-metric app data and chaotic paper knowledge — RESEARCH BRIEF
 
 **Date:** 2026-07-04 · **Status:** 🔬 **Research brief / options** — evaluates a proposed design against

@@ -1,3 +1,12 @@
+---
+title: AI Agent Navigation Protocol
+summary: The AI routing table (what to read per task), truth hierarchy, non-negotiables, and PR-review checklist for agents working anywhere in the repo — biotope, nao, and the brain. AGENTS.md §3/§7 point here; branch/PR/session mechanics stay authoritative in AGENTS.md.
+type: protocol
+scope: repo
+status: canonical
+updated: 2026-07-13
+---
+
 # agent-protocol.md — AI Agent Navigation Protocol
 > **CONSTANT LAYER** — Changes only at phase transitions or full team agreement.
 > Written for: AI agents (Claude Code sessions, automated reviewers)
@@ -24,18 +33,24 @@ Do not read every context file. Read only what your task requires.
 
 ## Reading Routing Table
 
+This protocol covers work anywhere in the repo — the **biotope** app, the **nao** web app, and the
+**brain** (offline knowledge-graph pipeline). Route by task:
+
 | Task | Files to read |
 |---|---|
-| Starting any session | `node tools/context_sync.mjs --session-start`, then the latest `docs/sessions/` files + `AGENTS.md` §6 (phase + workstreams) + `docs/phase-2-plan.md` |
+| Starting any session | `node tools/context_sync.mjs --session-start`, then the latest `docs/sessions/` files + `AGENTS.md` §6 (phase + workstreams) + `docs/shared/phase-2-plan.md` |
 | Working on M1 | `apps/biotope/lib/modules/m1_core/m1-context.md` + `docs/biotope/architecture-context.md` |
 | Working on M2 | `apps/biotope/lib/modules/m2_self_report/m2-context.md` + `shared/SHARED-CONTEXT.md` |
-| Touching `shared/types/` | `shared/SHARED-CONTEXT.md` — requires 2-reviewer PR |
+| Touching `shared/types/` or `shared/brain/` | `shared/SHARED-CONTEXT.md` — requires 2-reviewer PR |
+| Working on the insight engine (any stage) | `docs/shared/insight-engine-architecture.md` (authoritative) + the relevant `docs/shared/decisions/` ADR |
+| Working on nao (web app) | `docs/nao/nao-app-design.md` + `docs/shared/biotope-nao-link.md` (the seam) |
+| Working on the brain (synthesis / verification / ingestion) | `docs/nao/brain-synthesis-design.md` + `docs/nao/brain-ingestion-design.md` + `shared/brain/` |
 | Writing user-facing strings | `shared/constants/copy_guidelines.ts` + `shared/constants/copy_guidelines.dart` |
 | Reviewing a PR | This file `§ PR Review Checklist` + module context for the PR scope |
-| CI or workflow changes | `docs/structure-context.md` |
-| Phase transition work | `docs/biotope/architecture-context.md` + `docs/project-context.md` |
+| CI or workflow changes | `docs/shared/structure-context.md` |
+| Phase transition work | `docs/biotope/architecture-context.md` + `docs/shared/project-context.md` |
 | Understanding data shapes | `shared/SHARED-CONTEXT.md` |
-| Understanding project goals and principles | `docs/project-context.md` |
+| Understanding project goals and principles | `docs/shared/project-context.md` |
 
 ---
 
@@ -47,7 +62,7 @@ When files appear to contradict each other, trust in this order:
 2. `apps/biotope/lib/modules/m*/m*-context.md` — module-level state (may lag the latest session)
 3. `shared/SHARED-CONTEXT.md` — shared types (locked contract, authoritative for interfaces)
 4. `docs/biotope/architecture-context.md` — system structure
-5. `docs/project-context.md` — product principles (most stable, least likely to change)
+5. `docs/shared/project-context.md` — product principles (most stable, least likely to change)
 
 Module context files (`m1-context.md`, `m2-context.md`) can fall behind the newest `docs/sessions/`
 entry between sessions. Always read the most recent `docs/sessions/` files for work done since the
@@ -59,11 +74,11 @@ module file was last updated before assuming module context reflects current sta
 
 Check every one of these before finishing any session or review. No exceptions.
 
-**Copy rules — any user-facing string:**
-- Never use: `diagnosed`, `condition`, `disease`, `illness`, `treatment`, `symptom` (as label), `alert`, `warning`
-- Always use: `pattern`, `signal`, `observation`, `your data shows`, `you may notice`
-- Severity labels allowed: `info`, `notice`, `watch` only
-- For any `InsightCard` body text: call `M1.validateCopyString()` before persisting
+**Copy rules — any user-facing string:** use observational, non-diagnostic language only. The
+authoritative banned/allowed word lists and the permitted severity labels (`info`/`notice`/`watch`)
+live in `shared/constants/copy_guidelines.ts` (+ `.dart`) and
+[`../memory/0003-non-diagnostic-copy.md`](../memory/0003-non-diagnostic-copy.md) — not restated here.
+Call `M1.validateCopyString()` on any `InsightCard` body text before persisting.
 
 **Module boundary rules:**
 - No module imports from another module's `/impl` directory — public `index` exports only
@@ -90,7 +105,7 @@ Used when reviewing a PR. Each item is pass / fail / not-applicable.
 
 **Scope**
 - [ ] PR targets `dev-phase2` (the single integration branch), not `main`
-- [ ] Changes are within current phase scope (Phase 2 — see [`docs/phase-2-plan.md`](phase-2-plan.md))
+- [ ] Changes are within current phase scope (Phase 2 — see [`docs/shared/phase-2-plan.md`](phase-2-plan.md))
 - [ ] Work maps to a Phase 2 workstream/track in `phase-2-plan.md` (not pulled forward from Phase 3)
 
 **Code quality**
@@ -116,19 +131,10 @@ Used when reviewing a PR. Each item is pass / fail / not-applicable.
 
 ## Branch and PR Conventions
 
-**Branch naming:**
-```
-feat/m{n}-{module-name}/{short-description}
-fix/m{n}-{short-description}
-docs/{short-description}
-ci/{short-description}
-refactor/m{n}-{short-description}
-```
-
-**PR destination:** Always `dev-phase2` (the integration branch)
-**Merge to `main`:** Only `dev-phase2` merges to `main`, at phase/milestone completions — both team members must approve
-
-**Commit format:** `type(scope): subject` — full spec in `docs/commit-conventions.md`
+Branch naming, PR destination (always `dev-phase2`), the `dev-phase2 → main` release rule, and the
+one-issue/one-branch/one-worktree session mechanics are authoritative in
+**[`AGENTS.md`](../../AGENTS.md) §7** — not restated here. Commit format follows
+[`commit-conventions.md`](commit-conventions.md).
 
 ---
 

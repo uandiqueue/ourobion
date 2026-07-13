@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-07-13 — superseded / historical. Do not build from this; kept for provenance.** Current source of truth: [insight-engine-architecture.md](../../../shared/insight-engine-architecture.md).
+
 # Can the ideal insight-engine UX be built? — the gap map and the verdict
 
 **Date:** 2026-07-05 · **Status:** Fable research — **Wave 2 capstone.** Answers the one question Jayden

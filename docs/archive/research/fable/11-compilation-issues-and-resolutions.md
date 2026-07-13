@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-07-13 — superseded / historical. Do not build from this; kept for provenance.** Current source of truth: [insight-engine-architecture.md](../../../shared/insight-engine-architecture.md).
+
 # Insight engine — issues & resolutions compilation
 
 **Date:** 2026-07-05 · **Status:** Stakeholder briefing. A single, self-contained compilation of every

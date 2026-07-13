@@ -1,10 +1,15 @@
+> **ARCHIVED 2026-07-13 — superseded / historical. Do not build from this; kept for provenance.** Current source of truth: [insight-engine-architecture.md](../../../shared/insight-engine-architecture.md).
+
 # Fable research pack — insight-engine design
 
-> **Archived (2026-07-13) — research trail, not ground truth.** The flagship output of this pack,
-> `12-system-architecture.md`, has been **promoted** to authoritative ground truth at
-> [`../../../shared/INSIGHT-ENGINE-ARCHITECTURE.md`](../../../shared/INSIGHT-ENGINE-ARCHITECTURE.md),
-> with granular decisions in [`../../../shared/decisions/`](../../../shared/decisions/). This folder is
-> kept under `/temp` as the record of how that design was reached; build from the promoted docs, not from here.
+> The flagship output of this pack, `12-system-architecture.md`, was **promoted** to authoritative ground
+> truth at [`../../../shared/insight-engine-architecture.md`](../../../shared/insight-engine-architecture.md),
+> with granular decisions in [`../../../shared/decisions/`](../../../shared/decisions/). This folder is the
+> record of how that design was reached; build from the promoted docs, not from here.
+>
+> **Tombstone:** `12-system-architecture.md` (and its `.html`) was promoted to
+> `docs/shared/insight-engine-architecture.md` and the duplicate was deleted from this folder (git history
+> retains it). Pointers to `12` below are dangling and kept only for the record.
 
 This folder is a **self-contained** design record for the biotope **insight engine** — the flagship feature
 that turns a user's health metrics into grounded, paper-cited insights, and the "brain" that supplies them.

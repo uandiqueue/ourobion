@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-07-13 — superseded / historical. Do not build from this; kept for provenance.** Current source of truth: [phase-2-plan.md](../../shared/phase-2-plan.md).
+
 # nao — architecture research & options brief (2026-06-30)
 
 **Audience:** stakeholders deciding how to build **ourobion nao** (the brain-inspection web app).

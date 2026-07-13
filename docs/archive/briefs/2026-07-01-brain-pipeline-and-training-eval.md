@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-07-13 — superseded / historical. Do not build from this; kept for provenance.** Current source of truth: [0013-brain-pipeline-and-support-models-decision.md](../../memory/0013-brain-pipeline-and-support-models-decision.md).
+
 # nao brain pipeline & self-trained models — DECISION
 
 **Date:** 2026-07-01 · **Status:** ✅ **DECISION — adopted 2026-07-01; this brief is the anchor (source of truth).**

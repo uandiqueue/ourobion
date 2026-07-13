@@ -1,3 +1,13 @@
+---
+id: "0009"
+title: Local test data seeding (don't log for a week by hand)
+summary: Inject backdated rows keyed on log_date via scripts/seed-test-data.ps1 then rebuild projections (compute-baselines before generate-insights) so the UI renders "weeks in" instantly; target user must already exist (RLS on auth.uid).
+type: memory
+status: accepted
+decided: 2026-07-13
+updated: 2026-07-13
+---
+
 # Local test data seeding (don't log for a week by hand)
 
 **Gotcha / workflow.** Time-based features (streaks, baselines, insights) don't require logging for

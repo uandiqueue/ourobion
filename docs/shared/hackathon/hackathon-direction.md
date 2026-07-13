@@ -1,3 +1,12 @@
+---
+title: Ourobion @ Launchpad 2026 — Direction
+summary: The single canonical hackathon-strategy doc — track choice (Agentic Systems), prebuild-vs-delta framing, the "correlations are cheap" hook + adversarial-verifier mechanism, the living-apps trajectory ruling, sponsor integration, and how to win each judging pillar. Owner of all hackathon strategy.
+type: process
+scope: repo
+status: canonical
+updated: 2026-07-13
+---
+
 # hackathon-direction.md — Ourobion @ Launchpad 2026 AI Challenge
 
 > **Purpose.** The single strategy doc for our submission. `hackathon-rules.md` (sibling file) is the raw
@@ -35,7 +44,7 @@ against fresh literature before you ever see it."*
 
 ## 0.5 · Self-judgement response (post-adversarial round)
 
-Two internal judging rounds were run — full reports in [`HACKATHON_CRITERIA_JUDGE.md`](HACKATHON_CRITERIA_JUDGE.md). Round 1 (primed to *"assume the plan works"*) scored **21/25**. An **adversarial round**, scoring the **realistic delta a 2-person team can ship by 31 Jul** (no "assume it works," verified against `git log` — the delta is unbuilt today), scored **16/25**: Problem 3 · Approach 3 · Evidence 3 · Constraints 3 · Honesty 4. **No fundamental flaw survived; Agentic Systems remains correct; the "use a different submission" escape hatch is NOT triggered.** Treat **16/25 as the honest baseline** and the 21↔16 gap as pure **execution risk**.
+Two internal judging rounds were run (full reports kept for provenance in the archive, not linked here). Round 1 (primed to *"assume the plan works"*) scored **21/25**. An **adversarial round**, scoring the **realistic delta a 2-person team can ship by 31 Jul** (no "assume it works," verified against `git log` — the delta is unbuilt today), scored **16/25**: Problem 3 · Approach 3 · Evidence 3 · Constraints 3 · Honesty 4. **No fundamental flaw survived; Agentic Systems remains correct; the "use a different submission" escape hatch is NOT triggered.** Treat **16/25 as the honest baseline** and the 21↔16 gap as pure **execution risk**.
 
 **The one thing that decides everything: the delta must produce OBSERVED results.** Every point the adversarial round docked traces to one root — the scored delta (verifier, edges, curves, refusals) is unbuilt, so its evidence is *anticipated*, not *run*. A polished design of an unbuilt system is a 16; the same design plus a small real eval is a ~19–20. Priorities are ordered by that leverage.
 
@@ -185,6 +194,58 @@ evidence tier, and an honest "we couldn't ground this").
 2. **"One AI proposes a health relationship. A second, adversarial AI has to prove it against fresh literature before you ever see it."** ← **mechanism sentence** (immediately follows the hook).
 3. *"We treat the LLM as an unreliable witness — and cross-examine it."* ← memorable framing of the anti-hallucination stance.
 4. *(structural, recurring)* *"The app finds the pattern; the brain decides whether the science backs it."* ← keeps biotope-as-backdrop distinct from brain-as-delta.
+
+### 3.5 The sharpened delta claim (novel-in-combination, not "invented")
+
+Adversarial fact-checking is published prior art (PROClaim, FC-MAD, Tool-MAD) and offline claim
+verification has benchmarks (SciFact, HealthVer, HealthFC). Do **not** let the delta read as "an
+integration of known parts." The defensible, narrow, novel-in-combination claim is:
+
+> **"The first system to push scientific-claim verification past offline 3-way classification into a
+> gated, receipt-bearing, real-time *serve* decision — with a decorrelated, non-Anthropic adversary that
+> must independently re-ground each claim and defaults to *uncertain* when it can't."**
+
+Cite the prior art yourself (it shows you know exactly where your delta sits), and lean on the theory
+that makes the second model *necessary*, not decorative: **self-preference bias** (a model judging its
+own family's output self-enhances → the verifier must be a different vendor) and **decorrelation lowering
+joint hallucination probability** (neural-diversity tail bounds). The **withhold / "uncertain"** moment
+is the **hero of the demo**, not a caveat — a system that says "I don't know" is the strongest evidence
+of reasoning quality to expert judges.
+
+### 3.6 "Living apps" — trajectory, not headline (settled ruling)
+
+We considered building the story around **"Living Apps"** (nao as a reusable engine powering any app
+that needs gated, reliable online-knowledge input — health today, education/finance tomorrow). **Ruling:
+it is the right *idea* in the wrong *slot* — keep all the upside, but as a trajectory close, never the
+headline.** Reasons, converging across prior-art, judge-appeal, generalization, and buzzword-risk:
+
+- The governing rule — *"a modest claim proven beats a grand claim asserted"* — is the **axis judges
+  score on**. Generalizing from one built vertical to "any app" is the textbook *grand claim asserted*
+  ("platform theater"), and it forfeits the two most-weighted pillars (Evidence, Honesty) the moment a
+  judge files it as overreach.
+- **"living games" is Google's coined term** (Mar 2025), not ours — and its meaning (*more* generation,
+  emergent novelty) is the **opposite** of nao's actual innovation, which is **restraint** (a verifier
+  that *withholds*). If invoked at all: lowercase, attributed to Google, as an intuition pump only, with
+  the inversion stated as a deliberate design choice.
+- "Living Apps" as an umbrella is not an established term and collides with Salesforce/IBM's "Quip Live
+  Apps"; a coined proper-noun you must define is a tax on a skeptical technical audience.
+
+**Where the vision belongs — the trajectory close**, phrased as an *observed property of the
+architecture* a judge can verify (open the schema: the `EdgeVerification` contract in
+`shared/brain/relationships.ts` has nothing health-specific in it; only the corpus and metric ontology
+are domain-bound):
+
+> *"The verifier never sees a health fact. It sees a claim, a set of sources, and a prompt to refute
+> them — you can read it in the schema. Swap the corpus and the metric ontology and the same gate runs
+> on curriculum standards or market filings. AWS (Bedrock Automated Reasoning), Vectara, and Galileo are
+> all building horizontal trust layers, so the direction is real — the difference is ours is adversarial
+> and decorrelated, built to *refute* rather than confirm. Health is where we earned it; it's not where
+> it ends."*
+
+This captures the full upside while staying inside the modest-claim rule, and it *names the seams* that
+change per vertical (corpus, ontology, evidence-tier rubric, expert calibration set) — which itself
+scores Constraints + Honesty. **If the demo runs long, cut this beat before cutting evidence — it is the
+sacrificial slide.**
 
 ---
 
@@ -389,7 +450,7 @@ and *show one real failure*:
 - **2:15–2:45** constraints + honesty: cost paid at ingestion, budget guardrails, the rate-limit-assumption-corrected story, non-diagnostic gate; state built vs. designed vs. roadmap.
 - **2:45–3:00** two-more-weeks plan → close on the hook.
 
-**Rough sprint plan (adjust to team of 1–3; owners per PHASE2-PLAN §Ownership):**
+**Rough sprint plan (adjust to team of 1–3; owners per phase-2-plan §Ownership):**
 - **Week 1 (3–9 Jul):** register + claim credits; **tag `pre-hackathon-baseline`**; write success
   criteria + start the decision log; build the **LLM router** (with Agnes route) + synthesis node +
   `quoteCheck`; stand up cost/latency logging.
@@ -492,14 +553,14 @@ claims.**
 > `[verifier miss]` (Priority 0, §0.5) — the two artifacts that turn this from a design into evidence.
 
 ### Source appendix (where each decision is grounded)
-- Rules: `docs/hackathon-rules.md` (raw event page — reference only, not submitted).
-- Prebuild/delta scope + git dates: repo `git log` (117 commits ≤ 2026-07-03); `docs/phase-2-plan.md`;
+- Rules: `docs/shared/hackathon/hackathon-rules.md` (raw event page — reference only, not submitted).
+- Prebuild/delta scope + git dates: repo `git log` (117 commits ≤ 2026-07-03); `docs/shared/phase-2-plan.md`;
   session `docs/sessions/20260703T065307Z-agentjwork-claude-nao-corpus-run-plus-controls.md`.
 - Architecture / Approach / decision log: `docs/nao/brain-synthesis-design.md`, `brain-ingestion-design.md`,
-  `nao-app-design.md`, `brain-support-models-design.md`; brief `docs/human-briefs/2026-07-01-brain-pipeline-and-training-eval.md`.
+  `nao-app-design.md`, `brain-support-models-design.md`; brief `docs/archive/briefs/2026-07-01-brain-pipeline-and-training-eval.md`.
 - Contract truth (gating + invariants): `shared/brain/relationships.ts`, `shared/brain/index.ts`,
   `shared/brain/relationships.schema.ts`.
-- Non-diagnostic + prebuild framing: `docs/project-context.md`, `README.md`.
+- Non-diagnostic + prebuild framing: `docs/shared/project-context.md`, `README.md`.
 - Sponsor APIs/pricing: Agnes (`agnes-ai.com/doc`, OpenAI-compatible `apihub.agnes-ai.com/v1`,
   `agnes-2.0-flash` $0/1M today), OpenAI (`developers.openai.com/api/docs/pricing`), GMI Cloud
   (`gmicloud.ai/pricing`, CE-BMaaS).

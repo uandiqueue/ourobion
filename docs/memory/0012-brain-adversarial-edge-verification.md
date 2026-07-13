@@ -1,3 +1,13 @@
+---
+id: "0012"
+title: The brain verifies synthesised edges with a second, grounded, adversarial LLM
+summary: Every brain edge is synthesised then re-checked by an independent, adversarial verifier LLM against freshly-retrieved evidence; schema invariants force grounding (no retrieval ⇒ uncertain) and emit a graded trust score, not a yes/no gate.
+type: memory
+status: accepted
+decided: 2026-07-13
+updated: 2026-07-13
+---
+
 # 0012 — The brain verifies synthesised edges with a second, grounded, adversarial LLM
 
 **The brain** (knowledge graph of scientifically-derived metric relationships) produces every edge in

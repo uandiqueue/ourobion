@@ -1,3 +1,11 @@
+---
+title: Brain support models — training design (public-data-first)
+summary: How the three small biomedical encoders (NLI pre-filter, study-design + venue tiers, relation/direction) could be trained on free public data to offload the two brain LLMs; a design only (no model trained), so status is deferred — agents read it when planning that training. The numbered engine stages live in insight-engine-architecture.
+type: design
+scope: nao
+status: deferred
+updated: 2026-07-13
+---
 # Brain support models — training design (public-data-first)
 
 How ourobion could train the three small "self-trained" models that offload work from the two brain
@@ -5,7 +13,9 @@ LLMs (synthesis + verifier). This is a **design doc, not a training run** — no
 It is grounded in **real sample records pulled live on 2026-07-01** from each dataset (schemas, label
 sets, and split sizes below are observed, not assumed).
 
-- Product framing + why these models: [`../human-briefs/2026-07-01-brain-pipeline-and-training-eval.md`](../temp/human-brief/2026-07-01-brain-pipeline-and-training-eval.md)
+**Scope.** This doc covers only the three support models. How they slot into synthesis/verification is [`brain-synthesis-design.md`](brain-synthesis-design.md); the end-to-end 23-stage insight engine and its inter-stage contracts live in [`insight-engine-architecture`](../shared/insight-engine-architecture.md).
+
+- Product framing + why these models: [pipeline decision](../memory/0013-brain-pipeline-and-support-models-decision.md)
 - The contract fields these models populate/verify: [`brain-synthesis-design.md`](brain-synthesis-design.md) +
   [`../../shared/brain/relationships.ts`](../../shared/brain/relationships.ts).
 

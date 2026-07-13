@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-07-13 — superseded / historical. Do not build from this; kept for provenance.** Current source of truth: [insight-engine-architecture.md](../../../shared/insight-engine-architecture.md).
+
 # Appendix — repo reference map (makes this folder self-contained)
 
 Every document in this folder cites code, tables, and docs that live **elsewhere in the repo** by path

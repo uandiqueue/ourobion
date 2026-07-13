@@ -1,3 +1,13 @@
+---
+id: "0007"
+title: Analysis rules become data, via a two-tier blueprint→table pattern
+summary: Insight rules move from hardcoded TS to git-tracked JSON blueprints (truth, Zod-validated) loaded into a rebuildable Postgres rules table; engine is sequenced last and deterministic, LLM summarization is a later additive phase.
+type: memory
+status: accepted
+decided: 2026-06-09
+updated: 2026-07-13
+---
+
 # 0007 — Analysis rules become data, via a two-tier blueprint→table pattern
 
 **Decision (Phase 2 plan, 2026-06-09):** ourobion's insight rules move from **hardcoded TypeScript**

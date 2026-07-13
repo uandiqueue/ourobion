@@ -1,9 +1,18 @@
+---
+id: "0013"
+title: Brain pipeline + support-models decision (the anchor)
+summary: Fixes the brain build shape — agentic seeder → deterministic ingest → synthesis LLM + different-family verifier + 4 small support models → verified_edges truth store (relational 1-hop, Neo4j dropped) → runtime presentation agent; every LLM node has local-agent and API-worker routes.
+type: memory
+status: accepted
+decided: 2026-07-01
+updated: 2026-07-13
+---
+
 # 0013 — Brain pipeline + support-models decision (the anchor)
 
 **Decision (adopted 2026-07-01).** The brain's build shape and the four small "self-trained" support
-models are fixed by the anchor brief
-[`../human-briefs/2026-07-01-brain-pipeline-and-training-eval.md`](../temp/human-brief/2026-07-01-brain-pipeline-and-training-eval.md);
-this file is the durable pointer. Design detail: [`../nao/brain-synthesis-design.md`](../nao/brain-synthesis-design.md) +
+models are fixed by the anchor brief (2026-07-01 brain-pipeline-and-training-eval); this file is the
+durable pointer for that decision. Design detail: [`../nao/brain-synthesis-design.md`](../nao/brain-synthesis-design.md) +
 [`../nao/brain-support-models-design.md`](../nao/brain-support-models-design.md).
 
 **The roster (minimise the LLM surface; deterministic everywhere it's safe):**
@@ -22,7 +31,7 @@ this file is the durable pointer. Design detail: [`../nao/brain-synthesis-design
 > **Update 2026-07-13:** the Neo4j projection was dropped — the served graph is a relational 1-hop lookup over the Postgres verified_edges view (no graph DB). See docs/shared/insight-engine-architecture.md §S6.
 
 **The four support models** (fine-tuned on public data — we have no in-house labels yet; label maps +
-recipes in BRAIN-MODELS-TRAINING): (a) NLI claim-support → `verdict` pre-filter; (b1) study-design →
+recipes in brain-support-models-design): (a) NLI claim-support → `verdict` pre-filter; (b1) study-design →
 `evidenceTier`; (b2) venue lookup → `impactTier` (SJR + OpenAlex, no training; **JCR dropped — paid**);
 (c) relation/direction/claim-kind → cross-checks the claim (`directionCheck`, `claimKindCheck`).
 `no_effect` has **no public training source** — a known gap (source in-house or leave to the LLM).

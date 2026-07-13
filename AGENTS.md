@@ -38,7 +38,7 @@ ourobion has a source-of-truth tier and a derived tier. Treat them differently:
 - **TRUTH (git-tracked / user-authored, never reconstructable):**
   - **Supabase migrations** in `supabase/migrations/` — the schema is defined here, in PRs, diffable.
   - **Raw logged rows** — the self-report data users enter (`daily_gut_rows`, `antibiotic_courses`,
-    and later `wearable_daily`, `env_daily`). PROJECT-CONTEXT says it plainly: **"store all raw daily
+    and later `wearable_daily`, `env_daily`). project-context says it plainly: **"store all raw daily
     rows, never derive-only. Raw data is the asset."**
   - **Shared contracts** in `shared/` — the cross-language types every boundary crosses.
 - **DERIVED PROJECTION (rebuildable, never hand-edit):**
@@ -67,11 +67,13 @@ auto-generate a structural import graph yet — see §8 and [`docs/graph/README.
 - **Repository directory layout + `shared/` vs `apps/biotope/` rule + env files:** [`docs/shared/structure-context.md`](docs/shared/structure-context.md)
 - **The shared contract types (the connective tissue every boundary crosses):** [`shared/SHARED-CONTEXT.md`](shared/SHARED-CONTEXT.md) — incl. the metrics registry (`shared/metrics/`) and the brain relationship contract (`shared/brain/`, design in [`docs/nao/brain-synthesis-design.md`](docs/nao/brain-synthesis-design.md))
 - **UI design system:** [`docs/biotope/ui/ui-design-context.md`](docs/biotope/ui/ui-design-context.md)
-- **Per-feature design docs:** the **nao** brain surface in [`docs/nao/`](docs/nao/) — product design [`nao-app-design.md`](docs/nao/nao-app-design.md), plus [`brain-synthesis-design.md`](docs/nao/brain-synthesis-design.md) + [`brain-ingestion-design.md`](docs/nao/brain-ingestion-design.md) + [`brain-support-models-design.md`](docs/nao/brain-support-models-design.md); the **brain pipeline + support-model DECISION** (anchor) in [`docs/temp/human-brief/2026-07-01-brain-pipeline-and-training-eval.md`](docs/temp/human-brief/2026-07-01-brain-pipeline-and-training-eval.md) ([memory 0013](docs/memory/0013-brain-pipeline-and-support-models-decision.md)); the **biotope** app in [`docs/biotope/`](docs/biotope/); the **authoritative insight-engine architecture** (spans both apps, the promoted doc-12 design) in [`docs/shared/insight-engine-architecture.md`](docs/shared/insight-engine-architecture.md) with granular ADRs in [`docs/shared/decisions/`](docs/shared/decisions/) and the runtime seam in [`docs/shared/biotope-nao-link.md`](docs/shared/biotope-nao-link.md). **Cross-cutting / shared ground truth now lives in [`docs/shared/`](docs/shared/)**; temporary research output in [`docs/temp/human-brief/`](docs/temp/human-brief/).
+- **Per-feature design docs:** the **nao** brain surface in [`docs/nao/`](docs/nao/) — product design [`nao-app-design.md`](docs/nao/nao-app-design.md), plus [`brain-synthesis-design.md`](docs/nao/brain-synthesis-design.md) + [`brain-ingestion-design.md`](docs/nao/brain-ingestion-design.md) + [`brain-support-models-design.md`](docs/nao/brain-support-models-design.md); the **brain pipeline + support-model decision** in [memory 0013](docs/memory/0013-brain-pipeline-and-support-models-decision.md); the **biotope** app in [`docs/biotope/`](docs/biotope/); the **authoritative insight-engine architecture** (spans both apps, the promoted doc-12 design) in [`docs/shared/insight-engine-architecture.md`](docs/shared/insight-engine-architecture.md) with granular ADRs in [`docs/shared/decisions/`](docs/shared/decisions/) and the runtime seam in [`docs/shared/biotope-nao-link.md`](docs/shared/biotope-nao-link.md).
+
+**The doc map:** [`docs/INDEX.md`](docs/INDEX.md) lists every active doc with a one-line summary — **read it first to route** to the right doc. Cross-cutting / shared ground truth lives in [`docs/shared/`](docs/shared/); app-scoped truth in [`docs/nao/`](docs/nao/) and [`docs/biotope/`](docs/biotope/). Work-in-progress drafts live in [`docs/temp/`](docs/temp/) (promotable); **frozen/superseded material lives in `docs/archive/` — never build from it** (excluded from agent crawl via the root `.aiignore`; links flow archive→active only, never the reverse).
 - **AI routing table, truth hierarchy & PR review checklist:** [`docs/shared/agent-protocol.md`](docs/shared/agent-protocol.md)
 - **The human dev cycle (Issue → … → Merge):** [`docs/shared/dev-workflow.md`](docs/shared/dev-workflow.md)
 
-**Boundary rules that matter most** (full set in ARCHITECTURE-CONTEXT §"Module Interface Rules"):
+**Boundary rules that matter most** (full set in architecture-context §"Module Interface Rules"):
 
 - **No module imports from another module's `/impl`** — public `index`/façade only.
 - **M6 never reads `insight_cards` directly** — it only reacts to `InsightFiredEvent`.
@@ -255,13 +257,23 @@ e.g. 20260608T045610Z-uandiqueue-claude-context-system-bootstrap.md
 ```
 
 Timestamp is `YYYYMMDDThhmmssZ` (UTC). Each file records **Attempted / Changed / Decided / Left /
-Blockers** (copy the header from any existing file). The pre-push hook and CI **fail** unless a
-`docs/sessions/` entry is added/changed in the commits being pushed.
+Blockers** (copy the header from any existing file), **plus a `memory:` line** declaring durable-fact
+deltas — `memory: none`, or `memory: added 0016; superseded 0004`. The pre-push hook and CI **fail**
+unless a `docs/sessions/` entry is added/changed in the push **and** it carries a `memory:` line
+(check h); if the push changes memory/decisions but every touched log says `memory: none`, it fails.
 
-### Durable memory — `docs/memory/`
-One fact per file (architectural decisions, domain gotchas, schema rationale). Index **every** file in
-[`docs/memory/README.md`](docs/memory/README.md). The check **fails** on a dangling index link or an
-unindexed `*.md`. Keep index and files in lockstep.
+### Durable memory — `docs/memory/` and decisions — `docs/shared/decisions/` (ENFORCED)
+Two numbered, one-fact-per-file record stores (memory = durable facts/gotchas; decisions = cross-app
+architecture ADRs), `NNNN-slug.md`, each opening with YAML front-matter
+(`id/title/summary/status/updated`; `status: accepted|superseded`, and `superseded_by` when superseded).
+**Before pushing, run `node tools/context_sync.mjs --fix-index`** — it regenerates the GENERATED
+sections of [`docs/INDEX.md`](docs/INDEX.md), [`docs/memory/README.md`](docs/memory/README.md), and
+[`docs/shared/decisions/README.md`](docs/shared/decisions/README.md) from that front-matter. `--check`
+(pre-push + CI) then **fails** on: a dangling/unindexed link, invalid/missing front-matter, a
+`superseded` record without a resolving `superseded_by`, a **stale** generated index, a modified record
+that didn't bump `updated:`, an edited **accepted** decision body (supersede instead), any active doc
+missing from `docs/INDEX.md`, or an active doc linking into `docs/archive/`. Memory facts are living
+(edit + bump `updated:`); decisions are immutable once accepted (supersede with a new record).
 
 ### Task coordination
 Claim a task before starting so two agents on the same device never duplicate effort. State lives in a

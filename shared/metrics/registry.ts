@@ -8,11 +8,11 @@
 // TRUTH tier (git-tracked, 2-reviewer PR per docs/memory/0002). Keep registry.ts and registry.dart
 // in lockstep — the metrics-registry-ts-dart-parity guard enforces it.
 //
-// v2 (the metric platform): each metric carries the scale dimensions PHASE2-PLAN's platform needs —
+// v2 (the metric platform): each metric carries the scale dimensions phase-2-plan's platform needs —
 // source economy, collection tier, continuity, reliability, derivation inputs, platform availability,
 // and the semi-passive preferred source. `table` is retained as the current storage location; storage
 // is migrating to continuity-based primitives (daily_log / events / state_bands / signals /
-// derived_metrics) per PHASE2-PLAN, with the existing tables as the first instances.
+// derived_metrics) per phase-2-plan, with the existing tables as the first instances.
 
 /** Source economy — what it costs the user and where the value originates. */
 export type MetricSource = 'manual' | 'semi_passive' | 'sensor' | 'api' | 'derived';

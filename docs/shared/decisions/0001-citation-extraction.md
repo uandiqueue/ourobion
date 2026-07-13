@@ -1,3 +1,13 @@
+---
+id: "0001"
+title: Citation Extraction & Reference-Graph Construction
+summary: How stage A4b detects citation style, parses reference lists, maps in-text markers to citing claims, and clusters corroboration by independent root; pins down what insight-engine-architecture.md leaves open for A4b/A4/A6.
+type: decision
+status: accepted
+decided: 2026-07-13
+updated: 2026-07-13
+---
+
 # Citation extraction & reference-graph construction — architecture decision
 > **Status: authoritative ground truth** · Date: 2026-07-13 · Refines: A4b citation-block parse / A4 / A6
 > Part of the insight-engine architecture — see [`../insight-engine-architecture.md`](../insight-engine-architecture.md). Contracts: [`../../../shared/brain/`](../../../shared/brain/).
