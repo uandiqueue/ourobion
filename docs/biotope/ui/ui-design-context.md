@@ -1,4 +1,4 @@
-# UI-DESIGN-CONTEXT.md — Ourobion
+# ui-design-context.md — Ourobion
 > **REFERENCE LAYER** — Read before implementing any UI screen.
 > Last updated: Phase 1 Stage 1 (MVP) — sourced from Claude Design bundle (Onboarding Flow)
 
@@ -230,7 +230,7 @@ Flutter: use `AnimationController` + `AnimatedBuilder` with `Transform.translate
 
 ## Rules
 
-1. **Never import from `ui-context/` in Flutter code.** Reference only.
+1. **Never import from `ui/` in Flutter code.** Reference only.
 2. **Manrope everywhere.** No system fonts in user-facing UI.
 3. **Living Backdrop on all full-screen moments** (auth, onboarding, persona reveal).
 4. **Eyebrow labels above every heading** — uppercase, primary color, 10px/700.

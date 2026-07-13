@@ -1,6 +1,6 @@
 # Ourobion nao — Design (brain inspection & curation)
 
-> **Authoritative integrated architecture:** [`../shared/INSIGHT-ENGINE-ARCHITECTURE.md`](../shared/INSIGHT-ENGINE-ARCHITECTURE.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the nao-scoped (brain inspection & curation) view; where it differs, the architecture doc wins.
+> **Authoritative integrated architecture:** [`../shared/insight-engine-architecture.md`](../shared/insight-engine-architecture.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the nao-scoped (brain inspection & curation) view; where it differs, the architecture doc wins.
 
 **nao** (脑 — "brain") is ourobion's human-facing **window into the brain**: query and visualise the
 metric-relationship graph, inspect the *evidence* behind every relationship, and curate the brain — by
@@ -9,9 +9,9 @@ hand and, later, with an LLM. It is the **first product surface split out from t
 knowledge graph that powers biotope's insights.
 
 This doc is the durable design. The brain *contract* it renders lives in [`shared/brain/`](../../shared/brain/);
-how edges are synthesised + verified is [`BRAIN-DESIGN.md`](BRAIN-DESIGN.md); how the paper corpus is
-acquired is [`BRAIN-INGESTION-DESIGN.md`](BRAIN-INGESTION-DESIGN.md); how biotope *consumes* the brain is
-[`../biotope/INSIGHTS-ENGINE-DESIGN.md`](../biotope/INSIGHTS-ENGINE-DESIGN.md) and [`../PHASE2-PLAN.md`](../shared/PHASE2-PLAN.md) (Track B/W2).
+how edges are synthesised + verified is [`brain-synthesis-design.md`](brain-synthesis-design.md); how the paper corpus is
+acquired is [`brain-ingestion-design.md`](brain-ingestion-design.md); how biotope *consumes* the brain is
+[`../biotope/rules-engine-design.md`](../biotope/rules-engine-design.md) and [`../phase-2-plan.md`](../shared/phase-2-plan.md) (Track B/W2).
 
 > **Status (current reality).** The brain has a **contract** (`shared/brain/`, TRUTH, 2-reviewer-guarded)
 > and a **paper corpus** (on Cloudflare R2, see ingestion design) — but **no edges yet**: the synthesis
@@ -108,7 +108,7 @@ a projection rebuild never clobbers it. *(Pillar 2.)*
 
 Natural-language query over a *retrieved* brain subgraph — constrained so it introduces **no
 relationship not in the retrieved set** (the same guardrail as biotope's grounded synthesis,
-[`../PHASE2-PLAN.md`](../shared/PHASE2-PLAN.md) W2) — plus LLM-*proposed* edges that require **human approval**
+[`../phase-2-plan.md`](../shared/phase-2-plan.md) W2) — plus LLM-*proposed* edges that require **human approval**
 before entering the truth store. *(Pillar 3.)*
 
 ### The edge store (v2+)
@@ -146,7 +146,7 @@ double-helix weave), **neo** (bioluminescent teal→blue gradient, fluorescence-
 is biotope's **dark, expert, graph-centric sibling** — biotope is the warm light *ecosystem*; nao is the
 deep, glowing *brain*. Tokens come from
 [`assets/ourobion-brand/`](../../assets/ourobion-brand/); the sibling system is
-[`../biotope/ui-context/UI-DESIGN-CONTEXT.md`](../biotope/ui-context/UI-DESIGN-CONTEXT.md).
+[`../biotope/ui/ui-design-context.md`](../biotope/ui/ui-design-context.md).
 
 - **Palette (Ourobion dark):** background `#0B1D24`; accent ramp **`#2BC4BE` → `#2FB7D6` → `#3FA2E6` →
   `#5E8DF0` → `#7C86F2`**; eyebrow labels `#2BC4BE`; light text on dark. The 23-step coil ramp is the
@@ -200,13 +200,13 @@ deep, glowing *brain*. Tokens come from
 ## 10 · Deferred / open
 
 - **Brain synthesis + verification pipeline** (Track B) — the real critical path for everything past v1;
-  nao v2 cannot render a real graph until edges exist. See [`BRAIN-DESIGN.md`](BRAIN-DESIGN.md).
+  nao v2 cannot render a real graph until edges exist. See [`brain-synthesis-design.md`](brain-synthesis-design.md).
 - **Truth-tier edge store + relational `verified_edges` projection** — **shape now decided** (R2 JSONL
   edge artifacts + the contract = truth; a deterministic edge loader → the relational Postgres
   `verified_edges` projection, a 1-hop lookup, no graph DB) per the
   [pipeline decision](../temp/human-brief/2026-07-01-brain-pipeline-and-training-eval.md); build lands with v2.
 - **Source-reliability grading standard** — **decided**: an `evidenceTier` study-design classifier + an
   `impactTier` venue lookup (SJR + OpenAlex; JCR dropped as paid), per
-  [`BRAIN-MODELS-TRAINING.md`](BRAIN-MODELS-TRAINING.md). Extends `impactTier` (§6) — no new evidence model.
+  [`brain-support-models-design.md`](brain-support-models-design.md). Extends `impactTier` (§6) — no new evidence model.
 - **`apps/biotope/` move** — relocating the Flutter app under `apps/` is optional housekeeping.
 - **External users / richer roles** — Supabase Auth was chosen partly to keep this open.

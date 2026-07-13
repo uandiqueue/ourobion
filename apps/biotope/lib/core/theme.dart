@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // ─── Ourobion color tokens (M3) ────────────────────────────────────────────────
-// Source of truth: docs/biotope/ui-context/UI-DESIGN-CONTEXT.md
+// Source of truth: docs/biotope/ui/ui-design-context.md
 abstract final class OurobionColors {
   static const primary             = Color(0xFF3c6752);
   static const onPrimary           = Color(0xFFffffff);

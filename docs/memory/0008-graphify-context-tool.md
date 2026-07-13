@@ -49,4 +49,4 @@ job of the semantic pass (host session model), not the AST pass. This is adequat
 context-substrate role and confirms graphify does **not** substitute for the deferred structural
 import-graph — it is the complementary semantic layer.
 
-Plan: graphify is workstream W6 in `docs/PHASE2-PLAN.md`. Related: [0007-rules-as-data-two-tier](0007-rules-as-data-two-tier.md).
+Plan: graphify is workstream W6 in `docs/phase-2-plan.md`. Related: [0007-rules-as-data-two-tier](0007-rules-as-data-two-tier.md).

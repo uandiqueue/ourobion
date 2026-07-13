@@ -1,6 +1,6 @@
 # Anomaly & personal-signal definition — architecture decision
 > **Status: authoritative ground truth** · Date: 2026-07-13 · Refines: S4 / S5
-> Part of the insight-engine architecture — see [`../INSIGHT-ENGINE-ARCHITECTURE.md`](../INSIGHT-ENGINE-ARCHITECTURE.md). Contracts: [`../../../shared/brain/`](../../../shared/brain/).
+> Part of the insight-engine architecture — see [`../insight-engine-architecture.md`](../insight-engine-architecture.md). Contracts: [`../../../shared/brain/`](../../../shared/brain/).
 
 # ADR-013: Anomaly & Personal-Signal Definition for the nao Brain Pipeline (S4 single-metric signal, S5 pairwise co-movement)
 

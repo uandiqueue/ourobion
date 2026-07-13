@@ -1,6 +1,6 @@
 # Paper-reliability scoring — architecture decision
 > **Status: authoritative ground truth** · Date: 2026-07-13 · Refines: A5 / edgeScore / U1
-> Part of the insight-engine architecture — see [`../INSIGHT-ENGINE-ARCHITECTURE.md`](../INSIGHT-ENGINE-ARCHITECTURE.md). Contracts: [`../../../shared/brain/`](../../../shared/brain/).
+> Part of the insight-engine architecture — see [`../insight-engine-architecture.md`](../insight-engine-architecture.md). Contracts: [`../../../shared/brain/`](../../../shared/brain/).
 
 # ADR: Paper-reliability scoring — the evidence-tier ladder and the reliability axis
 

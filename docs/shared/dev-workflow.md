@@ -184,4 +184,4 @@ Only at phase/milestone completions. Both team members must agree. Steps:
 2. Both members review the milestone summary
 3. Merge `dev-phase2 → main`
 4. Tag the release (e.g. `v0.1.0-mvp1`)
-5. Update `docs/biotope/ARCHITECTURE-CONTEXT.md` phase status
+5. Update `docs/biotope/architecture-context.md` phase status

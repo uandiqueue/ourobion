@@ -6,7 +6,7 @@ It is grounded in **real sample records pulled live on 2026-07-01** from each da
 sets, and split sizes below are observed, not assumed).
 
 - Product framing + why these models: [`../human-briefs/2026-07-01-brain-pipeline-and-training-eval.md`](../temp/human-brief/2026-07-01-brain-pipeline-and-training-eval.md)
-- The contract fields these models populate/verify: [`BRAIN-DESIGN.md`](BRAIN-DESIGN.md) +
+- The contract fields these models populate/verify: [`brain-synthesis-design.md`](brain-synthesis-design.md) +
   [`../../shared/brain/relationships.ts`](../../shared/brain/relationships.ts).
 
 > **Licensing:** ourobion is a **non-commercial demo**, so CC BY-NC / ShareAlike / unconfirmed licenses

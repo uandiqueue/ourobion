@@ -1,6 +1,6 @@
-# HACKATHON_DIRECTION.md — Ourobion @ Launchpad 2026 AI Challenge
+# hackathon-direction.md — Ourobion @ Launchpad 2026 AI Challenge
 
-> **Purpose.** The single strategy doc for our submission. `HACKATHON.md` (sibling file) is the raw
+> **Purpose.** The single strategy doc for our submission. `hackathon-rules.md` (sibling file) is the raw
 > event rules, copied verbatim from the event page — reference only, **never submitted**. This doc turns
 > those rules into a decision: which track, how we position, what counts as prior work vs. the scored
 > delta, which sponsor tools we integrate, and how we win each judging pillar.
@@ -66,7 +66,7 @@ Ship the depth-first slice **and its measured artifacts** (cut breadth before cu
 
 ---
 
-## 1 · The rules that shape our strategy (structured digest of `HACKATHON.md`)
+## 1 · The rules that shape our strategy (structured digest of `hackathon-rules.md`)
 
 **What it is.** A 4-week open-format AI build sprint that doubles as a redesigned career fair. 100+
 professional judges (founders, engineers, researchers, product/domain leaders) are *potential
@@ -205,8 +205,8 @@ and we win the Honesty pillar for free.
   Actions control plane). *Conservatively declared prebuild even though dated the boundary day —
   understating is safe; overstating is not.*
 - **nao v1 corpus dashboard** — Next.js/OpenNext on Cloudflare, search/facet/inspect paper metadata (Jun 30).
-- **All design & decision docs** — `PHASE2-PLAN.md`, `BRAIN-DESIGN.md`, `BRAIN-INGESTION-DESIGN.md`,
-  `BRAIN-MODELS-TRAINING.md`, `NAO-DESIGN.md`, the pipeline brief. These are prebuild *designs* — but
+- **All design & decision docs** — `phase-2-plan.md`, `brain-synthesis-design.md`, `brain-ingestion-design.md`,
+  `brain-support-models-design.md`, `nao-app-design.md`, the pipeline brief. These are prebuild *designs* — but
   they're also a ready-made **Approach section + decision log** (rubric Pillar 2 gold). Cite them; don't
   claim them as built delta.
 
@@ -225,7 +225,7 @@ Depth-first over a **curated ~30–50 paper slice** of the corpus (the 1,200-pap
 **Stretch delta (only if GMI credits land):** train support **model (a)** (claim-support/NLI on
 SciFact/HealthVer) and wire it in as a **cheap first-pass verifier** — this is the Agnes-vs-OpenAI /
 small-model cost-accuracy story (§5). If credits don't arrive, **declare (a) + (b1) study-design + (c)
-relation/direction as roadmap** — designed and data-prepped (`BRAIN-MODELS-TRAINING.md`), training
+relation/direction as roadmap** — designed and data-prepped (`brain-support-models-design.md`), training
 deferred for lack of GPU. *Never claim a trained model you didn't train — that's the DQ line.*
 
 **Explicitly left OUT of the hackathon claim** (real Phase-2 work, but not the AI delta — mention as
@@ -492,14 +492,14 @@ claims.**
 > `[verifier miss]` (Priority 0, §0.5) — the two artifacts that turn this from a design into evidence.
 
 ### Source appendix (where each decision is grounded)
-- Rules: `docs/HACKATHON.md` (raw event page — reference only, not submitted).
-- Prebuild/delta scope + git dates: repo `git log` (117 commits ≤ 2026-07-03); `docs/PHASE2-PLAN.md`;
+- Rules: `docs/hackathon-rules.md` (raw event page — reference only, not submitted).
+- Prebuild/delta scope + git dates: repo `git log` (117 commits ≤ 2026-07-03); `docs/phase-2-plan.md`;
   session `docs/sessions/20260703T065307Z-agentjwork-claude-nao-corpus-run-plus-controls.md`.
-- Architecture / Approach / decision log: `docs/nao/BRAIN-DESIGN.md`, `BRAIN-INGESTION-DESIGN.md`,
-  `NAO-DESIGN.md`, `BRAIN-MODELS-TRAINING.md`; brief `docs/human-briefs/2026-07-01-brain-pipeline-and-training-eval.md`.
+- Architecture / Approach / decision log: `docs/nao/brain-synthesis-design.md`, `brain-ingestion-design.md`,
+  `nao-app-design.md`, `brain-support-models-design.md`; brief `docs/human-briefs/2026-07-01-brain-pipeline-and-training-eval.md`.
 - Contract truth (gating + invariants): `shared/brain/relationships.ts`, `shared/brain/index.ts`,
   `shared/brain/relationships.schema.ts`.
-- Non-diagnostic + prebuild framing: `docs/PROJECT-CONTEXT.md`, `README.md`.
+- Non-diagnostic + prebuild framing: `docs/project-context.md`, `README.md`.
 - Sponsor APIs/pricing: Agnes (`agnes-ai.com/doc`, OpenAI-compatible `apihub.agnes-ai.com/v1`,
   `agnes-2.0-flash` $0/1M today), OpenAI (`developers.openai.com/api/docs/pricing`), GMI Cloud
   (`gmicloud.ai/pricing`, CE-BMaaS).

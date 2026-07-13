@@ -1,4 +1,4 @@
-# STRUCTURE-CONTEXT.md — Ourobion Repository Structure
+# structure-context.md — Ourobion Repository Structure
 > **CONSTANT LAYER** — Update only when the repository structure changes.
 
 ---
@@ -24,33 +24,33 @@ ourobion/
 │   │   └── feature_request.yml
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── tools/                     # Node-stdlib enforcement + multi-agent helpers (no Python)
-│   ├── brain-ingest/          # TS paper-corpus ingestion pipeline (see docs/nao/BRAIN-INGESTION-DESIGN.md)
+│   ├── brain-ingest/          # TS paper-corpus ingestion pipeline (see docs/nao/brain-ingestion-design.md)
 │   ├── context_sync.mjs       # --session-start briefing / --check enforcement
 │   ├── setup_agent_worktree.mjs # create an isolated git worktree + configure hooks
 │   └── shared_memory.mjs      # task-claim coordinator (.agents/session-log.json, gitignored)
 ├── docs/                      # General project documentation
 │   ├── shared/                # Cross-app ground truth + process docs
-│   │   ├── INSIGHT-ENGINE-ARCHITECTURE.md # AUTHORITATIVE end-to-end insight-engine (serve + authoring)
-│   │   ├── BIOTOPE-NAO-LINK.md        # How biotope & nao connect at runtime (the seam)
-│   │   ├── PROJECT-CONTEXT.md         # Key project principles, goals, and phases
-│   │   ├── STRUCTURE-CONTEXT.md       # This document
-│   │   ├── PHASE2-PLAN.md             # Current phase plan: goals, workstreams, sequence, gate
-│   │   ├── AGENT-PROTOCOL.md          # AI agent routing table, non-negotiables, PR review checklist
+│   │   ├── insight-engine-architecture.md # AUTHORITATIVE end-to-end insight-engine (serve + authoring)
+│   │   ├── biotope-nao-link.md        # How biotope & nao connect at runtime (the seam)
+│   │   ├── project-context.md         # Key project principles, goals, and phases
+│   │   ├── structure-context.md       # This document
+│   │   ├── phase-2-plan.md             # Current phase plan: goals, workstreams, sequence, gate
+│   │   ├── agent-protocol.md          # AI agent routing table, non-negotiables, PR review checklist
 │   │   ├── dev-workflow.md            # Full dev cycle — what AI does vs what humans must do
 │   │   ├── commit-conventions.md      # Conventional Commits spec
 │   │   ├── decisions/                 # Granular architecture ADRs (citation extraction, anomaly, reliability)
 │   │   └── hackathon/                 # Launchpad 2026 strategy (rules, direction, narrative, judging)
 │   ├── nao/                   # The brain feature (knowledge graph of metric relationships)
-│   │   ├── NAO-DESIGN.md              # nao web app: brain inspection/curation surface
-│   │   ├── BRAIN-DESIGN.md            # Brain design: evidence-tiered edges, second-LLM verification
-│   │   ├── BRAIN-INGESTION-DESIGN.md  # Paper-corpus ingestion → synthesis → verification pipeline
-│   │   └── BRAIN-MODELS-TRAINING.md   # Support-model training design (deferred)
+│   │   ├── nao-app-design.md              # nao web app: brain inspection/curation surface
+│   │   ├── brain-synthesis-design.md            # Brain design: evidence-tiered edges, second-LLM verification
+│   │   ├── brain-ingestion-design.md  # Paper-corpus ingestion → synthesis → verification pipeline
+│   │   └── brain-support-models-design.md   # Support-model training design (deferred)
 │   ├── biotope/               # The app feature (architecture, insights engine, metrics, UI)
-│   │   ├── ARCHITECTURE-CONTEXT.md    # System architecture and data flow rules
-│   │   ├── INSIGHTS-ENGINE-DESIGN.md  # biotope-scoped serve engine (defers to shared/INSIGHT-ENGINE-ARCHITECTURE.md)
-│   │   ├── METRICS-CATALOG.md         # Candidate-metrics catalog
-│   │   ├── METRICS-REGISTRY-DESIGN.md # Single-source metric registry (safe metric add/remove)
-│   │   └── ui-context/                # UI design system (UI-DESIGN-CONTEXT.md + mockups)
+│   │   ├── architecture-context.md    # System architecture and data flow rules
+│   │   ├── rules-engine-design.md  # biotope-scoped serve engine (defers to shared/insight-engine-architecture.md)
+│   │   ├── metrics-catalog.md         # Candidate-metrics catalog
+│   │   ├── metrics-registry-design.md # Single-source metric registry (safe metric add/remove)
+│   │   └── ui/                # UI design system (ui-design-context.md + mockups)
 │   ├── temp/                  # Temporary research output — NOT ground truth
 │   │   └── human-brief/               # Plain-language + research briefs; fable_research/ = archived design pack
 │   ├── sessions/              # Append-only one-file-per-session logs (variable layer)
@@ -76,7 +76,7 @@ ourobion/
 │   │           ├── m1_core/       # Auth, Profile, Compliance (Contains m1-context.md)
 │   │           ├── m2_self_report/# Daily logging UI and normalizers (Contains m2-context.md)
 │   │           └── ...            # Other M* modules
-│   └── nao/                   # Brain-inspection web app (Next.js/Cloudflare; see docs/nao/NAO-DESIGN.md)
+│   └── nao/                   # Brain-inspection web app (Next.js/Cloudflare; see docs/nao/nao-app-design.md)
 ├── supabase/                  # Backend infrastructure
 │   ├── functions/             # TypeScript Edge Functions
 │   │   ├── compute-baselines/ # M5a backend worker
@@ -126,5 +126,5 @@ Supabase — see README "Where dependencies live". CI installs its own toolchain
 ## Folder Conventions
 
 - **`shared/` vs `apps/biotope/`:** Any logic, types, or constants that must be duplicated across Dart (app) and TypeScript (backend) belong in `shared/`. The frontend codebase should not reference backend specific scripts, and vice versa.
-- **Context files:** Constant, architectural constraints are capitalized and suffixed with `-CONTEXT` (e.g. `PROJECT-CONTEXT.md`). Variable context documents (such as module to-do lists/state files) are lowercase and suffixed with `-context` (e.g. `m1-context.md`).
+- **Context files:** Constant, architectural constraints are capitalized and suffixed with `-CONTEXT` (e.g. `project-context.md`). Variable context documents (such as module to-do lists/state files) are lowercase and suffixed with `-context` (e.g. `m1-context.md`).
 - **Assets:** two distinct locations. `apps/biotope/assets/` holds the app's **bundled** assets — `fonts/` (the Manrope family) and `images/` (e.g. `logo.png`); every file must be declared in `apps/biotope/pubspec.yaml` (`flutter: assets:` / `fonts:`) to be bundled and available at runtime (adding the file alone is not enough). The repo-root `assets/ourobion-brand/` is the **brand kit** (source logos, favicon, colors, brand `DESIGN.md`) — a design reference, **not** shipped in the app; app-facing images are derived from it into `apps/biotope/assets/`.

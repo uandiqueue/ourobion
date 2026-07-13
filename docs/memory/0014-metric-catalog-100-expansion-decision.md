@@ -2,7 +2,7 @@
 
 **Decision (adopted 2026-07-01).** Grow the metric registry from the shipped ~19 to **100 metrics**, in
 **collector-gated waves** — a deliberate step past PHASE2-PLAN's original "thin slice", which it now
-**supersedes**. The full **~360-metric catalog** ([`../biotope/METRICS-CATALOG.md`](../biotope/METRICS-CATALOG.md))
+**supersedes**. The full **~360-metric catalog** ([`../biotope/metrics-catalog.md`](../biotope/metrics-catalog.md))
 stays the **reference**, not the ship target. Which 100 + why + by wave:
 [`../human-briefs/2026-07-01-metric-catalog-100-promotion.md`](../temp/human-brief/2026-07-01-metric-catalog-100-promotion.md).
 
@@ -19,4 +19,4 @@ invariant), and reliability is promoted alongside each metric.
 
 Follows [0001](0001-two-tier-truth.md) (raw rows are truth); relates to
 [0013](0013-brain-pipeline-and-support-models-decision.md) (more registry nodes → more for the agentic
-seeder + brain). Sequencing (Family A): [`../PHASE2-PLAN.md` 2026-07-01 integrated update](../shared/PHASE2-PLAN.md).
+seeder + brain). Sequencing (Family A): [`../phase-2-plan.md` 2026-07-01 integrated update](../shared/phase-2-plan.md).

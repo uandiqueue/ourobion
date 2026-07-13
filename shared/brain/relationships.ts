@@ -24,12 +24,12 @@
 // verification is discriminative and grounded (a narrow, checkable task). A second pass earns its
 // cost ONLY when it (a) retrieves evidence INDEPENDENTLY rather than re-opining over the synthesis
 // context, and (b) is adversarial. Those two properties are encoded as schema invariants in
-// relationships.schema.ts. Full rationale: docs/nao/BRAIN-DESIGN.md.
+// relationships.schema.ts. Full rationale: docs/nao/brain-synthesis-design.md.
 //
 // TS-first: the brain ingestion pipeline is backend/tooling, so there is no registry.dart-style Dart
 // mirror yet, and no DB/parity guard couplings (the data isn't persisted or app-rendered yet). A Dart
 // mirror + ts-dart parity guard + a schema guard follow when the app renders edges and the graph is
-// persisted — the same deferral the registry used for env_daily. See docs/nao/BRAIN-DESIGN.md
+// persisted — the same deferral the registry used for env_daily. See docs/nao/brain-synthesis-design.md
 // "Guards (deferred)".
 
 /** Canonical snake_case metric key — must resolve to an active shared/metrics registry entry. */

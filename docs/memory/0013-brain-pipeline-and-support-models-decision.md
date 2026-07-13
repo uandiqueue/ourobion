@@ -3,8 +3,8 @@
 **Decision (adopted 2026-07-01).** The brain's build shape and the four small "self-trained" support
 models are fixed by the anchor brief
 [`../human-briefs/2026-07-01-brain-pipeline-and-training-eval.md`](../temp/human-brief/2026-07-01-brain-pipeline-and-training-eval.md);
-this file is the durable pointer. Design detail: [`../nao/BRAIN-DESIGN.md`](../nao/BRAIN-DESIGN.md) +
-[`../nao/BRAIN-MODELS-TRAINING.md`](../nao/BRAIN-MODELS-TRAINING.md).
+this file is the durable pointer. Design detail: [`../nao/brain-synthesis-design.md`](../nao/brain-synthesis-design.md) +
+[`../nao/brain-support-models-design.md`](../nao/brain-support-models-design.md).
 
 **The roster (minimise the LLM surface; deterministic everywhere it's safe):**
 - **Agentic seeder** — reads the metric registry (`derivedFrom[]`) + biotope needs → research queries
@@ -19,7 +19,7 @@ this file is the durable pointer. Design detail: [`../nao/BRAIN-DESIGN.md`](../n
   haiku-tier **presentation agent** phrases summaries / template copy — grounded, copy-gated, cached,
   degradable. nao adds **human-in-the-loop curation**.
 
-> **Update 2026-07-13:** the Neo4j projection was dropped — the served graph is a relational 1-hop lookup over the Postgres verified_edges view (no graph DB). See docs/shared/INSIGHT-ENGINE-ARCHITECTURE.md §S6.
+> **Update 2026-07-13:** the Neo4j projection was dropped — the served graph is a relational 1-hop lookup over the Postgres verified_edges view (no graph DB). See docs/shared/insight-engine-architecture.md §S6.
 
 **The four support models** (fine-tuned on public data — we have no in-house labels yet; label maps +
 recipes in BRAIN-MODELS-TRAINING): (a) NLI claim-support → `verdict` pre-filter; (b1) study-design →
@@ -37,4 +37,4 @@ Opus inside Claude Code, no API/no specialised worker) and *API-worker* (special
 **OpenAI or Anthropic**, model id in config; synthesis + verifier different families). Build the
 **LLM-router first**. Support-model **training is deferred until GMI credits + GPU** (no local GPU) —
 only the (b2) lookup + the design proceed now. Sequencing:
-[`PHASE2-PLAN.md` 2026-07-01 integrated update](../shared/PHASE2-PLAN.md).
+[`phase-2-plan.md` 2026-07-01 integrated update](../shared/phase-2-plan.md).

@@ -12,13 +12,13 @@ hundreds of metrics across five sources, where **adding or removing a metric is 
 guard-protected change — never a schema-wide rewrite.** On that platform Phase 2 **grows the registry to
 100 metrics in collector-gated waves** (the adopted
 [100-metric decision](../temp/human-brief/2026-07-01-metric-catalog-100-promotion.md) · [memory 0014](../memory/0014-metric-catalog-100-expansion-decision.md));
-the full ~360-metric [`METRICS-CATALOG.md`](../biotope/METRICS-CATALOG.md) stays the reference, not the ship target.
+the full ~360-metric [`metrics-catalog.md`](../biotope/metrics-catalog.md) stays the reference, not the ship target.
 
 This doc is the **plan authority**: goals, what Phase 2 contains, the tracks + sequence, and the gate.
 Detail lives in the design docs it points to — the metric platform in
-[`METRICS-REGISTRY-DESIGN.md`](../biotope/METRICS-REGISTRY-DESIGN.md) + [`shared/metrics/README.md`](../../shared/metrics/README.md);
-the insights engine in [`INSIGHTS-ENGINE-DESIGN.md`](../biotope/INSIGHTS-ENGINE-DESIGN.md); the brain
-pipeline in [`nao/BRAIN-DESIGN.md`](../nao/BRAIN-DESIGN.md) + [`nao/BRAIN-MODELS-TRAINING.md`](../nao/BRAIN-MODELS-TRAINING.md)
+[`metrics-registry-design.md`](../biotope/metrics-registry-design.md) + [`shared/metrics/README.md`](../../shared/metrics/README.md);
+the insights engine in [`rules-engine-design.md`](../biotope/rules-engine-design.md); the brain
+pipeline in [`nao/brain-synthesis-design.md`](../nao/brain-synthesis-design.md) + [`nao/brain-support-models-design.md`](../nao/brain-support-models-design.md)
 (anchor decision: [`human-briefs/2026-07-01-brain-pipeline-and-training-eval.md`](../temp/human-brief/2026-07-01-brain-pipeline-and-training-eval.md) · [memory 0013](../memory/0013-brain-pipeline-and-support-models-decision.md)).
 
 ## The metric platform (the floor everything else stands on)
@@ -49,7 +49,7 @@ the other four are maximized — breadth is the product, not the cost.
 - **Remove** a metric → **soft-deprecate** (mark it, keep the entry) so historical data and any
   rule/insight referencing the key keep resolving; the store is dropped only after a deprecation window.
 - **No add or remove touches more than the registry and its generated/guarded edges** — see
-  [`METRICS-REGISTRY-DESIGN.md`](../biotope/METRICS-REGISTRY-DESIGN.md) and the `metrics-registry-*` guards.
+  [`metrics-registry-design.md`](../biotope/metrics-registry-design.md) and the `metrics-registry-*` guards.
 
 ### 3 · Storage follows *continuity*, not body system
 
@@ -128,18 +128,18 @@ The unfinished MVP work, **plus the metric platform** everything else builds on.
 *Constraints (not features): HRV is RMSSD on Android (SDNN is iOS-only); wearable sync is best-effort,
 never a hard gate (graceful degradation).*
 
-### W2 · Insights engine (M5b) + the brain — see [`INSIGHTS-ENGINE-DESIGN.md`](../biotope/INSIGHTS-ENGINE-DESIGN.md)
+### W2 · Insights engine (M5b) + the brain — see [`rules-engine-design.md`](../biotope/rules-engine-design.md)
 
 | Feature | What it is |
 |---|---|
 | Rules as reviewable data | Git-tracked JSON rule blueprints (`data/rules/**`) → Postgres `rules` projection + loader. Adding a rule = a PR, not a redeploy. |
-| **Metric-relationship graph (the brain)** | Relationships-as-data (TRUTH tier): truth-tier edge artifacts, **projected to the relational `verified_edges` view** (a 1-hop Postgres lookup, no graph DB) for traversal. Bootstrapped from the registry's `derivedFrom[]` + curated priors and grown by the **brain pipeline** (paper corpus → synthesis → adversarial verification → verified edges — [`BRAIN-DESIGN.md`](../nao/BRAIN-DESIGN.md)). **Prunes the correlation search space** and is the **retrieval substrate** for explanation. Centralised, server-side, shared by all users. |
+| **Metric-relationship graph (the brain)** | Relationships-as-data (TRUTH tier): truth-tier edge artifacts, **projected to the relational `verified_edges` view** (a 1-hop Postgres lookup, no graph DB) for traversal. Bootstrapped from the registry's `derivedFrom[]` + curated priors and grown by the **brain pipeline** (paper corpus → synthesis → adversarial verification → verified edges — [`brain-synthesis-design.md`](../nao/brain-synthesis-design.md)). **Prunes the correlation search space** and is the **retrieval substrate** for explanation. Centralised, server-side, shared by all users. |
 | Cross-metric rules | `correlation` condition over 2+ metrics, **scoped to brain neighbours with configurable lag windows** — the headline analytical upgrade. |
 | Data-driven engine | `generate-insights` refactored to pure evaluators (trend / threshold / correlation), deterministic, non-diagnostic gates at load + render. **The brain decides *what* fires; the engine stays deterministic.** |
 | Reliability weighting + triangulation | Engine confidence-weights inputs by source reliability and cross-checks self-report against its passive correlate before firing. |
 | "Why am I seeing this?" | Per-card explanation from `contributing_metrics[]`, path-traced over the brain. |
-| Presentation agent (grounded NL) | On demand, the server retrieves the relevant brain subgraph and a **constrained** LLM phrases the wording — introducing **no relationship or number** outside the retrieved set, **copy-gated at render, cached, and degradable** to templated copy. The deterministic engine stays the authority for *what is true*; the agent only phrases *how it reads*. See [`INSIGHTS-ENGINE-DESIGN §E`](../biotope/INSIGHTS-ENGINE-DESIGN.md). |
-| Paper → rules/edge extraction | The brain's ingestion + synthesis + adversarial verification pipeline turns the paper corpus into verified relationships; human-reviewed, budget-capped. See [`BRAIN-DESIGN.md`](../nao/BRAIN-DESIGN.md) + [`BRAIN-MODELS-TRAINING.md`](../nao/BRAIN-MODELS-TRAINING.md). |
+| Presentation agent (grounded NL) | On demand, the server retrieves the relevant brain subgraph and a **constrained** LLM phrases the wording — introducing **no relationship or number** outside the retrieved set, **copy-gated at render, cached, and degradable** to templated copy. The deterministic engine stays the authority for *what is true*; the agent only phrases *how it reads*. See [`INSIGHTS-ENGINE-DESIGN §E`](../biotope/rules-engine-design.md). |
+| Paper → rules/edge extraction | The brain's ingestion + synthesis + adversarial verification pipeline turns the paper corpus into verified relationships; human-reviewed, budget-capped. See [`brain-synthesis-design.md`](../nao/brain-synthesis-design.md) + [`brain-support-models-design.md`](../nao/brain-support-models-design.md). |
 
 ### W3 · Environment & outbreak context (M4) — the `api` source
 
@@ -167,10 +167,10 @@ return when the user base justifies per-region publishing.
 ### W5 · nao — the brain's human surface
 
 nao is the expert web app for inspecting and curating the brain (biotope's sibling). It ships in phases
-gated on how much of the brain exists. Detail: [`nao/NAO-DESIGN.md`](../nao/NAO-DESIGN.md) (product +
-phasing) · [`nao/BRAIN-DESIGN.md`](../nao/BRAIN-DESIGN.md) (edge synthesis + verification) ·
-[`nao/BRAIN-INGESTION-DESIGN.md`](../nao/BRAIN-INGESTION-DESIGN.md) (paper corpus) ·
-[`nao/BRAIN-MODELS-TRAINING.md`](../nao/BRAIN-MODELS-TRAINING.md) (support models). Pipeline decision:
+gated on how much of the brain exists. Detail: [`nao/nao-app-design.md`](../nao/nao-app-design.md) (product +
+phasing) · [`nao/brain-synthesis-design.md`](../nao/brain-synthesis-design.md) (edge synthesis + verification) ·
+[`nao/brain-ingestion-design.md`](../nao/brain-ingestion-design.md) (paper corpus) ·
+[`nao/brain-support-models-design.md`](../nao/brain-support-models-design.md) (support models). Pipeline decision:
 [memory 0013](../memory/0013-brain-pipeline-and-support-models-decision.md). Stack: Next.js/OpenNext on
 Cloudflare Workers, D1 + R2, Supabase-auth-gated.
 
@@ -254,7 +254,7 @@ Critical path: **LLM router → edge pipeline** (edges unblock nao v2 and brain-
 
 1. **No GPU / GMI credits yet.** Support-model *training* can't start — credits aren't provisioned and
    the local box can't fine-tune. The models are **design + data-prep only** for now (see
-   [`BRAIN-MODELS-TRAINING.md`](../nao/BRAIN-MODELS-TRAINING.md)); training lands when GMI does. The **b2**
+   [`brain-support-models-design.md`](../nao/brain-support-models-design.md)); training lands when GMI does. The **b2**
    venue lookup needs no training and ships anytime.
 2. **Every LLM node runs via two routes** (model ids in config, both OpenAI and Anthropic): a
    **local-agent route** — inside Claude Code the host generalist (Opus) runs it, no API/no specialised

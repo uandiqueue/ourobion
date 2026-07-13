@@ -1,7 +1,7 @@
-# PROJECT-CONTEXT.md — Ourobion
+# project-context.md — Ourobion
 > **CONSTANT LAYER** — product principles, tech stack, module map, and the shared contract. Change
 > only at formal phase transitions or full team agreement. Current phase scope + sequencing live in
-> [`PHASE2-PLAN.md`](PHASE2-PLAN.md).
+> [`phase-2-plan.md`](phase-2-plan.md).
 
 ---
 
@@ -46,7 +46,7 @@ The app surfaces descriptive patterns and insight cards. It never diagnoses.
 | CI/CD | GitHub Actions |
 | Hosting | Supabase (backend), App Store + Play Store (mobile) |
 
-> ⚠️ Stack decisions are CONSTANT. Changes require full team agreement and PROJECT-CONTEXT.md update.
+> ⚠️ Stack decisions are CONSTANT. Changes require full team agreement and project-context.md update.
 
 ---
 
@@ -63,14 +63,14 @@ M6  Engagement & Motivation         ← depends on M2 (completeness), M5b (Insig
 M7  Community & Ecosystem           ← depends on M4, M2 aggregates
 ```
 
-Full dependency diagram: see `biotope/ARCHITECTURE-CONTEXT.md`
+Full dependency diagram: see `biotope/architecture-context.md`
 
 ---
 
 ## Phases
 
 > Phase definitions only. Current scope, sequencing, and the gate live in
-> [`PHASE2-PLAN.md`](PHASE2-PLAN.md); per-session status in `docs/sessions/`.
+> [`phase-2-plan.md`](phase-2-plan.md); per-session status in `docs/sessions/`.
 
 | Phase | Focus |
 |---|---|
@@ -107,8 +107,8 @@ Defined in `shared/types/`. Changes require team discussion + PR with two review
 | M3 Wearables | Alton | HealthKit / Health Connect → `wearable_daily` + M5a wearable extension |
 | M5a + M5b Intelligence | shared | Depends on M2 being stable |
 | M6 Engagement | shared | Depends on M2 completeness signal |
-| M4 Environmental | Jayden | Env ingestion → `env_daily` (SG-scoped); see `PHASE2-PLAN.md` Track A |
-| M7 Community | shared | Global aggregates + chat first slice; see `PHASE2-PLAN.md` Track A |
+| M4 Environmental | Jayden | Env ingestion → `env_daily` (SG-scoped); see `phase-2-plan.md` Track A |
+| M7 Community | shared | Global aggregates + chat first slice; see `phase-2-plan.md` Track A |
 
 ---
 

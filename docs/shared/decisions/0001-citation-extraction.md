@@ -1,6 +1,6 @@
 # Citation extraction & reference-graph construction — architecture decision
 > **Status: authoritative ground truth** · Date: 2026-07-13 · Refines: A4b citation-block parse / A4 / A6
-> Part of the insight-engine architecture — see [`../INSIGHT-ENGINE-ARCHITECTURE.md`](../INSIGHT-ENGINE-ARCHITECTURE.md). Contracts: [`../../../shared/brain/`](../../../shared/brain/).
+> Part of the insight-engine architecture — see [`../insight-engine-architecture.md`](../insight-engine-architecture.md). Contracts: [`../../../shared/brain/`](../../../shared/brain/).
 
 ## Context (what doc-12 leaves open, why it matters)
 

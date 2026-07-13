@@ -12,7 +12,7 @@ auto-generated structural graph, run a semantic context graph for agents, and en
   Guard tests live in `apps/biotope/test/guards/` and run with `flutter test`.
 
 The curated **module dependency graph and interface rules** are not duplicated here — they live in
-[`../biotope/ARCHITECTURE-CONTEXT.md`](../biotope/ARCHITECTURE-CONTEXT.md), which is the boundary reference today.
+[`../biotope/architecture-context.md`](../biotope/architecture-context.md), which is the boundary reference today.
 
 ## Semantic context graph — graphify
 

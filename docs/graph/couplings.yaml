@@ -53,7 +53,7 @@ couplings:
 
   # ─── Metrics registry (shared/metrics) — single source of truth for every metric ───────────────
   # The registry makes add/remove of a metric a localized, guard-protected change. See
-  # docs/biotope/METRICS-REGISTRY-DESIGN.md and shared/metrics/README.md.
+  # docs/biotope/metrics-registry-design.md and shared/metrics/README.md.
 
   - id: metrics-registry-ts-dart-parity
     from: shared/metrics/registry.ts

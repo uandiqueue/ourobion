@@ -1,4 +1,4 @@
-# AGENT-PROTOCOL.md — AI Agent Navigation Protocol
+# agent-protocol.md — AI Agent Navigation Protocol
 > **CONSTANT LAYER** — Changes only at phase transitions or full team agreement.
 > Written for: AI agents (Claude Code sessions, automated reviewers)
 >
@@ -26,16 +26,16 @@ Do not read every context file. Read only what your task requires.
 
 | Task | Files to read |
 |---|---|
-| Starting any session | `node tools/context_sync.mjs --session-start`, then the latest `docs/sessions/` files + `AGENTS.md` §6 (phase + workstreams) + `docs/PHASE2-PLAN.md` |
-| Working on M1 | `apps/biotope/lib/modules/m1_core/m1-context.md` + `docs/biotope/ARCHITECTURE-CONTEXT.md` |
+| Starting any session | `node tools/context_sync.mjs --session-start`, then the latest `docs/sessions/` files + `AGENTS.md` §6 (phase + workstreams) + `docs/phase-2-plan.md` |
+| Working on M1 | `apps/biotope/lib/modules/m1_core/m1-context.md` + `docs/biotope/architecture-context.md` |
 | Working on M2 | `apps/biotope/lib/modules/m2_self_report/m2-context.md` + `shared/SHARED-CONTEXT.md` |
 | Touching `shared/types/` | `shared/SHARED-CONTEXT.md` — requires 2-reviewer PR |
 | Writing user-facing strings | `shared/constants/copy_guidelines.ts` + `shared/constants/copy_guidelines.dart` |
 | Reviewing a PR | This file `§ PR Review Checklist` + module context for the PR scope |
-| CI or workflow changes | `docs/STRUCTURE-CONTEXT.md` |
-| Phase transition work | `docs/biotope/ARCHITECTURE-CONTEXT.md` + `docs/PROJECT-CONTEXT.md` |
+| CI or workflow changes | `docs/structure-context.md` |
+| Phase transition work | `docs/biotope/architecture-context.md` + `docs/project-context.md` |
 | Understanding data shapes | `shared/SHARED-CONTEXT.md` |
-| Understanding project goals and principles | `docs/PROJECT-CONTEXT.md` |
+| Understanding project goals and principles | `docs/project-context.md` |
 
 ---
 
@@ -46,8 +46,8 @@ When files appear to contradict each other, trust in this order:
 1. The latest `docs/sessions/` files + `docs/memory/` facts — most recent session state and durable decisions
 2. `apps/biotope/lib/modules/m*/m*-context.md` — module-level state (may lag the latest session)
 3. `shared/SHARED-CONTEXT.md` — shared types (locked contract, authoritative for interfaces)
-4. `docs/biotope/ARCHITECTURE-CONTEXT.md` — system structure
-5. `docs/PROJECT-CONTEXT.md` — product principles (most stable, least likely to change)
+4. `docs/biotope/architecture-context.md` — system structure
+5. `docs/project-context.md` — product principles (most stable, least likely to change)
 
 Module context files (`m1-context.md`, `m2-context.md`) can fall behind the newest `docs/sessions/`
 entry between sessions. Always read the most recent `docs/sessions/` files for work done since the
@@ -90,8 +90,8 @@ Used when reviewing a PR. Each item is pass / fail / not-applicable.
 
 **Scope**
 - [ ] PR targets `dev-phase2` (the single integration branch), not `main`
-- [ ] Changes are within current phase scope (Phase 2 — see [`docs/PHASE2-PLAN.md`](PHASE2-PLAN.md))
-- [ ] Work maps to a Phase 2 workstream/track in `PHASE2-PLAN.md` (not pulled forward from Phase 3)
+- [ ] Changes are within current phase scope (Phase 2 — see [`docs/phase-2-plan.md`](phase-2-plan.md))
+- [ ] Work maps to a Phase 2 workstream/track in `phase-2-plan.md` (not pulled forward from Phase 3)
 
 **Code quality**
 - [ ] No imports from another module's `/impl` directory

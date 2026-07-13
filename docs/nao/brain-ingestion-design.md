@@ -1,11 +1,11 @@
 # The Brain — Ingestion (paper corpus) Design
 
-> **Authoritative integrated architecture:** [`../shared/INSIGHT-ENGINE-ARCHITECTURE.md`](../shared/INSIGHT-ENGINE-ARCHITECTURE.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the ingestion-scoped (paper-corpus acquisition) view; where it differs, the architecture doc wins.
+> **Authoritative integrated architecture:** [`../shared/insight-engine-architecture.md`](../shared/insight-engine-architecture.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the ingestion-scoped (paper-corpus acquisition) view; where it differs, the architecture doc wins.
 
 How ourobion **acquires the scientific literature** that the brain's edges are synthesised from. This
 doc covers the *front of the pipeline only* — discovering papers, fetching them, giving each a stable
 identity, and storing them — up to the point where a paper's text is ready for synthesis. The
-synthesis → verification → graph steps are [`BRAIN-DESIGN.md`](BRAIN-DESIGN.md); the edge/claim
+synthesis → verification → graph steps are [`brain-synthesis-design.md`](brain-synthesis-design.md); the edge/claim
 contract is [`shared/brain/`](../../shared/brain/). The brain's runtime *schema* (how edges are stored
 and served) is **not yet designed** — this doc deliberately stops at "text + a `paper_uid` ready to
 cite."
@@ -406,7 +406,7 @@ interface IngestControlConfig {
 - **NUS institutional proxy + publisher TDM APIs** (Elsevier/Springer/Wiley) + the **Singapore 2021 TDM
   exception** — own follow-up research before any paywalled automation. Unlocks `paywalled → html/pdf`.
 - **Brain runtime schema** — how verified edges are stored/served (Supabase table vs generated
-  artifact); see [`BRAIN-DESIGN.md`](BRAIN-DESIGN.md) "Open decisions". This doc stops at "text + uid."
+  artifact); see [`brain-synthesis-design.md`](brain-synthesis-design.md) "Open decisions". This doc stops at "text + uid."
 - **Synthesis & verifier pipeline** — the two-LLM passes that consume this corpus (BRAIN-DESIGN §
   safeguard); `promptVersion` scheme.
 - **`PaperRecord` as a `shared/` contract + guards** — promote when a DB or the app consumes the

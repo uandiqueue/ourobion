@@ -1,6 +1,6 @@
 # The Brain — Design
 
-> **Authoritative integrated architecture:** [`../shared/INSIGHT-ENGINE-ARCHITECTURE.md`](../shared/INSIGHT-ENGINE-ARCHITECTURE.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the brain-scoped (edge synthesis + verification) view; where it differs, the architecture doc wins.
+> **Authoritative integrated architecture:** [`../shared/insight-engine-architecture.md`](../shared/insight-engine-architecture.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the brain-scoped (edge synthesis + verification) view; where it differs, the architecture doc wins.
 
 **The brain** is ourobion's knowledge graph of scientifically-derived relationships between metrics.
 Nodes are metric keys ([`shared/metrics/registry.ts`](../../shared/metrics/registry.ts)); edges are
@@ -159,7 +159,7 @@ anchor [`../human-briefs/2026-07-01-brain-pipeline-and-training-eval.md`](../tem
    of the second pass). Small trained **support models** additionally pre-check the claim before the
    verifier LLM spends a token — an NLI verdict pre-filter and a relation/direction/claim-kind
    cross-check that feed `directionCheck` / `claimKindCheck`; the study-design + venue models feed
-   `evidenceTier` / `impactTier`. See [`BRAIN-MODELS-TRAINING.md`](BRAIN-MODELS-TRAINING.md).
+   `evidenceTier` / `impactTier`. See [`brain-support-models-design.md`](brain-support-models-design.md).
 2. **Persistence — DECIDED: truth-tier edge artifacts (R2 JSONL + the contract), projected by a
    deterministic loader into the relational Postgres serving tables (`relationship_claims` +
    `edge_verifications`, read through the `verified_edges` view).** The artifacts + contract are TRUTH;

@@ -2,13 +2,13 @@
 
 > **Status: authoritative ground truth (cross-app).** How **biotope** (the consumer app) and **nao**
 > (the brain's curation/ingestion surface) actually connect at runtime. The full 23-stage design lives
-> in [`INSIGHT-ENGINE-ARCHITECTURE.md`](INSIGHT-ENGINE-ARCHITECTURE.md); the brain's synthesis +
-> verification pipeline is [`../nao/BRAIN-DESIGN.md`](../nao/BRAIN-DESIGN.md); the front of the paper
-> pipeline is [`../nao/BRAIN-INGESTION-DESIGN.md`](../nao/BRAIN-INGESTION-DESIGN.md); the deterministic
-> serve engine is [`../biotope/INSIGHTS-ENGINE-DESIGN.md`](../biotope/INSIGHTS-ENGINE-DESIGN.md). This
+> in [`insight-engine-architecture.md`](insight-engine-architecture.md); the brain's synthesis +
+> verification pipeline is [`../nao/brain-synthesis-design.md`](../nao/brain-synthesis-design.md); the front of the paper
+> pipeline is [`../nao/brain-ingestion-design.md`](../nao/brain-ingestion-design.md); the deterministic
+> serve engine is [`../biotope/rules-engine-design.md`](../biotope/rules-engine-design.md). This
 > doc is the *seam* view — it does not repeat those.
 >
-> **Supersedes** the earlier `docs/BIOTOPE-NAO-LINK.md` draft (branch `docs/biotope-nao-link-plan`),
+> **Supersedes** the earlier `docs/biotope-nao-link.md` draft (branch `docs/biotope-nao-link-plan`),
 > which projected the served graph into **Neo4j Aura**. There is **no graph database** — the served
 > graph is a 1-hop lookup over the relational `verified_edges` view (architecture §S6, decision P27).
 
@@ -73,7 +73,7 @@ storage. Server-side only; keys never reach the client.
 ## 4 · Who writes a relationship, and how it reaches biotope
 
 `verified_edges` has **three writers**, distinguished by `RelationshipClaim.provenance`. nao is only one,
-and not the expected majority — full detail in [`../nao/BRAIN-DESIGN.md`](../nao/BRAIN-DESIGN.md):
+and not the expected majority — full detail in [`../nao/brain-synthesis-design.md`](../nao/brain-synthesis-design.md):
 
 1. **`provenance:'llm'` — the automated pipeline, doesn't touch nao's UI.** A seeder/queue picks a pair;
    a synthesis LLM proposes a claim (§A8); a **second, decorrelated non-Anthropic** adversarial verifier
@@ -133,4 +133,4 @@ regenerate phrasing on the `insight_id` card upsert.
 **Open (confirm at implementation):** the loader trigger cadence (cron vs. dispatch-callback, §A11);
 the 1-hop neighbour cap per metric at serve time (starting guess, tune once real edges exist); the
 completeness-disclaimer roll-up copy. Tracked in the hyperparameter registry
-([architecture §9](INSIGHT-ENGINE-ARCHITECTURE.md)).
+([architecture §9](insight-engine-architecture.md)).

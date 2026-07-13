@@ -1,6 +1,6 @@
-# ARCHITECTURE-CONTEXT.md — Ourobion
+# architecture-context.md — Ourobion
 > **CONSTANT LAYER** — system structure, data flow, and module interface rules. Update only at phase
-> transitions. Current phase scope lives in [`PHASE2-PLAN.md`](../shared/PHASE2-PLAN.md).
+> transitions. Current phase scope lives in [`phase-2-plan.md`](../shared/phase-2-plan.md).
 
 ---
 

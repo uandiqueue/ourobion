@@ -3,7 +3,7 @@
 **The brain** (knowledge graph of scientifically-derived metric relationships) produces every edge in
 two LLM passes: synthesis proposes a `RelationshipClaim`; a **second, independent LLM** re-checks it
 against **freshly-retrieved** evidence and emits an `EdgeVerification`. Contract:
-[`shared/brain/`](../../shared/brain/); design: [`BRAIN-DESIGN.md`](../nao/BRAIN-DESIGN.md).
+[`shared/brain/`](../../shared/brain/); design: [`brain-synthesis-design.md`](../nao/brain-synthesis-design.md).
 
 **Why:** synthesis from papers is the highest hallucination-surface step; a wrong edge is written once
 and read forever, so quality is paid at ingestion time (amortised). A second pass is only
