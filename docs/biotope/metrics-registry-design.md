@@ -20,9 +20,9 @@ Dart / TypeScript / SQL seam:
 - `shared/types/index.ts` + `index.dart` — the `DailyGutRow` / `DailyPhysioRow` / `DailyEnvRow` fields
 - `supabase/functions/compute-baselines/index.ts` — a `GUT_METRIC_KEYS` / `WEARABLE_METRIC_KEYS` array **and** the explicit SQL `SELECT` column list
 - `supabase/functions/generate-insights/index.ts` — each rule's `metricKey`
-- the M2 logging screens, the DQS weighting (M6), the seed script, and the docs tables
+- the M2 logging screens, the DQS weighting (M2 normaliser), the seed script, and the docs tables
 
-**This already drifts.** The wearable contract and the baseline function disagree *right now*:
+**This drifted.** Before the registry, the wearable contract and the baseline function disagreed — e.g.:
 
 | Contract (`DailyPhysioRow`) | `compute-baselines` (`WEARABLE_METRIC_KEYS`) |
 |---|---|
@@ -31,8 +31,8 @@ Dart / TypeScript / SQL seam:
 | `skin_temp_delta` | `body_temp_c` |
 | `respiratory_rate`, `sleep_fragmentation` | `spo2_pct`, `step_count` |
 
-No test catches it because the Supabase client speaks dynamic JSON. A registry + guards turns each such
-mismatch into a failing build.
+No test caught it because the Supabase client speaks dynamic JSON. A registry + guards turns each such
+mismatch into a failing build (this specific drift is now resolved — see the RESOLVED section below).
 
 ## Goal
 
@@ -81,7 +81,7 @@ the README keeps the *shape*.
 | Migrations (`supabase/migrations`) | columns per table | schema guard: columns == registry keys (+ type compatibility) |
 | M5a `compute-baselines` | the list to baseline | derives from `registry.filter(active && baselineApplicable && table)` — no local literals |
 | M5b engine / rules | valid `metricKeys` | guard: every rule `metricKey ∈` registry active keys |
-| M6 DQS | per-field weights | reads `registry.dqs` |
+| M2 DQS (normaliser) | daily-core completeness weights | guard-synced to registry `countsTowardDailyCompleteness` weights (`kDailyCoreDqsWeights`); M6 only consumes the resulting `log_completeness` |
 | M2/M3/M4 collection + UI | what to collect/show | `self_report` entries drive the log screens |
 | `seed-test-data.ps1` | columns to populate | registry keys |
 | docs metric tables | the metric list | checked against the registry |
@@ -95,6 +95,7 @@ Each names a guard test (`status: active`), enforced by `context_sync --check` +
 - `metrics-registry-to-schema` — registry keys == migration columns
 - `metrics-registry-to-baselines` — `compute-baselines` derives its list from the registry (no stray key literals)
 - `metrics-registry-to-engine` — every rule `metricKey` resolves to an active registry entry
+- `metrics-registry-to-dqs` — the M2 normaliser's `kDailyCoreDqsWeights` stays in lockstep with the registry's `countsTowardDailyCompleteness` weights
 
 ## Add a metric (safe flow)
 
@@ -140,8 +141,10 @@ which is *why* it is nullable — not a reason to drop it). The stale artifact w
    `couplings.yaml`, tests in `apps/biotope/test/guards/`). The pre-existing `shared-types-ts-dart-parity` guard
    was also flipped to `active` (the W0 ⛔ guard work — now load-bearing).
 4. ✅ `compute-baselines` derives its metric list **and** SELECT columns from the registry import.
-5. ⬜ Point M6 DQS weighting at `registry.dqs` (the registry already carries the weights;
-   wiring M6 to read them is the remaining step). Pending.
+5. ✅ DQS weighting synced to the registry: the M2 self-report normaliser's `kDailyCoreDqsWeights`
+   (`apps/biotope/lib/modules/m2_self_report/impl/normaliser.dart`) is kept in lockstep with the
+   registry's `countsTowardDailyCompleteness` weights by the active `metrics-registry-to-dqs` guard.
+   (M6 only consumes the resulting `log_completeness`.)
 
 The `shared/` changes are 2-reviewer per [memory 0002](../memory/0002-shared-contract-two-reviewers.md).
 

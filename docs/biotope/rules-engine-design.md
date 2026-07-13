@@ -40,8 +40,10 @@ as rebuildable PROJECTIONS.
 
 ### Condition set — CORE
 
-`trend` + `threshold` + `correlation` cover all 6 current rules plus the cross-metric requirement.
-`deviation`/`all`/`any` are deferred until a real rule needs them.
+`trend` + `threshold` + `coincidence` cover all 6 current rules plus the cross-metric requirement.
+`deviation`/`all`/`any` are deferred until a real rule needs them. (`coincidence` was the MVP's
+`correlation` leaf, renamed per [`insight-engine-architecture`](../shared/insight-engine-architecture.md)
+§S4 to distinguish this rule-blueprint conjunction from the real D1/D2 personal relations.)
 
 ## Steps (engine refactor is LAST)
 
@@ -64,7 +66,7 @@ citation}, `effectiveFrom`/`effectiveTo`, `deprecatedAt`, `condition` (union bel
 **Condition union (Zod `discriminatedUnion`, one pure evaluator per type):**
 - `{type:"trend", metricKey, equals:"rising|falling|stable", minConfidence}` — replaces the 4 trend rules.
 - `{type:"threshold", metricKey, field:"mean|std_dev|min|max", op:"lt|lte|gt|gte|eq", value, minConfidence}` — replaces `gut_form_stable` (std_dev ≤ 1.0) / `gut_form_variable` (std_dev > 2.0).
-- `{type:"correlation", metricKeys:[K1,K2], both:[<leaf on K1>,<leaf on K2>], minConfidence}` — the cross-metric primitive (reads two `baseline_snapshots` rows for one user).
+- `{type:"coincidence", metricKeys:[K1,K2], both:[<leaf on K1>,<leaf on K2>], minConfidence}` — the cross-metric primitive (reads two `baseline_snapshots` rows for one user). Named `coincidence` (not `correlation`) per the architecture doc §S4, reserving "relation" for the D1/D2 personal-relation evaluators.
 
 `minConfidence` generalizes the scattered `notInsufficient(s)` checks.
 
@@ -131,7 +133,7 @@ Refactor from hardcoded `RULES: Rule[]` to load `rules` rows and evaluate generi
 ### D. Verification
 
 `npx supabase start` → `db reset` → `npm run rules:test` → `npm run rules:load` (verify `rules`, incl. a
-2-metric `correlation` row) → seed `baseline_snapshots` tripping a single + a cross rule →
+2-metric `coincidence` row) → seed `baseline_snapshots` tripping a single + a cross rule →
 `deno test supabase/functions/generate-insights/` → `functions serve` + service-role curl → confirm
 `insight_cards` populate (cross card has 2 `contributing_metrics`) → dismiss + re-invoke → not
 regenerated → `flutter analyze` + `flutter test` + `node tools/context_sync.mjs --check`.

@@ -1,6 +1,6 @@
 ---
 title: Insight-Engine Architecture
-summary: The single authoritative end-to-end insight-engine spec — every stage (S1-S9, U1, A1-A12), wire, and store across biotope's deterministic serve path and the offline authoring pipeline; canonical owner of all stage definitions and inter-stage contracts. Index source; child design docs point here.
+summary: The single authoritative end-to-end insight-engine spec — every stage (S1-S9, U1, A1-A12 incl. A4b), wire, and store across biotope's deterministic serve path and the offline authoring pipeline; canonical owner of all stage definitions and inter-stage contracts. Index source; child design docs point here.
 type: architecture
 scope: shared
 status: canonical
@@ -134,7 +134,7 @@ inside the ingest CLI on GitHub Actions runners, metered API calls, budget-guard
 interactively by a **developer-run terminal LLM session** (e.g. Claude Code), consuming **no
 metered API budget** (see §8, budget split). S8/S9 phrasing runs **server-side at generation
 time** (fire-triggered, cached — the IED presentation-agent discipline,
-`docs/biotope/rules-engine-design.md:128-136`). U1 applicability grading runs **server-side at
+[`rules-engine-design`](../biotope/rules-engine-design.md) §E). U1 applicability grading runs **server-side at
 S7 generation time** (fire-triggered, cached to `applicability_grades`; serve-time reads are
 deterministic table reads, so the two-tier-truth invariant holds). Nothing else touches an LLM.
 The consolidated per-stage model assignment is §10.
@@ -239,9 +239,10 @@ path.
 7. **Failure:** `insufficient` baseline → forced `neutral` → no pattern fires → no card; the
    *absence* is recorded by A1 as `blocked-completeness`.
 
-The IED `correlation` leaf (a conjunction of two per-metric tests,
-`docs/biotope/rules-engine-design.md:54`) is **renamed `coincidence`** in the blueprint
-contract; genuine cross-metric relations are exclusively D1/D2 territory.
+The IED cross-metric conjunction leaf (two per-metric tests,
+[`rules-engine-design`](../biotope/rules-engine-design.md) §B1 condition union) is named
+**`coincidence`** in the blueprint contract — **renamed** from the MVP's `correlation`; genuine
+cross-metric relations are exclusively D1/D2 territory.
 
 ### S5 · D2 personal relations — the n=1 evaluator
 
@@ -306,7 +307,8 @@ contract; genuine cross-metric relations are exclusively D1/D2 territory.
    Servability logic stays in `shared/brain/index.ts:25-69` — the loader precomputes
    `edge_score`/`serving_band` with those exact functions so reads never re-derive gating. **No
    Neo4j**: 1-hop lookup = `where subject = $k or object = $k` with two btree indexes; the IED
-   line naming a Neo4j projection (`docs/biotope/rules-engine-design.md:22`) is amended.
+   ([`rules-engine-design`](../biotope/rules-engine-design.md) §The pattern) already carries this
+   no-graph-DB serving model.
 3. **Compute:** DET. 4. **Generalization:** G. 5. **Transport:** table read by S7, A1; RLS:
    readable by authenticated users (population data, no user rows). 6. **Store:** above; claims
    upsert on `edge_id` (re-synthesis replaces, per `relationships.ts:99-101`); verifications
@@ -357,8 +359,8 @@ contract; genuine cross-metric relations are exclusively D1/D2 territory.
    contributing metrics, weights `w_m = dqs.weight`-normalised (`registry.ts:62-63`), computed
    **from S2 raw**, reproducible. Weights are provisional pending calibration (§11).
 3. **Compute:** DET + RULES. 4. **Generalization:** G. 5. **Transport:** runs inside the nightly
-   `generate-insights` edge function (existing job, refactored per IED §C,
-   `docs/biotope/rules-engine-design.md:102-113`); writes `composed_insights`; emits gap events
+   `generate-insights` edge function (existing job, refactored per
+   [`rules-engine-design`](../biotope/rules-engine-design.md) §C); writes `composed_insights`; emits gap events
    to A1 in the same transaction.
 6. **Store:**
    ```sql
@@ -408,7 +410,7 @@ contract; genuine cross-metric relations are exclusively D1/D2 territory.
 3. **Compute:** DET assembly + **LLM phrasing** (Claude Haiku 4.5 presentation agent — grounded:
    prompt contains only the ComposedInsight payload; introduces no number/relation not in input;
    output through `validateCopyString`; cached per `(insight_id)`; fire-triggered not per-render —
-   the IED §E discipline, `rules-engine-design.md:128-136`). Claim register: causal wording
+   the IED §E discipline, [`rules-engine-design`](../biotope/rules-engine-design.md) §E). Claim register: causal wording
    only inside quoted-citation framing; personal causal claims blocked by the copy gate (opaque
    here). The still-researching variant's phrasing prompt additionally REQUIRES the
    unverified-personal-observation framing and forbids any citation-like wording; its rendered
@@ -1056,8 +1058,8 @@ registry. Deferred; this registry section is its authoring source when it lands.
 
 - **`docs/biotope/rules-engine-design.md` (IED), serve-side design:** the rules engine (IED §C)
   survives as ONE of three card producers in `insight_cards`; this doc adds the edge and personal
-  producers (S7/S8), amends the IED's Neo4j-projection line (S6 replaces it with Postgres
-  `verified_edges`), and renames the IED `correlation` leaf to `coincidence` (S4). The IED's
+  producers (S7/S8), confirms the IED's Postgres `verified_edges` serving model (S6 — a relational
+  1-hop lookup, no graph DB), and renames the IED `correlation` leaf to `coincidence` (S4). The IED's
   presentation-agent discipline (§E) and copy-gate defense-in-depth (§C) are inherited unchanged.
 - **`docs/nao/brain-synthesis-design.md` / `docs/nao/brain-ingestion-design.md`:** remain accurate for the
   contract rationale and the shipped ingest CLI; this doc is the authority on the stages layered

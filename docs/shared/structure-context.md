@@ -49,7 +49,7 @@ ourobion/
 │   │   ├── dev-workflow.md            # Full dev cycle — what AI does vs what humans must do
 │   │   ├── commit-conventions.md      # Conventional Commits spec
 │   │   ├── decisions/                 # Granular architecture ADRs (citation extraction, anomaly, reliability)
-│   │   └── hackathon/                 # Launchpad 2026 strategy (rules, direction, narrative, judging)
+│   │   └── hackathon/                 # Launchpad 2026 strategy (rules + direction; narrative merged into direction, prior evaluations archived)
 │   ├── nao/                   # The brain feature (knowledge graph of metric relationships)
 │   │   ├── nao-app-design.md              # nao web app: brain inspection/curation surface
 │   │   ├── brain-synthesis-design.md            # Brain design: evidence-tiered edges, second-LLM verification

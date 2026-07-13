@@ -163,9 +163,10 @@ shipping placeholder guard files with nothing real to assert, which the enforcem
 
 Resolved by the pipeline decision ([memory 0013](../memory/0013-brain-pipeline-and-support-models-decision.md)):
 
-1. **Verifier model choice — DECIDED: a different model family from synthesis.** Synthesis uses the
-   strongest available model; the verifier a different family, for error decorrelation (the whole point
-   of the second pass). Small trained **support models** additionally pre-check the claim before the
+1. **Verifier model choice — DECIDED: a different model family from synthesis.** Synthesis uses a
+   strong generative model (Claude Sonnet 5); the verifier a different vendor family, for error
+   decorrelation (the whole point of the second pass). Exact model tiers are deferred to
+   [`insight-engine-architecture`](../shared/insight-engine-architecture.md) §10.1. Small trained **support models** additionally pre-check the claim before the
    verifier LLM spends a token — an NLI verdict pre-filter and a relation/direction/claim-kind
    cross-check that feed `directionCheck` / `claimKindCheck`; the study-design + venue models feed
    `evidenceTier` / `impactTier`. See [`brain-support-models-design.md`](brain-support-models-design.md).

@@ -17,8 +17,11 @@ doc covers the *front of the pipeline only* — discovering papers, fetching the
 identity, and storing them — up to the point where a paper's text is ready for synthesis. The
 synthesis → verification → graph steps are [`brain-synthesis-design.md`](brain-synthesis-design.md); the edge/claim
 contract is [`shared/brain/`](../../shared/brain/). The brain's runtime *schema* (how edges are stored
-and served) is **not yet designed** — this doc deliberately stops at "text + a `paper_uid` ready to
-cite."
+and served) is **settled** — truth-tier edge artifacts (R2 JSONL + the contract) projected by a
+deterministic loader into a relational `verified_edges` view served as a 1-hop lookup, no graph DB
+(see [`insight-engine-architecture`](../shared/insight-engine-architecture.md) §S6/§A11 and
+[`brain-synthesis-design.md`](brain-synthesis-design.md) "Decisions (resolved) item 2"). This doc
+deliberately stops at "text + a `paper_uid` ready to cite."
 
 > **Scope & use.** The corpus is a **private study asset for relationship extraction**, never shipped
 > in the product and never publicly redistributed. That keeps the licensing posture simple (see
@@ -415,8 +418,6 @@ interface IngestControlConfig {
 
 - **NUS institutional proxy + publisher TDM APIs** (Elsevier/Springer/Wiley) + the **Singapore 2021 TDM
   exception** — own follow-up research before any paywalled automation. Unlocks `paywalled → html/pdf`.
-- **Brain runtime schema** — how verified edges are stored/served (Supabase table vs generated
-  artifact); see [`brain-synthesis-design.md`](brain-synthesis-design.md) "Open decisions". This doc stops at "text + uid."
 - **Synthesis & verifier pipeline** — the two-LLM passes that consume this corpus (BRAIN-DESIGN §
   safeguard); `promptVersion` scheme.
 - **`PaperRecord` as a `shared/` contract + guards** — promote when a DB or the app consumes the

@@ -1,3 +1,11 @@
+---
+title: docs/graph — code-relationship awareness index
+summary: What docs/graph holds — the curated couplings.yaml semantic/data-coupling guards that static analysis cannot see, the graphify semantic context layer, and why the auto-generated structural import graph is deferred; the boundary reference for the deferred structural graph.
+type: index
+scope: repo
+status: canonical
+updated: 2026-07-13
+---
 # docs/graph — code-relationship awareness
 
 ourobion tracks a change's blast radius across layers: **curate what isn't derivable, defer the

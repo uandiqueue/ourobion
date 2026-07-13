@@ -61,7 +61,7 @@ Ship the depth-first slice **and its measured artifacts** (cut breadth before cu
 
 ### Priority 2 — design corrections (hours–1 day each)
 - **Calibrate `edgeScore` weights + `EDGE_GATES` (0.8/0.5)** against a small labelled set (or explicitly declare them provisional-pending-calibration) and add unit tests. These constants decide what reaches users and are currently unjustified magic numbers. *(Approach)*
-- **Drop Neo4j from the delta** — project the truth store straight into the force-graph — or explicitly justify it at demo scale. At ~dozens of edges a graph DB reads as complexity-for-its-own-sake. **Rescoping call: default to dropping it.** *(Approach)*
+- **Neo4j is dropped (settled).** The served graph is a relational `verified_edges` 1-hop lookup (`where subject=$k or object=$k`) projected straight into the client force-graph — no graph DB. At ~dozens of edges a graph DB would have been complexity-for-its-own-sake. *(Approach)*
 - **Tighten the `independentRetrieval` claim**: bind `performed:true` → `sources.length ≥ 1` and source-ids disjoint from the synthesis citations, or downgrade the "can't be prompted away / structural guarantee" language to "schema + prompt best-effort." It is currently a self-reported boolean. *(Approach, Honesty)*
 
 ### Priority 3 — write-up & demo hygiene (capacity-independent, free)
@@ -279,7 +279,7 @@ Depth-first over a **curated ~30–50 paper slice** of the corpus (the 1,200-pap
 3. **Synthesis LLM node (LLM-1)** — paper text → `RelationshipClaim` + `quoteSpans` against the existing contract.
 4. **Deterministic `quoteCheck`** + **(b2) venue lookup** (OpenAlex/SJR → `impactTier`, no training) — near-free cross-checks before any verifier token is spent.
 5. **Adversarial verifier LLM (LLM-2)** — *decorrelated model family*, independent retrieval, refute-by-default → graded `EdgeVerification`. **The intellectual center of the submission.**
-6. **`verified_edges` store → graph projection** (Supabase/R2 → Neo4j-style traversal).
+6. **`verified_edges` relational view → client force-graph projection** (1-hop lookup, `where subject=$k or object=$k`; no graph DB).
 7. **nao v2 graph + evidence panel** — the visible payoff: click an edge → quote spans, citations, `evidenceTier`/`servingBand`.
 8. **nao v3 human-in-the-loop curation** — curator approves/rejects proposed edges (`provenance:'human'`). Strongest *agentic-app* demo angle; cheap on top of v2.
 
@@ -557,7 +557,7 @@ claims.**
 - Prebuild/delta scope + git dates: repo `git log` (117 commits ≤ 2026-07-03); `docs/shared/phase-2-plan.md`;
   session `docs/sessions/20260703T065307Z-agentjwork-claude-nao-corpus-run-plus-controls.md`.
 - Architecture / Approach / decision log: `docs/nao/brain-synthesis-design.md`, `brain-ingestion-design.md`,
-  `nao-app-design.md`, `brain-support-models-design.md`; brief `docs/archive/briefs/2026-07-01-brain-pipeline-and-training-eval.md`.
+  `nao-app-design.md`, `brain-support-models-design.md`.
 - Contract truth (gating + invariants): `shared/brain/relationships.ts`, `shared/brain/index.ts`,
   `shared/brain/relationships.schema.ts`.
 - Non-diagnostic + prebuild framing: `docs/shared/project-context.md`, `README.md`.

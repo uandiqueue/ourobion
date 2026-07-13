@@ -1,3 +1,11 @@
+---
+title: docs/memory — durable cross-device memory index
+summary: Index of the one-fact-per-file durable memory notes (architectural decisions, domain gotchas, schema rationale) that travel across machines and agent CLIs; context_sync.mjs --check keeps this index and the fact files in lockstep.
+type: index
+scope: repo
+status: canonical
+updated: 2026-07-13
+---
 # docs/memory — durable, cross-device memory
 
 One durable fact per file (architectural decisions, domain gotchas, schema rationale), git-tracked so

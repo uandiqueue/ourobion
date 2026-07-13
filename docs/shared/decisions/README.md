@@ -1,3 +1,11 @@
+---
+title: Insight-engine ADRs — index
+summary: Index of the granular architecture decision records that pin down rules the top-level insight-engine architecture leaves open (citation extraction, anomaly definition, paper-reliability scoring); the architecture doc stays the canonical owner of stage definitions.
+type: index
+scope: shared
+status: canonical
+updated: 2026-07-13
+---
 # Insight-engine architecture decisions (ADRs)
 Granular decisions that pin down rules the top-level [architecture](../insight-engine-architecture.md) left open.
 
