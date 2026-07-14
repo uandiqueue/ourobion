@@ -6,8 +6,8 @@ Attempts used this session: 1
 Final asset: `apps/biotope/assets/images/generated/biomech_botanical/scan/scan_circular_bloom.png`
 Candidates:
 
-- `docs/biotope/ui-context/ai-assets/reviews/candidates/scan_circular_bloom_attempt_1.png`
-- `docs/biotope/ui-context/ai-assets/reviews/candidates/scan_circular_bloom_attempt_2.png`
+- `docs/biotope/ui/ai-assets/reviews/candidates/scan_circular_bloom_attempt_1.png`
+- `docs/biotope/ui/ai-assets/reviews/candidates/scan_circular_bloom_attempt_2.png`
 
 ## Seed Match
 

@@ -5,9 +5,9 @@
 - Final asset:
   `apps/biotope/assets/images/generated/biomech_botanical/profile/profile_signature_flower.png`
 - Candidate attempts:
-  - `docs/biotope/ui-context/ai-assets/reviews/candidates/profile_signature_flower_attempt_1.png`
-  - `docs/biotope/ui-context/ai-assets/reviews/candidates/profile_signature_flower_attempt_2.png`
-  - `docs/biotope/ui-context/ai-assets/reviews/candidates/profile_signature_flower_attempt_3.png`
+  - `docs/biotope/ui/ai-assets/reviews/candidates/profile_signature_flower_attempt_1.png`
+  - `docs/biotope/ui/ai-assets/reviews/candidates/profile_signature_flower_attempt_2.png`
+  - `docs/biotope/ui/ai-assets/reviews/candidates/profile_signature_flower_attempt_3.png`
 
 ## UI Seed Fit
 

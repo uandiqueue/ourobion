@@ -23,6 +23,9 @@ guard-protected change — never a schema-wide rewrite.** On that platform Phase
 [100-metric decision · memory 0014](../memory/0014-metric-catalog-100-expansion-decision.md));
 the full ~360-metric [`metrics-catalog.md`](../biotope/metrics-catalog.md) stays the reference, not the ship target.
 
+> **What to do next?** See [`next-steps.md`](./next-steps.md) — the roadmap home for the current top
+> priority, near-term work by area, and the backlog.
+
 This doc is the **plan authority**: goals, what Phase 2 contains, the tracks + sequence, and the gate.
 Detail lives in the design docs it points to — the metric platform in
 [`metrics-registry-design.md`](../biotope/metrics-registry-design.md) + [`shared/metrics/README.md`](../../shared/metrics/README.md);
@@ -118,7 +121,7 @@ The unfinished MVP work, **plus the metric platform** everything else builds on.
 | ⛔ **Metric platform — storage primitives** | Generalize storage to `daily_log` / `events` / `state_bands` / `signals` / `derived_metrics` (migrations + schema guards). `daily_gut_rows`, `antibiotic_courses`, `wearable_daily`, `baseline_snapshots` become the first instances — no rewrite. |
 | ⛔ Dart shared contracts | `shared/types/index.dart` (`BaselineSnapshot`, `InsightCard`, `InsightFiredEvent`, `EngagementState`, `DailyPhysioRow`, `DailyEnvRow` + `fromJson`/`toJson`) and `getCopyRule()`. 2-reviewer PR. |
 | ⛔ Real parity guard tests | `shared_types_parity`, `copy_guidelines_parity`, `daily_gut_row_schema` + their `couplings.yaml` edges `planned → active`. (`shared_types_parity` + the `metrics-registry-*` guards are active; `copy_guidelines` + `daily_gut_row` remain.) || M1 app shell | Replace the `[DEV]` home screen with real Home / Log / Insights / Profile tab navigation. || M2 logic extraction | Pull inline DQS/save logic into `normaliser.dart` + `logging_controller.dart` + tests. **DQS becomes tier-aware** — only the daily-core (T1) spine counts toward completeness; events / periods / passive never penalize it. |
-| M2 standing-water weekly audit | Weekly "standing water present?" prompt with re-ask suppression — a periodic event, not a daily column. |
+| M2 standing-water weekly audit ✅ **DONE** | Weekly "standing water present?" prompt with re-ask suppression — shipped; wires the existing `standing_water_present` column as a weekly/event-tier signal, kept out of DQS. A periodic event, not a daily column. |
 | M2 symptom flags | Multi-select symptom logging surfaced via a daily "anything feel off?" gateway that opens symptom **events**. |
 | M2 antibiotic course tracker | Set up a course (drug, start, duration); app derives `on_antibiotics`/`gut_watch_active`; dose reminders. The exemplar `state_bands` instance. |
 | M6 stat display | Surface `dqs_7day_avg` + `longest_streak` in the home tab. |

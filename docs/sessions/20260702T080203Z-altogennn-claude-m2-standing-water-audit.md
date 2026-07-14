@@ -64,3 +64,5 @@
 - `apps/biotope/.env.public` doesn't exist (only `.env.public.example`), so `flutter test` can't
   build its asset bundle. Fix needs Docker running + `npx supabase start` (prints the local anon
   key to paste in) — deferred to a later session, not attempted this session.
+
+memory: none

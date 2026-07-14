@@ -4,7 +4,7 @@ Status: accepted
 Background mode: porcelain_white - correct
 Attempts used this session: 1
 Final asset: `apps/biotope/assets/images/generated/biomech_botanical/archive/archive_report_thumbnail_base.png`
-Candidate: `docs/biotope/ui-context/ai-assets/reviews/candidates/archive_report_thumbnail_base_attempt_1.png`
+Candidate: `docs/biotope/ui/ai-assets/reviews/candidates/archive_report_thumbnail_base_attempt_1.png`
 
 ## Seed Match
 

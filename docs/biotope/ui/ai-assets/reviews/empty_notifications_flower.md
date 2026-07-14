@@ -5,7 +5,7 @@
 - Final asset:
   `apps/biotope/assets/images/generated/biomech_botanical/empty_states/empty_notifications_flower.png`
 - Candidate attempt:
-  `docs/biotope/ui-context/ai-assets/reviews/candidates/empty_notifications_flower_attempt_1.png`
+  `docs/biotope/ui/ai-assets/reviews/candidates/empty_notifications_flower_attempt_1.png`
 
 ## UI Seed Fit
 

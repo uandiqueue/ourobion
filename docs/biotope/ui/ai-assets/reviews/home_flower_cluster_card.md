@@ -6,8 +6,8 @@ Attempts used this session: 1
 Final asset: `apps/biotope/assets/images/generated/biomech_botanical/home/home_flower_cluster_card.png`
 Candidates:
 
-- `docs/biotope/ui-context/ai-assets/reviews/candidates/home_flower_cluster_card_attempt_1.png`
-- `docs/biotope/ui-context/ai-assets/reviews/candidates/home_flower_cluster_card_attempt_2.png`
+- `docs/biotope/ui/ai-assets/reviews/candidates/home_flower_cluster_card_attempt_1.png`
+- `docs/biotope/ui/ai-assets/reviews/candidates/home_flower_cluster_card_attempt_2.png`
 
 ## Seed Match
 

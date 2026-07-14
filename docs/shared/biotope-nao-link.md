@@ -4,7 +4,7 @@ summary: The seam view of how biotope (consumer app) and nao (brain curation sur
 type: architecture
 scope: shared
 status: canonical
-updated: 2026-07-13
+updated: 2026-07-15
 ---
 
 # biotope ↔ nao — the runtime link
@@ -79,7 +79,66 @@ number or relation not in the input, is cached per `insight_id` (fire-triggered,
 passes `validateCopyString` ([non-diagnostic copy](../memory/0003-non-diagnostic-copy.md)) before
 storage. Server-side only; keys never reach the client.
 
-## 4 · Who writes a relationship, and how it reaches biotope
+## 4 · Edge selection & trust gating at the seam
+
+Before any edge becomes user-visible the seam has to answer two questions: *how strongly* an edge is
+trusted enough to serve, and *which* of a metric's servable neighbours a card actually mentions. Both are
+settled by the **shared `shared/brain/` contract**, called identically on both sides of the seam — nao's
+curator UI and biotope's composer use the same `edgeScore` / `servingBand` / `servableEdges` /
+`needsReview` functions, so biotope can never surface an edge nao's own reviewers would treat as
+not-ready. The grading math (weights, thresholds, tiers) is owned by
+[`insight-engine-architecture.md`](insight-engine-architecture.md) §S6 + the hyperparameter registry (§9)
+and `shared/brain/index.ts`; this section records only the *seam consequences*, not those stage defs.
+
+### 4.1 · Trust grading is one shared gate, not a biotope-side decision
+
+Every edge carries a rolled-up 0–1 `edgeScore` — verifier confidence, shaded by study-design
+`evidenceTier` and net *independent-root* corroboration (composition + weights owned by architecture §S6
+/ §9, `index.ts:40-48`). `servingBand()` buckets that score:
+
+- **`high`** — serve plainly (a cited card, §3 `agree`).
+- **`mid`** — serve with a "limited evidence" qualifier.
+- **`hold`** — never served, on either side.
+
+biotope's composer joins **only servable edges** (`servableEdges()` = `status='active'` ∧ band ≠ `hold`,
+`index.ts:61`) — the same predicate nao's UI uses to decide an edge is presentable. Notability
+(`impactTier`, venue weight) is deliberately **excluded** from `edgeScore` (architecture invariant 4), so
+a top-venue paper running a weak design still lands in a low band. There is therefore no second,
+biotope-side trust judgement: biotope inherits nao's grade verbatim. Contradicted / grounded-but-low
+edges are the inverse — `needsReview()` (`index.ts:75-81`) suppresses them and routes them to a curator;
+they are never a serve candidate regardless of any other score (architecture §S7 `contradiction` branch).
+
+### 4.2 · Edge selection: which neighbour a card actually mentions
+
+As the brain grows a single metric can accrue several servable neighbours at once. A card states one
+clear claim, not a pile — and the phrasing LLM never arbitrates which. Selection is deterministic, ahead
+of phrasing:
+
+1. **Relation-kind filter (serve-time).** `no_effect` (a studied null, kept in the store only so the dead
+   edge isn't re-proposed) and `confounds` (a data-quality caveat about some *other* relationship, not an
+   "X→Y" claim) are excluded from surfacing outright, regardless of `edgeScore`. This is stricter than the
+   servable-verdict gate: such an edge can be `active` and well-graded yet still must not reach a card.
+2. **Direction eligibility.** Only monotonic relations (`increases|decreases`) may set a card's
+   direction; `modulates|correlates` edges attach as **context-only citations**, never a directional
+   claim (architecture invariant 3 / §S7).
+3. **Rank + cap.** Servable edges are ordered by `edgeScore` desc (`servableEdges()`, `index.ts:68`); the
+   composer surfaces the **single top directional edge** for the fired metric, not the whole 1-hop pool. A
+   fired pattern is single-metric (`FiredPattern.metricKey`, architecture §S4) — cross-metric relations
+   live in the edge, not the pattern — so a card carries one primary relationship plus any context-only
+   citations. (The 1-hop neighbour cap N per metric is still an open tuning knob, §7.)
+
+### 4.3 · Direction is phrased against the user's own movement
+
+Whether a relationship exists and which way it runs is fixed at verification time — never guessed at
+serve time. The one thing the seam resolves per fire: a monotonic edge is phrased against **which way
+this user's metric actually moved**. The composer already carries this as
+`direction: 'consistent'|'inconsistent'` (`sign(edge.relation)` vs `pattern.state`, architecture §S7
+`ComposedInsight.edges[]`), so the *same* stored edge phrases oppositely for a metric that rose vs. one
+that fell — same edge, opposite copy, because the observed movement was opposite. `modulates|correlates`
+are phrased without asserting a direction ("this pattern is linked to…"), consistent with their
+context-only role above.
+
+## 5 · Who writes a relationship, and how it reaches biotope
 
 `verified_edges` has **three writers**, distinguished by `RelationshipClaim.provenance`. nao is only one,
 and not the expected majority — full detail in [`../nao/brain-synthesis-design.md`](../nao/brain-synthesis-design.md):
@@ -112,7 +171,7 @@ changed" notification:
 A newly-written edge simply becomes visible the next time a card fires whose pattern metric matches it,
 once the loader has run. No Neo4j projection step exists.
 
-## 5 · The reverse direction: biotope feeding the brain what it's missing
+## 6 · The reverse direction: biotope feeding the brain what it's missing
 
 The brain does not only grow from papers researchers happen to pick — one research-query source is what
 biotope users actually need. This is the **gap ledger** (§A1), not an ad-hoc table:
@@ -131,7 +190,7 @@ biotope users actually need. This is the **gap ledger** (§A1), not an ad-hoc ta
 pair, biotope isn't told — the live lookup that used to come up empty simply succeeds next time a
 matching pattern fires. Same asynchronous, no-push posture as everything else here.
 
-## 6 · Settled vs. open
+## 7 · Settled vs. open
 
 **Settled (was open in the Neo4j draft):** the serving store is the relational `verified_edges` view,
 not Neo4j (no Bolt driver / Aura connectivity question); evidence for the phrasing prompt is read from

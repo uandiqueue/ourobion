@@ -4,7 +4,7 @@
 - Background mode: transparent
 - Final asset: `apps/biotope/assets/images/generated/biomech_botanical/profile/profile_botanical_crest.png`
 - Candidate attempts:
-  - `docs/biotope/ui-context/ai-assets/reviews/candidates/profile_botanical_crest_attempt_1.png`
+  - `docs/biotope/ui/ai-assets/reviews/candidates/profile_botanical_crest_attempt_1.png`
 
 ## UI Seed Fit
 

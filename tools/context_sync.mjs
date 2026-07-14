@@ -101,6 +101,9 @@ function mdFilesIn(dir) {
 function walkMd(dir, out = []) {
   if (!isDir(dir)) return out;
   for (const name of readdirSync(dir).sort()) {
+    // `ai-assets/` is an asset-generation working subsystem (per-asset prompts, reviews,
+    // manifests, progress) — not prose ground truth. Exempt it from the doc map + coverage check.
+    if (name === "ai-assets") continue;
     const p = join(dir, name);
     if (isDir(p)) walkMd(p, out);
     else if (name.endsWith(".md")) out.push(p);

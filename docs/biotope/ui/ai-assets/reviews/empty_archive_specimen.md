@@ -5,7 +5,7 @@
 - Final asset:
   `apps/biotope/assets/images/generated/biomech_botanical/empty_states/empty_archive_specimen.png`
 - Candidate attempt:
-  `docs/biotope/ui-context/ai-assets/reviews/candidates/empty_archive_specimen_attempt_1.png`
+  `docs/biotope/ui/ai-assets/reviews/candidates/empty_archive_specimen_attempt_1.png`
 
 ## UI Seed Fit
 

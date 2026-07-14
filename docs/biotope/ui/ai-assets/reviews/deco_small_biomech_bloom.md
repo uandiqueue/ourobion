@@ -5,7 +5,7 @@
 - Final asset:
   `apps/biotope/assets/images/generated/biomech_botanical/decorative/deco_small_biomech_bloom.png`
 - Candidate attempt:
-  `docs/biotope/ui-context/ai-assets/reviews/candidates/deco_small_biomech_bloom_attempt_1.png`
+  `docs/biotope/ui/ai-assets/reviews/candidates/deco_small_biomech_bloom_attempt_1.png`
 
 ## UI Seed Fit
 

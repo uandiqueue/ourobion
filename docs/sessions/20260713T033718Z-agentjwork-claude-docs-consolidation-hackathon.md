@@ -92,3 +92,29 @@ Went deeper on hygiene per user follow-up. Fable produced the taxonomy/naming/en
 - Two buckets: `temp/` (promotable) vs `archive/` (frozen); active docs never link into archive.
 - Memory is enforced, not trust-based: front-matter + generated indexes + push-gate checks d–j.
 - The insight-engine architecture doc is the sole owner of stage definitions; app docs point to it.
+
+---
+
+## Update — branch consolidation into this branch (2026-07-15)
+
+Consolidated all outstanding work onto this branch (the renewed structure) ahead of a dev-phase2 update:
+- **UI assets:** committed the biotope-ui-ux worktree's uncommitted work as AI-generated UI starter
+  assets (biomech-botanical images + `BiotopeGeneratedAssets` + logo/brand kit + the ai-assets
+  generation subsystem), merged it in, and relocated `ai-assets` to `docs/biotope/ui/ai-assets/`
+  (fixing a `git mv` double-nest). Exempted `ai-assets/` from the doc-index enforcement (asset
+  working files, not prose).
+- **m2 standing-water audit:** cherry-picked Alton's feature (weekly prompt over the existing
+  `standing_water_present` column; out of DQS) + its session log.
+- **biotope-nao-link:** ported the edge-selection + trust-grading substance from the superseded
+  `docs/biotope-nao-link-plan` branch into `docs/shared/biotope-nao-link.md` (adapted to the
+  relational, no-Neo4j model); kept its session log. The branch is now redundant.
+- **next-steps:** added `docs/shared/next-steps.md` (roadmap) + pointers in AGENTS.md and phase-2-plan;
+  marked the W0 standing-water item done.
+- Verified: `context_sync --check` green, 0 broken active links, retired-name sweep clean.
+
+## Left (after this)
+- Merge this branch → `dev-phase2` (most-updated), then delete stale branches + the biotope-ui-ux worktree.
+- **Immediate next step (NOT done here, needs go): fold `dev-phase2` → `main`** to register
+  `brain-ingest.yml`'s workflow_dispatch on the default branch and unblock nao ingestion. See next-steps.md.
+
+memory: none

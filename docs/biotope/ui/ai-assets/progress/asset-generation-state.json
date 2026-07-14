@@ -10,10 +10,10 @@
                        "category":  "home",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/home/home_hero_robot_hand_main.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/home_hero_robot_hand_main_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/home_hero_robot_hand_main_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/home_hero_robot_hand_main.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/home_hero_robot_hand_main.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/home_hero_robot_hand_main.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/home_hero_robot_hand_main.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,
@@ -28,10 +28,10 @@
                        "category":  "home",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/home/home_hero_robot_hand_alt_01.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/home_hero_robot_hand_alt_01_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/home_hero_robot_hand_alt_01_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/home_hero_robot_hand_alt_01.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/home_hero_robot_hand_alt_01.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/home_hero_robot_hand_alt_01.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/home_hero_robot_hand_alt_01.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,
@@ -46,11 +46,11 @@
                        "category":  "home",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/home/home_flower_cluster_card.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/home_flower_cluster_card_attempt_1.png",
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/home_flower_cluster_card_attempt_2.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/home_flower_cluster_card_attempt_1.png",
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/home_flower_cluster_card_attempt_2.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/home_flower_cluster_card.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/home_flower_cluster_card.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/home_flower_cluster_card.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/home_flower_cluster_card.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  2,
@@ -65,11 +65,11 @@
                        "category":  "scan",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/scan/scan_biomech_orchid.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/scan_biomech_orchid_attempt_1.png",
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/scan_biomech_orchid_attempt_2.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/scan_biomech_orchid_attempt_1.png",
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/scan_biomech_orchid_attempt_2.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/scan_biomech_orchid.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/scan_biomech_orchid.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/scan_biomech_orchid.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/scan_biomech_orchid.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  2,
@@ -84,11 +84,11 @@
                        "category":  "scan",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/scan/scan_circular_bloom.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/scan_circular_bloom_attempt_1.png",
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/scan_circular_bloom_attempt_2.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/scan_circular_bloom_attempt_1.png",
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/scan_circular_bloom_attempt_2.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/scan_circular_bloom.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/scan_circular_bloom.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/scan_circular_bloom.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/scan_circular_bloom.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  2,
@@ -103,10 +103,10 @@
                        "category":  "scan",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/scan/scan_sensor_flower_closeup.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/scan_sensor_flower_closeup_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/scan_sensor_flower_closeup_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/scan_sensor_flower_closeup.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/scan_sensor_flower_closeup.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/scan_sensor_flower_closeup.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/scan_sensor_flower_closeup.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,
@@ -121,10 +121,10 @@
                        "category":  "insights",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/insights/insights_neural_botanical_cluster.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/insights_neural_botanical_cluster_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/insights_neural_botanical_cluster_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/insights_neural_botanical_cluster.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/insights_neural_botanical_cluster.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/insights_neural_botanical_cluster.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/insights_neural_botanical_cluster.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,
@@ -139,10 +139,10 @@
                        "category":  "insights",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/insights/insights_biomech_heart_bloom.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/insights_biomech_heart_bloom_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/insights_biomech_heart_bloom_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/insights_biomech_heart_bloom.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/insights_biomech_heart_bloom.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/insights_biomech_heart_bloom.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/insights_biomech_heart_bloom.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,
@@ -157,10 +157,10 @@
                        "category":  "insights",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/insights/insights_branching_node_system.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/insights_branching_node_system_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/insights_branching_node_system_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/insights_branching_node_system.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/insights_branching_node_system.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/insights_branching_node_system.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/insights_branching_node_system.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,
@@ -175,10 +175,10 @@
                        "category":  "archive",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/archive/archive_herbarium_specimen.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/archive_herbarium_specimen_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/archive_herbarium_specimen_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/archive_herbarium_specimen.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/archive_herbarium_specimen.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/archive_herbarium_specimen.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/archive_herbarium_specimen.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,
@@ -193,10 +193,10 @@
                        "category":  "archive",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/archive/archive_preserved_flower_fragment.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/archive_preserved_flower_fragment_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/archive_preserved_flower_fragment_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/archive_preserved_flower_fragment.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/archive_preserved_flower_fragment.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/archive_preserved_flower_fragment.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/archive_preserved_flower_fragment.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,
@@ -211,10 +211,10 @@
                        "category":  "archive",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/archive/archive_report_thumbnail_base.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/archive_report_thumbnail_base_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/archive_report_thumbnail_base_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/archive_report_thumbnail_base.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/archive_report_thumbnail_base.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/archive_report_thumbnail_base.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/archive_report_thumbnail_base.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,
@@ -229,12 +229,12 @@
                        "category":  "profile",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/profile/profile_signature_flower.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/profile_signature_flower_attempt_1.png",
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/profile_signature_flower_attempt_2.png",
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/profile_signature_flower_attempt_3.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/profile_signature_flower_attempt_1.png",
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/profile_signature_flower_attempt_2.png",
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/profile_signature_flower_attempt_3.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/profile_signature_flower.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/profile_signature_flower.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/profile_signature_flower.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/profile_signature_flower.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  3,
@@ -249,11 +249,11 @@
                        "category":  "profile",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/profile/profile_porcelain_camellia.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/profile_porcelain_camellia_attempt_1.png",
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/profile_porcelain_camellia_attempt_2.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/profile_porcelain_camellia_attempt_1.png",
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/profile_porcelain_camellia_attempt_2.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/profile_porcelain_camellia.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/profile_porcelain_camellia.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/profile_porcelain_camellia.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/profile_porcelain_camellia.md",
                        "status":  "accepted",
                        "latest_session_attempts":  2,
                        "total_attempts":  2,
@@ -268,10 +268,10 @@
                        "category":  "profile",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/profile/profile_botanical_crest.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/profile_botanical_crest_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/profile_botanical_crest_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/profile_botanical_crest.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/profile_botanical_crest.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/profile_botanical_crest.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/profile_botanical_crest.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,
@@ -286,10 +286,10 @@
                        "category":  "decorative",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/decorative/deco_vine_corner_left.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/deco_vine_corner_left_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/deco_vine_corner_left_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/deco_vine_corner_left.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/deco_vine_corner_left.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/deco_vine_corner_left.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/deco_vine_corner_left.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,
@@ -304,10 +304,10 @@
                        "category":  "decorative",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/decorative/deco_vine_corner_right.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/deco_vine_corner_right_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/deco_vine_corner_right_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/deco_vine_corner_right.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/deco_vine_corner_right.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/deco_vine_corner_right.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/deco_vine_corner_right.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,
@@ -322,10 +322,10 @@
                        "category":  "decorative",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/decorative/deco_flower_cluster_white.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/deco_flower_cluster_white_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/deco_flower_cluster_white_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/deco_flower_cluster_white.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/deco_flower_cluster_white.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/deco_flower_cluster_white.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/deco_flower_cluster_white.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,
@@ -340,10 +340,10 @@
                        "category":  "decorative",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/decorative/deco_flower_cluster_blush.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/deco_flower_cluster_blush_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/deco_flower_cluster_blush_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/deco_flower_cluster_blush.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/deco_flower_cluster_blush.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/deco_flower_cluster_blush.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/deco_flower_cluster_blush.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,
@@ -358,10 +358,10 @@
                        "category":  "decorative",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/decorative/deco_small_biomech_bloom.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/deco_small_biomech_bloom_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/deco_small_biomech_bloom_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/deco_small_biomech_bloom.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/deco_small_biomech_bloom.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/deco_small_biomech_bloom.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/deco_small_biomech_bloom.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,
@@ -376,10 +376,10 @@
                        "category":  "decorative",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/decorative/deco_leaf_brass_node.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/deco_leaf_brass_node_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/deco_leaf_brass_node_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/deco_leaf_brass_node.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/deco_leaf_brass_node.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/deco_leaf_brass_node.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/deco_leaf_brass_node.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,
@@ -394,11 +394,11 @@
                        "category":  "empty_states",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/empty_states/empty_scan_bloom.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/empty_scan_bloom_attempt_1.png",
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/empty_scan_bloom_attempt_2.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/empty_scan_bloom_attempt_1.png",
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/empty_scan_bloom_attempt_2.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/empty_scan_bloom.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/empty_scan_bloom.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/empty_scan_bloom.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/empty_scan_bloom.md",
                        "status":  "accepted",
                        "latest_session_attempts":  2,
                        "total_attempts":  2,
@@ -413,10 +413,10 @@
                        "category":  "empty_states",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/empty_states/empty_archive_specimen.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/empty_archive_specimen_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/empty_archive_specimen_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/empty_archive_specimen.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/empty_archive_specimen.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/empty_archive_specimen.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/empty_archive_specimen.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,
@@ -431,10 +431,10 @@
                        "category":  "empty_states",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/empty_states/empty_insights_seedpod.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/empty_insights_seedpod_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/empty_insights_seedpod_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/empty_insights_seedpod.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/empty_insights_seedpod.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/empty_insights_seedpod.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/empty_insights_seedpod.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,
@@ -449,10 +449,10 @@
                        "category":  "empty_states",
                        "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/empty_states/empty_notifications_flower.png",
                        "candidate_attempt_paths":  [
-                                                       "docs/biotope/ui-context/ai-assets/reviews/candidates/empty_notifications_flower_attempt_1.png"
+                                                       "docs/biotope/ui/ai-assets/reviews/candidates/empty_notifications_flower_attempt_1.png"
                                                    ],
-                       "prompt_file_path":  "docs/biotope/ui-context/ai-assets/prompts/empty_notifications_flower.md",
-                       "review_file_path":  "docs/biotope/ui-context/ai-assets/reviews/empty_notifications_flower.md",
+                       "prompt_file_path":  "docs/biotope/ui/ai-assets/prompts/empty_notifications_flower.md",
+                       "review_file_path":  "docs/biotope/ui/ai-assets/reviews/empty_notifications_flower.md",
                        "status":  "accepted",
                        "latest_session_attempts":  1,
                        "total_attempts":  1,

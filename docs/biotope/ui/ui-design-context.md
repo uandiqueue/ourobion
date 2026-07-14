@@ -247,6 +247,29 @@ Flutter: use `AnimationController` + `AnimatedBuilder` with `Transform.translate
 
 ---
 
+## AI-Generated Image Assets
+
+The biotope UI now ships with a **starter set of AI-generated image assets** in the
+**biomech-botanical** style (porcelain-white backgrounds, ivory biomechanical surfaces,
+restrained brass detailing, realistic botanical stems — a calm, premium biotech feel).
+
+- **Generation subsystem:** `docs/biotope/ui/ai-assets/` — the documentation-first working set that
+  produces the images: the asset **manifest**, per-asset **prompts**, **reviews**, **lessons**, and
+  **progress** tracking (so batches resume across sessions). This folder is exempt from the doc
+  INDEX/front-matter convention (asset-generation working files, not prose).
+- **Image files:** `apps/biotope/assets/images/generated/biomech_botanical/` (grouped by surface:
+  `home/`, `scan/`, `insights/`, `archive/`, `profile/`, `decorative/`, `empty_states/`).
+- **Dart index:** reference images via the `BiotopeGeneratedAssets` constants in
+  `apps/biotope/lib/core/generated_assets.dart` — never hardcode asset path strings in widgets.
+- **Logo / brand kit:** the ourobion-biotope logo and brand package lives at
+  `assets/ourobion-biotope-logo/` (logo, color, favicon, brand `DESIGN.md`). It is a brand reference
+  only — do not regenerate, modify, or embed the logo inside AI-generated assets.
+
+These are a **START**, not a finished set. Only **manifest-accepted** assets should ship in production
+UI; refine and extend the set as UI screens are built out.
+
+---
+
 ## Files in This Folder
 
 | File | Screen | Module |

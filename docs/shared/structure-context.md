@@ -21,7 +21,8 @@ ourobion/
 ├── AGENTS.md                  # SINGLE SOURCE OF TRUTH for agents + humans (points to everything)
 ├── CLAUDE.md / GEMINI.md      # Thin pointers to AGENTS.md
 ├── assets/                    # Brand assets (design reference, NOT app-bundled)
-│   └── ourobion-brand/        # Logos (PNG/SVG, light/dark), favicon, colors, brand DESIGN.md
+│   ├── ourobion-brand/        # Logos (PNG/SVG, light/dark), favicon, colors, brand DESIGN.md
+│   └── ourobion-biotope-logo/ # biotope logo + brand kit (logo, color, favicon, DESIGN.md)
 ├── .githooks/
 │   └── pre-push               # Runs `node tools/context_sync.mjs --check` (core.hooksPath=.githooks)
 ├── .github/
@@ -61,6 +62,7 @@ ourobion/
 │   │   ├── metrics-catalog.md         # Candidate-metrics catalog
 │   │   ├── metrics-registry-design.md # Single-source metric registry (safe metric add/remove)
 │   │   └── ui/                # UI design system (ui-design-context.md + mockups)
+│   │       └── ai-assets/      # AI-generated UI asset subsystem (prompts/manifest/reviews) — exempt from the doc index
 │   ├── temp/                  # WIP drafts, promotable to ground truth — NOT authoritative
 │   │   ├── README.md                  # temp lifecycle (draft → promote → archive)
 │   │   └── briefs/                     # dated research/options briefs (YYYY-MM-DD-slug.md)
@@ -159,6 +161,8 @@ files are locatable and machine-checkable:
   it. Memory facts (`docs/memory/*.md`) and decisions (`docs/shared/decisions/*.md`) use the id-carrying
   memory/decision schema instead (`id`, `title`, `summary`, `type`, `status`, `decided`, `updated`).
 - **excluded** — `docs/sessions/` (append-only logs), `docs/archive/**` (kept verbatim behind an archive
-  banner), and code READMEs under `shared/` are **not** renamed or front-mattered under this convention.
+  banner), `docs/biotope/ui/ai-assets/` (asset-generation working files — manifest/prompts/reviews, not
+  prose; exempt from the INDEX and front-matter enforcement), and code READMEs under `shared/` are
+  **not** renamed or front-mattered under this convention.
 - **numbered facts** — memory and decision files are `NNNN-<kebab-slug>.md` with a zero-padded prefix
   that MUST match the `id:` in their front-matter.
