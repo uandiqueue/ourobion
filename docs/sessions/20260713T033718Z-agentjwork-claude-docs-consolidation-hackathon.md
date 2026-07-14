@@ -131,3 +131,5 @@ memory: none
   branch and unblock nao ingestion.
 
 memory: none
+
+- Fixed check (h) to exempt pre-convention session logs (full-history main fold flagged legacy logs).

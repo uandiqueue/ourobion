@@ -62,6 +62,8 @@ const NNNN_PREFIX = /^(\d{4})-/;
 const GEN_BEGIN = "<!-- BEGIN GENERATED -->";
 const GEN_END = "<!-- END GENERATED -->";
 const RECORD_STATUS = new Set(["accepted", "superseded"]);
+// Session logs from this date on must carry a `memory:` line (check h); older logs predate the convention.
+const MEMORY_LINE_SINCE = "20260713";
 
 function read(path) {
   return readFileSync(path, "utf8");
@@ -429,8 +431,12 @@ function checkSessionMemoryDelta(errors, ctx) {
   for (const rel of touchedSessions) {
     const abs = join(REPO_ROOT, rel);
     if (!isFile(abs)) continue;
+    // Pre-convention logs (before the memory: line was introduced) are exempt — otherwise a
+    // full-history fold to the default branch would flag every legacy session log at once.
+    const stamp = TS_PREFIX.exec(rel.split("/").pop() || "");
+    const preConvention = stamp && stamp[1] < MEMORY_LINE_SINCE;
     const m = MEM_LINE.exec(read(abs));
-    if (!m) { errors.push(`${rel}: missing a \`memory:\` line (use \`memory: none\` or \`memory: added 00NN; superseded 00MM\`).`); continue; }
+    if (!m) { if (!preConvention) errors.push(`${rel}: missing a \`memory:\` line (use \`memory: none\` or \`memory: added 00NN; superseded 00MM\`).`); continue; }
     if (m[1].trim().toLowerCase() !== "none") anyDeclaresChange = true;
   }
   const changedRecords = ctx.changed.some((l) =>
