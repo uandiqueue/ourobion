@@ -1,3 +1,13 @@
+---
+id: "0008"
+title: graphify is the semantic context tool; complementary to the deferred structural graph
+summary: graphify indexes repo + paper corpus into a gitignored graphify-out/ subgraph (project-bounded venv, Claude Code hook pre-wired) to fight context overload; it is a rebuildable projection and complements — never replaces — the deferred structural import-graph or couplings.yaml.
+type: memory
+status: accepted
+decided: 2026-07-13
+updated: 2026-07-13
+---
+
 # 0008 — graphify is the semantic context tool; complementary to the deferred structural graph
 
 ourobion uses **graphify** (github.com/safishamsi/graphify, PyPI `graphifyy`) — a semantic
@@ -49,4 +59,4 @@ job of the semantic pass (host session model), not the AST pass. This is adequat
 context-substrate role and confirms graphify does **not** substitute for the deferred structural
 import-graph — it is the complementary semantic layer.
 
-Plan: graphify is workstream W6 in `docs/PHASE2-PLAN.md`. Related: [0007-rules-as-data-two-tier](0007-rules-as-data-two-tier.md).
+Plan: graphify is workstream W6 in `docs/phase-2-plan.md`. Related: [0007-rules-as-data-two-tier](0007-rules-as-data-two-tier.md).

@@ -1,3 +1,13 @@
+---
+id: "0010"
+title: iOS builds need a Mac; HealthKit needs a paid Apple account + real device
+summary: iOS cannot be built on Windows (do daily work on Android emulator); HealthKit + Apple Sign In need the paid Apple Developer Program ($99/yr) plus a real iPhone, so treat iOS as a Mac/cloud-CI task.
+type: memory
+status: accepted
+decided: 2026-07-13
+updated: 2026-07-13
+---
+
 # iOS builds need a Mac; HealthKit needs a paid Apple account + real device
 
 **Constraint (dev environment).** The iOS target exists and is configured — `apps/biotope/ios/` is present

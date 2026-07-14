@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme.dart';
 import '../../impl/antibiotic_service.dart';
+import '../../impl/behaviour/mosquito_logging.dart';
 import '../../impl/logging_controller.dart';
 import '../../impl/normaliser.dart';
 import '../../../m3_passive_health/index.dart';
@@ -64,6 +65,8 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
   bool _isSaving = false;
   bool _isInitialLoading = true;
   AntibioticCourse? _activeCourse;
+  bool? _standingWaterPresent;
+  bool _standingWaterPromptDue = false;
 
   // ── DQS (Data Quality Score) ───────────────────────────────────
   // Pure logic lives in impl/normaliser.dart; weights are sourced from the
@@ -109,14 +112,19 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
 
     final rowFuture = DailyLogService(client).getTodayLog(userId, date);
     final courseFuture = AntibioticService(client).getActiveCourse(userId);
+    final lastStandingWaterFuture =
+        StandingWaterService(client).getLastAnsweredDate(userId);
     WearableService(client).syncToday(userId).ignore();
     final row = await rowFuture;
     final course = await courseFuture;
+    final lastStandingWaterCheck = await lastStandingWaterFuture;
 
     if (!mounted) return;
     setState(() {
       _isInitialLoading = false;
       _activeCourse = course;
+      _standingWaterPromptDue =
+          isStandingWaterPromptDue(lastStandingWaterCheck, DateTime.now());
       if (row != null) {
         _urineColour = row['urine_colour'] as int?;
         _stoolForm   = row['stool_form'] as int?;
@@ -130,6 +138,7 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
             ?.map((e) => e as String)
             .toList() ?? [];
         _notesCtrl.text = row['notes'] as String? ?? '';
+        _standingWaterPresent = row['standing_water_present'] as bool?;
       }
     });
   }
@@ -196,6 +205,7 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
           gutComfort: _gutComfort,
           symptomFlags: _symptomFlags,
           notes: _notesCtrl.text,
+          standingWaterPresent: _standingWaterPresent,
           logCompleteness: _dqs.toDouble(),
         ),
       );
@@ -362,6 +372,15 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
                       max: 20,
                       onChanged: (v) => setState(() => _mosquitoBites = v),
                     ),
+
+                    if (_standingWaterPromptDue)
+                      _YesNoCard(
+                        icon: Icons.water_outlined,
+                        label: 'Standing water nearby',
+                        sublabel: 'Weekly check — buckets, trays, blocked drains',
+                        value: _standingWaterPresent,
+                        onChanged: (v) => setState(() => _standingWaterPresent = v),
+                      ),
 
                     _NavigatorCard(
                       icon: Icons.warning_amber_rounded,
@@ -831,6 +850,127 @@ class _SegmentCard extends StatelessWidget {
                 ),
               );
             }),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _YesNoCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String sublabel;
+  final bool? value;
+  final ValueChanged<bool> onChanged;
+
+  const _YesNoCard({
+    required this.icon,
+    required this.label,
+    required this.sublabel,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final logged = value != null;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: OurobionColors.surfaceLowest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: logged ? OurobionColors.primaryContainer : OurobionColors.outlineVariant,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(icon, size: 18,
+                color: logged ? OurobionColors.primary : OurobionColors.outline),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: GoogleFonts.manrope(
+                      fontSize: 13, fontWeight: FontWeight.w600,
+                      color: OurobionColors.onSurface,
+                    ),
+                  ),
+                  Text(
+                    sublabel,
+                    style: GoogleFonts.manrope(
+                      fontSize: 11, color: OurobionColors.outline,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ]),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => onChanged(false),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    margin: const EdgeInsets.only(right: 6),
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: value == false
+                          ? OurobionColors.primary
+                          : OurobionColors.surfaceContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'No',
+                        style: GoogleFonts.manrope(
+                          fontSize: 14, fontWeight: FontWeight.w700,
+                          color: value == false
+                              ? OurobionColors.onPrimary
+                              : OurobionColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => onChanged(true),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: value == true
+                          ? OurobionColors.primary
+                          : OurobionColors.surfaceContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Yes',
+                        style: GoogleFonts.manrope(
+                          fontSize: 14, fontWeight: FontWeight.w700,
+                          color: value == true
+                              ? OurobionColors.onPrimary
+                              : OurobionColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

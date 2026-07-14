@@ -4,7 +4,7 @@ name: Brain ingest
 # (apps/nao/src/lib/githubDispatch.ts calls this workflow's `workflow_dispatch`
 # REST endpoint) or manually from the Actions tab. Runs on a GitHub-hosted
 # runner because the CLI does long-running network fetches + PDF parsing that
-# cannot run inside nao's own Cloudflare Worker (see docs/nao/BRAIN-INGESTION-DESIGN.md
+# cannot run inside nao's own Cloudflare Worker (see docs/nao/brain-ingestion-design.md
 # §8.1 for why). `--remote-control` makes the run honor a remote pause / budget
 # override from control/ingest-config.json regardless of how it was triggered.
 on:

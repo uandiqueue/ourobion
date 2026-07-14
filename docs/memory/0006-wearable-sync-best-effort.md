@@ -1,3 +1,13 @@
+---
+id: "0006"
+title: Wearable sync is best-effort
+summary: Wearable writes use .ignore() and silently no-op on permission/availability failures; never treat a missing wearable_daily row or null field as an error — wearables augment confidence, never gate.
+type: memory
+status: accepted
+decided: 2026-07-13
+updated: 2026-07-13
+---
+
 # Wearable sync is best-effort
 
 **Gotcha (M3 wearables).** Wearable sync is intentionally **best-effort** (`.ignore()` on the write):

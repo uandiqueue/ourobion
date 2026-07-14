@@ -1,3 +1,11 @@
+---
+title: docs/graph — code-relationship awareness index
+summary: What docs/graph holds — the curated couplings.yaml semantic/data-coupling guards that static analysis cannot see, the graphify semantic context layer, and why the auto-generated structural import graph is deferred; the boundary reference for the deferred structural graph.
+type: index
+scope: repo
+status: canonical
+updated: 2026-07-13
+---
 # docs/graph — code-relationship awareness
 
 ourobion tracks a change's blast radius across layers: **curate what isn't derivable, defer the
@@ -12,7 +20,7 @@ auto-generated structural graph, run a semantic context graph for agents, and en
   Guard tests live in `apps/biotope/test/guards/` and run with `flutter test`.
 
 The curated **module dependency graph and interface rules** are not duplicated here — they live in
-[`../biotope/ARCHITECTURE-CONTEXT.md`](../biotope/ARCHITECTURE-CONTEXT.md), which is the boundary reference today.
+[`../biotope/architecture-context.md`](../biotope/architecture-context.md), which is the boundary reference today.
 
 ## Semantic context graph — graphify
 
@@ -68,5 +76,5 @@ hand-edit it** (the two-tier-truth rule, [`../memory/0001-two-tier-truth.md`](..
 - **SQL side (`supabase/migrations`):** no import graph; keep relying on `couplings.yaml` guard tests
   to tie table shapes to the contracts and models that read/write them.
 
-Until then, `couplings.yaml` + the curated ARCHITECTURE-CONTEXT graph + `flutter analyze` are the
+Until then, `couplings.yaml` + the curated architecture-context graph + `flutter analyze` are the
 enforced relationship layer.

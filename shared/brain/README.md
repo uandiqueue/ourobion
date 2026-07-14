@@ -1,11 +1,13 @@
 # The Brain — relationship contract
 
+**Runbook only; rationale in [`docs/nao/brain-synthesis-design.md`](../../docs/nao/brain-synthesis-design.md), stages in [`docs/shared/insight-engine-architecture.md`](../../docs/shared/insight-engine-architecture.md).**
+
 `shared/brain/` is the cross-language contract for **the brain**: ourobion's knowledge graph of
 scientifically-derived relationships between metrics. Nodes are metric keys (from
 [`shared/metrics/registry.ts`](../metrics/registry.ts)); edges are relationships synthesised from the
 literature and then independently verified.
 
-See [`docs/nao/BRAIN-DESIGN.md`](../../docs/nao/BRAIN-DESIGN.md) for the full design (why a second LLM, the
+See [`docs/nao/brain-synthesis-design.md`](../../docs/nao/brain-synthesis-design.md) for the full design (why a second LLM, the
 evidence ladder, gating, the two-tier placement).
 
 ## Two records, two LLM passes
@@ -85,6 +87,6 @@ TS-first, like the registry was before its env metrics landed:
 - **A `brain-endpoint-to-registry` guard** — asserting every edge endpoint resolves to an active
   registry metric (`metrics.isActiveMetric`).
 
-These follow the `couplings.yaml` pattern in [`docs/biotope/METRICS-REGISTRY-DESIGN.md`](../../docs/biotope/METRICS-REGISTRY-DESIGN.md);
+These follow the `couplings.yaml` pattern in [`docs/biotope/metrics-registry-design.md`](../../docs/biotope/metrics-registry-design.md);
 they aren't added yet because there's no Dart consumer or DB table to hold honest. See
-`docs/nao/BRAIN-DESIGN.md` → "Guards (deferred)".
+`docs/nao/brain-synthesis-design.md` → "Guards (deferred)".

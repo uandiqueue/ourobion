@@ -31,7 +31,7 @@ Global options:
                     exit 0 if all required keys present, non-zero otherwise.
   --remote-control  read control/ingest-config.json from R2 before running: honor a
                     remote pause, a queued seed/limit request, and any budget-limit
-                    override (see docs/nao/BRAIN-INGESTION-DESIGN.md). A --seed/--limit
+                    override (see docs/nao/brain-ingestion-design.md). A --seed/--limit
                     passed on this command line always wins over a queued request.
   --help, -h        show this help.
 

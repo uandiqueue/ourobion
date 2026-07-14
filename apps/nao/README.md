@@ -106,4 +106,5 @@ node --test          # d1/etl fixtures
 4. Deploy via OpenNext (`npx opennextjs-cloudflare build && npx wrangler deploy`) and bind the route
    (`nao.ourobion.com`). Set the Worker secrets/vars (Supabase URL/anon key) in the Cloudflare dashboard.
 
-See [`docs/nao/NAO-DESIGN.md`](../../docs/nao/NAO-DESIGN.md) for the full design + rationale.
+See [`docs/nao/nao-app-design.md`](../../docs/nao/nao-app-design.md) for the full design + rationale.
+**Doc map (start here):** [`docs/INDEX.md`](../../docs/INDEX.md).

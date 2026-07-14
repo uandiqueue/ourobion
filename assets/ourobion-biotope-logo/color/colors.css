@@ -1,0 +1,28 @@
+/* Ourobion Biotope — brand colours */
+:root{
+  /* Light (primary) */
+  --biotope-bg: #FFFFFF;
+  --biotope-ring: #C8A878;
+  --biotope-petal-1: #D4B878;
+  --biotope-petal-2: #C4A060;
+  --biotope-petal-3: #A87840;
+  --biotope-petal-4: #886030;
+  --biotope-petal-5: #604818;
+  --biotope-glyph: #A87840;
+  --biotope-envelope: #C8A878;
+  --biotope-wordmark: #6E4C1E;
+}
+
+.biotope-dark,[data-theme="dark"]{
+  /* Dark */
+  --biotope-bg: #17130D;
+  --biotope-ring: #C8A878;
+  --biotope-petal-1: #EBD09A;
+  --biotope-petal-2: #DABE80;
+  --biotope-petal-3: #C6A468;
+  --biotope-petal-4: #AE8848;
+  --biotope-petal-5: #8C6C34;
+  --biotope-glyph: #E2C488;
+  --biotope-envelope: #C8A878;
+  --biotope-wordmark: #E2C488;
+}

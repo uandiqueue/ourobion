@@ -1,4 +1,7 @@
 # shared/SHARED-CONTEXT.md — Ourobion Shared Contract
+
+**Canonical owner of the cross-language contract types — other docs must link here, not re-enumerate.**
+
 > **CONSTANT LAYER** — All changes require PR with 2 team reviewers.
 > Breaking changes to any type below require notifying all module owners.
 > Last updated: Phase 2 (metrics registry; M3 wearable contract corrected; brain relationship contract)
@@ -247,7 +250,7 @@ interface EngagementState {
 > Produced by: the brain ingestion pipeline (synthesis + verification LLM passes)
 > Consumed by: M5b Insight Engine (the "why" behind a surfaced pattern) [forthcoming]
 > Authoritative shapes live in `shared/brain/relationships.ts` (TS-first). Full design:
-> [`docs/nao/BRAIN-DESIGN.md`](../docs/nao/BRAIN-DESIGN.md).
+> [`docs/nao/brain-synthesis-design.md`](../docs/nao/brain-synthesis-design.md).
 
 The brain is ourobion's knowledge graph of scientifically-derived relationships between metrics. Nodes
 are metric keys (`shared/metrics/registry.ts`); edges are produced in **two LLM passes**, kept as two
@@ -262,14 +265,10 @@ records so verification can re-run without re-synthesising:
   `corroboration`), the per-failure-mode checks (`directionCheck` / `claimKindCheck` / `scopeCheck` /
   `effectSizeCheck`), and the rolled-up trust (`evidenceTier` 1–5, `confidence` 0..1, `dqs.weight`).
 
-A `supported`/`contradicted` verdict **requires `independentRetrieval.performed === true`** (a
-schema invariant) — that is what makes the second pass a grounded check, not a rubber stamp. Trust is
-a **graded score** (`edgeScore` / `servingBand` in `shared/brain/index.ts`), not a binary gate.
-
-**Two-tier:** the contract above is TRUTH (2-reviewer); the claims/verifications are a **rebuildable
-projection** ([memory 0001](../docs/memory/0001-two-tier-truth.md)) — never hand-edit a verdict; fix
-the input (corpus / prompt — bump `promptVersion`) and re-run. See
-[memory 0012](../docs/memory/0012-brain-adversarial-edge-verification.md).
+The two join into a `VerifiedEdge` — the servable unit of the graph. **Why the second pass isn't a
+rubber stamp, the schema invariants that enforce it, gating (`edgeScore` / `servingBand`), and the
+two-tier placement are rationale — see [`docs/nao/brain-synthesis-design.md`](../docs/nao/brain-synthesis-design.md)**
+(field-level reference: [`shared/brain/README.md`](./brain/README.md)).
 
 ---
 

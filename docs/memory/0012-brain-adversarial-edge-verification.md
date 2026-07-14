@@ -1,9 +1,19 @@
+---
+id: "0012"
+title: The brain verifies synthesised edges with a second, grounded, adversarial LLM
+summary: Every brain edge is synthesised then re-checked by an independent, adversarial verifier LLM against freshly-retrieved evidence; schema invariants force grounding (no retrieval ⇒ uncertain) and emit a graded trust score, not a yes/no gate.
+type: memory
+status: accepted
+decided: 2026-07-13
+updated: 2026-07-13
+---
+
 # 0012 — The brain verifies synthesised edges with a second, grounded, adversarial LLM
 
 **The brain** (knowledge graph of scientifically-derived metric relationships) produces every edge in
 two LLM passes: synthesis proposes a `RelationshipClaim`; a **second, independent LLM** re-checks it
 against **freshly-retrieved** evidence and emits an `EdgeVerification`. Contract:
-[`shared/brain/`](../../shared/brain/); design: [`BRAIN-DESIGN.md`](../nao/BRAIN-DESIGN.md).
+[`shared/brain/`](../../shared/brain/); design: [`brain-synthesis-design.md`](../nao/brain-synthesis-design.md).
 
 **Why:** synthesis from papers is the highest hallucination-surface step; a wrong edge is written once
 and read forever, so quality is paid at ingestion time (amortised). A second pass is only

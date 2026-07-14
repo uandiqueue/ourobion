@@ -25,7 +25,7 @@ consent is granular, and community aggregates only publish above per-region thre
 | 🌱 **biotope** | The mobile app (Flutter, iOS + Android) — 30-second daily logging + descriptive insight cards. | [`apps/biotope/README.md`](apps/biotope/README.md) |
 | 🧠 **nao** | The web "window into the brain" — a Next.js dashboard over the research corpus (search, facets, coverage), deployed on Cloudflare. | [`apps/nao/README.md`](apps/nao/README.md) |
 
-Product principles in full: [`docs/PROJECT-CONTEXT.md`](docs/PROJECT-CONTEXT.md).
+Product principles in full: [`docs/shared/project-context.md`](docs/shared/project-context.md).
 
 ---
 
@@ -48,8 +48,8 @@ literature — and it pays its quality cost at ingestion time, by design:
 - **Rebuildable projection.** The *contract* (`shared/brain/`) is git-tracked truth; the *edges* are a
   rebuildable projection — never hand-edited. To change a verdict you fix the input and re-run.
 
-Design + rationale: [`docs/nao/BRAIN-DESIGN.md`](docs/nao/BRAIN-DESIGN.md) ·
-[`docs/nao/BRAIN-INGESTION-DESIGN.md`](docs/nao/BRAIN-INGESTION-DESIGN.md). Contract:
+Design + rationale: [`docs/nao/brain-synthesis-design.md`](docs/nao/brain-synthesis-design.md) ·
+[`docs/nao/brain-ingestion-design.md`](docs/nao/brain-ingestion-design.md). Contract:
 [`shared/brain/`](shared/brain/).
 
 ---
@@ -62,22 +62,24 @@ Design + rationale: [`docs/nao/BRAIN-DESIGN.md`](docs/nao/BRAIN-DESIGN.md) ·
 |---|---|
 | **Run the biotope app** (env, toolchain, Android) | [`apps/biotope/README.md`](apps/biotope/README.md) |
 | **Run the nao web dashboard** (env, D1/ETL, deploy) | [`apps/nao/README.md`](apps/nao/README.md) |
-| **Product design** — principles, goals, phases | [`docs/PROJECT-CONTEXT.md`](docs/PROJECT-CONTEXT.md) · [`docs/PHASE2-PLAN.md`](docs/PHASE2-PLAN.md) |
-| **System architecture & data flows** | [`docs/biotope/ARCHITECTURE-CONTEXT.md`](docs/biotope/ARCHITECTURE-CONTEXT.md) |
-| **Repository layout & structure rules** | [`docs/STRUCTURE-CONTEXT.md`](docs/STRUCTURE-CONTEXT.md) |
-| **UI design** — tokens, components | [`docs/biotope/ui-context/UI-DESIGN-CONTEXT.md`](docs/biotope/ui-context/UI-DESIGN-CONTEXT.md) (app) · [`docs/nao/NAO-DESIGN.md`](docs/nao/NAO-DESIGN.md) (nao) |
-| **The brain** — design + ingestion | [`docs/nao/BRAIN-DESIGN.md`](docs/nao/BRAIN-DESIGN.md) · [`docs/nao/BRAIN-INGESTION-DESIGN.md`](docs/nao/BRAIN-INGESTION-DESIGN.md) |
-| **Insights engine / metrics registry** | [`docs/biotope/INSIGHTS-ENGINE-DESIGN.md`](docs/biotope/INSIGHTS-ENGINE-DESIGN.md) · [`docs/biotope/METRICS-REGISTRY-DESIGN.md`](docs/biotope/METRICS-REGISTRY-DESIGN.md) |
+| **Product design** — principles, goals, phases | [`docs/shared/project-context.md`](docs/shared/project-context.md) · [`docs/shared/phase-2-plan.md`](docs/shared/phase-2-plan.md) |
+| **System architecture & data flows** | [`docs/biotope/architecture-context.md`](docs/biotope/architecture-context.md) |
+| **Repository layout & structure rules** | [`docs/shared/structure-context.md`](docs/shared/structure-context.md) |
+| **UI design** — tokens, components | [`docs/biotope/ui/ui-design-context.md`](docs/biotope/ui/ui-design-context.md) (app) · [`docs/nao/nao-app-design.md`](docs/nao/nao-app-design.md) (nao) |
+| **The brain** — design + ingestion | [`docs/nao/brain-synthesis-design.md`](docs/nao/brain-synthesis-design.md) · [`docs/nao/brain-ingestion-design.md`](docs/nao/brain-ingestion-design.md) |
+| **Insight-engine architecture** (authoritative, both apps) | [`docs/shared/insight-engine-architecture.md`](docs/shared/insight-engine-architecture.md) · ADRs [`docs/shared/decisions/`](docs/shared/decisions/) · seam [`docs/shared/biotope-nao-link.md`](docs/shared/biotope-nao-link.md) |
+| **Insights engine (biotope serve) / metrics registry** | [`docs/biotope/rules-engine-design.md`](docs/biotope/rules-engine-design.md) · [`docs/biotope/metrics-registry-design.md`](docs/biotope/metrics-registry-design.md) |
+| **Hackathon** (Launchpad 2026 strategy) | [`docs/shared/hackathon/`](docs/shared/hackathon/) — direction, narrative, judging self-review |
 | **Shared contracts** (TypeScript ↔ Dart) | [`shared/SHARED-CONTEXT.md`](shared/SHARED-CONTEXT.md) |
-| **Decisions & rationale** | [`docs/memory/`](docs/memory/) (indexed decisions) · [`docs/human-briefs/`](docs/human-briefs/) (plain-language briefs) · [`docs/sessions/`](docs/sessions/) (per-session logs) |
-| **Dev workflow** (Issue → PR → merge) | [`docs/dev-workflow.md`](docs/dev-workflow.md) · [`docs/commit-conventions.md`](docs/commit-conventions.md) |
+| **Decisions & rationale** | [`docs/memory/`](docs/memory/) (indexed decisions) · [`docs/shared/decisions/`](docs/shared/decisions/) (architecture ADRs) · [`docs/sessions/`](docs/sessions/) (per-session logs) |
+| **Dev workflow** (Issue → PR → merge) | [`docs/shared/dev-workflow.md`](docs/shared/dev-workflow.md) · [`docs/shared/commit-conventions.md`](docs/shared/commit-conventions.md) |
 
 ### 🤖 AI agents — start at [`AGENTS.md`](AGENTS.md)
 
 `AGENTS.md` is the **single, tool-agnostic source of truth** for agentic tools: how to build here and
 the principles to follow. `CLAUDE.md` / `GEMINI.md` are thin pointers to it, so guidance never drifts
 between Claude, Codex, and Gemini. The AI routing table, truth hierarchy, and PR-review checklist live
-in [`docs/AGENT-PROTOCOL.md`](docs/AGENT-PROTOCOL.md).
+in [`docs/shared/agent-protocol.md`](docs/shared/agent-protocol.md).
 
 > **The split:** humans are pointed to *decisions, rationale, and how to run the apps* (this README).
 > Agents are pointed to *how to build and the principles to follow* (`AGENTS.md`). Neither duplicates

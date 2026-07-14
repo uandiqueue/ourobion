@@ -1,11 +1,19 @@
+---
+title: docs/memory — durable cross-device memory index
+summary: Index of the one-fact-per-file durable memory notes (architectural decisions, domain gotchas, schema rationale) that travel across machines and agent CLIs; context_sync.mjs --check keeps this index and the fact files in lockstep.
+type: index
+scope: repo
+status: canonical
+updated: 2026-07-13
+---
 # docs/memory — durable, cross-device memory
 
 One durable fact per file (architectural decisions, domain gotchas, schema rationale), git-tracked so
 it travels across machines and agent CLIs — the in-repo equivalent of device-local `~/.claude` /
 `~/.gemini` memory, which does **not** travel.
 
-These facts are **decomposed from the CONSTANT-LAYER docs** (`docs/PROJECT-CONTEXT.md`,
-`docs/biotope/ARCHITECTURE-CONTEXT.md`, `shared/SHARED-CONTEXT.md`) and from session learnings — they are
+These facts are **decomposed from the CONSTANT-LAYER docs** (`docs/project-context.md`,
+`docs/biotope/architecture-context.md`, `shared/SHARED-CONTEXT.md`) and from session learnings — they are
 quick-reference pointers, not a replacement for those source docs.
 
 > **Enforcement:** `node tools/context_sync.mjs --check` (run by the pre-push hook + CI) fails on a
@@ -14,17 +22,20 @@ quick-reference pointers, not a replacement for those source docs.
 
 ## Index
 
-- [0001 — Two-tier truth](0001-two-tier-truth.md) — raw rows + migrations are truth; baselines/insights/engagement are rebuildable projections.
-- [0002 — Shared contract changes need 2 reviewers](0002-shared-contract-two-reviewers.md) — `shared/` types are the cross-language seam.
-- [0003 — Non-diagnostic copy is mandatory](0003-non-diagnostic-copy.md) — observational language only; enforced via copy_guidelines.
-- [0004 — HRV SDNN is iOS-only](0004-hrv-sdnn-ios-only.md) — `hrv_sdnn_ms` stays null on Android by design.
-- [0005 — pg_cron config prereqs](0005-pgcron-config-prereqs.md) — set `app.supabase_url` + `app.service_role_key` before applying cron migrations.
-- [0006 — Wearable sync is best-effort](0006-wearable-sync-best-effort.md) — missing wearable data silently no-ops; never a hard gate.
-- [0007 — Analysis rules become data (two-tier)](0007-rules-as-data-two-tier.md) — rules move from hardcoded TS to git-JSON blueprints → a `rules` table; engine last, AI summary later.
-- [0008 — graphify is the semantic context tool](0008-graphify-context-tool.md) — project-bounded semantic knowledge-graph (`graphify-out/`, gitignored) + Claude Code hook; complementary to the deferred structural graph.
-- [0009 — Local test data seeding](0009-local-test-data-seeding.md) — inject backdated rows + rebuild projections so the UI renders "weeks in"; don't log by hand for a week.
-- [0010 — iOS builds need a Mac; HealthKit needs a paid account](0010-ios-build-needs-mac-and-paid-account.md) — no iOS on Windows; Apple Developer Program ($99/yr) + real device for HealthKit.
-- [0011 — Local Supabase auth is email-only](0011-local-supabase-auth-email-only.md) — OAuth (Google/Apple) needs a hosted project; local DB persists across stop/start.
-- [0012 — The brain verifies edges with a second, grounded, adversarial LLM](0012-brain-adversarial-edge-verification.md) — synthesis proposes; an independent verifier re-checks against fresh evidence; invariants enforce grounding; trust is a graded score.
-- [0013 — Brain pipeline + support-models decision (anchor)](0013-brain-pipeline-and-support-models-decision.md) — agentic seeder → deterministic ingest → synthesis LLM + verifier (different family) + 4 small support models → `verified_edges` truth store → Neo4j projection; runtime presentation agent. Anchor: the 2026-07-01 human-brief.
-- [0014 — Metric-catalog 100-expansion decision](0014-metric-catalog-100-expansion-decision.md) — grow the registry 19→100 in collector-gated waves (supersedes the "thin slice"); full ~360 catalog is reference. Anchor: the 2026-07-01 metric-catalog brief.
+<!-- BEGIN GENERATED -->
+- [Two-tier truth](0001-two-tier-truth.md) — Raw rows + migrations + shared contracts are truth; baselines/insights/engagement are rebuildable projections — fix the input and re-run, never hand-edit derived tables.
+- [Shared contract changes need 2 reviewers](0002-shared-contract-two-reviewers.md) — Any change to a shared/ contract type crosses the Dart↔TS seam and requires a PR with 2 reviewers; add fields as optional-with-default, never remove/rename without a migration plan.
+- [Non-diagnostic language is mandatory for all user-facing copy](0003-non-diagnostic-copy.md) — Every user-facing string must be observational (signal/pattern/observation, never diagnose); enforce with validateCopyString and the copy_guidelines TS/Dart parity lists; severity is info/notice/watch.
+- [HRV SDNN is iOS-only](0004-hrv-sdnn-ios-only.md) — hrv_sdnn_ms comes only from Apple HealthKit and stays null on Android (Health Connect exposes RMSSD) by design — treat it as a nullable, platform-dependent signal, never gate on it.
+- [pg_cron migrations need app config set in the Supabase dashboard first](0005-pgcron-config-prereqs.md) — Before pushing pg_cron migrations to production, set app.supabase_url and app.service_role_key in the Supabase dashboard or the scheduled jobs are created but fail silently at run time.
+- [Wearable sync is best-effort](0006-wearable-sync-best-effort.md) — Wearable writes use .ignore() and silently no-op on permission/availability failures; never treat a missing wearable_daily row or null field as an error — wearables augment confidence, never gate.
+- [Analysis rules become data, via a two-tier blueprint→table pattern](0007-rules-as-data-two-tier.md) — Insight rules move from hardcoded TS to git-tracked JSON blueprints (truth, Zod-validated) loaded into a rebuildable Postgres rules table; engine is sequenced last and deterministic, LLM summarization is a later additive phase.
+- [graphify is the semantic context tool; complementary to the deferred structural graph](0008-graphify-context-tool.md) — graphify indexes repo + paper corpus into a gitignored graphify-out/ subgraph (project-bounded venv, Claude Code hook pre-wired) to fight context overload; it is a rebuildable projection and complements — never replaces — the deferred structural import-graph or couplings.yaml.
+- [Local test data seeding (don't log for a week by hand)](0009-local-test-data-seeding.md) — Inject backdated rows keyed on log_date via scripts/seed-test-data.ps1 then rebuild projections (compute-baselines before generate-insights) so the UI renders "weeks in" instantly; target user must already exist (RLS on auth.uid).
+- [iOS builds need a Mac; HealthKit needs a paid Apple account + real device](0010-ios-build-needs-mac-and-paid-account.md) — iOS cannot be built on Windows (do daily work on Android emulator); HealthKit + Apple Sign In need the paid Apple Developer Program ($99/yr) plus a real iPhone, so treat iOS as a Mac/cloud-CI task.
+- [Local Supabase auth: email/password works; OAuth needs a hosted project](0011-local-supabase-auth-email-only.md) — Against local Docker Supabase only email/password auth works (instant signup, no confirmation); test Google/Apple OAuth against a hosted project instead; local DB state persists across stop/start unless db reset or --no-backup.
+- [The brain verifies synthesised edges with a second, grounded, adversarial LLM](0012-brain-adversarial-edge-verification.md) — Every brain edge is synthesised then re-checked by an independent, adversarial verifier LLM against freshly-retrieved evidence; schema invariants force grounding (no retrieval ⇒ uncertain) and emit a graded trust score, not a yes/no gate.
+- [Brain pipeline + support-models decision (the anchor)](0013-brain-pipeline-and-support-models-decision.md) — Fixes the brain build shape — agentic seeder → deterministic ingest → synthesis LLM + different-family verifier + 4 small support models → verified_edges truth store (relational 1-hop, Neo4j dropped) → runtime presentation agent; every LLM node has local-agent and API-worker routes.
+- [Metric-catalog 100-expansion decision](0014-metric-catalog-100-expansion-decision.md) — Grow the metric registry from ~19 to 100 metrics in collector-gated waves (W1 self-report → W2 sensor → W3 env/api → W4 wearable/CGM), superseding the original thin-slice plan; the full ~360-metric catalog stays reference, not ship target.
+- [Docs taxonomy and enforcement](0015-docs-taxonomy-and-enforcement.md) — The docs tree has a fixed taxonomy (shared/nao/biotope/memory/sessions/graph, temp=in-building, archive=frozen/superseded), a kebab + type-suffix + front-matter naming rule, docs/INDEX.md as the enforced map, and context_sync.mjs --check enforces front-matter, supersede reciprocity, index freshness, and archive-containment.
+<!-- END GENERATED -->

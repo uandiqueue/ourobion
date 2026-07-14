@@ -22,7 +22,7 @@ app + Supabase backend that connects human physiology, daily behaviour, and envi
 surface **descriptive** patterns in gut health, hydration, and vector exposure. It is
 **non-diagnostic by construction**.
 
-- **Full product brief, principles, scope, module map, expansion hints:** [`docs/PROJECT-CONTEXT.md`](docs/PROJECT-CONTEXT.md)
+- **Full product brief, principles, scope, module map, expansion hints:** [`docs/shared/project-context.md`](docs/shared/project-context.md)
 - **Non-negotiable product principles** (non-diagnostic always; 30-second logging; graceful
   degradation; PDPA; privacy-safe community) live there — read them before touching user-facing copy
   or data isolation.
@@ -38,7 +38,7 @@ ourobion has a source-of-truth tier and a derived tier. Treat them differently:
 - **TRUTH (git-tracked / user-authored, never reconstructable):**
   - **Supabase migrations** in `supabase/migrations/` — the schema is defined here, in PRs, diffable.
   - **Raw logged rows** — the self-report data users enter (`daily_gut_rows`, `antibiotic_courses`,
-    and later `wearable_daily`, `env_daily`). PROJECT-CONTEXT says it plainly: **"store all raw daily
+    and later `wearable_daily`, `env_daily`). project-context says it plainly: **"store all raw daily
     rows, never derive-only. Raw data is the asset."**
   - **Shared contracts** in `shared/` — the cross-language types every boundary crosses.
 - **DERIVED PROJECTION (rebuildable, never hand-edit):**
@@ -48,7 +48,7 @@ ourobion has a source-of-truth tier and a derived tier. Treat them differently:
   - **the brain's edges** (`RelationshipClaim` + `EdgeVerification`) — synthesised from papers by one
     LLM and verified by a second; rebuilt by re-running the ingestion pipeline. The *contract*
     (`shared/brain/`) is truth; the *instances* are the projection. See
-    [`docs/nao/BRAIN-DESIGN.md`](docs/nao/BRAIN-DESIGN.md) and
+    [`docs/nao/brain-synthesis-design.md`](docs/nao/brain-synthesis-design.md) and
     [`docs/memory/0012-brain-adversarial-edge-verification.md`](docs/memory/0012-brain-adversarial-edge-verification.md).
 
 **Rule:** to change a derived value, fix the **input** (a raw row or the edge-function logic) and
@@ -63,15 +63,17 @@ ourobion is organized as modules **M1–M7** with a strict dependency order. The
 module graph and the enforced interface rules are the boundary reference** (we deliberately do *not*
 auto-generate a structural import graph yet — see §8 and [`docs/graph/README.md`](docs/graph/README.md)):
 
-- **Module dependency graph + data flow + table overview + interface rules:** [`docs/biotope/ARCHITECTURE-CONTEXT.md`](docs/biotope/ARCHITECTURE-CONTEXT.md)
-- **Repository directory layout + `shared/` vs `apps/biotope/` rule + env files:** [`docs/STRUCTURE-CONTEXT.md`](docs/STRUCTURE-CONTEXT.md)
-- **The shared contract types (the connective tissue every boundary crosses):** [`shared/SHARED-CONTEXT.md`](shared/SHARED-CONTEXT.md) — incl. the metrics registry (`shared/metrics/`) and the brain relationship contract (`shared/brain/`, design in [`docs/nao/BRAIN-DESIGN.md`](docs/nao/BRAIN-DESIGN.md))
-- **UI design system:** [`docs/biotope/ui-context/UI-DESIGN-CONTEXT.md`](docs/biotope/ui-context/UI-DESIGN-CONTEXT.md)
-- **Per-feature design docs:** the **nao** brain surface in [`docs/nao/`](docs/nao/) — product design [`NAO-DESIGN.md`](docs/nao/NAO-DESIGN.md), plus [`BRAIN-DESIGN.md`](docs/nao/BRAIN-DESIGN.md) + [`BRAIN-INGESTION-DESIGN.md`](docs/nao/BRAIN-INGESTION-DESIGN.md) + [`BRAIN-MODELS-TRAINING.md`](docs/nao/BRAIN-MODELS-TRAINING.md); the **brain pipeline + support-model DECISION** (anchor) in [`docs/human-briefs/2026-07-01-brain-pipeline-and-training-eval.md`](docs/human-briefs/2026-07-01-brain-pipeline-and-training-eval.md) ([memory 0013](docs/memory/0013-brain-pipeline-and-support-models-decision.md)); the **biotope** app in [`docs/biotope/`](docs/biotope/). Cross-cutting docs stay at `docs/` root.
-- **AI routing table, truth hierarchy & PR review checklist:** [`docs/AGENT-PROTOCOL.md`](docs/AGENT-PROTOCOL.md)
-- **The human dev cycle (Issue → … → Merge):** [`docs/dev-workflow.md`](docs/dev-workflow.md)
+- **Module dependency graph + data flow + table overview + interface rules:** [`docs/biotope/architecture-context.md`](docs/biotope/architecture-context.md)
+- **Repository directory layout + `shared/` vs `apps/biotope/` rule + env files:** [`docs/shared/structure-context.md`](docs/shared/structure-context.md)
+- **The shared contract types (the connective tissue every boundary crosses):** [`shared/SHARED-CONTEXT.md`](shared/SHARED-CONTEXT.md) — incl. the metrics registry (`shared/metrics/`) and the brain relationship contract (`shared/brain/`, design in [`docs/nao/brain-synthesis-design.md`](docs/nao/brain-synthesis-design.md))
+- **UI design system:** [`docs/biotope/ui/ui-design-context.md`](docs/biotope/ui/ui-design-context.md)
+- **Per-feature design docs:** the **nao** brain surface in [`docs/nao/`](docs/nao/) — product design [`nao-app-design.md`](docs/nao/nao-app-design.md), plus [`brain-synthesis-design.md`](docs/nao/brain-synthesis-design.md) + [`brain-ingestion-design.md`](docs/nao/brain-ingestion-design.md) + [`brain-support-models-design.md`](docs/nao/brain-support-models-design.md); the **brain pipeline + support-model decision** in [memory 0013](docs/memory/0013-brain-pipeline-and-support-models-decision.md); the **biotope** app in [`docs/biotope/`](docs/biotope/); the **authoritative insight-engine architecture** (spans both apps, the promoted doc-12 design) in [`docs/shared/insight-engine-architecture.md`](docs/shared/insight-engine-architecture.md) with granular ADRs in [`docs/shared/decisions/`](docs/shared/decisions/) and the runtime seam in [`docs/shared/biotope-nao-link.md`](docs/shared/biotope-nao-link.md).
 
-**Boundary rules that matter most** (full set in ARCHITECTURE-CONTEXT §"Module Interface Rules"):
+**The doc map:** [`docs/INDEX.md`](docs/INDEX.md) lists every active doc with a one-line summary — **read it first to route** to the right doc. **What to build next** is [`docs/shared/next-steps.md`](docs/shared/next-steps.md). Cross-cutting / shared ground truth lives in [`docs/shared/`](docs/shared/); app-scoped truth in [`docs/nao/`](docs/nao/) and [`docs/biotope/`](docs/biotope/). Work-in-progress drafts live in [`docs/temp/`](docs/temp/) (promotable); **frozen/superseded material lives in `docs/archive/` — never build from it** (excluded from agent crawl via the root `.aiignore`; links flow archive→active only, never the reverse).
+- **AI routing table, truth hierarchy & PR review checklist:** [`docs/shared/agent-protocol.md`](docs/shared/agent-protocol.md)
+- **The human dev cycle (Issue → … → Merge):** [`docs/shared/dev-workflow.md`](docs/shared/dev-workflow.md)
+
+**Boundary rules that matter most** (full set in architecture-context §"Module Interface Rules"):
 
 - **No module imports from another module's `/impl`** — public `index`/façade only.
 - **M6 never reads `insight_cards` directly** — it only reacts to `InsightFiredEvent`.
@@ -161,7 +163,7 @@ git config core.hooksPath .githooks
 
 ## 5. Conventions
 
-- **Commits:** Conventional Commits — full spec in [`docs/commit-conventions.md`](docs/commit-conventions.md).
+- **Commits:** Conventional Commits — full spec in [`docs/shared/commit-conventions.md`](docs/shared/commit-conventions.md).
   Types: `feat` / `fix` / `docs` / `style` / `refactor` / `perf` / `test` / `build` / `ci` / `chore` /
   `revert`. **Scope = module or area:** `m1`/`m2`/`m3`/`m5a`/`m5b`/`m6`, or `db`/`ui`/`docs`/`auth`.
   (Recent history uses `m3`, `m5a`, `db`, `docs`.) Keep commits `flutter analyze`-green.
@@ -187,7 +189,7 @@ The repo is in **Phase 2** — turning the shipped MVP self-report loop (M1 auth
 baselines, M5b insights, M6 engagement) into the real product: Android passive health (M3), a
 data-driven insights engine (M5b), environmental context (M4), and the first community slice (M7).
 **Current scope, sequencing, and the Phase 2 → Phase 3 gate live in
-[`docs/PHASE2-PLAN.md`](docs/PHASE2-PLAN.md)** (the plan authority); per-session status lives in
+[`docs/shared/phase-2-plan.md`](docs/shared/phase-2-plan.md)** (the plan authority); per-session status lives in
 `docs/sessions/`.
 
 ### Team workstreams (ownership)
@@ -204,8 +206,8 @@ Active gotchas captured as durable facts: HRV SDNN is iOS-only
 ## 7. Agent collaboration protocol (MANDATORY)
 
 > The detailed **AI routing table, truth hierarchy, and PR review checklist** live in
-> [`docs/AGENT-PROTOCOL.md`](docs/AGENT-PROTOCOL.md); the **human-facing dev cycle** is in
-> [`docs/dev-workflow.md`](docs/dev-workflow.md). This section is the authoritative summary they defer to.
+> [`docs/shared/agent-protocol.md`](docs/shared/agent-protocol.md); the **human-facing dev cycle** is in
+> [`docs/shared/dev-workflow.md`](docs/shared/dev-workflow.md). This section is the authoritative summary they defer to.
 
 ### Session start
 1. Run `node tools/context_sync.mjs --session-start` (the Claude Code SessionStart hook in
@@ -255,13 +257,23 @@ e.g. 20260608T045610Z-uandiqueue-claude-context-system-bootstrap.md
 ```
 
 Timestamp is `YYYYMMDDThhmmssZ` (UTC). Each file records **Attempted / Changed / Decided / Left /
-Blockers** (copy the header from any existing file). The pre-push hook and CI **fail** unless a
-`docs/sessions/` entry is added/changed in the commits being pushed.
+Blockers** (copy the header from any existing file), **plus a `memory:` line** declaring durable-fact
+deltas — `memory: none`, or `memory: added 0016; superseded 0004`. The pre-push hook and CI **fail**
+unless a `docs/sessions/` entry is added/changed in the push **and** it carries a `memory:` line
+(check h); if the push changes memory/decisions but every touched log says `memory: none`, it fails.
 
-### Durable memory — `docs/memory/`
-One fact per file (architectural decisions, domain gotchas, schema rationale). Index **every** file in
-[`docs/memory/README.md`](docs/memory/README.md). The check **fails** on a dangling index link or an
-unindexed `*.md`. Keep index and files in lockstep.
+### Durable memory — `docs/memory/` and decisions — `docs/shared/decisions/` (ENFORCED)
+Two numbered, one-fact-per-file record stores (memory = durable facts/gotchas; decisions = cross-app
+architecture ADRs), `NNNN-slug.md`, each opening with YAML front-matter
+(`id/title/summary/status/updated`; `status: accepted|superseded`, and `superseded_by` when superseded).
+**Before pushing, run `node tools/context_sync.mjs --fix-index`** — it regenerates the GENERATED
+sections of [`docs/INDEX.md`](docs/INDEX.md), [`docs/memory/README.md`](docs/memory/README.md), and
+[`docs/shared/decisions/README.md`](docs/shared/decisions/README.md) from that front-matter. `--check`
+(pre-push + CI) then **fails** on: a dangling/unindexed link, invalid/missing front-matter, a
+`superseded` record without a resolving `superseded_by`, a **stale** generated index, a modified record
+that didn't bump `updated:`, an edited **accepted** decision body (supersede instead), any active doc
+missing from `docs/INDEX.md`, or an active doc linking into `docs/archive/`. Memory facts are living
+(edit + bump `updated:`); decisions are immutable once accepted (supersede with a new record).
 
 ### Task coordination
 Claim a task before starting so two agents on the same device never duplicate effort. State lives in a
@@ -277,7 +289,7 @@ graph for agent context, and enforce what we keep:
 
 - **Structural import graph — DEFERRED.** ourobion is Dart + TypeScript + SQL, so a single import-graph
   tool is awkward. The **curated** module graph + interface rules in
-  [`docs/biotope/ARCHITECTURE-CONTEXT.md`](docs/biotope/ARCHITECTURE-CONTEXT.md) are the boundary reference today.
+  [`docs/biotope/architecture-context.md`](docs/biotope/architecture-context.md) are the boundary reference today.
   [`docs/graph/README.md`](docs/graph/README.md) records exactly how to add a real generated graph
   later (and that, when added, it is a rebuildable projection — never hand-edited).
 - **Semantic context graph (graphify).** [`graphify`](https://github.com/safishamsi/graphify) indexes

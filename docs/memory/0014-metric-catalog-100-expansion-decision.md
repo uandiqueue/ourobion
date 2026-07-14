@@ -1,10 +1,20 @@
+---
+id: "0014"
+title: Metric-catalog 100-expansion decision
+summary: Grow the metric registry from ~19 to 100 metrics in collector-gated waves (W1 self-report → W2 sensor → W3 env/api → W4 wearable/CGM), superseding the original thin-slice plan; the full ~360-metric catalog stays reference, not ship target.
+type: memory
+status: accepted
+decided: 2026-07-01
+updated: 2026-07-13
+---
+
 # 0014 — Metric-catalog 100-expansion decision
 
 **Decision (adopted 2026-07-01).** Grow the metric registry from the shipped ~19 to **100 metrics**, in
-**collector-gated waves** — a deliberate step past PHASE2-PLAN's original "thin slice", which it now
-**supersedes**. The full **~360-metric catalog** ([`../biotope/METRICS-CATALOG.md`](../biotope/METRICS-CATALOG.md))
-stays the **reference**, not the ship target. Which 100 + why + by wave:
-[`../human-briefs/2026-07-01-metric-catalog-100-promotion.md`](../human-briefs/2026-07-01-metric-catalog-100-promotion.md).
+**collector-gated waves** — a deliberate step past phase-2-plan's original "thin slice", which it now
+**supersedes**. The full **~360-metric catalog** ([`../biotope/metrics-catalog.md`](../biotope/metrics-catalog.md))
+stays the **reference**, not the ship target. Which 100 + why + by wave are fixed by the anchor brief
+(2026-07-01 metric-catalog-100-promotion).
 
 **Waves (each promotes only when its collector lands, or the guards go red):**
 - **W1** self-report expansion (~45 manual) — needs the `events` / `state_bands` storage primitives.
@@ -19,4 +29,4 @@ invariant), and reliability is promoted alongside each metric.
 
 Follows [0001](0001-two-tier-truth.md) (raw rows are truth); relates to
 [0013](0013-brain-pipeline-and-support-models-decision.md) (more registry nodes → more for the agentic
-seeder + brain). Sequencing (Family A): [`../PHASE2-PLAN.md` 2026-07-01 integrated update](../PHASE2-PLAN.md).
+seeder + brain). Sequencing (Family A): [`../phase-2-plan.md` 2026-07-01 integrated update](../shared/phase-2-plan.md).

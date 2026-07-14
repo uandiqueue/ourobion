@@ -11,7 +11,7 @@
 // The superRefine invariants are where the SAFEGUARD's philosophy is made executable: a verdict can
 // only be `supported` / `contradicted` if the verifier actually retrieved evidence independently
 // (no grounding ⇒ `uncertain`), `supported`/`partial` require corroboration, `contradicted` requires
-// a contradicting source, and scores stay in range. See docs/nao/BRAIN-DESIGN.md.
+// a contradicting source, and scores stay in range. See docs/nao/brain-synthesis-design.md.
 
 import { z } from 'zod';
 import type {

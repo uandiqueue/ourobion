@@ -1,3 +1,13 @@
+---
+id: "0007"
+title: Analysis rules become data, via a two-tier blueprint→table pattern
+summary: Insight rules move from hardcoded TS to git-tracked JSON blueprints (truth, Zod-validated) loaded into a rebuildable Postgres rules table; engine is sequenced last and deterministic, LLM summarization is a later additive phase.
+type: memory
+status: accepted
+decided: 2026-06-09
+updated: 2026-07-13
+---
+
 # 0007 — Analysis rules become data, via a two-tier blueprint→table pattern
 
 **Decision (Phase 2 plan, 2026-06-09):** ourobion's insight rules move from **hardcoded TypeScript**
@@ -21,4 +31,4 @@ cost discipline. Phase-2 condition set is **core only**: `trend` + `threshold` +
 ([0002-shared-contract-two-reviewers](0002-shared-contract-two-reviewers.md)). All rule copy stays non-diagnostic
 ([0003-non-diagnostic-copy](0003-non-diagnostic-copy.md)), enforced at load, blueprint-guard, and render.
 
-Engine design: `docs/biotope/INSIGHTS-ENGINE-DESIGN.md`; plan: `docs/PHASE2-PLAN.md`. Context tool: [0008-graphify-context-tool](0008-graphify-context-tool.md).
+Engine design: `docs/biotope/rules-engine-design.md`; plan: `docs/phase-2-plan.md`. Context tool: [0008-graphify-context-tool](0008-graphify-context-tool.md).

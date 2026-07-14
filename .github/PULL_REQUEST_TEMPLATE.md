@@ -29,7 +29,8 @@ Closes #
 ### Process
 - [ ] CI is green
 - [ ] PR targets `dev-phase2` (not `main`)
-- [ ] A `docs/sessions/` log for this session is added (enforced by `context_sync --check`)
+- [ ] A `docs/sessions/` log for this session is added, with a `memory:` line (enforced by `context_sync --check`)
+- [ ] If `docs/memory/` or `docs/shared/decisions/` changed: ran `node tools/context_sync.mjs --fix-index`
 - [ ] Linked issue number filled in above
 
 ### If `shared/types/` changed

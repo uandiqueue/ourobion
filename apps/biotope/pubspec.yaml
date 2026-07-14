@@ -67,6 +67,7 @@ flutter:
   assets:
     - .env.public
     - assets/images/
+    - assets/images/generated/biomech_botanical/
 
   fonts:
     - family: Manrope
