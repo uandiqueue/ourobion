@@ -10,9 +10,14 @@ body:
       options:
         - M1 — Core & Compliance
         - M2 — Self-Report
+        - M3 — Wearables
+        - M4 — Environmental context
         - M5a — Baselines
         - M5b — Insight Engine
         - M6 — Engagement
+        - M7 — Community
+        - nao — Brain web app
+        - brain — Knowledge graph / ingestion pipeline
         - CI / Workflow
         - Shared types
         - New module
@@ -25,10 +30,10 @@ body:
       label: Phase scope
       description: Is this in scope for the current phase?
       options:
-        - Phase 1 Stage 1 — current MVP
-        - Phase 1 Stage 2 — wearables
-        - Phase 1 Stage 3 — environmental
-        - Phase 2+
+        - Phase 2 — Track A (biotope app)
+        - Phase 2 — Track B (brain / nao)
+        - Phase 3+ (post stress-test gate)
+        - Backlog / later
     validations:
       required: true
 
@@ -56,5 +61,5 @@ body:
     attributes:
       label: Pre-checks
       options:
-        - label: "This is within the current phase scope (see `docs/shared/project-context.md § Current Scope`)"
+        - label: "This is within the current phase scope (see `docs/shared/phase-2-plan.md`)"
         - label: "No shared types need to change — or the team has discussed it"

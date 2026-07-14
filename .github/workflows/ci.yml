@@ -2,18 +2,18 @@ name: CI
 
 # The non-bypassable backstop: mirrors the local pre-push gate (skippable with --no-verify) and adds
 # the checks that can only run in CI. Three jobs:
-#   - context     : node tools/context_sync.mjs --check (sessions / memory / couplings)
+#   - context     : node tools/context_sync.mjs --check (sessions / memory / decisions / index / couplings)
 #   - flutter     : flutter analyze + flutter test (with the public env file built from secrets)
 #   - typescript  : tsc --noEmit over the shared/ contracts
 on:
   push:
-    branches: [main, dev-alton]
+    branches: [main, dev-phase2]
   pull_request:
-    branches: [main, dev-alton]
+    branches: [main, dev-phase2]
 
 jobs:
   context:
-    name: Context — sessions / memory / couplings
+    name: Context — sessions / memory / decisions / index / couplings
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

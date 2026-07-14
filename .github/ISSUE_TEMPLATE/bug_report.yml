@@ -10,9 +10,14 @@ body:
       options:
         - M1 — Core & Compliance
         - M2 — Self-Report
+        - M3 — Wearables
+        - M4 — Environmental context
         - M5a — Baselines
         - M5b — Insight Engine
         - M6 — Engagement
+        - M7 — Community
+        - nao — Brain web app
+        - brain — Knowledge graph / ingestion pipeline
         - CI / Workflow
         - Shared types
         - Other

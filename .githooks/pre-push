@@ -11,7 +11,7 @@
 # regenerate+diff step here yet. When a generated graph is added, regenerate + diff it below.
 set -e
 
-echo "[pre-push] context_sync --check (sessions / memory / couplings)"
+echo "[pre-push] context_sync --check (sessions / memory / decisions / index / couplings)"
 node tools/context_sync.mjs --check
 
 echo "[pre-push] ok"

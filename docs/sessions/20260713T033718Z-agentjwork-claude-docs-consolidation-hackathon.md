@@ -82,6 +82,10 @@ Went deeper on hygiene per user follow-up. Fable produced the taxonomy/naming/en
   tripped to confirm it fires**. Added [`docs/INDEX.md`] (the doc map) + memory record 0015.
 - **Verification:** retired-name sweep = 0 in active docs; link-check = 0 broken active links;
   `--check` green except session-coverage (this log).
+- **`.github` / `.githooks` refresh:** issue-template module dropdowns updated (added M3/M4/M7 +
+  `nao` + `brain`; feature phase options → Phase-2 Track A/B / Phase 3+); PR template gained the
+  `memory:` line + `--fix-index` checklist items; pre-push + CI labels updated to the fuller check
+  scope; **CI branch triggers `dev-alton` → `dev-phase2`** (the abolished personal line).
 
 ## Decided (reorg)
 - Kebab + type-suffix + front-matter naming; status/dates in metadata, never filenames.
