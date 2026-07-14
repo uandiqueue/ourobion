@@ -21,7 +21,23 @@
     {
       "binding": "DB",
       "database_name": "ourobion-nao-index",
-      "database_id": "PLACEHOLDER_RUN_wrangler_d1_create"
+      "database_id": "1c7d3a80-baa5-47f5-bdcb-9137b19e91ee"
+    }
+  ],
+  // Plain (non-secret) runtime vars — public info, safe to commit. The GitHub
+  // PAT itself (GH_ACTIONS_TOKEN) and SUPABASE_URL are set via
+  // `wrangler secret put` instead (see docs/nao/brain-ingestion-design.md §8.1).
+  "vars": {
+    "GH_REPO": "uandiqueue/ourobion"
+  },
+  // ourobion.com is already on Cloudflare (confirmed via NS lookup), so a Custom
+  // Domain route claims nao.ourobion.com for this Worker on `wrangler deploy` —
+  // no separate DNS record needed; Cloudflare manages it once this route exists
+  // and the deploying account owns the ourobion.com zone.
+  "routes": [
+    {
+      "pattern": "nao.ourobion.com",
+      "custom_domain": true
     }
   ]
 }

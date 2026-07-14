@@ -18,4 +18,10 @@ interface CloudflareEnv {
   CORPUS: R2Bucket;
   DB: D1Database;
   SUPABASE_URL: string;
+  /** Fine-grained GitHub PAT, "Actions: Read and write" scoped to this repo only. */
+  GH_ACTIONS_TOKEN: string;
+  /** "owner/repo", e.g. "uandiqueue/ourobion". */
+  GH_REPO: string;
+  /** Branch/ref the brain-ingest workflow dispatches against. Optional — defaults to "dev-phase2". */
+  GH_ACTIONS_REF?: string;
 }

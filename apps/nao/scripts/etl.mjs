@@ -231,7 +231,13 @@ async function main() {
   const stmts = manifestToSql(jsonl);
   console.log(`[etl] mapped ${stmts.length} paper rows.`);
 
-  const sql = ['BEGIN TRANSACTION;', ...stmts, 'COMMIT;'].join('\n') + '\n';
+  // NOTE: no explicit BEGIN TRANSACTION/COMMIT — real remote D1 (Durable-Object-
+  // backed) rejects raw SQL transaction-control statements ("please use the
+  // state.storage.transaction() APIs instead"); local D1 (Miniflare) tolerated
+  // them, which is why this only surfaced on a real `--remote` run. Each
+  // statement is an idempotent UPSERT, and `wrangler d1 execute --file` already
+  // applies the whole file as one batch, so dropping the wrapper is safe on both.
+  const sql = stmts.join('\n') + '\n';
   const scratchDir = resolve(appRoot, 'scratch');
   if (!existsSync(scratchDir)) mkdirSync(scratchDir, { recursive: true });
   const sqlPath = resolve(scratchDir, 'etl.sql');
