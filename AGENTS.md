@@ -105,9 +105,10 @@ backend + these `tools/`). There is **no Python**.
 | `flutter test` | run the widget + guard tests in `apps/biotope/test/` |
 | `flutter run` | launch the app on a connected device/emulator |
 
-> Flutter tests live in `apps/biotope/test/` (Flutter requires tests inside the package). The repo-root
-> `tests/` directory is reserved for out-of-app integration/e2e harnesses. Coupling **guard tests**
-> live in `apps/biotope/test/guards/` (see §8).
+> Flutter tests live in `apps/biotope/test/` (Flutter requires tests inside the package); other
+> package tests live beside their code (e.g. `tools/brain-ingest/tests/`). A repo-root `tests/`
+> directory can be added for cross-package integration/e2e harnesses once the first one is written.
+> Coupling **guard tests** live in `apps/biotope/test/guards/` (see §8).
 
 ### Supabase backend (run from repo root; the CLI is the `supabase` devDependency)
 

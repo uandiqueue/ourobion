@@ -118,3 +118,16 @@ Consolidated all outstanding work onto this branch (the renewed structure) ahead
   `brain-ingest.yml`'s workflow_dispatch on the default branch and unblock nao ingestion. See next-steps.md.
 
 memory: none
+
+---
+
+## Update — finalize (items 1/2/4, 2026-07-15)
+
+- **apps/nao deploy config committed** (D1 id, nao.ourobion.com route, GH_REPO var + env types,
+  User-Agent header, etl D1-transaction fix) — was the preserved WIP; now on dev-phase2.
+- **Removed the empty repo-root `tests/` placeholder** (YAGNI; per-package tests are the convention —
+  `apps/biotope/test/`, `tools/brain-ingest/tests/`); updated AGENTS §4 + structure-context.
+- **Folded `dev-phase2` → `main`** to register `brain-ingest.yml`'s workflow_dispatch on the default
+  branch and unblock nao ingestion.
+
+memory: none

@@ -99,7 +99,6 @@ ourobion/
 │   │   ├── compute-baselines/ # M5a backend worker
 │   │   └── generate-insights/ # M5b backend worker
 │   └── migrations/            # Postgres schema definitions
-├── tests/                     # Integration and end-to-end tests outside the app boundary
 └── graphify-out/              # graphify's semantic context graph (gitignored, rebuildable projection)
 ```
 
