@@ -252,7 +252,8 @@ function fixIndex() {
 
 // Extract just the GENERATED block content from a file's text (null if absent).
 function generatedBlockOf(text) {
-  const m = new RegExp(`${GEN_BEGIN}\\n([\\s\\S]*?)\\n${GEN_END}`).exec(text);
+  // Tolerate CRLF: git autocrlf checks the working tree out with \r\n on Windows.
+  const m = new RegExp(`${GEN_BEGIN}\\r?\\n([\\s\\S]*?)\\r?\\n${GEN_END}`).exec(text);
   return m ? m[1] : null;
 }
 
@@ -342,7 +343,8 @@ function checkIndexFreshness(errors) {
     if (!isFile(abs)) { errors.push(`${rel} is missing — run \`node tools/context_sync.mjs --fix-index\`.`); continue; }
     const have = generatedBlockOf(read(abs));
     if (have === null) { errors.push(`${rel} has no GENERATED block — run --fix-index.`); continue; }
-    if (have.trim() !== wanted.trim()) {
+    // Compare line-ending-agnostically (working tree may be CRLF on Windows, generated output is LF).
+    if (have.replace(/\r/g, "").trim() !== wanted.replace(/\r/g, "").trim()) {
       errors.push(`${rel} generated index is stale — run \`node tools/context_sync.mjs --fix-index\`.`);
     }
   }
