@@ -95,3 +95,8 @@ graphify-out/
 # now a LOCAL CACHE — R2 is the canonical metadata + binary store (manifest/
 # papers.jsonl + meta/<uid>.json + pdf|jats|text). See BRAIN-INGESTION-DESIGN §1/§6.
 data/corpus/
+
+# llm-router runtime state: budget ledger + local-agent mailbox (request/response
+# audit files). Rebuildable/ephemeral run state, never truth — see
+# tools/llm-router/README.md.
+data/llm-router/

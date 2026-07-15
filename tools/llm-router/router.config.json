@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "nodes": {
+    "seeder": { "model": "claude-sonnet-5", "route": "local_agent", "maxOutputTokens": 8000 },
+    "synthesis": { "model": "claude-sonnet-5", "route": "local_agent", "maxOutputTokens": 8000 },
+    "verifier": { "model": "gpt-5", "route": "local_agent", "maxOutputTokens": 8000 },
+    "phrasing_card": { "model": "claude-haiku-4-5", "route": "local_agent", "maxOutputTokens": 2000 },
+    "report_narrative": { "model": "claude-sonnet-5", "route": "local_agent", "maxOutputTokens": 4000 },
+    "extract_assist": { "model": "claude-haiku-4-5", "route": "local_agent", "maxOutputTokens": 2000 }
+  },
+  "providers": [
+    { "prefix": "claude-", "family": "anthropic", "envKey": "ANTHROPIC_API_KEY" },
+    { "prefix": "gpt-", "family": "openai", "envKey": "OPENAI_API_KEY" },
+    { "prefix": "o3", "family": "openai", "envKey": "OPENAI_API_KEY" },
+    { "prefix": "o4", "family": "openai", "envKey": "OPENAI_API_KEY" },
+    { "prefix": "gemini-", "family": "google", "envKey": "GOOGLE_API_KEY" }
+  ],
+  "prices": {
+    "claude-sonnet-5": { "inputUsdPerMTok": 3.0, "outputUsdPerMTok": 15.0, "provisional": true },
+    "claude-haiku-4-5": { "inputUsdPerMTok": 1.0, "outputUsdPerMTok": 5.0, "provisional": true },
+    "gpt-5": { "inputUsdPerMTok": 1.25, "outputUsdPerMTok": 10.0, "provisional": true }
+  },
+  "budget": {
+    "perRunOutputTokens": 200000,
+    "perDayUsdPerNode": 5.0,
+    "hardStopFraction": 0.95,
+    "ledgerPath": "data/llm-router/ledger.json"
+  },
+  "localAgent": {
+    "mailboxDir": "data/llm-router/mailbox",
+    "timeoutMs": 300000,
+    "pollIntervalMs": 500
+  }
+}
