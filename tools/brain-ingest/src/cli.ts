@@ -6,9 +6,11 @@
  * / `resume`, which delegate to `run.ts` (the §10.6 orchestrator).
  */
 
-import { inspectConfig, sourceEnablement, REQUIRED_VARS } from './config.js';
+import { inspectConfig, loadConfig, sourceEnablement, REQUIRED_VARS } from './config.js';
 import { run, statusReport, type RunResult } from './run.js';
 import { SEED_TOPICS } from './seeds.js';
+import { VenueCache, lookupVenueCached } from './venue/cache.js';
+import { bandImpactTier, type SjrQuartile } from './venue/banding.js';
 
 const USAGE = `ourobion brain-ingest — open-access-first paper-corpus fetcher
 
@@ -22,6 +24,8 @@ Commands:
                                                     discover → resolve → retrieve → extract → store
   status                                           manifest + budget summary
   resume [--remote-control]                        continue an interrupted multi-day run (skip 'fetched')
+  venue --issn <issn> [--sjr-quartile 1-4]         b2 venue lookup: OpenAlex Source stats +
+                                                   C8 impactTier band (per-ISSN cache)
 
 Seed topics:
   ${SEED_TOPICS.join(', ')}
@@ -117,6 +121,44 @@ function parseLimit(options: Map<string, string>): number | undefined {
   return n;
 }
 
+/**
+ * Parse the optional `--sjr-quartile N` (1–4), or `undefined` when absent.
+ * Throws on any other value so the CLI fails loudly.
+ */
+function parseSjrQuartile(options: Map<string, string>): SjrQuartile | undefined {
+  const raw = options.get('sjr-quartile');
+  if (raw === undefined) return undefined;
+  const n = Number(raw);
+  if (n !== 1 && n !== 2 && n !== 3 && n !== 4) {
+    throw new Error(`--sjr-quartile must be 1, 2, 3, or 4 (got '${raw}')`);
+  }
+  return n;
+}
+
+/**
+ * `venue --issn <issn>` — b2 lookup: cached OpenAlex Source stats + the C8
+ * impactTier band. Works without a valid .env (the lookup is keyless); the
+ * polite-pool mailto is sent only when config loads.
+ */
+async function runVenueLookup(options: Map<string, string>): Promise<number> {
+  const issn = options.get('issn');
+  if (issn === undefined) {
+    process.stderr.write('venue: --issn <issn> is required\n');
+    return 2;
+  }
+  let contactEmail: string | undefined;
+  try {
+    contactEmail = loadConfig().contactEmail;
+  } catch {
+    // keyless lookup still works; just no polite-pool mailto
+  }
+  const cache = VenueCache.open();
+  const { venue, cacheHit } = await lookupVenueCached(issn, cache, { contactEmail });
+  const outcome = bandImpactTier(venue, { sjrQuartile: parseSjrQuartile(options) ?? null });
+  process.stdout.write(JSON.stringify({ venue, impactTier: outcome, cacheHit }, null, 2) + '\n');
+  return 0;
+}
+
 /** CLI main — returns the process exit code. Async: the pipeline verbs await `run`. */
 export async function main(argv: string[]): Promise<number> {
   const { command, flags, options } = parseArgs(argv);
@@ -170,6 +212,9 @@ export async function main(argv: string[]): Promise<number> {
       case 'status':
         process.stdout.write(statusReport() + '\n');
         return 0;
+
+      case 'venue':
+        return await runVenueLookup(options);
 
       default:
         process.stderr.write(`unknown command: ${command}\n\n` + USAGE);
