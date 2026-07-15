@@ -10,13 +10,26 @@
 //
 // v2 (the metric platform): each metric carries the scale dimensions phase-2-plan's platform needs —
 // source economy, collection tier, continuity, reliability, derivation inputs, platform availability,
-// and the semi-passive preferred source. `table` is retained as the current storage location; storage
-// is migrating to continuity-based primitives (daily_log / events / state_bands / signals /
-// derived_metrics) per phase-2-plan, with the existing tables as the first instances.
+// and the semi-passive preferred source. `table` is the storage location: the continuity-based
+// primitives (events / state_bands / signals / derived_metrics — see the
+// create_continuity_storage_primitives migration) are what new metrics declare; the legacy tables
+// stay as grandfathered first instances of the primitives (no re-homing of existing metrics).
 
 /** Source economy — what it costs the user and where the value originates. */
 export type MetricSource = 'manual' | 'semi_passive' | 'sensor' | 'api' | 'derived';
-export type MetricTable = 'daily_gut_rows' | 'wearable_daily' | 'env_daily';
+/**
+ * Storage location. daily_gut_rows / wearable_daily / env_daily are the grandfathered first
+ * instances; events / state_bands / signals / derived_metrics are the continuity-based
+ * primitives (phase-2-plan §3) new metrics declare.
+ */
+export type MetricTable =
+  | 'daily_gut_rows'
+  | 'wearable_daily'
+  | 'env_daily'
+  | 'events'
+  | 'state_bands'
+  | 'signals'
+  | 'derived_metrics';
 /** Collection tier (logging budget): T0 passive · T1 daily core · T2 optional · T3 event · T4 state · T5 profile. */
 export type MetricTier = 'T0' | 'T1' | 'T2' | 'T3' | 'T4' | 'T5';
 /** Data shape over time — drives the storage primitive a metric lands in. */
@@ -38,7 +51,7 @@ export interface MetricDefinition {
   /** Canonical snake_case id — == DB column == BaselineSnapshot.metric_key == rule metricKey. */
   key: string;
   source: MetricSource;
-  /** Current storage location. Storage is migrating to continuity-based primitives — see file header. */
+  /** Storage location — a continuity primitive or a grandfathered first-instance table. */
   table: MetricTable;
   /** Collection tier (logging budget). Only T1 (daily core) counts toward daily completeness. */
   tier: MetricTier;

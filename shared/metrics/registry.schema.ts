@@ -10,7 +10,15 @@ import { z } from 'zod';
 import type { MetricDefinition } from './registry';
 
 export const metricSourceSchema = z.enum(['manual', 'semi_passive', 'sensor', 'api', 'derived']);
-export const metricTableSchema = z.enum(['daily_gut_rows', 'wearable_daily', 'env_daily']);
+export const metricTableSchema = z.enum([
+  'daily_gut_rows',
+  'wearable_daily',
+  'env_daily',
+  'events',
+  'state_bands',
+  'signals',
+  'derived_metrics',
+]);
 export const metricTierSchema = z.enum(['T0', 'T1', 'T2', 'T3', 'T4', 'T5']);
 export const metricContinuitySchema = z.enum(['continuous', 'episodic', 'state', 'static']);
 export const metricTypeSchema = z.enum([

@@ -30,6 +30,10 @@ class MetricDefinition {
   /// Canonical snake_case id — == DB column == BaselineSnapshot.metric_key == rule metricKey.
   final String key;
   final String source;
+
+  /// Storage location — mirrors the TS `MetricTable` union: 'daily_gut_rows' | 'wearable_daily'
+  /// | 'env_daily' (grandfathered first instances) | 'events' | 'state_bands' | 'signals'
+  /// | 'derived_metrics' (the continuity-based primitives, phase-2-plan §3).
   final String table;
 
   /// Collection tier (logging budget): 'T0'..'T5'. Only T1 (daily core) counts toward daily completeness.

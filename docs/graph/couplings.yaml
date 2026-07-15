@@ -80,11 +80,15 @@ couplings:
 
   - id: metrics-registry-to-schema
     from: shared/metrics/registry.ts
-    to: supabase/migrations (daily_gut_rows / wearable_daily columns)
+    to: supabase/migrations (daily_gut_rows / wearable_daily columns + the continuity primitives)
     why: >
-      Registry keys per table must equal the metric columns of that table's migration. A migration
-      that renames or adds a metric column without a matching registry entry (or vice versa) breaks
-      the write/read path with no compile-time error because the Supabase client speaks dynamic JSON.
+      For the legacy wide tables, registry keys per table must equal the metric columns of that
+      table's migration — a migration that renames or adds a metric column without a matching
+      registry entry (or vice versa) breaks the write/read path with no compile-time error because
+      the Supabase client speaks dynamic JSON. For the continuity primitives (events / state_bands /
+      signals / derived_metrics) metrics share tall/narrow rows keyed by metric_key, so the guard
+      instead asserts each primitive's migration exists with its core columns, and that every table
+      an active registry metric declares is covered by one of the two semantics.
     guard: apps/biotope/test/guards/metrics_registry_schema_test.dart
     status: active
     phase: P2

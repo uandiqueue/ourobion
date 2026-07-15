@@ -15,7 +15,7 @@ See [`docs/biotope/metrics-registry-design.md`](../../docs/biotope/metrics-regis
 |---|---|
 | `key` | canonical snake_case id — **== DB column == `metric_key` == rule `metricKey`** |
 | `source` | source economy: `manual` \| `semi_passive` \| `sensor` \| `api` \| `derived` |
-| `table` | current storage location: `daily_gut_rows` \| `wearable_daily` \| `env_daily` (storage is migrating to continuity-based primitives — see phase-2-plan) |
+| `table` | storage location: a continuity primitive (`events` \| `state_bands` \| `signals` \| `derived_metrics`) or a grandfathered first-instance table (`daily_gut_rows` \| `wearable_daily` \| `env_daily`) — see [Storage](#storage-continuity-primitives) |
 | `tier` | collection tier (logging budget): `T0` passive · `T1` daily core · `T2` optional · `T3` event · `T4` state · `T5` profile |
 | `continuity` | `continuous` \| `episodic` \| `state` \| `static` — the data shape over time |
 | `type` | `numeric` \| `ordinal` \| `boolean` \| `enum` \| `multi_select` \| `text` |
@@ -37,12 +37,26 @@ Typed accessors live in `index.ts` / `index.dart` (`activeMetrics`, `metricByKey
 `metricsByTable`, `baselineKeys`, `activeKeys`, `isActiveMetric`, `dqsWeights`,
 `dailyCompletenessKeys`) — consumers read the list through these, never hardcoded keys.
 
+## Storage (continuity primitives)
+
+Storage follows a metric's **continuity**, not its body system (phase-2-plan §3). The
+`create_continuity_storage_primitives` migration ships four generalized tall/narrow tables —
+`events` (episodic, timestamped; frequency/timing derived, never asked), `state_bands`
+(start/end spans; open band = active), `signals` (passive time-series), and `derived_metrics`
+(rebuildable projection, never truth-tier). A metric homed on a primitive needs **no dedicated
+column** — rows carry its registry `key` as `metric_key`. The legacy tables stay untouched as
+grandfathered first instances of the primitives: `daily_gut_rows` → `daily_log` (the thin
+continuous spine), `antibiotic_courses` → `state_bands`, `wearable_daily` → `signals`,
+`baseline_snapshots` → `derived_metrics`. No existing metric is re-homed.
+
 ## Add a metric (safe flow)
 
 1. Add **one** entry to `registry.ts` **and** `registry.dart` (same key, same order within its
    source block).
-2. Guards fail and tell you exactly what's missing → add the field to the contract row (TS + Dart)
-   plus a migration `ADD COLUMN <key> … NULL`.
+2. Guards fail and tell you exactly what's missing. Legacy wide table (`daily_gut_rows` /
+   `wearable_daily`): add the field to the contract row (TS + Dart) plus a migration
+   `ADD COLUMN <key> … NULL`. Continuity primitive (`events` / `state_bands` / `signals` /
+   `derived_metrics`): **no column and no migration** — rows carry the key as `metric_key`.
 3. Baselines, DQS, and engine validation pick it up **from the registry** — no separate edits.
 4. (self-report only) add the UI input; (optional) add rule blueprints that use it.
 5. 2-reviewer `shared/` PR. Green tests = nothing silently broke.
