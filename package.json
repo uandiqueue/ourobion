@@ -3,7 +3,10 @@
   "private": true,
   "scripts": {
     "context:start": "node tools/context_sync.mjs --session-start",
-    "context:check": "node tools/context_sync.mjs --check"
+    "context:check": "node tools/context_sync.mjs --check",
+    "rules:load": "node tools/rules/load_rules.mjs",
+    "rules:check": "node tools/rules/load_rules.mjs --check",
+    "rules:test": "npm --prefix tools/rules test"
   },
   "devDependencies": {
     "supabase": "^2.81.2"

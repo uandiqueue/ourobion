@@ -114,6 +114,66 @@ couplings:
     status: active
     phase: P2
 
+  # ─── Rules as data (shared/rules + data/rules + the rules table) — rules-engine-design §B1–B5 ──
+  # Blueprints are TRUTH; the rules table is a loader-owned projection (docs/memory/0007). The
+  # node guards live in tools/rules/tests/ (run via `npm --prefix tools/rules test`).
+
+  - id: rules-blueprint-to-schema
+    from: data/rules/{single,cross}/**.json
+    to: shared/rules/rule.schema.ts (+ shared/metrics/registry.ts keys)
+    why: >
+      The blueprint JSONs are hand-authored data with no compiler: only the zod contract makes a
+      malformed rule, an unknown/removed metric key, or a wrong on-disk path fail before the loader
+      projects it into the rules table. This is the database-free B5 blueprint gate (memory 0007).
+    guard: tools/rules/tests/rule_blueprint.test.ts
+    status: active
+    phase: P2
+
+  - id: rules-templates-to-copy-guidelines
+    from: data/rules/**.json template.title / template.body
+    to: shared/constants/copy_guidelines.ts (validateCopyString)
+    why: >
+      Rule templates are user-facing copy authored as data, so the non-diagnostic gate (memory 0003)
+      must bind them the same way it binds hardcoded strings. Enforced three times — zod schema +
+      loader hard-fail + this guard — but only the guard runs in CI without a database.
+    guard: tools/rules/tests/rule_blueprint.test.ts
+    status: active
+    phase: P2
+
+  - id: rules-schema-to-rules-table
+    from: shared/rules (flattened blueprint row, tools/rules/lib/blueprints.mjs flattenRule)
+    to: supabase/migrations (rules table columns + CHECK sets)
+    why: >
+      The loader speaks dynamic SQL into the rules table, so a renamed column or a CHECK set that
+      drifts from the contract enums (condition types, category, severity, scope, status,
+      provenance tier) breaks the load path with no compile-time error. This test parses the
+      migration DDL and holds it column-for-column to the flattened contract.
+    guard: tools/rules/tests/rules_table_schema.test.ts
+    status: active
+    phase: P2
+
+  - id: rules-table-to-insight-cards-parity
+    from: supabase/migrations (rules category/severity CHECKs)
+    to: supabase/migrations (insight_cards category/severity CHECKs)
+    why: >
+      The engine copies a rule's category/severity straight onto the fired card, so the two tables'
+      CHECK sets must stay character-identical or the loader could accept a rule whose card
+      insight_cards rejects at insert time. No import links two migrations — only a parity test.
+    guard: apps/biotope/test/guards/rules_table_contract_test.dart
+    status: active
+    phase: P2
+
+  - id: rules-blueprint-to-engine-coverage
+    from: data/rules/**.json condition types
+    to: supabase/functions/generate-insights (evaluators, engine refactor step C)
+    why: >
+      Every condition type a blueprint uses must have an evaluator branch in the engine, or a rule
+      ships that can never fire. The evaluator surface (evaluators.ts) lands with the engine
+      refactor; until then the guard is a runnable, skipped placeholder.
+    guard: tools/rules/tests/engine_condition_coverage.test.ts
+    status: planned
+    phase: P2
+
   - id: metrics-registry-to-dqs
     from: shared/metrics/registry.ts (countsTowardDailyCompleteness weights)
     to: apps/biotope/lib/modules/m2_self_report/impl/normaliser.dart (kDailyCoreDqsWeights)

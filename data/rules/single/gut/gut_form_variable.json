@@ -1,0 +1,32 @@
+{
+  "ruleId": "gut_form_variable",
+  "schemaVersion": 1,
+  "category": "gut",
+  "severity": "info",
+  "scope": "single",
+  "enabledPhase": "phase1_stage1",
+  "metricKeys": ["stool_form"],
+  "provenance": {
+    "tier": "hand_authored",
+    "sourceNote": "Faithful port of the hardcoded MVP rule 'gut_form_variable' (supabase/functions/generate-insights/index.ts): std_dev !== null && std_dev > 2.0 && notInsufficient(s).",
+    "citation": null
+  },
+  "effectiveFrom": null,
+  "effectiveTo": null,
+  "status": "active",
+  "deprecatedAt": null,
+  "cooldownDays": null,
+  "expiryDays": 7,
+  "condition": {
+    "type": "threshold",
+    "metricKey": "stool_form",
+    "field": "std_dev",
+    "op": "gt",
+    "value": 2.0,
+    "minConfidence": "low"
+  },
+  "template": {
+    "title": "Gut consistency pattern",
+    "body": "Your stool consistency data shows notable variation this week."
+  }
+}
