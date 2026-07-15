@@ -93,3 +93,12 @@ Numeric hyperparameters/config values are in [`phase2-run-config-decisions.md`](
   same conditions, copy, severity `info`, 7-day expiry.
 - **Flag for later:** CI does not run any node tool-package tests (brain-ingest / llm-router / rules) —
   queued as worklist U18.
+
+## D11 · S2/S3 judgment calls (U6)
+- **View column named `log_date`** (house convention) over the architecture sketch's `day`; signals
+  branch aggregates to daily grain as **mean** (UTC bucket) — revisit per-metric aggregation when a
+  real high-frequency signal lands.
+- **`baseline_snapshots` numeric columns widened** from `numeric(6,3)` to unconstrained `numeric` —
+  seeded `step_count` (~7.7k) overflowed 22003; v1 would fail identically. Projection table, safe.
+- **Drive-by fixes:** `scripts/seed-test-data.sql` array-literal bug fixed; the `.ps1` seeder fails to
+  parse under PowerShell 5.1 (UTF-8-no-BOM) — file left untouched, workaround noted in the session log.
