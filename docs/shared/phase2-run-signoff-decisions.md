@@ -21,6 +21,18 @@ Numeric hyperparameters/config values are in [`phase2-run-config-decisions.md`](
   (L0 → engine; router → pipeline) would stall on the first PR, contradicting "keep building everything
   still unblocked"; (b) stack branches on unmerged branches — produces an unreviewable tower and defeats
   the PR-per-session record. `main` remains untouched either way.
+- **AMENDED 2026-07-15 (same day):** the permission system denied `gh pr merge` for agent-authored PRs,
+  so self-merge is off the table. The run switched to alternative (b) in disciplined form: a **stacked
+  chain** — each session branch cut from the previous session's tip, each PR based on its predecessor
+  branch so its diff stays session-scoped. Jayden merges the chain in order (bases auto-retarget as
+  predecessors merge), or grants a `gh pr merge` permission rule to restore the original policy.
+
+## D8 · L0 fields shipped as required/nullable, not optional-with-default
+- **Choice:** `derivation` is required and `population`/`charStart`/`charEnd` are required-nullable on
+  the brain contract, exactly as the architecture specifies — no optionality escape hatch.
+- **Rationale:** memory 0002's optional-with-default rule protects existing instances; the build agent
+  verified there are zero persisted claim/verification instances and zero constructors in code, so
+  strictness is free now and saves a tightening migration later.
 
 ## D2 · No worktrees; sequential sessions in the main checkout
 - **Choice:** per Jayden's instruction (2026-07-15), session branches are cut directly off `dev-phase2`

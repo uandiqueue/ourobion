@@ -18,8 +18,9 @@ Run protocol (per Jayden's instructions + AGENTS.md §7, with one waiver):
 - **No worktrees** — Jayden waived them for this solo run; sessions run sequentially in the main checkout.
 - Testing gate before any PR: `flutter analyze` + `flutter test` + `node tools/context_sync.mjs --check`
   green (plus the touched package's own suite: `tsc --noEmit`, `npm test` in `tools/brain-ingest`, nao checks).
-- Session PRs target `dev-phase2` and are self-merged after the gate (see
-  [sign-off decision D1](./phase2-run-signoff-decisions.md)); **never `main`** (the fold is human-gated).
+- Session branches form a **stacked chain** (each cut from the previous session's tip) with one PR per
+  session; Jayden merges in order — see [sign-off decision D1 (amended)](./phase2-run-signoff-decisions.md).
+  **Never `main`** (the fold is human-gated).
 - Blocked-on-human ⇒ record in the register, skip, keep building what's unblocked.
 
 ## Baseline (assessed 2026-07-15, dev-phase2 @ bd6f09d)
@@ -49,8 +50,8 @@ extraction; anomaly definition — **supersedes S4/S5 dummy thresholds**; paper 
 
 | # | Unit | Status | Notes |
 |---|---|---|---|
-| U0 | Orchestration bootstrap (these 4 docs) | **in-flight** | issue #42 |
-| U1 | **L0 contract extension** — `Citation.population`, `QuoteSpan.charStart/charEnd`, `RelationshipClaim.derivation` (+ zod mirrors, AssertExact) in `shared/brain/`; `signal: { deadbandK }` on `MetricDefinition` (TS+Dart, ADR-0002 semantics — see decision D5) | next | Small; gates all engine work (L1+). shared/ ⇒ retro-review flag |
+| U0 | Orchestration bootstrap (these 4 docs) | **done** | issue #42 · PR #43 |
+| U1 | **L0 contract extension** — `Citation.population`, `QuoteSpan.charStart/charEnd`, `RelationshipClaim.derivation` (+ zod mirrors, AssertExact) in `shared/brain/`; `signal: { deadbandK }` on `MetricDefinition` (TS+Dart, ADR-0002 semantics — see decision D5) | **done** | Commit `b774229`; 35/35 tests, tsc clean. shared/ ⇒ retro-review flag. Architecture doc still says `deadbandSigma` in §S4/§7 — reconcile in U7 |
 | U2 | **Storage primitives** — migrations for `events`, `state_bands`, `signals`, `derived_metrics` (+RLS, legacy tables become first instances in place); extend `metrics_registry_schema_test.dart` table→migration map + couplings edge | next | Track A critical path |
 | U3 | **LLM router** — dual-route (local-agent / api-worker), Anthropic+OpenAI adapters, model ids + caps from config, synthesis↔verifier family-decorrelation assertion; fixture-mockable, tested | next | Track B foundation; model ids in [config decisions](./phase2-run-config-decisions.md) C6–C7 |
 | U4 | **Deterministic quick wins** — A9 quoteCheck (literal-presence gate) + b2 venue lookup (OpenAlex ISSN + SJR → impactTier, cached) | queued | No deps; can slot anywhere |
@@ -77,7 +78,8 @@ tables + the S2 view) — it stays early because it's Track A's longest pole.
 | When (UTC) | Unit | Branch / PR | Outcome |
 |---|---|---|---|
 | 2026-07-15 | Assessment (4 Explore agents) | — | Baseline above; no code changes |
-| 2026-07-15 | U0 bootstrap | `docs/orchestration/phase2-run-tracking` / #42 | in-flight |
+| 2026-07-15 | U0 bootstrap | `docs/orchestration/phase2-run-tracking` / PR #43 | done; awaiting review/merge |
+| 2026-07-15 | U1 L0 contract extension | `feat/shared/l0-contract-extension` (stacked on U0) | done; **shared/ retro-review** |
 
 ## Notes for the resuming orchestrator
 
