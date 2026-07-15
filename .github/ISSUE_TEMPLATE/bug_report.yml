@@ -1,0 +1,63 @@
+name: Bug Report
+description: Something is not working as expected
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: module
+    attributes:
+      label: Module
+      description: Which module is affected?
+      options:
+        - M1 — Core & Compliance
+        - M2 — Self-Report
+        - M3 — Wearables
+        - M4 — Environmental context
+        - M5a — Baselines
+        - M5b — Insight Engine
+        - M6 — Engagement
+        - M7 — Community
+        - nao — Brain web app
+        - brain — Knowledge graph / ingestion pipeline
+        - CI / Workflow
+        - Shared types
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug clearly.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Extra context
+      description: Error output, screenshots, device info (e.g. Samsung A165F), Flutter version.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-checks
+      options:
+        - label: "`flutter analyze` passes on the current branch"
+        - label: "Supabase connection is healthy (check `apps/biotope/.env.public` IP if on WiFi)"

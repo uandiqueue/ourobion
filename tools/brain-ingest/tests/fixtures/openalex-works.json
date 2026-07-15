@@ -1,0 +1,111 @@
+{
+  "meta": { "count": 4, "per_page": 50, "page": 1 },
+  "results": [
+    {
+      "id": "https://openalex.org/W2741809807",
+      "doi": "https://doi.org/10.1371/journal.pone.0211200",
+      "ids": {
+        "openalex": "https://openalex.org/W2741809807",
+        "doi": "https://doi.org/10.1371/journal.pone.0211200",
+        "pmid": "https://pubmed.ncbi.nlm.nih.gov/30682108",
+        "pmcid": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6347394"
+      },
+      "title": "A gold-OA article with a CC-BY PDF",
+      "type": "article",
+      "cited_by_count": 142,
+      "open_access": { "is_oa": true, "oa_status": "gold" },
+      "best_oa_location": {
+        "pdf_url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0211200&type=printable",
+        "landing_page_url": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0211200",
+        "license": "cc-by",
+        "version": "publishedVersion"
+      },
+      "primary_location": {
+        "landing_page_url": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0211200",
+        "source": {
+          "display_name": "PLOS ONE",
+          "issn": ["1932-6203"],
+          "host_organization_name": "Public Library of Science",
+          "type": "journal"
+        }
+      },
+      "concepts": [
+        { "display_name": "Gut microbiome" },
+        { "display_name": "Immunology" },
+        { "display_name": "Microbiology" },
+        { "display_name": "Biology" },
+        { "display_name": "Medicine" },
+        { "display_name": "Should-be-dropped-sixth" }
+      ]
+    },
+    {
+      "id": "https://openalex.org/W3000000001",
+      "doi": "https://doi.org/10.1101/2020.01.01.900000",
+      "ids": {
+        "openalex": "https://openalex.org/W3000000001",
+        "doi": "https://doi.org/10.1101/2020.01.01.900000",
+        "pmcid": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7000001"
+      },
+      "title": "A green-OA preprint, accepted version, no pdf_url (landing only)",
+      "type": "preprint",
+      "cited_by_count": 7,
+      "open_access": { "is_oa": true, "oa_status": "green" },
+      "best_oa_location": {
+        "pdf_url": null,
+        "landing_page_url": "https://www.biorxiv.org/content/10.1101/2020.01.01.900000v1",
+        "license": "cc-by-nc-nd",
+        "version": "acceptedVersion"
+      },
+      "primary_location": {
+        "landing_page_url": "https://www.biorxiv.org/content/10.1101/2020.01.01.900000v1",
+        "source": {
+          "display_name": "bioRxiv",
+          "issn": [],
+          "host_organization_name": "Cold Spring Harbor Laboratory",
+          "type": "repository"
+        }
+      },
+      "topics": [
+        { "display_name": "Hydration and electrolytes" },
+        { "display_name": "Sports physiology" }
+      ],
+      "concepts": [
+        { "display_name": "This-should-be-ignored-because-topics-present" }
+      ]
+    },
+    {
+      "id": "https://openalex.org/W3000000002",
+      "doi": "https://doi.org/10.9999/closed.0001",
+      "title": "A closed work with no OA location",
+      "type": "article",
+      "cited_by_count": 0,
+      "open_access": { "is_oa": false, "oa_status": "closed" },
+      "best_oa_location": null,
+      "primary_location": { "source": null }
+    },
+    {
+      "id": "https://openalex.org/W3000000003",
+      "doi": "https://doi.org/10.5555/cc0.dataset",
+      "title": "A bronze work, CC0, submitted version",
+      "type": "dataset",
+      "cited_by_count": 23,
+      "open_access": { "is_oa": true, "oa_status": "bronze" },
+      "best_oa_location": {
+        "pdf_url": "https://example.org/cc0.pdf",
+        "landing_page_url": "https://example.org/cc0",
+        "license": "cc0",
+        "version": "submittedVersion"
+      },
+      "primary_location": {
+        "landing_page_url": "https://example.org/cc0",
+        "source": {
+          "display_name": "Example Data Repository",
+          "issn": [],
+          "host_organization_name": "Example Org",
+          "type": "repository"
+        }
+      },
+      "concepts": [{ "display_name": "Data science" }]
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "status": "ok",
+  "message-type": "work-list",
+  "message": {
+    "items": [
+      {
+        "DOI": "10.1038/S41586-020-2649-2",
+        "title": ["Gut microbiome composition shapes host metabolism"],
+        "author": [
+          { "given": "Ada", "family": "Lovelace" },
+          { "given": "Alan", "family": "Turing" },
+          { "name": "The Microbiome Consortium" }
+        ],
+        "container-title": ["Nature"],
+        "abstract": "<jats:p><jats:title>Background</jats:title> The gut &amp; its microbiota influence metabolism.</jats:p>",
+        "issued": { "date-parts": [[2020, 9, 1]] }
+      },
+      {
+        "DOI": "https://doi.org/10.1371/journal.pone.0123456",
+        "title": ["Hydration status and cognitive performance"],
+        "author": [{ "family": "Rosalind" }],
+        "container-title": ["PLOS ONE"],
+        "published": { "date-parts": [[2019]] }
+      },
+      {
+        "title": [],
+        "author": [{ "given": "No", "family": "Title" }],
+        "issued": { "date-parts": [[2021]] }
+      }
+    ]
+  }
+}

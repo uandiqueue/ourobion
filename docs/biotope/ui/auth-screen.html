@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Ourobion — Auth Screens</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #e7e8e7;
+      font-family: 'Manrope', -apple-system, system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 48px;
+      padding: 40px 20px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Phone frame ── */
+    .phone {
+      width: 390px; height: 844px;
+      border-radius: 54px; background: #1a1c1f; padding: 10px;
+      box-shadow: 0 0 0 2px rgba(0,0,0,0.08), 0 40px 100px -30px rgba(60,103,82,0.35);
+      position: relative; flex-shrink: 0;
+    }
+    .phone::before {
+      content: ''; position: absolute; top: 18px; left: 50%;
+      transform: translateX(-50%); width: 110px; height: 32px;
+      border-radius: 20px; background: #000; z-index: 100;
+    }
+    .phone-screen {
+      width: 100%; height: 100%; border-radius: 44px;
+      overflow: hidden; position: relative; background: #f9f9f8;
+      display: flex; flex-direction: column;
+    }
+
+    /* ── Living backdrop orbs ── */
+    .backdrop {
+      position: absolute; inset: 0; overflow: hidden;
+      background: #f9f9f8; z-index: 0; pointer-events: none;
+    }
+    .orb {
+      position: absolute; border-radius: 50%; opacity: 0.55; filter: blur(60px);
+    }
+    .orb-1 { width: 480px; height: 480px; top: -20%; left: -15%;  background: #a2d1b7; animation: drift-1 28s ease-in-out infinite; }
+    .orb-2 { width: 360px; height: 360px; top: 40%;  right: -20%; background: #9acee9; animation: drift-2 34s ease-in-out -8s infinite; }
+    .orb-3 { width: 300px; height: 300px; bottom: -15%; left: 20%; background: #81d4d6; animation: drift-3 30s ease-in-out -14s infinite; }
+    .orb-4 { width: 220px; height: 220px; top: 15%;  right: 25%;  background: #beedd3; animation: drift-4 26s ease-in-out -4s infinite; }
+
+    @keyframes drift-1 { 0%,100% { transform: translate(0,0) scale(1); }     50% { transform: translate(40px,30px) scale(1.1); } }
+    @keyframes drift-2 { 0%,100% { transform: translate(0,0) scale(1.05); }  50% { transform: translate(-30px,-40px) scale(0.95); } }
+    @keyframes drift-3 { 0%,100% { transform: translate(0,0) scale(1); }     50% { transform: translate(50px,-30px) scale(1.08); } }
+    @keyframes drift-4 { 0%,100% { transform: translate(0,0) scale(0.95); }  50% { transform: translate(-40px,40px) scale(1.05); } }
+
+    .vignette {
+      position: absolute; inset: 0;
+      background: radial-gradient(circle at 50% 50%, transparent 0%, rgba(249,249,248,0.4) 100%);
+    }
+
+    /* ── Screen content ── */
+    .screen-content {
+      position: relative; z-index: 5;
+      flex: 1; display: flex; flex-direction: column;
+      padding: 0 24px;
+      padding-top: 60px; /* safe area + dynamic island */
+      overflow: hidden;
+    }
+
+    /* ── Branding ── */
+    .brand {
+      display: flex; flex-direction: column; align-items: center;
+      margin-bottom: 40px; margin-top: 12px;
+    }
+    .brand-icon {
+      width: 64px; height: 64px; border-radius: 20px;
+      background: linear-gradient(135deg, #beedd3 0%, #3c6752 100%);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 14px;
+      box-shadow: 0 8px 24px rgba(60,103,82,0.28);
+    }
+    /* pixel leaf inside icon */
+    .leaf {
+      width: 28px; height: 28px; position: relative;
+    }
+    .leaf::before {
+      content: ''; position: absolute;
+      top: 4px; left: 8px; width: 12px; height: 18px;
+      background: #fff; border-radius: 50% 50% 0 50%;
+    }
+    .leaf::after {
+      content: ''; position: absolute;
+      top: 8px; left: 14px; width: 2px; height: 14px;
+      background: rgba(60,103,82,0.4); border-radius: 2px;
+    }
+    .brand-name {
+      font-size: 28px; font-weight: 700; letter-spacing: -0.6px;
+      color: #191c1c;
+    }
+    .brand-tagline {
+      font-size: 13px; font-weight: 400; color: #717973;
+      margin-top: 4px; text-align: center; line-height: 1.5;
+    }
+
+    /* ── Eyebrow label ── */
+    .eyebrow {
+      font-size: 10px; font-weight: 700; letter-spacing: 1.6px;
+      color: #3c6752; text-transform: uppercase; margin-bottom: 20px;
+      text-align: center;
+    }
+
+    /* ── Input fields ── */
+    .field-group { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
+
+    .field {
+      position: relative;
+    }
+    .field input {
+      width: 100%; padding: 18px 20px; border-radius: 16px;
+      border: 1.5px solid #c1c8c2;
+      background: #ffffff; font-family: 'Manrope', sans-serif;
+      font-size: 16px; font-weight: 500; color: #191c1c;
+      outline: none; transition: border 200ms, box-shadow 200ms;
+    }
+    .field input:focus {
+      border-color: #3c6752;
+      box-shadow: 0 0 0 4px rgba(190,237,211,0.4);
+    }
+    .field input::placeholder { color: #717973; font-weight: 400; }
+
+    /* ── CTA button ── */
+    .btn-primary {
+      width: 100%; height: 56px; border-radius: 16px; border: none;
+      background: #3c6752; color: #ffffff;
+      font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 600;
+      letter-spacing: 0.3px; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(60,103,82,0.25);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: transform 100ms, box-shadow 200ms;
+      margin-top: 24px;
+    }
+    .btn-primary:active { transform: scale(0.98); }
+
+    /* ── Divider ── */
+    .divider {
+      display: flex; align-items: center; gap: 12px;
+      margin: 20px 0;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: #c1c8c2;
+    }
+    .divider span {
+      font-size: 12px; font-weight: 600; color: #717973;
+      letter-spacing: 0.4px;
+    }
+
+    /* ── Secondary link ── */
+    .link-row {
+      text-align: center; margin-top: 16px;
+    }
+    .link-row a, .link-row span {
+      font-size: 13px; font-weight: 600; color: #3c6752;
+      text-decoration: none; cursor: pointer;
+    }
+    .link-row .muted {
+      color: #717973; font-weight: 400;
+    }
+
+    /* ── Forgot password ── */
+    .forgot {
+      text-align: right; margin-top: 6px;
+    }
+    .forgot a {
+      font-size: 12px; font-weight: 600; color: #717973;
+      text-decoration: none; letter-spacing: 0.2px;
+    }
+
+    /* ── Sign Up extra fields ── */
+    .consent-note {
+      font-size: 11px; font-weight: 400; color: #717973;
+      text-align: center; line-height: 1.6; margin-top: 16px;
+    }
+    .consent-note a { color: #3c6752; font-weight: 600; }
+
+    /* ── Label above phone ── */
+    .phone-label {
+      text-align: center; margin-bottom: 16px;
+      font-size: 11px; font-weight: 700; letter-spacing: 1.4px;
+      color: #717973; text-transform: uppercase;
+    }
+    .phone-wrapper { display: flex; flex-direction: column; align-items: center; }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════ SIGN IN ═══════ -->
+  <div class="phone-wrapper">
+    <div class="phone-label">Sign In</div>
+    <div class="phone">
+      <div class="phone-screen">
+
+        <!-- Living backdrop -->
+        <div class="backdrop">
+          <div class="orb orb-1"></div>
+          <div class="orb orb-2"></div>
+          <div class="orb orb-3"></div>
+          <div class="orb orb-4"></div>
+          <div class="vignette"></div>
+        </div>
+
+        <div class="screen-content">
+
+          <!-- Brand -->
+          <div class="brand">
+            <div class="brand-icon"><div class="leaf"></div></div>
+            <div class="brand-name">Ourobion</div>
+            <div class="brand-tagline">Your health, your ecosystem.</div>
+          </div>
+
+          <!-- Eyebrow -->
+          <div class="eyebrow">Welcome back</div>
+
+          <!-- Fields -->
+          <div class="field-group">
+            <div class="field">
+              <input type="email" placeholder="Email address" value="jayden@example.com"/>
+            </div>
+            <div class="field">
+              <input type="password" placeholder="Password" value="••••••••"/>
+            </div>
+          </div>
+
+          <div class="forgot"><a href="#">Forgot password?</a></div>
+
+          <!-- CTA -->
+          <button class="btn-primary">Sign In →</button>
+
+          <!-- Divider -->
+          <div class="divider"><span>or</span></div>
+
+          <!-- Link to sign up -->
+          <div class="link-row">
+            <span class="muted">No account? </span>
+            <a href="#">Create one →</a>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ SIGN UP ═══════ -->
+  <div class="phone-wrapper">
+    <div class="phone-label">Sign Up</div>
+    <div class="phone">
+      <div class="phone-screen">
+
+        <div class="backdrop">
+          <div class="orb orb-1"></div>
+          <div class="orb orb-2"></div>
+          <div class="orb orb-3"></div>
+          <div class="orb orb-4"></div>
+          <div class="vignette"></div>
+        </div>
+
+        <div class="screen-content">
+
+          <!-- Brand -->
+          <div class="brand" style="margin-bottom: 28px;">
+            <div class="brand-icon"><div class="leaf"></div></div>
+            <div class="brand-name">Ourobion</div>
+            <div class="brand-tagline">Start your journey.</div>
+          </div>
+
+          <!-- Eyebrow -->
+          <div class="eyebrow">Create account</div>
+
+          <!-- Fields -->
+          <div class="field-group">
+            <div class="field">
+              <input type="email" placeholder="Email address"/>
+            </div>
+            <div class="field">
+              <input type="password" placeholder="Password"/>
+            </div>
+            <div class="field">
+              <input type="password" placeholder="Confirm password"/>
+            </div>
+          </div>
+
+          <!-- CTA -->
+          <button class="btn-primary">Get Started →</button>
+
+          <!-- Consent note -->
+          <div class="consent-note">
+            By continuing you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.
+            You'll set your data permissions in the next step.
+          </div>
+
+          <!-- Link to sign in -->
+          <div class="link-row" style="margin-top: 20px;">
+            <span class="muted">Already have an account? </span>
+            <a href="#">Sign In →</a>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

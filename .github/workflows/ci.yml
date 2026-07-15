@@ -1,21 +1,82 @@
 name: CI
 
+# The non-bypassable backstop: mirrors the local pre-push gate (skippable with --no-verify) and adds
+# the checks that can only run in CI. Three jobs:
+#   - context     : node tools/context_sync.mjs --check (sessions / memory / decisions / index / couplings)
+#   - flutter     : flutter analyze + flutter test (with the public env file built from secrets)
+#   - typescript  : tsc --noEmit over the shared/ contracts
 on:
   push:
-    branches: [ main ]
+    branches: [main, dev-phase2]
   pull_request:
-    branches: [ main ]
+    branches: [main, dev-phase2]
 
 jobs:
-  build:
+  context:
+    name: Context — sessions / memory / decisions / index / couplings
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Run a one-line script
-        run: echo "Hello, world!"
-        
-      - name: Run a multi-line script
+        with:
+          # Full history so context_sync's session-coverage check can diff origin/main..HEAD.
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Context check
+        run: node tools/context_sync.mjs --check
+
+  flutter:
+    name: Flutter — Analyze & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: stable
+          cache: true
+
+      - name: Create public env file
+        working-directory: apps/biotope
         run: |
-          echo "Add other actions to build,"
-          echo "test, and deploy your project."
+          printf "SUPABASE_URL=%s\n" "${{ secrets.SUPABASE_URL }}" > .env.public
+          printf "SUPABASE_ANON_KEY=%s\n" "${{ secrets.SUPABASE_ANON_KEY }}" >> .env.public
+
+      - name: Install dependencies
+        working-directory: apps/biotope
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: apps/biotope
+        run: flutter analyze
+
+      - name: Test
+        working-directory: apps/biotope
+        run: flutter test
+
+  typescript:
+    name: TypeScript — Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: shared/package-lock.json
+
+      - name: Install dependencies
+        working-directory: shared
+        run: npm ci
+
+      - name: Type check shared types
+        working-directory: shared
+        run: npx tsc --noEmit

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<article xmlns:xlink="http://www.w3.org/1999/xlink" article-type="research-article">
+  <front>
+    <article-meta>
+      <article-id pub-id-type="doi">10.1234/sample.2026.0001</article-id>
+      <title-group>
+        <article-title>A canned JATS sample for the R2 storage adapter test</article-title>
+      </title-group>
+      <abstract>
+        <p>This tiny fixture stands in for a PMC JATS full-text body that the
+        retrieval layer would upload to R2 under jats/&lt;uid&gt;.xml. It exists
+        only so the storage test has a real-shaped text body to checksum, sync,
+        and read back — no network is ever touched.</p>
+      </abstract>
+    </article-meta>
+  </front>
+  <body>
+    <sec>
+      <title>Introduction</title>
+      <p>Open-access full text lives durably in object storage; the manifest
+      keeps only metadata. The sha256 recorded per binary makes re-sync
+      idempotent.</p>
+    </sec>
+  </body>
+</article>

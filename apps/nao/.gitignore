@@ -1,0 +1,10 @@
+# ourobion nao — app-local ignores (the repo-root .gitignore already covers
+# .env, .env.local, .dev.vars, node_modules/, .next/, out/).
+/.next/
+/.open-next/
+/.wrangler/
+next-env.d.ts
+*.tsbuildinfo
+
+# ETL scratch output (generated SQL; derived from the R2 manifest, rebuild via `npm run etl`)
+/scratch/

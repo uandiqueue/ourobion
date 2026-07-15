@@ -1,0 +1,123 @@
+# Semantic / data couplings — what static analysis CANNOT see.
+#
+# ourobion spans Dart (app), TypeScript (edge functions) and SQL (migrations). Many contracts between
+# these are runtime/data shapes that share an implicit structure but are NOT linked by any import, so
+# no structural graph (and none is auto-generated yet — see docs/graph/README.md) can catch them
+# drifting. To stop that, EVERY edge names a `guard:` — a test file that makes the coupling executable.
+# `node tools/context_sync.mjs --check` (pre-push hook + CI) fails if any `guard:` path is missing.
+#
+# `status: active`  -> the guard's assertions are implemented and enforce the coupling now.
+# `status: planned` -> the guard file exists as a runnable, skipped placeholder; the real assertions
+#                      land later. (The file must still exist so the existence check is honest.)
+#
+# Schema: a list under `couplings:`, each with id / from / to / why / guard / status (/ phase).
+
+version: 1
+
+couplings:
+  - id: shared-types-ts-dart-parity
+    from: shared/types/index.ts
+    to: shared/types/index.dart
+    why: >
+      The shared contract types are duplicated across TypeScript (backend/edge functions) and Dart
+      (app). Nothing imports across the language seam, so if one side adds/renames/retypes a field and
+      the other does not, the app and backend silently disagree at runtime. Only a parity test holds
+      the two declarations together. Governed by the 2-reviewer rule (docs/memory/0002).
+    guard: apps/biotope/test/guards/shared_types_parity_test.dart
+    status: active
+    phase: P1S2
+
+  - id: copy-guidelines-ts-dart-parity
+    from: shared/constants/copy_guidelines.ts
+    to: shared/constants/copy_guidelines.dart
+    why: >
+      The non-diagnostic copy rules (forbidden/allowed word lists, severity labels) exist in both TS
+      and Dart so M5b/M6 can enforce them on both sides. If the two word lists diverge, a string the
+      backend accepts could be rejected by the app or vice versa, weakening Product Principle #1
+      (docs/memory/0003). No import links them — a parity test is the only guard.
+    guard: apps/biotope/test/guards/copy_guidelines_parity_test.dart
+    status: active
+    phase: P1S2
+
+  - id: daily-gut-row-to-schema
+    from: shared/SHARED-CONTEXT.md DailyGutRow + shared/types
+    to: supabase/migrations (daily_gut_rows columns) + the M2 Flutter model
+    why: >
+      DailyGutRow is the M2 source-of-truth shape (docs/memory/0001). Its fields must match the
+      daily_gut_rows table columns the app writes and M5a/M6 read. A migration that renames a column,
+      or a model field that drifts, breaks the write/read path with no compile-time error because the
+      Supabase client speaks dynamic JSON. A schema/shape test is the only guard.
+    guard: apps/biotope/test/guards/daily_gut_row_schema_test.dart
+    status: active
+    phase: P1S2
+
+  # ─── Metrics registry (shared/metrics) — single source of truth for every metric ───────────────
+  # The registry makes add/remove of a metric a localized, guard-protected change. See
+  # docs/biotope/metrics-registry-design.md and shared/metrics/README.md.
+
+  - id: metrics-registry-ts-dart-parity
+    from: shared/metrics/registry.ts
+    to: shared/metrics/registry.dart
+    why: >
+      The metrics registry is the single source of truth for every metric, duplicated across the
+      TS (backend) and Dart (app) seam with no import linking them. If one side adds/removes/retypes
+      a metric and the other does not, baselines, DQS and the contract silently disagree. Governed by
+      the 2-reviewer rule (docs/memory/0002).
+    guard: apps/biotope/test/guards/metrics_registry_parity_test.dart
+    status: active
+    phase: P2
+
+  - id: metrics-registry-to-contract
+    from: shared/metrics/registry.ts
+    to: shared/types/index.ts + shared/types/index.dart (DailyGutRow / DailyPhysioRow)
+    why: >
+      Every active registry key for a table must be a field of that table's contract row (TS and
+      Dart), and every non-system row field must be a registry metric. This is the guard that would
+      have caught the DailyPhysioRow <-> wearable-key drift at build time.
+    guard: apps/biotope/test/guards/metrics_registry_contract_test.dart
+    status: active
+    phase: P2
+
+  - id: metrics-registry-to-schema
+    from: shared/metrics/registry.ts
+    to: supabase/migrations (daily_gut_rows / wearable_daily columns)
+    why: >
+      Registry keys per table must equal the metric columns of that table's migration. A migration
+      that renames or adds a metric column without a matching registry entry (or vice versa) breaks
+      the write/read path with no compile-time error because the Supabase client speaks dynamic JSON.
+    guard: apps/biotope/test/guards/metrics_registry_schema_test.dart
+    status: active
+    phase: P2
+
+  - id: metrics-registry-to-baselines
+    from: shared/metrics/registry.ts
+    to: supabase/functions/compute-baselines/index.ts
+    why: >
+      compute-baselines must derive its per-table metric lists (and SELECT columns) from the registry,
+      never from hardcoded key literals. The original wearable-key drift was exactly a hardcoded
+      WEARABLE_METRIC_KEYS array drifting from the contract; this guard makes that impossible.
+    guard: apps/biotope/test/guards/metrics_registry_baselines_test.dart
+    status: active
+    phase: P2
+
+  - id: metrics-registry-to-engine
+    from: shared/metrics/registry.ts
+    to: supabase/functions/generate-insights/index.ts
+    why: >
+      Every rule's metricKey in the insight engine must resolve to an active registry metric, so a
+      rule can never read a metric that was never defined or has been removed.
+    guard: apps/biotope/test/guards/metrics_registry_engine_test.dart
+    status: active
+    phase: P2
+
+  - id: metrics-registry-to-dqs
+    from: shared/metrics/registry.ts (countsTowardDailyCompleteness weights)
+    to: apps/biotope/lib/modules/m2_self_report/impl/normaliser.dart (kDailyCoreDqsWeights)
+    why: >
+      The M2 normaliser computes the Data Quality Score from the daily-core (T1) metric weights. Those
+      weights are owned by the registry (the metrics with countsTowardDailyCompleteness: true), but the
+      normaliser can't import shared/metrics (cross-language parity mirror), so without a guard the two
+      silently drift and the DQS stops reflecting the registry.
+    guard: apps/biotope/test/guards/metrics_registry_dqs_test.dart
+    status: active
+    phase: P2

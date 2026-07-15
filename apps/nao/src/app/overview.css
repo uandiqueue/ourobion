@@ -1,0 +1,484 @@
+/*
+ * ourobion nao — Overview dashboard ("what the pipeline did").
+ * Layout/skin only; all data-driven widths, gradients and conic stops are set as
+ * inline styles by the server components (they carry the real numbers).
+ */
+
+.ov {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 30px 26px 70px;
+}
+
+/* ── Page head ───────────────────────────────────────────────────────────── */
+.ov__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.ov__title {
+  margin: 9px 0 0;
+  font-weight: 300;
+  font-size: 34px;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.ov__head-meta {
+  text-align: right;
+}
+
+.ov__head-meta-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.ov__head-meta-val {
+  font-weight: 500;
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+
+/* Shared section spacing + grids. */
+.ov__row {
+  margin-bottom: 18px;
+}
+
+.ov-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.ov-grid-year {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 16px;
+}
+.ov-grid-3 {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: 16px;
+}
+
+/* ── Generic panel ───────────────────────────────────────────────────────── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  padding: 20px 22px;
+}
+
+.panel--inset {
+  background: var(--panel-inset);
+}
+
+.panel__label {
+  margin-bottom: 16px;
+}
+
+/* ── KPI tiles ───────────────────────────────────────────────────────────── */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.kpi {
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+
+.kpi--teal {
+  border-color: rgba(43, 196, 190, 0.28);
+  box-shadow: var(--glow-teal);
+}
+.kpi--blue {
+  border-color: rgba(63, 162, 230, 0.26);
+  box-shadow: var(--glow-blue);
+}
+.kpi--muted {
+  background: var(--panel-inset);
+  display: block;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.kpi__num {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: 40px;
+  line-height: 1;
+  color: var(--text-primary);
+  margin-top: 12px;
+}
+.kpi--muted .kpi__num {
+  color: var(--text-secondary);
+}
+.kpi__unit {
+  font-size: 22px;
+  color: var(--text-secondary);
+}
+.kpi__sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 7px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.kpi__sub-arrow {
+  color: var(--accent-1);
+}
+
+/* ── Funnel ──────────────────────────────────────────────────────────────── */
+.funnel {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+.funnel__row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.funnel__label {
+  width: 130px;
+  flex: none;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.funnel__bar {
+  height: 30px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  min-width: 0;
+}
+.funnel__bar-val {
+  font-weight: 500;
+  font-size: 13px;
+  color: #fff;
+  white-space: nowrap;
+}
+.funnel__grow {
+  flex: 1;
+}
+.funnel__pct {
+  width: 48px;
+  flex: none;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ── Horizontal bar lists (OA, topic, discovery, format) ─────────────────── */
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.bar-label {
+  flex: none;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+.bar-track {
+  flex: 1;
+  height: 14px;
+  border-radius: 4px;
+  background: rgba(99, 150, 160, 0.1);
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 4px;
+}
+.bar-val {
+  width: 46px;
+  flex: none;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+/* ── Donut (retrievability) ──────────────────────────────────────────────── */
+.donut {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+}
+.donut__ring {
+  width: 148px;
+  height: 148px;
+  border-radius: 50%;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.donut__hole {
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.donut__hole-num {
+  font-weight: 300;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--text-primary);
+}
+.donut__hole-cap {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+.donut__legend {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.legend-swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  flex: none;
+}
+.legend-label {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+.legend-val {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+/* ── Year histogram ──────────────────────────────────────────────────────── */
+.hist {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 140px;
+}
+.hist__col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  justify-content: flex-end;
+}
+.hist__bar {
+  width: 100%;
+  border-radius: 5px 5px 0 0;
+  background: linear-gradient(180deg, var(--accent-1), var(--deep-1));
+  min-height: 2px;
+}
+.hist__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* ── Format conversion footer ────────────────────────────────────────────── */
+.fmt {
+  display: flex;
+  flex-direction: column;
+}
+.fmt__footer {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid var(--hairline-soft);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.fmt__big {
+  font-weight: 300;
+  font-size: 28px;
+  line-height: 1;
+  color: var(--text-primary);
+}
+.fmt__cap {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ── Work-type tiles ─────────────────────────────────────────────────────── */
+.wt {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.wt__tile {
+  flex: 1;
+  min-width: 90px;
+  background: var(--panel-inset);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 14px;
+}
+.wt__num {
+  font-weight: 300;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--text-primary);
+}
+.wt__cap {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  text-transform: capitalize;
+}
+
+/* ── Storage + failures tiles ────────────────────────────────────────────── */
+.storage__num {
+  font-weight: 300;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--text-primary);
+}
+.storage__unit {
+  font-size: 18px;
+  color: var(--text-secondary);
+}
+.storage__cap {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+.failtile {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+}
+.failtile__row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.failtile__num {
+  font-weight: 300;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--text-secondary);
+}
+.failtile__link {
+  font-size: 13px;
+  color: var(--accent-1);
+}
+.failtile__cap {
+  font-size: 12px;
+  color: var(--text-ghost);
+  margin-top: 8px;
+}
+
+/* ── v2 graph teaser ─────────────────────────────────────────────────────── */
+.teaser {
+  position: relative;
+  overflow: hidden;
+  background: var(--panel-inset);
+  border: 1px dashed rgba(63, 162, 230, 0.3);
+  border-radius: 16px;
+  padding: 34px;
+  display: flex;
+  align-items: center;
+  gap: 34px;
+}
+.teaser__mark {
+  flex: none;
+  width: 120px;
+  height: 120px;
+  opacity: 0.92;
+  animation: ouroGlow 5s ease-in-out infinite;
+}
+.teaser__body {
+  flex: 1;
+}
+.teaser__eyebrow {
+  color: var(--accent-4);
+  margin-bottom: 10px;
+}
+.teaser__title {
+  margin: 0 0 8px;
+  font-weight: 300;
+  font-size: 26px;
+  color: var(--text-primary);
+}
+.teaser__text {
+  margin: 0;
+  max-width: 560px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.teaser__badge {
+  flex: none;
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--text-muted);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 20px;
+  padding: 7px 14px;
+  white-space: nowrap;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 920px) {
+  .kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .ov-grid-2,
+  .ov-grid-year,
+  .ov-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .ov {
+    padding: 22px 16px 60px;
+  }
+  .teaser {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+}

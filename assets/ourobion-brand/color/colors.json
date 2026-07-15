@@ -1,0 +1,80 @@
+{
+  "light": {
+    "background": "#FFFFFF",
+    "ring": "#083E49",
+    "coil_ramp": [
+      "#0A5160",
+      "#11788B",
+      "#1C9FB0",
+      "#2D93C6",
+      "#2E66B2"
+    ],
+    "coil_ramp_full_23": [
+      "#0A5160",
+      "#0B5868",
+      "#0D5F70",
+      "#0E6677",
+      "#0F6D7F",
+      "#107487",
+      "#127C8E",
+      "#148395",
+      "#168A9C",
+      "#1891A3",
+      "#1A98A9",
+      "#1C9FB0",
+      "#1F9DB4",
+      "#229BB8",
+      "#2598BC",
+      "#2896C0",
+      "#2B94C4",
+      "#2D8FC4",
+      "#2D87C1",
+      "#2D7FBD",
+      "#2E76B9",
+      "#2E6EB6",
+      "#2E66B2"
+    ],
+    "nucleus_core": "#0A5160",
+    "nucleus_envelope": "#1C9FB0",
+    "wordmark": "#0C5D6E"
+  },
+  "dark": {
+    "background": "#0B1D24",
+    "ring": "#2A6B78",
+    "coil_ramp": [
+      "#2BC4BE",
+      "#2FB7D6",
+      "#3FA2E6",
+      "#5E8DF0",
+      "#7C86F2"
+    ],
+    "coil_ramp_full_23": [
+      "#2BC4BE",
+      "#2CC2C2",
+      "#2CBFC7",
+      "#2DBDCB",
+      "#2EBBCF",
+      "#2FB8D4",
+      "#30B5D7",
+      "#33B1DA",
+      "#36ADDD",
+      "#39AAE0",
+      "#3CA6E3",
+      "#3FA2E6",
+      "#459EE8",
+      "#4A9AEA",
+      "#5097EB",
+      "#5693ED",
+      "#5B8FEF",
+      "#618CF0",
+      "#668BF1",
+      "#6C8AF1",
+      "#7189F1",
+      "#7787F2",
+      "#7C86F2"
+    ],
+    "nucleus_core": "#2BC4BE",
+    "nucleus_envelope": "#3FA2E6",
+    "wordmark": "#2BC4BE"
+  }
+}

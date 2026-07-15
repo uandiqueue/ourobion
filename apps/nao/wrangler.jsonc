@@ -1,0 +1,43 @@
+{
+  // ourobion nao — Cloudflare Workers config (deploy via @opennextjs/cloudflare).
+  // Bindings live HERE, not in .env: the deployed Worker reads R2 via the native
+  // CORPUS binding (no S3 creds) and the search index via the DB (D1) binding.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ourobion-nao",
+  "compatibility_date": "2024-12-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": ".open-next/worker.js",
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "r2_buckets": [
+    {
+      "binding": "CORPUS",
+      "bucket_name": "ourobion-corpus"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ourobion-nao-index",
+      "database_id": "1c7d3a80-baa5-47f5-bdcb-9137b19e91ee"
+    }
+  ],
+  // Plain (non-secret) runtime vars — public info, safe to commit. The GitHub
+  // PAT itself (GH_ACTIONS_TOKEN) and SUPABASE_URL are set via
+  // `wrangler secret put` instead (see docs/nao/brain-ingestion-design.md §8.1).
+  "vars": {
+    "GH_REPO": "uandiqueue/ourobion"
+  },
+  // ourobion.com is already on Cloudflare (confirmed via NS lookup), so a Custom
+  // Domain route claims nao.ourobion.com for this Worker on `wrangler deploy` —
+  // no separate DNS record needed; Cloudflare manages it once this route exists
+  // and the deploying account owns the ourobion.com zone.
+  "routes": [
+    {
+      "pattern": "nao.ourobion.com",
+      "custom_domain": true
+    }
+  ]
+}

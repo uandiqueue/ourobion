@@ -1,20 +1,22 @@
-# Environments
+# ═══════════════════════════════════════════════════════════════
+# 1. ENVIRONMENTS & SECRETS (Critical)
+# ═══════════════════════════════════════════════════════════════
 .env
 .env.*
+!.env.example
+!.env.public.example
+.env.keys
+.env.local
+.dev.vars
+.dev.vars.*
+.claude/settings.local.json
 
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+# Multi-agent task-claim coordination state (machine-local; see tools/shared_memory.mjs).
+.agents/
 
-# OS Files
-.DS_Store
-Thumbs.db
-
-# Dependencies (Common)
+# ═══════════════════════════════════════════════════════════════
+# 2. DEPENDENCIES (Common)
+# ═══════════════════════════════════════════════════════════════
 node_modules/
 vendor/
 __pycache__/
@@ -23,15 +25,73 @@ __pycache__/
 venv/
 env/
 
-# Build / Output
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+
+# ═══════════════════════════════════════════════════════════════
+# 3. BUILD / OUTPUT
+# ═══════════════════════════════════════════════════════════════
 dist/
 build/
 out/
 bin/
 target/
 
-# IDEs and Editors
+# Flutter/Native Builds
+**/doc/api/
+**/ios/Flutter/.last_build_id
+/build/
+/coverage/
+app.*.symbols
+app.*.map.json
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# ═══════════════════════════════════════════════════════════════
+# 4. LOGS & OS FILES
+# ═══════════════════════════════════════════════════════════════
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.DS_Store
+Thumbs.db
+
+# ═══════════════════════════════════════════════════════════════
+# 5. IDEs AND EDITORS
+# ═══════════════════════════════════════════════════════════════
 .idea/
 .vscode/
 *.swp
 *.swo
+*.class
+*.pyc
+
+# Supabase Local Dev
+.branches
+.temp
+
+# ═══════════════════════════════════════════════════════════════
+# 6. GENERATED CONTEXT GRAPH (graphify)
+# ═══════════════════════════════════════════════════════════════
+# graphify's output dir (graph.json + graph.html + AST cache + manifest) is a
+# rebuildable PROJECTION — regenerate with scripts/graphify-build.ps1, never
+# hand-edit (two-tier-truth rule). Gitignored until a path-normalizer makes
+# graph.json diff cleanly cross-machine; see docs/graph/README.md + memory 0008.
+graphify-out/
+
+# ═══════════════════════════════════════════════════════════════
+# 7. BRAIN-INGEST LOCAL CORPUS CACHE
+# ═══════════════════════════════════════════════════════════════
+# The paper manifest (papers.jsonl), usage.json, and browser-captured html are
+# now a LOCAL CACHE — R2 is the canonical metadata + binary store (manifest/
+# papers.jsonl + meta/<uid>.json + pdf|jats|text). See BRAIN-INGESTION-DESIGN §1/§6.
+data/corpus/

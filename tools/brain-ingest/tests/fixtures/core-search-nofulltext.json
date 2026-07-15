@@ -1,0 +1,21 @@
+{
+  "totalHits": 2,
+  "limit": 5,
+  "offset": 0,
+  "results": [
+    {
+      "id": 987654321,
+      "doi": "10.1016/j.example.2022.07.014",
+      "title": "Oral rehydration strategies in acute dengue: a randomized trial",
+      "downloadUrl": "https://core.ac.uk/download/987654321.pdf",
+      "fullText": null
+    },
+    {
+      "id": 555000111,
+      "doi": "10.9999/other.2020.001",
+      "title": "An unrelated work that should not be selected",
+      "downloadUrl": "https://core.ac.uk/download/555000111.pdf",
+      "fullText": "short stub"
+    }
+  ]
+}

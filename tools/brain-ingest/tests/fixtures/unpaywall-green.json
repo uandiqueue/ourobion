@@ -1,0 +1,28 @@
+{
+  "doi": "10.1016/j.example.2020.01.001",
+  "doi_url": "https://doi.org/10.1016/j.example.2020.01.001",
+  "title": "A green-OA repository-deposited article",
+  "year": 2020,
+  "journal_name": "Journal of Examples",
+  "publisher": "Elsevier BV",
+  "is_oa": true,
+  "oa_status": "green",
+  "has_repository_copy": true,
+  "best_oa_location": {
+    "url": "https://repository.example.edu/handle/12345",
+    "url_for_pdf": "https://repository.example.edu/bitstream/12345/accepted.pdf",
+    "url_for_landing_page": "https://repository.example.edu/handle/12345",
+    "license": null,
+    "version": "acceptedVersion",
+    "host_type": "repository",
+    "is_best": true
+  },
+  "oa_locations": [
+    {
+      "url_for_pdf": "https://repository.example.edu/bitstream/12345/accepted.pdf",
+      "license": null,
+      "version": "acceptedVersion",
+      "host_type": "repository"
+    }
+  ]
+}

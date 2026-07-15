@@ -1,0 +1,48 @@
+{
+  "version": "6.9",
+  "hitCount": 3,
+  "request": {
+    "queryString": "gut microbiome",
+    "resultType": "core",
+    "pageSize": 100
+  },
+  "resultList": {
+    "result": [
+      {
+        "id": "38123456",
+        "source": "MED",
+        "pmid": "38123456",
+        "pmcid": "PMC10765432",
+        "doi": "https://doi.org/10.1016/J.CELL.2024.01.001",
+        "title": "Gut microbiome composition and host metabolic health: a cohort study",
+        "authorString": "Tan WH, Lim JK, Garcia M.",
+        "authorList": {
+          "author": [
+            { "fullName": "Tan Wei Hong", "firstName": "Wei Hong", "lastName": "Tan", "initials": "WH" },
+            { "fullName": "Lim Jia Kai", "firstName": "Jia Kai", "lastName": "Lim", "initials": "JK" },
+            { "firstName": "Maria", "lastName": "Garcia", "initials": "M" }
+          ]
+        },
+        "journalTitle": "Cell",
+        "pubYear": "2024",
+        "abstractText": "We profiled the gut microbiome of 1,204 adults and found a robust association between microbial diversity and metabolic markers."
+      },
+      {
+        "id": "PPR789012",
+        "source": "PPR",
+        "doi": "10.1101/2024.05.10.593001",
+        "title": "Short-chain fatty acids modulate intestinal barrier integrity",
+        "authorString": "Okafor C, Nguyen T.",
+        "bookOrReportDetails": { "publisher": "bioRxiv" },
+        "pubYear": "2024",
+        "abstractText": "This preprint reports that SCFAs strengthen tight-junction expression in a murine model."
+      },
+      {
+        "id": "EMPTY1",
+        "source": "MED",
+        "pubYear": "abcd",
+        "title": ""
+      }
+    ]
+  }
+}

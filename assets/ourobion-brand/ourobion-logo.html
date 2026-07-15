@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ourobion — Logo v10 (graded teal→blue)</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+         gap:26px; background:#E4E3DD; padding:46px 22px; font-family:'Outfit','Helvetica Neue',sans-serif; }
+  .row { display:flex; flex-wrap:wrap; gap:24px; justify-content:center; align-items:flex-start; }
+  .col { display:flex; flex-direction:column; align-items:center; }
+  .card-light { background:#fff; padding:54px 64px; box-shadow:0 1px 6px rgba(0,0,0,.07); }
+  .card-dark  { background:#0B1D24; padding:54px 64px; box-shadow:0 2px 10px rgba(0,0,0,.22); }
+  .label { margin-top:13px; font-size:9px; letter-spacing:3px; color:#9A9A92; font-weight:300; text-transform:uppercase; text-align:center; }
+  .note  { font-size:9px; letter-spacing:.4px; color:#ABAAA4; font-weight:300; text-align:center; max-width:430px; line-height:1.95; }
+</style>
+</head>
+<body>
+
+<div class="row">
+  <div class="col"><div class="card-light"><svg id="ll" viewBox="0 0 400 405" width="262"></svg></div><p class="label">Primary · Light</p></div>
+  <div class="col"><div class="card-dark"><svg id="ld" viewBox="0 0 400 405" width="262"></svg></div><p class="label">Inverted · Dark</p></div>
+</div>
+
+<div class="row">
+  <div class="col"><svg id="il" viewBox="58 54 284 252" width="100" style="background:#fff;padding:12px;"></svg><p class="label">100px light</p></div>
+  <div class="col"><svg id="id" viewBox="58 54 284 252" width="100" style="background:#0B1D24;padding:12px;"></svg><p class="label">100px dark</p></div>
+  <div class="col"><svg id="is" viewBox="58 54 284 252" width="50" style="background:#fff;padding:6px;"></svg><p class="label">50px</p></div>
+</div>
+
+<p class="note">
+  Locked shape · 23 segments each a different fade of teal→blue (harmonious, not flat)<br>
+  Snake coiling around the flat ring axis · 11.5 turns = 23 crossings · central nucleus
+</p>
+
+<script>
+const NS='http://www.w3.org/2000/svg';
+const CX=200, CY=178;
+const R_AXIS=100, RING_IN=92, RING_OUT=108;
+const RHO=15, W=6.2, HALO=3.2;
+const START=340, SPAN=345, T=11.5, N=23, M=920;
+const NUC_CORE=34, NUC_ENV=60, NUC_ENV_W=3;
+
+// ── teal→blue ramps ─────────────────────────────────────────────────────
+const RAMP_LIGHT = ['#0A5160','#11788B','#1C9FB0','#2D93C6','#2E66B2'];
+const RAMP_DARK  = ['#2BC4BE','#2FB7D6','#3FA2E6','#5E8DF0','#7C86F2'];
+const PAL = {
+  light: { ramp:RAMP_LIGHT, bg:'#FFFFFF', ring:'#083E49', nucCore:'#0A5160', nucEnv:'#1C9FB0', wm:'#0C5D6E' },
+  dark:  { ramp:RAMP_DARK,  bg:'#0B1D24', ring:'#2A6B78', nucCore:'#2BC4BE', nucEnv:'#3FA2E6', wm:'#2BC4BE' },
+};
+
+const rad=d=>d*Math.PI/180;
+const f=v=>Math.round(v*100)/100;
+const ox=(d,r)=>CX+r*Math.cos(rad(d));
+const oy=(d,r)=>CY+r*Math.sin(rad(d));
+const el=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,String(a[k]));return e;};
+
+function h2r(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+function r2h(c){return '#'+c.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');}
+function ramp(controls,n){
+  const cs=controls.map(h2r), out=[];
+  for(let i=0;i<n;i++){
+    const t=n>1?i/(n-1):0, x=t*(cs.length-1), k=Math.min(cs.length-2,Math.floor(x)), fr=x-k;
+    out.push(r2h([0,1,2].map(j=>cs[k][j]+(cs[k+1][j]-cs[k][j])*fr)));
+  }
+  return out;
+}
+
+function sample(){
+  const p=[];
+  for(let i=0;i<=M;i++){
+    const u=i/M, phi=START+SPAN*u, th=2*Math.PI*T*u, rr=R_AXIS+RHO*Math.cos(th), z=RHO*Math.sin(th);
+    let w=W;
+    if(u<0.05) w=W*(0.28+0.72*(u/0.05));
+    if(u>0.95) w=W*(1-(u-0.95)/0.05*0.35);
+    p.push({u,x:ox(phi,rr),y:oy(phi,rr),z,w});
+  }
+  for(let i=0;i<p.length;i++){
+    const a=p[Math.max(0,i-1)],b=p[Math.min(p.length-1,i+1)];
+    let tx=b.x-a.x,ty=b.y-a.y;const L=Math.hypot(tx,ty)||1;p[i].nx=-ty/L;p[i].ny=tx/L;
+  }
+  return p;
+}
+function ribbon(arr,pad=0){
+  const Lp=[],Rp=[];
+  for(const s of arr){const h=s.w/2+pad;Lp.push([s.x+s.nx*h,s.y+s.ny*h]);Rp.push([s.x-s.nx*h,s.y-s.ny*h]);}
+  let d=`M ${f(Lp[0][0])} ${f(Lp[0][1])} `;
+  for(let i=1;i<Lp.length;i++)d+=`L ${f(Lp[i][0])} ${f(Lp[i][1])} `;
+  for(let i=Rp.length-1;i>=0;i--)d+=`L ${f(Rp[i][0])} ${f(Rp[i][1])} `;
+  return d+'Z';
+}
+function ringPath(){
+  const a0=START,a1=START+SPAN,big=SPAN>180?1:0;
+  return `M ${f(ox(a0,RING_OUT))} ${f(oy(a0,RING_OUT))} `
+       + `A ${RING_OUT} ${RING_OUT} 0 ${big} 1 ${f(ox(a1,RING_OUT))} ${f(oy(a1,RING_OUT))} `
+       + `L ${f(ox(a1,RING_IN))} ${f(oy(a1,RING_IN))} `
+       + `A ${RING_IN} ${RING_IN} 0 ${big} 0 ${f(ox(a0,RING_IN))} ${f(oy(a0,RING_IN))} Z`;
+}
+
+function draw(svgId,pal,wordmark){
+  const svg=document.getElementById(svgId);const add=e=>svg.appendChild(e);
+  const P=sample(), cols=ramp(pal.ramp,N);
+
+  // pieces split by segment index AND front/behind
+  const pieces=[]; let cur=[P[0]];
+  let cseg=Math.min(N-1,Math.floor(P[0].u*N)), cfront=P[0].z>=0;
+  for(let i=1;i<P.length;i++){
+    const seg=Math.min(N-1,Math.floor(P[i].u*N)), front=P[i].z>=0;
+    if(seg!==cseg||front!==cfront){cur.push(P[i]);pieces.push({front:cfront,seg:cseg,pts:cur});cur=[P[i]];cseg=seg;cfront=front;}
+    else cur.push(P[i]);
+  }
+  pieces.push({front:cfront,seg:cseg,pts:cur});
+
+  // behind
+  for(const p of pieces) if(!p.front) add(el('path',{d:ribbon(p.pts),fill:cols[p.seg]}));
+  // ring + cuts
+  add(el('path',{d:ringPath(),fill:pal.ring}));
+  for(let j=0;j<=N;j++){const ang=START+SPAN*j/N;
+    add(el('line',{x1:f(ox(ang,RING_IN)),y1:f(oy(ang,RING_IN)),x2:f(ox(ang,RING_OUT)),y2:f(oy(ang,RING_OUT)),
+      stroke:pal.bg,'stroke-width':2.3,opacity:.85}));}
+  // front (halo + colour)
+  for(const p of pieces) if(p.front){
+    add(el('path',{d:ribbon(p.pts,HALO),fill:pal.bg}));
+    add(el('path',{d:ribbon(p.pts),fill:cols[p.seg]}));
+  }
+
+  // head
+  const head=P[P.length-1], tail=P[0];
+  let hx=tail.x-head.x, hy=tail.y-head.y; const HL=Math.hypot(hx,hy); hx/=HL; hy/=HL;
+  const px=-hy, py=hx, reach=Math.min(HL-5,24), bw=W*0.9, mw=W*1.5;
+  const hpath=`M ${f(head.x+px*bw)} ${f(head.y+py*bw)} `
+    + `L ${f(head.x+hx*reach*0.5+px*mw)} ${f(head.y+hy*reach*0.5+py*mw)} `
+    + `L ${f(head.x+hx*reach)} ${f(head.y+hy*reach)} `
+    + `L ${f(head.x+hx*reach*0.5-px*mw)} ${f(head.y+hy*reach*0.5-py*mw)} `
+    + `L ${f(head.x-px*bw)} ${f(head.y-py*bw)} Z`;
+  add(el('path',{d:ribbon([head,head],HALO),fill:pal.bg}));
+  add(el('path',{d:hpath,fill:cols[N-1]}));
+  add(el('circle',{cx:f(head.x+hx*9+px*3),cy:f(head.y+hy*9+py*3),r:1.7,fill:pal.bg,opacity:.85}));
+
+  // nucleus
+  add(el('circle',{cx:CX,cy:CY,r:NUC_ENV,fill:'none',stroke:pal.nucEnv,'stroke-width':NUC_ENV_W}));
+  add(el('circle',{cx:CX,cy:CY,r:NUC_CORE,fill:pal.nucCore}));
+
+  if(wordmark){
+    add(el('line',{x1:150,y1:332,x2:250,y2:332,stroke:pal.wm,'stroke-width':.5,opacity:.22}));
+    const t=el('text',{x:200,y:360,'text-anchor':'middle','font-family':"'Outfit','Helvetica Neue',Arial,sans-serif",
+      'font-size':26,'font-weight':200,'letter-spacing':8,fill:pal.wm});t.textContent='ourobion';add(t);
+  }
+}
+
+draw('ll',PAL.light,true);
+draw('ld',PAL.dark,true);
+draw('il',PAL.light,false);
+draw('id',PAL.dark,false);
+draw('is',PAL.light,false);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "ourobion",
+  "private": true,
+  "scripts": {
+    "context:start": "node tools/context_sync.mjs --session-start",
+    "context:check": "node tools/context_sync.mjs --check"
+  },
+  "devDependencies": {
+    "supabase": "^2.81.2"
+  }
+}
