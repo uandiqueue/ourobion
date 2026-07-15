@@ -78,6 +78,12 @@ export interface Citation {
   paperId: string;
   title: string;
   year: number | null;
+  /**
+   * Per-paper studied population, verbatim, when the source states one; null when not reported.
+   * Distinct from the claim-level `RelationshipClaim.population` (the claimed scope of the whole
+   * edge) — this is what THIS paper actually studied. U1 applicability-grader input.
+   */
+  population: string | null;
   evidenceTier: EvidenceTier;
   impactTier: ImpactTier;
   /** What this source does to the edge. */
@@ -92,6 +98,14 @@ export interface QuoteSpan {
   quote: string;
   /** Section / page / figure locator, when known. */
   locator: string | null;
+  /**
+   * Start character offset of `quote` into the source's canonical extracted text
+   * (`StructuredPaper.canonicalText`); null when unknown. Upgrades `locator` from free-text-only
+   * and makes the deterministic quote check exact.
+   */
+  charStart: number | null;
+  /** End character offset (exclusive) into the canonical extracted text; null when unknown. */
+  charEnd: number | null;
 }
 
 /**
@@ -118,6 +132,12 @@ export interface RelationshipClaim {
   citations: readonly Citation[];
   /** Grounding spans (≥1) — exact text the claim rests on. */
   quoteSpans: readonly QuoteSpan[];
+  /**
+   * The synthesis node's plain-language reasoning trace — "how these sentences produce this
+   * claim". Captured AT synthesis time (never regenerated on view), copy-gated before storage.
+   * Required on every claim.
+   */
+  derivation: string;
   /** Provenance — makes the claim a reproducible projection. */
   synthesisModel: string;
   promptVersion: string;

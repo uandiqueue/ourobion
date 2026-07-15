@@ -44,6 +44,9 @@ The authoritative shapes are in [`relationships.ts`](./relationships.ts). Highli
 | Field | Meaning |
 |---|---|
 | `edgeId` | deterministic `${subject}\|${relation}\|${object}` (see `index.relationKey`) — re-runs update the same edge |
+| `derivation` | the synthesis node's plain-language reasoning trace — how the quoted sentences produce the claim; captured at synthesis time (never regenerated on view), copy-gated before storage |
+| `Citation.population` | per-paper studied population, verbatim, when stated — distinct from the claim-level `population` (the claimed scope); U1 applicability-grader input |
+| `charStart` / `charEnd` | a `QuoteSpan`'s offsets into the source's canonical extracted text (`null` when unknown) — makes the deterministic quote check exact |
 | `relation` | `increases` · `decreases` · `modulates` · `correlates` · `confounds` · `no_effect` (`no_effect` records a studied null) |
 | `claimKind` | `causal` · `correlational` · `mechanistic` — the axis synthesis most overstates |
 | `evidenceTier` | study-design strength `1` mechanistic … `5` meta-analysis — the brain's analog of metric `reliability` |

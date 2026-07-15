@@ -54,6 +54,7 @@ export const metricDefinitionSchema = z.object({
     weight: z.number(),
     countsTowardDailyCompleteness: z.boolean(),
   }),
+  signal: z.object({ deadbandK: z.number().positive() }).nullable(),
   ui: z.object({ label: z.string(), inputType: z.string() }).nullable(),
   status: metricStatusSchema,
   introducedIn: z.string(),
@@ -74,6 +75,13 @@ export const registrySchema = z
         ctx.addIssue({
           code: 'custom',
           message: `${m.key}: baselineApplicable requires numeric|ordinal type`,
+        });
+      }
+      // Every baselined metric carries S4 signal params (ADR-0002 deadband).
+      if (m.baselineApplicable && m.signal === null) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `${m.key}: baselineApplicable requires signal (S4 deadbandK, ADR-0002)`,
         });
       }
       // enum / multi_select must enumerate their values; nothing else may.
