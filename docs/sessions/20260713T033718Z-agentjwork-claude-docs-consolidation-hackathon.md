@@ -133,3 +133,5 @@ memory: none
 memory: none
 
 - Fixed check (h) to exempt pre-convention session logs (full-history main fold flagged legacy logs).
+
+- Fixed CI: metrics-registry-dqs guard test read normaliser.dart at the stale `src/lib/` path → corrected to `apps/biotope/lib/` (only surfaced once CI began running on dev-phase2). Verified locally: guard test passes.

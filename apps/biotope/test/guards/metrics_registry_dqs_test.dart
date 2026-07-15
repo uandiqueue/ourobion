@@ -14,7 +14,7 @@ void main() {
       final registryWeights =
           registryDailyCoreWeights(readRepoFile('shared/metrics/registry.ts'));
       final normaliserWeights = dartIntMap(
-        readRepoFile('src/lib/modules/m2_self_report/impl/normaliser.dart'),
+        readRepoFile('apps/biotope/lib/modules/m2_self_report/impl/normaliser.dart'),
         'kDailyCoreDqsWeights',
       );
 
