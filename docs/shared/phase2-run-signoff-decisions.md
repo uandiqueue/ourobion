@@ -27,23 +27,6 @@ Numeric hyperparameters/config values are in [`phase2-run-config-decisions.md`](
   branch so its diff stays session-scoped. Jayden merges the chain in order (bases auto-retarget as
   predecessors merge), or grants a `gh pr merge` permission rule to restore the original policy.
 
-## D8 · L0 fields shipped as required/nullable, not optional-with-default
-- **Choice:** `derivation` is required and `population`/`charStart`/`charEnd` are required-nullable on
-  the brain contract, exactly as the architecture specifies — no optionality escape hatch.
-- **Rationale:** memory 0002's optional-with-default rule protects existing instances; the build agent
-  verified there are zero persisted claim/verification instances and zero constructors in code, so
-  strictness is free now and saves a tightening migration later.
-
-## D9 · Storage-primitive schema judgment calls (U2)
-- **Choices (full list + rationale in session log `20260715T140420Z-…storage-primitives.md`):** jsonb
-  values on `events`/`state_bands`/`derived_metrics`, fixed `double precision` on `signals` (no
-  `value_text`); natural composite PK `(user_id, metric_key, ts, source)` on `signals`;
-  `daily_log` deliberately NOT created (`daily_gut_rows` is its grandfathered instance); no
-  overlap-exclusion constraint on `state_bands` (concurrent courses are legal; collector's problem).
-- **The one precedent conflict:** `derived_metrics` got all four RLS policies while `baseline_snapshots`
-  is select-only — followed the session spec (client-side derivation already exists in M2; "never
-  hand-edit" is a process rule, not an RLS rule). Flag if you'd rather match the select-only precedent.
-
 ## D2 · No worktrees; sequential sessions in the main checkout
 - **Choice:** per Jayden's instruction (2026-07-15), session branches are cut directly off `dev-phase2`
   in the main checkout; sessions run one at a time. Read-only subagents may run in parallel; only one
@@ -83,3 +66,30 @@ Numeric hyperparameters/config values are in [`phase2-run-config-decisions.md`](
 - **Choice:** the 2026-07-13 session log's claim that the `main` fold happened is recorded as a
   discrepancy (register B1) rather than edited — session logs are append-only, and the fold stays gated
   on your explicit go.
+
+## D8 · L0 fields shipped as required/nullable, not optional-with-default
+- **Choice:** `derivation` is required and `population`/`charStart`/`charEnd` are required-nullable on
+  the brain contract, exactly as the architecture specifies — no optionality escape hatch.
+- **Rationale:** memory 0002's optional-with-default rule protects existing instances; the build agent
+  verified there are zero persisted claim/verification instances and zero constructors in code, so
+  strictness is free now and saves a tightening migration later.
+
+## D9 · Storage-primitive schema judgment calls (U2)
+- **Choices (full list + rationale in session log `20260715T140420Z-…storage-primitives.md`):** jsonb
+  values on `events`/`state_bands`/`derived_metrics`, fixed `double precision` on `signals` (no
+  `value_text`); natural composite PK `(user_id, metric_key, ts, source)` on `signals`;
+  `daily_log` deliberately NOT created (`daily_gut_rows` is its grandfathered instance); no
+  overlap-exclusion constraint on `state_bands` (concurrent courses are legal; collector's problem).
+- **The one precedent conflict:** `derived_metrics` got all four RLS policies while `baseline_snapshots`
+  is select-only — followed the session spec (client-side derivation already exists in M2; "never
+  hand-edit" is a process rule, not an RLS rule). Flag if you'd rather match the select-only precedent.
+
+## D10 · Rule-blueprint contract judgment calls (U5)
+- **Choices where the design doc was silent** (full detail in session log `20260715T152517Z-…rules-as-data.md`):
+  `coincidence.lagDays: number | null` on the cross-rule leaf (null = same window; lagged evaluation
+  lands with the engine); `minConfidence: low|medium|high` replaces the design's `notInsufficient`
+  boolean; `rules` table adds `scope/status/cooldown_days/expiry_days` beyond the doc's column list;
+  RLS enabled with zero policies (service-role-only, per design). The 6 MVP rules ported faithfully —
+  same conditions, copy, severity `info`, 7-day expiry.
+- **Flag for later:** CI does not run any node tool-package tests (brain-ingest / llm-router / rules) —
+  queued as worklist U18.

@@ -55,7 +55,7 @@ extraction; anomaly definition — **supersedes S4/S5 dummy thresholds**; paper 
 | U2 | **Storage primitives** — migrations for `events`, `state_bands`, `signals`, `derived_metrics` (+RLS, legacy tables become first instances in place); extend `metrics_registry_schema_test.dart` table→migration map + couplings edge | **done** | Commit `23f6947`; 40/40 tests; migrations verified via real `db reset` (Docker). Schema judgment calls: decision D9 + session log 20260715T140420Z |
 | U3 | **LLM router** — dual-route (local-agent / api-worker), Anthropic+OpenAI adapters, model ids + caps from config, synthesis↔verifier family-decorrelation assertion; fixture-mockable, tested | **done** | `tools/llm-router/` commit `a419d8e`; 42/42 tests offline; all nodes default `local_agent` until keys land (B5); mailbox contract in package README |
 | U4 | **Deterministic quick wins** — A9 quoteCheck (literal-presence gate) + b2 venue lookup (OpenAlex ISSN + SJR → impactTier, cached) | **done** | Commit `389074f`; brain-ingest 268/268. quoteCheck block matches `EdgeVerification.quoteCheck` exactly; SJR = typed optional input (dataset gap → register B11) |
-| U5 | **Rules-as-data** — `shared/rules/` contract (+zod), `data/rules/{single,cross}/`, `rules` table migration, loader `tools/rules/load_rules.mjs`, copy-gate at load, guards + couplings | queued | Replaces the 6 hardcoded rules at U12 |
+| U5 | **Rules-as-data** — `shared/rules/` contract (+zod), `data/rules/{single,cross}/`, `rules` table migration, loader `tools/rules/load_rules.mjs`, copy-gate at load, guards + couplings | **done** | Commit `e8e4a06`; 6 rules ported + real DB load verified idempotent; 43/43 flutter, 22 node tests. AST calls → decision D10 |
 | U6 | **S2 + S3** — `metric_daily_values` unpivot view (registry-generated, `tools/gen-metric-view.mjs`) + baseline v2 (`window_days`, `total_history_days`, confidence cutoffs per C5) in `compute-baselines` | queued | Right column start; needs U1 |
 | U7 | **S4 + S5** — 3-state signal firing (robust median/MAD per ADR-0002) + n=1 evaluator (Spearman ρ, N_eff, BH q) + `personal_signals` migration | queued | Needs U6 |
 | U8 | **S6 edge store + A11 loader** — `relationship_claims` / `edge_verifications` / `verified_edges` migrations (DDL in architecture §S6) + R2→Postgres loader precomputing score/band via `shared/brain` | queued | Needs U1 |
@@ -68,6 +68,7 @@ extraction; anomaly definition — **supersedes S4/S5 dummy thresholds**; paper 
 | U15 | A4 extract v2 (offsets) · A4b citation parse · A2 terms.ts · A6 mentions/co-occurrence · A7 assertion gate | stretch | Left column depth |
 | U16 | S9 report composer · A1 gap ledger · A3 transport · A12 coverage (L7/L8) | stretch | |
 | U17 | nao v2 graph + evidence panel | stretch | Needs U8 servable edges |
+| U18 | CI: run node tool-package suites (`brain-ingest`, `llm-router`, `rules`) — ci.yml today runs only context / flutter / shared-tsc | queued | Small; found during U5 |
 
 Dependency spine: U1 → {U6→U7, U8}; U3 → {U9, U10, U11}; U5+U7+U8 → U12 → U13. U2 unblocks U14
 and the primitives-backed instances but nothing in U6–U13 hard-depends on it (engine reads existing
@@ -82,7 +83,8 @@ tables + the S2 view) — it stays early because it's Track A's longest pole.
 | 2026-07-15 | U1 L0 contract extension | `feat/shared/l0-contract-extension` / PR #45 (stacked on U0) | done; **shared/ retro-review** |
 | 2026-07-15 | U2 storage primitives | `feat/db-storage/continuity-primitives` / PR #47 (stacked on U1) | done; **shared/ retro-review** (MetricTable widening) |
 | 2026-07-15 | U3 LLM router | `feat/brain/llm-router` / PR #49 (stacked on U2) | done |
-| 2026-07-15 | U4 quoteCheck + venue lookup | `feat/brain/quotecheck-venue-lookup` (stacked on U3) | done |
+| 2026-07-15 | U4 quoteCheck + venue lookup | `feat/brain/quotecheck-venue-lookup` / PR #51 (stacked on U3) | done |
+| 2026-07-15 | U5 rules-as-data | `feat/m5b-rules/rules-as-data` (stacked on U4) | done; **shared/ retro-review** (`shared/rules/` new contract) |
 
 ## Notes for the resuming orchestrator
 
