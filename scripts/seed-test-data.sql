@@ -213,10 +213,12 @@ begin
 
   -- Titles (kTitleRegistry): pioneer ≥1 log, committed ≥7 streak,
   -- consistent ≥30 streak, explorer ≥30 logs. active_title = last unlocked.
-  if v_total   >= 1  then v_titles := v_titles || 'pioneer';    v_active := 'pioneer';    end if;
-  if v_streak  >= 7  then v_titles := v_titles || 'committed';  v_active := 'committed';  end if;
-  if v_streak  >= 30 then v_titles := v_titles || 'consistent'; v_active := 'consistent'; end if;
-  if v_total   >= 30 then v_titles := v_titles || 'explorer';   v_active := 'explorer';   end if;
+  -- '::text' casts matter: with an untyped literal, `text[] || 'x'` resolves to
+  -- array_cat and Postgres tries to parse 'x' as an ARRAY literal → "malformed array literal".
+  if v_total   >= 1  then v_titles := v_titles || 'pioneer'::text;    v_active := 'pioneer';    end if;
+  if v_streak  >= 7  then v_titles := v_titles || 'committed'::text;  v_active := 'committed';  end if;
+  if v_streak  >= 30 then v_titles := v_titles || 'consistent'::text; v_active := 'consistent'; end if;
+  if v_total   >= 30 then v_titles := v_titles || 'explorer'::text;   v_active := 'explorer';   end if;
 
   insert into engagement_state (
     user_id, current_streak_days, longest_streak_days,

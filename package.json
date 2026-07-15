@@ -6,7 +6,11 @@
     "context:check": "node tools/context_sync.mjs --check",
     "rules:load": "node tools/rules/load_rules.mjs",
     "rules:check": "node tools/rules/load_rules.mjs --check",
-    "rules:test": "npm --prefix tools/rules test"
+    "rules:test": "npm --prefix tools/rules test",
+    "view:gen": "node tools/metric-view/gen_metric_view.mjs",
+    "view:write": "node tools/metric-view/gen_metric_view.mjs --write",
+    "view:check": "node tools/metric-view/gen_metric_view.mjs --check",
+    "view:test": "npm --prefix tools/metric-view test"
   },
   "devDependencies": {
     "supabase": "^2.81.2"
