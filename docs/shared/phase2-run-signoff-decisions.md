@@ -34,6 +34,16 @@ Numeric hyperparameters/config values are in [`phase2-run-config-decisions.md`](
   verified there are zero persisted claim/verification instances and zero constructors in code, so
   strictness is free now and saves a tightening migration later.
 
+## D9 · Storage-primitive schema judgment calls (U2)
+- **Choices (full list + rationale in session log `20260715T140420Z-…storage-primitives.md`):** jsonb
+  values on `events`/`state_bands`/`derived_metrics`, fixed `double precision` on `signals` (no
+  `value_text`); natural composite PK `(user_id, metric_key, ts, source)` on `signals`;
+  `daily_log` deliberately NOT created (`daily_gut_rows` is its grandfathered instance); no
+  overlap-exclusion constraint on `state_bands` (concurrent courses are legal; collector's problem).
+- **The one precedent conflict:** `derived_metrics` got all four RLS policies while `baseline_snapshots`
+  is select-only — followed the session spec (client-side derivation already exists in M2; "never
+  hand-edit" is a process rule, not an RLS rule). Flag if you'd rather match the select-only precedent.
+
 ## D2 · No worktrees; sequential sessions in the main checkout
 - **Choice:** per Jayden's instruction (2026-07-15), session branches are cut directly off `dev-phase2`
   in the main checkout; sessions run one at a time. Read-only subagents may run in parallel; only one

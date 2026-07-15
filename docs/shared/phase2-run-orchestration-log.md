@@ -52,7 +52,7 @@ extraction; anomaly definition — **supersedes S4/S5 dummy thresholds**; paper 
 |---|---|---|---|
 | U0 | Orchestration bootstrap (these 4 docs) | **done** | issue #42 · PR #43 |
 | U1 | **L0 contract extension** — `Citation.population`, `QuoteSpan.charStart/charEnd`, `RelationshipClaim.derivation` (+ zod mirrors, AssertExact) in `shared/brain/`; `signal: { deadbandK }` on `MetricDefinition` (TS+Dart, ADR-0002 semantics — see decision D5) | **done** | Commit `b774229`; 35/35 tests, tsc clean. shared/ ⇒ retro-review flag. Architecture doc still says `deadbandSigma` in §S4/§7 — reconcile in U7 |
-| U2 | **Storage primitives** — migrations for `events`, `state_bands`, `signals`, `derived_metrics` (+RLS, legacy tables become first instances in place); extend `metrics_registry_schema_test.dart` table→migration map + couplings edge | next | Track A critical path |
+| U2 | **Storage primitives** — migrations for `events`, `state_bands`, `signals`, `derived_metrics` (+RLS, legacy tables become first instances in place); extend `metrics_registry_schema_test.dart` table→migration map + couplings edge | **done** | Commit `23f6947`; 40/40 tests; migrations verified via real `db reset` (Docker). Schema judgment calls: decision D9 + session log 20260715T140420Z |
 | U3 | **LLM router** — dual-route (local-agent / api-worker), Anthropic+OpenAI adapters, model ids + caps from config, synthesis↔verifier family-decorrelation assertion; fixture-mockable, tested | next | Track B foundation; model ids in [config decisions](./phase2-run-config-decisions.md) C6–C7 |
 | U4 | **Deterministic quick wins** — A9 quoteCheck (literal-presence gate) + b2 venue lookup (OpenAlex ISSN + SJR → impactTier, cached) | queued | No deps; can slot anywhere |
 | U5 | **Rules-as-data** — `shared/rules/` contract (+zod), `data/rules/{single,cross}/`, `rules` table migration, loader `tools/rules/load_rules.mjs`, copy-gate at load, guards + couplings | queued | Replaces the 6 hardcoded rules at U12 |
@@ -79,7 +79,8 @@ tables + the S2 view) — it stays early because it's Track A's longest pole.
 |---|---|---|---|
 | 2026-07-15 | Assessment (4 Explore agents) | — | Baseline above; no code changes |
 | 2026-07-15 | U0 bootstrap | `docs/orchestration/phase2-run-tracking` / PR #43 | done; awaiting review/merge |
-| 2026-07-15 | U1 L0 contract extension | `feat/shared/l0-contract-extension` (stacked on U0) | done; **shared/ retro-review** |
+| 2026-07-15 | U1 L0 contract extension | `feat/shared/l0-contract-extension` / PR #45 (stacked on U0) | done; **shared/ retro-review** |
+| 2026-07-15 | U2 storage primitives | `feat/db-storage/continuity-primitives` (stacked on U1) | done; **shared/ retro-review** (MetricTable widening) |
 
 ## Notes for the resuming orchestrator
 
