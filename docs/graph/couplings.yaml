@@ -118,6 +118,45 @@ couplings:
     status: active
     phase: P2
 
+  - id: metrics-registry-to-signals
+    from: shared/metrics/registry.ts
+    to: supabase/functions/evaluate-signals/index.ts
+    why: >
+      The evaluate-signals edge function (S4 3-state signal + S5 n=1 evaluator) must derive its
+      metric key list AND its per-metric deadband (signal.deadbandK, ADR-0002) from the registry —
+      never from hardcoded key literals — and read day-series only through the S2
+      metric_daily_values view. Same drift class the baselines guard exists for: a registry change
+      must reach the signal path with no manual key-list edit.
+    guard: apps/biotope/test/guards/metrics_registry_signals_test.dart
+    status: active
+    phase: P2
+
+  - id: adr-0002-s4-signal-stats
+    from: docs/shared/decisions/0002-anomaly-definition.md (S4 robust anomaly definition)
+    to: supabase/functions/evaluate-signals/stats.ts (+ config.ts C3 constants)
+    why: >
+      The S4 statistics are a prose contract (ADR-0002) implemented as pure TS with no compiler
+      linking doc to code: median/MAD (sigma-hat = MAD/0.6745), artifact rejection strictly
+      |M| > 3.5 (boundary kept), deadband neutral iff |x - median| <= deadbandK*sigma-hat
+      (boundary neutral), baselineMinDays guard, MAD-degeneracy fallback. Only executable vectors
+      keep the implementation honest to the decided thresholds and boundary semantics.
+    guard: tools/engine-stats/tests/s4_signal.test.ts
+    status: active
+    phase: P2
+
+  - id: adr-0002-s5-evaluator-stats
+    from: docs/shared/decisions/0002-anomaly-definition.md (S5 pairwise evaluator definition)
+    to: supabase/functions/evaluate-signals/stats.ts (+ config.ts C4 constants)
+    why: >
+      Same doc-to-code seam for the S5 half: Spearman with average-rank ties, Pyper–Peterman
+      modified-Chelton N_eff (bias-corrected autocorrelations, ~N/5 truncation, canonical 2/N
+      rendering), Benjamini–Hochberg step-up q-values, evaluatePair null-alignment and the
+      flat-vs-no-data failure modes, and the deterministic fixed-window sign-stability gate
+      (never unseeded resampling — Invariant 1). Held by hand-computed and published vectors.
+    guard: tools/engine-stats/tests/s5_pairwise.test.ts
+    status: active
+    phase: P2
+
   - id: metrics-registry-to-engine
     from: shared/metrics/registry.ts
     to: supabase/functions/generate-insights/index.ts
