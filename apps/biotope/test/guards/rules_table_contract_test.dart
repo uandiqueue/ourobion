@@ -1,9 +1,11 @@
 // Coupling guard: rules-table-to-insight-cards-parity
 // See docs/graph/couplings.yaml. The `rules` table (the derived projection of the data/rules
-// blueprints — rules-engine-design §B2) declares `category` and `severity` CHECK sets that must be
-// CHARACTER-IDENTICAL to `insight_cards`': the engine copies a rule's category/severity straight
-// onto the card, so any drift lets the loader accept a rule whose fired card the insight_cards
-// CHECK would reject at insert time. No import links the two migrations — only this test does.
+// blueprints — rules-engine-design §B2) declares `category` and `severity` CHECK sets the engine
+// copies straight onto fired cards, so insight_cards must accept every value rules can hold.
+// Since the §S8 card-producer migration, insight_cards' category CHECK is the rules set PLUS
+// 'relationship' (the composer producers' category — never written by the rules producer), so
+// the guard holds: severity character-identical; cards.category == rules.category + the one
+// composer value, verbatim. No import links the migrations — only this test does.
 //
 // status: active.
 
@@ -27,11 +29,16 @@ void main() {
         'supabase/migrations/20260715151252_create_m5b_rules_table.sql');
     final cardsSql = readRepoFile(
         'supabase/migrations/20260515110000_create_m5b_insight_cards.sql');
+    // The §S8 migration re-declares insight_cards' category CHECK (adds 'relationship').
+    final producersSql = readRepoFile(
+        'supabase/migrations/20260716050639_create_m5b_composed_insights_and_card_producers.sql');
 
-    test('category CHECK sets are character-identical', () {
-      expect(checkListLiteral(rulesSql, 'category'),
-          checkListLiteral(cardsSql, 'category'),
-          reason: 'rules.category CHECK must be character-identical to insight_cards.category');
+    test('cards category CHECK is exactly the rules CHECK plus the composer value', () {
+      final rulesSet = checkListLiteral(rulesSql, 'category');
+      final cardsSet = checkListLiteral(producersSql, 'category');
+      expect(cardsSet, "$rulesSet, 'relationship'",
+          reason: 'insight_cards.category must stay the rules set (verbatim) plus '
+              "'relationship' — the engine copies rule categories onto cards unchanged");
     });
 
     test('severity CHECK sets are character-identical', () {

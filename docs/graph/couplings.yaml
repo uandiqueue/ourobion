@@ -158,11 +158,14 @@ couplings:
     phase: P2
 
   - id: metrics-registry-to-engine
-    from: shared/metrics/registry.ts
-    to: supabase/functions/generate-insights/index.ts
+    from: shared/metrics/registry.ts (+ data/rules/** blueprint metric keys)
+    to: supabase/functions/generate-insights/ (index/evaluators/composer/render)
     why: >
-      Every rule's metricKey in the insight engine must resolve to an active registry metric, so a
-      rule can never read a metric that was never defined or has been removed.
+      Since the U12 refactor the engine is data-driven: it must contain ZERO hardcoded rules or
+      metric-key literals (deriving its metric surface from the registry and reading rules /
+      verified_edges / personal_signals / metric_daily_values from their tables), and every
+      metric key a data/rules blueprint references must resolve to an active registry metric —
+      so a rule can never read a metric that was never defined or has been removed.
     guard: apps/biotope/test/guards/metrics_registry_engine_test.dart
     status: active
     phase: P2
@@ -207,24 +210,39 @@ couplings:
 
   - id: rules-table-to-insight-cards-parity
     from: supabase/migrations (rules category/severity CHECKs)
-    to: supabase/migrations (insight_cards category/severity CHECKs)
+    to: supabase/migrations (insight_cards category/severity CHECKs, as re-declared by the §S8 card-producer migration)
     why: >
-      The engine copies a rule's category/severity straight onto the fired card, so the two tables'
-      CHECK sets must stay character-identical or the loader could accept a rule whose card
-      insight_cards rejects at insert time. No import links two migrations — only a parity test.
+      The engine copies a rule's category/severity straight onto the fired card, so insight_cards
+      must accept every value rules can hold: severity character-identical; category = the rules
+      set verbatim PLUS 'relationship' (the composer producers' category, never written by the
+      rules producer). No import links migrations — only a parity test.
     guard: apps/biotope/test/guards/rules_table_contract_test.dart
     status: active
     phase: P2
 
   - id: rules-blueprint-to-engine-coverage
     from: data/rules/**.json condition types
-    to: supabase/functions/generate-insights (evaluators, engine refactor step C)
+    to: supabase/functions/generate-insights/evaluators.ts (EVALUATORS)
     why: >
-      Every condition type a blueprint uses must have an evaluator branch in the engine, or a rule
-      ships that can never fire. The evaluator surface (evaluators.ts) lands with the engine
-      refactor; until then the guard is a runnable, skipped placeholder.
+      Every condition type a blueprint uses (including coincidence leaf types) must have an
+      evaluator branch in the engine, or a rule ships that can never fire. The guard also pins
+      golden evaluator vectors (trend/threshold/coincidence incl. the C10 lag routing) and the
+      windowed-baseline math the lagged leaves evaluate against.
     guard: tools/rules/tests/engine_condition_coverage.test.ts
-    status: planned
+    status: active
+    phase: P2
+
+  - id: engine-producers-to-cards-schema
+    from: supabase/functions/generate-insights (render.ts PRODUCERS / RELATIONSHIP_CATEGORY + composer.ts branches)
+    to: supabase/migrations (insight_cards producer/category/edge_refs CHECKs + composed_insights branch CHECK)
+    why: >
+      The S8 card producer speaks dynamic SQL into insight_cards and composed_insights, so the
+      producer namespace values, the 'relationship' category, the four composer branches, and
+      the personal⇒uncited CHECK (a still-researching card can never carry a citation) exist in
+      TS and SQL with no import linking them. Drift would make the engine emit rows Postgres
+      rejects at insert time — or worse, silently accept a cited "personal" card.
+    guard: tools/rules/tests/engine_cards_schema.test.ts
+    status: active
     phase: P2
 
   # ─── The brain (shared/brain + R2 edge artifacts + the S6 serving tables) — §S6/§A11 ───────────

@@ -287,10 +287,12 @@ test('loaders: registry exposes derivedFrom metrics and blueprints load from dis
   assert.ok(blueprints.every((b) => Array.isArray(b.metricKeys)), 'every blueprint has metricKeys');
 });
 
-test('enumerateSeederCandidates: real registry+blueprints → 8 derivedFrom + 6 topics', async () => {
+test('enumerateSeederCandidates: real registry+blueprints → 8 derivedFrom + 1 cross rule + 6 topics', async () => {
   const c = await enumerateSeederCandidates();
   const counts = candidateCounts(c);
   assert.equal(counts.derivedFrom, 8);
-  assert.equal(counts.rule_blueprint, 0); // all shipped MVP rules are single-metric
+  // The 6 ported MVP rules are single-metric; U12 shipped the first cross (coincidence)
+  // blueprint (hrv_rise_after_sleep_rise), which the seeder rightly enumerates as a pair.
+  assert.equal(counts.rule_blueprint, 1);
   assert.equal(counts.static_topic, 6);
 });
