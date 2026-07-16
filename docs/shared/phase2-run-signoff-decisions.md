@@ -111,3 +111,13 @@ Numeric hyperparameters/config values are in [`phase2-run-config-decisions.md`](
 - **Interim S5 pair scope**: all active baselineApplicable pairs (105 = C(15,2)) with ≥14 in-window
   days each and ≥10 joint days; BH per user per run. Brain-neighbour pruning replaces this in U12.
 - Architecture §S4 now carries a bracketed ADR-0002/`deadbandK` reconciliation note (`updated:` bumped).
+
+## D13 · Edge-store/loader judgment calls (U8)
+- **Verifications upsert + prune instead of the doc's `on conflict do nothing`** — do-nothing left a
+  stale status column when the newest-active verification changed; upsert+prune makes the Postgres
+  tables a pure function of the artifact set (two-tier truth).
+- **Hard fail on invalid JSONL lines instead of §A11's quarantine-and-continue** — with no synthesis
+  running yet, every line is authored truth; revisit at A8 volume.
+- **Loader home `tools/edge-loader/`** (doc ambiguous between tools and nao; nao cron wiring is later).
+- RLS: authenticated read + service-role write (recorded deviation from the rules-table
+  no-read-policy precedent — biotope must read edges at serve time).

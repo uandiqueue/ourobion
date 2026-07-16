@@ -58,7 +58,7 @@ extraction; anomaly definition — **supersedes S4/S5 dummy thresholds**; paper 
 | U5 | **Rules-as-data** — `shared/rules/` contract (+zod), `data/rules/{single,cross}/`, `rules` table migration, loader `tools/rules/load_rules.mjs`, copy-gate at load, guards + couplings | **done** | Commit `e8e4a06`; 6 rules ported + real DB load verified idempotent; 43/43 flutter, 22 node tests. AST calls → decision D10 |
 | U6 | **S2 + S3** — `metric_daily_values` unpivot view (registry-generated, `tools/metric-view/`) + baseline v2 (`window_days`, `total_history_days`, confidence cutoffs per C5) in `compute-baselines` | **done** | Commit `cfcf257`; live-verified on local stack (224 view rows, snapshots 16/16, tiers proven 4→low/5→medium/14→high); view drift guard active; D11 |
 | U7 | **S4 + S5** — 3-state signal firing (robust median/MAD per ADR-0002) + n=1 evaluator (Spearman ρ, N_eff, BH q) + `personal_signals` migration | **done** | Commit `97dbd40`; `evaluate-signals` fn; live-verified (z=8.77 outlier fired, BH refused noise pairs, ρ=0.96 injected pair passed all gates); 46/46 flutter + 30/30 stats tests; D12 |
-| U8 | **S6 edge store + A11 loader** — `relationship_claims` / `edge_verifications` / `verified_edges` migrations (DDL in architecture §S6) + R2→Postgres loader precomputing score/band via `shared/brain` | queued | Needs U1 |
+| U8 | **S6 edge store + A11 loader** — `relationship_claims` / `edge_verifications` / `verified_edges` migrations (DDL in architecture §S6) + R2→Postgres loader precomputing score/band via `shared/brain` | **done** | Commit `b5b0115`; `tools/edge-loader/` 21/21; live fixture load: 3 servable edges, supersede/prune/idempotency proven; both brain guards active; D13 |
 | U9 | **Agentic seeder** — registry `derivedFrom[]` + insight needs → research queries; `seeds.ts` stays fallback | queued | Needs U3 |
 | U10 | **A8 synthesis** — claim-bearing text → `RelationshipClaim` via router (local-agent route runs keyless in-session) → R2 `edges/claims.jsonl` | queued | Needs U3; real corpus run via local-agent route |
 | U11 | **A10 verifier scaffold** — adversarial refute-first verifier via router, fixture-tested; **real runs blocked** on non-Anthropic API key (register B5) | queued | Needs U3+U4 |
@@ -86,7 +86,8 @@ tables + the S2 view) — it stays early because it's Track A's longest pole.
 | 2026-07-15 | U4 quoteCheck + venue lookup | `feat/brain/quotecheck-venue-lookup` / PR #51 (stacked on U3) | done |
 | 2026-07-15 | U5 rules-as-data | `feat/m5b-rules/rules-as-data` / PR #53 (stacked on U4) | done; **shared/ retro-review** (`shared/rules/` new contract) |
 | 2026-07-15 | U6 S2 view + S3 baseline v2 | `feat/m5a-engine/s2-view-s3-baseline-v2` / PR #55 (stacked on U5) | done; live-verified |
-| 2026-07-16 | U7 S4 signals + S5 evaluator | `feat/m5a-engine/s4-signals-s5-evaluator` (stacked on U6; salvaged after session-limit kill) | done; live-verified |
+| 2026-07-16 | U7 S4 signals + S5 evaluator | `feat/m5a-engine/s4-signals-s5-evaluator` / PR #57 (stacked on U6; salvaged after session-limit kill) | done; live-verified |
+| 2026-07-16 | U8 S6 edge store + A11 loader | `feat/brain/s6-edge-store-a11-loader` (stacked on U7) | done; live-verified (fixtures) |
 
 ## Notes for the resuming orchestrator
 
