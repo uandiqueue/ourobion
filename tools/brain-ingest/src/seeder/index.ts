@@ -1,0 +1,149 @@
+/**
+ * Agentic seeder — orchestration + barrel (memory 0013 roster; design steps
+ * 1–3). Wires the deterministic candidate builder to the LLM query-generation
+ * call (through the shared `@ourobion/llm-router`) and the versioned artifact.
+ *
+ * Flow (a real run):
+ *   load registry metrics + rule blueprints (`load.ts`) + static topics
+ *   → buildCandidates (deterministic, C9: the only source of pairs)
+ *   → buildSeederPrompt (one batched call for the lot)
+ *   → router.route({ nodeId:'seeder', expectJson:true })  [local_agent mailbox]
+ *   → validateSeederResponse (reject unknown pairs, dedupe, cap)
+ *   → assembleArtifact → writeArtifact (data/corpus/seed-queries.json).
+ *
+ * `--candidates-only` stops after the deterministic build (no LLM); `--dry-run`
+ * builds the prompt too but issues no router call and writes nothing.
+ *
+ * ESM / NodeNext — imports use explicit `.js` extensions.
+ */
+
+import { join } from 'node:path';
+
+import { LlmRouter } from '../../../llm-router/src/index.js';
+import type { LlmRequest, LlmResponse } from '../../../llm-router/src/index.js';
+
+import { SEEDS } from '../seeds.js';
+import { buildCandidates, candidateCounts } from './candidates.js';
+import { loadBlueprints, loadRegistryMetrics, repoRoot } from './load.js';
+import { buildSeederPrompt, PROMPT_VERSION } from './prompt.js';
+import { assembleArtifact, seedQueriesPath, writeArtifact } from './artifact.js';
+import { DEFAULT_CAP_PER_CANDIDATE, validateSeederResponse } from './validate.js';
+import type {
+  BlueprintInput,
+  RegistryMetricInput,
+  SeedCandidate,
+  SeedQueryArtifact,
+  TopicInput,
+} from './types.js';
+
+/** Structural minimum of the router the seeder needs (injectable in tests). */
+export interface SeederRouter {
+  route(req: LlmRequest): Promise<LlmResponse>;
+}
+
+/** Default corpus dir (matches run.ts's `defaultCorpusDir`): `<repoRoot>/data/corpus`. */
+export function defaultCorpusDir(root = repoRoot()): string {
+  return join(root, 'data', 'corpus');
+}
+
+export interface SeederOptions {
+  /** Where the artifact is written / the router run-state lives. */
+  corpusDir?: string;
+  /** Injected router (tests); default a real `LlmRouter` (local_agent per config). */
+  router?: SeederRouter;
+  /** Run identity for the router's per-run token cap. */
+  runId?: string;
+  /** Per-candidate query cap; default `DEFAULT_CAP_PER_CANDIDATE`. */
+  capPerCandidate?: number;
+  /** Injected registry metrics (tests); default loaded from `shared/metrics`. */
+  metrics?: readonly RegistryMetricInput[];
+  /** Injected blueprints (tests); default loaded from `data/rules`. */
+  blueprints?: readonly BlueprintInput[];
+  /** Topic anchors; default the static `SEEDS`. */
+  topics?: readonly TopicInput[];
+  now?: () => number;
+  log?: (line: string) => void;
+}
+
+/**
+ * Build the deterministic candidate list (design step 1). Loads the registry +
+ * blueprints from disk unless injected. Used by `--candidates-only` and by the
+ * full run.
+ */
+export async function enumerateSeederCandidates(
+  opts: SeederOptions = {},
+): Promise<SeedCandidate[]> {
+  const root = repoRoot();
+  const metrics = opts.metrics ?? (await loadRegistryMetrics(root));
+  const blueprints = opts.blueprints ?? loadBlueprints(root);
+  const topics = opts.topics ?? SEEDS;
+  return buildCandidates({ metrics, blueprints, topics });
+}
+
+export interface GenerateResult {
+  artifact: SeedQueryArtifact;
+  path: string;
+  candidates: SeedCandidate[];
+  rejectedKeys: string[];
+  missingIds: string[];
+  response: LlmResponse;
+}
+
+/**
+ * Full run (design steps 1–3): candidates → batched LLM call → validate → write
+ * the artifact. Returns the artifact plus the validation report (rejected /
+ * missing) for the caller to log as run evidence.
+ */
+export async function generateSeedQueries(opts: SeederOptions = {}): Promise<GenerateResult> {
+  const log = opts.log ?? (() => {});
+  const corpusDir = opts.corpusDir ?? defaultCorpusDir();
+  const cap = opts.capPerCandidate ?? DEFAULT_CAP_PER_CANDIDATE;
+
+  const candidates = await enumerateSeederCandidates(opts);
+  const counts = candidateCounts(candidates);
+  log(
+    `seeder: ${candidates.length} candidate(s) — derivedFrom=${counts.derivedFrom} ` +
+      `rule_blueprint=${counts.rule_blueprint} static_topic=${counts.static_topic}`,
+  );
+
+  const { system, prompt } = buildSeederPrompt(candidates);
+  const router: SeederRouter =
+    opts.router ?? new LlmRouter({ ...(opts.runId !== undefined ? { runId: opts.runId } : {}) });
+
+  const response = await router.route({ nodeId: 'seeder', system, prompt, expectJson: true });
+
+  const { byId, rejectedKeys, missingIds } = validateSeederResponse(response.text, candidates, cap);
+  if (rejectedKeys.length > 0) {
+    log(`seeder: dropped ${rejectedKeys.length} unknown key(s) (C9): ${rejectedKeys.join(', ')}`);
+  }
+  if (missingIds.length > 0) {
+    log(`seeder: ${missingIds.length} candidate(s) received no queries: ${missingIds.join(', ')}`);
+  }
+
+  const artifact = assembleArtifact({
+    candidates,
+    byId,
+    promptVersion: PROMPT_VERSION,
+    model: response.model,
+    route: response.route,
+    ...(opts.now !== undefined ? { now: opts.now } : {}),
+  });
+  const path = writeArtifact(corpusDir, artifact);
+  log(`seeder: wrote ${artifact.candidates.length} candidate(s) → ${path}`);
+
+  return { artifact, path, candidates, rejectedKeys, missingIds, response };
+}
+
+export { buildCandidates, candidateCounts } from './candidates.js';
+export { buildSeederPrompt, PROMPT_VERSION, SEEDER_SYSTEM } from './prompt.js';
+export { validateSeederResponse, DEFAULT_CAP_PER_CANDIDATE } from './validate.js';
+export {
+  assembleArtifact,
+  readArtifact,
+  writeArtifact,
+  seedQueriesPath,
+  seedsFromArtifact,
+  SEED_QUERIES_FILE,
+} from './artifact.js';
+export { loadBlueprints, loadRegistryMetrics, repoRoot } from './load.js';
+export type * from './types.js';

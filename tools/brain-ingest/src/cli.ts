@@ -11,6 +11,12 @@ import { run, statusReport, type RunResult } from './run.js';
 import { SEED_TOPICS } from './seeds.js';
 import { VenueCache, lookupVenueCached } from './venue/cache.js';
 import { bandImpactTier, type SjrQuartile } from './venue/banding.js';
+import {
+  buildSeederPrompt,
+  candidateCounts,
+  enumerateSeederCandidates,
+  generateSeedQueries,
+} from './seeder/index.js';
 
 const USAGE = `ourobion brain-ingest — open-access-first paper-corpus fetcher
 
@@ -24,6 +30,10 @@ Commands:
                                                     discover → resolve → retrieve → extract → store
   status                                           manifest + budget summary
   resume [--remote-control]                        continue an interrupted multi-day run (skip 'fetched')
+  seed-queries [--dry-run|--candidates-only] [--cap N]
+                                                   agentic seeder: registry derivedFrom[] + rule-blueprint
+                                                   pairs + static topics → LLM search queries (via router);
+                                                   writes data/corpus/seed-queries.json (ingest consumes it)
   venue --issn <issn> [--sjr-quartile 1-4]         b2 venue lookup: OpenAlex Source stats +
                                                    C8 impactTier band (per-ISSN cache)
 
@@ -159,6 +169,70 @@ async function runVenueLookup(options: Map<string, string>): Promise<number> {
   return 0;
 }
 
+/**
+ * Parse the optional `--cap N` (per-candidate query cap) into a positive
+ * integer, or `undefined` when absent. Throws on a non-positive value.
+ */
+function parseCap(options: Map<string, string>): number | undefined {
+  const raw = options.get('cap');
+  if (raw === undefined) return undefined;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n <= 0) {
+    throw new Error(`--cap must be a positive integer (got '${raw}')`);
+  }
+  return n;
+}
+
+/**
+ * `seed-queries` — the agentic seeder (design steps 1–3).
+ *  - `--candidates-only`: print the deterministic candidate list, no LLM call.
+ *  - `--dry-run`: print candidates + the prompt that WOULD be sent, no call/write.
+ *  - default: call the router (local_agent mailbox per config), validate, and
+ *    write `data/corpus/seed-queries.json`.
+ */
+async function runSeedQueries(
+  flags: Set<string>,
+  options: Map<string, string>,
+): Promise<number> {
+  const cap = parseCap(options);
+  const log = (line: string) => process.stdout.write(line + '\n');
+
+  if (flags.has('candidates-only')) {
+    const candidates = await enumerateSeederCandidates();
+    const counts = candidateCounts(candidates);
+    log(
+      `candidates: ${candidates.length} (derivedFrom=${counts.derivedFrom} ` +
+        `rule_blueprint=${counts.rule_blueprint} static_topic=${counts.static_topic})`,
+    );
+    for (const c of candidates) log(`  [${c.source}] ${c.id} — ${c.label}`);
+    return 0;
+  }
+
+  if (flags.has('dry-run')) {
+    const candidates = await enumerateSeederCandidates();
+    const counts = candidateCounts(candidates);
+    const { system, prompt } = buildSeederPrompt(candidates);
+    log(
+      `dry-run: ${candidates.length} candidate(s) (derivedFrom=${counts.derivedFrom} ` +
+        `rule_blueprint=${counts.rule_blueprint} static_topic=${counts.static_topic}) — no LLM call.`,
+    );
+    log('\n--- system ---\n' + system);
+    log('\n--- prompt ---\n' + prompt);
+    return 0;
+  }
+
+  const result = await generateSeedQueries({
+    ...(cap !== undefined ? { capPerCandidate: cap } : {}),
+    log,
+  });
+  const withQueries = result.artifact.candidates.filter((c) => c.queries.length > 0).length;
+  log(
+    `seed-queries done: ${withQueries}/${result.artifact.candidates.length} candidate(s) got queries ` +
+      `via ${result.response.route} (${result.response.model}); rejected=${result.rejectedKeys.length}`,
+  );
+  return 0;
+}
+
 /** CLI main — returns the process exit code. Async: the pipeline verbs await `run`. */
 export async function main(argv: string[]): Promise<number> {
   const { command, flags, options } = parseArgs(argv);
@@ -212,6 +286,9 @@ export async function main(argv: string[]): Promise<number> {
       case 'status':
         process.stdout.write(statusReport() + '\n');
         return 0;
+
+      case 'seed-queries':
+        return await runSeedQueries(flags, options);
 
       case 'venue':
         return await runVenueLookup(options);
