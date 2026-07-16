@@ -121,3 +121,14 @@ Numeric hyperparameters/config values are in [`phase2-run-config-decisions.md`](
 - **Loader home `tools/edge-loader/`** (doc ambiguous between tools and nao; nao cron wiring is later).
 - RLS: authenticated read + service-role write (recorded deviation from the rules-table
   no-read-policy precedent — biotope must read edges at serve time).
+
+## D14 · S7/S8 engine judgment calls (U12)
+- **Branch rules made disjoint** (doc's truth table overlapped): contradiction → agree →
+  research-context → idiosyncratic, first match wins; a personal signal failing its serve gate
+  (q≤0.05 ∧ N_eff≥10 ∧ stable) is treated as absent.
+- **Producer vocabulary** `rules|edge|personal`; coincidence cards stay in the rules namespace but
+  carry `edge_refs` + `insight_id`, suppressed on contradiction. Cooldown deferred (all null).
+- **FiredPatterns recomputed in-process** by importing evaluate-signals' Deno-free stats/config
+  directly (no HTTP hop); lagged leaves use a windowed-baseline replication of compute-baselines math.
+- **No LLM phrasing wired** — the deterministic template path is the shipped authority; the
+  phrasing_card router node remains for a later additive session (per rules-engine design's phasing).
