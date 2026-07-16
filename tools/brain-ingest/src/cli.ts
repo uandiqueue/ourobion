@@ -17,6 +17,7 @@ import {
   enumerateSeederCandidates,
   generateSeedQueries,
 } from './seeder/index.js';
+import { pairFromKeys, synthesize } from './synth/index.js';
 
 const USAGE = `ourobion brain-ingest — open-access-first paper-corpus fetcher
 
@@ -34,6 +35,11 @@ Commands:
                                                    agentic seeder: registry derivedFrom[] + rule-blueprint
                                                    pairs + static topics → LLM search queries (via router);
                                                    writes data/corpus/seed-queries.json (ingest consumes it)
+  synthesize (--pair a,b | --from-seed-artifact) --paper <uid>[,<uid>]
+             [--terms t1,t2] [--dry-run] [--push-r2]
+                                                   A8 synthesis: load canonical text → passages → LLM
+                                                   RelationshipClaims (via router), quoteCheck-gated;
+                                                   appends data/corpus/edges/claims.jsonl (edge-loader reads it)
   venue --issn <issn> [--sjr-quartile 1-4]         b2 venue lookup: OpenAlex Source stats +
                                                    C8 impactTier band (per-ISSN cache)
 
@@ -233,6 +239,69 @@ async function runSeedQueries(
   return 0;
 }
 
+/** Parse a comma-separated option into a trimmed, non-empty list (or `undefined`). */
+function parseCsv(options: Map<string, string>, key: string): string[] | undefined {
+  const raw = options.get(key);
+  if (raw === undefined) return undefined;
+  const parts = raw.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
+  return parts.length > 0 ? parts : undefined;
+}
+
+/**
+ * `synthesize` — the A8 synthesis node (design steps 1–4).
+ *  - `--pair a,b`: synthesise for one explicit metric pair.
+ *  - `--from-seed-artifact`: synthesise for every derivedFrom/rule_blueprint pair
+ *    in data/corpus/seed-queries.json.
+ *  - `--paper <uid>[,<uid>]`: papers to synthesise against (canonical text).
+ *  - `--terms t1,t2`: override the passage-prefilter terms.
+ *  - `--dry-run`: assemble + print the prompt, no LLM call / no write.
+ *  - `--push-r2`: also append accepted claims to R2 edges/claims.jsonl.
+ */
+async function runSynthesize(
+  flags: Set<string>,
+  options: Map<string, string>,
+): Promise<number> {
+  const log = (line: string) => process.stdout.write(line + '\n');
+  const paperUids = parseCsv(options, 'paper');
+  if (paperUids === undefined) {
+    process.stderr.write('synthesize: --paper <uid>[,<uid>] is required\n');
+    return 2;
+  }
+  const pairRaw = parseCsv(options, 'pair');
+  const fromSeed = flags.has('from-seed-artifact');
+  if (!pairRaw && !fromSeed) {
+    process.stderr.write('synthesize: pass --pair a,b OR --from-seed-artifact\n');
+    return 2;
+  }
+  if (pairRaw && (pairRaw.length !== 2)) {
+    process.stderr.write('synthesize: --pair needs exactly two metric keys (a,b)\n');
+    return 2;
+  }
+  const terms = parseCsv(options, 'terms');
+  const result = await synthesize({
+    paperUids,
+    ...(pairRaw ? { pairs: [pairFromKeys(pairRaw[0]!, pairRaw[1]!, terms)] } : { fromSeedArtifact: true }),
+    ...(terms ? { terms } : {}),
+    dryRun: flags.has('dry-run'),
+    pushR2: flags.has('push-r2'),
+    log,
+  });
+
+  if (flags.has('dry-run')) {
+    for (const o of result.outcomes) {
+      log(`\n--- system (pair ${o.pair.id}) ---\n` + o.assembled.system);
+      log(`\n--- prompt (pair ${o.pair.id}) ---\n` + o.assembled.prompt);
+    }
+    log(`\ndry-run: ${result.outcomes.length} pair(s) assembled — no LLM call.`);
+    return 0;
+  }
+  log(
+    `synthesize done: ${result.accepted.length} claim(s) accepted, ${result.rejectedCount} rejected` +
+      (result.write ? ` — ${result.write.written} written (${result.write.skipped} dup) → ${result.write.path}` : ''),
+  );
+  return 0;
+}
+
 /** CLI main — returns the process exit code. Async: the pipeline verbs await `run`. */
 export async function main(argv: string[]): Promise<number> {
   const { command, flags, options } = parseArgs(argv);
@@ -289,6 +358,9 @@ export async function main(argv: string[]): Promise<number> {
 
       case 'seed-queries':
         return await runSeedQueries(flags, options);
+
+      case 'synthesize':
+        return await runSynthesize(flags, options);
 
       case 'venue':
         return await runVenueLookup(options);
