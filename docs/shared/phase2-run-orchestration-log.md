@@ -68,7 +68,7 @@ extraction; anomaly definition — **supersedes S4/S5 dummy thresholds**; paper 
 | U15 | A4 extract v2 (offsets) · A4b citation parse · A2 terms.ts · A6 mentions/co-occurrence · A7 assertion gate | stretch | Left column depth |
 | U16 | S9 report composer · A1 gap ledger · A3 transport · A12 coverage (L7/L8) | stretch | |
 | U17 | nao v2 graph + evidence panel | stretch | Needs U8 servable edges |
-| U18 | CI: run node tool-package suites (`brain-ingest`, `llm-router`, `rules`) — ci.yml today runs only context / flutter / shared-tsc | queued | Small; found during U5 |
+| U18 | CI: run node tool-package suites (all six `tools/` packages) — ci.yml previously ran only context / flutter / shared-tsc | **done** | Commit `00bd131`; matrix job, all suites offline-safe, drift guards for rules + metric-view; every CI command verified locally. Follow-up: branch-protection required checks (register B12) |
 
 Dependency spine: U1 → {U6→U7, U8}; U3 → {U9, U10, U11}; U5+U7+U8 → U12 → U13. U2 unblocks U14
 and the primitives-backed instances but nothing in U6–U13 hard-depends on it (engine reads existing
@@ -92,7 +92,8 @@ tables + the S2 view) — it stays early because it's Track A's longest pole.
 | 2026-07-16 | U10 A8 synthesis | `feat/brain/a8-synthesis` / PR #63 (stacked on U9) | done; real R2 paper, A9 gate proven live |
 | 2026-07-16 | U11 A10 verifier scaffold | `feat/brain/a10-verifier-scaffold` / PR #65 (stacked on U10) | done; real runs await B5 key |
 | 2026-07-16 | U12 S7 composer + S8 cards | `feat/m5b-engine/s7-composer-s8-cards` / PR #67 (stacked on U11) | done; live-verified (a)–(f) |
-| 2026-07-16 | U13 L6 one-card slice | `feat/shared/l6-one-card-slice` (stacked on U12) | done; **memory 0016 added**; run's core scope complete |
+| 2026-07-16 | U13 L6 one-card slice | `feat/shared/l6-one-card-slice` / PR #69 (stacked on U12) | done; **memory 0016 added**; run's core scope complete |
+| 2026-07-16 | U18 CI node-suite wiring | `ci/node-tool-suites` (stacked on U13) | done; run **paused** after this — U14–U17 remain stretch |
 
 ## Notes for the resuming orchestrator
 
