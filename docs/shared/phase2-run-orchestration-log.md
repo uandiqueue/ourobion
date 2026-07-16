@@ -61,7 +61,7 @@ extraction; anomaly definition — **supersedes S4/S5 dummy thresholds**; paper 
 | U8 | **S6 edge store + A11 loader** — `relationship_claims` / `edge_verifications` / `verified_edges` migrations (DDL in architecture §S6) + R2→Postgres loader precomputing score/band via `shared/brain` | **done** | Commit `b5b0115`; `tools/edge-loader/` 21/21; live fixture load: 3 servable edges, supersede/prune/idempotency proven; both brain guards active; D13 |
 | U9 | **Agentic seeder** — registry `derivedFrom[]` + insight needs → research queries; `seeds.ts` stays fallback | **done** | Commit `f13d359`; 14 candidates (8 derivedFrom + 6 static; blueprint source lights up with first cross rule); REAL local-agent route run (ledger: 1 call, $0.02); 286/286 |
 | U10 | **A8 synthesis** — claim-bearing text → `RelationshipClaim` via router (local-agent route runs keyless in-session) → R2 `edges/claims.jsonl` | **done** | Commit `138fea4`; REAL run on real R2 paper: 1 claim accepted (offsets backfilled), 1 causal overstatement rejected by A9 (paraphrased quote); loader-proven; 299/299 |
-| U11 | **A10 verifier scaffold** — adversarial refute-first verifier via router, fixture-tested; **real runs blocked** on non-Anthropic API key (register B5) | queued | Needs U3+U4 |
+| U11 | **A10 verifier scaffold** — adversarial refute-first verifier via router, fixture-tested; **real runs blocked** on non-Anthropic API key (register B5) | **done** | Commit `106e120`; enforcement-not-trust (no-retrieval⇒uncertain forced, sourceless verdicts rejected); BM25-lite interim retrieval; C7 triage; live join/prune proof; 320/320. Real runs: key + one-line route flip |
 | U12 | **S7 + S8 engine refactor** — `generate-insights` → composer (4-branch classify, completeness) + card producer (rules from `rules` table, copy-gate at load+render, U1 applicability stub returning `unknown`, template fallback phrasing) | queued | Needs U5–U8; the flagship refactor |
 | U13 | **L6 one-card end-to-end slice** — one pair through seeder→synthesis→quoteCheck→(mock verify)→loader→composer→card on seeded data; prove the workflow end-to-end | queued | The run's finish line |
 | U14 | Metric **Wave 1** (self-report ~45) onto the primitives | stretch | After U2; collector = M2 forms |
@@ -89,7 +89,8 @@ tables + the S2 view) — it stays early because it's Track A's longest pole.
 | 2026-07-16 | U7 S4 signals + S5 evaluator | `feat/m5a-engine/s4-signals-s5-evaluator` / PR #57 (stacked on U6; salvaged after session-limit kill) | done; live-verified |
 | 2026-07-16 | U8 S6 edge store + A11 loader | `feat/brain/s6-edge-store-a11-loader` / PR #59 (stacked on U7) | done; live-verified (fixtures) |
 | 2026-07-16 | U9 agentic seeder | `feat/brain/agentic-seeder` / PR #61 (stacked on U8) | done; first real local-agent LLM run |
-| 2026-07-16 | U10 A8 synthesis | `feat/brain/a8-synthesis` (stacked on U9) | done; real R2 paper, A9 gate proven live |
+| 2026-07-16 | U10 A8 synthesis | `feat/brain/a8-synthesis` / PR #63 (stacked on U9) | done; real R2 paper, A9 gate proven live |
+| 2026-07-16 | U11 A10 verifier scaffold | `feat/brain/a10-verifier-scaffold` (stacked on U10) | done; real runs await B5 key |
 
 ## Notes for the resuming orchestrator
 
