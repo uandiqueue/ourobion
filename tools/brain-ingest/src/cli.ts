@@ -17,7 +17,12 @@ import {
   enumerateSeederCandidates,
   generateSeedQueries,
 } from './seeder/index.js';
-import { pairFromKeys, synthesize } from './synth/index.js';
+import { pairFromKeys, synthesize, claimsPath, defaultEdgesDir } from './synth/index.js';
+import { repoRoot } from './seeder/load.js';
+import { R2Store } from './storage/r2.js';
+import { r2TextLoader } from './verify/quoteCheck.js';
+import { verify } from './verify/verifier.js';
+import { LlmRouter } from '../../llm-router/src/index.js';
 
 const USAGE = `ourobion brain-ingest — open-access-first paper-corpus fetcher
 
@@ -40,6 +45,13 @@ Commands:
                                                    A8 synthesis: load canonical text → passages → LLM
                                                    RelationshipClaims (via router), quoteCheck-gated;
                                                    appends data/corpus/edges/claims.jsonl (edge-loader reads it)
+  verify [--from-claims <path>] [--edge <edgeId>] [--dry-run] [--triage-only]
+                                                   A10 adversarial verification: A9 quoteCheck →
+                                                   budget triage (C7) → verifier-owned retrieval →
+                                                   refute-first LLM (router node 'verifier',
+                                                   non-Anthropic) → schema-enforced EdgeVerification;
+                                                   appends data/corpus/edges/verifications.jsonl.
+                                                   --triage-only / --dry-run make no LLM call.
   venue --issn <issn> [--sjr-quartile 1-4]         b2 venue lookup: OpenAlex Source stats +
                                                    C8 impactTier band (per-ISSN cache)
 
@@ -302,6 +314,63 @@ async function runSynthesize(
   return 0;
 }
 
+/**
+ * `verify` — the A10 adversarial verifier (design steps 1–4).
+ *  - `--from-claims <path>`: claims.jsonl to verify (default data/corpus/edges/claims.jsonl).
+ *  - `--edge <edgeId>`: verify only this edge.
+ *  - `--triage-only`: print the budget-triage decision per claim; no retrieval / LLM / write.
+ *  - `--dry-run`: run quoteCheck + retrieval + assemble the prompt; no LLM call / no write.
+ *  - default: full run — routes the verifier node (api_worker per config; real runs need the
+ *    non-Anthropic key) and appends edges/verifications.jsonl.
+ */
+async function runVerify(flags: Set<string>, options: Map<string, string>): Promise<number> {
+  const log = (line: string) => process.stdout.write(line + '\n');
+  const root = repoRoot();
+  const edgesDir = defaultEdgesDir(root);
+  const claimsFile = options.get('from-claims') ?? claimsPath(edgesDir);
+  const triageOnly = flags.has('triage-only');
+  const dryRun = flags.has('dry-run');
+
+  const runOpts: Parameters<typeof verify>[0] = {
+    claimsPath: claimsFile,
+    edgesDir,
+    triageOnly,
+    dryRun,
+    log,
+  };
+  const edge = options.get('edge');
+  if (edge !== undefined) runOpts.edgeId = edge;
+
+  // The quoteCheck / retrieval / LLM path needs paper text + the router; --triage-only needs neither.
+  if (!triageOnly) {
+    runOpts.textLoader = r2TextLoader(new R2Store(loadConfig()));
+    if (!dryRun) {
+      // The router config enforces the non-Anthropic decorrelation invariant at load;
+      // a real dispatch surfaces the missing key (run decision D4 / register B5).
+      runOpts.router = new LlmRouter();
+      runOpts.verifierModel = 'router:verifier-node';
+    }
+  }
+
+  const result = await verify(runOpts);
+  for (const r of result.results) {
+    if (triageOnly) {
+      log(`  - ${r.claim.edgeId} → ${r.triage.mode}` + (r.triage.reasons.length ? ` (${r.triage.reasons.join('; ')})` : ''));
+    } else if (r.record) {
+      log(`  - ${r.claim.edgeId} → ${r.record.verdict} [${r.triage.mode}]${r.fallback ? ' (fallback)' : ''}`);
+    } else if (r.rejected) {
+      log(`  - ${r.claim.edgeId} → REJECTED (${r.rejected.reason})`);
+    } else if (dryRun) {
+      log(`  - ${r.claim.edgeId} → dry-run [${r.triage.mode}] retrieved ${r.retrieval?.sources.length ?? 0} source(s)`);
+    }
+  }
+  log(
+    `verify done: ${result.records.length} verification(s), ${result.rejectedCount} rejected` +
+      (result.write ? ` — ${result.write.written} written (${result.write.skipped} dup) → ${result.write.path}` : ''),
+  );
+  return 0;
+}
+
 /** CLI main — returns the process exit code. Async: the pipeline verbs await `run`. */
 export async function main(argv: string[]): Promise<number> {
   const { command, flags, options } = parseArgs(argv);
@@ -361,6 +430,9 @@ export async function main(argv: string[]): Promise<number> {
 
       case 'synthesize':
         return await runSynthesize(flags, options);
+
+      case 'verify':
+        return await runVerify(flags, options);
 
       case 'venue':
         return await runVenueLookup(options);
