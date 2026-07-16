@@ -102,3 +102,12 @@ Numeric hyperparameters/config values are in [`phase2-run-config-decisions.md`](
   seeded `step_count` (~7.7k) overflowed 22003; v1 would fail identically. Projection table, safe.
 - **Drive-by fixes:** `scripts/seed-test-data.sql` array-literal bug fixed; the `.ps1` seeder fails to
   parse under PowerShell 5.1 (UTF-8-no-BOM) — file left untouched, workaround noted in the session log.
+
+## D12 · S4/S5 judgment calls (U7)
+- **`baselineMinDays` re-checked after artifact rejection** (14 raw days containing artifacts are not
+  14 clean days — ADR-0002 silent; conservative reading chosen).
+- **FiredPatterns are not persisted** — response-JSON transport to the future S7 composer, per the
+  architecture's "Store: none" for S4; an additive `suppressed` field carries observability.
+- **Interim S5 pair scope**: all active baselineApplicable pairs (105 = C(15,2)) with ≥14 in-window
+  days each and ≥10 joint days; BH per user per run. Brain-neighbour pruning replaces this in U12.
+- Architecture §S4 now carries a bracketed ADR-0002/`deadbandK` reconciliation note (`updated:` bumped).
