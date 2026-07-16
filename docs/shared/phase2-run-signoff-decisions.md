@@ -132,3 +132,13 @@ Numeric hyperparameters/config values are in [`phase2-run-config-decisions.md`](
   directly (no HTTP hop); lagged leaves use a windowed-baseline replication of compute-baselines math.
 - **No LLM phrasing wired** — the deterministic template path is the shipped authority; the
   phrasing_card router node remains for a later additive session (per rules-engine design's phasing).
+
+## D15 · L6 slice ships the honest end-state, not the shiny one (U13)
+- **Choice:** the slice's verification carries `verifierModel: INTERIM:pending-real-verifier` and the
+  contract-forced verdict `uncertain` (supporting stances may only come from an LLM verifier, which is
+  key-blocked) — so the edge holds, and the end-to-end card is the uncited `personal` variant, not an
+  `agree` card. The runbook documents exactly what flips when the B5 key lands (band, branch, card
+  citation). Note also: this pair's `correlates` relation tops out at `research-context` even when
+  served — `agree` requires a monotonic edge (§1.3).
+- **Alternative rejected:** hand-marking the verification `supported` for demo effect — would fabricate
+  the exact trust signal the adversarial-verification design exists to earn.

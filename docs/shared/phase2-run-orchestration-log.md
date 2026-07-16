@@ -63,7 +63,7 @@ extraction; anomaly definition — **supersedes S4/S5 dummy thresholds**; paper 
 | U10 | **A8 synthesis** — claim-bearing text → `RelationshipClaim` via router (local-agent route runs keyless in-session) → R2 `edges/claims.jsonl` | **done** | Commit `138fea4`; REAL run on real R2 paper: 1 claim accepted (offsets backfilled), 1 causal overstatement rejected by A9 (paraphrased quote); loader-proven; 299/299 |
 | U11 | **A10 verifier scaffold** — adversarial refute-first verifier via router, fixture-tested; **real runs blocked** on non-Anthropic API key (register B5) | **done** | Commit `106e120`; enforcement-not-trust (no-retrieval⇒uncertain forced, sourceless verdicts rejected); BM25-lite interim retrieval; C7 triage; live join/prune proof; 320/320. Real runs: key + one-line route flip |
 | U12 | **S7 + S8 engine refactor** — `generate-insights` → composer (4-branch classify, completeness) + card producer (rules from `rules` table, copy-gate at load+render, U1 applicability stub returning `unknown`, template fallback phrasing) | **done** | Commit `a9204ee`; zero hardcoded rules; cross card fired via brain edge (agree, ρ=0.998); both copy gates proven live; dismissal + idempotency verified; first cross blueprint shipped; 48/48 flutter + all node suites; D14 |
-| U13 | **L6 one-card end-to-end slice** — one pair through seeder→synthesis→quoteCheck→(mock verify)→loader→composer→card on seeded data; prove the workflow end-to-end | queued | The run's finish line |
+| U13 | **L6 one-card end-to-end slice** — one pair through seeder→synthesis→quoteCheck→(mock verify)→loader→composer→card on seeded data; prove the workflow end-to-end | **done** | Commit `8b33dc2`; full chain real; honest end-state: INTERIM verification ⇒ `hold` ⇒ personal card (agree path documented for B5 key); runbook `docs/shared/insight-slice-demo-runbook.md`; memory 0016; D15 |
 | U14 | Metric **Wave 1** (self-report ~45) onto the primitives | stretch | After U2; collector = M2 forms |
 | U15 | A4 extract v2 (offsets) · A4b citation parse · A2 terms.ts · A6 mentions/co-occurrence · A7 assertion gate | stretch | Left column depth |
 | U16 | S9 report composer · A1 gap ledger · A3 transport · A12 coverage (L7/L8) | stretch | |
@@ -91,7 +91,8 @@ tables + the S2 view) — it stays early because it's Track A's longest pole.
 | 2026-07-16 | U9 agentic seeder | `feat/brain/agentic-seeder` / PR #61 (stacked on U8) | done; first real local-agent LLM run |
 | 2026-07-16 | U10 A8 synthesis | `feat/brain/a8-synthesis` / PR #63 (stacked on U9) | done; real R2 paper, A9 gate proven live |
 | 2026-07-16 | U11 A10 verifier scaffold | `feat/brain/a10-verifier-scaffold` / PR #65 (stacked on U10) | done; real runs await B5 key |
-| 2026-07-16 | U12 S7 composer + S8 cards | `feat/m5b-engine/s7-composer-s8-cards` (stacked on U11) | done; live-verified (a)–(f) |
+| 2026-07-16 | U12 S7 composer + S8 cards | `feat/m5b-engine/s7-composer-s8-cards` / PR #67 (stacked on U11) | done; live-verified (a)–(f) |
+| 2026-07-16 | U13 L6 one-card slice | `feat/shared/l6-one-card-slice` (stacked on U12) | done; **memory 0016 added**; run's core scope complete |
 
 ## Notes for the resuming orchestrator
 
