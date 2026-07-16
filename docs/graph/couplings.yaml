@@ -227,6 +227,37 @@ couplings:
     status: planned
     phase: P2
 
+  # ─── The brain (shared/brain + R2 edge artifacts + the S6 serving tables) — §S6/§A11 ───────────
+  # Edge artifacts are TRUTH (R2 JSONL, validated by shared/brain); the S6 tables are a
+  # loader-owned projection. The node guards live in tools/edge-loader/tests/ (run via
+  # `npm --prefix tools/edge-loader test`).
+
+  - id: brain-edge-to-schema
+    from: shared/brain (contract enums + tools/edge-loader/lib/artifacts.mjs row shapes)
+    to: supabase/migrations (relationship_claims / edge_verifications columns + CHECK sets + verified_edges view)
+    why: >
+      The A11 loader speaks dynamic SQL into the S6 tables, so a renamed column, a CHECK set that
+      drifts from the shared/brain enums (relation kinds, verdicts, verification statuses, serving
+      bands), or a view that stops selecting the newest active verification breaks the serve path
+      with no compile-time error. This test parses the migration DDL and holds it column-for-column
+      and enum-for-enum to the contract the loader writes.
+    guard: tools/edge-loader/tests/edge_table_schema.test.ts
+    status: active
+    phase: P2
+
+  - id: brain-endpoint-to-registry
+    from: shared/brain edge endpoints (subject / object metric keys in edge artifacts + fixtures)
+    to: shared/metrics/registry.ts (active metric keys)
+    why: >
+      Edge endpoints are canonical registry keys with no import linking the artifacts to the
+      registry (relationships.ts header invariant). An edge naming a removed or never-defined
+      metric would serve insights about a metric the product cannot read. The loader hard-fails on
+      non-active endpoints (parseClaims); this guard proves both the enforcement path and that the
+      shipped fixture artifacts resolve.
+    guard: tools/edge-loader/tests/edge_endpoints_registry.test.ts
+    status: active
+    phase: P2
+
   - id: metrics-registry-to-dqs
     from: shared/metrics/registry.ts (countsTowardDailyCompleteness weights)
     to: apps/biotope/lib/modules/m2_self_report/impl/normaliser.dart (kDailyCoreDqsWeights)

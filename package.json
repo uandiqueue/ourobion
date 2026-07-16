@@ -11,7 +11,10 @@
     "view:write": "node tools/metric-view/gen_metric_view.mjs --write",
     "view:check": "node tools/metric-view/gen_metric_view.mjs --check",
     "view:test": "npm --prefix tools/metric-view test",
-    "stats:test": "npm --prefix tools/engine-stats test"
+    "stats:test": "npm --prefix tools/engine-stats test",
+    "edges:load": "node tools/edge-loader/load_edges.mjs",
+    "edges:check": "node tools/edge-loader/load_edges.mjs --check",
+    "edges:test": "npm --prefix tools/edge-loader test"
   },
   "devDependencies": {
     "supabase": "^2.81.2"

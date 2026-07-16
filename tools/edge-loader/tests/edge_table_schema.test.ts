@@ -1,0 +1,96 @@
+// Coupling guard: brain-edge-to-schema (docs/graph/couplings.yaml). The rows the A11 loader
+// writes and the S6 migration's DDL (relationship_claims / edge_verifications columns, CHECK
+// sets, verified_edges view) are the same shape in two languages (JS object vs SQL) with no
+// import linking them — this test holds them together: column-set equality per table, every
+// CHECK enum character-identical to the shared/brain zod enums, and the view's newest-active
+// semantics present in the SQL.
+//
+// status: active.
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readdirSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { buildLoad, brain, REPO_ROOT } from '../lib/artifacts.mjs';
+import {
+  relationKindSchema,
+  verdictSchema,
+  verificationStatusSchema,
+} from '../../../shared/brain/relationships.schema.ts';
+
+const migrationsDir = path.join(REPO_ROOT, 'supabase', 'migrations');
+const migrationFile = readdirSync(migrationsDir).find((f) =>
+  /create_brain_edge_read_store\.sql$/.test(f),
+);
+assert.ok(migrationFile, 'brain edge read store migration not found in supabase/migrations');
+const sql = readFileSync(path.join(migrationsDir, migrationFile), 'utf8');
+
+const FIXTURES = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'edges');
+const { claimRows, verificationRows, errors } = buildLoad(
+  readFileSync(path.join(FIXTURES, 'claims.jsonl'), 'utf8'),
+  readFileSync(path.join(FIXTURES, 'verifications.jsonl'), 'utf8'),
+);
+assert.deepEqual(errors, []);
+
+/** Table-level constraint keywords — lines that are not column declarations. */
+const NON_COLUMN_KEYWORDS = new Set(['primary', 'constraint', 'check', 'unique', 'foreign']);
+
+/** Column names of the `create table ... <table> (...)` block (leading identifier per line). */
+function tableColumns(source: string, table: string): Set<string> {
+  const m = new RegExp(
+    `create table[^(]*\\bpublic\\.${table}\\b[^(]*\\(([\\s\\S]*?)\\n\\);`,
+  ).exec(source);
+  assert.ok(m, `create table public.${table} block not found`);
+  const cols = new Set<string>();
+  for (const rawLine of (m[1] ?? '').split('\n')) {
+    const line = rawLine.replace(/--.*$/, '').trim();
+    if (line === '') continue;
+    const col = /^([a-z_][a-z0-9_]*)\s+\S/.exec(line);
+    if (col?.[1] && !NON_COLUMN_KEYWORDS.has(col[1])) cols.add(col[1]);
+  }
+  return cols;
+}
+
+/** The quoted values of `check (<column> in (...))` — tolerant of a line break after `in`. */
+function checkSet(source: string, column: string): string[] {
+  const m = new RegExp(`check \\(${column} in\\s*\\(([^)]*)\\)\\)`).exec(source);
+  assert.ok(m, `check (${column} in (...)) not found in migration`);
+  return [...(m[1] ?? '').matchAll(/'([^']+)'/g)].map((x) => x[1] ?? '');
+}
+
+test('relationship_claims columns equal the loader claim-row keys (+ DB-defaulted loaded_at)', () => {
+  const rowKeys = new Set<string>(Object.keys(claimRows[0]!));
+  rowKeys.add('loaded_at'); // DB-defaulted load metadata — the one column the loader never sets
+  assert.deepEqual([...tableColumns(sql, 'relationship_claims')].sort(), [...rowKeys].sort());
+});
+
+test('edge_verifications columns equal the loader verification-row keys (+ loaded_at)', () => {
+  const rowKeys = new Set<string>(Object.keys(verificationRows[0]!));
+  rowKeys.add('loaded_at');
+  assert.deepEqual([...tableColumns(sql, 'edge_verifications')].sort(), [...rowKeys].sort());
+});
+
+test('relation / verdict / status CHECK sets equal the shared/brain zod enums', () => {
+  assert.deepEqual(checkSet(sql, 'relation'), relationKindSchema.options);
+  assert.deepEqual(checkSet(sql, 'verdict'), verdictSchema.options);
+  assert.deepEqual(checkSet(sql, 'status'), verificationStatusSchema.options);
+});
+
+test('serving_band CHECK covers exactly the shared/brain servingBand range (EDGE_GATES + hold)', () => {
+  assert.deepEqual(checkSet(sql, 'serving_band').sort(), ['high', 'hold', 'mid']);
+  for (const band of Object.keys(brain.EDGE_GATES)) {
+    assert.ok(checkSet(sql, 'serving_band').includes(band), `EDGE_GATES band '${band}' missing`);
+  }
+});
+
+test('verified_edges view: security_invoker, active-only, newest verification per edge', () => {
+  const view = /create or replace view public\.verified_edges([\s\S]*?);/.exec(sql);
+  assert.ok(view, 'verified_edges view not found');
+  const body = view[1]!;
+  assert.match(body, /security_invoker = true/);
+  assert.match(body, /select distinct on \(c\.edge_id\)/);
+  assert.match(body, /where v\.status = 'active'/);
+  assert.match(body, /order by c\.edge_id, v\.verified_at desc/);
+});
