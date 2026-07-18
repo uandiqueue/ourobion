@@ -1,0 +1,6 @@
+# CI STUB — not the real pg_net (see ci/migrations-bootstrap.sql for why).
+# Lets `create extension if not exists pg_net with schema extensions;` succeed on the
+# vanilla postgres:17 image used by the migrations-apply CI job.
+comment = 'CI stub for pg_net (shadow migration apply only)'
+default_version = '1.0'
+relocatable = true

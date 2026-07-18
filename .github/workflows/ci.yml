@@ -1,13 +1,20 @@
 name: CI
 
 # The non-bypassable backstop: mirrors the local pre-push gate (skippable with --no-verify) and adds
-# the checks that can only run in CI. Four jobs:
+# the checks that can only run in CI. Six jobs:
 #   - context     : node tools/context_sync.mjs --check (sessions / memory / decisions / index / couplings)
 #   - flutter     : flutter analyze + flutter test (with the public env file built from secrets)
 #   - typescript  : tsc --noEmit over the shared/ contracts
 #   - node-tools  : matrix over the tools/* node packages — npm ci + typecheck + test, plus the
 #                   DB-free drift guards (rules --check, metric-view --check). All suites are
 #                   offline-first: no Docker, no DB, no network, no secrets.
+#   - deno-check       : deno check over the three edge-function handler entrypoints (audit A24) —
+#                        the only compile pass the Deno.serve shells get before deploy.
+#   - migrations-apply : applies supabase/migrations/*.sql in filename order against a vanilla
+#                        postgres:17 service (audit A24). A shadow apply: it complements — does
+#                        NOT replace — the local `npx supabase db reset` on the real supabase
+#                        image; its job is catching SQL syntax/ordering/constraint-name breaks
+#                        in CI, where no supabase stack exists.
 on:
   push:
     branches: [main, dev-phase2]
@@ -141,3 +148,79 @@ jobs:
         if: matrix.drift_check
         working-directory: ${{ matrix.package }}
         run: npm run check
+
+  # ─── Audit A24: the three Deno handler shells (Deno.serve + jsr: imports) are imported by
+  # nothing the node jobs compile — this is their only type check before deploy. Runs from each
+  # function's directory so its deno.json (the same file config.toml points at as import_map) is
+  # the discovered config and the walk never reaches the repo-root package.json. --no-lock:
+  # no deno.lock is committed (deno is not installed on dev machines; the supabase CLI bundler
+  # owns dependency resolution at deploy time), so jsr deps resolve fresh per run.
+  deno-check:
+    name: Deno — ${{ matrix.function }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        function:
+          - compute-baselines
+          - evaluate-signals
+          - generate-insights
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          # supabase/config.toml pins edge_runtime deno_version = 2.
+          deno-version: v2.x
+
+      - name: Type check handler
+        working-directory: supabase/functions/${{ matrix.function }}
+        run: deno check --no-lock index.ts
+
+  # ─── Audit A24: shadow-apply every migration, in filename order, on vanilla postgres:17
+  # (major version = supabase/config.toml `major_version`). Complements — does NOT replace —
+  # the local `npx supabase db reset` (real supabase image, real pg_cron/pg_net/auth): this job
+  # exists to catch SQL syntax errors, ordering breaks, and constraint-name assumptions in CI.
+  # Vanilla postgres lacks supabase's primitives, so two bootstrap steps run first:
+  #   1. stub pg_cron/pg_net extension definitions are docker-cp'd into the service container
+  #      (`create extension` needs control files on the server filesystem — SQL cannot fake it);
+  #   2. ci/migrations-bootstrap.sql creates the roles/auth schema/extensions schema the
+  #      migrations reference. Both are documented in-file.
+  migrations-apply:
+    name: Migrations — shadow apply (postgres:17)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGDATABASE: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pg_cron/pg_net stubs into the service container
+        run: |
+          docker cp ci/pg-extension-stubs/. ${{ job.services.postgres.id }}:/usr/share/postgresql/17/extension/
+
+      - name: Bootstrap supabase-shaped primitives
+        run: psql -v ON_ERROR_STOP=1 -q -f ci/migrations-bootstrap.sql
+
+      - name: Apply migrations in filename order
+        run: |
+          set -eu
+          for f in $(ls supabase/migrations/*.sql | sort); do
+            echo "== $f"
+            psql -v ON_ERROR_STOP=1 -q -f "$f"
+          done
