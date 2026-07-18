@@ -29,7 +29,7 @@ import {
 } from "./composer.ts"
 import {
   directionPhrase,
-  EDGE_CARD_TEMPLATE,
+  edgeCardTemplate,
   edgeRuleId,
   PERSONAL_CARD_TEMPLATE,
   personalRuleId,
@@ -141,6 +141,8 @@ interface BaselineRow {
   trend: "rising" | "falling" | "stable" | null
   confidence: Confidence
   data_sources: string[]
+  /** Rolling-stats window the snapshot was computed over (baseline v2 column — A23). */
+  window_days: number
 }
 
 interface SeriesRow {
@@ -224,14 +226,23 @@ async function fetchAll<T>(query: (from: number, to: number) => any): Promise<T[
 // ─── Handler ─────────────────────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
+  // A22: without this guard an unset env var degenerates the expected header to the literal
+  // string "Bearer undefined" — fail loudly (500, secret never echoed) before any compare.
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+  if (!serviceRoleKey) {
+    console.error("SUPABASE_SERVICE_ROLE_KEY is not set — refusing to serve")
+    return new Response(
+      JSON.stringify({ error: "server misconfiguration: service-role key unavailable" }),
+      { status: 500 },
+    )
+  }
 
   const auth = req.headers.get("Authorization")
   if (!auth || auth !== `Bearer ${serviceRoleKey}`) {
     return new Response("Unauthorized", { status: 401 })
   }
 
-  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey!)
+  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey)
   const day = new Date().toISOString().split("T")[0]
   const now = new Date().toISOString()
   const seriesStart = addDays(day, -SIGNAL_CONFIG.windowDays) // 28 baseline days + today
@@ -260,7 +271,9 @@ Deno.serve(async (req) => {
     baselines = await fetchAll<BaselineRow>((from, to) =>
       supabase
         .from("baseline_snapshots")
-        .select("user_id, metric_key, mean, std_dev, min, max, trend, confidence, data_sources")
+        .select(
+          "user_id, metric_key, mean, std_dev, min, max, trend, confidence, data_sources, window_days",
+        )
         .order("user_id", { ascending: true })
         .order("metric_key", { ascending: true })
         .range(from, to),
@@ -494,7 +507,7 @@ Deno.serve(async (req) => {
             min: snapshot.min ?? "",
             max: snapshot.max ?? "",
             trend: snapshot.trend ?? "",
-            window_days: 7,
+            window_days: snapshot.window_days, // the snapshot's actual window (A23)
           },
         )
         if (!rendered.ok) {
@@ -678,7 +691,9 @@ Deno.serve(async (req) => {
         // endpoints' patterns collapse onto the same upsert key by construction).
         if (classified.branch === "agree" && topEdge !== null) {
           const state = userStates[metricKey]
-          const rendered = renderCard(EDGE_CARD_TEMPLATE, {
+          // A21: the "matching pattern" clause ships only when a gate-passing personal signal
+          // backs it (classified.personal is exactly that row, or null).
+          const rendered = renderCard(edgeCardTemplate(classified.personal !== null), {
             metric_a_label: label(topEdge.subject),
             metric_b_label: label(topEdge.object),
             pattern_metric_label: label(metricKey),

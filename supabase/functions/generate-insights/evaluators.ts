@@ -212,6 +212,13 @@ function addDays(isoDate: string, days: number): string {
  * lagged window's confidence never peeks at data after its own window end. Returns null when
  * the series has no value in the window at all (mirrors S3, which emits no snapshot row for a
  * metric with zero in-window and zero historical rows — a missing baseline never fires a leaf).
+ *
+ * CONSERVATIVE-HISTORY caveat (A23): the history count sees only the days present in the
+ * supplied series — the engine fetches a ~28-day slice, so a user with months of history is
+ * undercounted relative to S3's all-days-ever semantics. The error is one-directional:
+ * lagged-leaf confidence can only come out LOWER than S3 would grant ('high' needs
+ * ≥ highMinHistoryDays of visible history), never higher — a leaf may under-fire, never
+ * over-claim.
  */
 export function windowedBaseline(
   series: ReadonlyMap<string, number>,

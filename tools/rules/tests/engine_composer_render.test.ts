@@ -21,10 +21,13 @@ import {
 } from '../../../supabase/functions/generate-insights/composer.ts';
 import {
   EDGE_CARD_TEMPLATE,
+  EDGE_CARD_TEMPLATE_WITH_PERSONAL,
+  edgeCardTemplate,
   edgeRuleId,
   fillTemplate,
   PERSONAL_CARD_TEMPLATE,
   personalRuleId,
+  relationPhrase,
   renderCard,
 } from '../../../supabase/functions/generate-insights/render.ts';
 
@@ -190,14 +193,17 @@ test('an unresolved {{placeholder}} DROPS the card (broken copy never ships)', (
 });
 
 test('the shipped composer templates render clean with representative values', () => {
-  const edgeCard = renderCard(EDGE_CARD_TEMPLATE, {
+  const edgeValues = {
     metric_a_label: 'sleep duration min',
     metric_b_label: 'hrv sdnn ms',
     pattern_metric_label: 'sleep duration min',
     direction_phrase: 'upward',
     relation_phrase: 'tends to raise',
-  });
-  assert.ok(edgeCard.ok, JSON.stringify(edgeCard));
+  };
+  for (const template of [EDGE_CARD_TEMPLATE, EDGE_CARD_TEMPLATE_WITH_PERSONAL]) {
+    const edgeCard = renderCard(template, edgeValues);
+    assert.ok(edgeCard.ok, JSON.stringify(edgeCard));
+  }
   const personalCard = renderCard(PERSONAL_CARD_TEMPLATE, {
     metric_a_label: 'energy score',
     metric_b_label: 'mood score',
@@ -205,6 +211,28 @@ test('the shipped composer templates render clean with representative values', (
   assert.ok(personalCard.ok, JSON.stringify(personalCard));
   // The still-researching variant must SAY it is an unverified personal observation.
   assert.ok(personalCard.ok && personalCard.copy.body.includes('unverified personal observation'));
+});
+
+// A21 honesty split: the pairwise-corroboration clause ships only when a gate-passing personal
+// signal backs it — an agree card fired per D14 with the personal signal absent (or failing its
+// serve gate) must NOT claim the user's own data matches.
+test('A21: agree card without a gate-passing personal signal omits the matching-pattern clause', () => {
+  const CLAUSE = 'Your own recent data shows a matching pattern';
+  assert.ok(!EDGE_CARD_TEMPLATE.body.includes(CLAUSE));
+  assert.ok(EDGE_CARD_TEMPLATE_WITH_PERSONAL.body.includes(CLAUSE));
+  // The selection function the handler calls with (classified.personal !== null).
+  assert.equal(edgeCardTemplate(false), EDGE_CARD_TEMPLATE);
+  assert.equal(edgeCardTemplate(true), EDGE_CARD_TEMPLATE_WITH_PERSONAL);
+  // Both variants share the title, so the upsert identity is unchanged by the split.
+  assert.equal(EDGE_CARD_TEMPLATE.title, EDGE_CARD_TEMPLATE_WITH_PERSONAL.title);
+});
+
+// A23: a non-monotonic relation must fail loudly, never default to a directional phrase.
+test('A23: relationPhrase throws on non-monotonic relations', () => {
+  assert.equal(relationPhrase('increases'), 'tends to raise');
+  assert.equal(relationPhrase('decreases'), 'tends to lower');
+  assert.throws(() => relationPhrase('correlates'), /non-monotonic/);
+  assert.throws(() => relationPhrase('modulates'), /non-monotonic/);
 });
 
 test('producer rule_id namespaces are disjoint and pair-order-stable', () => {

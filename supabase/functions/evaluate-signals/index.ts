@@ -166,7 +166,16 @@ const PRUNE_DELETE_CHUNK = 50
 // ─── Handler ──────────────────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
+  // A22: without this guard an unset env var degenerates the expected header to the literal
+  // string "Bearer undefined" — fail loudly (500, secret never echoed) before any compare.
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+  if (!serviceRoleKey) {
+    console.error("SUPABASE_SERVICE_ROLE_KEY is not set — refusing to serve")
+    return new Response(
+      JSON.stringify({ error: "server misconfiguration: service-role key unavailable" }),
+      { status: 500 },
+    )
+  }
 
   // Only pg_cron (or an admin curl) may invoke this function.
   const auth = req.headers.get("Authorization")
@@ -174,7 +183,7 @@ Deno.serve(async (req) => {
     return new Response("Unauthorized", { status: 401 })
   }
 
-  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey!)
+  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey)
 
   // The evaluated day (UTC). The S5 window is the PAIR_WINDOW_DAYS days ending today; the
   // S4 baseline is the SIGNAL_CONFIG.windowDays days ENDING YESTERDAY (window excludes the
