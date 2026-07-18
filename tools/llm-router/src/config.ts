@@ -60,6 +60,13 @@ export interface BudgetConfig {
   hardStopFraction: number;
   /** Ledger file, repo-root-relative unless absolute. */
   ledgerPath: string;
+  /**
+   * Ledger retention window in days (A11): day/run entries whose UTC day is
+   * strictly older are pruned on ledger load/persist. Optional —
+   * defaults to `DEFAULT_RETENTION_DAYS` (30) in budget.ts, so pre-existing
+   * configs stay valid.
+   */
+  retentionDays?: number;
 }
 
 /** Local-agent mailbox defaults. */
@@ -189,6 +196,9 @@ export function validateConfig(raw: unknown): RouterConfig {
     fail('budget.hardStopFraction must be in (0, 1]');
   }
   if (typeof b.ledgerPath !== 'string' || b.ledgerPath.length === 0) fail('budget.ledgerPath must be a non-empty string');
+  if (b.retentionDays !== undefined && !isPositiveInt(b.retentionDays)) {
+    fail('budget.retentionDays must be a positive integer when set');
+  }
 
   // localAgent
   const la = c.localAgent as LocalAgentConfig | undefined;

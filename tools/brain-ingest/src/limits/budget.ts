@@ -30,6 +30,18 @@
  * and reset at the provider's UTC-midnight window (the `windowStart` stored
  * with each counter). A multi-day ingest is the expected mode (§5.1).
  *
+ * Concurrency (audit A10): `charge()` merges a fresh disk read into memory
+ * BEFORE the hard-stop check, so two concurrent ingest processes see each
+ * other's spend and the 95% gate fires on the COMBINED total instead of each
+ * process's own view (last-write-wins under-counting). Merge = newest UTC
+ * window wins; same window → max(spent), which equals the union of both
+ * writers' charges because each persists after every charge (a naive sum
+ * would double-count the shared base). The residual race is one charge's
+ * read→rename window — exactly the in-flight overlap the 5% headroom above
+ * is documented to absorb. Lifecycle (audit A11): counters from dead (past)
+ * UTC windows are dropped on persist; the file is otherwise bounded by the
+ * source vocabulary, so no further pruning is needed.
+ *
  * ESM / NodeNext — imports use explicit `.js` extensions. No network.
  */
 
@@ -161,6 +173,50 @@ export class FileBudgetGuard implements BudgetGuard {
     return {};
   }
 
+  /**
+   * A10: merge a fresh disk read into memory. Per source, the counter from
+   * the NEWER UTC window wins (ISO `windowStart` strings order
+   * lexicographically); within the same window, max(spent) — each process
+   * persists after every charge, so the larger total supersets the smaller
+   * and max sums both writers without double-counting. Counters for sources
+   * this instance doesn't meter are carried through untouched (another
+   * process may meter them via `budgetOverrides`).
+   */
+  private mergeFromDisk(): void {
+    const disk = this.load();
+    const sources = new Set([
+      ...(Object.keys(this.counters) as SourceName[]),
+      ...(Object.keys(disk) as SourceName[]),
+    ]);
+    for (const source of sources) {
+      const mine = this.counters[source];
+      const theirs = disk[source];
+      if (mine === undefined || theirs === undefined) {
+        this.counters[source] = mine ?? theirs;
+      } else if (mine.windowStart === theirs.windowStart) {
+        this.counters[source] = {
+          windowStart: mine.windowStart,
+          spent: Math.max(mine.spent, theirs.spent),
+        };
+      } else {
+        this.counters[source] = mine.windowStart > theirs.windowStart ? mine : theirs;
+      }
+    }
+  }
+
+  /**
+   * A11: drop counters whose window is not the CURRENT UTC day (in place).
+   * A past-window counter is dead by definition — `currentCounter` would
+   * reset it on next use — so persisting only live windows keeps usage.json
+   * to exactly the sources spending today.
+   */
+  private pruneStaleWindows(): void {
+    const today = utcMidnightIso(this.now());
+    for (const source of Object.keys(this.counters) as SourceName[]) {
+      if (this.counters[source]?.windowStart !== today) delete this.counters[source];
+    }
+  }
+
   /** Atomic write: temp file + rename. */
   private persist(): void {
     const dir = dirname(this.usagePath);
@@ -206,6 +262,9 @@ export class FileBudgetGuard implements BudgetGuard {
   charge(source: SourceName, cost: number): void {
     const budget = this.budgetFor(source);
     if (budget === undefined) return; // unmetered → no-op (NCBI etc.)
+    // A10: merge the on-disk counters BEFORE the gate, so the hard stop
+    // fires on the combined spend of every concurrent process.
+    this.mergeFromDisk();
     if (this.wouldExceed95(source, cost)) {
       throw new Error(
         `budget: charging ${cost} to '${source}' would cross the 95% hard stop ` +
@@ -215,6 +274,7 @@ export class FileBudgetGuard implements BudgetGuard {
     }
     const counter = this.currentCounter(source)!; // metered ⇒ defined
     counter.spent += cost;
+    this.pruneStaleWindows(); // A11: persist only live-window counters
     this.persist();
   }
 }

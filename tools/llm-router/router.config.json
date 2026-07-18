@@ -24,7 +24,8 @@
     "perRunOutputTokens": 200000,
     "perDayUsdPerNode": 5.0,
     "hardStopFraction": 0.95,
-    "ledgerPath": "data/llm-router/ledger.json"
+    "ledgerPath": "data/llm-router/ledger.json",
+    "retentionDays": 30
   },
   "localAgent": {
     "mailboxDir": "data/llm-router/mailbox",

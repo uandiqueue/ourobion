@@ -158,7 +158,8 @@ atomically, repeat.
     "perRunOutputTokens": 200000,   // output tokens per run (runId)
     "perDayUsdPerNode": 5.0,        // USD per UTC day per node/stage
     "hardStopFraction": 0.95,       // refuse the call that would cross this line
-    "ledgerPath": "data/llm-router/ledger.json"   // repo-root-relative unless absolute
+    "ledgerPath": "data/llm-router/ledger.json",  // repo-root-relative unless absolute
+    "retentionDays": 30             // optional (default 30): ledger entries older than this are pruned
   },
   "localAgent": {
     "mailboxDir": "data/llm-router/mailbox",      // repo-root-relative unless absolute
@@ -189,6 +190,23 @@ writes, crash-tolerant reads); prices come from the config table and are **provi
 sonnet-5 sticker ($3/$15) is used rather than its time-boxed intro pricing, and the gpt-5 row is a
 placeholder pending the real verifier key (B5).
 
+**Lifecycle (audit A11).** Day and run entries whose UTC day is older than `budget.retentionDays`
+(optional, default 30) are pruned on every ledger load and persist, so the file — and the `ledger`
+CLI/`state()` run listing — stays bounded. Runs carry no completion marker, so a run counts as
+completed once its `startedAt` day ages out of the window. The on-disk format is unchanged
+(version 1): an old ledger file loads fine and simply gets pruned.
+
+**Concurrency (audit A10).** `record()` re-reads the on-disk ledger and merges it with in-memory
+state before persisting (element-wise max — since every instance persists after each record, the
+file supersets its own past writes, so max yields the union of every writer's spend without
+double-counting; runs union with max tokens + earliest start). Two concurrent processes therefore
+no longer drop each other's spend. Residuals, deliberately accepted: (a) two writers inside the
+same read→rename window can drop at most **one call's** usage, and (b) a process's **pre-call
+gate** reads the ledger as of its own last `record()`, so it can be up to one call behind another
+writer — both are exactly the in-flight overlap the 5% hard-stop headroom exists to absorb. No
+cross-process file lock is attempted. The run-token cap merges cleanly (run counters only grow),
+so **no single-writer assumption remains** for either cap.
+
 ## CLI
 
 ```
@@ -201,8 +219,10 @@ npx tsx src/cli.ts ledger         # today's per-node spend + per-run output toke
 
 ## Testing
 
-`npm test` — 42 tests, fully offline: config validation incl. every decorrelation failure mode;
+`npm test` — 48 tests, fully offline: config validation incl. every decorrelation failure mode;
 both adapters against mocked fetch (wire shapes, 429 backoff, 5xx exhaustion, non-retryable 400,
 key-missing before any network); mailbox round-trip with the response written by the test playing
 the fulfilling agent (timeout, error responses, half-written-JSON tolerance); both budget hard
-stops, persistence, UTC-day reset; facade dispatch on both routes + `checkConfig`.
+stops, persistence, UTC-day reset, retention pruning (boundary day kept, old-format file loads,
+`retentionDays` override), and interleaved two-writer merges (summed totals, hard stops on merged
+spend); facade dispatch on both routes + `checkConfig`.
