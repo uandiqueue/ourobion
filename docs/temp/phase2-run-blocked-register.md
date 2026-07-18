@@ -95,9 +95,12 @@ keeps building; when an item unblocks, the orchestrator picks it up from here.
   high/moderate boundary.
 
 ## B12 · Branch-protection required checks for the new CI matrix
-- **Stopped at:** U18 added the six `Node tools — tools/*` CI checks; making them *required* is a repo
-  settings change (Settings → Branches → dev-phase2 protection rule).
-- **Needs:** you to add the six new check names to the required-checks list (2 minutes).
+- **Stopped at:** U18 added the six `Node tools — tools/*` CI checks; U27 added four more —
+  `Deno — compute-baselines` / `Deno — evaluate-signals` / `Deno — generate-insights` and
+  `Migrations — shadow apply (postgres:17)`. Making them *required* is a repo settings change
+  (Settings → Branches → dev-phase2 protection rule).
+- **Needs:** you to add the ten new check names (six node-tools + four U27) to the
+  required-checks list (2 minutes).
 - **Gates:** nothing hard — the checks run on every PR regardless; requiring them just makes the
   14-PR merge queue unbypassable.
 

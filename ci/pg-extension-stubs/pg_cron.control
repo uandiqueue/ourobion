@@ -1,0 +1,7 @@
+# CI STUB — not the real pg_cron (see ci/migrations-bootstrap.sql for why).
+# Lets `create extension if not exists pg_cron with schema extensions;` succeed on the
+# vanilla postgres:17 image used by the migrations-apply CI job, where the real extension's
+# shared library is not installed.
+comment = 'CI stub for pg_cron (shadow migration apply only)'
+default_version = '1.0'
+relocatable = true
