@@ -64,7 +64,9 @@ Map<String, Set<String>> dartClassToJsonKeys(String dartSource) {
     final block = dartSource.substring(start, end);
     final tj = block.indexOf('toJson()');
     if (tj < 0) continue;
-    final keyRe = RegExp(r"'([a-z0-9_]+)':");
+    // Wire keys are snake_case for table columns; jsonb payload shapes (InsightCardEdgeRef)
+    // keep the camelCase keys the engine writes, so uppercase is allowed here.
+    final keyRe = RegExp(r"'([a-zA-Z0-9_]+)':");
     result[name] = keyRe.allMatches(block.substring(tj)).map((m) => m.group(1)!).toSet();
   }
   return result;
