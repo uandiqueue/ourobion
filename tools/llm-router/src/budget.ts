@@ -20,6 +20,19 @@
  * construction, written atomically (tmp + rename). Day counters key on the UTC
  * date; run counters key on the caller-supplied runId.
  *
+ * Lifecycle (audit A11): entries older than the retention window
+ * (`budget.retentionDays`, default {@link DEFAULT_RETENTION_DAYS}) are pruned
+ * on every load and persist, so the file stays bounded. Runs carry no
+ * completion marker, so a run counts as finished once its `startedAt` UTC day
+ * ages out of the same window. The on-disk format is unchanged (version 1) —
+ * an old ledger file loads fine and simply gets pruned.
+ *
+ * Concurrency (audit A10): `record()` re-reads the on-disk ledger and MERGES
+ * it with in-memory state before persisting, so two concurrent processes no
+ * longer drop each other's spend (last-write-wins). See {@link
+ * BudgetLedger.record} for the merge semantics and the (one-call-wide)
+ * residual race the 5% hard-stop headroom absorbs.
+ *
  * ESM / NodeNext — imports use explicit `.js` extensions. No network.
  */
 
@@ -66,6 +79,15 @@ export function utcDayKey(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
+/**
+ * Ledger retention (A11): day/run entries whose UTC day is strictly older
+ * than this many days before "today" are pruned on load and persist.
+ * Overridable per config via `budget.retentionDays`.
+ */
+export const DEFAULT_RETENTION_DAYS = 30;
+
+const MS_PER_DAY = 86_400_000;
+
 /** USD cost of `usage` on `model` per the config price table. */
 export function costUsd(config: RouterConfig, model: string, usage: LlmUsage): number {
   const price = config.prices[model];
@@ -111,11 +133,94 @@ export class BudgetLedger {
   private load(): LedgerFile {
     try {
       const parsed = JSON.parse(readFileSync(this.ledgerPath, 'utf8')) as LedgerFile;
-      if (parsed && typeof parsed === 'object' && parsed.version === 1) return parsed;
+      if (parsed && typeof parsed === 'object' && parsed.version === 1) {
+        // Backward-compat: tolerate an older/hand-edited version-1 file
+        // missing a map, then prune (A11) so stale entries never re-enter
+        // memory. The format itself is unchanged.
+        const data: LedgerFile = { version: 1, days: parsed.days ?? {}, runs: parsed.runs ?? {} };
+        this.prune(data);
+        return data;
+      }
     } catch {
       // Missing or corrupt → clean start.
     }
     return { version: 1, days: {}, runs: {} };
+  }
+
+  /** Oldest UTC day key still retained (the boundary day itself is KEPT). */
+  private retentionCutoffKey(): string {
+    const days = this.config.budget.retentionDays ?? DEFAULT_RETENTION_DAYS;
+    return utcDayKey(this.now() - days * MS_PER_DAY);
+  }
+
+  /**
+   * A11: drop entries older than the retention window (in place). Day keys
+   * (YYYY-MM-DD) compare lexicographically = chronologically. Runs have no
+   * completion marker, so a run is treated as completed once its `startedAt`
+   * UTC day ages out of the window (no run lives that long); an unparsable
+   * `startedAt` (hand-edited file) is pruned as unaccountable.
+   */
+  private prune(data: LedgerFile): void {
+    const cutoff = this.retentionCutoffKey();
+    for (const dayKey of Object.keys(data.days)) {
+      if (dayKey < cutoff) delete data.days[dayKey];
+    }
+    for (const [runId, run] of Object.entries(data.runs)) {
+      const startedMs = Date.parse(run.startedAt);
+      if (Number.isNaN(startedMs) || utcDayKey(startedMs) < cutoff) delete data.runs[runId];
+    }
+  }
+
+  /**
+   * A10: merge in-memory state with a fresh disk read, element-wise MAX.
+   *
+   * Why max and not sum: every counter only ever grows and every instance
+   * persists after each `record()`, so the on-disk file always supersets this
+   * instance's own past writes. Element-wise max therefore yields the union
+   * of every writer's spend without double-counting, where a naive sum would
+   * double-count the shared base both writers loaded. Runs union the same
+   * way (max outputTokens, earliest startedAt).
+   *
+   * Residual race: two writers inside the same read→rename window can drop at
+   * most ONE call's usage (down from "everything the other process ever
+   * spent" pre-merge) — the 5% hard-stop headroom absorbs that, per the
+   * module docstring. No cross-process file lock is attempted.
+   */
+  private mergeWithDisk(): LedgerFile {
+    const disk = this.load();
+    const merged: LedgerFile = { version: 1, days: {}, runs: {} };
+
+    const dayKeys = new Set([...Object.keys(this.data.days), ...Object.keys(disk.days)]);
+    for (const dayKey of dayKeys) {
+      const mine = this.data.days[dayKey] ?? {};
+      const theirs = disk.days[dayKey] ?? {};
+      const day: Partial<Record<LlmNodeId, NodeDayCounter>> = {};
+      const nodeIds = new Set([...Object.keys(mine), ...Object.keys(theirs)] as LlmNodeId[]);
+      for (const nodeId of nodeIds) {
+        const a = mine[nodeId];
+        const b = theirs[nodeId];
+        day[nodeId] = {
+          calls: Math.max(a?.calls ?? 0, b?.calls ?? 0),
+          inputTokens: Math.max(a?.inputTokens ?? 0, b?.inputTokens ?? 0),
+          outputTokens: Math.max(a?.outputTokens ?? 0, b?.outputTokens ?? 0),
+          usd: Math.max(a?.usd ?? 0, b?.usd ?? 0),
+        };
+      }
+      merged.days[dayKey] = day;
+    }
+
+    const runIds = new Set([...Object.keys(this.data.runs), ...Object.keys(disk.runs)]);
+    for (const runId of runIds) {
+      const a = this.data.runs[runId];
+      const b = disk.runs[runId];
+      const startedAts = [a?.startedAt, b?.startedAt].filter((s): s is string => s !== undefined);
+      merged.runs[runId] = {
+        startedAt: startedAts.sort()[0]!,
+        outputTokens: Math.max(a?.outputTokens ?? 0, b?.outputTokens ?? 0),
+      };
+    }
+
+    return merged;
   }
 
   private persist(): void {
@@ -176,8 +281,14 @@ export class BudgetLedger {
     );
   }
 
-  /** Record ACTUAL post-call usage and persist. */
+  /**
+   * Record ACTUAL post-call usage and persist. Re-reads and merges the
+   * on-disk ledger first (A10) so a concurrent process's spend persisted
+   * since our last read is never dropped, then prunes (A11).
+   */
   record(nodeId: LlmNodeId, runId: string, model: string, usage: LlmUsage): void {
+    this.data = this.mergeWithDisk();
+
     const dayKey = utcDayKey(this.now());
     const day = (this.data.days[dayKey] ??= {});
     const counter = (day[nodeId] ??= { calls: 0, inputTokens: 0, outputTokens: 0, usd: 0 });
@@ -192,11 +303,16 @@ export class BudgetLedger {
     });
     run.outputTokens += usage.outputTokens;
 
+    this.prune(this.data);
     this.persist();
   }
 
-  /** Snapshot for reports. */
+  /**
+   * Snapshot for reports. Runs are pruned to the retention window first, so
+   * the listing stays bounded even on a long-lived instance (A11).
+   */
   state(): BudgetState {
+    this.prune(this.data);
     const dayKey = utcDayKey(this.now());
     return {
       day: dayKey,
