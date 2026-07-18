@@ -15,6 +15,7 @@ import {
   PAIR_WINDOW_DAYS,
   SIGNAL_CONFIG,
 } from "./config.ts"
+import { computeStalePairs, pairEligibilityKey, type PairRowRef } from "./lifecycle.ts"
 
 // ─── S4 + S5 · evaluate-signals (docs/shared/insight-engine-architecture.md §S4/§S5, as ───
 // superseded by ADR-0002, docs/shared/decisions/0002-anomaly-definition.md) ───────────────
@@ -29,6 +30,9 @@ import {
 //      (interim scope — brain-neighbour pruning arrives in U12/C10), Spearman ρ +
 //      Pyper–Peterman N_eff + Benjamini–Hochberg q across the user's pair family, and the
 //      ADR-0002 deterministic 3-window sign-stability gate → upserted into personal_signals.
+//      After the upsert, rows whose pair LOST eligibility (metric under the 14-day floor,
+//      joint days < minJointDays, or no longer evaluated) are DELETED, keeping the table a
+//      pure function of the current data — the loaders' upsert+prune model, D13 (audit A19).
 //
 // Metric keys and deadbands derive from the registry — never hardcoded. Reads go through the
 // S2 metric_daily_values view only (the metrics-registry-to-signals guard,
@@ -135,6 +139,30 @@ async function fetchConfidence(
   return out
 }
 
+/** The (user, pair) identity of every row currently in personal_signals — the prune input. */
+async function fetchExistingPairs(
+  supabase: ReturnType<typeof createClient>,
+): Promise<PairRowRef[]> {
+  const out: PairRowRef[] = []
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("personal_signals")
+      .select("user_id, metric_a, metric_b")
+      .order("user_id", { ascending: true })
+      .order("metric_a", { ascending: true })
+      .order("metric_b", { ascending: true })
+      .range(from, from + PAGE_SIZE - 1)
+    if (error) throw new Error(error.message)
+    const page = (data ?? []) as unknown as PairRowRef[]
+    out.push(...page)
+    if (page.length < PAGE_SIZE) break
+  }
+  return out
+}
+
+/** Per-user delete batch size for the stale-pair prune (PostgREST `or=` filter length cap). */
+const PRUNE_DELETE_CHUNK = 50
+
 // ─── Handler ──────────────────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -183,6 +211,7 @@ Deno.serve(async (req) => {
   const metricSignals: MetricSignal[] = []
   const firedPatterns: FiredPattern[] = []
   const signalRows: object[] = []
+  const eligiblePairKeys = new Set<string>() // every (user, pair) that earns a row THIS run
   let pairsEvaluated = 0
 
   for (const [userId, metrics] of byUser) {
@@ -266,7 +295,11 @@ Deno.serve(async (req) => {
     // Benjamini–Hochberg across THIS user's evaluated pair family (q is per user per run).
     const qValues = benjaminiHochberg(pending.map((entry) => entry.p))
     for (let k = 0; k < pending.length; k++) {
-      signalRows.push({ ...pending[k].row, q_value: round(qValues[k], 5) })
+      const row = pending[k].row
+      signalRows.push({ ...row, q_value: round(qValues[k], 5) })
+      eligiblePairKeys.add(
+        pairEligibilityKey(userId, row.metric_a as string, row.metric_b as string),
+      )
     }
   }
 
@@ -280,6 +313,47 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ── A19 · prune lost-eligibility pairs (delete-on-loss, D13 upsert+prune model) ──────────
+  // personal_signals must stay a pure function of the current data: any existing row whose
+  // pair did NOT earn a row this run (metric under the PAIR_MIN_METRIC_DAYS floor, joint days
+  // < minJointDays, metric no longer evaluated, or the user's data left the window entirely)
+  // is deleted, scoped per user to exactly the stale pairs. BH q-values stay coherent: q is
+  // computed per user per run over that run's evaluated family — a pruned pair was not in the
+  // current family, so the surviving rows' q-values never depended on it.
+  //
+  // Guard (the A14 lesson): if the S2 view returned NO users at all, treat it as a suspect
+  // input rather than proof every signal died, and skip the prune instead of wiping the table.
+  let rowsPruned = 0
+  if (byUser.size > 0) {
+    let existingPairs: PairRowRef[]
+    try {
+      existingPairs = await fetchExistingPairs(supabase)
+    } catch (e) {
+      console.error("personal_signals existing-pairs fetch error", e)
+      return new Response(JSON.stringify({ error: (e as Error).message }), { status: 500 })
+    }
+    const staleByUser = computeStalePairs(eligiblePairKeys, existingPairs)
+    for (const [userId, stalePairs] of staleByUser) {
+      for (let from = 0; from < stalePairs.length; from += PRUNE_DELETE_CHUNK) {
+        const chunk = stalePairs.slice(from, from + PRUNE_DELETE_CHUNK)
+        // Registry metric keys are ^[a-z0-9_]+$ — safe inside a PostgREST or= expression.
+        const orFilter = chunk
+          .map((p) => `and(metric_a.eq.${p.metricA},metric_b.eq.${p.metricB})`)
+          .join(",")
+        const { error: deleteError } = await supabase
+          .from("personal_signals")
+          .delete()
+          .eq("user_id", userId)
+          .or(orFilter)
+        if (deleteError) {
+          console.error("personal_signals prune error", deleteError)
+          return new Response(JSON.stringify({ error: deleteError.message }), { status: 500 })
+        }
+        rowsPruned += chunk.length
+      }
+    }
+  }
+
   return new Response(
     JSON.stringify({
       ok: true,
@@ -287,7 +361,7 @@ Deno.serve(async (req) => {
       users: byUser.size,
       metricSignals,
       firedPatterns,
-      personalSignals: { pairsEvaluated, rowsUpserted: signalRows.length },
+      personalSignals: { pairsEvaluated, rowsUpserted: signalRows.length, rowsPruned },
     }),
     { headers: { "Content-Type": "application/json" } },
   )
