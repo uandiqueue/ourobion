@@ -94,3 +94,10 @@ keeps building; when an item unblocks, the orchestrator picks it up from here.
   alternative quartile source.
 - **Gates:** nothing hard — banding works from OpenAlex h-index alone; SJR just sharpens the
   high/moderate boundary.
+
+## B12 · Branch-protection required checks for the new CI matrix
+- **Stopped at:** U18 added the six `Node tools — tools/*` CI checks; making them *required* is a repo
+  settings change (Settings → Branches → dev-phase2 protection rule).
+- **Needs:** you to add the six new check names to the required-checks list (2 minutes).
+- **Gates:** nothing hard — the checks run on every PR regardless; requiring them just makes the
+  14-PR merge queue unbypassable.

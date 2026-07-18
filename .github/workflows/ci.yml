@@ -1,10 +1,13 @@
 name: CI
 
 # The non-bypassable backstop: mirrors the local pre-push gate (skippable with --no-verify) and adds
-# the checks that can only run in CI. Three jobs:
+# the checks that can only run in CI. Four jobs:
 #   - context     : node tools/context_sync.mjs --check (sessions / memory / decisions / index / couplings)
 #   - flutter     : flutter analyze + flutter test (with the public env file built from secrets)
 #   - typescript  : tsc --noEmit over the shared/ contracts
+#   - node-tools  : matrix over the tools/* node packages — npm ci + typecheck + test, plus the
+#                   DB-free drift guards (rules --check, metric-view --check). All suites are
+#                   offline-first: no Docker, no DB, no network, no secrets.
 on:
   push:
     branches: [main, dev-phase2]
@@ -80,3 +83,61 @@ jobs:
       - name: Type check shared types
         working-directory: shared
         run: npx tsc --noEmit
+
+  node-tools:
+    name: Node tools — ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - tools/brain-ingest
+          - tools/llm-router
+          - tools/rules
+          - tools/edge-loader
+          - tools/engine-stats
+          - tools/metric-view
+        include:
+          # DB-free drift guards (`npm run check` = --check/--dry-run: validate + render, no DB).
+          # edge-loader's --check is NOT here: it needs an edges/ artifact source (--from-dir
+          # mirror or R2 credentials), which CI does not have — its zod validation is covered by
+          # the package's own tests instead.
+          - package: tools/rules
+            drift_check: true
+          - package: tools/metric-view
+            drift_check: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          # brain-ingest and llm-router declare engines.node >=26; the rest accept >=20.
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: |
+            ${{ matrix.package }}/package-lock.json
+            shared/package-lock.json
+
+      # The tool suites import the shared/ TS contracts directly (via tsx), which resolve
+      # zod & co. from shared/node_modules — install those first.
+      - name: Install shared contract dependencies
+        working-directory: shared
+        run: npm ci
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.package }}
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: ${{ matrix.package }}
+        run: npm run typecheck
+
+      - name: Test
+        working-directory: ${{ matrix.package }}
+        run: npm test
+
+      - name: Drift check
+        if: matrix.drift_check
+        working-directory: ${{ matrix.package }}
+        run: npm run check
