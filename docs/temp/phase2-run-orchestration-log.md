@@ -22,7 +22,7 @@ not into `dev-phase2` — only #43 actually reached `dev-phase2` (81b5827). The 
 `origin/feat/shared/l6-one-card-slice` (f442eac, which received #71's merge). That branch is the
 **true chain tip**.
 
-**Recovery (decision D20):** one recovery PR — **PR #TBD-RECOVERY** — merges
+**Recovery (decision D20):** one recovery PR — **PR #72** — merges
 `feat/shared/l6-one-card-slice` straight into `dev-phase2` (Jayden's click; see register **B13**).
 No rebase / re-cherry-pick: that would rewrite reviewed history. Until it merges, **new units stack
 on the chain tip**, i.e. cut from `chore/run/chain-recovery-docs-move` (the R1 branch, which sits on
@@ -38,7 +38,7 @@ contentious ones; fixes to shipped migrations are NEW additive migrations per D1
 
 | # | Unit | Status | Notes |
 |---|---|---|---|
-| R1 | Chain recovery + docs/temp move + this bookkeeping | **done** | branch `chore/run/chain-recovery-docs-move` (cut from the chain tip); recovery PR #TBD-RECOVERY |
+| R1 | Chain recovery + docs/temp move + this bookkeeping | **done** | branch `chore/run/chain-recovery-docs-move` (cut from the chain tip) / PR #73; recovery PR #72 |
 | U19 | A1/A2/A3 — shared-schema safeguard seam: `partial` requires `independentRetrieval.performed` (D16); corroboration-vs-sources cross-check; reconcile the vacuous-quoteCheck code/schema disagreement | next | shared/brain — retro-review flag |
 | U20 | A6/A26/A20 — InsightCard contract repair: revive the shared Dart mirror (id int + producer/insight_id/edge_refs), app imports it, retire the app-local duplicate (D18); widen data/confidence-source unions | queued | shared/types — retro-review flag |
 | U21 | A25/A27 — app serve seam: `relationship` category + producer/edge_refs read + citation affordance; UTC-correct expiry filter (fix frozen `now` in watchInsights) | queued | apps/biotope m5b |
@@ -132,7 +132,7 @@ tables + the S2 view) — it stays early because it's Track A's longest pole.
 | 2026-07-16 | U13 L6 one-card slice | `feat/shared/l6-one-card-slice` / PR #69 (stacked on U12) | done; **memory 0016 added**; run's core scope complete |
 | 2026-07-16 | U18 CI node-suite wiring | `ci/node-tool-suites` (stacked on U13) | done; run **paused** after this — U14–U17 remain stretch |
 | 2026-07-17 | Build audit AU0–AU9 (record-only) | — (no code changes) | done; 27 findings → `docs/temp/phase2-audit/` |
-| 2026-07-18 | R1 recovery + docs/temp move | `chore/run/chain-recovery-docs-move` (cut from chain tip `feat/shared/l6-one-card-slice`) / R1 PR + recovery PR #TBD-RECOVERY | done; run docs now in docs/temp; D16–D20 recorded; B1 closed, B13 opened |
+| 2026-07-18 | R1 recovery + docs/temp move | `chore/run/chain-recovery-docs-move` (cut from chain tip `feat/shared/l6-one-card-slice`) / R1 PR #73 + recovery PR #72 | done; run docs now in docs/temp; D16–D20 recorded; B1 closed, B13 opened |
 
 ## Notes for the resuming orchestrator
 

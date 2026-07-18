@@ -105,7 +105,7 @@ keeps building; when an item unblocks, the orchestrator picks it up from here.
 - **Stopped at:** the 2026-07-16 hand-merge of the 15-PR stacked chain cascaded upward (PRs #43–#71
   merged into their stacked PARENT branches; only #43 reached `dev-phase2`). The full chain
   (28 commits, U1–U18) sits on `feat/shared/l6-one-card-slice`; the recovery PR
-  (**#TBD-RECOVERY**, base `dev-phase2`, head `feat/shared/l6-one-card-slice`) is open and merges it
+  (**#72**, base `dev-phase2`, head `feat/shared/l6-one-card-slice`) is open and merges it
   in one click — see sign-off decision D20.
 - **Needs:** Jayden to merge the recovery PR. One click.
 - **Gates:** everything downstream of `dev-phase2` — CI on `dev-phase2`, future sessions cutting

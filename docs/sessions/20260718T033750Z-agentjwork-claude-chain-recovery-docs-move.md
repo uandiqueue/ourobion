@@ -46,7 +46,9 @@
   units (mediums first: A1-seam → InsightCard contract → app seam → snooze → stale signals).
 
 ## Left
-- Recovery PR + R1 PR opened (numbers recorded in the orchestration log / B13 after creation).
+- Recovery PR **#72** (base `dev-phase2`, head `feat/shared/l6-one-card-slice`) + R1 PR **#73**
+  (base `feat/shared/l6-one-card-slice`, head this branch) opened; numbers filled into the
+  orchestration log + B13 in a follow-up commit.
 - U19 is the first `next` unit; U20–U28 queued. All stack on this branch until B13 merges.
 
 ## Blockers
