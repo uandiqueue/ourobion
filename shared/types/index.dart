@@ -297,8 +297,36 @@ class BaselineSnapshot {
   }
 }
 
+/// One card <-> verified-edge reference inside [InsightCard.edgeRefs] (jsonb payload written by
+/// generate-insights — keys stay camelCase on the wire, matching the engine's CardRow shape and
+/// the migration comment "[{edgeId, verifiedAt}]"). verifiedAt pins the edge VERSION (S6).
+class InsightCardEdgeRef {
+  final String edgeId;
+  final String verifiedAt;
+
+  const InsightCardEdgeRef({
+    required this.edgeId,
+    required this.verifiedAt,
+  });
+
+  factory InsightCardEdgeRef.fromJson(Map<String, dynamic> json) {
+    return InsightCardEdgeRef(
+      edgeId: json['edgeId'] as String,
+      verifiedAt: json['verifiedAt'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'edgeId': edgeId,
+      'verifiedAt': verifiedAt,
+    };
+  }
+}
+
 class InsightCard {
-  final String id;
+  /// bigint identity column — arrives as a JSON number over PostgREST.
+  final int id;
   final String userId;
   final String generatedAt;
   final String title;
@@ -312,6 +340,13 @@ class InsightCard {
   final String? expiresAt;
   final String ruleId;
   final String phaseGenerated;
+
+  /// S8 producer columns. Optional-with-default (docs/memory/0002): instances serialized before
+  /// the 20260716050639 migration lack them; fromJson tolerates the missing keys with the same
+  /// defaults the DB backfills ('rules' / null / []).
+  final String producer; // 'rules' | 'edge' | 'personal' — DB default 'rules'
+  final String? insightId; // composed_insights FK; null for plain rules cards
+  final List<InsightCardEdgeRef> edgeRefs; // DB default []; always [] for producer 'personal'
 
   const InsightCard({
     required this.id,
@@ -328,11 +363,15 @@ class InsightCard {
     this.expiresAt,
     required this.ruleId,
     required this.phaseGenerated,
+    this.producer = 'rules',
+    this.insightId,
+    this.edgeRefs = const [],
   });
 
   factory InsightCard.fromJson(Map<String, dynamic> json) {
     return InsightCard(
-      id: json['id'] as String,
+      // num-then-toInt: tolerates a decoder that surfaces the JSON number as double.
+      id: (json['id'] as num).toInt(),
       userId: json['user_id'] as String,
       generatedAt: json['generated_at'] as String,
       title: json['title'] as String,
@@ -348,6 +387,13 @@ class InsightCard {
       expiresAt: json['expires_at'] as String?,
       ruleId: json['rule_id'] as String,
       phaseGenerated: json['phase_generated'] as String,
+      producer: json['producer'] as String? ?? 'rules',
+      insightId: json['insight_id'] as String?,
+      edgeRefs: (json['edge_refs'] as List?)
+              ?.map((e) =>
+                  InsightCardEdgeRef.fromJson(Map<String, dynamic>.from(e as Map)))
+              .toList() ??
+          const [],
     );
   }
 
@@ -367,6 +413,9 @@ class InsightCard {
       'expires_at': expiresAt,
       'rule_id': ruleId,
       'phase_generated': phaseGenerated,
+      'producer': producer,
+      'insight_id': insightId,
+      'edge_refs': edgeRefs.map((e) => e.toJson()).toList(),
     };
   }
 }

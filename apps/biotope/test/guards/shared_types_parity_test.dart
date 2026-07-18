@@ -21,6 +21,7 @@ void main() {
       'DailyPhysioRow',
       'DailyEnvRow',
       'BaselineSnapshot',
+      'InsightCardEdgeRef', // the InsightCard.edge_refs jsonb payload shape (camelCase wire keys)
       'InsightCard',
       'InsightFiredEvent',
       'EngagementState',

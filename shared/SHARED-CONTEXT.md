@@ -155,8 +155,9 @@ interface BaselineSnapshot {
   confidence: 'insufficient' | 'low' | 'medium' | 'high'
   // insufficient = <3 days, low = 3–6 days, medium = 7–13 days, high = 14+ days
 
-  // Expansion hint: data_sources will include 'wearable' and 'env' in later phases
-  data_sources: ('self_report' | 'wearable' | 'env')[]
+  // Vocabulary = the S2 metric_daily_values view's source tags ('signal' = the signals
+  // long-table branch); 'env' is reserved for env metrics in later phases
+  data_sources: ('self_report' | 'wearable' | 'env' | 'signal')[]
 }
 ```
 
@@ -168,16 +169,16 @@ interface BaselineSnapshot {
 
 ```typescript
 interface InsightCard {
-  id: string
+  id: number                        // bigint identity — a JSON number over PostgREST
   user_id: string
   generated_at: string              // ISO datetime
 
   // Content
   title: string                     // short, non-diagnostic
   body: string                      // 1–2 sentences, observational language only
-  category: 'hydration' | 'gut' | 'vector' | 'behaviour' | 'descriptive'
+  category: 'hydration' | 'gut' | 'vector' | 'behaviour' | 'descriptive' | 'relationship'
   severity: 'info' | 'notice' | 'watch'
-  // MVP only uses 'info' and 'descriptive' cards — 'notice'/'watch' are Phase 2
+  // 'relationship' = the §S8 composer producers' category (edge / personal cards)
 
   // Evidence (always populated, even if empty array in MVP)
   contributing_metrics: string[]    // e.g. ['urine_colour', 'gut_comfort_score']
@@ -185,8 +186,8 @@ interface InsightCard {
 
   // Confidence
   confidence_score: number          // 0–1
-  confidence_sources: ('self_report' | 'wearable' | 'env')[]
-  // MVP: confidence_sources = ['self_report'] always
+  confidence_sources: ('self_report' | 'wearable' | 'env' | 'signal' | 'brain')[]
+  // = BaselineSnapshot.data_sources vocabulary + 'brain' (card rests on verified research edges)
 
   // Lifecycle
   status: 'active' | 'snoozed' | 'dismissed'
@@ -195,6 +196,12 @@ interface InsightCard {
   // Metadata
   rule_id: string                   // which rule generated this — for debugging
   phase_generated: string           // e.g. 'p1s1' — for filtering/analytics
+
+  // §S8 producer columns — optional-with-default (docs/memory/0002): instances serialized
+  // before migration 20260716050639 lack them; the DB defaults are 'rules' / null / [].
+  producer?: 'rules' | 'edge' | 'personal'
+  insight_id?: string | null        // composed_insights FK; null for plain rules cards
+  edge_refs?: { edgeId: string; verifiedAt: string }[] // [] for producer 'personal' (CHECK)
 }
 ```
 

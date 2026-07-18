@@ -40,7 +40,7 @@ contentious ones; fixes to shipped migrations are NEW additive migrations per D1
 |---|---|---|---|
 | R1 | Chain recovery + docs/temp move + this bookkeeping | **done** | branch `chore/run/chain-recovery-docs-move` (cut from the chain tip) / PR #73; recovery PR #72 |
 | U19 | A1–A5 — shared-schema safeguard seam: `partial` requires `independentRetrieval.performed` (D16); corroboration-vs-sources cross-check; reconcile the vacuous-quoteCheck code/schema disagreement; A4 format tightening (deprecatedAt/title/ISO datetimes); A5 conditional-generic identity guard | **done** | Branch `fix/shared-brain/safeguard-hardening` / PR #75, issue #74; edge-loader 27/27 (+6), rules 52/52 (+2), brain-ingest 320/320, llm-router 42/42, shared tsc clean, flutter 48/48. shared/brain — **retro-review flag** |
-| U20 | A6/A26/A20 — InsightCard contract repair: revive the shared Dart mirror (id int + producer/insight_id/edge_refs), app imports it, retire the app-local duplicate (D18); widen data/confidence-source unions | queued | shared/types — retro-review flag |
+| U20 | A6/A26/A20 (+A7 pulled forward from U28) — InsightCard contract catch-up: revive the shared Dart mirror (id int + producer/insight_id/edge_refs `[{edgeId, verifiedAt}]` + 'relationship' category, D18); widen data/confidence-source unions ('signal', 'brain'); 'wearable'→'sensor' comment fix | **done** | Branch `fix/shared-types/insight-card-catchup` / PR #77, issue #76; one commit; shared tsc clean, flutter **52/52** (+4: edge-ref parity + 3 Dart round-trip). App-side import/retire of the duplicate model is the D18 second half — deferred to the app seam units, `apps/biotope/lib` untouched. shared/types — **retro-review flag** |
 | U21 | A25/A27 — app serve seam: `relationship` category + producer/edge_refs read + citation affordance; UTC-correct expiry filter (fix frozen `now` in watchInsights) | queued | apps/biotope m5b |
 | U22 | A18 — snooze semantics: regeneration skips `snoozed` exactly like `dismissed` (D17); auto-reactivation deferred to Jayden | queued | generate-insights |
 | U23 | A19 — stale personal_signals lifecycle: evaluate-signals removes lost-eligibility pairs; composer applies a computed_at freshness filter | queued | evaluate-signals + generate-insights |
@@ -48,7 +48,7 @@ contentious ones; fixes to shipped migrations are NEW additive migrations per D1
 | U25 | A15/A16/A17 — migration hygiene as NEW additive migrations (D19): derived_metrics RLS tightened to select-only, edge_score precision, missing CHECKs | queued | supabase/migrations |
 | U26 | A10/A11 — budget-ledger lifecycle: concurrency (re-read+merge if small, else document single-writer — build agent's call per D19) + prune old days/runs | queued | llm-router + brain-ingest |
 | U27 | A24 — CI blind spots: `deno check` the 3 edge-function handlers + a migration-apply (shadow DB) job | queued | .github/workflows/ci.yml |
-| U28 | Nit sweep — A4/A5/A7/A8/A9/A12/A21/A22/A23: copy-gate word boundaries, stricter Equals guard, stale comments, agree-copy honesty, service-role guard, engine drift nits, mailbox-attestation note | queued | batched small fixes |
+| U28 | Nit sweep — A4/A5/A8/A9/A12/A21/A22/A23 (A7 done in U20): copy-gate word boundaries, stricter Equals guard, stale comments, agree-copy honesty, service-role guard, engine drift nits, mailbox-attestation note | queued | batched small fixes |
 
 Run protocol (per Jayden's instructions + AGENTS.md §7, with one waiver):
 - One unit of work = one session issue + one branch cut from `dev-phase2` + one `docs/sessions/` log.
@@ -134,6 +134,7 @@ tables + the S2 view) — it stays early because it's Track A's longest pole.
 | 2026-07-17 | Build audit AU0–AU9 (record-only) | — (no code changes) | done; 27 findings → `docs/temp/phase2-audit/` |
 | 2026-07-18 | R1 recovery + docs/temp move | `chore/run/chain-recovery-docs-move` (cut from chain tip `feat/shared/l6-one-card-slice`) / R1 PR #73 + recovery PR #72 | done; run docs now in docs/temp; D16–D20 recorded; B1 closed, B13 opened |
 | 2026-07-18 | U19 shared/brain safeguard hardening (audit A1–A5) | `fix/shared-brain/safeguard-hardening` (stacked on `chore/run/chain-recovery-docs-move`) / PR #75 · issue #74 | done; **shared/ retro-review** (B8); A1 D16 grounding, A2 corroboration cross-check, A3 quoteCheck invariant, A4 format tightening, A5 identity guard |
+| 2026-07-18 | U20 InsightCard contract catch-up (audit A6/A7/A20/A26) | `fix/shared-types/insight-card-catchup` (stacked on `fix/shared-brain/safeguard-hardening`) / PR #77 · issue #76 | done; **shared/ retro-review** (B8); D18 revive-the-mirror half — producer/insight_id/edge_refs + 'relationship' + numeric id + widened source unions; app-side import/retire deferred to the app units |
 
 ## Notes for the resuming orchestrator
 
