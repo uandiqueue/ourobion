@@ -4,7 +4,7 @@ summary: Every item the automated Phase-2 run skipped because it needs Jayden �
 type: plan
 scope: shared
 status: canonical
-updated: 2026-07-15
+updated: 2026-07-18
 ---
 
 # Phase-2 Run — Blocked-Items Register
@@ -12,16 +12,15 @@ updated: 2026-07-15
 Each entry: **where it stopped · what is needed from Jayden · what it gates**. The run skips these and
 keeps building; when an item unblocks, the orchestrator picks it up from here.
 
-## B1 · dev-phase2 → main fold (top of next-steps.md)
-- **Stopped at:** ready to execute (`git merge --no-ff dev-phase2` into `main`); explicitly gated —
-  "Pending an explicit go — do not merge to `main` without it."
-- **Needs:** your explicit go. One word is enough.
-- **Gates:** nao's "Run now" ingestion trigger (GitHub only exposes `workflow_dispatch` for workflows on
-  the **default branch**; `brain-ingest.yml` is absent from `main`, so the dispatch 404s), plus landing
-  the consolidation on `main`.
-- **⚠ Discrepancy:** session log `20260713T033718Z-…docs-consolidation-hackathon.md` says the fold was
-  done. It was not — `main` is still at the initial commit (`9d4831b`), 134 commits behind `dev-phase2`,
-  and contains only `ci.yml`. Treat that log line as aspirational; the go is still open.
+## B1 · dev-phase2 → main fold — **DONE / CLOSED 2026-07-18**
+- **Resolution:** the fold HAPPENED — `origin/main` now carries the consolidation including the
+  workflows, via **PR #41**. The `workflow_dispatch` gate this item tracked (brain-ingest.yml absent
+  from the default branch) is therefore lifted.
+- **Note:** the discrepancy recorded below was real at the time of writing (main was at the initial
+  commit when the run started); PR #41 subsequently closed it. The NEXT fold — carrying the Phase-2
+  chain U1–U18 to `main` — is a separate future gate and depends on B13 + the B8 retro-review.
+- <details>original entry: stopped at ready-to-execute merge; needed Jayden's explicit go; gated
+  nao's "Run now" ingestion trigger; session log `20260713T033718Z` had claimed the fold early.</details>
 
 ## B2 · Cloudflare provisioning for nao
 - **Stopped at:** nao deploys need an authenticated Cloudflare account owning the D1 DB
@@ -101,3 +100,14 @@ keeps building; when an item unblocks, the orchestrator picks it up from here.
 - **Needs:** you to add the six new check names to the required-checks list (2 minutes).
 - **Gates:** nothing hard — the checks run on every PR regardless; requiring them just makes the
   14-PR merge queue unbypassable.
+
+## B13 · dev-phase2 recovery merge (the reverse-cascade fix)
+- **Stopped at:** the 2026-07-16 hand-merge of the 15-PR stacked chain cascaded upward (PRs #43–#71
+  merged into their stacked PARENT branches; only #43 reached `dev-phase2`). The full chain
+  (28 commits, U1–U18) sits on `feat/shared/l6-one-card-slice`; the recovery PR
+  (**#TBD-RECOVERY**, base `dev-phase2`, head `feat/shared/l6-one-card-slice`) is open and merges it
+  in one click — see sign-off decision D20.
+- **Needs:** Jayden to merge the recovery PR. One click.
+- **Gates:** everything downstream of `dev-phase2` — CI on `dev-phase2`, future sessions cutting
+  from `dev-phase2`, and the next `dev-phase2 → main` fold. Until it merges, new units stack on the
+  chain tip (currently `chore/run/chain-recovery-docs-move`) instead of `dev-phase2`.
