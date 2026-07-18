@@ -60,7 +60,8 @@ import {
 // The S8 producer renders deterministic template copy (NO LLM in this function — the phrasing
 // LLM is a later, copy-gated, cached layer; the template path shipped here stays its fallback),
 // runs the RENDER-TIME validateCopyString gate (failing card dropped + logged), respects
-// dismissals, honors per-rule expiry, and upserts on (user_id, rule_id) with the three §S8
+// dismissals AND snoozes (both user-held until the user acts — D17, audit A18), honors
+// per-rule expiry, and upserts on (user_id, rule_id) with the three §S8
 // producer namespaces: 'rules' (blueprint ids), 'edge' ('edge:'||edge_id, cited relationship
 // cards), 'personal' ('personal:'||a||'|'||b, the uncited "still researching" variant).
 
@@ -91,6 +92,15 @@ const COMPOSER_EXPIRY_DAYS = 7
 
 /** phase_generated stamped on composer-produced cards (rule cards carry their rule's phase). */
 const COMPOSER_PHASE = "phase2_engine"
+
+/**
+ * User-held card statuses the regeneration pass must never overwrite (sign-off D17, audit
+ * A18): a `snoozed` card is skipped exactly like a `dismissed` one — the hold persists until
+ * the USER changes the status. N-day auto-reactivation (a snooze-until column) is deliberately
+ * deferred to Jayden (D17). Skipping happens at pushCard — the only writer into the
+ * (user_id, rule_id) upsert batch — so a held card can never be re-upserted `status: 'active'`.
+ */
+const USER_HELD_STATUSES: ReadonlySet<string> = new Set(["dismissed", "snoozed"])
 
 /** Confidence-level → 0–1 score for RULE cards (preserved from the MVP for M6 / future use). */
 const CONFIDENCE_SCORE: Record<string, number> = {
@@ -328,9 +338,11 @@ Deno.serve(async (req) => {
   }
 
   // ── Index the read surfaces ────────────────────────────────────────────────────────────────
-  const dismissed = new Set(
-    existingCards.filter((c) => c.status === "dismissed").map((c) => `${c.user_id}:${c.rule_id}`),
-  )
+  // User-held cards (dismissed / snoozed — D17): key → status, consulted before every push.
+  const heldStatusByKey = new Map<string, string>()
+  for (const c of existingCards) {
+    if (USER_HELD_STATUSES.has(c.status)) heldStatusByKey.set(`${c.user_id}:${c.rule_id}`, c.status)
+  }
 
   const snapshotsByUser = new Map<string, Map<string, BaselineRow>>()
   for (const b of baselines) {
@@ -378,6 +390,7 @@ Deno.serve(async (req) => {
   const brainScopeSkips: { userId: string; ruleId: string; pair: string }[] = []
   let firedPatternCount = 0
   let dismissedSkips = 0
+  let snoozedSkips = 0
   const branchCounts: Record<Branch, number> = {
     agree: 0,
     "research-context": 0,
@@ -410,11 +423,15 @@ Deno.serve(async (req) => {
     }
 
     const pushCard = (card: CardRow): void => {
-      if (dismissed.has(`${card.user_id}:${card.rule_id}`)) {
-        dismissedSkips++
+      const key = `${card.user_id}:${card.rule_id}`
+      // D17 / A18: a user-held card (dismissed OR snoozed) is never re-upserted — the upsert
+      // would rewrite `status: 'active'` over the user's choice. Held = held until the user acts.
+      const held = heldStatusByKey.get(key)
+      if (held !== undefined) {
+        if (held === "dismissed") dismissedSkips++
+        else snoozedSkips++
         return
       }
-      const key = `${card.user_id}:${card.rule_id}`
       if (!cardsByKey.has(key)) cardsByKey.set(key, card) // first wins; duplicates are equivalent
     }
 
@@ -806,6 +823,7 @@ Deno.serve(async (req) => {
         byProducer: producerCounts,
         droppedAtRender: renderDrops,
         dismissedSkipped: dismissedSkips,
+        snoozedSkipped: snoozedSkips,
       },
       brainScopeSkips,
     }),
