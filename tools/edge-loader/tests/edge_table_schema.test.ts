@@ -94,3 +94,23 @@ test('verified_edges view: security_invoker, active-only, newest verification pe
   assert.match(body, /where v\.status = 'active'/);
   assert.match(body, /order by c\.edge_id, v\.verified_at desc/);
 });
+
+// The A16 hygiene migration (U25) must drop/recreate verified_edges around its edge_score
+// type change — Postgres refuses to alter a column a view depends on. The view definition
+// now exists in TWO migration files; this pins them character-identical so the serving
+// semantics can never fork between the create-table migration and the amendment.
+test('A16 hygiene migration recreates verified_edges character-identical to the S6 original', () => {
+  const hygieneFile = readdirSync(migrationsDir).find((f) =>
+    /constraint_hygiene_checks_and_edge_score_precision\.sql$/.test(f),
+  );
+  assert.ok(hygieneFile, 'A16/A17 constraint hygiene migration not found in supabase/migrations');
+  const hygieneSql = readFileSync(path.join(migrationsDir, hygieneFile), 'utf8');
+  // CRLF-normalized: the two files may sit at different line-ending states of a Windows checkout.
+  const viewBlock = (source: string) =>
+    /create or replace view public\.verified_edges[\s\S]*?;/.exec(source.replace(/\r\n/g, '\n'))?.[0];
+  assert.ok(viewBlock(hygieneSql), 'verified_edges recreation not found in the hygiene migration');
+  assert.equal(viewBlock(hygieneSql), viewBlock(sql));
+  // The migration must widen edge_score to unconstrained numeric (no precision cap to round
+  // the loader's float) — the A16 fix itself.
+  assert.match(hygieneSql, /alter column edge_score type numeric;/);
+});
