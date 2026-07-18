@@ -1,5 +1,5 @@
 /// <reference types="jsr:@supabase/functions-js/edge-runtime.d.ts" />
-import { createClient } from "jsr:@supabase/supabase-js@2"
+import { createClient } from "jsr:@supabase/supabase-js@2.110.7"
 import { METRICS } from "../../../shared/metrics/registry.ts"
 import { validateCopyString } from "../../../shared/constants/copy_guidelines.ts"
 import { classifyDaily } from "../evaluate-signals/stats.ts"

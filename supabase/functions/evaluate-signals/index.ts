@@ -1,5 +1,5 @@
 /// <reference types="jsr:@supabase/functions-js/edge-runtime.d.ts" />
-import { createClient } from "jsr:@supabase/supabase-js@2"
+import { createClient } from "jsr:@supabase/supabase-js@2.110.7"
 import { METRICS } from "../../../shared/metrics/registry.ts"
 import {
   benjaminiHochberg,
@@ -88,12 +88,21 @@ function round(n: number, digits: number): number {
   return Math.round(n * f) / f
 }
 
+// Client factory with the handler's actual call shape. `ReturnType<typeof createClient>`
+// resolves to the ZERO-ARG overload's default generics, which supabase-js ≥ 2.110's
+// PostgrestVersion/schema generics no longer accept from a real createClient(url, key)
+// instantiation (deno-check TS2345) — deriving the helper param type from this wrapper
+// keeps the two in lockstep.
+function makeClient(url: string, key: string) {
+  return createClient(url, key)
+}
+
 // ─── S2 view read (paginated, stable order — compute-baselines mechanism) ────────────────
 
 const PAGE_SIZE = 1000
 
 async function fetchSeries(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ReturnType<typeof makeClient>,
   windowStart: string,
 ): Promise<SeriesRow[]> {
   const rows: SeriesRow[] = []
@@ -117,7 +126,7 @@ async function fetchSeries(
 
 /** S3 confidence per (user, metric) — carried on MetricSignal for S7 observability. */
 async function fetchConfidence(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ReturnType<typeof makeClient>,
 ): Promise<Map<string, Confidence>> {
   const out = new Map<string, Confidence>()
   for (let from = 0; ; from += PAGE_SIZE) {
@@ -141,7 +150,7 @@ async function fetchConfidence(
 
 /** The (user, pair) identity of every row currently in personal_signals — the prune input. */
 async function fetchExistingPairs(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ReturnType<typeof makeClient>,
 ): Promise<PairRowRef[]> {
   const out: PairRowRef[] = []
   for (let from = 0; ; from += PAGE_SIZE) {
@@ -183,7 +192,7 @@ Deno.serve(async (req) => {
     return new Response("Unauthorized", { status: 401 })
   }
 
-  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey)
+  const supabase = makeClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey)
 
   // The evaluated day (UTC). The S5 window is the PAIR_WINDOW_DAYS days ending today; the
   // S4 baseline is the SIGNAL_CONFIG.windowDays days ENDING YESTERDAY (window excludes the
