@@ -150,7 +150,7 @@ export const ruleBlueprintSchema = z
     effectiveFrom: z.string().regex(ISO_DATE, 'effectiveFrom must be YYYY-MM-DD').nullable(),
     effectiveTo: z.string().regex(ISO_DATE, 'effectiveTo must be YYYY-MM-DD').nullable(),
     status: ruleStatusSchema,
-    deprecatedAt: z.string().nullable(),
+    deprecatedAt: z.string().datetime({ offset: true }).nullable(),
     cooldownDays: z.number().int().positive().nullable(),
     expiryDays: z.number().int().positive(),
     condition: ruleConditionSchema,
