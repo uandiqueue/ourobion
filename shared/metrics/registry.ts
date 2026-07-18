@@ -10,13 +10,26 @@
 //
 // v2 (the metric platform): each metric carries the scale dimensions phase-2-plan's platform needs —
 // source economy, collection tier, continuity, reliability, derivation inputs, platform availability,
-// and the semi-passive preferred source. `table` is retained as the current storage location; storage
-// is migrating to continuity-based primitives (daily_log / events / state_bands / signals /
-// derived_metrics) per phase-2-plan, with the existing tables as the first instances.
+// and the semi-passive preferred source. `table` is the storage location: the continuity-based
+// primitives (events / state_bands / signals / derived_metrics — see the
+// create_continuity_storage_primitives migration) are what new metrics declare; the legacy tables
+// stay as grandfathered first instances of the primitives (no re-homing of existing metrics).
 
 /** Source economy — what it costs the user and where the value originates. */
 export type MetricSource = 'manual' | 'semi_passive' | 'sensor' | 'api' | 'derived';
-export type MetricTable = 'daily_gut_rows' | 'wearable_daily' | 'env_daily';
+/**
+ * Storage location. daily_gut_rows / wearable_daily / env_daily are the grandfathered first
+ * instances; events / state_bands / signals / derived_metrics are the continuity-based
+ * primitives (phase-2-plan §3) new metrics declare.
+ */
+export type MetricTable =
+  | 'daily_gut_rows'
+  | 'wearable_daily'
+  | 'env_daily'
+  | 'events'
+  | 'state_bands'
+  | 'signals'
+  | 'derived_metrics';
 /** Collection tier (logging budget): T0 passive · T1 daily core · T2 optional · T3 event · T4 state · T5 profile. */
 export type MetricTier = 'T0' | 'T1' | 'T2' | 'T3' | 'T4' | 'T5';
 /** Data shape over time — drives the storage primitive a metric lands in. */
@@ -38,7 +51,7 @@ export interface MetricDefinition {
   /** Canonical snake_case id — == DB column == BaselineSnapshot.metric_key == rule metricKey. */
   key: string;
   source: MetricSource;
-  /** Current storage location. Storage is migrating to continuity-based primitives — see file header. */
+  /** Storage location — a continuity primitive or a grandfathered first-instance table. */
   table: MetricTable;
   /** Collection tier (logging budget). Only T1 (daily core) counts toward daily completeness. */
   tier: MetricTier;
@@ -61,6 +74,13 @@ export interface MetricDefinition {
   preferredSource: MetricSource | null;
   /** M6 Data-Quality-Score contribution. countsTowardDailyCompleteness is true only for the T1 spine. */
   dqs: { weight: number; countsTowardDailyCompleteness: boolean };
+  /**
+   * S4 anomaly-signal parameters (ADR-0002, docs/shared/decisions/0002-anomaly-definition.md):
+   * `deadbandK` is the daily 3-state deadband in robust σ̂ = MAD/0.6745 units —
+   * `neutral := |x − median| ≤ deadbandK·σ̂`. Typical value 1.0 (provisional, pending calibration).
+   * Set for every baselineApplicable metric; null for metrics S4 never signals on.
+   */
+  signal: { deadbandK: number } | null;
   /** Optional hint for the M2 self-report screens. */
   ui: { label: string; inputType: string } | null;
   status: MetricStatus;
@@ -88,6 +108,7 @@ const SELF_REPORT: MetricDefinition[] = [
     availability: 'both',
     preferredSource: null,
     dqs: { weight: 25, countsTowardDailyCompleteness: true },
+    signal: { deadbandK: 1.0 },
     ui: { label: 'Urine colour', inputType: 'armstrong_1_8' },
     status: 'active',
     introducedIn: 'phase1',
@@ -109,6 +130,7 @@ const SELF_REPORT: MetricDefinition[] = [
     availability: 'both',
     preferredSource: null,
     dqs: { weight: 25, countsTowardDailyCompleteness: true },
+    signal: { deadbandK: 1.0 },
     ui: { label: 'Stool form', inputType: 'bristol_1_7' },
     status: 'active',
     introducedIn: 'phase1',
@@ -130,6 +152,7 @@ const SELF_REPORT: MetricDefinition[] = [
     availability: 'both',
     preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
+    signal: { deadbandK: 1.0 },
     ui: { label: 'Stool count', inputType: 'stepper_0_10' },
     status: 'active',
     introducedIn: 'phase1',
@@ -152,6 +175,7 @@ const SELF_REPORT: MetricDefinition[] = [
     availability: 'both',
     preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
+    signal: { deadbandK: 1.0 },
     ui: null,
     status: 'active',
     introducedIn: 'phase1',
@@ -173,6 +197,7 @@ const SELF_REPORT: MetricDefinition[] = [
     availability: 'both',
     preferredSource: null,
     dqs: { weight: 20, countsTowardDailyCompleteness: true },
+    signal: { deadbandK: 1.0 },
     ui: { label: 'Meals outside home', inputType: 'segmented_0_3' },
     status: 'active',
     introducedIn: 'phase1',
@@ -194,6 +219,7 @@ const SELF_REPORT: MetricDefinition[] = [
     availability: 'both',
     preferredSource: null,
     dqs: { weight: 10, countsTowardDailyCompleteness: true },
+    signal: { deadbandK: 1.0 },
     ui: { label: 'Mosquito bites', inputType: 'stepper_0_20' },
     status: 'active',
     introducedIn: 'phase1',
@@ -215,6 +241,7 @@ const SELF_REPORT: MetricDefinition[] = [
     availability: 'both',
     preferredSource: null,
     dqs: { weight: 7, countsTowardDailyCompleteness: true },
+    signal: { deadbandK: 1.0 },
     ui: { label: 'Energy', inputType: 'likert_1_5' },
     status: 'active',
     introducedIn: 'phase1',
@@ -236,6 +263,7 @@ const SELF_REPORT: MetricDefinition[] = [
     availability: 'both',
     preferredSource: null,
     dqs: { weight: 7, countsTowardDailyCompleteness: true },
+    signal: { deadbandK: 1.0 },
     ui: { label: 'Mood', inputType: 'likert_1_5' },
     status: 'active',
     introducedIn: 'phase1',
@@ -257,6 +285,7 @@ const SELF_REPORT: MetricDefinition[] = [
     availability: 'both',
     preferredSource: null,
     dqs: { weight: 6, countsTowardDailyCompleteness: true },
+    signal: { deadbandK: 1.0 },
     ui: { label: 'Gut comfort', inputType: 'likert_1_5' },
     status: 'active',
     introducedIn: 'phase1',
@@ -286,6 +315,7 @@ const SELF_REPORT: MetricDefinition[] = [
     availability: 'both',
     preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
+    signal: null,
     ui: { label: 'Symptoms', inputType: 'multi_select' },
     status: 'active',
     introducedIn: 'phase1',
@@ -307,6 +337,7 @@ const SELF_REPORT: MetricDefinition[] = [
     availability: 'both',
     preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
+    signal: null,
     ui: { label: 'Standing water nearby', inputType: 'toggle' },
     status: 'active',
     introducedIn: 'phase1',
@@ -328,6 +359,7 @@ const SELF_REPORT: MetricDefinition[] = [
     availability: 'both',
     preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
+    signal: null,
     ui: { label: 'Notes', inputType: 'text' },
     status: 'active',
     introducedIn: 'phase1',
@@ -358,6 +390,7 @@ const SELF_REPORT: MetricDefinition[] = [
     availability: 'both',
     preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
+    signal: { deadbandK: 1.0 },
     ui: null,
     status: 'active',
     introducedIn: 'phase1',
@@ -385,6 +418,7 @@ const WEARABLE: MetricDefinition[] = [
     availability: 'hardware_gated',
     preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
+    signal: { deadbandK: 1.0 },
     ui: null,
     status: 'active',
     introducedIn: 'phase2',
@@ -406,6 +440,7 @@ const WEARABLE: MetricDefinition[] = [
     availability: 'ios_only',
     preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
+    signal: { deadbandK: 1.0 },
     ui: null,
     status: 'active',
     introducedIn: 'phase2',
@@ -427,6 +462,7 @@ const WEARABLE: MetricDefinition[] = [
     availability: 'hardware_gated',
     preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
+    signal: { deadbandK: 1.0 },
     ui: null,
     status: 'active',
     introducedIn: 'phase2',
@@ -448,6 +484,7 @@ const WEARABLE: MetricDefinition[] = [
     availability: 'hardware_gated',
     preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
+    signal: { deadbandK: 1.0 },
     ui: null,
     status: 'active',
     introducedIn: 'phase2',
@@ -469,6 +506,7 @@ const WEARABLE: MetricDefinition[] = [
     availability: 'hardware_gated',
     preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
+    signal: { deadbandK: 1.0 },
     ui: null,
     status: 'active',
     introducedIn: 'phase2',
@@ -490,6 +528,7 @@ const WEARABLE: MetricDefinition[] = [
     availability: 'hardware_gated',
     preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
+    signal: { deadbandK: 1.0 },
     ui: null,
     status: 'active',
     introducedIn: 'phase2',

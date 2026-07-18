@@ -3,7 +3,18 @@
   "private": true,
   "scripts": {
     "context:start": "node tools/context_sync.mjs --session-start",
-    "context:check": "node tools/context_sync.mjs --check"
+    "context:check": "node tools/context_sync.mjs --check",
+    "rules:load": "node tools/rules/load_rules.mjs",
+    "rules:check": "node tools/rules/load_rules.mjs --check",
+    "rules:test": "npm --prefix tools/rules test",
+    "view:gen": "node tools/metric-view/gen_metric_view.mjs",
+    "view:write": "node tools/metric-view/gen_metric_view.mjs --write",
+    "view:check": "node tools/metric-view/gen_metric_view.mjs --check",
+    "view:test": "npm --prefix tools/metric-view test",
+    "stats:test": "npm --prefix tools/engine-stats test",
+    "edges:load": "node tools/edge-loader/load_edges.mjs",
+    "edges:check": "node tools/edge-loader/load_edges.mjs --check",
+    "edges:test": "npm --prefix tools/edge-loader test"
   },
   "devDependencies": {
     "supabase": "^2.81.2"

@@ -10,7 +10,15 @@ import { z } from 'zod';
 import type { MetricDefinition } from './registry';
 
 export const metricSourceSchema = z.enum(['manual', 'semi_passive', 'sensor', 'api', 'derived']);
-export const metricTableSchema = z.enum(['daily_gut_rows', 'wearable_daily', 'env_daily']);
+export const metricTableSchema = z.enum([
+  'daily_gut_rows',
+  'wearable_daily',
+  'env_daily',
+  'events',
+  'state_bands',
+  'signals',
+  'derived_metrics',
+]);
 export const metricTierSchema = z.enum(['T0', 'T1', 'T2', 'T3', 'T4', 'T5']);
 export const metricContinuitySchema = z.enum(['continuous', 'episodic', 'state', 'static']);
 export const metricTypeSchema = z.enum([
@@ -54,6 +62,7 @@ export const metricDefinitionSchema = z.object({
     weight: z.number(),
     countsTowardDailyCompleteness: z.boolean(),
   }),
+  signal: z.object({ deadbandK: z.number().positive() }).nullable(),
   ui: z.object({ label: z.string(), inputType: z.string() }).nullable(),
   status: metricStatusSchema,
   introducedIn: z.string(),
@@ -74,6 +83,13 @@ export const registrySchema = z
         ctx.addIssue({
           code: 'custom',
           message: `${m.key}: baselineApplicable requires numeric|ordinal type`,
+        });
+      }
+      // Every baselined metric carries S4 signal params (ADR-0002 deadband).
+      if (m.baselineApplicable && m.signal === null) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `${m.key}: baselineApplicable requires signal (S4 deadbandK, ADR-0002)`,
         });
       }
       // enum / multi_select must enumerate their values; nothing else may.

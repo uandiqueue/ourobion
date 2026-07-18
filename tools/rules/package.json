@@ -1,0 +1,27 @@
+{
+  "name": "@ourobion/rules-loader",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ourobion rules loader — validates data/rules/** blueprints against shared/rules and projects them into the Postgres rules table (rules-engine-design §B3).",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "load": "node load_rules.mjs",
+    "check": "node load_rules.mjs --check",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test \"tests/**/*.test.ts\""
+  },
+  "dependencies": {
+    "pg": "^8.13.0",
+    "tsx": "^4.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
+  }
+}

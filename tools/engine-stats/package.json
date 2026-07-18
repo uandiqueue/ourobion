@@ -1,0 +1,24 @@
+{
+  "name": "@ourobion/engine-stats",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ourobion S4/S5 stats-core tests — node-side vectors holding supabase/functions/evaluate-signals/stats.ts to ADR-0002 (robust median/MAD signal, Spearman, Pyper–Peterman N_eff, Benjamini–Hochberg, stability windows). The stats core is dependency-free and Deno-free, so these tests import the function-dir .ts directly via tsx: one source file, no mirror, no drift.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test \"tests/**/*.test.ts\""
+  },
+  "dependencies": {
+    "tsx": "^4.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
+  }
+}

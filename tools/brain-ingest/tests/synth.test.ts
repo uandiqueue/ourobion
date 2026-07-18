@@ -1,0 +1,291 @@
+/**
+ * A8 · Synthesis tests (session U10) — node:test via tsx, NO network.
+ *
+ * Covers the gate the session brief names: input-assembly determinism; response
+ * post-processing (valid claim passes; fabricated quote → A9 quoteCheck reject;
+ * unrequested-pair reject; foreign-paperId reject; offset backfill; edgeId
+ * normalization; schema-invalid reject); artifact dedupe; and an end-to-end run
+ * with a mocked router + fixture text (the real shared zod validateClaim is used
+ * via the module's runtime loader, so the gate is exercised for real).
+ */
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import {
+  assembleSynthesisInput,
+  claimDedupeKey,
+  dedupeAgainst,
+  appendClaimsToDir,
+  loadClaimValidator,
+  pairFromKeys,
+  processSynthesisResponse,
+  segmentSentences,
+  selectPassages,
+  synthesize,
+  type ClaimValidator,
+} from '../src/synth/index.js';
+import type { SynthClaim, SynthPair } from '../src/synth/index.js';
+import type { LlmRequest, LlmResponse } from '../../llm-router/src/index.js';
+
+// ── fixtures ─────────────────────────────────────────────────────────────────
+
+const PAPER_ID = 'fix:paper-1';
+// A claim-bearing sentence sits in the middle; offsets must round-trip.
+const FIXTURE_TEXT =
+  'Introduction paragraph with unrelated content. ' +
+  'Higher gut comfort was associated with better mood in the studied cohort of healthy adults. ' +
+  'A closing sentence about methods and limitations.';
+const QUOTE = 'Higher gut comfort was associated with better mood in the studied cohort of healthy adults.';
+
+const PAIR: SynthPair = pairFromKeys('gut_comfort_score', 'mood_score', [
+  'gut',
+  'comfort',
+  'mood',
+  'associated',
+]);
+
+/** A well-formed raw claim as the synthesis LLM would emit it (edgeId deliberately wrong). */
+function validRawClaim(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    edgeId: 'MODEL-SHOULD-NOT-BE-TRUSTED',
+    subject: 'gut_comfort_score',
+    object: 'mood_score',
+    relation: 'correlates',
+    claimKind: 'correlational',
+    effect: { size: null, unit: null, ci: null },
+    population: 'healthy adults',
+    citations: [
+      {
+        paperId: PAPER_ID,
+        title: 'Fixture paper',
+        year: 2026,
+        population: 'healthy adults',
+        evidenceTier: 2,
+        impactTier: 'moderate',
+        stance: 'supports',
+      },
+    ],
+    quoteSpans: [{ paperId: PAPER_ID, quote: QUOTE, locator: null, charStart: null, charEnd: null }],
+    derivation: 'The sentence directly associates gut comfort with mood, so the two correlate.',
+    ...overrides,
+  };
+}
+
+function texts(): Map<string, string> {
+  return new Map([[PAPER_ID, FIXTURE_TEXT]]);
+}
+
+function ctxWith(validateClaim: ClaimValidator, over: Record<string, unknown> = {}) {
+  return {
+    pair: PAIR,
+    allowedPaperIds: [PAPER_ID],
+    texts: texts(),
+    validateClaim,
+    synthesisModel: 'test-model',
+    promptVersion: 'synthesis-test.1',
+    now: () => Date.parse('2026-07-16T00:00:00.000Z'),
+    ...over,
+  };
+}
+
+function tmp(): string {
+  return mkdtempSync(join(tmpdir(), 'synth-'));
+}
+
+// ── input assembly (determinism) ───────────────────────────────────────────────
+
+test('passages: sentence offsets round-trip as verbatim slices', () => {
+  const sents = segmentSentences(FIXTURE_TEXT);
+  for (const s of sents) {
+    assert.equal(FIXTURE_TEXT.slice(s.charStart, s.charEnd), s.text);
+  }
+});
+
+test('passages: keyword prefilter selects the claim-bearing sentence, deterministically', () => {
+  const a = selectPassages(FIXTURE_TEXT, PAIR.terms);
+  const b = selectPassages(FIXTURE_TEXT, PAIR.terms);
+  assert.deepEqual(a, b); // deterministic
+  assert.ok(a.length >= 1);
+  assert.ok(a.some((p) => p.text.includes('gut comfort was associated with better mood')));
+  // the matched passage's own offsets slice back to its text
+  for (const p of a) assert.equal(FIXTURE_TEXT.slice(p.charStart, p.charEnd), p.text);
+});
+
+test('assembleSynthesisInput: allowed ids + prompt name the pair and passages', () => {
+  const asm = assembleSynthesisInput(PAIR, texts());
+  assert.deepEqual(asm.allowedPaperIds, [PAPER_ID]);
+  assert.ok(asm.prompt.includes('gut_comfort_score'));
+  assert.ok(asm.prompt.includes('mood_score'));
+  assert.ok(asm.prompt.includes(PAPER_ID));
+  assert.ok(asm.papers[0]!.passages.length >= 1);
+});
+
+// ── post-processing (the gate) ─────────────────────────────────────────────────
+
+test('postprocess: a valid claim passes; edgeId normalized; offsets backfilled', async () => {
+  const validateClaim = await loadClaimValidator();
+  const res = processSynthesisResponse(
+    JSON.stringify({ claims: [validRawClaim()] }),
+    ctxWith(validateClaim),
+  );
+  assert.equal(res.rejected.length, 0);
+  assert.equal(res.accepted.length, 1);
+  const claim = res.accepted[0] as SynthClaim;
+  // edgeId FORCED (the model's value was ignored)
+  assert.equal(claim.edgeId, 'gut_comfort_score|correlates|mood_score');
+  // offsets backfilled from quoteCheck's computed positions
+  const span = claim.quoteSpans[0]!;
+  const expectedStart = FIXTURE_TEXT.indexOf(QUOTE);
+  assert.equal(span.charStart, expectedStart);
+  assert.equal(span.charEnd, expectedStart + QUOTE.length);
+  assert.equal(FIXTURE_TEXT.slice(span.charStart!, span.charEnd!), QUOTE);
+  // provenance stamped by the pipeline
+  assert.equal(claim.synthesisModel, 'test-model');
+  assert.equal(claim.promptVersion, 'synthesis-test.1');
+});
+
+test('postprocess: a fabricated quote is rejected by A9 quoteCheck', async () => {
+  const validateClaim = await loadClaimValidator();
+  const fabricated = validRawClaim({
+    quoteSpans: [
+      {
+        paperId: PAPER_ID,
+        quote: 'This sentence never appears anywhere in the fixture paper text.',
+        locator: null,
+        charStart: null,
+        charEnd: null,
+      },
+    ],
+  });
+  const res = processSynthesisResponse(JSON.stringify({ claims: [fabricated] }), ctxWith(validateClaim));
+  assert.equal(res.accepted.length, 0);
+  assert.equal(res.rejected.length, 1);
+  assert.equal(res.rejected[0]!.reason, 'quote-not-found');
+});
+
+test('postprocess: a claim for an unrequested pair is rejected (C9)', async () => {
+  const validateClaim = await loadClaimValidator();
+  const offPair = validRawClaim({ subject: 'energy_score', object: 'mood_score' });
+  const res = processSynthesisResponse(JSON.stringify({ claims: [offPair] }), ctxWith(validateClaim));
+  assert.equal(res.accepted.length, 0);
+  assert.equal(res.rejected[0]!.reason, 'unrequested-pair');
+});
+
+test('postprocess: a claim citing a foreign paperId is rejected', async () => {
+  const validateClaim = await loadClaimValidator();
+  const foreign = validRawClaim({
+    quoteSpans: [{ paperId: 'fix:not-provided', quote: QUOTE, locator: null, charStart: null, charEnd: null }],
+  });
+  const res = processSynthesisResponse(JSON.stringify({ claims: [foreign] }), ctxWith(validateClaim));
+  assert.equal(res.accepted.length, 0);
+  assert.equal(res.rejected[0]!.reason, 'foreign-paper');
+});
+
+test('postprocess: a schema-invalid claim is rejected by validateClaim', async () => {
+  const validateClaim = await loadClaimValidator();
+  const noCite = validRawClaim({ citations: [] }); // contract requires ≥1 citation
+  const res = processSynthesisResponse(JSON.stringify({ claims: [noCite] }), ctxWith(validateClaim));
+  assert.equal(res.accepted.length, 0);
+  assert.equal(res.rejected[0]!.reason, 'schema-invalid');
+});
+
+test('postprocess: unparseable JSON throws; an empty claims array is valid', async () => {
+  const validateClaim = await loadClaimValidator();
+  assert.throws(() => processSynthesisResponse('not json', ctxWith(validateClaim)));
+  const empty = processSynthesisResponse(JSON.stringify({ claims: [] }), ctxWith(validateClaim));
+  assert.deepEqual(empty, { accepted: [], rejected: [] });
+});
+
+// ── artifact dedupe ────────────────────────────────────────────────────────────
+
+test('artifact: dedupeAgainst skips a repeated edgeId+promptVersion+paperSet', async () => {
+  const validateClaim = await loadClaimValidator();
+  const res = processSynthesisResponse(JSON.stringify({ claims: [validRawClaim()] }), ctxWith(validateClaim));
+  const claim = res.accepted[0] as SynthClaim;
+  const key = claimDedupeKey(claim);
+  const first = dedupeAgainst(new Set(), [claim]);
+  assert.equal(first.toWrite.length, 1);
+  const second = dedupeAgainst(new Set([key]), [claim]);
+  assert.equal(second.toWrite.length, 0);
+  assert.equal(second.skipped.length, 1);
+});
+
+test('artifact: appendClaimsToDir is idempotent across runs', async () => {
+  const validateClaim = await loadClaimValidator();
+  const res = processSynthesisResponse(JSON.stringify({ claims: [validRawClaim()] }), ctxWith(validateClaim));
+  const dir = tmp();
+  try {
+    const w1 = appendClaimsToDir(dir, res.accepted);
+    assert.equal(w1.written, 1);
+    const w2 = appendClaimsToDir(dir, res.accepted);
+    assert.equal(w2.written, 0);
+    assert.equal(w2.skipped, 1);
+    const lines = readFileSync(w1.path, 'utf8').trim().split(/\r?\n/);
+    assert.equal(lines.length, 1); // no duplicate line appended
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ── end-to-end (mocked router + fixture text, real validateClaim) ──────────────
+
+test('synthesize: end-to-end accepts the grounded claim, rejects the fabricated one, writes the artifact', async () => {
+  const validateClaim = await loadClaimValidator();
+  const router = {
+    async route(_req: LlmRequest): Promise<LlmResponse> {
+      const fabricated = validRawClaim({
+        relation: 'increases',
+        quoteSpans: [
+          { paperId: PAPER_ID, quote: 'A quote that is not present in the text.', locator: null, charStart: null, charEnd: null },
+        ],
+      });
+      return {
+        text: JSON.stringify({ claims: [validRawClaim(), fabricated] }),
+        model: 'mock-fable',
+        route: 'local_agent',
+        usage: { inputTokens: 10, outputTokens: 20 },
+      };
+    },
+  };
+  const dir = tmp();
+  try {
+    const result = await synthesize({
+      pairs: [PAIR],
+      paperUids: [PAPER_ID],
+      edgesDir: dir,
+      router,
+      textLoader: async (id) => (id === PAPER_ID ? FIXTURE_TEXT : null),
+      validateClaim,
+      activeMetricKeys: new Set(['gut_comfort_score', 'mood_score']),
+      now: () => Date.parse('2026-07-16T00:00:00.000Z'),
+    });
+    assert.equal(result.accepted.length, 1);
+    assert.equal(result.rejectedCount, 1);
+    assert.equal(result.write?.written, 1);
+    const written = readFileSync(result.write!.path, 'utf8').trim();
+    const rec = JSON.parse(written) as SynthClaim;
+    assert.equal(rec.edgeId, 'gut_comfort_score|correlates|mood_score');
+    assert.equal(rec.synthesisModel, 'mock-fable');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('synthesize: rejects an explicit pair whose endpoint is not an active metric', async () => {
+  const validateClaim = await loadClaimValidator();
+  await assert.rejects(
+    synthesize({
+      pairs: [pairFromKeys('gut_comfort_score', 'not_a_metric')],
+      paperUids: [PAPER_ID],
+      router: { async route() { throw new Error('should not be called'); } },
+      textLoader: async () => FIXTURE_TEXT,
+      validateClaim,
+      activeMetricKeys: new Set(['gut_comfort_score', 'mood_score']),
+    }),
+    /not an active shared\/metrics registry key/,
+  );
+});

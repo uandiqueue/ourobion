@@ -1,0 +1,27 @@
+{
+  "name": "@ourobion/metric-view",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ourobion S2 view generator — renders the registry-driven metric_daily_values unpivot view SQL and guards the committed migration against drift (insight-engine-architecture §S2).",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "gen": "node gen_metric_view.mjs",
+    "write": "node gen_metric_view.mjs --write",
+    "check": "node gen_metric_view.mjs --check",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test \"tests/**/*.test.ts\""
+  },
+  "dependencies": {
+    "tsx": "^4.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
+  }
+}

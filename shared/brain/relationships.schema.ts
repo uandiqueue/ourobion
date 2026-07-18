@@ -51,16 +51,29 @@ export const citationSchema = z.object({
   paperId: z.string().min(1),
   title: z.string(),
   year: z.number().int().nullable(),
+  population: z.string().nullable(),
   evidenceTier: evidenceTierSchema,
   impactTier: impactTierSchema,
   stance: z.enum(['supports', 'refutes', 'mixed', 'mentions']),
 });
 
-export const quoteSpanSchema = z.object({
-  paperId: z.string().min(1),
-  quote: z.string().min(1),
-  locator: z.string().nullable(),
-});
+export const quoteSpanSchema = z
+  .object({
+    paperId: z.string().min(1),
+    quote: z.string().min(1),
+    locator: z.string().nullable(),
+    charStart: z.number().int().nonnegative().nullable(),
+    charEnd: z.number().int().nonnegative().nullable(),
+  })
+  .superRefine((s, ctx) => {
+    // Offsets must form a well-ordered span when both are known.
+    if (s.charStart !== null && s.charEnd !== null && s.charStart > s.charEnd) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `quote span for '${s.paperId}': charStart (${s.charStart}) > charEnd (${s.charEnd})`,
+      });
+    }
+  });
 
 const metricKeySchema = z.string().regex(/^[a-z][a-z0-9_]*$/, 'metric key must be snake_case');
 
@@ -79,6 +92,7 @@ export const relationshipClaimSchema = z
     population: z.string().nullable(),
     citations: z.array(citationSchema).readonly(),
     quoteSpans: z.array(quoteSpanSchema).readonly(),
+    derivation: z.string().min(1),
     synthesisModel: z.string().min(1),
     promptVersion: z.string().min(1),
     synthesisedAt: z.string().min(1),

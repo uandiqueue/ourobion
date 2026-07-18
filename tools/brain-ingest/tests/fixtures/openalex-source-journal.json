@@ -1,0 +1,25 @@
+{
+  "id": "https://openalex.org/S137773608",
+  "issn_l": "0028-0836",
+  "issn": ["0028-0836", "1476-4687"],
+  "display_name": "Nature",
+  "host_organization": "https://openalex.org/P4310319908",
+  "host_organization_name": "Nature Portfolio",
+  "works_count": 432093,
+  "cited_by_count": 21463859,
+  "summary_stats": {
+    "2yr_mean_citedness": 19.0298,
+    "h_index": 1331,
+    "i10_index": 111324
+  },
+  "is_oa": false,
+  "is_in_doaj": false,
+  "is_core": true,
+  "type": "journal",
+  "type_id": "https://openalex.org/source-types/journal",
+  "apc_prices": [{ "price": 9750, "currency": "EUR" }],
+  "country_code": "GB",
+  "societies": [],
+  "updated_date": "2026-07-01T11:32:11.982099",
+  "created_date": "2016-06-24"
+}

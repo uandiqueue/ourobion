@@ -96,6 +96,7 @@ import { fetchArxivPdf, arxivIdFromRecord } from './retrieval/arxivPdf.js';
 import { fetchBestOaUrl } from './retrieval/directOa.js';
 import { waitForMemory, type MemoryGuardOptions } from './limits/memoryGuard.js';
 import { loadIngestControl } from './control.js';
+import { readArtifact, seedsFromArtifact } from './seeder/artifact.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Options + result
@@ -676,16 +677,39 @@ function errMsg(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-/** Resolve the seed list from `opts.seed` (one topic) or all six. */
-function selectSeeds(seedTopic: string | undefined): Seed[] {
-  if (seedTopic === undefined) return [...SEEDS];
-  const seed = seedByTopic(seedTopic);
-  if (seed === undefined) {
-    throw new Error(
-      `unknown --seed '${seedTopic}'. Known topics: ${SEED_TOPICS.join(', ')}`,
-    );
+/**
+ * Resolve the seed list. An explicit `--seed <topic>` always selects a single
+ * STATIC topic (explicit selection wins). Otherwise, when the agentic seeder's
+ * `seed-queries.json` artifact is present in `corpusDir` and non-empty, its
+ * generated queries drive discovery (superseding the static list); absent or
+ * empty, the static six topics are the fallback (soft). `log` reports which.
+ */
+function selectSeeds(
+  seedTopic: string | undefined,
+  corpusDir: string,
+  log: (line: string) => void,
+): Seed[] {
+  if (seedTopic !== undefined) {
+    const seed = seedByTopic(seedTopic);
+    if (seed === undefined) {
+      throw new Error(
+        `unknown --seed '${seedTopic}'. Known topics: ${SEED_TOPICS.join(', ')}`,
+      );
+    }
+    return [seed];
   }
-  return [seed];
+  const artifact = readArtifact(corpusDir);
+  if (artifact !== undefined) {
+    const seeds = seedsFromArtifact(artifact);
+    if (seeds.length > 0) {
+      log(
+        `seeds: agentic seed-queries.json (${artifact.candidates.length} candidate(s), ` +
+          `${seeds.length} query-seed(s), promptVersion=${artifact.promptVersion})`,
+      );
+      return seeds;
+    }
+  }
+  return [...SEEDS];
 }
 
 /**
@@ -741,7 +765,7 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
     await hydrateManifestFromR2(manifest, store, log);
   }
 
-  const seeds = selectSeeds(opts.seed);
+  const seeds = selectSeeds(opts.seed, corpusDir, log);
   log(`ingest: seeds=[${seeds.map((s) => s.topic).join(', ')}]${opts.dryRun ? ' (dry-run)' : ''}`);
 
   // ── Steps 1–4: discover → dedup → record → OA-locate → classify ─────────────

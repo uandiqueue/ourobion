@@ -45,12 +45,16 @@ a config object, never an inline literal (ADR-0002 mandate). Cross-reference: ar
   non-Anthropic by invariant** — provisional `gpt-5` family via OpenAI, **exact id + key needs Jayden
   (register B5)**. Alternatives: Gemini-tier verifier (equally valid; pick whichever key you provision);
   Opus-tier synthesis (costlier, no measured quality need yet). All ids live in router config, never in
-  node code.
+  node code. **Shipped (U3):** `tools/llm-router/router.config.json`; all six nodes default to the
+  keyless `local_agent` route until keys land (register B5); provisional price table (sonnet $3/$15,
+  haiku $1/$5, gpt-5 $1.25/$10 placeholder) marked provisional in config.
 - **C7 · LLM budget caps** — per-run token cap 200k output-tokens and per-day spend cap US$5 per
   pipeline stage, 95% hard-stop (mirrors `tools/brain-ingest` `limits/budget.ts` semantics);
   verification triage: full independent-retrieval verification only for high-impact or low-corroboration
   edges, quoteCheck-only otherwise (designed in synthesis doc). Alternatives: uncapped (rejected —
   headless pipeline), per-edge cap (finer but premature). Raise deliberately when real runs start.
+  **Shipped (U3):** per-day USD cap interpreted **per-node**; per-run token cap survives midnight
+  rollover; 95% hard-stop → typed `RouterBudgetExceededError`.
 
 ## Support models / venue weighting (to ship with U4)
 

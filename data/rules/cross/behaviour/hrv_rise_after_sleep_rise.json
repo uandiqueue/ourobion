@@ -1,0 +1,44 @@
+{
+  "ruleId": "hrv_rise_after_sleep_rise",
+  "schemaVersion": 1,
+  "category": "behaviour",
+  "severity": "info",
+  "scope": "cross",
+  "enabledPhase": "phase2_engine",
+  "metricKeys": ["hrv_sdnn_ms", "sleep_duration_min"],
+  "provenance": {
+    "tier": "hand_authored",
+    "sourceNote": "First cross-metric coincidence rule (U12). Pairing chosen because the brain serves a verified sleep_duration_min|increases|hrv_sdnn_ms edge; the engine additionally scopes coincidence rules to brain-neighbour pairs at runtime (C10), so this rule only ever fires through that edge. Lag 1 day from the C10 lag set {0,1,3,7}: HRV is expected to respond to sleep on roughly a next-day horizon.",
+    "citation": null
+  },
+  "effectiveFrom": null,
+  "effectiveTo": null,
+  "status": "active",
+  "deprecatedAt": null,
+  "cooldownDays": null,
+  "expiryDays": 7,
+  "condition": {
+    "type": "coincidence",
+    "metricKeys": ["hrv_sdnn_ms", "sleep_duration_min"],
+    "both": [
+      {
+        "type": "trend",
+        "metricKey": "hrv_sdnn_ms",
+        "equals": "rising",
+        "minConfidence": "low"
+      },
+      {
+        "type": "trend",
+        "metricKey": "sleep_duration_min",
+        "equals": "rising",
+        "minConfidence": "low"
+      }
+    ],
+    "lagDays": 1,
+    "minConfidence": "low"
+  },
+  "template": {
+    "title": "Recovery pattern: {{metric_b_label}} and {{metric_a_label}} rising together",
+    "body": "Your {{metric_b_label}} data has been rising, and your {{metric_a_label}} data rose in step about {{lag_days}} day(s) behind it. Published research links these two signals, and your own recent data shows the same pattern."
+  }
+}

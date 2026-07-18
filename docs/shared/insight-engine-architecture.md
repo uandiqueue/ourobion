@@ -4,7 +4,7 @@ summary: The single authoritative end-to-end insight-engine spec — every stage
 type: architecture
 scope: shared
 status: canonical
-updated: 2026-07-13
+updated: 2026-07-16
 ---
 
 # Insight-engine architecture — ground truth
@@ -216,6 +216,14 @@ path.
 7. **Failure:** `days_of_data < 3` → `confidence='insufficient'` → S4 emits `neutral`, S7 skips.
 
 ### S4 · 3-state signal + pattern firing
+
+> **[Superseded statistics — see ADR-0002.]** The mean/SD baseline, `deadbandSigma = 0.5` and
+> the missing minimum-baseline guard below were the doc-12 dummies;
+> [decision 0002](decisions/0002-anomaly-definition.md) replaces them with a robust
+> median/MAD baseline (σ̂ = MAD/0.6745, 28-day window, `baselineMinDays = 14`, |M| > 3.5
+> artifact rejection, MAD-degeneracy fallback). The shipped registry extension field is
+> `signal: { deadbandK: number }` (deadband in robust-σ̂ units, 1.0 provisional) — not
+> `deadbandSigma`. Implemented in `supabase/functions/evaluate-signals/` (U7).
 
 1. **Purpose:** classify each metric today as up / neutral / down vs baseline, with a per-metric
    deadband; emit "fired patterns" (the composer's trigger).

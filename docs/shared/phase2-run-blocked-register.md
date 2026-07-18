@@ -85,3 +85,19 @@ keeps building; when an item unblocks, the orchestrator picks it up from here.
 - **Stopped at:** Health Connect end-to-end needs a physical device.
 - **Needs:** a session with a real Android phone (plus the `MainActivity extends FlutterFragmentActivity` fix applied first).
 - **Gates:** metric Wave 4 (wearable/CGM) promotion; W1 device verification. Emulator work unaffected.
+
+## B11 · SJR quartile dataset for b2 venue banding
+- **Stopped at:** b2 shipped OpenAlex-only; `sjrQuartile` is a typed optional input with OR-semantics in
+  the banding (config C8). The design doc names scimagojr.com as the SJR source but no dataset is in the
+  repo.
+- **Needs:** your call on vendoring a SCImago CSV snapshot (license/redistribution check) or an
+  alternative quartile source.
+- **Gates:** nothing hard — banding works from OpenAlex h-index alone; SJR just sharpens the
+  high/moderate boundary.
+
+## B12 · Branch-protection required checks for the new CI matrix
+- **Stopped at:** U18 added the six `Node tools — tools/*` CI checks; making them *required* is a repo
+  settings change (Settings → Branches → dev-phase2 protection rule).
+- **Needs:** you to add the six new check names to the required-checks list (2 minutes).
+- **Gates:** nothing hard — the checks run on every PR regardless; requiring them just makes the
+  14-PR merge queue unbypassable.

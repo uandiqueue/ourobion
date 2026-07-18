@@ -13,6 +13,13 @@ class MetricDqs {
   const MetricDqs({required this.weight, required this.countsTowardDailyCompleteness});
 }
 
+class MetricSignal {
+  /// S4 daily 3-state deadband in robust σ̂ = MAD/0.6745 units (ADR-0002):
+  /// neutral := |x − median| ≤ deadbandK·σ̂. Typical 1.0 (provisional, pending calibration).
+  final num deadbandK;
+  const MetricSignal({required this.deadbandK});
+}
+
 class MetricUi {
   final String label;
   final String inputType;
@@ -23,6 +30,10 @@ class MetricDefinition {
   /// Canonical snake_case id — == DB column == BaselineSnapshot.metric_key == rule metricKey.
   final String key;
   final String source;
+
+  /// Storage location — mirrors the TS `MetricTable` union: 'daily_gut_rows' | 'wearable_daily'
+  /// | 'env_daily' (grandfathered first instances) | 'events' | 'state_bands' | 'signals'
+  /// | 'derived_metrics' (the continuity-based primitives, phase-2-plan §3).
   final String table;
 
   /// Collection tier (logging budget): 'T0'..'T5'. Only T1 (daily core) counts toward daily completeness.
@@ -60,6 +71,10 @@ class MetricDefinition {
   /// M6 Data-Quality-Score contribution.
   final MetricDqs dqs;
 
+  /// S4 anomaly-signal parameters (ADR-0002). Set for every baselineApplicable metric;
+  /// null for metrics S4 never signals on.
+  final MetricSignal? signal;
+
   /// Optional hint for the M2 self-report screens.
   final MetricUi? ui;
 
@@ -83,6 +98,7 @@ class MetricDefinition {
     required this.availability,
     this.preferredSource,
     required this.dqs,
+    this.signal,
     this.ui,
     required this.status,
     required this.introducedIn,
@@ -109,6 +125,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'both',
     preferredSource: null,
     dqs: MetricDqs(weight: 25, countsTowardDailyCompleteness: true),
+    signal: MetricSignal(deadbandK: 1.0),
     ui: MetricUi(label: 'Urine colour', inputType: 'armstrong_1_8'),
     status: 'active',
     introducedIn: 'phase1',
@@ -130,6 +147,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'both',
     preferredSource: null,
     dqs: MetricDqs(weight: 25, countsTowardDailyCompleteness: true),
+    signal: MetricSignal(deadbandK: 1.0),
     ui: MetricUi(label: 'Stool form', inputType: 'bristol_1_7'),
     status: 'active',
     introducedIn: 'phase1',
@@ -151,6 +169,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'both',
     preferredSource: null,
     dqs: MetricDqs(weight: 0, countsTowardDailyCompleteness: false),
+    signal: MetricSignal(deadbandK: 1.0),
     ui: MetricUi(label: 'Stool count', inputType: 'stepper_0_10'),
     status: 'active',
     introducedIn: 'phase1',
@@ -173,6 +192,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'both',
     preferredSource: null,
     dqs: MetricDqs(weight: 0, countsTowardDailyCompleteness: false),
+    signal: MetricSignal(deadbandK: 1.0),
     ui: null,
     status: 'active',
     introducedIn: 'phase1',
@@ -194,6 +214,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'both',
     preferredSource: null,
     dqs: MetricDqs(weight: 20, countsTowardDailyCompleteness: true),
+    signal: MetricSignal(deadbandK: 1.0),
     ui: MetricUi(label: 'Meals outside home', inputType: 'segmented_0_3'),
     status: 'active',
     introducedIn: 'phase1',
@@ -215,6 +236,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'both',
     preferredSource: null,
     dqs: MetricDqs(weight: 10, countsTowardDailyCompleteness: true),
+    signal: MetricSignal(deadbandK: 1.0),
     ui: MetricUi(label: 'Mosquito bites', inputType: 'stepper_0_20'),
     status: 'active',
     introducedIn: 'phase1',
@@ -236,6 +258,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'both',
     preferredSource: null,
     dqs: MetricDqs(weight: 7, countsTowardDailyCompleteness: true),
+    signal: MetricSignal(deadbandK: 1.0),
     ui: MetricUi(label: 'Energy', inputType: 'likert_1_5'),
     status: 'active',
     introducedIn: 'phase1',
@@ -257,6 +280,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'both',
     preferredSource: null,
     dqs: MetricDqs(weight: 7, countsTowardDailyCompleteness: true),
+    signal: MetricSignal(deadbandK: 1.0),
     ui: MetricUi(label: 'Mood', inputType: 'likert_1_5'),
     status: 'active',
     introducedIn: 'phase1',
@@ -278,6 +302,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'both',
     preferredSource: null,
     dqs: MetricDqs(weight: 6, countsTowardDailyCompleteness: true),
+    signal: MetricSignal(deadbandK: 1.0),
     ui: MetricUi(label: 'Gut comfort', inputType: 'likert_1_5'),
     status: 'active',
     introducedIn: 'phase1',
@@ -307,6 +332,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'both',
     preferredSource: null,
     dqs: MetricDqs(weight: 0, countsTowardDailyCompleteness: false),
+    signal: null,
     ui: MetricUi(label: 'Symptoms', inputType: 'multi_select'),
     status: 'active',
     introducedIn: 'phase1',
@@ -328,6 +354,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'both',
     preferredSource: null,
     dqs: MetricDqs(weight: 0, countsTowardDailyCompleteness: false),
+    signal: null,
     ui: MetricUi(label: 'Standing water nearby', inputType: 'toggle'),
     status: 'active',
     introducedIn: 'phase1',
@@ -349,6 +376,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'both',
     preferredSource: null,
     dqs: MetricDqs(weight: 0, countsTowardDailyCompleteness: false),
+    signal: null,
     ui: MetricUi(label: 'Notes', inputType: 'text'),
     status: 'active',
     introducedIn: 'phase1',
@@ -379,6 +407,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'both',
     preferredSource: null,
     dqs: MetricDqs(weight: 0, countsTowardDailyCompleteness: false),
+    signal: MetricSignal(deadbandK: 1.0),
     ui: null,
     status: 'active',
     introducedIn: 'phase1',
@@ -401,6 +430,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'hardware_gated',
     preferredSource: null,
     dqs: MetricDqs(weight: 0, countsTowardDailyCompleteness: false),
+    signal: MetricSignal(deadbandK: 1.0),
     ui: null,
     status: 'active',
     introducedIn: 'phase2',
@@ -422,6 +452,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'ios_only',
     preferredSource: null,
     dqs: MetricDqs(weight: 0, countsTowardDailyCompleteness: false),
+    signal: MetricSignal(deadbandK: 1.0),
     ui: null,
     status: 'active',
     introducedIn: 'phase2',
@@ -443,6 +474,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'hardware_gated',
     preferredSource: null,
     dqs: MetricDqs(weight: 0, countsTowardDailyCompleteness: false),
+    signal: MetricSignal(deadbandK: 1.0),
     ui: null,
     status: 'active',
     introducedIn: 'phase2',
@@ -464,6 +496,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'hardware_gated',
     preferredSource: null,
     dqs: MetricDqs(weight: 0, countsTowardDailyCompleteness: false),
+    signal: MetricSignal(deadbandK: 1.0),
     ui: null,
     status: 'active',
     introducedIn: 'phase2',
@@ -485,6 +518,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'hardware_gated',
     preferredSource: null,
     dqs: MetricDqs(weight: 0, countsTowardDailyCompleteness: false),
+    signal: MetricSignal(deadbandK: 1.0),
     ui: null,
     status: 'active',
     introducedIn: 'phase2',
@@ -506,6 +540,7 @@ const List<MetricDefinition> kMetrics = [
     availability: 'hardware_gated',
     preferredSource: null,
     dqs: MetricDqs(weight: 0, countsTowardDailyCompleteness: false),
+    signal: MetricSignal(deadbandK: 1.0),
     ui: null,
     status: 'active',
     introducedIn: 'phase2',

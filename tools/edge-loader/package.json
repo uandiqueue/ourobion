@@ -1,0 +1,28 @@
+{
+  "name": "@ourobion/edge-loader",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ourobion brain edge loader — validates truth-tier edge artifacts (edges/*.jsonl) against the shared/brain contract and projects them into the Postgres S6 serving tables (insight-engine-architecture §A11).",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "load": "node load_edges.mjs",
+    "check": "node load_edges.mjs --check",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test \"tests/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.658.0",
+    "pg": "^8.13.0",
+    "tsx": "^4.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
+  }
+}
