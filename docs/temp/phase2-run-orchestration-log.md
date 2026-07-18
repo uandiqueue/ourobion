@@ -39,7 +39,7 @@ contentious ones; fixes to shipped migrations are NEW additive migrations per D1
 | # | Unit | Status | Notes |
 |---|---|---|---|
 | R1 | Chain recovery + docs/temp move + this bookkeeping | **done** | branch `chore/run/chain-recovery-docs-move` (cut from the chain tip) / PR #73; recovery PR #72 |
-| U19 | A1/A2/A3 — shared-schema safeguard seam: `partial` requires `independentRetrieval.performed` (D16); corroboration-vs-sources cross-check; reconcile the vacuous-quoteCheck code/schema disagreement | next | shared/brain — retro-review flag |
+| U19 | A1–A5 — shared-schema safeguard seam: `partial` requires `independentRetrieval.performed` (D16); corroboration-vs-sources cross-check; reconcile the vacuous-quoteCheck code/schema disagreement; A4 format tightening (deprecatedAt/title/ISO datetimes); A5 conditional-generic identity guard | **done** | Branch `fix/shared-brain/safeguard-hardening` / PR #75, issue #74; edge-loader 27/27 (+6), rules 52/52 (+2), brain-ingest 320/320, llm-router 42/42, shared tsc clean, flutter 48/48. shared/brain — **retro-review flag** |
 | U20 | A6/A26/A20 — InsightCard contract repair: revive the shared Dart mirror (id int + producer/insight_id/edge_refs), app imports it, retire the app-local duplicate (D18); widen data/confidence-source unions | queued | shared/types — retro-review flag |
 | U21 | A25/A27 — app serve seam: `relationship` category + producer/edge_refs read + citation affordance; UTC-correct expiry filter (fix frozen `now` in watchInsights) | queued | apps/biotope m5b |
 | U22 | A18 — snooze semantics: regeneration skips `snoozed` exactly like `dismissed` (D17); auto-reactivation deferred to Jayden | queued | generate-insights |
@@ -133,6 +133,7 @@ tables + the S2 view) — it stays early because it's Track A's longest pole.
 | 2026-07-16 | U18 CI node-suite wiring | `ci/node-tool-suites` (stacked on U13) | done; run **paused** after this — U14–U17 remain stretch |
 | 2026-07-17 | Build audit AU0–AU9 (record-only) | — (no code changes) | done; 27 findings → `docs/temp/phase2-audit/` |
 | 2026-07-18 | R1 recovery + docs/temp move | `chore/run/chain-recovery-docs-move` (cut from chain tip `feat/shared/l6-one-card-slice`) / R1 PR #73 + recovery PR #72 | done; run docs now in docs/temp; D16–D20 recorded; B1 closed, B13 opened |
+| 2026-07-18 | U19 shared/brain safeguard hardening (audit A1–A5) | `fix/shared-brain/safeguard-hardening` (stacked on `chore/run/chain-recovery-docs-move`) / PR #75 · issue #74 | done; **shared/ retro-review** (B8); A1 D16 grounding, A2 corroboration cross-check, A3 quoteCheck invariant, A4 format tightening, A5 identity guard |
 
 ## Notes for the resuming orchestrator
 

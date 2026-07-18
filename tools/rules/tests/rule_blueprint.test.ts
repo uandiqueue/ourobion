@@ -103,6 +103,20 @@ test('deprecated status without deprecatedAt is rejected', () => {
   assert.equal(ruleBlueprintSchema.safeParse(bad).success, false);
 });
 
+test('A4: empty-string deprecatedAt is rejected (must be a non-empty ISO datetime)', () => {
+  const bad = base();
+  bad.status = 'deprecated';
+  bad.deprecatedAt = ''; // empty string used to satisfy the "set ⟺ deprecated" XOR check
+  assert.equal(ruleBlueprintSchema.safeParse(bad).success, false);
+});
+
+test('A4: a valid ISO-datetime deprecatedAt on a deprecated blueprint is accepted', () => {
+  const ok = base();
+  ok.status = 'deprecated';
+  ok.deprecatedAt = '2026-07-18T00:00:00Z';
+  assert.equal(ruleBlueprintSchema.safeParse(ok).success, true);
+});
+
 test('a well-formed cross/coincidence blueprint parses (the shape the first cross rule will use)', () => {
   const cross = {
     ...base(),

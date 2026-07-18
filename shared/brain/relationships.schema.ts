@@ -49,7 +49,7 @@ export const verificationStatusSchema = z.enum(['active', 'stale', 'superseded']
 
 export const citationSchema = z.object({
   paperId: z.string().min(1),
-  title: z.string(),
+  title: z.string().min(1),
   year: z.number().int().nullable(),
   population: z.string().nullable(),
   evidenceTier: evidenceTierSchema,
@@ -95,7 +95,7 @@ export const relationshipClaimSchema = z
     derivation: z.string().min(1),
     synthesisModel: z.string().min(1),
     promptVersion: z.string().min(1),
-    synthesisedAt: z.string().min(1),
+    synthesisedAt: z.string().datetime({ offset: true }),
   })
   .superRefine((c, ctx) => {
     // No self-loops — a metric can't relate to itself.
@@ -149,15 +149,17 @@ export const edgeVerificationSchema = z
     dqs: z.object({ weight: z.number().min(0).max(1) }),
     verifierModel: z.string().min(1),
     promptVersion: z.string().min(1),
-    verifiedAt: z.string().min(1),
+    verifiedAt: z.string().datetime({ offset: true }),
     status: verificationStatusSchema,
   })
   .superRefine((v, ctx) => {
-    // THE safeguard invariant: an affirmative/contradicting verdict requires INDEPENDENT grounding.
-    // Re-opining over the synthesis context (no retrieval) can only ever be `uncertain` — this is
-    // what makes the second pass non-redundant rather than a rubber stamp.
-    const affirms = v.verdict === 'supported' || v.verdict === 'contradicted';
-    if (affirms && !v.independentRetrieval.performed) {
+    // THE safeguard invariant: every SERVABLE verdict requires INDEPENDENT grounding. Re-opining over
+    // the synthesis context (no retrieval) can only ever be `uncertain` — this is what makes the second
+    // pass non-redundant rather than a rubber stamp. `partial` is servable (shared/brain/index.ts
+    // SERVABLE_VERDICTS), so it must be grounded too, not just `supported`/`contradicted` (A1/D16).
+    const requiresGrounding =
+      v.verdict === 'supported' || v.verdict === 'contradicted' || v.verdict === 'partial';
+    if (requiresGrounding && !v.independentRetrieval.performed) {
       ctx.addIssue({
         code: 'custom',
         message: `${v.edgeId}: verdict '${v.verdict}' requires independentRetrieval.performed === true`,
@@ -171,17 +173,49 @@ export const edgeVerificationSchema = z
     if (v.verdict === 'contradicted' && v.corroboration.contradicting < 1) {
       ctx.addIssue({ code: 'custom', message: `${v.edgeId}: 'contradicted' requires ≥1 contradicting source` });
     }
+    // Corroboration counts can't exceed what the retrieved source stances can support — the LLM cannot
+    // invent corroboration the retrieval didn't yield (A2). Mirrors brain-ingest enforce()'s stance
+    // re-derivation as an upper bound: `supports`/`mixed` sources can corroborate, `refutes` can
+    // contradict. Stance vocabulary is citationSchema's own enum.
+    const canSupport = v.independentRetrieval.sources.filter(
+      (s) => s.stance === 'supports' || s.stance === 'mixed',
+    ).length;
+    const canContradict = v.independentRetrieval.sources.filter((s) => s.stance === 'refutes').length;
+    if (v.corroboration.supporting > canSupport) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `${v.edgeId}: corroboration.supporting (${v.corroboration.supporting}) exceeds retrieved supporting/mixed sources (${canSupport})`,
+      });
+    }
+    if (v.corroboration.contradicting > canContradict) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `${v.edgeId}: corroboration.contradicting (${v.corroboration.contradicting}) exceeds retrieved refuting sources (${canContradict})`,
+      });
+    }
     // quoteCheck arithmetic must be consistent.
     if (v.quoteCheck.spansFound > v.quoteCheck.spansTotal) {
       ctx.addIssue({ code: 'custom', message: `${v.edgeId}: spansFound > spansTotal` });
     }
-    if (v.quoteCheck.allPresent !== (v.quoteCheck.spansFound === v.quoteCheck.spansTotal)) {
-      ctx.addIssue({ code: 'custom', message: `${v.edgeId}: allPresent must equal (spansFound === spansTotal)` });
+    // `allPresent` matches brain-ingest quoteCheck.ts's computation: a zero-span block never passes
+    // vacuously (0/0 ⇒ false), so the shared schema and the in-repo producer agree (A3).
+    const allPresentExpected =
+      v.quoteCheck.spansTotal > 0 && v.quoteCheck.spansFound === v.quoteCheck.spansTotal;
+    if (v.quoteCheck.allPresent !== allPresentExpected) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `${v.edgeId}: allPresent must equal (spansTotal > 0 && spansFound === spansTotal)`,
+      });
     }
   });
 
 // ─── Compile-time AssertExact: zod-inferred types === hand-written interfaces ────────────────────
-type Exact<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+// Conditional-generic identity (not mutual assignability): `Exact<any, T>` is `false` and
+// optional-vs-`| undefined` drift is visible, so an `any`-degraded zod inference fails the guard
+// instead of silently passing (A5). Same form as shared/rules/_assert.ts `Equals`.
+type Exact<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2)
+  ? true
+  : false;
 
 type ZodCitation = z.infer<typeof citationSchema>;
 type ZodQuoteSpan = z.infer<typeof quoteSpanSchema>;

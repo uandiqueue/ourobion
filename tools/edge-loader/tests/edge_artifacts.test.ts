@@ -91,6 +91,65 @@ test('the safeguard invariant is enforced: supported without independent retriev
   assert.match(errors[0]!.message, /requires independentRetrieval\.performed/);
 });
 
+test('A1: a partial verdict without independent retrieval is rejected (grounding safeguard)', () => {
+  const broken = mutateLine(verificationsText, EDGE_SLEEP_RHR, (v) => {
+    // EDGE_SLEEP_RHR is already partial; strip its retrieval so the safeguard must bite.
+    v.independentRetrieval = { performed: false, sources: [] };
+  });
+  const { errors } = parseVerifications(broken);
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0]!.line, 3); // EDGE_SLEEP_RHR verification is fixture line 3
+  assert.match(errors[0]!.message, /requires independentRetrieval\.performed/);
+});
+
+test('A1: a partial verdict WITH retrieval + ≥1 supporting source is accepted', () => {
+  // The unmodified fixture partial line already satisfies this — assert it stays green.
+  const { errors, verificationRows } = buildLoad(claimsText, verificationsText);
+  assert.deepEqual(errors, []);
+  const partial = verificationRows.find(
+    (r) => r.edge_id === EDGE_SLEEP_RHR && r.verification.verdict === 'partial',
+  )!;
+  assert.equal(partial.verification.independentRetrieval.performed, true);
+  assert.ok(partial.verification.corroboration.supporting >= 1);
+});
+
+test('A2: invented corroboration (supporting exceeds retrieved supporting/mixed sources) is rejected', () => {
+  const broken = mutateLine(verificationsText, EDGE_SLEEP_RHR, (v) => {
+    // Fixture has 1 supporting source; claim 2 supporting without adding a source.
+    v.corroboration = { supporting: 2, contradicting: 0 };
+  });
+  const { errors } = parseVerifications(broken);
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0]!.line, 3);
+  assert.match(errors[0]!.message, /corroboration\.supporting .* exceeds retrieved/);
+});
+
+test('A2: corroboration counts within the retrieved supporting/mixed source count are accepted', () => {
+  // Fixture line 1 (EDGE_SLEEP_HRV @ 2026-07-11) has supporting:2 with 2 supports sources.
+  const { errors } = buildLoad(claimsText, verificationsText);
+  assert.deepEqual(errors, []);
+});
+
+test('A3: a vacuous quoteCheck (spansFound:0, spansTotal:0, allPresent:true) is rejected', () => {
+  const broken = mutateLine(verificationsText, EDGE_SLEEP_RHR, (v) => {
+    v.quoteCheck = { spansFound: 0, spansTotal: 0, allPresent: true };
+  });
+  const { errors } = parseVerifications(broken);
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0]!.line, 3);
+  assert.match(errors[0]!.message, /allPresent must equal/);
+});
+
+test('A3: the in-repo quoteCheck zero-span output (allPresent:false at 0/0) is accepted by the schema', () => {
+  // brain-ingest quoteCheck.ts computes allPresent = spansTotal > 0 && …, so a zero-span block
+  // is {0,0,false} — the schema must accept exactly that encoding.
+  const zeroSpan = mutateLine(verificationsText, EDGE_SLEEP_RHR, (v) => {
+    v.quoteCheck = { spansFound: 0, spansTotal: 0, allPresent: false };
+  });
+  const { errors } = parseVerifications(zeroSpan);
+  assert.deepEqual(errors, []);
+});
+
 test('a claim endpoint that is not an active registry metric fails with its line number', () => {
   const broken = mutateLine(claimsText, EDGE_STEPS_SLEEP, (c) => {
     c.subject = 'not_a_registry_metric';
