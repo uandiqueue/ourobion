@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   buildLoad,
+  canonicalVerifiedAt,
   parseClaims,
   parseVerifications,
   joinEdges,
@@ -185,23 +186,24 @@ test('fixture scores/bands match hand-computed expectations', () => {
   const { verificationRows } = buildLoad(claimsText, verificationsText);
   const byKey = new Map(verificationRows.map((r) => [`${r.edge_id} ${r.verified_at}`, r]));
 
+  // Keys use the canonical verified_at (A13): fixture '…T00:00:00Z' → '…T00:00:00.000Z'.
   // supported, conf .9, tier 5, net +3: .9 * (.6 + .25*1 + .15*1) = 0.9 → high
-  const newest = byKey.get(`${EDGE_SLEEP_HRV} 2026-07-12T00:00:00Z`)!;
+  const newest = byKey.get(`${EDGE_SLEEP_HRV} 2026-07-12T00:00:00.000Z`)!;
   assert.ok(Math.abs(newest.edge_score - 0.9) < 1e-9);
   assert.equal(newest.serving_band, 'high');
 
   // supported, conf .85, tier 4, net +2: .85 * (.6 + .25*.8 + .15*(2/3)) = 0.765 → mid
-  const older = byKey.get(`${EDGE_SLEEP_HRV} 2026-07-11T00:00:00Z`)!;
+  const older = byKey.get(`${EDGE_SLEEP_HRV} 2026-07-11T00:00:00.000Z`)!;
   assert.ok(Math.abs(older.edge_score - 0.765) < 1e-9);
   assert.equal(older.serving_band, 'mid');
 
   // partial, conf .7, tier 3, net +1: .7 * (.6 + .25*.6 + .15*(1/3)) = 0.56 → mid
-  const partial = byKey.get(`${EDGE_SLEEP_RHR} 2026-07-12T00:00:00Z`)!;
+  const partial = byKey.get(`${EDGE_SLEEP_RHR} 2026-07-12T00:00:00.000Z`)!;
   assert.ok(Math.abs(partial.edge_score - 0.56) < 1e-9);
   assert.equal(partial.serving_band, 'mid');
 
   // uncertain: never servable → score 0, hold
-  const uncertain = byKey.get(`${EDGE_STEPS_SLEEP} 2026-07-12T00:00:00Z`)!;
+  const uncertain = byKey.get(`${EDGE_STEPS_SLEEP} 2026-07-12T00:00:00.000Z`)!;
   assert.equal(uncertain.edge_score, 0);
   assert.equal(uncertain.serving_band, 'hold');
 });
@@ -218,8 +220,8 @@ test('multiple active verifications: only the newest stays active, older flipped
   const { verificationRows } = buildLoad(claimsText, verificationsText);
   const rows = verificationRows.filter((r) => r.edge_id === EDGE_SLEEP_HRV);
   assert.equal(rows.length, 2);
-  const older = rows.find((r) => r.verified_at === '2026-07-11T00:00:00Z')!;
-  const newer = rows.find((r) => r.verified_at === '2026-07-12T00:00:00Z')!;
+  const older = rows.find((r) => r.verified_at === '2026-07-11T00:00:00.000Z')!;
+  const newer = rows.find((r) => r.verified_at === '2026-07-12T00:00:00.000Z')!;
   assert.equal(older.status, 'superseded');
   assert.equal(newer.status, 'active');
   // The truth-artifact copy stays verbatim — only the serving column flips.
@@ -236,6 +238,76 @@ test('duplicate (edgeId, verifiedAt) lines dedupe first-wins (on-conflict-do-not
   const rows = verificationRows.filter((r) => r.edge_id === EDGE_SLEEP_RHR);
   assert.equal(rows.length, 1);
   assert.ok(Math.abs(rows[0]!.edge_score - 0.56) < 1e-9); // the first (fixture) line won
+});
+
+// ── A13: verifiedAt canonicalization (JS comparisons must match timestamptz semantics) ───────────
+
+/** Replace the verification line matching (edgeId, verifiedAt) with a mutated copy. */
+function mutateVerification(
+  text: string,
+  edgeId: string,
+  verifiedAt: string,
+  mutate: (record: any) => void,
+): string {
+  return text
+    .split('\n')
+    .map((line) => {
+      if (line.trim() === '') return line;
+      const record = JSON.parse(line);
+      if (record.edgeId !== edgeId || record.verifiedAt !== verifiedAt) return line;
+      mutate(record);
+      return JSON.stringify(record);
+    })
+    .join('\n');
+}
+
+test('A13: canonicalVerifiedAt collapses every offset spelling to one UTC ISO form', () => {
+  assert.equal(canonicalVerifiedAt('2026-07-12T00:00:00Z'), '2026-07-12T00:00:00.000Z');
+  assert.equal(canonicalVerifiedAt('2026-07-12T00:00:00+00:00'), '2026-07-12T00:00:00.000Z');
+  assert.equal(canonicalVerifiedAt('2026-07-12T08:00:00+08:00'), '2026-07-12T00:00:00.000Z');
+  assert.equal(canonicalVerifiedAt('2026-07-12T00:00:00.250+00:00'), '2026-07-12T00:00:00.250Z');
+});
+
+test('A13: two offset spellings of the SAME instant dedupe to one row (no silent DB last-wins)', () => {
+  // Same instant as the fixture RHR line ('…T00:00:00Z'), spelled '+00:00', different content.
+  // Pre-A13 these were two JS rows colliding on the DB (edge_id, verified_at) key — last wins
+  // silently. Canonical dedup keeps exactly one, first-wins, like on-conflict-do-nothing.
+  const dupLine = verificationsText.split('\n').find((l) => l.includes(EDGE_SLEEP_RHR))!;
+  const variant = JSON.parse(dupLine);
+  variant.verifiedAt = '2026-07-12T00:00:00+00:00';
+  variant.confidence = 0.1; // would change the score if the offset variant won
+  const withVariant = `${verificationsText.trimEnd()}\n${JSON.stringify(variant)}\n`;
+  const { verificationRows, errors } = buildLoad(claimsText, withVariant);
+  assert.deepEqual(errors, []);
+  const rows = verificationRows.filter((r) => r.edge_id === EDGE_SLEEP_RHR);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]!.verified_at, '2026-07-12T00:00:00.000Z');
+  assert.ok(Math.abs(rows[0]!.edge_score - 0.56) < 1e-9); // the first (fixture) line won
+});
+
+test('A13: supersede picks the chronologically newest active verification across mixed offsets', () => {
+  // '2026-07-13T07:00:00+08:00' == 2026-07-12T23:00Z — LEXICOGRAPHICALLY the largest string,
+  // chronologically the OLDER instant. Raw string ordering would keep it active and flip the
+  // actually-newest '2026-07-12T23:30:00Z'; canonical ordering must do the opposite.
+  let text = mutateVerification(verificationsText, EDGE_SLEEP_HRV, '2026-07-11T00:00:00Z', (v) => {
+    v.verifiedAt = '2026-07-13T07:00:00+08:00';
+  });
+  text = mutateVerification(text, EDGE_SLEEP_HRV, '2026-07-12T00:00:00Z', (v) => {
+    v.verifiedAt = '2026-07-12T23:30:00Z';
+  });
+  const { verificationRows, errors } = buildLoad(claimsText, text);
+  assert.deepEqual(errors, []);
+  const rows = verificationRows.filter((r) => r.edge_id === EDGE_SLEEP_HRV);
+  assert.equal(rows.length, 2);
+  const offsetForm = rows.find((r) => r.verified_at === '2026-07-12T23:00:00.000Z')!;
+  const newest = rows.find((r) => r.verified_at === '2026-07-12T23:30:00.000Z')!;
+  assert.equal(newest.status, 'active');
+  assert.equal(offsetForm.status, 'superseded');
+  // Rows sort chronologically (canonical order), not lexicographically over raw spellings.
+  assert.deepEqual(rows.map((r) => r.verified_at), [offsetForm.verified_at, newest.verified_at]);
+  // The verification jsonb keeps the producer's verbatim spelling — only the column is canonical.
+  assert.equal(offsetForm.verification.verifiedAt, '2026-07-13T07:00:00+08:00');
+  assert.equal(newest.verification.verifiedAt, '2026-07-12T23:30:00Z');
 });
 
 test('re-synthesised claim (same edgeId later in the append-only file) wins: last line', () => {

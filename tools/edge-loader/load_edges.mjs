@@ -16,6 +16,10 @@
 //   node tools/edge-loader/load_edges.mjs --from-r2          # R2_ENDPOINT / R2_ACCESS_KEY_ID /
 //                                                            # R2_SECRET_ACCESS_KEY / R2_BUCKET
 //   ... --dry-run | --check                                  # validate + print rows, no DB
+//   ... --allow-empty                                        # A14: an EMPTY validated artifact set
+//                                                            # otherwise aborts (exit 1, no prune) —
+//                                                            # this flag lets it legitimately empty
+//                                                            # the projection tables
 //   SUPABASE_DB_URL=postgresql://...  (local stack: `npx supabase status` → DB URL)
 //
 // A local directory holds the same basenames the R2 `edges/` prefix does (claims.jsonl +
@@ -198,10 +202,11 @@ async function loadIntoDb(claimRows, verificationRows, dbUrl) {
 // ── CLI ──────────────────────────────────────────────────────────────────────────────────────────
 
 function parseArgs(argv) {
-  const args = { dryRun: false, fromDir: null, fromR2: false };
+  const args = { dryRun: false, fromDir: null, fromR2: false, allowEmpty: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--dry-run' || a === '--check') args.dryRun = true;
+    else if (a === '--allow-empty') args.allowEmpty = true;
     else if (a === '--from-r2') args.fromR2 = true;
     else if (a === '--from-dir') {
       args.fromDir = argv[++i];
@@ -234,6 +239,20 @@ async function main() {
     console.error(`✗ ${errors.length} artifact error(s) (${sourceLabel}):`);
     for (const { source, line, message } of errors) console.error(`  - ${source}:${line}: ${message}`);
     console.error('Nothing loaded — fix the artifacts (TRUTH tier) / their producer and re-run.');
+    process.exit(1);
+  }
+
+  // A14 empty-set guard: the end-of-run prune makes the tables a pure function of the artifact
+  // set (D13), so a zero-claim input would wipe EVERY relationship_claims + edge_verifications
+  // row. That is almost always a mis-pointed/blank source, not an intent — refuse (exit 1,
+  // nothing written, no prune) unless the operator states the intent with --allow-empty.
+  // Fires in --dry-run/--check too, so the check verdict mirrors what a real run would do.
+  if (claimRows.length === 0 && !args.allowEmpty) {
+    console.error(
+      `✗ validated artifact set is EMPTY (${sourceLabel}) — refusing to load: the prune would ` +
+        'wipe every relationship_claims + edge_verifications row. If the truth set really is ' +
+        'empty (not a mis-pointed or blank source), re-run with --allow-empty.',
+    );
     process.exit(1);
   }
 

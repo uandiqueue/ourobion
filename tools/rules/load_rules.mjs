@@ -10,6 +10,11 @@
 //   node tools/rules/load_rules.mjs               # validate + load (needs SUPABASE_DB_URL)
 //   node tools/rules/load_rules.mjs --dry-run     # validate + print rows, no DB
 //   node tools/rules/load_rules.mjs --check       # alias of --dry-run for CI
+//   ... --allow-empty                             # A14: an EMPTY validated blueprint set otherwise
+//                                                 # aborts (exit 1, no prune) — this flag lets it
+//                                                 # legitimately empty the rules table
+//   ... --rules-dir <dir>                         # blueprint tree override (default data/rules —
+//                                                 # tests/ops only)
 //   SUPABASE_DB_URL=postgresql://...  (local stack: `npx supabase status` → DB URL)
 //
 // Root package.json aliases: `npm run rules:load` / `npm run rules:check`.
@@ -86,16 +91,50 @@ async function loadIntoDb(rows, dbUrl) {
   }
 }
 
-async function main() {
-  const args = new Set(process.argv.slice(2));
-  const dryRun = args.has('--dry-run') || args.has('--check');
+function parseArgs(argv) {
+  const args = { dryRun: false, allowEmpty: false, rulesDir: RULES_DIR };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--dry-run' || a === '--check') args.dryRun = true;
+    else if (a === '--allow-empty') args.allowEmpty = true;
+    else if (a === '--rules-dir') {
+      args.rulesDir = argv[++i];
+      if (!args.rulesDir) throw new Error('--rules-dir needs a directory path');
+    } else throw new Error(`unknown argument '${a}'`);
+  }
+  return args;
+}
 
-  const { rows, errors } = buildRows();
+async function main() {
+  let args;
+  try {
+    args = parseArgs(process.argv.slice(2));
+  } catch (e) {
+    console.error(String(e.message ?? e));
+    process.exit(2);
+  }
+  const { dryRun } = args;
+
+  const { rows, errors } = buildRows(args.rulesDir);
 
   if (errors.length > 0) {
-    console.error(`✗ ${errors.length} blueprint error(s) in ${RULES_DIR}:`);
+    console.error(`✗ ${errors.length} blueprint error(s) in ${args.rulesDir}:`);
     for (const { relPath, message } of errors) console.error(`  - ${relPath}: ${message}`);
     console.error('Nothing loaded — fix the blueprints (TRUTH) and re-run.');
+    process.exit(1);
+  }
+
+  // A14 empty-set guard: the end-of-run prune makes the rules table a pure function of the
+  // blueprint set, so a zero-blueprint input (e.g. a checkout where the scope dirs are missing —
+  // discoverBlueprintFiles returns [] rather than erroring) would wipe every rules row. Refuse
+  // (exit 1, nothing written, no prune) unless the operator states the intent with --allow-empty.
+  // Fires in --dry-run/--check too, so the check verdict mirrors what a real run would do.
+  if (rows.length === 0 && !args.allowEmpty) {
+    console.error(
+      `✗ validated blueprint set is EMPTY (${args.rulesDir}) — refusing to load: the prune would ` +
+        'wipe every rules row. If the blueprint set really is empty (not a missing or mis-pointed ' +
+        'tree), re-run with --allow-empty.',
+    );
     process.exit(1);
   }
 

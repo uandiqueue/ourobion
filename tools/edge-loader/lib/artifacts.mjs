@@ -110,16 +110,36 @@ export function parseVerifications(text, source = R2_VERIFICATIONS_KEY) {
 }
 
 /**
+ * A13: canonicalize a contract-valid `verifiedAt` (zod `.datetime({ offset: true })`, per U19)
+ * to the ONE UTC ISO form `YYYY-MM-DDTHH:mm:ss.sssZ` (`Date#toISOString`). Postgres compares
+ * `verified_at` as timestamptz, so mixed offset spellings of the same instant
+ * ("…T10:00:00Z" vs "…T10:00:00+00:00" vs "…T18:00:00+08:00") are EQUAL there while raw JS
+ * string comparison treats them as distinct — and lexicographic order across mixed offsets can
+ * invert chronology. Canonicalizing before every JS comparison makes plain string equality and
+ * ordering of this fixed-length form agree exactly with timestamptz semantics.
+ *
+ * Canonical everywhere: the dedup key, the newest-active supersede ordering AND the
+ * `verified_at` column value all use this form. Only the `verification` jsonb keeps the
+ * producer's verbatim string (truth-artifact copy, never rewritten).
+ */
+export function canonicalVerifiedAt(verifiedAt) {
+  return new Date(verifiedAt).toISOString();
+}
+
+/**
  * Join validated claims + verifications into S6-table rows.
  *
  * - Claims: the artifact is append-only, so a re-synthesised edge appears as a LATER line for the
  *   same edgeId — the last line wins (mirrors the table's upsert-on-edge_id semantics).
  * - Verifications: every record must reference a claimed edgeId (else a line-numbered error — the
- *   FK would reject it anyway). Duplicate (edgeId, verifiedAt) lines dedupe first-wins, matching
- *   the table's `on conflict do nothing`.
+ *   FK would reject it anyway). Duplicate (edgeId, verifiedAt) lines dedupe first-wins on the
+ *   CANONICAL verifiedAt (A13: same instant in different offset spellings is one key, matching
+ *   the DB's timestamptz `(edge_id, verified_at)` uniqueness).
  * - Supersede: per edge, only the NEWEST verification whose artifact status is 'active' stays
- *   active in the status COLUMN; older active lines are stored as 'superseded'. The verification
- *   jsonb stays verbatim (truth artifact copy) — the column is the serving lifecycle.
+ *   active in the status COLUMN; older active lines are stored as 'superseded'. Newest is decided
+ *   on the canonical form (A13), so mixed-offset artifacts order chronologically, exactly as
+ *   timestamptz would. The verification jsonb stays verbatim (truth artifact copy) — the column
+ *   is the serving lifecycle.
  * - Gating: edge_score / serving_band precomputed with shared/brain edgeScore / servingBand.
  */
 export function joinEdges(claims, verifications) {
@@ -137,11 +157,12 @@ export function joinEdges(claims, verifications) {
       );
       continue;
     }
-    const key = `${record.edgeId}\n${record.verifiedAt}`;
+    const verifiedAt = canonicalVerifiedAt(record.verifiedAt); // A13: one UTC ISO form for all comparisons
+    const key = `${record.edgeId}\n${verifiedAt}`;
     if (seen.has(key)) continue; // first wins == on conflict (edge_id, verified_at) do nothing
     seen.add(key);
     const list = verByEdge.get(record.edgeId) ?? [];
-    list.push(record);
+    list.push({ record, verifiedAt });
     verByEdge.set(record.edgeId, list);
   }
 
@@ -159,19 +180,21 @@ export function joinEdges(claims, verifications) {
 
   const verificationRows = [];
   for (const edgeId of [...verByEdge.keys()].sort()) {
+    // Canonical-form comparisons throughout (A13): fixed-length UTC ISO strings order exactly
+    // like the instants they name, so `<`/`>` here == timestamptz ordering in Postgres.
     const list = verByEdge
       .get(edgeId)
       .slice()
       .sort((a, b) => (a.verifiedAt < b.verifiedAt ? -1 : a.verifiedAt > b.verifiedAt ? 1 : 0));
     const newestActiveAt = list
-      .filter((v) => v.status === 'active')
-      .reduce((acc, v) => (acc === null || v.verifiedAt > acc ? v.verifiedAt : acc), null);
-    for (const v of list) {
-      const superseded = v.status === 'active' && newestActiveAt !== null && v.verifiedAt < newestActiveAt;
+      .filter(({ record }) => record.status === 'active')
+      .reduce((acc, { verifiedAt }) => (acc === null || verifiedAt > acc ? verifiedAt : acc), null);
+    for (const { record: v, verifiedAt } of list) {
+      const superseded = v.status === 'active' && newestActiveAt !== null && verifiedAt < newestActiveAt;
       verificationRows.push({
         edge_id: v.edgeId,
-        verified_at: v.verifiedAt,
-        verification: v,
+        verified_at: verifiedAt, // canonical UTC ISO — the timestamptz the DB round-trips to
+        verification: v, // verbatim truth copy — keeps the producer's original verifiedAt spelling
         verdict: v.verdict,
         status: superseded ? 'superseded' : v.status,
         edge_score: brain.edgeScore(v),
