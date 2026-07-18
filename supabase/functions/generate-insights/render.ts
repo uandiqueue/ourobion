@@ -112,13 +112,33 @@ export function renderCard(
 // §S8 claim register; the personal variant states plainly that it is an unverified personal
 // observation and carries no citation-like wording.
 
+// A21 honesty split: D14 lets the agree branch fire with the personal signal absent or
+// non-gate-passing, so the "Your own recent data shows a matching pattern" clause ships ONLY
+// when a gate-passing personal signal actually backs it (D15 posture: never claim corroboration
+// the data does not hold). Both variants are deterministic templates; edgeCardTemplate picks.
+
 export const EDGE_CARD_TEMPLATE = {
+  title: "Research-linked pattern: {{metric_a_label}} and {{metric_b_label}}",
+  body:
+    "Your {{metric_a_label}} data shifted {{direction_phrase}} today, and published research " +
+    "reports that {{metric_a_label}} {{relation_phrase}} {{metric_b_label}}. Worth watching, " +
+    "not a verdict.",
+} as const
+
+export const EDGE_CARD_TEMPLATE_WITH_PERSONAL = {
   title: "Research-linked pattern: {{metric_a_label}} and {{metric_b_label}}",
   body:
     "Your {{metric_a_label}} data shifted {{direction_phrase}} today, and published research " +
     "reports that {{metric_a_label}} {{relation_phrase}} {{metric_b_label}}. Your own recent " +
     "data shows a matching pattern — worth watching, not a verdict.",
 } as const
+
+/** The agree-branch edge-card template: pairwise corroboration copy only when it is backed. */
+export function edgeCardTemplate(
+  hasGatePassingPersonal: boolean,
+): typeof EDGE_CARD_TEMPLATE | typeof EDGE_CARD_TEMPLATE_WITH_PERSONAL {
+  return hasGatePassingPersonal ? EDGE_CARD_TEMPLATE_WITH_PERSONAL : EDGE_CARD_TEMPLATE
+}
 
 export const PERSONAL_CARD_TEMPLATE = {
   title: "Still researching: {{metric_a_label}} and {{metric_b_label}}",
@@ -128,9 +148,19 @@ export const PERSONAL_CARD_TEMPLATE = {
     "found published research for this pairing yet and are still researching it.",
 } as const
 
-/** Human phrase for a monotonic relation, used inside the citation framing. */
+/**
+ * Human phrase for a MONOTONIC relation, used inside the citation framing. Throws on any other
+ * relation (A23): a context-only relation (`modulates`/`correlates`) must never be verbalised
+ * as a directional claim (§1.3 monotonic-only invariant) — callers reach this only with an
+ * agree-branch topEdge, which is monotonic by construction, so a throw here is a bug surfacing
+ * loudly, not a runtime hazard.
+ */
 export function relationPhrase(relation: string): string {
-  return relation === "decreases" ? "tends to lower" : "tends to raise"
+  if (relation === "increases") return "tends to raise"
+  if (relation === "decreases") return "tends to lower"
+  throw new Error(
+    `relationPhrase: non-monotonic relation "${relation}" cannot carry a directional phrase`,
+  )
 }
 
 /** Human phrase for a signal direction. */
