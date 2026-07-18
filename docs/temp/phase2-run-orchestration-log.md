@@ -4,7 +4,7 @@ summary: Resumable state of the automated Phase-2 build run — what shipped, wh
 type: plan
 scope: shared
 status: canonical
-updated: 2026-07-15
+updated: 2026-07-18
 ---
 
 # Phase-2 Run — Orchestration Log
@@ -12,6 +12,43 @@ updated: 2026-07-15
 The resumable state of the automated Phase-2 build run started 2026-07-15 (orchestrator: Claude Code,
 device agentjwork). **A fresh session resumes here**: read this doc top-to-bottom, then the
 [blocked register](./phase2-run-blocked-register.md), then continue at the first `next` unit.
+
+## ⚠ 2026-07-18 — recovery + audit-fix phase (READ THIS FIRST)
+
+**The reverse-cascade merge event.** Jayden's hand-merge of the 15-PR stacked chain went upward,
+not downward: PRs #43–#71 all show "merged", but each was merged into its stacked **parent branch**,
+not into `dev-phase2` — only #43 actually reached `dev-phase2` (81b5827). The full chain content
+(28 commits, units U1–U13 + U18, every gate green at each step) accumulated instead on
+`origin/feat/shared/l6-one-card-slice` (f442eac, which received #71's merge). That branch is the
+**true chain tip**.
+
+**Recovery (decision D20):** one recovery PR — **PR #72** — merges
+`feat/shared/l6-one-card-slice` straight into `dev-phase2` (Jayden's click; see register **B13**).
+No rebase / re-cherry-pick: that would rewrite reviewed history. Until it merges, **new units stack
+on the chain tip**, i.e. cut from `chore/run/chain-recovery-docs-move` (the R1 branch, which sits on
+the tip) — NOT from `dev-phase2`, which still lacks U1–U18.
+
+**Run docs moved to `docs/temp/`** (this file + the blocked/config/signoff registers): they are
+dev-aid tier, not canonical ground truth, so they now live index-exempt in `docs/temp/` — supersedes
+decision D6. The completed build audit lives beside them in `docs/temp/phase2-audit/`
+(orchestration log + findings register: 27 findings A1–A27, 0 blocker/high, 5 medium).
+
+**New worklist — audit-fix units U19–U28** (from the audit's A1–A27; decisions D16–D19 govern the
+contentious ones; fixes to shipped migrations are NEW additive migrations per D19):
+
+| # | Unit | Status | Notes |
+|---|---|---|---|
+| R1 | Chain recovery + docs/temp move + this bookkeeping | **done** | branch `chore/run/chain-recovery-docs-move` (cut from the chain tip) / PR #73; recovery PR #72 |
+| U19 | A1/A2/A3 — shared-schema safeguard seam: `partial` requires `independentRetrieval.performed` (D16); corroboration-vs-sources cross-check; reconcile the vacuous-quoteCheck code/schema disagreement | next | shared/brain — retro-review flag |
+| U20 | A6/A26/A20 — InsightCard contract repair: revive the shared Dart mirror (id int + producer/insight_id/edge_refs), app imports it, retire the app-local duplicate (D18); widen data/confidence-source unions | queued | shared/types — retro-review flag |
+| U21 | A25/A27 — app serve seam: `relationship` category + producer/edge_refs read + citation affordance; UTC-correct expiry filter (fix frozen `now` in watchInsights) | queued | apps/biotope m5b |
+| U22 | A18 — snooze semantics: regeneration skips `snoozed` exactly like `dismissed` (D17); auto-reactivation deferred to Jayden | queued | generate-insights |
+| U23 | A19 — stale personal_signals lifecycle: evaluate-signals removes lost-eligibility pairs; composer applies a computed_at freshness filter | queued | evaluate-signals + generate-insights |
+| U24 | A13/A14 — loader hardening: empty-input prune guard in both loaders; normalize verifiedAt before dedup/ordering | queued | tools/rules + tools/edge-loader |
+| U25 | A15/A16/A17 — migration hygiene as NEW additive migrations (D19): derived_metrics RLS tightened to select-only, edge_score precision, missing CHECKs | queued | supabase/migrations |
+| U26 | A10/A11 — budget-ledger lifecycle: concurrency (re-read+merge if small, else document single-writer — build agent's call per D19) + prune old days/runs | queued | llm-router + brain-ingest |
+| U27 | A24 — CI blind spots: `deno check` the 3 edge-function handlers + a migration-apply (shadow DB) job | queued | .github/workflows/ci.yml |
+| U28 | Nit sweep — A4/A5/A7/A8/A9/A12/A21/A22/A23: copy-gate word boundaries, stricter Equals guard, stale comments, agree-copy honesty, service-role guard, engine drift nits, mailbox-attestation note | queued | batched small fixes |
 
 Run protocol (per Jayden's instructions + AGENTS.md §7, with one waiver):
 - One unit of work = one session issue + one branch cut from `dev-phase2` + one `docs/sessions/` log.
@@ -94,6 +131,8 @@ tables + the S2 view) — it stays early because it's Track A's longest pole.
 | 2026-07-16 | U12 S7 composer + S8 cards | `feat/m5b-engine/s7-composer-s8-cards` / PR #67 (stacked on U11) | done; live-verified (a)–(f) |
 | 2026-07-16 | U13 L6 one-card slice | `feat/shared/l6-one-card-slice` / PR #69 (stacked on U12) | done; **memory 0016 added**; run's core scope complete |
 | 2026-07-16 | U18 CI node-suite wiring | `ci/node-tool-suites` (stacked on U13) | done; run **paused** after this — U14–U17 remain stretch |
+| 2026-07-17 | Build audit AU0–AU9 (record-only) | — (no code changes) | done; 27 findings → `docs/temp/phase2-audit/` |
+| 2026-07-18 | R1 recovery + docs/temp move | `chore/run/chain-recovery-docs-move` (cut from chain tip `feat/shared/l6-one-card-slice`) / R1 PR #73 + recovery PR #72 | done; run docs now in docs/temp; D16–D20 recorded; B1 closed, B13 opened |
 
 ## Notes for the resuming orchestrator
 

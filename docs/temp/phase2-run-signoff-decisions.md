@@ -4,7 +4,7 @@ summary: Every non-trivial choice the automated Phase-2 run made on Jayden's beh
 type: plan
 scope: shared
 status: canonical
-updated: 2026-07-15
+updated: 2026-07-18
 ---
 
 # Phase-2 Run — Decisions for Human Sign-off
@@ -61,6 +61,9 @@ Numeric hyperparameters/config values are in [`phase2-run-config-decisions.md`](
   `--fix-index` (taxonomy 0015: process/roadmap docs belong in shared).
 - **Alternative rejected:** `docs/temp/` drafts — exempt from index enforcement, but these docs are the
   run's review deliverable and must be as discoverable as `next-steps.md`.
+- **SUPERSEDED 2026-07-18:** the four run docs moved to `docs/temp/` (dev-aid tier, index-exempt) —
+  they track a run in progress, not canonical ground truth; the `docs/shared/` INDEX entries were
+  removed. See the orchestration log's recovery section.
 
 ## D7 · Assessment discrepancy surfaced, not silently corrected
 - **Choice:** the 2026-07-13 session log's claim that the `main` fold happened is recorded as a
@@ -142,3 +145,40 @@ Numeric hyperparameters/config values are in [`phase2-run-config-decisions.md`](
   served — `agree` requires a monotonic edge (§1.3).
 - **Alternative rejected:** hand-marking the verification `supported` for demo effect — would fabricate
   the exact trust signal the adversarial-verification design exists to earn.
+
+## D16 · A1 fix direction: `partial` verdicts also require independent retrieval
+- **Choice:** extend the shared-schema safeguard invariant so `partial` verdicts also require
+  `independentRetrieval.performed === true` — every servable verdict must be grounded, preserving the
+  grounding invariant without shrinking the serving vocabulary.
+- **Alternative rejected:** dropping `partial` from `SERVABLE_VERDICTS` — a behavior regression for
+  legitimately-partial edges (real, retrieval-backed partial support would stop serving).
+
+## D17 · A18 snooze semantics: snoozed cards skipped at regeneration, indefinitely
+- **Choice:** snoozed cards are skipped at regeneration exactly like dismissed ones — a snooze
+  persists until the user changes it. The engine stops silently rewriting `status='active'` over a
+  user's snooze.
+- **Deferred to Jayden:** an N-day auto-reactivation would need a snooze-until column (schema
+  addition + product call on N) — not decided autonomously.
+
+## D18 · Dart InsightCard mirror: REVIVE the shared mirror, retire the app-local duplicate
+- **Choice:** fix the shared Dart `InsightCard` mirror (id becomes int to match the bigint column;
+  add the S8 `producer`/`insight_id`/`edge_refs` fields) and make the app import it, retiring the
+  app-local duplicate model — per the "shared/ is the only cross-language seam" rule.
+- **Alternative rejected:** retiring the shared mirror and blessing the app-local copy — leaves the
+  TRUTH-tier contract dead/misleading and the cross-language seam unowned.
+
+## D19 · A16 + migration policy: shipped-but-unreleased migrations are still append-only
+- **Choice:** migrations already in the merged chain are treated as append-only even though they are
+  unreleased — audit fixes to schema (A15/A16/A17) ship as NEW additive migrations.
+- **Alternative rejected:** editing the historical migration files — rewrites what was reviewed and
+  makes the merged chain unreviewable.
+- **Also recorded (A10 concurrency):** fix with re-read+merge if the change stays small, else
+  document the single-writer assumption — the build agent's call at implementation time.
+
+## D20 · Recovery approach: one merge PR from the chain tip; new units stack on the tip
+- **Choice:** recovery from the reverse-cascade merge = ONE PR merging the chain-tip branch
+  (`feat/shared/l6-one-card-slice`) into `dev-phase2` (Jayden's click — register B13), while the
+  run's new units stack on the chain tip in the meantime.
+- **Alternative rejected:** rebasing or re-cherry-picking the 28 chain commits onto `dev-phase2` —
+  rewrites reviewed history, breaks the PR-per-session record, and invites conflict churn for zero
+  content difference.
