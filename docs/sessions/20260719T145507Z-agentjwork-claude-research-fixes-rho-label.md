@@ -47,3 +47,7 @@
 
 memory: none (F1 is a docs/comment label fix; run state stays covered by
 `docs/temp/phase2-research-fixes/`; the existing phase2-run-state memory pointer is sufficient).
+
+---
+Issue: #100 · PR: #101 (base `docs/research-fixes/run-scaffolding`) · commits `f4b5aa5` (fix) +
+follow-up (orchestration-log number update). Part of #98.
