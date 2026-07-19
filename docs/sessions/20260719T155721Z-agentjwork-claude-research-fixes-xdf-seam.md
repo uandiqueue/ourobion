@@ -90,5 +90,5 @@ the verified port**, never a hand-rolled unverified numeric (the honesty invaria
 seam).
 
 ---
-Issue: #110 · PR: #111 (base `feat/research-fixes/lag-grid-add-lag2`) · commit (fix + bookkeeping) + follow-up (PR/issue-number record).
+Issue: #110 · PR: #111 (base `feat/research-fixes/lag-grid-add-lag2`) · commit `746b650` (fix + bookkeeping) + follow-up `bc94a99`+ (PR/issue-number + commit-hash record).
 Part of #98.
