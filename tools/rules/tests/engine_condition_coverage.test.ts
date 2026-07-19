@@ -60,7 +60,7 @@ test('the shipped corpus exercises both scopes (single rules + the cross coincid
   assert.ok(types.has('coincidence'), 'no cross-metric coincidence blueprint shipped');
 });
 
-test('every shipped coincidence lag is in the C10 set {0(null), 1, 3, 7}', () => {
+test('every shipped coincidence lag is in the C10 set {0(null), 1, 2, 3, 7}', () => {
   for (const { relPath, blueprint } of blueprints) {
     if (blueprint.condition.type !== 'coincidence') continue;
     const lag = blueprint.condition.lagDays;
@@ -69,6 +69,43 @@ test('every shipped coincidence lag is in the C10 set {0(null), 1, 3, 7}', () =>
       `${relPath}: lagDays ${lag} outside the C10 lag set`,
     );
   }
+});
+
+// ─── Lag gate: {0,1,2,3,7} — lag 2 added (phase2-research-fixes C4·F5 / RU7 / A2) ─────────────
+//
+// The engine's load-time lag gate (generate-insights/index.ts) accepts a coincidence rule iff its
+// lagDays is null (≡ lag 0) or a member of ALLOWED_LAG_DAYS. This pins the exact set after adding
+// lag 2 (gut transit / DOMS both peak near the 1–3 day boundary the old {0,1,3,7} grid skipped),
+// and proves lag 2 is now ACCEPTED while an out-of-set lag (4) is still REJECTED. Adding 2 only
+// WIDENS what an author may specify — no shipped blueprint auto-expands across the set (each names
+// a single lagDays), so lag 2 is inert until a rule opts into it.
+test('ALLOWED_LAG_DAYS is exactly {1,2,3,7}: lag 2 accepted, lag 4 rejected (C4·F5)', () => {
+  assert.deepEqual([...ALLOWED_LAG_DAYS].sort((a, b) => a - b), [1, 2, 3, 7]);
+  assert.equal(ALLOWED_LAG_DAYS.has(2), true, 'lag 2 must now be accepted by the gate');
+  assert.equal(ALLOWED_LAG_DAYS.has(4), false, 'lag 4 must still be rejected by the gate');
+  assert.equal(ALLOWED_LAG_DAYS.has(1), true);
+  assert.equal(ALLOWED_LAG_DAYS.has(3), true);
+  assert.equal(ALLOWED_LAG_DAYS.has(7), true);
+});
+
+test('a coincidence rule can be evaluated at lagDays:2 (leaf 1 routed to the lag-2 window)', () => {
+  const params: CoincidenceParams = {
+    metricKeys: ['a_metric', 'b_metric'],
+    both: [
+      { type: 'trend', metricKey: 'a_metric', equals: 'rising', minConfidence: 'low' },
+      { type: 'trend', metricKey: 'b_metric', equals: 'rising', minConfidence: 'low' },
+    ],
+    lagDays: 2,
+    minConfidence: 'low',
+  };
+  const lookups: string[] = [];
+  const getBaseline = (key: string, lag: number): EngineBaseline | null => {
+    lookups.push(`${key}@${lag}`);
+    return baseline({ trend: 'rising' });
+  };
+  assert.equal(evaluateCoincidence(params, getBaseline), true);
+  // both[0] at lag 0, both[1] trailing by the new lag 2 (contract semantics).
+  assert.deepEqual(lookups, ['a_metric@0', 'b_metric@2']);
 });
 
 // ─── Golden vectors: trend ─────────────────────────────────────────────────────────────────

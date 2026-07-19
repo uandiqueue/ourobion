@@ -44,7 +44,8 @@ import {
 // The MVP's 6 hardcoded rules are GONE (their blueprints shipped in data/rules/**, U5): rules
 // now load from the derived `rules` table and evaluate through the pure evaluators, including
 // cross-metric `coincidence` rules SCOPED TO BRAIN NEIGHBOURS (a servable verified_edges 1-hop
-// edge must connect the pair — C10) with lag windows from the C10 set {0,1,3,7}.
+// edge must connect the pair — C10) with lag windows from the C10 set {0,1,2,3,7} (lag 2 added
+// per phase2-research-fixes C4·F5 / RU7 — gut-transit & DOMS peak near the 1–3 day boundary).
 //
 // FiredPattern consumption (§S4 "transport: pure function called in-process by S7's job"):
 // the S4 3-state classify is RECOMPUTED IN-PROCESS by importing evaluate-signals' shared
@@ -340,7 +341,7 @@ Deno.serve(async (req) => {
     if (rule.condition_type === "coincidence") {
       const lag = (rule.condition_params as unknown as CoincidenceParams).lagDays
       if (lag !== null && !ALLOWED_LAG_DAYS.has(lag)) {
-        ruleLoadIssues.push({ ruleId: rule.rule_id, reason: `lagDays ${lag} outside the C10 set {0,1,3,7}` })
+        ruleLoadIssues.push({ ruleId: rule.rule_id, reason: `lagDays ${lag} outside the C10 set {0,1,2,3,7}` })
         continue
       }
     }
