@@ -4,7 +4,7 @@ summary: Human-gated / data-blocked items for the remediation run (B-entries). W
 type: plan
 scope: shared
 status: canonical
-updated: 2026-07-19
+updated: 2026-07-20
 ---
 
 # Phase-2 Research-Fixes — Blocked Register
@@ -95,6 +95,27 @@ instrumentation** and records the **calibration** here as a backlog item — nev
   seam shipped, faithful impl pending) appends are recorded as *amendment intent* in **D4** rather than
   applied in-run (accepted-decision-body immutability guard); a human applies them via the ADR's 2-reviewer
   / supersede channel.
+
+- **B6 · Replace the global 100/50 h-index cutoffs with a field-normalized / percentile rule + reconsider
+  the SJR∨h OR-combination (from F7 / RU6d, RU6f)** — *where it stopped:* F7 **documented** the current
+  heuristic's limitations at the code site (`tools/brain-ingest/src/venue/banding.ts`: strengthened comments
+  on `IMPACT_BANDS_C8` and `bandImpactTier`) and left every value + the OR logic + tier order UNCHANGED. The
+  global integers `highHIndexMin: 100` / `moderateHIndexMin: 50` are uncited and unjustifiable as global
+  integers — journal/venue h is field- and size-dependent and not cross-field comparable (RU6d) — and the
+  `SJR-quartile ∨ h-index` combination mixes non-commensurable metrics on non-commensurable databases with
+  the more-permissive (hotter OpenAlex h) leg winning (RU6f). *What is needed:* **per-field reference data /
+  per-field percentile distributions** (e.g. h-index or a field-normalized indicator's percentile within a
+  Scopus/OpenAlex subject category) to define bands as *percentile-within-field* instead of raw global
+  integers, OR adopt a **field-normalized indicator (SNIP or Journal Citation Indicator / JCI)** whose value
+  is already cross-field comparable; then decide whether the two legs still combine (and if so AND vs OR).
+  The three **fetched-but-unused** OpenAlex signals already on `VenueInfo` — `twoYrMeanCitedness`, `isCore`,
+  `worksCount` (`tools/brain-ingest/src/venue/openalexSources.ts`) — are candidate inputs to a
+  field-normalized / size-aware banding mechanism (none is wired into banding today; wiring them is exactly
+  this backlogged mechanism, out of F7's docs-only scope). *What it gates:* **nothing** — `impactTier` is
+  notability-only (feeds discovery/ranking, never trust; excluded from edgeScore/reliability and the UX
+  applicability axis — RU6g/ADR-0003 §5), so the failure mode is bounded (occasionally over-ranking
+  large/high-volume venues) and the current bands are a safe provisional. Unblock when per-field reference
+  data / percentiles land.
 
 ## Closed
 
