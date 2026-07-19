@@ -32,6 +32,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import {
+  brain,
   buildLoad,
   CLAIMS_BASENAME,
   VERIFICATIONS_BASENAME,
@@ -269,6 +270,18 @@ async function main() {
       ? `${active.serving_band} @ ${active.edge_score.toFixed(3)} (${active.verdict}, ${active.verified_at})`
       : 'no active verification — not servable';
     console.log(`  - ${row.edge_id} → ${gate}`);
+    // RU2 guardrail: surface WHY the edge scored as it did — the component breakdown alongside the
+    // composite (uncited weights, so the composite is a rank aid, not a truth value). Review-only /
+    // non-persisted: the DB projection stays edge_score + serving_band (persisting this is B2 backlog).
+    if (active) {
+      const c = brain.edgeScoreComponents(active.verification);
+      console.log(
+        `      components: confidence ${c.confidence.toFixed(3)} × [base ${c.baseContribution.toFixed(3)} + ` +
+          `tier ${c.tierContribution.toFixed(3)} (w=${c.tierWeight.toFixed(2)}) + ` +
+          `corrob ${c.corroborationContribution.toFixed(3)} (boost=${c.corroborationBoost.toFixed(2)})] ` +
+          `= mult ${c.multiplier.toFixed(3)} → ${c.composite.toFixed(3)}`,
+      );
+    }
   }
 
   if (args.dryRun) {

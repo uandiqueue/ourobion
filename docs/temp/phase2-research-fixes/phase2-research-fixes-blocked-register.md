@@ -27,6 +27,20 @@ instrumentation** and records the **calibration** here as a backlog item — nev
   `deadbandK` registry field) — neither exists yet. *What it gates:* nothing — the global `7` is a safe
   provisional and blocks no other unit; unblock when per-metric reliability data lands.
 
+- **B2 · Persist the edgeScore component breakdown to the edge read store (from F3 / RU2b)** — *where
+  it stopped:* F3 shipped the pure `edgeScoreComponents(v)` and surfaces the breakdown (confidence ·
+  tier · corroboration · contributions · multiplier · composite · band) in the loader's per-edge review
+  log — the cheap, non-persisted guardrail. Persisting it alongside `edge_score` / `serving_band` in the
+  `edge_verifications` projection (so a UI/reviewer reads it from the DB, not just loader stdout) would
+  need a **new column / migration on a git-tracked truth-tier contract** (`shared/brain` + the S6 table
+  schema), which is a 2-reviewer shared-contract change (docs/memory/0002) — out of lane B's additive/
+  non-schema scope. *What is needed:* a shared-contract PR adding the column(s) + migration + the
+  ts↔db parity guard, gated on 2-reviewer sign-off; and a decision on whether to store the full
+  breakdown or recompute-on-read (it is a pure function of the already-stored `verification` jsonb, so
+  recompute-on-read is viable and may make persistence unnecessary). *What it gates:* nothing — the pure
+  function + loader review log already satisfy the RU2 guardrail without a truth-tier change; unblock if
+  a DB-backed reviewer UI needs the components server-side.
+
 ## Closed
 
 _(none yet.)_

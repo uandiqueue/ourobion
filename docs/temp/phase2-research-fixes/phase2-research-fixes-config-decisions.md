@@ -30,3 +30,20 @@ These are *this run's* C-entries; the Phase-2 build run's originals stay in
   evaluators.ts`). Behaviour change (a 6-day baseline is now `low`, was `medium`); proven by the
   boundary test in `tools/rules/tests/engine_condition_coverage.test.ts`. Provisional until per-metric
   calibration (B1).
+
+- **C2 · edgeScore weights + corroboration saturation [F3]** — **value shipped (UNCHANGED, now config):**
+  `EDGE_WEIGHTS = { base 0.6, tier 0.25, corroboration 0.15, corroborationSaturation 3 }` in
+  `shared/brain/index.ts` · **alternatives considered:** leave inline (rejected — violates the ADR-0002
+  "values in config objects, never inline literals" mandate) / re-tune the split (out of scope, and the
+  literature supports no alternative numbers either) · **rationale:** evidence-review **RU2b** — the
+  0.6/0.25/0.15 split and the saturation-at-3 are **engineering judgment, uncited** (no literature
+  supports these or any composite weights); the honest posture is *keep as provisional baseline* + apply
+  the RU2 guardrail: **report the components (confidence, tier, corroboration) alongside the composite**
+  wherever an edge is surfaced for review (Cochrane domain-wise practice). This unit is a **refactor +
+  reporting change only — the composite score and serving bands are byte-identical for all inputs**
+  (proven by the regression table in `tools/edge-loader/tests/edge_score_components.test.ts`, which
+  checks `edgeScore` against the transcribed pre-refactor formula). The breakdown is exposed by the pure
+  `edgeScoreComponents(v)` (the single source of truth `edgeScore` / `servingBand` now read) and
+  surfaced in the loader's per-edge review log (`tools/edge-loader/load_edges.mjs`); persisting it is a
+  shared-contract change → backlogged (B2). Weights stay provisional-until-calibrated (ADR-0003 Open-Q
+  1–2; the F8 sibling).
