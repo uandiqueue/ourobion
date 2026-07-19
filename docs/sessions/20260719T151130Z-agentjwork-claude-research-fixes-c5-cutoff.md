@@ -72,5 +72,5 @@ memory: none (F2's run state is covered by `docs/temp/phase2-research-fixes/`; t
 phase2-run-state memory pointer remains sufficient).
 
 ---
-Issue: #<F2-issue> · PR: #<F2-pr> (base `fix/research-fixes/rho-effect-size-label`) · commits
-`<fix-sha>` (fix + bookkeeping) + follow-up (orchestration-log/session-log number update). Part of #98.
+Issue: #102 · PR: #103 (base `fix/research-fixes/rho-effect-size-label`) · commits
+`f37da44` (fix + bookkeeping) + follow-up (orchestration-log/session-log number update). Part of #98.
