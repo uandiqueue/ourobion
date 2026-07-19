@@ -72,4 +72,5 @@ memory: none (F3's run state is covered by `docs/temp/phase2-research-fixes/`; t
 phase2-run-state memory pointer remains sufficient).
 
 ---
-Issue: #<pending> · PR: #<pending> (base `fix/research-fixes/c5-medium-cutoff-revert`). Part of #98.
+Issue: #104 · PR: #105 (base `fix/research-fixes/c5-medium-cutoff-revert`) · commit `704ca89` (fix +
+bookkeeping) + follow-up (PR/issue-number record). Part of #98.
