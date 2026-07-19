@@ -132,3 +132,28 @@ These are *this run's* C-entries; the Phase-2 build run's originals stay in
   from edgeScore (RU6g), NOT the 100/50 bands or the OR rule → the bands live in code + dev-aid C8 only, so
   **no accepted-doc amendment intent is needed** (unlike F4/F6). Provisional until field-level reference
   data lands (B6).
+
+- **C1 · `EDGE_GATES` serving gates 0.8/0.5 + `EDGE_WEIGHTS` 0.6/0.25/0.15 — provisional-uncalibrated [F8]**
+  — **values re-affirmed (UNCHANGED, provisional-marking comments only): `EDGE_GATES = { high 0.8, mid 0.5 }`
+  and `EDGE_WEIGHTS = { base 0.6, tier 0.25, corroboration 0.15, corroborationSaturation 3 }`** in
+  `shared/brain/index.ts` · **alternatives considered:** pick calibrated gate/weight values now (rejected —
+  lane C ships no guessed constant, and calibration needs a GRADE-rated Cochrane exemplar dataset this repo
+  does not have → backlog **B7**) / re-implement the components guardrail (rejected — F3 already shipped it) ·
+  **rationale:** evidence-review **RU2a,b,f** — **(RU2f)** the gates 0.8/0.5 have no published basis and,
+  because `edgeScore` is uncalibrated, carry **no operational meaning beyond rank order**: until calibrated
+  against a GRADE-rated exemplar set (ADR-0003 Open-Q 1–2), `high`/`mid` are **rank-order UX bands, not truth
+  claims** (contrast Knowledge Vault's Platt-calibrated 0.9/0.7 gates, which do mean ~90%/~70% true; Jüni 1999
+  shows threshold membership on a composite quality score is scale-dependent). **(RU2b)** the weights
+  0.6/0.25/0.15 are **uncited engineering judgment** — no literature supports these or any specific composite
+  weights. **(RU2a)** the additive composite *form itself* is literature-**contested/hostile** (Jüni 1999 →
+  Cochrane abandoned numeric quality scores for domain-by-domain judgment; GRADE is not an additive formula).
+  **The cheap guardrail already shipped in F3** (`EDGE_WEIGHTS` config object + `edgeScoreComponents()`
+  reporting the components alongside the composite — the domain-wise-transparency step RU2a implies); F8 adds
+  **no scoring change** — only provisional-marking comments on `EDGE_GATES`/`EDGE_WEIGHTS` recording the above
+  and pointing at the calibration backlog. **NO value, formula, gate, or weight changed** (edge-loader **45/45**
+  unchanged from F3; typecheck clean; context_sync + flutter analyze green). Calibration (fit weights + set
+  gates against GRADE-rated Cochrane exemplars; also weigh replacing the additive form with domain-wise
+  reporting) backlogged **B7**. RU2a,b,f corroborate ADR-0003 Open-Q 1–2 → amendment intent recorded in **D5**
+  (accepted-ADR immutability — retro-review; ADR-0003 left byte-unchanged). Provisional until the GRADE-rated
+  exemplar dataset lands (B7). *(This entry covers the gates (review's C1) + re-states the weights, whose config
+  lift shipped in F3/C2; the two are the RU2 sibling pair.)*

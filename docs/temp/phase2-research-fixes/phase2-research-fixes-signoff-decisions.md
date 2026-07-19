@@ -4,7 +4,7 @@ summary: Judgment calls made during the remediation run (D-entries). Choice · a
 type: plan
 scope: shared
 status: canonical
-updated: 2026-07-19
+updated: 2026-07-20
 ---
 
 # Phase-2 Research-Fixes — Sign-off Decisions
@@ -148,3 +148,53 @@ would-be appends to ADR-0002 "Open questions / calibration plan":**
 **Deviation from the F6 brief:** the brief asked for the Open-Q1/Open-Q8 appends; per the accepted-ADR
 immutability guard (discovered in F4/D3) they are recorded as amendment intent here rather than applied to
 the ADR body — same append text, same retro-review flag, only the mechanism differs.
+
+### D5 · Composite `EDGE_GATES` 0.8/0.5 + `EDGE_WEIGHTS` 0.6/0.25/0.15 — RU2a,b,f corroborate ADR-0003 Open-Q 1–2; mark provisional, backlog calibration (F8, lane C, RU2a,b,f)
+**The findings (RU2a,b,f, applied not re-derived):** **(RU2a)** the additive composite-score *form itself*
+is literature-**hostile**, not merely uncited: Jüni 1999 applied 25 quality scales to the same trials and the
+"high-quality" subset flipped with the scale chosen — the result that led **Cochrane to abandon numeric quality
+scores for domain-by-domain judgment**; GRADE is explicitly not an additive formula. **(RU2b)** the specific
+weights 0.60/0.25/0.15 are **engineering judgment, uncited** — no published source supports these or any
+specific composite weights. **(RU2f)** the gates 0.8/0.5 have no published basis, and because `edgeScore` is
+uncalibrated they carry **no operational meaning beyond rank order** — `high`/`mid` are UX ordering, not truth
+claims, until calibrated (`decisions-evidence-review.md` §RU2 verdicts a/b/f).
+**Choice (what F8 shipped):** **comments + bookkeeping only — NO scoring change.** Added provisional-marking
+comments on `EDGE_GATES` (0.8/0.5 provisional/uncalibrated → rank-order UX bands, not truth claims, RU2f) and
+`EDGE_WEIGHTS` (uncited engineering judgment + literature-contested additive form, RU2a,b) in
+`shared/brain/index.ts`, pointing at the calibration backlog (**B7**). **No value, formula, gate, or weight
+changed.** The cheap guardrail — the `EDGE_WEIGHTS` config object + `edgeScoreComponents()` reporting the
+components (confidence · tier · corroboration) alongside the composite, the Cochrane-style
+domain-wise-transparency step RU2a implies — **already shipped in F3** (D-none / C2); F8 did NOT re-implement it.
+**Alternatives rejected:** picking calibrated gate/weight values now (forbidden — lane C ships no guessed
+constant; calibration needs a GRADE-rated Cochrane exemplar dataset the repo lacks → B7); re-implementing the
+components guardrail (F3 already did it).
+**ADR-0003 amendment intent (recorded NOT applied — flagged for shared/ retro-review; ADR-0003 is
+`status: accepted` and its body is immutable under `context_sync --check`, same constraint as D3/D4):**
+- **Unlike D3/D4, RU2a,b,f add NO new open question** — they **corroborate ADR-0003's *existing* Open questions
+  1–2** ("Anchor to GRADE-rated exemplars" / "Set gates against that set") and §4 ("gates defined by exemplar
+  behaviour … calibration targets, not properties of the current numbers"), which already say every weight and
+  gate is *provisional — pending calibration* and that "gates on an uncalibrated score" need the exemplar set.
+  The evidence review's contribution is the *external* literature backing (Jüni 1999 / Cochrane domain-wise;
+  the composite-form hostility; the Knowledge-Vault Platt-calibration contrast), which strengthens the case for
+  executing Open-Q 1–2 and adds the **form-replacement** angle (weigh domain-wise reporting vs re-weighting).
+- **Suggested would-be append to ADR-0003 "Open questions / calibration plan" Q1–2 (for a human to apply via the
+  ADR's 2-reviewer / supersede channel):**
+  > **AMENDED 2026-07-19 (evidence-review RU2a,b,f · phase2-research-fixes F8 — retro-review needed):**
+  > the evidence review **corroborates** this calibration plan and adds external grounding. The additive
+  > composite *form* is literature-**hostile** (Jüni 1999: the "high-quality" trial subset flips with the
+  > quality scale chosen — the finding that led Cochrane to abandon numeric quality scores for domain-by-domain
+  > judgment; GRADE is not an additive formula), the weights 0.60/0.25/0.15 are **uncited engineering judgment**,
+  > and gates on an **uncalibrated** `edgeScore` have **no operational meaning beyond rank order** (contrast
+  > Knowledge Vault's Platt-calibrated 0.9/0.7 gates). So Open-Q 1–2 should additionally weigh whether the
+  > additive form is **replaced by domain-wise reporting** rather than merely re-weighted; the
+  > `edgeScoreComponents()` component-reporting guardrail (phase2-research-fixes F3) is the first step of that
+  > path. Calibration + form decision are backlogged (phase2-research-fixes **B7**), pending a GRADE-rated
+  > Cochrane exemplar dataset. *(Additive open-question corroboration note; the accepted §Decision, weights, and
+  > gates above are unchanged.)*
+- **Confirmation:** ADR-0003 (`docs/shared/decisions/0003-paper-reliability.md`) was **left byte-unchanged
+  in-run** — `git hash-object` is identical before and after (`34f37f4…`) and `context_sync --check` passed; the
+  append above is recorded here as amendment intent for a human to apply via the ADR's 2-reviewer / supersede
+  channel.
+**Deviation from the F8 brief:** none of substance — the brief itself directs recording the amendment intent in
+this doc (not editing ADR-0003), which is what was done; the note simply makes explicit that RU2a,b,f *corroborate*
+existing Open-Q 1–2 rather than introducing a new open question (so no separate would-be Open-Q was invented).
