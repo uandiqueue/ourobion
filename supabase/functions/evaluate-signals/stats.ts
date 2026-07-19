@@ -26,6 +26,15 @@ export interface SignalConfig {
   minDistinctValues: number
 }
 
+/**
+ * S5 effective-sample-size method (F6 / RU4d). Values ship in config.ts; the dispatcher in
+ * `effectiveN` defaults to `'pyper-peterman'` when `PairConfig.nEffMethod` is absent.
+ *   'pyper-peterman' — the shipped Bartlett/Pyper–Peterman modified-Chelton estimator (default).
+ *   'xdf'            — the cross-correlation-aware Afyouni–Smith–Nichols (2019) estimator; an
+ *                      INTERIM seam that THROWS until a faithful port is verified (ADR-0002 Open-Q8).
+ */
+export type NEffMethod = "pyper-peterman" | "xdf"
+
 export interface PairConfig {
   /** Pyper–Peterman lag truncation as a fraction of N (ADR-0002: ~N/5 → 0.2). */
   maxLagFraction: number
@@ -35,6 +44,12 @@ export interface PairConfig {
   stabilityStepDays: number
   /** Minimum joint non-null days for a pair row / a stability run (architecture §S5 failure mode). */
   minJointDays: number
+  /**
+   * S5 effective-N method (F6 / RU4d). Optional; ABSENT ⇒ `'pyper-peterman'`, so existing
+   * callers and test fixtures are unaffected and the P&P result stays byte-identical.
+   * `'xdf'` selects the INTERIM seam in `effectiveN` (throws until the faithful port lands).
+   */
+  nEffMethod?: NEffMethod
 }
 
 // ─── Robust location/scale (S4) ─────────────────────────────────────────────────────────
@@ -221,10 +236,14 @@ export function biasCorrectedAutocorr(values: readonly number[], lag: number): n
  *   1/N* = 1/N + (2/N)·Σ_{j=1..J} r_XX(j)·r_YY(j),  J = floor(N·maxLagFraction)
  * with bias-corrected autocorrelations. Clamped to [2, N] (a negative-autocorrelation sum
  * cannot make the series MORE informative than independent observations; nor do we allow
- * a degenerate df). ADR-0002 flags verifying the denominator constant against the primary
- * PDF as a calibration action item; this is the canonical (2/N) rendering it names.
+ * a degenerate df). The coded 2/N coefficient + N/(N−j) correction are the canonical
+ * Bartlett/Bayley–Hammersley/Pyper–Peterman form — verify-first A1 resolved ADR-0002 Open-Q1
+ * (`phase2-research-fixes-findings.md` §A1); `1 + 4Σ/N` is the non-canonical rendering, not this.
+ *
+ * This is the default `effectiveN` path, extracted verbatim so the dispatcher below leaves the
+ * P&P arithmetic and result BYTE-IDENTICAL.
  */
-export function effectiveN(
+export function effectiveNPyperPeterman(
   a: readonly number[],
   b: readonly number[],
   cfg: PairConfig,
@@ -239,6 +258,40 @@ export function effectiveN(
   const invNStar = 1 / n + (2 / n) * sum
   if (invNStar <= 1 / n) return n // clamp at N (independence or negative-sum case)
   return Math.max(2, Math.min(n, 1 / invNStar))
+}
+
+/**
+ * Effective-N dispatcher (S5). Reads `cfg.nEffMethod`, DEFAULTING to `'pyper-peterman'` when
+ * absent so every existing caller/fixture is unaffected and the default computation is identical.
+ *   'pyper-peterman' (default) → `effectiveNPyperPeterman` (byte-identical result).
+ *   'xdf'                      → an INTERIM seam that THROWS (see below).
+ *
+ * ── INTERIM PROVENANCE (F6 / RU4d / ADR-0002 Open-Q8) ────────────────────────────────────────
+ * The Pyper–Peterman/Bartlett estimator depends only on each series' OWN autocorrelation
+ * (Σ ρ_XX·ρ_YY) and is "substantially biased by non-zero cross-correlation" — the exact regime
+ * this detector operates in, since it selects pairs BECAUSE they co-move (RU4d). The principled
+ * fix is the cross-correlation-aware xDF (Afyouni–Smith–Nichols 2019). It is NOT hand-rolled in
+ * this run: the exact Afyouni equations are not obtainable from an accessible source, and a
+ * faithful xDF needs FFT-based auto/cross-correlation + Tukey-taper/adaptive-truncation
+ * regularization + verification against reference vectors — shipping an unverified hand-roll as
+ * functional would violate this run's honesty invariant. So the mechanism/dispatch exists and is
+ * swappable, but the `'xdf'` branch THROWS rather than run unverified science. Faithful port +
+ * verification are backlogged (phase2-research-fixes B5).
+ */
+export function effectiveN(
+  a: readonly number[],
+  b: readonly number[],
+  cfg: PairConfig,
+): number {
+  const method: NEffMethod = cfg.nEffMethod ?? "pyper-peterman"
+  if (method === "xdf") {
+    throw new Error(
+      "nEffMethod 'xdf' not yet implemented — faithful Afyouni xDF port + reference-vector " +
+        "verification pending (phase2-research-fixes B5). Cross-correlation-aware effective-N " +
+        "is the principled fix for co-moving pairs (RU4d/Open-Q8) but must not ship unverified.",
+    )
+  }
+  return effectiveNPyperPeterman(a, b, cfg)
 }
 
 // ─── Student-t two-sided p-value (via the regularized incomplete beta) ──────────────────

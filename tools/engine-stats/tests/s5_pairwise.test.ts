@@ -14,6 +14,7 @@ import {
   averageRanks,
   benjaminiHochberg,
   effectiveN,
+  effectiveNPyperPeterman,
   evaluatePair,
   fisherConfidenceInterval,
   signStability,
@@ -80,6 +81,39 @@ test('N_eff clamps at N when the autocorrelation sum is non-positive (independen
   const a = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3];
   const constant = Array(10).fill(7);
   assert.equal(effectiveN(a, constant, PAIR_CONFIG), 10);
+});
+
+// ─── nEffMethod toggle: P&P default byte-unchanged · xDF INTERIM seam (F6 / RU4d / Open-Q8) ──
+// The mechanism is a swappable dispatcher; the default Pyper–Peterman path must be identical,
+// and the 'xdf' branch must THROW (no unverified cross-correlation-aware science runs in-run).
+
+const NEFF_METHOD_CASES: ReadonlyArray<readonly [string, number[], number[]]> = [
+  ['alternating self-pair (N* = 2 clamp floor)', [1, 2, 1, 2, 1, 2, 1, 2, 1, 2], [1, 2, 1, 2, 1, 2, 1, 2, 1, 2]],
+  ['smooth ramp self-pair (below N)', Array.from({ length: 20 }, (_, i) => Math.floor(i / 2) + 1), Array.from({ length: 20 }, (_, i) => Math.floor(i / 2) + 1)],
+  ['independence clamp at N', [3, 1, 4, 1, 5, 9, 2, 6, 5, 3], Array(10).fill(7)],
+];
+
+test('nEffMethod: default (absent) reproduces the P&P N_eff vectors exactly', () => {
+  // Regression guard: omitting nEffMethod must give the exact same result as the extracted
+  // Pyper–Peterman helper — i.e. the dispatch changed nothing for the shipped default.
+  for (const [label, a, b] of NEFF_METHOD_CASES) {
+    assert.equal(effectiveN(a, b, PAIR_CONFIG), effectiveNPyperPeterman(a, b, PAIR_CONFIG), label);
+  }
+});
+
+test("nEffMethod: explicit 'pyper-peterman' equals the default", () => {
+  const cfg = { ...PAIR_CONFIG, nEffMethod: 'pyper-peterman' as const };
+  for (const [label, a, b] of NEFF_METHOD_CASES) {
+    assert.equal(effectiveN(a, b, cfg), effectiveN(a, b, PAIR_CONFIG), label);
+  }
+});
+
+test("nEffMethod: 'xdf' throws the documented INTERIM error (no unverified science runs)", () => {
+  const cfg = { ...PAIR_CONFIG, nEffMethod: 'xdf' as const };
+  assert.throws(
+    () => effectiveN([1, 2, 1, 2, 1, 2], [1, 2, 1, 2, 1, 2], cfg),
+    /nEffMethod 'xdf' not yet implemented.*B5.*RU4d\/Open-Q8.*must not ship unverified/s,
+  );
 });
 
 // ─── Student-t p-values ──────────────────────────────────────────────────────────────────
