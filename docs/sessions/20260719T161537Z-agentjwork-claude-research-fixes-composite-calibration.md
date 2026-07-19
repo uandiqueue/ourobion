@@ -94,5 +94,5 @@ change, no guessed constant); if the finding *corroborates* an existing ADR open
 one, say so in the amendment intent instead of inventing a new open-Q.
 
 ---
-Issue: #114 · PR: #115 (base `docs/research-fixes/impacttier-heuristic-limits`) · commit `<pending>` (comments + bookkeeping).
+Issue: #114 · PR: #115 (base `docs/research-fixes/impacttier-heuristic-limits`) · commit `12d8e3d` (comments + bookkeeping).
 Part of #98. **Run COMPLETE — last unit.**
