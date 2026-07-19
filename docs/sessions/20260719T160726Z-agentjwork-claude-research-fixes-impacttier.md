@@ -90,5 +90,5 @@ and check whether the value actually lives in an accepted doc before assuming an
 here the 100/50 bands live in code + dev-aid only, so no accepted-doc change was needed.
 
 ---
-Issue: #TBD · PR: #TBD (base `feat/research-fixes/neff-method-toggle-xdf-seam`) · commit `TBD`.
+Issue: #112 · PR: #113 (base `feat/research-fixes/neff-method-toggle-xdf-seam`) · commit `049f182` (docs + bookkeeping).
 Part of #98.
