@@ -85,5 +85,5 @@ CCF" defect was a **premise mismatch** — always verify the implementation exis
 fix the review implies.
 
 ---
-Issue: #<TBD> · PR: #<TBD> (base `feat/research-fixes/deadbandk-intent-instrumentation`) · commit `<TBD>`.
+Issue: #108 · PR: #109 (base `feat/research-fixes/deadbandk-intent-instrumentation`) · commit `8d258dd` (fix + bookkeeping) + follow-up (PR/issue-number record).
 Part of #98.
