@@ -5,6 +5,7 @@ import {
   benjaminiHochberg,
   classifyDaily,
   evaluatePair,
+  fireRate,
   signStability,
   type SignalState,
 } from "./stats.ts"
@@ -372,6 +373,29 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ── RU3c / ADR-0002 Open-Q2 · deadbandK fire-rate instrumentation (MEASUREMENT ONLY) ─────
+  // Accrue the per-metric fire rate (fraction of today's classifications that were non-neutral)
+  // so real n=1 fire-rate data builds up for `deadbandK` calibration. This reads classifier
+  // output; it changes no threshold, no classification, and no response contract. The intent
+  // question (anomaly alert vs ~1-in-3 daily nudge) is product-gated — see phase2-research-fixes
+  // D3 / blocked-register B3; `deadbandK` stays 1.0 until calibrated against these numbers.
+  const statesByMetric = new Map<string, SignalState[]>()
+  for (const s of metricSignals) {
+    const arr = statesByMetric.get(s.metricKey)
+    if (arr) arr.push(s.state)
+    else statesByMetric.set(s.metricKey, [s.state])
+  }
+  const fireRates = [...statesByMetric.entries()]
+    .map(([metricKey, states]) => ({
+      metricKey,
+      n: states.length,
+      fireRate: round(fireRate(states), 4),
+    }))
+    .sort((a, b) => a.metricKey.localeCompare(b.metricKey))
+  if (fireRates.length > 0) {
+    console.log(`[evaluate-signals] deadbandK fire-rate (RU3c/Open-Q2) ${day}:`, JSON.stringify(fireRates))
+  }
+
   return new Response(
     JSON.stringify({
       ok: true,
@@ -380,6 +404,7 @@ Deno.serve(async (req) => {
       metricSignals,
       firedPatterns,
       personalSignals: { pairsEvaluated, rowsUpserted: signalRows.length, rowsPruned },
+      fireRates,
     }),
     { headers: { "Content-Type": "application/json" } },
   )

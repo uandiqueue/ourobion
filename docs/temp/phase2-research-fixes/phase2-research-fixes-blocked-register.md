@@ -41,6 +41,23 @@ instrumentation** and records the **calibration** here as a backlog item — nev
   function + loader review log already satisfy the RU2 guardrail without a truth-tier change; unblock if
   a DB-backed reviewer UI needs the components server-side.
 
+- **B3 · Resolve `deadbandK` intent + calibrate `k` to a target fire rate (from F4 / RU3c)** — *where it
+  stopped:* F4 shipped the **mechanism + instrumentation** (the per-metric `deadbandK` registry field
+  already exists; F4 added the pure `fireRate(states)` helper in `evaluate-signals/stats.ts`, wired to log
+  the per-metric fire rate per run in `evaluate-signals/index.ts` and surfaced as `fireRates` in the
+  handler response). It did **not** change `deadbandK` — it stays **1.0 (provisional)** everywhere. *What
+  is needed:* **(1) a product decision from Jayden** — is S4's daily 3-state signal an *occasional anomaly
+  alert* or a *~1-in-3 daily 3-state nudge*? RU3c shows `k = 1.0` fires ~31.7% of days under a Gaussian
+  (more under heavy tails), which contradicts an "anomaly" reading; if "anomaly", `k` likely needs to be
+  **> 1.5** (D3). **(2) Real per-metric n=1 fire-rate data** — now gatherable from the `fireRate` logging
+  as runs accrue — to calibrate `k` to the chosen target fire rate (ADR-0002 Open-Q2's 0.75–1.5 sweep is
+  the starting plan, but may need to extend past 1.5). *What it gates:* nothing — `deadbandK = 1.0` is a
+  safe provisional and blocks no other unit; unblock when the intent is signed off AND enough fire-rate
+  data has accrued. **Also pending (retro-review):** the ADR-0002 Open-Q2 amendment (exact text in D3) is
+  recorded as *amendment intent* rather than applied in-run, because the accepted-decision-body
+  immutability guard (`context_sync --check`, pre-push + CI) forbids editing an accepted ADR body — a
+  human applies it via the ADR's 2-reviewer / supersede channel.
+
 ## Closed
 
 _(none yet.)_
