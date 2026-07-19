@@ -60,6 +60,10 @@ export const PAIR_MIN_METRIC_DAYS = 14
  * C4 · serve gates. `rhoMin` feeds the `stable` column (|ρ| ≥ 0.3 AND sign-stability);
  * `qMax` / `nEffMin` are stored per row and applied by S7 at read time
  * (signal := q ≤ 0.05 ∧ N_eff ≥ 10 ∧ stable).
+ *
+ * Note: `rhoMin = 0.3` is a conservative ~top-quartile ("relatively large") effect-size
+ * screen — NOT a Cohen-"medium" cutoff (that label is a mislabel; only ~27% of published
+ * correlations exceed .30, per Bosco 2015 / Gignac–Szodorai 2016; see evidence-review RU4b).
  */
 export const PAIR_GATES = {
   rhoMin: 0.3,

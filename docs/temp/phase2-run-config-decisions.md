@@ -33,7 +33,8 @@ a config object, never an inline literal (ADR-0002 mandate). Cross-reference: ar
 - **C4 · S5 n=1 evaluator gates** — Spearman |ρ| ≥ 0.3, BH FDR q ≤ 0.05, Pyper–Peterman N_eff ≥ 10,
   window 60 days, stability = 3 fixed deterministic windows. Alternatives: q ≤ 0.10 (ADR-0002 allows
   loosening only if card volume starves), Pearson (rejected — non-normal ordinal data). Rationale:
-  Cohen-medium effect floor + FDR control keeps n=1 "personal signals" honest.
+  a conservative effect floor (|ρ| ≥ 0.3 is empirically ~top-quartile / "relatively large" — NOT
+  Cohen-"medium"; see evidence-review RU4b) + FDR control keeps n=1 "personal signals" honest.
 - **C5 · S3 baseline confidence cutoffs** — **3 / 5 / 14 days** (low/med/high), per the architecture
   DDL. Note: current deployed code uses 3/**7**/14; U6 adopts 3/5/14. Alternative: keep 7 (no basis
   either way; the doc value wins until calibration says otherwise).
