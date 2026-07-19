@@ -86,5 +86,5 @@ phase2-run-state memory pointer remains sufficient). A run-level finding worth a
 recurs: accepted-ADR appends are blocked in-run by the context_sync immutability guard.
 
 ---
-Issue: #<F4-issue> · PR: #<F4-pr> (base `fix/research-fixes/edge-score-components`) · commit `<sha>`
+Issue: #106 · PR: #107 (base `fix/research-fixes/edge-score-components`) · commit `1511fe9`
 (fix + bookkeeping) + follow-up (PR/issue-number record). Part of #98.
