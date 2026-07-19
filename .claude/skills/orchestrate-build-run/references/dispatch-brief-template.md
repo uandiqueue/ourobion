@@ -20,7 +20,7 @@ You are a build agent in C:\project\ourobion (Windows). <One-sentence mission.>
 ## Session setup
 - You are on `<base branch>` @ <sha> (or later — pull first).
 - Cut: `git checkout -b <type>/<area>/<slug>`
-  (base = current chain tip when stacking, else dev-phase2).
+  (base = current chain tip when stacking, else <integration-branch>).
 
 ## Read first
 - <finding/spec/ADR/decision docs — exact paths, most-binding first>
@@ -44,11 +44,11 @@ You are a build agent in C:\project\ourobion (Windows). <One-sentence mission.>
 ## Bookkeeping
 - Session log docs/sessions/<UTC>-<device>-claude-<slug>.md, house format
   (Attempted/Changed/Decided/Left/Blockers) + `memory:` line.
-- Update docs/temp/phase2-run-orchestration-log.md: worklist row + ledger row.
+- Update docs/temp/<run-slug>-orchestration-log.md: worklist row + ledger row.
 
 ## Commit / push / PR
 - One commit: `<type>(<scope>): <summary>` + Co-Authored-By line. Push.
-- `gh issue create` + `gh pr create --base <predecessor branch or dev-phase2>`
+- `gh issue create` + `gh pr create --base <predecessor branch or <integration-branch>>`
   (body: what + why the bar is met, Closes #<issue>, Claude Code footer).
 - Do NOT merge.
 

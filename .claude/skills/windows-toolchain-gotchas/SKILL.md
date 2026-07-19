@@ -9,7 +9,8 @@ Part of the **orchestrate-build-run** skill set (see that skill for the full run
 
 Six traps, each hit repeatedly during the Phase-2 run. Full command reference:
 `AGENTS.md` §4 (Environment & commands) and the backend test plan
-`docs/temp/briefs/2026-07-18-backend-test-plan.md` — don't duplicate them, read them.
+`docs/temp/briefs/2026-07-18-backend-test-plan.md` (if still present) — don't duplicate
+them, read them.
 
 ## 1. node/flutter are NOT on the base PATH
 
@@ -45,8 +46,8 @@ a test fails mysteriously.
 - Detect: `git diff --stat` showing `Bin`, or `perl -ne 'print "$.\n" if /\x00/' <file>`.
 - **Check before fixing** — a NUL can be intentional:
   `supabase/functions/compute-baselines/index.ts` deliberately uses `\x00` as the
-  `${user_id}\x00${metric_key}` map-key separator (line ~129; renders as a space in
-  most viewers). Preserve it.
+  `${user_id}\x00${metric_key}` map-key separator (search the file for the `\x00`
+  separator; it renders as a space in most viewers). Preserve it.
 - Fix accidental ones: `perl -pi -e 's/\x00/ /g' <file>`.
 - After any Write to critical code, byte-verify.
 
@@ -55,7 +56,7 @@ a test fails mysteriously.
 `scripts/seed-test-data.ps1` is UTF-8 without BOM and **fails to parse** under
 Windows PowerShell 5.1 (a mis-decoded `✓` becomes a smart quote inside a string).
 Don't fight it — every session pipes the SQL straight into the DB container instead
-(proven form, from the SQL file's own header + U7's session log):
+(proven form, from the SQL file's own header + an earlier seeding session's log):
 
 ```powershell
 Get-Content scripts\seed-test-data.sql -Raw |
@@ -71,8 +72,7 @@ create it by direct `auth.users` INSERT — see
 
 Edge functions cannot be `deno check`ed on this machine. Validate instead with
 `npx supabase functions serve` + HTTP invokes; the CI `deno-check` job is the type
-gate — first-run type failures surface on the PR, not locally (that is how U29's
-TS2345 was caught).
+gate — a first-run CI type failure surfaces on the PR, not locally.
 
 ## 6. Heredocs / multiline strings
 

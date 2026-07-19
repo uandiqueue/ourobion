@@ -5,10 +5,12 @@ description: "Use when running an autonomous multi-unit build/fix run on this re
 
 # Orchestrate a build run
 
-The operating loop for an autonomous multi-unit run (the Phase-2 run, 2026-07-15→18, is the
-proven instance: U0–U29, 15-PR stacked chain, audit + audit-fix phase). Member skills:
-**stacked-pr-chain** (chain mechanics + reverse-cascade recovery) and
-**windows-toolchain-gotchas** (environment traps) — read both; this skill assumes them.
+The operating loop for an autonomous multi-unit run (the Phase-2 run is the proven
+instance — see `references/phase2-run-example.md`). Member skills:
+**stacked-pr-chain** (chain mechanics + reverse-cascade recovery),
+**windows-toolchain-gotchas** (environment traps), **record-only-audit** (the
+read-only audit run between build and fix phases), and **evidence-review-run** (the
+record-only literature review of a run's decisions) — read them; this skill assumes them.
 
 ## 1. Roles
 
@@ -26,9 +28,9 @@ proven instance: U0–U29, 15-PR stacked chain, audit + audit-fix phase). Member
 1. Activate the toolchain per shell: `. .\scripts\biotope-env.ps1` (see
    windows-toolchain-gotchas).
 2. `node tools/context_sync.mjs --session-start`; read the latest `docs/sessions/` logs.
-3. Read the run docs under `docs/temp/phase2-run-*.md` — the **orchestration log is the
-   resume point** (read top-to-bottom, then the blocked register, then continue at the
-   first `next` unit). See `references/tracking-docs.md` for what each doc records.
+3. Read this run's tracking docs under `docs/temp/<run-slug>-*.md` (naming convention in
+   `references/tracking-docs.md`) — the **orchestration log is the resume point** (read
+   top-to-bottom, then the blocked register, then continue at the first `next` unit).
 4. **Verify git/chain state against the ledger** — branches, open PRs, and whether the
    integration branch REALLY contains what "merged" claims. Run
    `git log origin/<integration>..origin/<tip>`; a non-empty result after "all merged"
@@ -44,8 +46,8 @@ dependency spine. Only then dispatch unit 1.
 
 ## 4. Unit lifecycle (every unit, no exceptions)
 
-1. **Branch** cut from the current chain tip — or from the integration branch
-   (`dev-phase2`) when nothing is stacked.
+1. **Branch** cut from the current chain tip — or from `<integration-branch>` (the run's
+   integration branch; Phase-2 used `dev-phase2`) when nothing is stacked.
 2. **Build agent implements** from a dispatch brief
    (`references/dispatch-brief-template.md`).
 3. **Full gate green before any PR**: `flutter analyze` + `flutter test` +
@@ -70,18 +72,19 @@ dependency spine. Only then dispatch unit 1.
   config-decisions doc: value shipped · alternatives considered · rationale; values live
   in config objects, never inline literals.
 - Findings marked **by-design in an accepted decision are SKIPPED, not re-decided**
-  (Phase-2 precedent: audit finding A15 stayed as-shipped per D9).
+  (precedent in `references/phase2-run-example.md`).
 
 ## 6. Honesty invariants
 
 - Interim/mock artifacts carry unmistakable provenance strings — e.g.
-  `INTERIM:pending-real-verifier (decorrelation-blocked, register B5)`,
+  `INTERIM:pending-real-<thing> (<why>, register B#)`,
   `MOCK:mock-router (NOT a real verifier verdict)` — and **never persist as truth-tier
   data** (gitignored/scratch dirs only, or clearly-marked DB fields).
 - Report what **actually ran** vs what was only statically checked (the Phase-2 audit's
   whole coverage-gaps section exists because this distinction was kept).
-- Prefer the honest end-state over demo shine (L6 shipped a `hold`-band card with the
-  interim marker rather than faking a verified edge).
+- Prefer the honest end-state over demo shine — ship the weaker-but-true artifact with
+  its interim marker rather than faking a verified one (worked example in
+  `references/phase2-run-example.md`).
 
 ## 7. Dispatching a build agent
 
