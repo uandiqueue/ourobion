@@ -41,6 +41,14 @@ only when every required reviewer has signed it.
 > **Alton:** your units are every row tagged **Alton** or **BOTH** in the ledger (§6). Skip anything
 > tagged **⏸ deferred** — do not sign the statistics.
 
+> **Brain-synthesis lane = Jayden (the whole pipeline that turns a paper into edges).** Breaking a
+> research paper into parts for the LLM and synthesising from them is the agent core:
+> **A4 extract** (`tools/brain-ingest/src/extract.ts` — segment + offsets + role-tagging, LLM-assisted)
+> **+ A6 mentions/co-occurrence** → **A8 synthesis** → **A10 verify**. In the ledger these are
+> **U10** (A8 synthesis) and **U11** (A10 verifier), both Jayden's. The A4-v2 extract/decomposition
+> rebuild (**U15**: A4 · A4b · A2 · A6 · A7) is a **not-yet-built stretch unit — Jayden's when built**;
+> the `extract.ts` shipped today is the pre-phase-2 baseline, outside this sign-off's scope.
+
 ## 4. The git flow (per unit)
 
 The integration branch **`signoff/phase2`** already exists (cut from `dev-phase2`, scaffolding
