@@ -43,14 +43,16 @@
   fixed now, + **O5** (catalog coverage). Formal sign-off is **Alton's** (DB/build) + Jayden's shared
   cosign — still pending.
 
-- **U3 (LLM router): HELD, not signed.** Jayden's review found the decorrelation invariant over-specified
-  (hardcodes `verifier != anthropic`; should be vendor-agnostic `family(verifier) != family(synthesis)`
-  so the main model is swappable) → **O7**; and the per-node `maxOutputTokens`/caps are undocumented
-  guesses → **O8**. Synthesis may move to Opus at key-load (C6/B5). A12 (local-route self-reported model)
-  accepted as mooted once keys land (local route retires). U3 clears after O7/O8 land with the api-key work.
+- **U3 (LLM router): signed by Jayden 2026-07-20 (provisional, with conditions).** Approved the dual-route
+  router + the enforced synthesis↔verifier decorrelation as a sound scaffold. Conditions tracked as
+  follow-ups for the api-key integration (not blockers): decorrelation invariant is over-specified
+  (hardcodes `verifier != anthropic`; generalize to vendor-agnostic `family(verifier) != family(synthesis)`
+  so the main model is swappable) → **O7**; per-node `maxOutputTokens`/caps are undocumented guesses →
+  **O8**; synthesis may move to Opus at key-load (C6/B5). A12 (local-route self-reported model) accepted as
+  mooted once keys land (local route retires).
 
 ## Left
-- **Jayden's remaining sign-offs:** agent lane U9→U10→U11→U13 (U3 held); shared cosigns U5/U8/U19/U20/U28;
+- **Jayden's remaining sign-offs:** agent lane U9→U10→U11→U13 (U1, U3 signed); shared cosigns U5/U8/U19/U20/U28;
   audit acceptance (honesty findings A1/A12).
 - **Alton's queue:** his build units + shared cosigns, per the ledger runbook (he self-serves).
 - **Deferred (nobody now):** research-fixes F1–F8 + stat sub-decisions (C3/C4/C5/C8, U1's value 1.0) —
