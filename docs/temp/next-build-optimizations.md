@@ -258,3 +258,43 @@ Status values: `open` (ready for the next run) · `done` (executed, with the com
 - **Composes with:** the sign-off protocol (this run) · register **B8** (shared/ retro-review) · **O2**
   (science routing later delegates to the stats team).
 - **Gate / what it gates:** gates nothing; process automation that makes the review split self-enforcing.
+
+---
+
+## O7 · Generalize the synthesis↔verifier decorrelation invariant (vendor-agnostic; main model swappable)
+
+- **Source:** U3 (LLM router) sign-off review (Jayden). Config: C6 / `tools/llm-router/src/config.ts`.
+- **Status:** open — **U3 is held on this.**
+- **Intent (Jayden):** the current invariant hardcodes `family(verifier) !== 'anthropic'`, which assumes
+  the main/synthesis model is Anthropic. It is **not** — the synthesis (main) model must be **swappable to
+  any vendor**. The real, general guard is: **the verifier's operator (vendor/family) must differ from the
+  synthesis operator's**, whatever synthesis is. Decorrelation exists to avoid sharing one vendor's
+  training/blind-spots, so it is **symmetric and family-level**, not an Anthropic special-case.
+- **Locked decision — do NOT re-decide:**
+  - Replace the two-clause invariant (`family(synthesis) !== family(verifier)` **AND**
+    `family(verifier) !== 'anthropic'`) with the single general rule
+    **`family(verifier) !== family(synthesis)`**, both resolved from config, for any synthesis vendor.
+  - Keep it **operator/family-level** (not merely a different model id) — same vendor, different model
+    still shares blind-spots.
+  - **No hardcoded vendor name** anywhere in the guard.
+  - It must hold on the **real `api_worker` route** (where it actually matters), not only at config load.
+- **Related C6 model choice (Jayden, at key-load / B5):** synthesis may move `sonnet-5 → opus` for
+  quality; whatever vendor synthesis lands on, the verifier must be a **different** operator (that is what
+  O7 enforces). Pin the exact ids when provisioning keys.
+- **Gate / what it gates:** gates the real adversarial-verification integrity claim once keys land (B5) —
+  land O7 **with** the api-key integration.
+
+## O8 · Document + calibrate the router's provisional config (`maxOutputTokens`, budget caps)
+
+- **Source:** U3 sign-off review (Jayden — "not sure how those config is chosen"). Config: C6/C7 /
+  `router.config.json`.
+- **Status:** open — **U3 is held on this.**
+- **Intent (Jayden):** the per-node `maxOutputTokens` (synthesis/seeder/verifier 8k, phrasing/extract 2k,
+  report 4k) and the C7 caps (200k/run, $5/day/node, 95% hard-stop) are **undocumented provisional
+  guesses** with no recorded basis. Record the **intended rationale per node** (expected output size for
+  that task) and **calibrate against real token usage** once keys land.
+- **Locked decision — do NOT re-decide:**
+  - Do NOT silently retune values first — **document the basis per node**, then calibrate on real runs.
+  - This is **agent-config** calibration (NOT the statistical calibration deferred to O2), but it likewise
+    needs real-run data — so it unblocks alongside the api-key integration (B5), not before.
+- **Gate / what it gates:** gates nothing; the caps are safe provisionals meanwhile.

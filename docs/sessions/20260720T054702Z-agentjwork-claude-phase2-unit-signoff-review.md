@@ -21,7 +21,8 @@
   deadbandK doc reconciliation; O1a §11 drift guard (→O3); O2 Method & Parameter Register (the stats
   dossier — now the **hard gate** for all statistical sign-off); O3 Registry Catalog + co-located review
   surface; O4 make `derived_metrics` read-only; O5 catalog-wide storage-primitive coverage pass; O6
-  CODEOWNERS routing.
+  CODEOWNERS routing; **O7** generalize the decorrelation invariant (vendor-agnostic, main-model
+  swappable); **O8** document/calibrate the router config (maxOutputTokens, caps).
 - **`docs/temp/signoff-instructions.md`** (NEW) — the sign-off runbook: routing, branch→PR→CLI-merge
   flow, annotation format, and the per-unit ledger (24 build units + audit acceptance; F1–F8 deferred).
 - **`docs/temp/phase2-run-signoff-decisions.md`** — sign-off protocol legend + **U1 sign-off** (D5, D8).
@@ -42,8 +43,14 @@
   fixed now, + **O5** (catalog coverage). Formal sign-off is **Alton's** (DB/build) + Jayden's shared
   cosign — still pending.
 
+- **U3 (LLM router): HELD, not signed.** Jayden's review found the decorrelation invariant over-specified
+  (hardcodes `verifier != anthropic`; should be vendor-agnostic `family(verifier) != family(synthesis)`
+  so the main model is swappable) → **O7**; and the per-node `maxOutputTokens`/caps are undocumented
+  guesses → **O8**. Synthesis may move to Opus at key-load (C6/B5). A12 (local-route self-reported model)
+  accepted as mooted once keys land (local route retires). U3 clears after O7/O8 land with the api-key work.
+
 ## Left
-- **Jayden's remaining sign-offs:** agent lane U3→U9→U10→U11→U13; shared cosigns U5/U8/U19/U20/U28;
+- **Jayden's remaining sign-offs:** agent lane U9→U10→U11→U13 (U3 held); shared cosigns U5/U8/U19/U20/U28;
   audit acceptance (honesty findings A1/A12).
 - **Alton's queue:** his build units + shared cosigns, per the ledger runbook (he self-serves).
 - **Deferred (nobody now):** research-fixes F1–F8 + stat sub-decisions (C3/C4/C5/C8, U1's value 1.0) —

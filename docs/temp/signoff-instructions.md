@@ -113,7 +113,7 @@ One row per shipped unit. Update your rows as you sign. `commit/PR` is the thing
 |------|-------|---------|-------------|--------|
 | U1 · L0 contract | BOTH | D5, D8 (deadbandK **value** ⏸) | `b774229` | ✅ Jayden 2026-07-20 · ✅ Alton 2026-07-20 — **cleared** |
 | U2 · storage primitives | Alton (shared part BOTH) | D9 (derived_metrics RLS → O4) | `23f6947` | ✅ Alton 2026-07-20 — approved; concurs with O4 (server-side-only, revert `derived_metrics` to select-only) |
-| U3 · LLM router | Jayden | C6/C7 (model-ids, caps, decorrelation) | `a419d8e` | ⬜ Jayden |
+| U3 · LLM router | Jayden | C6/C7 (model-ids, caps, decorrelation) | `a419d8e` | ⏸ **HELD** — decorrelation must generalize (**O7**); maxOut/caps undocumented (**O8**); verifier id + synthesis-Opus at key-load (B5) |
 | U4 · quoteCheck + venue | Alton | plumbing; impactTier bands C8 ⏸ | `389074f` | ⬜ Alton |
 | U5 · rules-as-data | BOTH | D10 | `e8e4a06` | ⬜ BOTH |
 | U6 · S2 view + S3 baseline | Alton | D11; confidence cutoffs C5 ⏸ | `cfcf257` | ⬜ Alton |
