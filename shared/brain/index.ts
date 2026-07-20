@@ -21,11 +21,22 @@ export function relationKey(subject: string, relation: RelationKind, object: str
   return `${subject}|${relation}|${object}`;
 }
 
-/** Gating thresholds — the confidence floor an edge must clear to be served at each band. */
+/**
+ * Gating thresholds — the confidence floor an edge must clear to be served at each band.
+ *
+ * **Provisional & uncalibrated (RU2f).** The gates 0.8 / 0.5 have no published basis and — because
+ * `edgeScore` is not calibrated to any external probability — they carry **no operational meaning
+ * beyond rank order**. Until they are calibrated against a GRADE-rated exemplar set (ADR-0003
+ * Open-Q 1–2), treat `high` / `mid` as **rank-order UX bands, not truth claims**: a `high` edge is
+ * ranked above a `mid` edge, but "0.8" does not mean "≈80% true" (contrast Knowledge Vault's
+ * Platt-calibrated 0.9/0.7 gates, which do — Jüni 1999 further shows threshold membership on a
+ * composite quality score is scale-dependent). Calibration is backlogged — **phase2-research-fixes B7**.
+ * Do NOT read these as tuned; changing a value here re-bands every edge.
+ */
 export const EDGE_GATES = {
-  /** ≥ this and well-evidenced → served plainly. */
+  /** ≥ this and well-evidenced → served plainly. Provisional (uncalibrated) — a rank-order band, not a ~80%-true claim (RU2f). */
   high: 0.8,
-  /** ≥ this → served with a "limited evidence" qualifier. */
+  /** ≥ this → served with a "limited evidence" qualifier. Provisional (uncalibrated) — a rank-order band, not a truth claim (RU2f). */
   mid: 0.5,
 } as const;
 
@@ -39,6 +50,16 @@ const SERVABLE_VERDICTS: ReadonlySet<Verdict> = new Set<Verdict>(['supported', '
  * honest guardrail is to report the components alongside the composite wherever an edge is surfaced
  * for review (see `edgeScoreComponents`, and RU2's Cochrane-style domain-wise practice). Changing a
  * value here changes the score for every edge — do not treat these as tuned.
+ *
+ * **The composite FORM itself is literature-contested, not just these weights (RU2a).** The evidence
+ * review is actively *hostile* to additive quality scores: Jüni 1999 applied 25 quality scales to the
+ * same trials and the "high-quality" subset flipped with the scale chosen, which led Cochrane to
+ * abandon numeric quality scores for **domain-by-domain judgment**; GRADE is explicitly not an
+ * additive formula. So `edgeScoreComponents()` reporting the parts alongside the composite (shipped in
+ * F3) is the **domain-wise-transparency guardrail** this literature implies — the first step of the
+ * mitigation, not a full remedy. The remedy is ADR-0003 Open-Q 1–2: **fit the weights against
+ * GRADE-rated Cochrane exemplars**, and reconsider whether the additive form should be replaced by
+ * domain-wise reporting. Calibration is backlogged — **phase2-research-fixes B7**.
  */
 export const EDGE_WEIGHTS = {
   /** Floor multiplier: confidence alone, before structural signals shade it. */

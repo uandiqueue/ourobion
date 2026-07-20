@@ -117,6 +117,30 @@ instrumentation** and records the **calibration** here as a backlog item — nev
   large/high-volume venues) and the current bands are a safe provisional. Unblock when per-field reference
   data / percentiles land.
 
+- **B7 · Calibrate `EDGE_GATES` (0.8/0.5) + `EDGE_WEIGHTS` (0.6/0.25/0.15) against a GRADE-rated Cochrane
+  exemplar set, and weigh replacing the additive composite FORM with domain-wise reporting (from F8 /
+  RU2a,b,f)** — *where it stopped:* F8 **marked the numbers provisional at the code site** (comments on
+  `EDGE_GATES` and `EDGE_WEIGHTS` in `shared/brain/index.ts`) and confirmed the calibration is tracked;
+  it changed **no value and no formula**. The cheap guardrail already shipped in **F3** — the
+  `EDGE_WEIGHTS` config object + `edgeScoreComponents()` reporting the parts (confidence · tier ·
+  corroboration) alongside the composite, which is the Cochrane-style domain-wise-transparency step
+  RU2a implies. *What is needed:* **(1) a small gold set of claims already GRADE-rated (High/Moderate/
+  Low/Very-low) in published Cochrane reviews** — data this repo does not have — to *fit the weight
+  vector* so `edgeScore` bins reproduce the human GRADE band (ordinal agreement / weighted κ), then
+  *set the gates* against that set so the ADR-0003 §4 exemplar property holds (a clean tier-4/low-RoB/
+  ≥1-corroboration RCT clears `high`; a single tier-2 cross-sectional does not) — **ADR-0003 Open-Q 1–2**,
+  the accepted calibration plan. **(2) A design decision on the composite FORM itself:** the literature
+  is actively *hostile* to additive quality scores (Jüni 1999: "high-quality" subset flips with scale
+  choice → Cochrane abandoned numeric quality scores for domain-by-domain judgment; GRADE has no
+  additive formula — RU2a), so calibration should also weigh whether the additive form should be
+  *replaced* by domain-wise reporting rather than merely re-weighted (F3's `edgeScoreComponents()` is the
+  first step of that path). *What it gates:* **nothing** — the gates/weights are safe provisionals and
+  the bands are usable as **rank-order UX provisionals** (not truth claims) meanwhile; unblock when the
+  GRADE-rated exemplar dataset lands (or the A10 verifier-confidence calibration curves become available).
+  **Also pending (retro-review):** RU2a,b,f *corroborate* ADR-0003's existing Open-Q 1–2 rather than
+  adding new open questions — recorded as amendment intent in **D5** (ADR-0003 is `status: accepted`; its
+  body is immutable under `context_sync --check`, same constraint as D3/D4), NOT applied to the ADR in-run.
+
 ## Closed
 
 _(none yet.)_
