@@ -114,7 +114,7 @@ One row per shipped unit. Update your rows as you sign. `commit/PR` is the thing
 | U1 · L0 contract | BOTH | D5, D8 (deadbandK **value** ⏸) | `b774229` | ✅ Jayden 2026-07-20 · ✅ Alton 2026-07-20 — **cleared** |
 | U2 · storage primitives | Alton (shared part BOTH) | D9 (derived_metrics RLS → O4) | `23f6947` | ✅ Alton 2026-07-20 — approved; concurs with O4 (server-side-only, revert `derived_metrics` to select-only) |
 | U3 · LLM router | Jayden | C6/C7 (model-ids, caps, decorrelation) | `a419d8e` | ✅ Jayden 2026-07-20 — approved (provisional scaffold): dual-route + the enforced synthesis↔verifier decorrelation are sound. Conditions tracked for the api-key integration (**not blockers**): **O7** generalize the invariant (vendor-agnostic — `family(verifier)≠family(synthesis)`, main model swappable), **O8** document/calibrate `maxOutputTokens`+caps, verifier exact id + possible synthesis→Opus at key-load (**B5**); A12 mooted once the local route retires |
-| U4 · quoteCheck + venue | Alton | plumbing; impactTier bands C8 ⏸ | `389074f` | ⬜ Alton |
+| U4 · quoteCheck + venue | Alton | plumbing; impactTier bands C8 ⏸ | `389074f` | ✅ Alton 2026-07-20 — approved (A9 quoteCheck gate + b2 venue lookup engineering sound: typed unknown-not-silent-low, presence-vs-offset distinction, no fabricated SJR source); C8 band values stay ⏸ deferred (O2). SJR-hookup + known-venue-table follow-ups tracked as O10. |
 | U5 · rules-as-data | BOTH | D10 | `e8e4a06` | ⬜ BOTH |
 | U6 · S2 view + S3 baseline | Alton | D11; confidence cutoffs C5 ⏸ | `cfcf257` | ⬜ Alton |
 | U7 · S4 signals + S5 evaluator | Alton | D12; deadbandK/ρ/N_eff/q C3/C4 ⏸ | `97dbd40` | ⬜ Alton |
