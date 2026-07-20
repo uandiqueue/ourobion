@@ -298,3 +298,88 @@ Status values: `open` (ready for the next run) · `done` (executed, with the com
   - This is **agent-config** calibration (NOT the statistical calibration deferred to O2), but it likewise
     needs real-run data — so it unblocks alongside the api-key integration (B5), not before.
 - **Gate / what it gates:** gates nothing; the caps are safe provisionals meanwhile.
+
+---
+
+## O9 · Location-fetch trigger config — per-source distance/refresh thresholds for env-API collectors
+
+- **Source:** Alton design conversation (2026-07-20), surfaced while reviewing U2/D9 (storage primitives)
+  and the environmental-exposome derived metrics (`docs/biotope/metrics-catalog.md` §C2, D-77–D-102
+  env exposome + D-133–D-145 One Health). **Not yet Jayden-reviewed** — unlike every other entry in this
+  doc, this is a proposal, not a locked decision; flag to Jayden before a build run executes it.
+- **Status:** open — **pending Jayden review** (provenance caveat above; do not treat as pre-approved).
+- **Intent (Alton):** the env-API-backed derived metrics (AQI, weather, pollen, dengue-cluster proximity,
+  NDVI/UV) need a location-change trigger to decide when a network call to an external API is worth
+  making. Location updates should ride the OS-level significant-change/visit API (cheap wakeup; matches
+  E-2's existing "visit + significant-change logging" note) — never continuous GPS polling, which breaks
+  the passive layer's "~zero cost to user" premise (§A1). But "meaningfully different" for *re-fetch*
+  purposes is not one constant: each external source has its own spatial resolution (a dengue cluster is
+  block-sized; AQI/weather are multi-km grids; pollen is regional), and each has its own refresh cadence
+  (most update hourly regardless of movement) — so staleness needs a second, independent time-based
+  trigger alongside the distance check.
+- **Locked decision — do NOT re-decide** *(pending Jayden's confirmation, per the caveat above)*:
+  - This is an **ops/engineering config, NOT a statistical method or parameter** — explicitly out of the
+    MPR's scope (O2 excludes "pure ops knobs... not for the stats team"). Do not route it to the stats
+    team or the MPR.
+  - Routes as **Alton / build-plumbing**, not deferred.
+  - Trigger mechanism = OS significant-change/visit API, not continuous polling — matches E-1/E-2.
+  - Refetch gate (per source, not global):
+    `should_refetch = distance_from(last_fetch_location) > source.spatial_resolution_km`
+    `                 OR (now - last_fetch_time) > source.refresh_interval_hours`
+- **Exactly what to do:**
+  1. When the env-API collectors for D-77–D-102 / D-133–D-145 are actually built, add a per-source
+     code-config registry (location TBD at build time, e.g. alongside the relevant edge function's
+     `config.ts`, following the existing `router.config.json` / `supabase/functions/*/config.ts` pattern)
+     with rows: `source id · spatial_resolution_km · refresh_interval_hours · provenance`.
+  2. Populate initial per-source values as a build-time engineering call (record as a C-entry if formally
+     signed off) — not pre-decided here; illustrative starting points only: AQI/weather ~3–5km / 1hr,
+     dengue clusters ~0.3km / 24hr, pollen coarser/regional / 24hr+.
+  3. Register the new config file so O3's future Registry Catalog picks it up.
+- **Composes with:** O3 (registry catalog indexing), O5 (storage-primitive coverage pass — same
+  D-77–D-102/D-133–D-145 metric set), the not-yet-scheduled env-API collector build.
+- **Gate / what it gates:** gates nothing yet — no env-API collectors exist to build against; this is
+  forward design capture ahead of that work.
+
+---
+
+## O10 · Known-venue override table for impactTier banding (sourced, not vibes)
+
+- **Source:** Alton design conversation (2026-07-20), surfaced while reviewing U4 (`quoteCheck` + venue
+  lookup) sign-off — C8's h-index cutoffs are explicitly uncalibrated placeholders. **Not yet
+  Jayden-reviewed** — a proposal, not a locked decision; flag to Jayden before a build run executes it.
+- **Status:** open — **pending Jayden review**.
+- **Intent (Alton):** `bandImpactTier` (`tools/brain-ingest/src/venue/banding.ts`, C8) only assigns a
+  tier when OpenAlex resolves the venue's h-index/type — unresolved venues already correctly return
+  `unknown`, never a silent `low` (confirmed sound in U4 sign-off). What's still weak is the tier
+  boundary itself: round-number h-index cutoffs with no external anchor. Two complementary fixes,
+  not alternatives:
+  1. **Wire up the already-designed SJR quartile slot** (`sjrQuartile` optional param, shipped in U4 but
+     unfed) — SJR quartiles are an existing, externally-maintained bibliometric standard, so anchoring to
+     it replaces "we picked round numbers" with "we deferred to a recognized ranking." Blocked on
+     sourcing an SJR snapshot + checking its license (CC-BY-NC-SA-ish, per U4's session log).
+  2. **A small, sourced known-venue override table** for cases the automated lookup misses or
+     under-serves (e.g. an obviously top-tier journal whose OpenAlex h-index doesn't reflect it) — e.g.
+     `{ issn/name → tier }` for a short list of well-known venues (Nature, Science, Cell, NEJM, …).
+- **Locked decision — do NOT re-decide** *(pending Jayden's confirmation)*:
+  - **The override table must be built from an AI *research* pass, not an AI *runtime decision*.** An
+    LLM may compile candidate entries, but each entry requires a cited bibliometric source (an SJR
+    quartile, a JCR ranking, an official top-venues list) — not the model asserting reputation from
+    training-data recall. Uncited entries are rejected, same cite-don't-fabricate discipline as
+    `evidence-review-run`.
+  - **No live LLM call in the runtime venue-lookup path.** The table is a one-time research pass, human-
+    reviewed and locked as a static, versioned config (same shape as `IMPACT_BANDS_C8`), checked into
+    the repo — not a call made per-lookup. This preserves the existing pipeline's keyless/deterministic/
+    cached/reproducible properties (U4).
+  - **Precedence order:** known-venue override table → OpenAlex h-index/SJR banding → `unknown`. The
+    override table supplements, it does not replace, the metric-based path.
+- **Exactly what to do:**
+  1. Run an AI-assisted research pass to shortlist well-known venues with a citable bibliometric source
+     per entry; human review locks the final table.
+  2. Add `tools/brain-ingest/src/venue/knownVenues.ts` (or similar), consulted before the OpenAlex call
+     in `bandImpactTier`.
+  3. Separately, resolve the SJR snapshot blocker (fix 1 above) — the two fixes are independent and both
+     reduce C8's current subjectivity.
+- **Composes with:** U4 (the venue-lookup module this extends), O2/MPR (C8's cutoffs are still routed
+  there for the metric-based path; this table is an ops/engineering supplement, not itself statistical).
+- **Gate / what it gates:** gates nothing; reduces C8's placeholder-number reliance ahead of real venue
+  lookups running at scale.
