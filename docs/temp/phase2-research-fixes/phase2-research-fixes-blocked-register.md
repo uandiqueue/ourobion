@@ -18,7 +18,14 @@ instrumentation** and records the **calibration** here as a backlog item — nev
 
 ## Open
 
-_(none yet — populated as lane-C units ship their mechanisms and defer calibration here.)_
+- **B1 · Per-metric medium confidence cutoff (from F2 / RU5b)** — *where it stopped:* F2 reverted the
+  S3 medium cutoff to the single global `7` in-window days. RU5b's stronger recommendation is to make
+  the cutoff **metric-dependent** (the right day-count depends on a metric's within-person variability —
+  cortisol slope needs 5–10 days, steps ~3, sleep 6–7), but that is a lane-C *mechanism* change, not a
+  value tweak. *What is needed:* per-metric within-person variability / reliability data (day-count for
+  target ICC per signal), plus a mechanism to carry a per-metric cutoff (analogous to the per-metric
+  `deadbandK` registry field) — neither exists yet. *What it gates:* nothing — the global `7` is a safe
+  provisional and blocks no other unit; unblock when per-metric reliability data lands.
 
 ## Closed
 

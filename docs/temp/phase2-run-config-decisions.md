@@ -35,9 +35,13 @@ a config object, never an inline literal (ADR-0002 mandate). Cross-reference: ar
   loosening only if card volume starves), Pearson (rejected — non-normal ordinal data). Rationale:
   a conservative effect floor (|ρ| ≥ 0.3 is empirically ~top-quartile / "relatively large" — NOT
   Cohen-"medium"; see evidence-review RU4b) + FDR control keeps n=1 "personal signals" honest.
-- **C5 · S3 baseline confidence cutoffs** — **3 / 5 / 14 days** (low/med/high), per the architecture
-  DDL. Note: current deployed code uses 3/**7**/14; U6 adopts 3/5/14. Alternative: keep 7 (no basis
-  either way; the doc value wins until calibration says otherwise).
+- **C5 · S3 baseline confidence cutoffs** — **3 / 7 / 14 days** (low/med/high). History: the
+  architecture DDL and U6 adopted 3/5/14 (medium lowered 7→5, "no basis either way"). **Reverted 5→7
+  per evidence-review RU5b** (phase2-research-fixes F2): the confirmed literature mildly favours 6–7
+  nights for "medium/acceptable" reliability and *nothing* supports 5, so the deployed 7 is the
+  better-grounded choice. Alternative considered: make the cutoff per-metric (a metric's within-person
+  variability sets its own day-count) — backlogged (needs data + a mechanism not yet built); the global
+  7 is a safe provisional. Do not treat 5 as equivalent to 7 — it was the weaker choice.
 
 ## LLM router (to ship with U3)
 

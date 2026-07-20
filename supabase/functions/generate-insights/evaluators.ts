@@ -158,15 +158,16 @@ export type ConditionType = keyof typeof EVALUATORS
 //
 // Lagged evaluation needs per-window stats the single current-window baseline_snapshots row
 // cannot provide (the deferral recorded on CoincidenceCondition.lagDays lands here). The math
-// is compute-baselines' exactly — mean / population std-dev / half-split trend / C5 3-5-14
+// is compute-baselines' exactly — mean / population std-dev / half-split trend / C5 3-7-14
 // confidence — over a 7-day window ending on an arbitrary day of the S2 series.
+// (medium cutoff reverted 5→7 per evidence-review RU5b; see phase2-research-fixes F2.)
 
 /** Mirrors compute-baselines' BASELINE_CONFIG (C5) — the S3 window + confidence cutoffs. */
 export const WINDOWED_BASELINE_CONFIG = {
   windowDays: 7,
   confidence: {
     lowMinDays: 3,
-    mediumMinDays: 5,
+    mediumMinDays: 7,
     highMinHistoryDays: 14,
   },
 } as const

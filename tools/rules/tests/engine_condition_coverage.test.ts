@@ -161,3 +161,46 @@ test('windowedBaseline reproduces the S3 window stats and C5 confidence on a lag
   // An empty window with zero history returns null (no snapshot → leaf never fires).
   assert.equal(windowedBaseline(new Map(), '2026-07-15'), null);
 });
+
+// ─── C5 medium-cutoff revert 5→7 (RU5b · phase2-research-fixes F2) ──────────────────────────
+//
+// The medium confidence floor was reverted from 5 back to 7 in-window days: the confirmed
+// literature mildly favours 6–7 nights for "medium/acceptable" reliability and nothing supports
+// 5, so the deployed 7 is the better-grounded choice. These boundary cases pin the reverted
+// behaviour on a deterministic integer ramp — 6 in-window days is now `low` (was `medium` under
+// the 5-day floor) and `medium`/`high` require the full 7-day window.
+test('C5 confidence: medium floor is 7 in-window days (reverted 5→7 per RU5b)', () => {
+  const endDay = '2026-07-15';
+  // A clean (date → value) ramp of `historyDays` days ending on `endDay`, minus any `skip` dates
+  // (thins in-window coverage without changing total history). Window = the 7 days ending endDay.
+  const ramp = (historyDays: number, skip: string[] = []): Map<string, number> => {
+    const m = new Map<string, number>();
+    for (let i = 0; i < historyDays; i++) {
+      const d = new Date(Date.UTC(2026, 6, 15));
+      d.setUTCDate(d.getUTCDate() - (historyDays - 1 - i));
+      const iso = d.toISOString().split('T')[0]!;
+      if (!skip.includes(iso)) m.set(iso, i);
+    }
+    return m;
+  };
+
+  // days_of_data = 6 (drop one in-window day), abundant history → LOW (was `medium` at floor 5).
+  const six = windowedBaseline(ramp(20, ['2026-07-10']), endDay);
+  assert.ok(six);
+  assert.equal(six.confidence, 'low');
+
+  // days_of_data = 5 (drop two in-window days) → LOW — the crux of the revert (was `medium`).
+  const five = windowedBaseline(ramp(20, ['2026-07-10', '2026-07-11']), endDay);
+  assert.ok(five);
+  assert.equal(five.confidence, 'low');
+
+  // days_of_data = 7, total_history = 14 (≥ highMinHistoryDays) → HIGH.
+  const sevenHigh = windowedBaseline(ramp(14), endDay);
+  assert.ok(sevenHigh);
+  assert.equal(sevenHigh.confidence, 'high');
+
+  // days_of_data = 7, total_history = 13 (< highMinHistoryDays) → MEDIUM.
+  const sevenMedium = windowedBaseline(ramp(13), endDay);
+  assert.ok(sevenMedium);
+  assert.equal(sevenMedium.confidence, 'medium');
+});
