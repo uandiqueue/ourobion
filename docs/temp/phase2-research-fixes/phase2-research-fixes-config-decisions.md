@@ -4,7 +4,7 @@ summary: Numeric/config values shipped or re-affirmed by the remediation run (C-
 type: plan
 scope: shared
 status: canonical
-updated: 2026-07-19
+updated: 2026-07-20
 ---
 
 # Phase-2 Research-Fixes — Config Decisions
@@ -103,3 +103,32 @@ These are *this run's* C-entries; the Phase-2 build run's originals stay in
   `PairConfig.nEffMethod` (`evaluate-signals/stats.ts`). ADR-0002 Open-Q1 (resolved-confirmed) + Open-Q8
   (xDF seam) amendment intent recorded in **D4** (accepted-ADR immutability — retro-review). Provisional
   until the faithful xDF lands + the P&P→xDF switch is calibrated (B5).
+
+- **C8 · b2 venue `impactTier` bands — h-index 100/50 + SJR∨h OR-combination [F7]** — **value re-affirmed
+  (UNCHANGED, documentation only): `IMPACT_BANDS_C8 = { highHIndexMin 100, moderateHIndexMin 50,
+  highSjrQuartile 1, moderateSjrQuartile 2, … }`** in `tools/brain-ingest/src/venue/banding.ts`, with the
+  OR ladder in `bandImpactTier` (`high` = SJR Q1 ∨ h ≥ 100; `moderate` = SJR Q2 ∨ h ≥ 50; `low` = other
+  resolvable; `preprint` first) · **alternatives considered:** replace the global 100/50 integers with a
+  **field-normalized / percentile** rule, or a field-normalized indicator (**SNIP / JCI**) (rejected in-run
+  — needs per-field reference data this repo does not have → backlog **B6**, never a guessed constant) /
+  make the combination **AND** instead of OR (rejected — out of scope; the OR is the deliberate
+  recall-favouring choice, kept as a documented tradeoff) / drop the h-index leg (rejected — SJR ships no
+  in-repo dataset, so the OpenAlex h path is the functional default) · **rationale:** evidence-review
+  **RU6d** — the 100/50 cutoffs have **NO literature grounding** and are **unjustifiable as global
+  integers** because journal/venue h is field- and size-dependent and explicitly not cross-field comparable
+  (Schubert & Glänzel 2007; Bihari 2020), so one global integer over-promotes high-citation-base fields
+  (biomed) and under-promotes math/CS/humanities; **RU6f** — the `SJR-quartile ∨ h-index` combination mixes
+  **non-commensurable metrics on non-commensurable databases** (Scopus prestige-weighted field-normalized
+  quartile vs raw field-*un*normalized OpenAlex integer), the OpenAlex h leg **runs hotter**, and because
+  it is OR the more-permissive leg wins — an **asymmetric, recall-favouring heuristic**, kept as a
+  documented tradeoff, not as metrically principled. Bounded because **RU6g** (the strongest C8 decision —
+  left untouched): `impactTier` is **notability-only, feeds discovery/ranking, NEVER trust** — excluded
+  from edgeScore/reliability AND the UX applicability axis (ADR-0003 §5; notability ≠ trust); JIF rejection
+  and the notability⊥trust separation are unchanged. **Documentation only — NO behaviour change:** only the
+  comments on `IMPACT_BANDS_C8` and `bandImpactTier` were strengthened; no value, no OR logic, no tier order
+  touched (brain-ingest **323/323** unchanged; typecheck clean). Field-normalization/percentile +
+  OR-reconsideration backlogged **B6** (the fetched-but-unused `twoYrMeanCitedness` / `isCore` /
+  `worksCount` OpenAlex signals could feed it). ADR-0003 §5 records only the *exclusion* of `impactTier`
+  from edgeScore (RU6g), NOT the 100/50 bands or the OR rule → the bands live in code + dev-aid C8 only, so
+  **no accepted-doc amendment intent is needed** (unlike F4/F6). Provisional until field-level reference
+  data lands (B6).
