@@ -47,3 +47,16 @@ These are *this run's* C-entries; the Phase-2 build run's originals stay in
   surfaced in the loader's per-edge review log (`tools/edge-loader/load_edges.mjs`); persisting it is a
   shared-contract change → backlogged (B2). Weights stay provisional-until-calibrated (ADR-0003 Open-Q
   1–2; the F8 sibling).
+
+- **C3 · S4 `deadbandK` [F4]** — **value re-affirmed (UNCHANGED): `deadbandK = 1.0`** (robust-σ̂ units)
+  for all 16 baselineApplicable metrics · **mechanism:** per-metric registry field
+  (`shared/metrics/registry.ts` `signal.deadbandK`), consumed via the `DEADBAND_K` map in
+  `evaluate-signals/index.ts` — *not* a `config.ts` constant (deliberately per-metric) · **alternatives
+  considered:** raising `k` now (e.g. to > 1.5 for an "anomaly" reading — rejected: lane C ships no
+  guessed constant, and the right target depends on the unresolved product intent + real fire-rate data) ·
+  **rationale:** evidence-review **RU3c** — `k = 1.0` fires ~31.7% of days under a Gaussian (more under
+  heavy tails), which is defensible only if the intent is a ~1-in-3 daily 3-state nudge, not an occasional
+  anomaly alert. F4 resolves nothing about the *value*: it keeps `1.0` provisional and ships **fire-rate
+  instrumentation** (`fireRate` in `evaluate-signals/stats.ts`, logged per metric per run by `index.ts`,
+  surfaced as `fireRates` in the handler response) so `k` can later be calibrated to a target fire rate.
+  Intent = product sign-off (D3); calibration = backlog (B3). No behaviour change (measurement-only).

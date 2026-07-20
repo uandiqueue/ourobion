@@ -137,6 +137,22 @@ export function classifyDaily(
   return { state, modifiedZ, suppressed: null, baselineMedian: med, robustSigma: sigma }
 }
 
+/**
+ * Fraction of classified days that fired (non-neutral). Pure, deterministic instrumentation
+ * for `deadbandK` calibration (RU3c / ADR-0002 Open-Q2): under a Gaussian, k = 1.0 leaves
+ * ~68.3% of days neutral and fires ~31.7% (heavier tails fire more), so a run's observed
+ * fire rate is the datum needed to decide whether k matches the intended product behaviour
+ * (occasional anomaly alert vs ~1-in-3 daily 3-state nudge) and to later target a fire rate.
+ * MEASUREMENT ONLY — this reads classifier output; it changes no threshold or classification.
+ * Returns 0 for an empty input.
+ */
+export function fireRate(states: readonly SignalState[]): number {
+  if (states.length === 0) return 0
+  let fired = 0
+  for (const s of states) if (s !== "neutral") fired++
+  return fired / states.length
+}
+
 // ─── Ranking + Spearman ρ (S5) ──────────────────────────────────────────────────────────
 
 /** Average ranks (1-based); ties share the mean of the positions they occupy. */

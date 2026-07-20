@@ -12,6 +12,7 @@ import assert from 'node:assert/strict';
 import {
   MAD_TO_SIGMA,
   classifyDaily,
+  fireRate,
   mad,
   median,
   rejectArtifacts,
@@ -133,4 +134,36 @@ test('too few distinct in-window values → suppressed neutral (minDistinctValue
   const signal = classifyDaily(twoValued, 100, DEADBAND_K, SIGNAL_CONFIG);
   assert.equal(signal.state, 'neutral');
   assert.equal(signal.suppressed, 'degenerate-mad');
+});
+
+// ─── fireRate: deadbandK calibration instrumentation (RU3c / ADR-0002 Open-Q2) ───────────
+// Pure, deterministic, measurement-only. Fraction of classified days that fired (non-neutral).
+
+test('fireRate: non-neutral fraction; all-neutral and empty are 0', () => {
+  assert.equal(fireRate(['up', 'neutral', 'down', 'neutral']), 0.5);
+  assert.equal(fireRate(['neutral', 'neutral', 'neutral']), 0);
+  assert.equal(fireRate([]), 0);
+  assert.equal(fireRate(['up', 'down', 'up']), 1);
+  assert.equal(fireRate(['up']), 1);
+});
+
+test('fireRate through classifyDaily at k=1.0 is materially ABOVE an anomaly rate (RU3c)', () => {
+  // Baseline [1..15]: median 8, MAD 4, σ̂ = 4/0.6745 ≈ 5.9303 (nothing artifact-rejected).
+  // Feed a deterministic standard-normal-quantile sample as evaluated values = median + z·σ̂.
+  // Because the deadband is |x−median| ≤ k·σ̂ ⟺ |z| ≤ k, σ̂ cancels: at k=1.0 a day fires iff
+  // |z| > 1 — exactly the Gaussian tail P(|Z|>1) ≈ 0.3173 that RU3c flags against "anomaly".
+  const zQuantiles = [
+    // Φ⁻¹((i−0.5)/20) for i = 1..20 — 20 evenly-spaced standard-normal quantiles.
+    -1.9600, -1.4395, -1.1503, -0.9346, -0.7554, -0.5978, -0.4538, -0.3186, -0.1891, -0.0627,
+    0.0627, 0.1891, 0.3186, 0.4538, 0.5978, 0.7554, 0.9346, 1.1503, 1.4395, 1.9600,
+  ];
+  const sigmaHat = 4 / MAD_TO_SIGMA;
+  const states = zQuantiles.map(
+    (z) => classifyDaily(DEADBAND_BASE, 8 + z * sigmaHat, DEADBAND_K, SIGNAL_CONFIG).state,
+  );
+  // 6 of 20 quantiles have |z| > 1 (the ±1.15/±1.44/±1.96 pairs) → 0.30.
+  const fr = fireRate(states);
+  assert.equal(fr, 0.3);
+  // The RU3c point: ~30% is far hotter than an "occasional anomaly alert" would be (< ~5-10%).
+  assert.ok(fr > 0.25, `k=1.0 fire rate ${fr} should be materially above an anomaly rate`);
 });
