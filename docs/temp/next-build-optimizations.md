@@ -264,7 +264,7 @@ Status values: `open` (ready for the next run) · `done` (executed, with the com
 ## O7 · Generalize the synthesis↔verifier decorrelation invariant (vendor-agnostic; main model swappable)
 
 - **Source:** U3 (LLM router) sign-off review (Jayden). Config: C6 / `tools/llm-router/src/config.ts`.
-- **Status:** open — **U3 is held on this.**
+- **Status:** open — tracked **condition of U3's sign-off** (Jayden 2026-07-20); lands with the api-key integration (B5).
 - **Intent (Jayden):** the current invariant hardcodes `family(verifier) !== 'anthropic'`, which assumes
   the main/synthesis model is Anthropic. It is **not** — the synthesis (main) model must be **swappable to
   any vendor**. The real, general guard is: **the verifier's operator (vendor/family) must differ from the
@@ -288,7 +288,7 @@ Status values: `open` (ready for the next run) · `done` (executed, with the com
 
 - **Source:** U3 sign-off review (Jayden — "not sure how those config is chosen"). Config: C6/C7 /
   `router.config.json`.
-- **Status:** open — **U3 is held on this.**
+- **Status:** open — tracked **condition of U3's sign-off** (Jayden 2026-07-20); lands with the api-key integration (B5).
 - **Intent (Jayden):** the per-node `maxOutputTokens` (synthesis/seeder/verifier 8k, phrasing/extract 2k,
   report 4k) and the C7 caps (200k/run, $5/day/node, 95% hard-stop) are **undocumented provisional
   guesses** with no recorded basis. Record the **intended rationale per node** (expected output size for
