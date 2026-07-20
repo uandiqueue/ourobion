@@ -46,16 +46,19 @@ changes. Read this top-to-bottom, then the blocked register, then continue at th
 
 ## Worklist
 
-▶ **RESUME AT: F1** — F0 done (scaffolding + lane-A findings committed). Assessment complete; worklist
-below reflects the A1/A2 reframing (see `phase2-research-fixes-findings.md`). **A1: no change needed**
-(coded N_eff is the canonical 2/N Bartlett/P&P form; Open-Q1 resolved-confirmed). **A2: the review's
-"prewhiten-before-CCF" premise does not match the code — there is NO rank-CCF; prewhitening is
-by-design offline per ADR-0002** — so F5 collapses to "add lag 2 + document limitations."
+▶ **RESUME AT: F2** — F0 + F1 done. Assessment complete; worklist below reflects the A1/A2 reframing
+(see `phase2-research-fixes-findings.md`). **A1: no change needed** (coded N_eff is the canonical 2/N
+Bartlett/P&P form; Open-Q1 resolved-confirmed). **A2: the review's "prewhiten-before-CCF" premise does
+not match the code — there is NO rank-CCF; prewhitening is by-design offline per ADR-0002** — so F5
+collapses to "add lag 2 + document limitations." **F1 (chain tip = `fix/research-fixes/rho-effect-size-label`,
+PR #101 · issue #100):** corrected the `|ρ|≥0.3` "medium" mislabel → "conservative ~top-quartile / relatively-large"
+in `phase2-run-config-decisions.md:36` + `evaluate-signals/config.ts` PAIR_GATES doc-comment (RU4b);
+wording/comment only, no behaviour change.
 
 | # | Unit | Lane | Status | Notes |
 |---|------|------|--------|-------|
 | F0 | Run scaffolding + lane-A findings (A1 P&P formula-constant · A2 prewhiten/CCF) | A | **done** | A1 no-change (canonical 2/N confirmed); A2 premise-mismatch (no CCF) → reshapes F5/F6 |
-| F1 | Correct `\|ρ\|≥0.3` "medium" label → "top-quartile / relatively-large" wording (RU4b) | B | next | mislabel lives in `phase2-run-config-decisions.md:36`; also add correct characterization at `config.ts` PAIR_GATES (ADR-0002:115 already hedged) |
+| F1 | Correct `\|ρ\|≥0.3` "medium" label → "top-quartile / relatively-large" wording (RU4b) | B | **done** | fixed `phase2-run-config-decisions.md:36` + `config.ts` PAIR_GATES doc-comment; wording/comment only, no behaviour change. Branch `fix/research-fixes/rho-effect-size-label` · PR #101 · issue #100 · commit `f4b5aa5`. **Chain tip = this branch.** |
 | F2 | Revert C5 medium confidence cutoff **5→7** (code already has 5; U6 regression), or make per-metric (RU5b) | B | queued | 2 synced config objects: `compute-baselines/index.ts:34` (UTF-16!) + `generate-insights/evaluators.ts:165`; behaviour change → test + live proof |
 | F3 | Report edgeScore components (confidence · tier · corroboration) alongside the composite; **lift inline weights 0.6/0.25/0.15 → config object** (RU2 guardrail + ADR-0002 mandate) | B | queued | component reporting is net-new; weights inline at `shared/brain/index.ts:46`; gates already config |
 | F4 | Resolve `deadbandK=1.0` intent mismatch (nudge vs anomaly): D-entry + fire-rate instrumentation; calibration → backlog; ADR-0002 Open-Q2 append (RU3c) | C | queued | mechanism (per-metric registry field) already exists; keep 1.0 until calibrated — no guessed constant |
@@ -82,7 +85,8 @@ the chain so cheap lane-B fixes land before the heavier lane-C design units.
 
 | When (UTC) | Unit | Branch / PR | Outcome |
 |---|---|---|---|
-| 2026-07-19 | F0 setup | (this session) — scaffolding on dev-phase2 | run created; assessment agents dispatched |
+| 2026-07-19 | F0 setup + lane-A | `docs/research-fixes/run-scaffolding` · PR #99 · issue #98 | run created; A1 no-change, A2 premise-mismatch; docs-only, context_sync green. |
+| 2026-07-19 | F1 label fix | `fix/research-fixes/rho-effect-size-label` · PR #101 · issue #100 | corrected `\|ρ\|≥0.3` "medium" mislabel → conservative ~top-quartile/relatively-large (RU4b) at `phase2-run-config-decisions.md:36` + `config.ts` PAIR_GATES comment; wording/comment only, no behaviour change; context_sync + engine-stats typecheck/36 tests + flutter analyze all green. **Chain tip = this branch.** |
 
 ## Notes for the resuming orchestrator
 
