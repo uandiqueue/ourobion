@@ -12,6 +12,26 @@ updated: 2026-07-18
 Non-trivial choices made autonomously during the run. Review order: D1 first (it colors everything).
 Numeric hyperparameters/config values are in [`phase2-run-config-decisions.md`](./phase2-run-config-decisions.md).
 
+## Sign-off protocol (added 2026-07-20)
+
+Each decision carries a **Review** line (who must approve) and a **Sign-off** line
+(✅ approved / ⬜ pending / ⏸ deferred · reviewer · date · comment). A decision is **cleared** only
+when every required reviewer has signed. Routing for the two-person team (Jayden + Alton):
+
+- **`shared/` contracts → BOTH** (memory 0002 2-reviewer rule; register B8) — non-negotiable.
+- **Agent-related** (LLM router, synthesis, adversarial verifier, seeder, prompts — the hackathon
+  deliverable) **→ Jayden.**
+- **Build / app / tools / CI / DB migrations / deterministic engine → Alton.**
+- **Statistical method or number decisions → DEFERRED (⏸)** until the **Methodology & Parameter
+  Register** is built next build (next-build `O2`); a stats team then reviews the science through it.
+  Neither teammate signs the *science* now; Alton may still sign a stats unit's **engineering**
+  correctness (built as specified, tests green).
+
+**Sign-off git flow:** each unit signs off on its **own branch → PR → merged (CLI) into the
+`signoff/phase2` integration branch** (only `dev-phase2` / `main` carry merge protection, so the
+integration branch takes CLI merges). Path-based enforcement of the routing is proposed as a
+`CODEOWNERS` file (next-build `O6`).
+
 ## D1 · Session PRs are self-merged into `dev-phase2`; `shared/` PRs flagged for retro-review
 - **Choice:** each session PR is merged by the orchestrator once the testing gate is green
   (`flutter analyze` + `flutter test` + `context_sync --check` + touched package suites). PRs touching
