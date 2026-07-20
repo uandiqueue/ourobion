@@ -74,6 +74,28 @@ instrumentation** and records the **calibration** here as a backlog item — nev
   (both shipped coincidence rules are lag 1 / lag 0). Unblock when a lag-7 rule is authored AND real data
   shows the weekly confound matters.
 
+- **B5 · Implement + verify the faithful cross-correlation-aware xDF effective-N, then calibrate the
+  P&P→xDF switch (from F6 / RU4d / ADR-0002 Open-Q8)** — *where it stopped:* F6 shipped the **swappable
+  mechanism** — a `nEffMethod: 'pyper-peterman' | 'xdf'` toggle on `PAIR_CONFIG` with `effectiveN`
+  dispatching on it (P&P default, byte-identical; extracted `effectiveNPyperPeterman` helper). The `'xdf'`
+  branch is an **INTERIM seam that throws** — no unverified science runs. It did **not** implement xDF.
+  *Why not in-run:* the **exact Afyouni–Smith–Nichols (2019) xDF equations are not obtainable from an
+  accessible source** (primary paper + preprint paywalled; only the algorithm shape is public), and a
+  faithful xDF needs FFT-based auto/cross-correlation + Tukey-taper/adaptive-truncation regularization +
+  verification against reference vectors — shipping an unverified hand-roll as functional would violate this
+  run's honesty invariant (D4). *What is needed (port recipe):* (1) port `xDF.m` / `AC_fft.m` / `xC_fft.m`
+  from the open reference repo `github.com/asoroosh/xDF`; (2) write a **deterministic TS port** and **verify
+  it against reference vectors generated from the MATLAB/Octave reference** (fixed seeds, tabulated N_eff to
+  tolerance); (3) choose + record the **regularization** (Tukey taper M≈√T, or adaptive truncation); (4)
+  flip `PAIR_CONFIG.nEffMethod` to `'xdf'` (or make it per-run) and **calibrate the P&P→xDF switch on real
+  co-moving-pair n=1 data**. *What it gates:* nothing — `nEffMethod = 'pyper-peterman'` is the safe,
+  behaviour-unchanged default and blocks no other unit; the co-moving-pair bias (RU4d) is a documented
+  method limitation, not a serve-path bug. The `effectiveN` throw message references this **B5**. **Also
+  pending (retro-review):** the ADR-0002 Open-Q1 (resolved-confirmed, 2/N Bartlett/P&P) and Open-Q8 (xDF
+  seam shipped, faithful impl pending) appends are recorded as *amendment intent* in **D4** rather than
+  applied in-run (accepted-decision-body immutability guard); a human applies them via the ADR's 2-reviewer
+  / supersede channel.
+
 ## Closed
 
 _(none yet.)_

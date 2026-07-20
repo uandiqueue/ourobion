@@ -42,6 +42,17 @@ export const PAIR_CONFIG: PairConfig = {
   stabilityStepDays: 10,
   /** Joint days below this → no row (architecture §S5 failure mode: "joint days < 10 → no row"). */
   minJointDays: 10,
+  /**
+   * C6 · S5 effective-N method [F6 / RU4d]. Default **`'pyper-peterman'`** — the shipped
+   * Bartlett/Pyper–Peterman modified-Chelton estimator, behaviour UNCHANGED. The alternative
+   * `'xdf'` selects the cross-correlation-aware Afyouni–Smith–Nichols (2019) estimator, which
+   * is the principled fix for the co-moving-pair bias (P&P uses only each series' OWN
+   * autocorrelation, yet the detector picks pairs *because* they co-move). `'xdf'` is an
+   * INTERIM seam: `effectiveN` THROWS on it until a faithful port is verified against reference
+   * vectors (backlog B5; ADR-0002 Open-Q8). Shipping unverified xDF would violate the run's
+   * honesty invariant, so the toggle exists but no unverified science runs.
+   */
+  nEffMethod: "pyper-peterman",
 }
 
 /** C4 · the 60-day joint-series evaluation window. */

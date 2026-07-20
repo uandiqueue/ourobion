@@ -84,3 +84,22 @@ These are *this run's* C-entries; the Phase-2 build run's originals stay in
   confound** is a genuine small concern → deseasonalize-before-lag-7 backlogged (**B4**). Provisional until
   physiological calibration. §11 records no lag grid → no accepted-doc change needed (grid lives in code +
   dev-aid C10; this run's amendment is C4 here).
+
+- **C6 · S5 effective-N method toggle [F6]** — **value shipped: `nEffMethod = 'pyper-peterman'`** (default,
+  behaviour UNCHANGED) · **alternatives considered:** `'xdf'` — the cross-correlation-aware Afyouni–Smith–
+  Nichols (2019) estimator, the principled fix for the co-moving-pair bias (**INTERIM**: `effectiveN`
+  **throws** on it; faithful port + reference-vector verification backlogged **B5**) / hand-rolling xDF now
+  (rejected — exact Afyouni equations not accessibly available; FFT + Tukey-taper/adaptive-truncation
+  complexity; unverified science violates the run's honesty invariant, D4) / no toggle at all (rejected —
+  RU4d is a real bias; the swappable mechanism should exist now, science later) · **rationale:** evidence-
+  review **RU4d** — the Pyper–Peterman/Bartlett effective-N uses only each series' OWN autocorrelation
+  (`Σ ρ_XX·ρ_YY`) and is "substantially biased by non-zero cross-correlation", the exact regime the detector
+  operates in (it selects pairs *because* they co-move). F6 ships the **mechanism, not the science**:
+  `effectiveN` dispatches on `PAIR_CONFIG.nEffMethod` (optional, absent ⇒ `'pyper-peterman'`), with the P&P
+  path extracted verbatim into `effectiveNPyperPeterman` — **byte-identical** for the default (regression-
+  proven in `tools/engine-stats/tests/s5_pairwise.test.ts`: default reproduces the existing N_eff vectors
+  exactly; explicit `'pyper-peterman'` equals the default; `'xdf'` throws the documented INTERIM error).
+  Lives in `PAIR_CONFIG.nEffMethod` (`evaluate-signals/config.ts`) + the `NEffMethod` type / optional
+  `PairConfig.nEffMethod` (`evaluate-signals/stats.ts`). ADR-0002 Open-Q1 (resolved-confirmed) + Open-Q8
+  (xDF seam) amendment intent recorded in **D4** (accepted-ADR immutability — retro-review). Provisional
+  until the faithful xDF lands + the P&P→xDF switch is calibrated (B5).
