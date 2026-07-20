@@ -75,6 +75,12 @@ integration branch takes CLI merges). Path-based enforcement of the routing is p
   `deadbandSigma: 0.5` (mean/SD).
 - **Alternative rejected:** shipping the superseded name/semantics and migrating later — a contract
   field rename is exactly the churn the 2-reviewer rule exists to prevent.
+- **Review:** BOTH (shared/ L0 contract — 2-reviewer rule) · lead **Jayden** (brain/agent contract).
+- **Sign-off:** ✅ **Jayden 2026-07-20** — approved (contract/semantics): `deadbandK` = ADR-0002
+  robust-σ̂ semantics, correctly superseding `deadbandSigma`. Reconciled against live code this review.
+  Doc drift in §7/§9/§11 → **O1** (next build); the **method validity + the value `1.0` are statistics
+  → ⏸ deferred** (methodology register **O2** / backlog **B3**), not signed here.
+  ⬜ **Alton** — pending co-sign (shared/ contract).
 
 ## D6 · Run-tracking docs live in `docs/shared/` as indexed canonical docs
 - **Choice:** the four `phase2-run-*` docs sit in `docs/shared/` with full front-matter, picked up by
@@ -96,6 +102,10 @@ integration branch takes CLI merges). Path-based enforcement of the routing is p
 - **Rationale:** memory 0002's optional-with-default rule protects existing instances; the build agent
   verified there are zero persisted claim/verification instances and zero constructors in code, so
   strictness is free now and saves a tightening migration later.
+- **Review:** BOTH (shared/ brain contract — 2-reviewer rule) · lead **Jayden**.
+- **Sign-off:** ✅ **Jayden 2026-07-20** — approved; required / required-nullable is the right call, and
+  the zero-persisted-instances + zero-constructors basis was re-verified against live code this review.
+  ⬜ **Alton** — pending co-sign (shared/ contract).
 
 ## D9 · Storage-primitive schema judgment calls (U2)
 - **Choices (full list + rationale in session log `20260715T140420Z-…storage-primitives.md`):** jsonb
