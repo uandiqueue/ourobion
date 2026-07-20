@@ -60,3 +60,27 @@ These are *this run's* C-entries; the Phase-2 build run's originals stay in
   instrumentation** (`fireRate` in `evaluate-signals/stats.ts`, logged per metric per run by `index.ts`,
   surfaced as `fireRates` in the handler response) so `k` can later be calibrated to a target fire rate.
   Intent = product sign-off (D3); calibration = backlog (B3). No behaviour change (measurement-only).
+
+- **C4 · Coincidence-rule lag grid [F5]** — **value shipped: `ALLOWED_LAG_DAYS = {1, 2, 3, 7}`**
+  (effective cross-metric grid **{0, 1, 2, 3, 7}** days; lag 0 encoded as `lagDays: null`) — **added lag
+  2** to the prior C10 set {0,1,3,7} · **alternatives considered:** leave the grid at {0,1,3,7} (rejected —
+  it skips the dense 1–3 day physiological zone) / a continuous lag scan (rejected — n=1 ~60-day data
+  can't support it, and this path is a boolean baseline conjunction, not a scan) · **rationale:**
+  evidence-review **RU7** (RU7a,e,f) — gut transit (median ~28h; functional-GI 43–60h) and DOMS (peak
+  24–48h) both peak **near the 1–3 day boundary** the old grid skipped; lag 2 is a low-cost fill of that
+  zone. The set is **physiologically-plausible coverage, NOT calibrated** (gut 1–3d, DOMS 1–2d, short
+  env-exposures 0–7d). Lives in `ALLOWED_LAG_DAYS` (`generate-insights/evaluators.ts`) + the load-time gate
+  (`generate-insights/index.ts`). **Widen-only, no behaviour change:** adding 2 only widens what an author
+  may specify — lag 2 is **inert until a blueprint opts into it** (verified: the two shipped coincidence
+  blueprints each name a single `lagDays` — `hrv_rise_after_sleep_rise`=1, `gut_comfort_mood_comove`=null;
+  no rule auto-expands across the allowed set). Proven by the added lag-2-accepted / lag-4-rejected gate
+  test + lagDays:2 evaluation test in `tools/rules/tests/engine_condition_coverage.test.ts`.
+  **Coincidence-path limitations recorded (A2 reframing — this is NOT the review's CCF rewrite):** this
+  lag path is a **boolean conjunction of baseline leaves at lagged windows, not a rank cross-correlation**
+  (`phase2-research-fixes-findings.md` §A2), so (a) **serve-time prewhitening/deseasonalizing stays
+  by-design offline per ADR-0002** — none added; (b) **"treat the 4 lags as one hypothesis" (RU7e) is moot
+  as coded** — the lag path never enters the BH/FDR family (that family is the S5 lag-0 Spearman pair set
+  only), so there is no lag multiplicity to correct; (c) **lag-7 ↔ weekly-periodicity (day-of-week)
+  confound** is a genuine small concern → deseasonalize-before-lag-7 backlogged (**B4**). Provisional until
+  physiological calibration. §11 records no lag grid → no accepted-doc change needed (grid lives in code +
+  dev-aid C10; this run's amendment is C4 here).

@@ -58,6 +58,22 @@ instrumentation** and records the **calibration** here as a backlog item — nev
   immutability guard (`context_sync --check`, pre-push + CI) forbids editing an accepted ADR body — a
   human applies it via the ADR's 2-reviewer / supersede channel.
 
+- **B4 · Deseasonalize day-of-week before trusting lag-7 coincidences (from F5 / RU7f / A2 R2)** — *where
+  it stopped:* F5 added lag 2 to the coincidence grid and documented the coincidence-path limitations, but
+  did **not** touch the lag-7 window. A `coincidence` rule at `lagDays: 7` compares two baseline fires
+  exactly 7 days apart, which **aligns with weekly calendar rhythm** — a lag-7 coincidence can reflect a
+  day-of-week periodicity (e.g. weekend behaviour) rather than a real 7-day physiological horizon (the
+  RU7f weekly-periodicity confound, narrowed by A2 to the boolean-conjunction surface — weaker than for a
+  rank CCF, but still live). *What is needed:* a **day-of-week deseasonalize step** applied to the series
+  before the lagged windowed-baseline recomputation (`windowedBaseline` in `generate-insights/
+  evaluators.ts`), plus **real n=1 data** to confirm the confound bites in practice. Note serve-time
+  prewhitening/deseasonalizing is **by-design offline per ADR-0002** — so any such step belongs in the
+  offline-authoring pipeline, not the deterministic serve path; this backlog item is where that decision
+  would be revisited if lag-7 coincidences prove unreliable. *What it gates:* nothing — the lag-7 window
+  stays available and is a documented-limitation, not a bug; no shipped blueprint currently uses lag 7
+  (both shipped coincidence rules are lag 1 / lag 0). Unblock when a lag-7 rule is authored AND real data
+  shows the weekly confound matters.
+
 ## Closed
 
 _(none yet.)_
