@@ -116,6 +116,16 @@ integration branch takes CLI merges). Path-based enforcement of the routing is p
 - **The one precedent conflict:** `derived_metrics` got all four RLS policies while `baseline_snapshots`
   is select-only — followed the session spec (client-side derivation already exists in M2; "never
   hand-edit" is a process rule, not an RLS rule). Flag if you'd rather match the select-only precedent.
+- **Review:** Alton (build/plumbing — storage primitives; not a shared/ contract change).
+- **Sign-off:** ✅ Alton 2026-07-20 — approved. Schema/PK/jsonb judgment calls (D9) confirmed sound:
+                 jsonb vs fixed-width value columns, `signals`' natural composite PK, `daily_log`
+                 deferral, no overlap-exclusion on `state_bands` — all reasonable engineering calls.
+                 The one flagged precedent conflict is resolved: **derived_metrics should be
+                 server-side-only** — concur with Jayden's pre-flag and **O4** (revert to select-only,
+                 matching `baseline_snapshots`/`personal_signals`/`composed_insights`). M2's on-device
+                 derivation writes `daily_gut_rows`, not `derived_metrics`, so D9's client-write premise
+                 doesn't actually apply here; nothing writes the table today, so the revert is free.
+                 O4 is now unblocked to execute.
 
 ## D10 · Rule-blueprint contract judgment calls (U5)
 - **Choices where the design doc was silent** (full detail in session log `20260715T152517Z-…rules-as-data.md`):
