@@ -80,7 +80,7 @@ integration branch takes CLI merges). Path-based enforcement of the routing is p
   robust-σ̂ semantics, correctly superseding `deadbandSigma`. Reconciled against live code this review.
   Doc drift in §7/§9/§11 → **O1** (next build); the **method validity + the value `1.0` are statistics
   → ⏸ deferred** (methodology register **O2** / backlog **B3**), not signed here.
-  ⬜ **Alton** — pending co-sign (shared/ contract).
+  ✅ **Alton 2026-07-20** — approved (naming/semantics call, not the value); co-sign complete.
 
 ## D6 · Run-tracking docs live in `docs/shared/` as indexed canonical docs
 - **Choice:** the four `phase2-run-*` docs sit in `docs/shared/` with full front-matter, picked up by
@@ -105,7 +105,7 @@ integration branch takes CLI merges). Path-based enforcement of the routing is p
 - **Review:** BOTH (shared/ brain contract — 2-reviewer rule) · lead **Jayden**.
 - **Sign-off:** ✅ **Jayden 2026-07-20** — approved; required / required-nullable is the right call, and
   the zero-persisted-instances + zero-constructors basis was re-verified against live code this review.
-  ⬜ **Alton** — pending co-sign (shared/ contract).
+  ✅ **Alton 2026-07-20** — approved (required/required-nullable, zero-instance basis is sound); co-sign complete.
 
 ## D9 · Storage-primitive schema judgment calls (U2)
 - **Choices (full list + rationale in session log `20260715T140420Z-…storage-primitives.md`):** jsonb
