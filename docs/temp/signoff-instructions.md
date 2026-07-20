@@ -75,7 +75,9 @@ git merge --no-ff signoff/u2-storage-primitives
 git push                                  # the PR auto-closes as merged
 ```
 
-- **BOTH (shared/) units:** wait for the other reviewer's PR approval **before** the CLI merge.
+- **BOTH (shared/) units:** each reviewer signs via **their own PR** (adds their own ✅). Merge each
+  half as it lands — a merged one-sided sign-off is fine and expected. The unit is **cleared** only when
+  **both ✅ appear** on `signoff/phase2` (the ledger row shows both).
 - **Additive commits only** — never `git commit --amend` / force-push a pushed branch.
 - Do units in ledger order where you can (they touch the same file; sequential merges stay conflict-free).
 
