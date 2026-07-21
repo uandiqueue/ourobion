@@ -22,7 +22,8 @@
   dossier — now the **hard gate** for all statistical sign-off); O3 Registry Catalog + co-located review
   surface; O4 make `derived_metrics` read-only; O5 catalog-wide storage-primitive coverage pass; O6
   CODEOWNERS routing; **O7** generalize the decorrelation invariant (vendor-agnostic, main-model
-  swappable); **O8** document/calibrate the router config (maxOutputTokens, caps).
+  swappable); **O8** document/calibrate the router config (maxOutputTokens, caps); **O9** demand-side
+  gap-driven seeding loop (the A1-gap-ledger complement to C9's predetermined seeds).
 - **`docs/temp/signoff-instructions.md`** (NEW) — the sign-off runbook: routing, branch→PR→CLI-merge
   flow, annotation format, and the per-unit ledger (24 build units + audit acceptance; F1–F8 deferred).
 - **`docs/temp/phase2-run-signoff-decisions.md`** — sign-off protocol legend + **U1 sign-off** (D5, D8).
@@ -52,7 +53,11 @@
   mooted once keys land (local route retires).
 
 ## Left
-- **Jayden's remaining sign-offs:** agent lane U9→U10→U11→U13 (U1, U3 signed); shared cosigns U5/U8/U19/U20/U28;
+- **U9 (agentic seeder): signed by Jayden 2026-07-22.** C9 (LLM phrases *queries* for known candidates
+  only — `derivedFrom` + blueprints + static topics; cannot hallucinate edges) approved as the right
+  cold-start **supply-side** seeding. Recorded the **demand-side gap-driven loop** (A1 gap ledger → new
+  research from real user patterns, verifier-gated) as the planned complement → **O9** (future, L7/L8/U16).
+- **Jayden's remaining sign-offs:** agent lane U10→U11→U13 (U1, U3, U9 signed); shared cosigns U5/U8/U19/U20/U28;
   audit acceptance (honesty findings A1/A12).
 - **Alton's queue:** his build units + shared cosigns, per the ledger runbook (he self-serves).
 - **Deferred (nobody now):** research-fixes F1–F8 + stat sub-decisions (C3/C4/C5/C8, U1's value 1.0) —

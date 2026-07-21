@@ -298,3 +298,30 @@ Status values: `open` (ready for the next run) · `done` (executed, with the com
   - This is **agent-config** calibration (NOT the statistical calibration deferred to O2), but it likewise
     needs real-run data — so it unblocks alongside the api-key integration (B5), not before.
 - **Gate / what it gates:** gates nothing; the caps are safe provisionals meanwhile.
+
+---
+
+## O9 · Build the demand-side (gap-driven) seeding loop — the complement to predetermined seeds (C9)
+
+- **Source:** U9 (agentic seeder) sign-off (Jayden). Architecture L7/L8 + the **A1 gap ledger**; worklist
+  **U16** (stretch).
+- **Status:** open.
+- **Intent (Jayden):** C9's predetermined seeder (registry `derivedFrom` + rule blueprints + static
+  topics) is only the **cold-start / supply-side** answer to "what should the brain research" — kept
+  deliberately conservative (no LLM-invented candidates) while the verifier can't yet police quality.
+  The planned **complement** is the **demand-side, gap-driven loop**: when a user's personal signal (S5)
+  fires with **no matching verified edge**, the **A1 gap ledger** records that gap, and the aggregate
+  demand drives **new** research (gap → queue (A3) → dispatch → seeder → synthesize → verify → new edge).
+  This lets the knowledge graph grow from **real user patterns**, not only pre-declared relationships.
+  Predetermined seeds is "just one way"; this is the second.
+- **Locked decision — do NOT re-decide:**
+  - This **does NOT replace or loosen C9** — it is the **second, complementary** path (supply = C9
+    predetermined; demand = gap-driven). Both stay.
+  - Gap-driven candidates remain **verifier-gated** — the adversarial verifier stays the quality filter,
+    so this only becomes safe once the **real non-Anthropic verifier runs (B5)**. Do NOT open free
+    LLM candidate-invention without that gate (that is the exact C9 line, held until the verifier is real).
+  - Build the pieces the architecture already specs: **A1 gap ledger + status classifier, A3 transport/
+    queue, dispatch → seeder** (worklist **U16** / L7–L8).
+  - **Privacy:** the A1 ledger aggregates `demand` with **NO user ids** (architecture §A1) — preserve that.
+- **Gate / what it gates:** gates nothing now (C9 predetermined seeds is the working supply); unblocks
+  graph growth from real user gaps once the verifier + gap loop land (**B5** + **U16**).
