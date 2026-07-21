@@ -119,7 +119,7 @@ One row per shipped unit. Update your rows as you sign. `commit/PR` is the thing
 | U6 · S2 view + S3 baseline | Alton | D11; confidence cutoffs C5 ⏸ | `cfcf257` | ⬜ Alton |
 | U7 · S4 signals + S5 evaluator | Alton | D12; deadbandK/ρ/N_eff/q C3/C4 ⏸ | `97dbd40` | ⬜ Alton |
 | U8 · S6 edge store + loader | BOTH | D13 | `b5b0115` | ⬜ BOTH |
-| U9 · agentic seeder | Jayden | C9 | `f13d359` | ⬜ Jayden |
+| U9 · agentic seeder | Jayden | C9 | `f13d359` | ✅ Jayden 2026-07-22 — approved: C9 (seed *queries* from known candidates only — registry `derivedFrom` + blueprints + static topics; LLM is query-phrasing-only, **cannot hallucinate edges**) is the right **cold-start supply**. This is deliberately the leash; the **demand-side gap-driven loop** (A1 gap ledger → new research from real user patterns, verifier-gated) is the planned complement → **O9** (future, L7/L8/U16). Approved as the bootstrap knowing the gap-loop comes later. |
 | U10 · A8 synthesis | Jayden | built-to-spec (real run) | `138fea4` | ⬜ Jayden |
 | U11 · A10 verifier scaffold | Jayden | D4 | `106e120` | ⬜ Jayden |
 | U12 · S7/S8 engine refactor | Alton | D14 | `a9204ee` | ⬜ Alton |
