@@ -26,6 +26,8 @@
   gap-driven seeding loop (the A1-gap-ledger complement to C9's predetermined seeds).
 - **`docs/temp/signoff-instructions.md`** (NEW) — the sign-off runbook: routing, branch→PR→CLI-merge
   flow, annotation format, and the per-unit ledger (24 build units + audit acceptance; F1–F8 deferred).
+- **`docs/temp/phase2-unit-index.md`** (NEW) — the review cockpit: one row per unit with build/sign-off
+  status, owner, decision refs, **session-log slug + key code paths**, and commit/PR. Ledger links to it.
 - **`docs/temp/phase2-run-signoff-decisions.md`** — sign-off protocol legend + **U1 sign-off** (D5, D8).
 - **Sign-off git structure:** integration branch **`signoff/phase2`** (off `dev-phase2`, unprotected →
   CLI-mergeable); each unit signs off on its own `signoff/uN` branch → PR → CLI-merge into `signoff/phase2`.

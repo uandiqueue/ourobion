@@ -107,6 +107,9 @@ note "built to spec, PR reviewed" + your name/date.
 One row per shipped unit. Update your rows as you sign. `commit/PR` is the thing to review.
 **Deferred stat sub-decisions** inside a unit are called out so you sign only the engineering.
 
+> **Navigation:** for status + **code-path & session-log pointers** per unit, see the unit index —
+> [`phase2-unit-index.md`](./phase2-unit-index.md). This ledger stays the authoritative *sign-off* record.
+
 ### Build run (`phase2-run`)
 
 | Unit | Owner | Confirm | commit / PR | Status |
