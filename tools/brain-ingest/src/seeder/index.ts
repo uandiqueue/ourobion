@@ -59,7 +59,13 @@ export interface SeederOptions {
   metrics?: readonly RegistryMetricInput[];
   /** Injected blueprints (tests); default loaded from `data/rules`. */
   blueprints?: readonly BlueprintInput[];
-  /** Topic anchors; default the static `SEEDS`. */
+  /**
+   * Topic anchors; default the static `SEEDS`. The CLI passes the MERGED
+   * static + `ingestion_seeds` pool (O14 seeds-as-data, `dbSeeds.ts`) so
+   * human-added db seeds anchor candidates exactly like static topics — the
+   * C9 pair gate is untouched (a topic anchor carries no metric pair and the
+   * LLM still cannot add pairs).
+   */
   topics?: readonly TopicInput[];
   now?: () => number;
   log?: (line: string) => void;
@@ -107,8 +113,12 @@ export async function generateSeedQueries(opts: SeederOptions = {}): Promise<Gen
   );
 
   const { system, prompt } = buildSeederPrompt(candidates);
+  // U8/D13 carry-forward: construct via the async factory so nao-edited cap
+  // overrides (llm_router_cap_overrides) bind this real pipeline call.
+  // Fail-soft: absent env / unreachable Supabase → file caps + one warning.
   const router: SeederRouter =
-    opts.router ?? new LlmRouter({ ...(opts.runId !== undefined ? { runId: opts.runId } : {}) });
+    opts.router ??
+    (await LlmRouter.create({ ...(opts.runId !== undefined ? { runId: opts.runId } : {}) }));
 
   const response = await router.route({ nodeId: 'seeder', system, prompt, expectJson: true });
 
@@ -146,4 +156,6 @@ export {
   SEED_QUERIES_FILE,
 } from './artifact.js';
 export { loadBlueprints, loadRegistryMetrics, repoRoot } from './load.js';
+export { fetchDbSeeds, mergeSeeds, loadMergedSeeds } from './dbSeeds.js';
+export type { FetchDbSeedsOptions, MergedSeeds } from './dbSeeds.js';
 export type * from './types.js';

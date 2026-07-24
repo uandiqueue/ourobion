@@ -10,9 +10,10 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { buildCandidates, candidateCounts } from '../src/seeder/candidates.js';
 import { validateSeederResponse } from '../src/seeder/validate.js';
@@ -125,6 +126,71 @@ test('candidates: a blueprint pair equal to a derivedFrom pair is deduped away',
   const blueprints: BlueprintInput[] = [{ ruleId: 'r', metricKeys: ['a', 'b'], status: 'active' }];
   const c = buildCandidates({ metrics, blueprints, topics: [] });
   assert.deepEqual(c.map((x) => x.id), ['df:a__b']); // rb:a__b dropped as dup
+});
+
+// ── O14 seeds-as-data: db topics anchor EXACTLY like static topics (C9 gate) ─
+
+const DB_TOPIC: TopicInput = {
+  topic: 'magnesium_sleep',
+  query: 'magnesium supplementation sleep quality',
+  topicTags: ['magnesium_sleep'],
+};
+
+test('O14/C9: a db-loaded topic anchors candidates exactly like a static topic — no new pair source', () => {
+  const withDb = buildCandidates({
+    metrics: METRICS,
+    blueprints: BLUEPRINTS,
+    topics: [...TOPICS, DB_TOPIC],
+  });
+  const anchor = withDb.find((c) => c.id === 'st:magnesium_sleep');
+  assert.ok(anchor, 'the db topic becomes an st: anchor');
+  assert.equal(anchor!.source, 'static_topic', 'same provenance bucket as a static topic');
+  assert.deepEqual(anchor!.metricKeys, [], 'a topic anchor NEVER carries a metric pair');
+  assert.equal(anchor!.topic, 'magnesium_sleep');
+
+  // The pair-bearing candidates are BYTE-IDENTICAL with or without the db topic:
+  // adding a seed can never add, remove, or reorder a pair (C9).
+  const withoutDb = buildCandidates({ metrics: METRICS, blueprints: BLUEPRINTS, topics: TOPICS });
+  const pairsOf = (cs: typeof withDb) => cs.filter((c) => c.metricKeys.length > 0);
+  assert.deepEqual(pairsOf(withDb), pairsOf(withoutDb));
+
+  // And no NEW candidate source appeared — the tally still knows exactly three.
+  assert.deepEqual(Object.keys(candidateCounts(withDb)).sort(), [
+    'derivedFrom',
+    'rule_blueprint',
+    'static_topic',
+  ]);
+});
+
+test('O14/C9: the LLM still cannot smuggle a pair in via a db-topic response key', () => {
+  const cands = buildCandidates({ metrics: [], blueprints: [], topics: [...TOPICS, DB_TOPIC] });
+  const body = JSON.stringify({
+    'st:magnesium_sleep': ['magnesium intake and sleep architecture'],
+    // an LLM "helpfully" inventing a metric pair for the new topic — must be dropped:
+    'df:magnesium_intake__sleep_duration_min': ['magnesium vs sleep duration'],
+    'rb:magnesium_intake__hrv_sdnn_ms': ['magnesium vs HRV'],
+  });
+  const r = validateSeederResponse(body, cands);
+  assert.deepEqual(r.rejectedKeys.sort(), [
+    'df:magnesium_intake__sleep_duration_min',
+    'rb:magnesium_intake__hrv_sdnn_ms',
+  ]);
+  assert.deepEqual(r.byId.get('st:magnesium_sleep'), ['magnesium intake and sleep architecture']);
+});
+
+test('O14/C9: the candidates.ts header invariant ("ONLY source of pairs") still holds verbatim', () => {
+  const src = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'seeder', 'candidates.ts'),
+    'utf8',
+  ).replace(/\r\n/g, '\n'); // CRLF checkouts (core.autocrlf) must not defeat the pin
+  assert.ok(
+    src.includes('This list is the ONLY source of pairs (C9'),
+    'the C9 header invariant must stay in candidates.ts — seeds-as-data adds topics, never pairs',
+  );
+  assert.ok(
+    src.includes('the LLM must\n * not add pairs'),
+    'the LLM-may-not-add-pairs clause must stay in candidates.ts',
+  );
 });
 
 // ── response validation ───────────────────────────────────────────────────────

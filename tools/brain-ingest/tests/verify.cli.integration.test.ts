@@ -2,8 +2,9 @@
  * ACCEPTANCE TEST (i) — O15/B1 · the mandatory integration test on the REAL CLI seam.
  *
  * This drives the SAME entry the `brain-ingest verify` command executes — `main([...])`
- * with argv-level wiring (parseArgs → runVerify → new LlmRouter() → the real api_worker
- * route) — NOT a direct `verifyClaim` call with an injected `retrieve`. The router's
+ * with argv-level wiring (parseArgs → runVerify → await LlmRouter.create() → the real
+ * api_worker route) — NOT a direct `verifyClaim` call with an injected `retrieve`. The
+ * router's
  * transport is captured at the FETCH level (global `fetch` stubbed, offline — no live LLM
  * call), so what we assert is the ACTUAL request the router would put on the wire.
  *

@@ -19,6 +19,8 @@ import {
   candidateCounts,
   enumerateSeederCandidates,
   generateSeedQueries,
+  loadMergedSeeds,
+  type MergedSeeds,
 } from './seeder/index.js';
 import { pairFromKeys, synthesize, claimsPath, defaultEdgesDir } from './synth/index.js';
 import { repoRoot } from './seeder/load.js';
@@ -211,11 +213,28 @@ function parseCap(options: Map<string, string>): number | undefined {
 }
 
 /**
+ * Log the O14 topic-pool header ("topics: N static + M db") so every run makes
+ * the seeds source visible; the merge itself is `seeder/dbSeeds.ts` (fail-soft:
+ * no/unreachable Supabase → static only + one loud warning on stderr).
+ */
+async function loadTopicPool(log: (line: string) => void): Promise<MergedSeeds> {
+  const merged = await loadMergedSeeds({ warn: (m) => process.stderr.write(m + '\n') });
+  log(
+    `topics: ${merged.staticCount} static + ${merged.dbCount} db` +
+      (merged.dbAvailable ? '' : ' (db seeds unavailable — static only)'),
+  );
+  return merged;
+}
+
+/**
  * `seed-queries` — the agentic seeder (design steps 1–3).
  *  - `--candidates-only`: print the deterministic candidate list, no LLM call.
  *  - `--dry-run`: print candidates + the prompt that WOULD be sent, no call/write.
  *  - default: call the router (local_agent mailbox per config), validate, and
  *    write `data/corpus/seed-queries.json`.
+ * Topic anchors are the MERGED static + `ingestion_seeds` pool (O14
+ * seeds-as-data): a db seed anchors candidates exactly like a static topic;
+ * the C9 pair gate is untouched.
  */
 async function runSeedQueries(
   flags: Set<string>,
@@ -223,9 +242,10 @@ async function runSeedQueries(
 ): Promise<number> {
   const cap = parseCap(options);
   const log = (line: string) => process.stdout.write(line + '\n');
+  const topics = (await loadTopicPool(log)).seeds;
 
   if (flags.has('candidates-only')) {
-    const candidates = await enumerateSeederCandidates();
+    const candidates = await enumerateSeederCandidates({ topics });
     const counts = candidateCounts(candidates);
     log(
       `candidates: ${candidates.length} (derivedFrom=${counts.derivedFrom} ` +
@@ -236,7 +256,7 @@ async function runSeedQueries(
   }
 
   if (flags.has('dry-run')) {
-    const candidates = await enumerateSeederCandidates();
+    const candidates = await enumerateSeederCandidates({ topics });
     const counts = candidateCounts(candidates);
     const { system, prompt } = buildSeederPrompt(candidates);
     log(
@@ -249,6 +269,7 @@ async function runSeedQueries(
   }
 
   const result = await generateSeedQueries({
+    topics,
     ...(cap !== undefined ? { capPerCandidate: cap } : {}),
     log,
   });
@@ -382,7 +403,9 @@ async function runVerify(flags: Set<string>, options: Map<string, string>): Prom
     if (!dryRun) {
       // The router config enforces the non-Anthropic decorrelation invariant at load;
       // a real dispatch surfaces the missing key (run decision D4 / register B5).
-      runOpts.router = new LlmRouter();
+      // U8/D13 carry-forward: the async factory fetches nao's cap overrides
+      // (llm_router_cap_overrides) FAIL-SOFT so they bind this real verify run.
+      runOpts.router = await LlmRouter.create();
       runOpts.verifierModel = 'router:verifier-node';
     }
   }
@@ -426,6 +449,9 @@ export async function main(argv: string[]): Promise<number> {
         return 0;
 
       case 'ingest': {
+        // O14 seeds-as-data: discovery draws from the merged static + db pool
+        // (fail-soft; a db slug is also a valid --seed selector on real runs).
+        const pool = await loadTopicPool((line) => process.stdout.write(line + '\n'));
         const result = await run({
           seed: options.get('seed'),
           limit: parseLimit(options),
@@ -436,6 +462,7 @@ export async function main(argv: string[]): Promise<number> {
           memoryGuard: {},
           // Opt-in: read control/ingest-config.json from R2 (src/control.ts).
           controlFromR2: flags.has('remote-control'),
+          seedPool: pool.seeds,
         });
         printRunResult(result);
         return 0;
@@ -445,12 +472,14 @@ export async function main(argv: string[]): Promise<number> {
         // Resume is `ingest` without a dry-run: already-'fetched' papers are
         // skipped (run() resumes from the manifest), so this picks up where an
         // interrupted multi-day run stopped.
+        const pool = await loadTopicPool((line) => process.stdout.write(line + '\n'));
         const result = await run({
           seed: options.get('seed'),
           limit: parseLimit(options),
           dryRun: false,
           memoryGuard: {},
           controlFromR2: flags.has('remote-control'),
+          seedPool: pool.seeds,
         });
         printRunResult(result);
         return 0;

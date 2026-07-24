@@ -217,8 +217,12 @@ export async function synthesize(opts: SynthesizeOptions): Promise<SynthesizeRes
   if (missing.length > 0) log(`synth: no canonical text for ${missing.length} paper(s): ${missing.join(', ')}`);
   if (texts.size === 0) throw new Error('synth: no canonical text loaded for any requested paper');
 
+  // U8/D13 carry-forward: construct via the async factory so nao-edited cap
+  // overrides (llm_router_cap_overrides) bind this real pipeline call.
+  // Fail-soft: absent env / unreachable Supabase → file caps + one warning.
   const router: SynthesisRouter =
-    opts.router ?? new LlmRouter({ ...(opts.runId !== undefined ? { runId: opts.runId } : {}) });
+    opts.router ??
+    (await LlmRouter.create({ ...(opts.runId !== undefined ? { runId: opts.runId } : {}) }));
   const validateClaim = opts.validateClaim ?? (await loadClaimValidator(root));
   const validateCopy = opts.validateCopy ?? (await loadCopyValidator(root));
 
