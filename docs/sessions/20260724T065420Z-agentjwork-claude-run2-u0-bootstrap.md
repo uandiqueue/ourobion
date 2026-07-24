@@ -80,5 +80,9 @@ NOT-live-verified list). U2 (O15 verifier grounding) marked in-progress and disp
   loop 1–4 from the nao seam (loader → flagged rows → rule cards → +7 backfill → 11 patterns).
   D11 recorded (backfill semantics, provenance mechanism, auth-stub repair, harness-classifier
   note); ledger row 7. U7 (biotope trend + provenance views) marked in-progress and dispatched.
+- U7 done — PR #130, gates green (flutter analyze clean, 111/111, context_sync) + live service
+  proof (21-point series + provenance RPC parse as demo user). MAIN LOOP 1–5 FULLY BUILT. D12
+  recorded (CustomPaint, TEST-MODE stamp, U21 tile-line flag); ledger row 8. U8 (O10 model-config +
+  spend boundaries + nao panel, feature a) marked in-progress and dispatched.
 
 memory: Run 2.0 launched 2026-07-24 — resumable state = docs/temp/phase2-run-2/orchestration-log.md on the feat/phase2-run-2/* chain (worktree C:\project\ourobion-run2); inputs live ON the run branch, not dev-phase2.

@@ -200,4 +200,24 @@ undersized maxOutputTokens yields empty visible text. Size generously in downstr
   (stage-2); actions reviewed by the orchestrator — local-stack admin user + session-cookie route
   testing, exactly per brief. Recorded for transparency.
 
+## D12 · U7 implementation choices (biotope trend + provenance) — U7
+
+- **No new dependency:** trend chart is hand-rolled CustomPaint (polyline + dots + nice-ticks;
+  date-proportional x-axis so missing days render as honest gaps). fl_chart rejected — the app
+  already hand-rolls CustomPaint and "functional, not pretty" is locked.
+- **Placement:** TRENDS card section on the Home tab (reload-on-focus free); provenance is a pushed
+  detail screen off the insight-card tile (no 6th nav tab; placeholders untouched).
+- **TEST-MODE honesty:** the stamp ("scaffolded + unit-tested…") renders under EVERY edge verdict;
+  Dart const in ProvenanceCopy with a lockstep comment pointing at tools/llm-router TEST_MODE_LABEL
+  + a character-exact test pin (no cross-language import exists). All new strings added to
+  copy-gate test lists.
+- **Contract tolerance:** every ProvenanceEdge field except edgeId is nullable (the RPC's LEFT
+  joins can null them) — parse-don't-crash.
+- **Flagged, not changed:** the PRE-EXISTING "verified <date>" line on the card tile's research
+  basis (U21-era) arguably owes the same D15/TEST-MODE stamp — left as-is (out of scope), recorded
+  for sign-off review here and in the U7 session log.
+- Environment notes for future Flutter units: plugin injection needed an unsandboxed flutter run
+  (symlink creation); worktree needs gitignored apps/biotope/.env.public copied from the main
+  checkout.
+
 _(Further D-entries appended per unit as the run executes.)_

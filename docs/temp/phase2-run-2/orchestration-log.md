@@ -32,12 +32,13 @@ reproduces from a clean local stack.
 **Current state:** U0 done (#123) · U1 done (#124; router OpenAI-only TEST-MODE, caps 1.00 USD/day/
 node + 60k tok/run) · U2 done (#125; verifier grounded — evidence-bearing citations, fixture corpus,
 CLI retrieve wiring, acceptance (i) green). Local supabase stack UP (API 54321 / DB 54322). Chain
-tip: feat/phase2-run-2/u6-nao-data-loader (U6 done, #129 — nao /loader + run-analysis relay + nao
-CI job; main loop 1–4 live-proven from the nao seam). Tracking-doc updates ride the chain tip.
-Demo dev user on local stack: u6-demo@ourobion.local (has 21 days simulated data + cards).
+tip: feat/phase2-run-2/u7-biotope-trend-provenance (U7 done, #130 — trend + provenance screens;
+MAIN LOOP 1–5 fully built, features a–d remain). Tracking-doc updates ride the chain tip.
+Demo dev user on local stack: u6-demo@ourobion.local (21 days simulated data + cards; password was
+reset by U7 via auth admin API — see U7 session log).
 BOTH keys present in tools/brain-ingest/.env (gitignored): OPENAI (≤20 SGD) + ANTHROPIC (≤2 SGD,
 optional verifier decorrelation — see Budget + D2 AMENDED).
-**Next action:** U7 is `in-progress` (marked before dispatch, per PART R). If resuming mid-U7:
+**Next action:** U8 is `in-progress` (marked before dispatch, per PART R). If resuming mid-U8:
 re-run the WHOLE unit — git status/diff the worktree, reset or finish partial work, redo gate +
 tests before its PR.
 
@@ -56,8 +57,8 @@ One writer at a time; each unit stacks on the chain tip.
 | U4 | Card semantics: orientation-aware cards (ACCEPTANCE (ii) 8-vector matrix), research-context/contradiction gap-only (O18 decided), gap_ledger table + composer writes, kill pairEdges fallback (correlates/modulates never decorate) | O16, O18, O9-table | done |
 | U5 | Serve-pipeline on-demand trigger (runs compute-baselines → evaluate-signals → generate-insights; note: evaluate-signals has NO cron today), provenance read surface (card→edges→claims/citations view), baseline upsert-and-prune (+O19 test gates) | O12-backend, O19 | done |
 | U6 | Simulated-data loader: nao page + API route writing biotope tables (provenance-flagged, incremental by-day) + "Run analysis now" button (calls run-pipeline server-side) + FIRST nao unit adds nao CI job (typecheck+test) | O11 | done |
-| U7 | biotope demo surfaces: trend/graph on metric_daily_values, provenance detail view (get_insight_provenance RPC; handles "still researching"), post-trigger refresh | O12-app | in-progress |
-| U8 | Model-config + spend boundaries (Supabase read surfaces for router config + ledger; caps-edit write path router honors) + nao panel (feature a) | O10 | queued |
+| U7 | biotope demo surfaces: trend/graph on metric_daily_values, provenance detail view (get_insight_provenance RPC; handles "still researching"), post-trigger refresh | O12-app | done |
+| U8 | Model-config + spend boundaries (Supabase read surfaces for router config + ledger; caps-edit write path router honors) + nao panel (feature a) | O10 | in-progress |
 | U9 | Claims curation + human REJECT: edge_human_verdicts migration, loader/view overlay (reject supersedes for serving), nao paper→claims page + reject action | O13 | queued |
 | U10 | Seeds-as-data: seeds table migration, nao seed-add UI, seeder reads table as 4th candidate source (C9 pair-only gate intact) | O14 | queued |
 | U11 | Gap surfacing: nao ingestion-view of gap_ledger (detection landed in U4); signal-no-edge → gap row → visible in nao | O9 slice | queued |
@@ -140,6 +141,7 @@ load-bearing facts:
 
 | 6 | U5 | feat/phase2-run-2/u5-trigger-provenance-prune | #128 | engine-stats 49/49 + tsc; rules 82/82 + tsc; db reset clean; LIVE 3-stage pipeline + authed provenance JSON + prune/freshness/A14 proofs; context_sync green | 0.00 | 0.0002 | O12-backend+O19 closed; run-pipeline + get_insight_provenance(bigint) shipped; SNAPSHOT_FRESHNESS_DAYS=7; evaluate-signals config.toml entry added (cron still H3) |
 | 7 | U6 | feat/phase2-run-2/u6-nao-data-loader | #129 | nao tsc + 54/54; db reset clean; LIVE loader→rules-cards→backfill→11-patterns proof; context_sync green | 0.00 | 0.0002 | O11 closed; /loader page + routes + nao CI job; data_origin migration; auth-test stub repair in-commit; harness classifier warning reviewed (transient stage-2 error; actions in-brief) |
+| 8 | U7 | feat/phase2-run-2/u7-biotope-trend-provenance | #130 | flutter analyze clean + 111/111; context_sync green | 0.00 | 0.0002 | O12-app closed — MAIN LOOP 1–5 FULLY BUILT; CustomPaint trend on Home tab; provenance screen with TEST-MODE stamp under every edge verdict; live series+RPC proof via raw Dart client |
 
 **Carry-forwards (not lost, owned later):** `contradiction` → shared/brain `needsReview()` edge-flag
 not wired (U4 report; candidate for U9's serving-layer work or a backlog note at run end).
