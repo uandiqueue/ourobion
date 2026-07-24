@@ -181,4 +181,23 @@ undersized maxOutputTokens yields empty visible text. Size generously in downstr
   runs the full pipeline (adding scoping = out of scope).
 - **evaluate-signals config.toml entry added** (it had none) — cron still NOT added (H3, Jayden's).
 
+## D11 · U6 implementation choices (nao loader) — U6
+
+- **Backfill semantics:** first load ends TODAY (the engine's evaluated day must have a value or
+  nothing fires); once the range reaches today, "N more days" extends history BACKWARD
+  (forward-to-today takes priority when real days have passed). The only shape satisfying both
+  O11's "up to today" and a single-sitting demo of steps 1→4. Dip scenario anchored to today;
+  loaded days never rewritten. Defaults: 14 first / 7 increment / 60 max; seed `run2-demo`.
+- **Provenance mechanism:** wearable_daily uses its EXISTING `source` column; daily_gut_rows gained
+  additive nullable `data_origin text` via new migration (NULL = real; value
+  `simulated:run2-demo`). No guard/contract change (guards parse only the original migration file).
+- **Auth-test repair in-commit:** two pre-existing nao jose-stub tests were stale (missing
+  `role:'authenticated'`, invisible pre-CI since nao was never gated); repaired mechanically so the
+  new CI job lands green — flagged for reviewer as unrelated-but-necessary.
+- **Honesty holds on fresh DB:** no hand-seeded verified_edges — edge/personal card paths stay
+  empty, gap_ledger carries the demand (110 personal-null rows), brainScopeSkips logged.
+- **Harness note:** the U6 subagent run carried a transient harness security-classifier error
+  (stage-2); actions reviewed by the orchestrator — local-stack admin user + session-cookie route
+  testing, exactly per brief. Recorded for transparency.
+
 _(Further D-entries appended per unit as the run executes.)_

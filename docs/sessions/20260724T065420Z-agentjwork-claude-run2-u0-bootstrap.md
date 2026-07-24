@@ -76,5 +76,9 @@ NOT-live-verified list). U2 (O15 verifier grounding) marked in-progress and disp
   JSON as authenticated user, prune/freshness/A14. D10 recorded; ledger row 6. Backend spine for
   main loop 1–5 COMPLETE. U6 (nao simulated-data loader + nao CI job) marked in-progress and
   dispatched.
+- U6 done — PR #129, gates green (nao tsc + 54/54, db reset, context_sync) + LIVE proof of main
+  loop 1–4 from the nao seam (loader → flagged rows → rule cards → +7 backfill → 11 patterns).
+  D11 recorded (backfill semantics, provenance mechanism, auth-stub repair, harness-classifier
+  note); ledger row 7. U7 (biotope trend + provenance views) marked in-progress and dispatched.
 
 memory: Run 2.0 launched 2026-07-24 — resumable state = docs/temp/phase2-run-2/orchestration-log.md on the feat/phase2-run-2/* chain (worktree C:\project\ourobion-run2); inputs live ON the run branch, not dev-phase2.
