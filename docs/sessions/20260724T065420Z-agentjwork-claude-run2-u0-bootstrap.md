@@ -62,5 +62,9 @@ NOT-live-verified list). U2 (O15 verifier grounding) marked in-progress and disp
   context_sync). ACCEPTANCE (i) proven on the real CLI argv seam and mutation-checked. [B8] shared/
   Citation.evidence additive change flagged. D7 recorded; ledger row 3; U3 (O17+O20 contract
   hardening) marked in-progress and dispatched.
+- U3 done — PR #126, gates green (shared tsc, edge-loader 50/50, brain-ingest 340/340,
+  context_sync). ACCEPTANCE (iii) mutation-proven both cases; [B8] O17 superRefine clause; A3 test
+  retarget flagged for reviewers. D8 recorded; ledger row 4; U4 (O16+O18+gap_ledger card semantics)
+  marked in-progress and dispatched.
 
 memory: Run 2.0 launched 2026-07-24 — resumable state = docs/temp/phase2-run-2/orchestration-log.md on the feat/phase2-run-2/* chain (worktree C:\project\ourobion-run2); inputs live ON the run branch, not dev-phase2.

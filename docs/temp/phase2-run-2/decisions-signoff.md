@@ -125,4 +125,23 @@ undersized maxOutputTokens yields empty visible text. Size generously in downstr
   consumer); flagged for the retro-review to consider giving shared/brain its own typecheck.
 - **Prompt contract:** `VERIFIER_PROMPT_VERSION` bumped to `verifier-2026-07-24.1`.
 
+## D8 · U3 implementation choices (contract hardening) — U3
+
+- **[B8] O17 clause shape:** superRefine on the shared verification schema — servable verdict
+  (`supported`/`partial`, inlined to mirror SERVABLE_VERDICTS) requires `spansFound >= 1 AND
+  allPresent === true`; conditional on verdict so zero-span `uncertain`/`refuted` records stay
+  valid (intentionally retained). Band code (shared/brain/index.ts) untouched — the loader
+  zod-validates every line before banding, so the schema clause alone makes bad records unloadable
+  (the brief's touch-index.ts condition was not met).
+- **Pre-existing test retargeted, not weakened:** the old A3 "zero-span accepted" test rode the
+  `partial` fixture — exactly what O17 now forbids; retargeted to the `uncertain` fixture so A3's
+  producer-encoding guarantee survives on a non-servable carrier. Flag for reviewers: this is
+  O17's intended tightening, not a lost invariant.
+- **O20 seams:** synthesis rejects with new typed reason `'copy-gate'` (follows existing rejected-
+  claims pattern; `validateCopy` is a REQUIRED ProcessContext field, runtime-imported mirror of
+  loadClaimValidator so shared/ stays out of brain-ingest's static type graph); loader re-checks as
+  a line-numbered hard-fail (matches its active-metric convention).
+- Mutation proof for acceptance (iii): schema clause + loader gate git-stashed → both O17 tests and
+  the O20 loader test fail; restored → 50/50 + 340/340.
+
 _(Further D-entries appended per unit as the run executes.)_
