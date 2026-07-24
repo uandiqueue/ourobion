@@ -23,7 +23,7 @@
 import type { SynthClaim, VerifyCitation } from './types.js';
 
 /** Bump on ANY change to the system/prompt text below (artifact provenance). */
-export const VERIFIER_PROMPT_VERSION = 'verifier-2026-07-16.1';
+export const VERIFIER_PROMPT_VERSION = 'verifier-2026-07-24.1';
 
 export const VERIFIER_SYSTEM = [
   "You are the ourobion brain pipeline's adversarial edge-verification node (A10).",
@@ -32,8 +32,10 @@ export const VERIFIER_SYSTEM = [
   'retrieved the evidence below; assess whether it truly grounds the claim.',
   '',
   'Rules (a second pass only earns its cost if it is adversarial and grounded):',
-  '- Judge ONLY from the retrieved sources shown. Never use outside knowledge or the',
-  '  synthesizer\'s reasoning. If the sources do not settle it, the answer is uncertain.',
+  '- Judge ONLY from the retrieved sources shown, and within each source ONLY from its',
+  '  quoted evidence passages. Never use outside knowledge or the synthesizer\'s',
+  '  reasoning. A source listed with no evidence passages cannot ground the claim.',
+  '  If the shown passages do not settle it, the answer is uncertain.',
   '- Actively look for CONTRADICTION (direction flipped, claim-kind inflated, effect',
   '  overstated, population overgeneralised), not just confirmation.',
   '- Assign each shown source a stance: supports | refutes | mixed | mentions.',
@@ -67,10 +69,23 @@ const CONTRACT = [
   'shown below — inventing a source is a rejected answer.',
 ].join('\n');
 
-/** Render one retrieved source for the evidence block. */
+/**
+ * Render one retrieved source for the evidence block: header + its verbatim
+ * evidence passages, each with provenance (paperId + locator into the source's
+ * canonical text / abstract). A source without passages is explicitly marked
+ * ungroundable (O15: the verifier judges ONLY shown evidence).
+ */
 function sourceBlock(s: VerifyCitation, i: number): string {
   const yr = s.year === null ? 'n.d.' : String(s.year);
-  return `  [S${i + 1}] paperId: ${s.paperId} (${yr}) — evidenceTier ${s.evidenceTier}, impact ${s.impactTier}\n        title: ${s.title}`;
+  const head =
+    `  [S${i + 1}] paperId: ${s.paperId} (${yr}) — evidenceTier ${s.evidenceTier}, impact ${s.impactTier}\n` +
+    `        title: ${s.title}`;
+  const passages = s.evidence ?? [];
+  if (passages.length === 0) {
+    return head + '\n        evidence: (no passages available — this source cannot ground the claim)';
+  }
+  const lines = passages.map((p) => `          - [${s.paperId} @ ${p.locator}] "${p.text}"`);
+  return head + '\n        evidence (verbatim passages):\n' + lines.join('\n');
 }
 
 /** Compact claim summary the verifier assesses (its own retrieval is the evidence). */

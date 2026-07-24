@@ -24,7 +24,12 @@ import {
   claimQueryTerms,
   decideTriage,
   DEFAULT_TRIAGE_CONFIG,
+  DEFAULT_MAX_EVIDENCE_CHARS_PER_SOURCE,
   enforceVerification,
+  extractEvidencePassages,
+  corpusHitToCitation,
+  candidateToCitation,
+  loadCorpusFromText,
   parseVerifierResponse,
   rankCorpus,
   retrieveForClaim,
@@ -36,10 +41,12 @@ import {
 } from '../src/verify/verifier.js';
 import type {
   CorpusDoc,
+  RankedDoc,
   RetrievalResult,
   SynthClaim,
   VerifyImpactTier,
 } from '../src/verify/types.js';
+import type { Candidate } from '../src/types.js';
 import type { LlmRequest, LlmResponse } from '../../llm-router/src/index.js';
 
 // ── fixtures ─────────────────────────────────────────────────────────────────
@@ -139,6 +146,119 @@ test('retrieveForClaim: echo-controls the claim\'s own citations, performed=true
   assert.equal(res.sources.every((s) => s.stance === 'mentions'), true); // retrieval is stance-neutral
 });
 
+// ── evidence passages (O15/B1 — the verifier judges ONLY shown evidence) ────────
+
+test('extractEvidencePassages: carries matched-term sentences with chars:<start>-<end> locators into the doc text', () => {
+  const doc = corpusDoc({
+    text: 'Intro about unrelated things. Higher gut comfort tracked better mood in the cohort. A closing methods note.',
+  });
+  const passages = extractEvidencePassages(doc, ['gut', 'comfort', 'mood']);
+  assert.ok(passages.length >= 1);
+  const p = passages[0]!;
+  assert.match(p.text, /gut comfort tracked better mood/);
+  const m = /^chars:(\d+)-(\d+)$/.exec(p.locator);
+  assert.ok(m, `locator '${p.locator}' must be chars:<start>-<end>`);
+  const [start, end] = [Number(m![1]), Number(m![2])];
+  // The locator addresses the passage's real span in the canonical text.
+  assert.equal(doc.text.slice(start, end), p.text);
+});
+
+test('extractEvidencePassages: bounds total passage chars to the budget (no prompt blow-up)', () => {
+  const long = Array.from({ length: 40 }, (_, i) => `Sentence ${i} about gut comfort and mood in the cohort.`).join(' ');
+  const passages = extractEvidencePassages(corpusDoc({ text: long }), ['gut', 'comfort', 'mood'], 120);
+  const total = passages.reduce((n, p) => n + p.text.length, 0);
+  assert.ok(total <= 120, `total evidence chars ${total} must be ≤ 120`);
+  assert.ok(passages.length >= 1);
+});
+
+test('extractEvidencePassages: no matching sentence → [] (evidence carried honestly, never padded)', () => {
+  const doc = corpusDoc({ title: 'gut comfort mood', text: 'This body text is entirely about sleep and steps.' });
+  assert.deepEqual(extractEvidencePassages(doc, ['gut', 'comfort', 'mood']), []);
+});
+
+test('corpusHitToCitation: carries bounded evidence text + provenance from the doc', () => {
+  const hit: RankedDoc = {
+    doc: corpusDoc({ text: 'Higher gut comfort tracked better mood across the cohort. Unrelated closing.' }),
+    score: 1,
+    matchedTerms: ['gut', 'comfort', 'mood'],
+  };
+  const cite = corpusHitToCitation(hit);
+  assert.ok(cite.evidence && cite.evidence.length >= 1);
+  assert.match(cite.evidence![0]!.text, /gut comfort tracked better mood/);
+  assert.match(cite.evidence![0]!.locator, /^chars:\d+-\d+$/);
+});
+
+test('corpusHitToCitation: maxEvidenceChars override bounds the carried text', () => {
+  const hit: RankedDoc = {
+    doc: corpusDoc({ text: 'Higher gut comfort tracked better mood across the whole studied cohort of adults.' }),
+    score: 1,
+    matchedTerms: ['gut', 'comfort', 'mood'],
+  };
+  const cite = corpusHitToCitation(hit, { maxEvidenceChars: 20 });
+  const total = (cite.evidence ?? []).reduce((n, p) => n + p.text.length, 0);
+  assert.ok(total <= 20);
+});
+
+function candidate(over: Partial<Candidate> = {}): Candidate {
+  return {
+    identifiers: { doi: '10.1/abc' },
+    title: 'External candidate on gut and mood',
+    authors: [],
+    year: 2024,
+    venue: null,
+    abstract: 'This external abstract discusses gut comfort and mood associations.',
+    discoveredVia: 'crossref',
+    ...over,
+  } as Candidate;
+}
+
+test('candidateToCitation: carries the abstract as bounded evidence with an abstract:<start>-<end> locator', () => {
+  const cite = candidateToCitation(candidate());
+  assert.ok(cite.evidence && cite.evidence.length === 1);
+  assert.match(cite.evidence![0]!.locator, /^abstract:0-\d+$/);
+  assert.match(cite.evidence![0]!.text, /gut comfort and mood/);
+});
+
+test('candidateToCitation: no abstract → no evidence (never fabricated)', () => {
+  const cite = candidateToCitation(candidate({ abstract: null }));
+  assert.equal(cite.evidence, undefined);
+});
+
+test('retrieveForClaim: retrieved corpus sources carry evidence passages', async () => {
+  const res = await retrieveForClaim(makeClaim(), {
+    corpus: [corpusDoc({ text: 'Higher gut comfort was linked to better mood across the cohort of adults.' })],
+  });
+  const src = res.sources.find((s) => s.paperId === 'corpus:gut-mood-2024');
+  assert.ok(src && src.evidence && src.evidence.length >= 1);
+});
+
+// ── corpus loader (fixture corpus) ──────────────────────────────────────────────
+
+test('loadCorpusFromText: parses JSONL CorpusDoc lines, skips blanks, tolerates BOM', () => {
+  const jsonl =
+    '﻿{"paperId":"c:1","title":"T1","year":2024,"text":"gut comfort mood","evidenceTier":3,"impactTier":"moderate"}\n' +
+    '\n' +
+    '{"paperId":"c:2","title":"T2","year":null,"text":"more text","evidenceTier":1,"impactTier":"low"}\n';
+  const docs = loadCorpusFromText(jsonl);
+  assert.equal(docs.length, 2);
+  assert.equal(docs[0]!.paperId, 'c:1');
+  assert.equal(docs[1]!.year, null);
+});
+
+test('loadCorpusFromText: a malformed doc fails loudly with the line number', () => {
+  const jsonl = '{"paperId":"c:1","title":"T","year":2024,"text":"ok","evidenceTier":3,"impactTier":"moderate"}\n{"paperId":"c:2","title":"","text":"x","evidenceTier":3,"impactTier":"low"}\n';
+  assert.throws(() => loadCorpusFromText(jsonl, 'fix'), /fix:2/);
+});
+
+test('loadCorpusFromText: duplicate paperId is rejected', () => {
+  const line = '{"paperId":"c:1","title":"T","year":2024,"text":"ok","evidenceTier":3,"impactTier":"moderate"}';
+  assert.throws(() => loadCorpusFromText(`${line}\n${line}\n`), /duplicate paperId/);
+});
+
+test('DEFAULT_MAX_EVIDENCE_CHARS_PER_SOURCE is a positive config bound', () => {
+  assert.ok(DEFAULT_MAX_EVIDENCE_CHARS_PER_SOURCE > 0);
+});
+
 // ── triage predicate boundaries ────────────────────────────────────────────────
 
 test('triage: a high-impact citation forces full retrieval', () => {
@@ -195,6 +315,30 @@ test('buildVerifierPrompt: refute-first posture, claim + retrieved sources embed
   assert.match(prompt, /gut_comfort_score correlates mood_score/);
   assert.match(prompt, /corpus:x/);
   assert.match(prompt, /supported\|partial\|unsupported\|contradicted\|uncertain/);
+});
+
+test('buildVerifierPrompt: renders evidence passage TEXT with paperId + locator provenance', () => {
+  const { prompt } = buildVerifierPrompt(makeClaim(), [
+    {
+      paperId: 'corpus:x',
+      title: 'A retrieved source',
+      year: 2023,
+      population: null,
+      evidenceTier: 3,
+      impactTier: 'moderate',
+      stance: 'mentions',
+      evidence: [{ text: 'gut comfort tracked mood in the cohort', locator: 'chars:12-51' }],
+    },
+  ]);
+  assert.match(prompt, /gut comfort tracked mood in the cohort/); // the passage TEXT reaches the prompt
+  assert.match(prompt, /corpus:x @ chars:12-51/); // provenance: paperId + locator
+});
+
+test('buildVerifierPrompt: a source with no evidence is marked ungroundable', () => {
+  const { prompt } = buildVerifierPrompt(makeClaim(), [
+    { paperId: 'corpus:x', title: 'no-evidence source', year: 2023, population: null, evidenceTier: 3, impactTier: 'moderate', stance: 'mentions' },
+  ]);
+  assert.match(prompt, /no passages available/);
 });
 
 test('buildVerifierPrompt: zero sources tells the model to answer uncertain', () => {

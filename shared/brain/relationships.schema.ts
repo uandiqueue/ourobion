@@ -16,6 +16,7 @@
 import { z } from 'zod';
 import type {
   Citation,
+  EvidencePassage,
   QuoteSpan,
   RelationshipClaim,
   EdgeVerification,
@@ -47,6 +48,15 @@ export const evidenceTierSchema = z.union([
 export const impactTierSchema = z.enum(['high', 'moderate', 'low', 'preprint']);
 export const verificationStatusSchema = z.enum(['active', 'stale', 'superseded']);
 
+// O15/B1: bounded, provenance-addressable evidence passage carried on a citation. ADDITIVE +
+// OPTIONAL (accepted-contract discipline: fields are added optional, never removed/renamed) so
+// every pre-existing record without `evidence` still validates. Producers bound the text size
+// (brain-ingest `maxEvidenceCharsPerSource`); the schema only requires non-emptiness.
+export const evidencePassageSchema = z.object({
+  text: z.string().min(1),
+  locator: z.string().min(1),
+});
+
 export const citationSchema = z.object({
   paperId: z.string().min(1),
   title: z.string().min(1),
@@ -55,6 +65,7 @@ export const citationSchema = z.object({
   evidenceTier: evidenceTierSchema,
   impactTier: impactTierSchema,
   stance: z.enum(['supports', 'refutes', 'mixed', 'mentions']),
+  evidence: z.array(evidencePassageSchema).readonly().optional(),
 });
 
 export const quoteSpanSchema = z
@@ -217,16 +228,19 @@ type Exact<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B 
   ? true
   : false;
 
+type ZodEvidencePassage = z.infer<typeof evidencePassageSchema>;
 type ZodCitation = z.infer<typeof citationSchema>;
 type ZodQuoteSpan = z.infer<typeof quoteSpanSchema>;
 type ZodClaim = z.infer<typeof relationshipClaimSchema>;
 type ZodVerification = z.infer<typeof edgeVerificationSchema>;
 
 // If any line errors, relationships.ts and relationships.schema.ts have drifted apart.
+const _assertEvidencePassage: Exact<ZodEvidencePassage, EvidencePassage> = true;
 const _assertCitation: Exact<ZodCitation, Citation> = true;
 const _assertQuoteSpan: Exact<ZodQuoteSpan, QuoteSpan> = true;
 const _assertClaim: Exact<ZodClaim, RelationshipClaim> = true;
 const _assertVerification: Exact<ZodVerification, EdgeVerification> = true;
+void _assertEvidencePassage;
 void _assertCitation;
 void _assertQuoteSpan;
 void _assertClaim;

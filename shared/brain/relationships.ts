@@ -72,6 +72,25 @@ export type VerificationStatus =
   | 'stale'        // promptVersion / corpus moved on — re-run pending
   | 'superseded';  // replaced by a newer verification of the same edge
 
+/**
+ * One bounded, provenance-addressable evidence passage carried on a citation (O15/B1: the
+ * verifier judges ONLY shown evidence, so the passage text must survive to the prompt).
+ * `locator` addresses where in the paper the passage came from:
+ *   - `chars:<start>-<end>` — character span (end exclusive) into the source's canonical
+ *     extracted text (`StructuredPaper.canonicalText`), same coordinate space as
+ *     `QuoteSpan.charStart`/`charEnd`;
+ *   - `abstract:<start>-<end>` — character span into the source's abstract (external
+ *     discovery candidates, where only an abstract is available).
+ * Producers bound `text` (brain-ingest `maxEvidenceCharsPerSource`); the schema keeps it
+ * additive-optional so legacy records without evidence stay valid.
+ */
+export interface EvidencePassage {
+  /** Verbatim passage text from the source (bounded by the producer). */
+  text: string;
+  /** Provenance address of the passage within the source (see grammar above). */
+  locator: string;
+}
+
 /** A cited source, scored on the two independent axes (design strength × venue impact). */
 export interface Citation {
   /** DOI when available, else a stable internal corpus id. */
@@ -88,6 +107,13 @@ export interface Citation {
   impactTier: ImpactTier;
   /** What this source does to the edge. */
   stance: 'supports' | 'refutes' | 'mixed' | 'mentions';
+  /**
+   * Bounded evidence passages from THIS source (O15/B1) — what the verifier was actually
+   * shown. OPTIONAL and additive: absent on legacy records and on sources where no passage
+   * could be extracted honestly (e.g. an external candidate with no abstract). Never
+   * fabricated — an empty/absent list means the source cannot ground the claim.
+   */
+  evidence?: readonly EvidencePassage[];
 }
 
 /** A verbatim span grounding a claim in a specific source — enables a near-free deterministic check. */

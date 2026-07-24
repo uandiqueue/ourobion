@@ -41,7 +41,18 @@ export type VerifyClaimKind = 'causal' | 'correlational' | 'mechanistic';
 /** Mirror of `VerificationStatus` (relationships.ts:70-73). */
 export type VerifyStatus = 'active' | 'stale' | 'superseded';
 
-/** Mirror of `Citation` (relationships.ts:76-91). */
+/**
+ * Mirror of `EvidencePassage` (relationships.ts) — one bounded, provenance-addressable
+ * passage carried on a citation (O15/B1). `locator` grammar:
+ *   `chars:<start>-<end>`    — char span (end exclusive) into the source's canonical text;
+ *   `abstract:<start>-<end>` — char span into an external candidate's abstract.
+ */
+export interface VerifyEvidencePassage {
+  text: string;
+  locator: string;
+}
+
+/** Mirror of `Citation` (relationships.ts). */
 export interface VerifyCitation {
   paperId: string;
   title: string;
@@ -50,6 +61,12 @@ export interface VerifyCitation {
   evidenceTier: VerifyEvidenceTier;
   impactTier: VerifyImpactTier;
   stance: 'supports' | 'refutes' | 'mixed' | 'mentions';
+  /**
+   * Bounded evidence passages from THIS source — what the verifier prompt shows (O15/B1).
+   * Optional + additive (absent on legacy records / sources with nothing extractable);
+   * NEVER fabricated: absent means the source cannot ground the claim.
+   */
+  evidence?: readonly VerifyEvidencePassage[];
 }
 
 /** Mirror of `EdgeVerification` (relationships.ts:152-198) — the artifact record. */
