@@ -15,3 +15,4 @@ merely unit-green). Anything NOT verified is named in the Notes column — never
 | Unit | Built | O-items | Gate | e2e-verified | SIGN-OFF | Notes (incl. what was NOT verified) |
 |------|-------|---------|------|--------------|----------|--------------------------------------|
 | U0 | Run bootstrap: worktree, input docs carried onto branch, tracking docs, final worklist + test strategy from 4-agent assessment | — | context_sync green | n/a (docs-only) | pending | PR #123 |
+| U1 | Router OpenAI-only TEST-MODE posture: labelled decorrelation override, 6 nodes → gpt-5/gpt-5-mini on api_worker, caps 1.00 USD/day/node + 60k tok/run, live smoke | PART 3 / D2 | tsc + 56/56 + context_sync green | y (one live api_worker call, US$0.00015125, ledger-recorded) | pending | PR #124. NOT live-verified: the 5 non-phrasing nodes, expectJson against live endpoint, real 429/5xx retries (offline-tested only) |

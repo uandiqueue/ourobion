@@ -47,4 +47,10 @@ updated: 2026-07-24
 
 Dispatch U1 build agent (router OpenAI-only TEST-MODE posture + low C7 caps + smoke call).
 
+## U1 closed (orchestrator, same session)
+
+U1 done — PR #124, gate green (tsc + 56/56 + context_sync), live smoke US$0.00015125 (ledger row 2,
+cumulative 0.0002 SGD). D6 + C2.1–C2.3 recorded; unit-signoff row added (sign-off pending, honest
+NOT-live-verified list). U2 (O15 verifier grounding) marked in-progress and dispatched.
+
 memory: Run 2.0 launched 2026-07-24 — resumable state = docs/temp/phase2-run-2/orchestration-log.md on the feat/phase2-run-2/* chain (worktree C:\project\ourobion-run2); inputs live ON the run branch, not dev-phase2.

@@ -72,4 +72,30 @@ to keep Run 2.0's review surface in one doc.
 - **Why:** production scheduling policy (cadence, cost, pg_cron config prereqs per memory 0005) is a
   product call the backlog does not answer; the run's boundary rule says record, don't resolve.
 
+## D6 · TEST-MODE flag shape + router surface changes — U1
+
+- **Choice:** `testMode: { reason: string }` in router.config.json (non-empty reason mandatory;
+  reason text records posture, date, Jayden attribution, revert instruction). With the flag, the two
+  decorrelation clauses downgrade to a loud warning; without it, validation hard-fails exactly as
+  before (test-proven). Warning sink injectable (`validateConfig(raw, {warn})`, default
+  console.warn). `route()` results + `checkConfig` carry testMode state; `decorrelation.ok` widened
+  `true` → `boolean` (false only reachable under TEST-MODE; sole consumer updated in-commit).
+  Exported label constant: `scaffolded + unit-tested (TEST-MODE: single-provider, decorrelation
+  OFF)` — downstream units MUST stamp verifier verdicts/UI/logs with it.
+- **Alternatives rejected:** env-var flag (invisible in the committed config = not "clearly
+  labelled"); silently removing the invariant (forbidden — O7's general fix still lands with B5).
+- **Source:** U1 (PR #124). Anthropic/google provider + price rows kept so re-arming decorrelation
+  is config-only.
+
+## C2 · Run-2.0 router config values — U1
+
+| id | value shipped | alternatives | rationale |
+|----|---------------|--------------|-----------|
+| C2.1 | synthesis + verifier → `gpt-5`; seeder/phrasing_card/extract_assist/report_narrative → `gpt-5-mini`; ALL routes `api_worker` | o4-mini for cheap tier | PART 3 mandates gpt-*/o* on api_worker; gpt-5 for the two quality-critical nodes, mini for volume nodes |
+| C2.2 | `perDayUsdPerNode` 1.00 USD; per-run output-token cap 60000; hard-stop 0.95 kept | prior $5/day/200k | 20 SGD run cap ⇒ keep the guardrail well under it (6 nodes × $1 = worst-case $6/day) |
+| C2.3 | price row `gpt-5-mini: 0.25/2.0 USD per MTok, provisional: true` | — | OpenAI list price at ship time; provisional pending O8 calibration |
+
+Operational note (U1 smoke): gpt-5-family models spend ~70 reasoning tokens on trivial prompts —
+undersized maxOutputTokens yields empty visible text. Size generously in downstream units.
+
 _(Further D-entries appended per unit as the run executes.)_

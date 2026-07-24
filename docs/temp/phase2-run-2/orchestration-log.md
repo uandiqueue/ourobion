@@ -29,9 +29,10 @@ reproduces from a clean local stack.
 
 ## ▶ RESUME
 
-**Current state:** U0 `done` (PR #123). Worklist FINAL (assessment synthesis below). Local supabase
-stack UP (API 54321 / DB 54322). OPENAI_API_KEY present in tools/brain-ingest/.env (gitignored).
-**Next action:** U1 is `in-progress` (marked before dispatch, per PART R). If resuming mid-U1:
+**Current state:** U0 done (PR #123) · U1 done (PR #124; router is now OpenAI-only TEST-MODE, caps
+1.00 USD/day/node + 60k tok/run). Local supabase stack UP (API 54321 / DB 54322). Chain tip:
+feat/phase2-run-2/u1-router-openai-posture. Tracking-doc updates ride the chain tip.
+**Next action:** U2 is `in-progress` (marked before dispatch, per PART R). If resuming mid-U2:
 re-run the WHOLE unit — git status/diff the worktree, reset or finish partial work, redo gate +
 tests before its PR.
 
@@ -44,8 +45,8 @@ One writer at a time; each unit stacks on the chain tip.
 | Unit | Title | O-items | Status |
 |------|-------|---------|--------|
 | U0 | Run bootstrap: worktree, input docs, tracking docs, PR #123 | — | done |
-| U1 | Router OpenAI-only posture: TEST-MODE decorrelation override (labelled), all nodes → gpt-*/o* on api_worker, low C7 caps (C-entry), live smoke call (ledger row) | PART 3, D2 | in-progress |
-| U2 | Verifier grounding: evidence-bearing citation type (shared/, B8), fixture corpus file + loader, CLI retrieve wiring, evidence in prompt; ACCEPTANCE (i) integration test on the real CLI seam | O15 | queued |
+| U1 | Router OpenAI-only posture: TEST-MODE decorrelation override (labelled), all nodes → gpt-*/o* on api_worker, low C7 caps (C-entry), live smoke call (ledger row) | PART 3, D2 | done |
+| U2 | Verifier grounding: evidence-bearing citation type (shared/, B8), fixture corpus file + loader, CLI retrieve wiring, evidence in prompt; ACCEPTANCE (i) integration test on the real CLI seam | O15 | in-progress |
 | U3 | Contract hardening: servable band ⇒ quote-check pass (shared/ superRefine, B8; ACCEPTANCE (iii) loader test) + derivation copy-gate at synthesis + load | O17, O20 | queued |
 | U4 | Card semantics: orientation-aware cards (ACCEPTANCE (ii) 8-vector matrix), research-context/contradiction gap-only (O18 decided), gap_ledger table + composer writes, kill pairEdges fallback (correlates/modulates never decorate) | O16, O18, O9-table | queued |
 | U5 | Serve-pipeline on-demand trigger (runs compute-baselines → evaluate-signals → generate-insights; note: evaluate-signals has NO cron today), provenance read surface (card→edges→claims/citations view), baseline upsert-and-prune (+O19 test gates) | O12-backend, O19 | queued |
@@ -127,6 +128,7 @@ load-bearing facts:
 | # | Unit | Branch | PR | Gate | OpenAI spend (SGD) | Cumulative spend | Notes |
 |---|------|--------|----|------|--------------------|------------------|-------|
 | 1 | U0 | feat/phase2-run-2/u0-run-docs | #123 | context_sync green | 0.00 | 0.00 | docs-only bootstrap; inputs carried onto branch |
+| 2 | U1 | feat/phase2-run-2/u1-router-openai-posture | #124 | tsc + 56/56 tests + context_sync green | 0.0002 | 0.0002 | live smoke: gpt-5-mini via api_worker, US$0.00015125; gpt-5-family spends ~70 reasoning tokens even on trivial prompts — size maxOutputTokens generously downstream |
 
 ## Budget
 
