@@ -19,11 +19,14 @@ import {
 import {
   classifyPattern,
   completenessScore,
+  gapStatusFor,
   insightId,
   pairKey,
   personalPassesGate,
+  rendersCard,
   type Branch,
   type CandidatePattern,
+  type GapStatus,
   type PersonalSignalRow,
   type ServableEdge,
 } from "./composer.ts"
@@ -57,6 +60,14 @@ import {
 // (agree / research-context / idiosyncratic / contradiction — truth table in composer.ts),
 // scores completeness from S2 raw day-counts with registry dqs weights, and appends
 // composed_insights (idempotent on the deterministic insight_id).
+//
+// SURFACING (O16 + O18, `rendersCard` in composer.ts is the single policy): only `agree` with
+// a SUBJECT-endpoint cardEdge and `idiosyncratic` ever render a user card. research-context and
+// contradiction are GAP-ONLY (composed row + A1 gap event — architecture §S7, decision O18(a)),
+// and an object-only fired signal (O16: the fired metric is only an edge's OBJECT endpoint)
+// likewise records a gap event instead of a card — a card never states the non-fired endpoint
+// as having moved. Gap events land in gap_ledger via record_gap_events() (§A1): aggregate
+// demand per (pair, status), deduped per user per run, NO user ids (privacy invariant).
 //
 // The S8 producer renders deterministic template copy (NO LLM in this function — the phrasing
 // LLM is a later, copy-gated, cached layer; the template path shipped here stays its fallback),
@@ -180,6 +191,16 @@ interface InsightRow {
   period_end: string
   branch: Branch
   payload: Record<string, unknown>
+}
+
+/** One record_gap_events() element (§A1 aggregate demand — NO user id ever leaves the batch). */
+interface GapEventRow {
+  metric_a: string
+  metric_b: string
+  status: GapStatus
+  demand: number
+  completeness?: number
+  lit_candidate?: Record<string, unknown>
 }
 
 // ─── Small helpers ───────────────────────────────────────────────────────────────────────────
@@ -400,6 +421,34 @@ Deno.serve(async (req) => {
   // ── Per-user evaluation → composition → production ─────────────────────────────────────────
   const cardsByKey = new Map<string, CardRow>() // in-batch dedupe on (user_id, rule_id)
   const insightsById = new Map<string, InsightRow>()
+
+  // A1 gap events (§A1 / biotope-nao-link §6): aggregated per (pair, status) across the run,
+  // deduped per user — demand counts DEMANDING USERS per run, and the user id itself never
+  // leaves this function (privacy invariant: aggregate counts only).
+  const gapSeenUserKeys = new Set<string>()
+  const gapByAggKey = new Map<string, GapEventRow>()
+  const pushGap = (
+    userId: string,
+    metricA: string,
+    metricB: string,
+    status: GapStatus,
+    extra?: { completeness?: number; lit_candidate?: Record<string, unknown> },
+  ): void => {
+    const [a, b] = metricA < metricB ? [metricA, metricB] : [metricB, metricA]
+    const userKey = `${userId}:${a}|${b}:${status}`
+    if (gapSeenUserKeys.has(userKey)) return
+    gapSeenUserKeys.add(userKey)
+    const aggKey = `${a}|${b}:${status}`
+    const existing = gapByAggKey.get(aggKey)
+    if (existing) existing.demand++
+    else gapByAggKey.set(aggKey, { metric_a: a, metric_b: b, status, demand: 1, ...extra })
+  }
+  /** The §A1 lit_candidate snapshot for a pair's servable edges (best band when any exist). */
+  const litCandidate = (pairEdges: ServableEdge[]): Record<string, unknown> => {
+    if (pairEdges.length === 0) return { hasEdge: false }
+    const best = pairEdges.reduce((x, y) => (y.edge_score > x.edge_score ? y : x))
+    return { hasEdge: true, servingBand: best.serving_band }
+  }
   const renderDrops: { userId: string; ruleId: string; reason: string }[] = []
   const brainScopeSkips: { userId: string; ruleId: string; pair: string }[] = []
   let firedPatternCount = 0
@@ -608,8 +657,19 @@ Deno.serve(async (req) => {
         },
       })
 
-      // contradiction is never surfaced (§S7); agree / research-context render the rule's card.
-      if (classified.branch !== "agree" && classified.branch !== "research-context") continue
+      // O18 (decision (a), Jayden 2026-07-24): ONLY `agree` renders the rule's card —
+      // research-context and contradiction keep their composed row (pushInsight above) and
+      // write an A1 gap event instead of surfacing (§S7 / composed_insights migration comment).
+      if (!rendersCard(classified)) {
+        const gapStatus = gapStatusFor(classified)
+        if (gapStatus !== null) {
+          pushGap(userId, keyA, keyB, gapStatus, {
+            completeness: completeness.score,
+            lit_candidate: litCandidate(pairEdges),
+          })
+        }
+        continue
+      }
       const rendered = renderCard(
         { title: rule.title_template, body: rule.body_template },
         {
@@ -623,6 +683,10 @@ Deno.serve(async (req) => {
         console.warn(`card dropped at render: ${userId}:${rule.rule_id}`, rendered.failure)
         continue
       }
+      // O18: edge_refs may ONLY carry monotonic direction-consistent edges — the former
+      // all-pairEdges fallback let correlates/modulates citations decorate a card (§1.3
+      // monotonic-only invariant). For `agree` (the only branch that reaches here) at least
+      // one such edge exists by construction.
       const monotonicConsistent = pairEdges.filter(
         (e) => classified.edges.find((r) => r.edgeId === e.edge_id)?.direction === "consistent",
       )
@@ -642,7 +706,7 @@ Deno.serve(async (req) => {
         phase_generated: rule.enabled_phase,
         producer: "rules",
         insight_id: id,
-        edge_refs: (monotonicConsistent.length > 0 ? monotonicConsistent : pairEdges).map((e) => ({
+        edge_refs: monotonicConsistent.map((e) => ({
           edgeId: e.edge_id,
           verifiedAt: e.verified_at,
         })),
@@ -688,56 +752,130 @@ Deno.serve(async (req) => {
           },
         })
 
-        // agree → the cited edge card (producer 'edge', rule_id = 'edge:'||edge_id — both
-        // endpoints' patterns collapse onto the same upsert key by construction).
-        if (classified.branch === "agree" && topEdge !== null) {
+        // agree with a SUBJECT-endpoint cardEdge → the cited edge card (producer 'edge',
+        // rule_id = 'edge:'||edge_id). O16: `rendersCard` is false for an object-only signal
+        // (cardEdge null) — the directional template would state that the SUBJECT moved when
+        // only the object fired — and for research-context / contradiction (O18 gap-only);
+        // all three route to the A1 gap event below instead of a card.
+        if (rendersCard(classified) && classified.cardEdge !== null) {
+          const cardEdge = classified.cardEdge
           const state = userStates[metricKey]
-          // A21: the "matching pattern" clause ships only when a gate-passing personal signal
-          // backs it (classified.personal is exactly that row, or null).
-          const rendered = renderCard(edgeCardTemplate(classified.personal !== null), {
-            metric_a_label: label(topEdge.subject),
-            metric_b_label: label(topEdge.object),
-            pattern_metric_label: label(metricKey),
-            direction_phrase: directionPhrase(state ?? "up"),
-            relation_phrase: relationPhrase(topEdge.relation),
-          })
-          if (!rendered.ok) {
+          // O16 binding invariant: the card states the metric that ACTUALLY fired. The composer
+          // guarantees cardEdge.subject === the fired metric; verify anyway and drop loudly —
+          // a wrong-metric card must never ship.
+          if (cardEdge.subject !== metricKey) {
             renderDrops.push({
               userId,
-              ruleId: edgeRuleId(topEdge.edge_id),
-              reason: JSON.stringify(rendered.failure),
+              ruleId: edgeRuleId(cardEdge.edge_id),
+              reason: `O16 orientation violation: cardEdge.subject "${cardEdge.subject}" is not the fired metric "${metricKey}"`,
             })
-            console.warn(`card dropped at render: ${userId}:${edgeRuleId(topEdge.edge_id)}`, rendered.failure)
+            console.error(
+              `O16 orientation violation dropped: ${userId}:${edgeRuleId(cardEdge.edge_id)} ` +
+                `cardEdge.subject "${cardEdge.subject}" != fired metric "${metricKey}"`,
+            )
           } else {
-            pushCard({
-              user_id: userId,
-              rule_id: edgeRuleId(topEdge.edge_id),
-              generated_at: now,
-              title: rendered.copy.title,
-              body: rendered.copy.body,
-              category: RELATIONSHIP_CATEGORY,
-              severity: "info",
-              contributing_metrics: contributing,
-              confidence_score: round(topEdge.edge_score, 3),
-              confidence_sources: [...new Set([...snapshotSources(contributing), "brain"])].sort(),
-              status: "active",
-              expires_at: addDaysIso(now, COMPOSER_EXPIRY_DAYS),
-              phase_generated: COMPOSER_PHASE,
-              producer: "edge",
-              insight_id: id,
-              edge_refs: [{ edgeId: topEdge.edge_id, verifiedAt: topEdge.verified_at }],
+            // A21: the "matching pattern" clause ships only when a gate-passing personal signal
+            // backs it (classified.personal is exactly that row, or null).
+            const rendered = renderCard(edgeCardTemplate(classified.personal !== null), {
+              // The stated "shifted" subject IS the fired metric (asserted equal to
+              // cardEdge.subject above) — never the other endpoint (O16).
+              metric_a_label: label(metricKey),
+              metric_b_label: label(cardEdge.object),
+              pattern_metric_label: label(metricKey),
+              direction_phrase: directionPhrase(state ?? "up"),
+              relation_phrase: relationPhrase(cardEdge.relation),
+            })
+            if (!rendered.ok) {
+              renderDrops.push({
+                userId,
+                ruleId: edgeRuleId(cardEdge.edge_id),
+                reason: JSON.stringify(rendered.failure),
+              })
+              console.warn(`card dropped at render: ${userId}:${edgeRuleId(cardEdge.edge_id)}`, rendered.failure)
+            } else {
+              pushCard({
+                user_id: userId,
+                rule_id: edgeRuleId(cardEdge.edge_id),
+                generated_at: now,
+                title: rendered.copy.title,
+                body: rendered.copy.body,
+                category: RELATIONSHIP_CATEGORY,
+                severity: "info",
+                contributing_metrics: contributing,
+                confidence_score: round(cardEdge.edge_score, 3),
+                confidence_sources: [...new Set([...snapshotSources(contributing), "brain"])].sort(),
+                status: "active",
+                expires_at: addDaysIso(now, COMPOSER_EXPIRY_DAYS),
+                phase_generated: COMPOSER_PHASE,
+                producer: "edge",
+                insight_id: id,
+                edge_refs: [{ edgeId: cardEdge.edge_id, verifiedAt: cardEdge.verified_at }],
+              })
+            }
+          }
+        } else {
+          // No card → A1 gap event (O16 object-only agree / O18 research-context /
+          // contradiction). Pair selection per case; completeness recomputed per pair.
+          const gapStatus = gapStatusFor(classified)
+          if (gapStatus === "personal-signal-no-edge" && topEdge !== null) {
+            // O16 object-only: a servable edge exists, but not in an orientation that can
+            // serve the fired signal.
+            pushGap(userId, topEdge.subject, topEdge.object, gapStatus, {
+              completeness: completeness.score,
+              lit_candidate: { ...litCandidate([topEdge]), orientation: "object-only" },
+            })
+          } else if (gapStatus === "blocked-completeness") {
+            // research-context: every distinct 1-hop pair that could not carry the direction.
+            const seenPairs = new Set<string>()
+            for (const e of oneHop) {
+              const pk = pairKey(e.subject, e.object)
+              if (seenPairs.has(pk)) continue
+              seenPairs.add(pk)
+              const pairCompleteness = completenessScore(
+                [e.subject, e.object],
+                daysPresent,
+                COMPLETENESS_WINDOW_DAYS,
+                dqsWeight,
+              )
+              pushGap(userId, e.subject, e.object, gapStatus, {
+                completeness: pairCompleteness.score,
+                lit_candidate: litCandidate(edgesByPair.get(pk) ?? [e]),
+              })
+            }
+          } else if (gapStatus === "needs-review" && classified.personal !== null) {
+            // contradiction: the pair whose gate-passing personal signal opposes the edge.
+            pushGap(userId, classified.personal.metric_a, classified.personal.metric_b, gapStatus, {
+              completeness: completeness.score,
+              lit_candidate: litCandidate(
+                edgesByPair.get(pairKey(classified.personal.metric_a, classified.personal.metric_b)) ?? [],
+              ),
             })
           }
         }
       }
 
       // idiosyncratic sweep: gate-passing personal pairs involving this metric with NO servable
-      // edge → the "still researching" card (uncited, edge_refs = [] by CHECK) + its insight.
+      // edge → the "still researching" card (uncited, edge_refs = [] by CHECK) + its insight
+      // AND its A1 gap event (§S7: idiosyncratic does BOTH — card + 'personal-signal-no-edge').
+      // A computed-but-NON-gate-passing personal pair with no edge is branch-5 gap fuel:
+      // 'personal-null', no card, no insight.
       for (const [pk, row] of personal) {
         const [a, b] = pk.split("|")
         if (a !== metricKey && b !== metricKey) continue
         if (edgesByPair.has(pk)) continue
-        if (!personalPassesGate(row, PAIR_GATES)) continue
+        if (!personalPassesGate(row, PAIR_GATES)) {
+          pushGap(userId, a!, b!, "personal-null", {
+            completeness: completenessScore([a!, b!], daysPresent, COMPLETENESS_WINDOW_DAYS, dqsWeight)
+              .score,
+            lit_candidate: { hasEdge: false },
+          })
+          continue
+        }
+        pushGap(userId, a!, b!, "personal-signal-no-edge", {
+          completeness: completenessScore([a!, b!], daysPresent, COMPLETENESS_WINDOW_DAYS, dqsWeight)
+            .score,
+          lit_candidate: { hasEdge: false },
+        })
 
         const partnerPattern: CandidatePattern = {
           patternKey: `personal:${pk}`,
@@ -812,6 +950,17 @@ Deno.serve(async (req) => {
     }
   }
 
+  // A1 gap events (§S7 "emits gap events to A1" — same run, beside the composed rows; the
+  // upsert-increment is atomic per event inside record_gap_events).
+  const gapEvents = [...gapByAggKey.values()]
+  if (gapEvents.length > 0) {
+    const { error } = await supabase.rpc("record_gap_events", { events: gapEvents })
+    if (error) {
+      console.error("gap_ledger record_gap_events error", error)
+      return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    }
+  }
+
   const cardRows = [...cardsByKey.values()]
   if (cardRows.length > 0) {
     const { error } = await supabase
@@ -825,6 +974,10 @@ Deno.serve(async (req) => {
 
   const producerCounts = { rules: 0, edge: 0, personal: 0 }
   for (const c of cardRows) producerCounts[c.producer]++
+  const gapStatusCounts: Record<string, number> = {}
+  for (const g of gapEvents) {
+    gapStatusCounts[g.status] = (gapStatusCounts[g.status] ?? 0) + g.demand
+  }
 
   return new Response(
     JSON.stringify({
@@ -841,6 +994,7 @@ Deno.serve(async (req) => {
         dismissedSkipped: dismissedSkips,
         snoozedSkipped: snoozedSkips,
       },
+      gapLedger: { pairsTouched: gapEvents.length, demandByStatus: gapStatusCounts },
       brainScopeSkips,
     }),
     { headers: { "Content-Type": "application/json" } },

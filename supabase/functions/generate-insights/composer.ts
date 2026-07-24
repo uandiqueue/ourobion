@@ -23,6 +23,12 @@
 //   5. neither                                                                    -> no insight (gap fuel)
 // A personal signal "passes the gate" iff q_value <= qMax AND n_eff >= nEffMin AND stable
 // (§S5 / config C4 — gates supplied by the caller from evaluate-signals' PAIR_GATES).
+//
+// O16 ORIENTATION INVARIANT (backlog, verdict B2): a directional card may only be driven by a
+// SUBJECT-endpoint signal — `cardEdge` is null when a single-metric pattern's fired metric sits
+// only on OBJECT endpoints, and `rendersCard` is the single surfacing policy (O18: only `agree`
+// with a cardEdge, plus `idiosyncratic`, ever render; research-context/contradiction are
+// gap-only).
 
 // ─── Inputs ────────────────────────────────────────────────────────────────────────────────
 
@@ -190,8 +196,19 @@ export interface ClassifiedPattern {
   /** The personal row backing the branch decision (opposing row for contradiction, the pair's
    *  row otherwise), when one exists. */
   personal: PersonalSignalRow | null
-  /** For agree: the best (highest edge_score) monotonic direction-consistent edge. */
+  /** For agree: the best monotonic direction-consistent edge — SUBJECT-endpoint edges first
+   *  (O16), then by edge_score. */
   topEdge: ServableEdge | null
+  /**
+   * O16 · The edge allowed to drive a DIRECTIONAL card, or null. For a single-metric (fired
+   * signal) pattern this is the best consistent edge whose SUBJECT is the fired metric — an
+   * edge where the fired metric is only the OBJECT endpoint yields cardEdge = null, because
+   * the directional template states that the subject moved and the subject did not fire
+   * (backlog O16: a card never states the non-fired endpoint as having moved). For pair
+   * patterns (both endpoints observed by construction) cardEdge === topEdge. Non-agree
+   * branches always carry null.
+   */
+  cardEdge: ServableEdge | null
 }
 
 /**
@@ -210,13 +227,17 @@ export function classifyPattern(
   for (const edge of edges) {
     const personal = personalFor(pairKey(edge.subject, edge.object))
     if (personal !== null && personalPassesGate(personal, gates) && personalOpposesEdge(personal, edge)) {
-      return { branch: "contradiction", edges: refs, personal, topEdge: null }
+      return { branch: "contradiction", edges: refs, personal, topEdge: null, cardEdge: null }
     }
   }
 
   // 2. agree: a monotonic direction-consistent edge (personal absent / non-gating / consistent —
   //    opposition was excluded above). Triangulation (agree-with-personal outranking
   //    agree-without) is an S9 rank modulator, not a branch change.
+  //    O16 orientation: for a single-metric (fired signal) pattern, only an edge whose SUBJECT
+  //    is the fired metric may drive the directional card — subject-endpoint edges are
+  //    preferred as topEdge, and cardEdge is null when the fired metric sits only on OBJECT
+  //    endpoints (the handler then routes to gap handling: composed row + gap event, no card).
   const consistent = edges
     .filter(
       (e) =>
@@ -225,20 +246,24 @@ export function classifyPattern(
     )
     .sort((a, b) => b.edge_score - a.edge_score)
   if (consistent.length > 0) {
-    const top = consistent[0]!
+    const firedMetric = pattern.metricKeys.length === 1 ? pattern.metricKeys[0]! : null
+    const subjectDriven =
+      firedMetric === null ? consistent : consistent.filter((e) => e.subject === firedMetric)
+    const top = subjectDriven[0] ?? consistent[0]!
     const personal = personalFor(pairKey(top.subject, top.object))
     return {
       branch: "agree",
       edges: refs,
       personal: personal !== null && personalPassesGate(personal, gates) ? personal : null,
       topEdge: top,
+      cardEdge: subjectDriven[0] ?? null,
     }
   }
 
   // 3. research-context: edges exist but none can carry the direction (context-only relations,
   //    or inconsistent direction without a personal contradiction).
   if (edges.length > 0) {
-    return { branch: "research-context", edges: refs, personal: null, topEdge: null }
+    return { branch: "research-context", edges: refs, personal: null, topEdge: null, cardEdge: null }
   }
 
   // 4. idiosyncratic: no edge, but the user's own data holds (pair patterns only — a
@@ -246,12 +271,59 @@ export function classifyPattern(
   if (pattern.metricKeys.length === 2) {
     const personal = personalFor(pairKey(pattern.metricKeys[0]!, pattern.metricKeys[1]!))
     if (personal !== null && personalPassesGate(personal, gates)) {
-      return { branch: "idiosyncratic", edges: [], personal, topEdge: null }
+      return { branch: "idiosyncratic", edges: [], personal, topEdge: null, cardEdge: null }
     }
   }
 
-  // 5. nothing to say — the pattern is gap fuel (A1 gap ledger, later session).
+  // 5. nothing to say — the pattern is gap fuel (the handler writes the A1 gap event).
   return null
+}
+
+// ─── Surfacing policy + A1 gap-status mapping (O16 + O18) ───────────────────────────────────
+
+/**
+ * O18 (Jayden 2026-07-24, decision (a): gap-only) + O16 — the ONE place that says which
+ * classified patterns may render a user card:
+ *   - `agree` renders the cited edge card ONLY with a subject-endpoint cardEdge (O16);
+ *   - `idiosyncratic` renders the uncited "still researching" card (architecture §S7);
+ *   - `research-context` and `contradiction` NEVER render — composed row + gap event only
+ *     (architecture §S7 / the composed_insights migration comment; verdict H1).
+ */
+export function rendersCard(classified: ClassifiedPattern): boolean {
+  if (classified.branch === "agree") return classified.cardEdge !== null
+  return classified.branch === "idiosyncratic"
+}
+
+/** The gap_ledger status values the serve path writes (subset of the architecture §A1 enum). */
+export type GapStatus =
+  | "personal-signal-no-edge"
+  | "blocked-completeness"
+  | "needs-review"
+  | "personal-null"
+
+/**
+ * Architecture §A1 status for a classified pattern's gap event, or null when no gap is written
+ * (a served card is not a gap). The mapping is the architecture §S7 text, verbatim:
+ *   - `research-context` → completeness-gated → 'blocked-completeness';
+ *   - `contradiction` → 'needs-review';
+ *   - `idiosyncratic` → 'personal-signal-no-edge' (card AND gap event — §S7 does both);
+ *   - `agree` with cardEdge null (O16 object-only signal) → 'personal-signal-no-edge': the
+ *     fired signal has no servable edge in the orientation that could serve it.
+ * The fifth serve-path status, 'personal-null' (pair with a computed-but-non-gate-passing
+ * personal signal and no edge — branch 5), is written by the handler's idiosyncratic sweep,
+ * which never constructs a ClassifiedPattern.
+ */
+export function gapStatusFor(classified: ClassifiedPattern): GapStatus | null {
+  switch (classified.branch) {
+    case "agree":
+      return classified.cardEdge === null ? "personal-signal-no-edge" : null
+    case "research-context":
+      return "blocked-completeness"
+    case "contradiction":
+      return "needs-review"
+    case "idiosyncratic":
+      return "personal-signal-no-edge"
+  }
 }
 
 // ─── Completeness scorer (§S7.2) ───────────────────────────────────────────────────────────
