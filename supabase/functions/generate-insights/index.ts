@@ -106,6 +106,17 @@ const COMPOSER_EXPIRY_DAYS = 7
 const COMPOSER_PHASE = "phase2_engine"
 
 /**
+ * O19 defense-in-depth (verdict H2): baseline_snapshots is refreshed AND pruned by every
+ * successful compute-baselines run, so under normal operation no snapshot is older than the
+ * last run. A snapshot whose computed_at is older than this many days therefore survives only
+ * when the baseline job is down or its prune was skipped (the A14 empty-input guard) — and it
+ * describes a 7-day stats window that has entirely rolled past. Exclude it from evaluation
+ * rather than serving stale stats. One baseline window (7 days) is the shipped provisional
+ * value — named config, never inline (ADR-0002 house style; calibration is a data change).
+ */
+const SNAPSHOT_FRESHNESS_DAYS = 7
+
+/**
  * User-held card statuses the regeneration pass must never overwrite (sign-off D17, audit
  * A18): a `snoozed` card is skipped exactly like a `dismissed` one — the hold persists until
  * the USER changes the status. N-day auto-reactivation (a snooze-until column) is deliberately
@@ -290,12 +301,19 @@ Deno.serve(async (req) => {
         .order("rule_id", { ascending: true })
         .range(from, to),
     )
+    // O19 freshness filter: snapshots older than SNAPSHOT_FRESHNESS_DAYS never enter the run
+    // (a small WHERE — the downstream union of series-having + snapshot-having users is
+    // unchanged in shape; stale-snapshot-only users simply drop out of it naturally).
+    const snapshotFreshnessCutoff = new Date(
+      Date.now() - SNAPSHOT_FRESHNESS_DAYS * 24 * 60 * 60 * 1000,
+    ).toISOString()
     baselines = await fetchAll<BaselineRow>((from, to) =>
       supabase
         .from("baseline_snapshots")
         .select(
           "user_id, metric_key, mean, std_dev, min, max, trend, confidence, data_sources, window_days",
         )
+        .gte("computed_at", snapshotFreshnessCutoff)
         .order("user_id", { ascending: true })
         .order("metric_key", { ascending: true })
         .range(from, to),
