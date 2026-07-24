@@ -144,4 +144,24 @@ undersized maxOutputTokens yields empty visible text. Size generously in downstr
 - Mutation proof for acceptance (iii): schema clause + loader gate git-stashed → both O17 tests and
   the O20 loader test fail; restored → 50/50 + 340/340.
 
+## D9 · U4 implementation choices (card semantics + gap ledger) — U4
+
+- **Gap-ledger shape: architecture §A1 VERBATIM, overriding the dispatch brief's suggested shape**
+  (per the brief's own architecture-wins rule): `(metric_a, metric_b, scope pk, status ∈ 8 §A1
+  values, personal_signal, lit_candidate, completeness, demand, last_ingest_attempt, corpus_version,
+  last_status_change)` + `metric_a < metric_b` CHECK. The brief's `reason` values map to §A1
+  statuses via `gapStatusFor` (research_context→blocked-completeness per §S7; contradiction→
+  needs-review; no-edge→personal-signal-no-edge/personal-null); `object_only_signal` has no §A1
+  status → carried in `lit_candidate.orientation`. Serve path writes `scope='aggregate'` only; no
+  user ids (§A1 privacy invariant); authenticated SELECT restricted to aggregate rows; UPSERT via
+  `record_gap_events(jsonb)` RPC, service_role-only EXECUTE.
+- **O16 seam choice:** pure-layer `ClassifiedPattern.cardEdge` (null for object-only) + single
+  `rendersCard` policy fn + render-level fired-metric assertion (defense in depth); `topEdge` now
+  PREFERS subject-endpoint consistent edges so card metadata/insight identity stay coherent.
+- **Demand semantics:** per-(user, pair, status) dedupe per run → demand = demanding-users count;
+  last-write-wins status until the weekly A1 classifier (later cycle) owns resolution; branch-4
+  idiosyncratic BOTH renders the personal card AND ledgers demand (architecture's "does BOTH").
+- **Carry-forward:** contradiction's shared/brain `needsReview()` edge-flag not wired (shared/ was
+  out of U4 scope) — owned by a later unit / run-end backlog note.
+
 _(Further D-entries appended per unit as the run executes.)_

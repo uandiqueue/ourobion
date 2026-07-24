@@ -66,5 +66,10 @@ NOT-live-verified list). U2 (O15 verifier grounding) marked in-progress and disp
   context_sync). ACCEPTANCE (iii) mutation-proven both cases; [B8] O17 superRefine clause; A3 test
   retarget flagged for reviewers. D8 recorded; ledger row 4; U4 (O16+O18+gap_ledger card semantics)
   marked in-progress and dispatched.
+- U4 done — PR #127, gates green (rules 82/82 + tsc, db reset clean, context_sync) + LIVE handler
+  proof on the local stack (reproduced O16 bug input → no wrong-metric card + gap row; demand
+  increment; RLS denial). gap_ledger shipped §A1-verbatim (D9 records the brief-vs-architecture
+  divergence). Ledger row 5; carry-forward noted (needsReview wiring). U5 (trigger + provenance +
+  O19 prune) marked in-progress and dispatched.
 
 memory: Run 2.0 launched 2026-07-24 — resumable state = docs/temp/phase2-run-2/orchestration-log.md on the feat/phase2-run-2/* chain (worktree C:\project\ourobion-run2); inputs live ON the run branch, not dev-phase2.
