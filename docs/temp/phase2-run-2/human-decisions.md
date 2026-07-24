@@ -26,4 +26,9 @@ Format: id · what stopped / what is decided · what is needed · what it gates.
 
 ## Blocked-on-human (live)
 
-_(none yet)_
+- **H3 · evaluate-signals has no cron schedule** (found in assessment 2026-07-24): the shipped
+  pipeline never populates `personal_signals` on the nightly schedule — only compute-baselines
+  (18:00) and generate-insights (18:30) are scheduled. The demo is unaffected (the U5 on-demand
+  trigger runs all three), but production needs a decision: add a `evaluate-signals` cron between
+  the two (plus its missing `config.toml` entry)? What cadence? Gates: nightly-schedule correctness
+  only; nothing in this run.

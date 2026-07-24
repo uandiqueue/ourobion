@@ -41,4 +41,35 @@ to keep Run 2.0's review surface in one doc.
   with B5, unchanged.
 - **B8 flag:** any shared/-touching implementation detail will be listed on the owning unit's entry.
 
+## D3 · nao writes biotope tables for the simulated-data loader (design-contract deviation) — U6 (planned)
+
+- **Choice:** implement O11 as a nao API route + page writing simulated rows into biotope's existing
+  storage-primitive tables via Supabase (shared identity), provenance-flagged as simulated, dev-only.
+- **Alternatives rejected:** (a) a biotope-side loader screen — rejected: PART 1 step 1 says "via a
+  nao UI" (Jayden's demo definition); (b) hand-run SQL — the exact thing O11 exists to remove.
+- **Why flagged:** docs/shared/biotope-nao-link.md says the apps share only identity/contracts/the
+  verified_edges layer and nao never touches biotope's per-user health tables. O11 is Jayden's locked
+  decision and supersedes for the demo, but the deviation is recorded for retro-review (and the link
+  doc may need an amendment note next cycle). **B8-adjacent: retro-review.**
+
+## D4 · Unit decomposition + sequencing of the FINAL worklist — U0
+
+- **Choice:** 12 build units as in the orchestration log; contract/backend units (U1–U5) before app
+  units (U6–U11); U4 carries the gap_ledger migration used by both O18 and O9; the nao CI job rides
+  the first nao code unit (U6); e2e + runbook is its own final unit (U12).
+- **Alternatives rejected:** (a) one-unit-per-O-item (15+ PRs, more gate runs, no cohesion — O17+O20
+  are one contract-hardening seam; O16+O18 edit the same handler blocks); (b) backend-all-then-UI-all
+  (delays integration feedback on the nao seam until late).
+- **Why:** matches the dependency spine (O15→feature b; O16→card demo), keeps each PR one review
+  surface, and caps loss-on-halt at one unit.
+
+## D5 · evaluate-signals cron gap: fix via the U5 trigger only, not a new cron — U0/U5
+
+- **Choice:** the shipped schedule never runs evaluate-signals (no cron, no config.toml entry). The
+  demo path is the U5 on-demand trigger, which runs all three functions in sequence — so the demo
+  does not need the cron. Adding the missing cron/schedule is recorded for Jayden (human-decisions
+  H3), NOT done autonomously.
+- **Why:** production scheduling policy (cadence, cost, pg_cron config prereqs per memory 0005) is a
+  product call the backlog does not answer; the run's boundary rule says record, don't resolve.
+
 _(Further D-entries appended per unit as the run executes.)_

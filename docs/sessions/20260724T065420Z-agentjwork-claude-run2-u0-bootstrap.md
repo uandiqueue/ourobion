@@ -32,9 +32,19 @@ updated: 2026-07-24
    from it.
 7. Gate: node tools/context_sync.mjs --check green in the worktree.
 
+## Assessment synthesis + worklist finalization (same session, second commit)
+
+8. U0 pushed; PR #123 opened (base dev-phase2; never merge).
+9. All 4 assessment agents reported. Load-bearing findings folded into the orchestration log:
+   evaluate-signals never scheduled (H3); O15 evidence stripped at the TYPE boundary + no fixture
+   corpus exists; gap ledger fully absent (U4 builds it for O18 + O9); decorrelation enforced at
+   config load only; nao is Supabase-auth-only + absent from CI (U6 adds the job); biotope trend +
+   provenance views are greenfield (chart source: metric_daily_values).
+10. FINAL 12-unit worklist + binding test-strategy BAR written to the orchestration log; D3–D5
+    recorded; U0 flipped done (ledger row 1); U1 marked in-progress ahead of dispatch (PART R).
+
 ## Next
 
-Commit + push U0, open PR (never merge). Then: assessment synthesis → final worklist + test strategy
-→ U1.
+Dispatch U1 build agent (router OpenAI-only TEST-MODE posture + low C7 caps + smoke call).
 
 memory: Run 2.0 launched 2026-07-24 — resumable state = docs/temp/phase2-run-2/orchestration-log.md on the feat/phase2-run-2/* chain (worktree C:\project\ourobion-run2); inputs live ON the run branch, not dev-phase2.

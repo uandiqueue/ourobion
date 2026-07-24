@@ -29,38 +29,104 @@ reproduces from a clean local stack.
 
 ## ▶ RESUME
 
-**Current state:** U0 (bootstrap) `in-progress` — tracking docs created; assessment agents running;
-supabase stack starting. Worklist below is DRAFT until assessment synthesis lands (next commit).
-**Next action:** finish U0 (commit + push + PR), then write the final worklist from assessment results,
-then start U1.
+**Current state:** U0 `done` (PR #123). Worklist FINAL (assessment synthesis below). Local supabase
+stack UP (API 54321 / DB 54322). OPENAI_API_KEY present in tools/brain-ingest/.env (gitignored).
+**Next action:** U1 is `in-progress` (marked before dispatch, per PART R). If resuming mid-U1:
+re-run the WHOLE unit — git status/diff the worktree, reset or finish partial work, redo gate +
+tests before its PR.
 
-## Worklist (DRAFT — pending assessment synthesis)
+## Worklist (FINAL — from assessment synthesis 2026-07-24)
 
-Status: `queued` / `in-progress` / `done`. Sequencing spine: backend path before consuming UI; O16
-before any card demo; O15 before feature b. Unit boundaries will be finalized after the 4 assessment
-agents report; the O-item → unit mapping below is the planning skeleton.
+Status: `queued` / `in-progress` / `done`. Sequencing spine: O15 (U2) before feature b (U9); O16 (U4)
+before any card demo (U12); backend seam lands in the same unit as (or before) the UI consuming it.
+One writer at a time; each unit stacks on the chain tip.
 
-| Unit | Working title | O-items | Status |
-|------|---------------|---------|--------|
-| U0 | Run bootstrap: worktree, input docs, tracking docs, PR | — | in-progress |
-| U1 | Local stack + fixtures + test-mode wiring (supabase env, OpenAI-only router TEST-MODE flag, fixture corpus) | O15-prereq, PART 3 | queued |
-| U2 | Orientation-aware cards (wrong-metric fix) + research-context gap-only | O16, O18 | queued |
-| U3 | Servable-band quote-check invariant (shared/, B8 flag) + derivation copy-gate | O17, O20 | queued |
-| U4 | Verifier grounding: evidence-bearing citations + fixture retrieval in CLI verify | O15 | queued |
-| U5 | Simulated health-data loader: backend write path + nao UI (incremental by-day) | O11 | queued |
-| U6 | Serve-pipeline on-demand trigger + provenance read + baseline prune | O12, O19 | queued |
-| U7 | biotope: trend/graph view + insight cards + provenance ("how generated") view | O12 (app side) | queued |
-| U8 | Model-config read boundary + editable caps + spend-vs-budget nao panel | O10 (feature a) | queued |
-| U9 | Claims curation + human REJECT override (supersedes verifier for serving) | O13 (feature b) | queued |
-| U10 | Seeds-as-data + nao seed-load UI | O14 (feature c) | queued |
-| U11 | Gap detection + ledger + nao surfacing during ingestion | O9 slice (feature d) | queued |
-| U12 | E2E demo dry-run (main loop 1–5 + a–d) + demo runbook | DoD (v)+(vi) | queued |
+| Unit | Title | O-items | Status |
+|------|-------|---------|--------|
+| U0 | Run bootstrap: worktree, input docs, tracking docs, PR #123 | — | done |
+| U1 | Router OpenAI-only posture: TEST-MODE decorrelation override (labelled), all nodes → gpt-*/o* on api_worker, low C7 caps (C-entry), live smoke call (ledger row) | PART 3, D2 | in-progress |
+| U2 | Verifier grounding: evidence-bearing citation type (shared/, B8), fixture corpus file + loader, CLI retrieve wiring, evidence in prompt; ACCEPTANCE (i) integration test on the real CLI seam | O15 | queued |
+| U3 | Contract hardening: servable band ⇒ quote-check pass (shared/ superRefine, B8; ACCEPTANCE (iii) loader test) + derivation copy-gate at synthesis + load | O17, O20 | queued |
+| U4 | Card semantics: orientation-aware cards (ACCEPTANCE (ii) 8-vector matrix), research-context/contradiction gap-only (O18 decided), gap_ledger table + composer writes, kill pairEdges fallback (correlates/modulates never decorate) | O16, O18, O9-table | queued |
+| U5 | Serve-pipeline on-demand trigger (runs compute-baselines → evaluate-signals → generate-insights; note: evaluate-signals has NO cron today), provenance read surface (card→edges→claims/citations view), baseline upsert-and-prune (+O19 test gates) | O12-backend, O19 | queued |
+| U6 | Simulated-data loader: nao page + API route writing biotope tables (provenance-flagged, incremental by-day) + FIRST nao unit adds nao CI job (typecheck+test) | O11 | queued |
+| U7 | biotope demo surfaces: trend/graph on metric_daily_values, provenance detail view (verified_edges/composed_insights read; handles "still researching"), post-trigger refresh | O12-app | queued |
+| U8 | Model-config + spend boundaries (Supabase read surfaces for router config + ledger; caps-edit write path router honors) + nao panel (feature a) | O10 | queued |
+| U9 | Claims curation + human REJECT: edge_human_verdicts migration, loader/view overlay (reject supersedes for serving), nao paper→claims page + reject action | O13 | queued |
+| U10 | Seeds-as-data: seeds table migration, nao seed-add UI, seeder reads table as 4th candidate source (C9 pair-only gate intact) | O14 | queued |
+| U11 | Gap surfacing: nao ingestion-view of gap_ledger (detection landed in U4); signal-no-edge → gap row → visible in nao | O9 slice | queued |
+| U12 | E2E demo dry-run: scripted full PART-1 flow (main loop 1–5 + features a–d) on local stack, live OpenAI for the essential proofs (ACCEPTANCE (iv), card copy inspected both orientations) + demo runbook (DoD v+vi) | DoD | queued |
+
+## Test strategy (the BAR, binding on every unit)
+
+- **Unit-green ≠ seam-correct.** Every backend path the demo exercises gets an INTEGRATION test on
+  the REAL seam: real CLI entry (U2), real shared-schema load path (U3), real generate-insights
+  handler on the local stack (U4/U5), real HTTP trigger (U5), real nao route → DB rows (U6), real
+  reject → serving exclusion (U9), real seed row → candidate enumeration via CLI (U10), real
+  signal-no-edge → gap row (U11).
+- **Mandatory acceptance tests:** (i) U2 — evidence text + provenance in the actual router request
+  from the CLI seam (capturing transport is OK; injected `retrieve` + mock router is NOT);
+  (ii) U4 — subject-only / object-only / both-consistent / both-inconsistent × increases/decreases;
+  (iii) U3 — failed quote check never yields a servable band (loader test); (iv) U12 — one real
+  end-to-end main-loop run on simulated data with OpenAI, card copy inspected for both endpoint
+  orientations.
+- **Handler-layer coverage is net-new by necessity** — the three edge functions have ZERO runtime
+  tests today (CI deno-checks types only); U4/U5 establish local-stack invocation tests.
+- **LLM spend:** live calls ONLY in U1 (smoke, ~0.1 SGD) and U12 (the e2e proof). Everything else
+  runs fixtures or a capturing transport. C7 caps set low in U1.
+- **Per-unit gate (PART 6):** flutter analyze + flutter test (when app touched); per-package
+  tsc --noEmit + npm test; deno check unavailable locally (memory: validate via
+  `supabase functions serve` + HTTP; CI deno-check is the type gate); `supabase db reset` for
+  migration units; context_sync --check; the unit's own integration tests.
+
+## Assessment synthesis (verified baseline, 2026-07-24)
+
+Four read-only Explore agents mapped dev-phase2 @ e185cf0. Full reports in the session transcript;
+load-bearing facts:
+
+- **Engine:** cron-only (pg_cron→pg_net, service-role header check); **evaluate-signals has NO cron
+  schedule and no config.toml entry** — personal_signals never populate on the shipped schedule (the
+  U5 trigger runs it explicitly; cron addition left to Jayden — human-decisions H3). Wrong-metric bug
+  confirmed at generate-insights/index.ts:693-731 + render.ts EDGE_CARD_TEMPLATE (subject hardcoded)
+  + composer.ts:97-98 (single-endpoint ⇒ consistent); NO orientation test exists. research-context
+  coincidence cards render today (index.ts:612) and the pairEdges fallback (index.ts:645-648) can
+  attach correlates/modulates; gap ledger is entirely absent (composer.ts:253 defers it) — U4 builds
+  the table both O18 and O9 need. compute-baselines upserts without pruning; generate-insights unions
+  baseline-only users (index.ts:415).
+- **Brain/verifier/router:** O15 fully confirmed — cli.ts:334-353 never sets runOpts.retrieve (zero
+  retrieval, yet `performed:true` = grounded-absence), VerifyCitation (verify/types.ts:45-53) has no
+  text field (evidence stripped at the TYPE boundary), prompt shows title/ids only (prompt.ts:71-74).
+  NO fixture corpus file exists — the RetrieveOptions.corpus seam is fed only by inline test objects.
+  Router: all six nodes currently route local_agent (verifier is already gpt-5 but goes through the
+  mailbox, not OpenAI); decorrelation enforced at CONFIG LOAD only (config.ts:221-236, two clauses
+  incl. verifier!==anthropic — both violated by the OpenAI-only posture → TEST-MODE flag);
+  OpenAI adapter exists and works (apiWorker.ts:169-208) but is UNEXERCISED by shipped config.
+  Budget ledger solid (budget.ts, file-backed, 0.95 hard-stop). O17 confirmed: no superRefine clause
+  ties servable verdicts to quoteCheck (relationships.schema.ts:155-210); only the pipeline's
+  pre-LLM reject masks it — not a contract guarantee. O20 confirmed: validateCopyString never called
+  on derivation (synthesis or loader). Human-override layer: nothing exists (greenfield). Seeds:
+  candidates.ts:60-119 has three sources (registry derivedFrom / blueprints / static topics), C9
+  pair-only gate also enforced at postprocess.ts:131-139 — a seeds table is a clean 4th source.
+- **nao:** Next.js 15 App Router on OpenNext/CF Workers; Supabase is AUTH-ONLY today — zero DB
+  reads/writes; corpus data comes from R2+D1. Existing reusable seams: IngestControlPanel form
+  pattern, API-route-handler convention, SubNav tabs, theme.css tokens, GH-Actions dispatch (the
+  seed "Run now" already dispatches a fixed list — O14 extends this seam with a table). **nao is NOT
+  in CI at all** — U6 adds the job. No claims/evidence/model-config/gap UI exists.
+- **biotope:** Insights tab renders insight_cards (extend, don't re-skin; severity parsed but
+  unrendered); provenance detail view + any per-day trend are GREENFIELD — no charting package, no
+  range query; the canonical chart source is the `metric_daily_values` view (security_invoker).
+  App never invokes the engine (cron-only from its POV); realtime watchInsights exists unused.
+  Widget tests blocked on Supabase init (placeholder only) — unit-test the pure parts, verify
+  screens on the live stack in U12.
+- **Design-contract deviation to record:** biotope-nao-link says nao never writes biotope's health
+  tables; O11 (Jayden, locked) sanctions the simulated-data loader doing exactly that, dev-only +
+  provenance-flagged. Recorded as D3 in decisions-signoff.md; retro-review flag.
 
 ## Ledger
 
 | # | Unit | Branch | PR | Gate | OpenAI spend (SGD) | Cumulative spend | Notes |
 |---|------|--------|----|------|--------------------|------------------|-------|
-| — | — | — | — | — | 0.00 | 0.00 | run started 2026-07-24; no LLM calls yet |
+| 1 | U0 | feat/phase2-run-2/u0-run-docs | #123 | context_sync green | 0.00 | 0.00 | docs-only bootstrap; inputs carried onto branch |
 
 ## Budget
 

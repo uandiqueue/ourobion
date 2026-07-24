@@ -14,4 +14,4 @@ merely unit-green). Anything NOT verified is named in the Notes column — never
 
 | Unit | Built | O-items | Gate | e2e-verified | SIGN-OFF | Notes (incl. what was NOT verified) |
 |------|-------|---------|------|--------------|----------|--------------------------------------|
-| U0 | Run bootstrap: worktree, input docs carried onto branch, tracking docs | — | n/a (docs-only) | n/a | pending | context_sync --check green before PR |
+| U0 | Run bootstrap: worktree, input docs carried onto branch, tracking docs, final worklist + test strategy from 4-agent assessment | — | context_sync green | n/a (docs-only) | pending | PR #123 |
