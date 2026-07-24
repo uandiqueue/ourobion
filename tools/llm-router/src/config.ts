@@ -10,7 +10,13 @@
  *
  * A same-family verifier shares the synthesizer's blind spots and rubber-stamps
  * it; per §10.1 the verifier is explicitly non-Anthropic. No config that
- * violates this can be constructed.
+ * violates this can be constructed — EXCEPT under an explicit, loudly-labelled
+ * TEST-MODE (`testMode` block, Run 2.0 single-provider posture): with
+ * `testMode: { reason: "…" }` present, a decorrelation violation is DOWNGRADED
+ * from a hard failure to a warning naming the violated invariant, and every
+ * router result carries `testMode` metadata (label: TEST_MODE_LABEL from
+ * types.ts) so downstream consumers stamp verifier verdicts accordingly.
+ * Without the flag, validation behaves exactly as before (hard fail).
  *
  * Paths in the config (`budget.ledgerPath`, `localAgent.mailboxDir`) are
  * repo-root-relative and resolved via `resolveRepoPath` — no hardcoded absolute
@@ -22,7 +28,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, isAbsolute, resolve } from 'node:path';
-import { LLM_NODE_IDS, type LlmNodeId, type RouteKind, type VendorFamily } from './types.js';
+import { LLM_NODE_IDS, TEST_MODE_LABEL, type LlmNodeId, type RouteKind, type VendorFamily } from './types.js';
 import { RouterConfigError } from './errors.js';
 
 /** Per-node routing entry. */
@@ -77,6 +83,17 @@ export interface LocalAgentConfig {
   pollIntervalMs: number;
 }
 
+/**
+ * TEST-MODE flag (Run 2.0 single-provider posture). Presence of this block
+ * downgrades the two decorrelation clauses from hard load failures to loud
+ * warnings; it changes NOTHING else about validation. It must be explicit:
+ * a non-empty `reason` is required, so nobody lands in test mode by accident.
+ */
+export interface TestModeConfig {
+  /** Non-empty justification for running without decorrelation. REQUIRED. */
+  reason: string;
+}
+
 export interface RouterConfig {
   version: 1;
   nodes: Record<LlmNodeId, NodeConfig>;
@@ -84,6 +101,8 @@ export interface RouterConfig {
   prices: Record<string, PriceEntry>;
   budget: BudgetConfig;
   localAgent: LocalAgentConfig;
+  /** Optional TEST-MODE flag — see {@link TestModeConfig}. */
+  testMode?: TestModeConfig;
 }
 
 const VALID_ROUTES: readonly RouteKind[] = ['local_agent', 'api_worker'];
@@ -137,12 +156,22 @@ export function familyOf(config: RouterConfig, model: string): VendorFamily {
   return entry.family;
 }
 
+/** Options for {@link validateConfig} / {@link loadConfig}. */
+export interface ValidateOptions {
+  /**
+   * Sink for TEST-MODE decorrelation warnings (injectable for tests).
+   * Default: `console.warn`.
+   */
+  warn?: (message: string) => void;
+}
+
 /**
  * Validate an already-parsed config object. Returns the same object, typed.
  * Enforces: shape, all six nodes present, every node model resolves to a
- * family and has a price row, budget sanity, and the DECORRELATION INVARIANT.
+ * family and has a price row, budget sanity, and the DECORRELATION INVARIANT
+ * (downgraded to a warning ONLY when an explicit `testMode` block is present).
  */
-export function validateConfig(raw: unknown): RouterConfig {
+export function validateConfig(raw: unknown, opts: ValidateOptions = {}): RouterConfig {
   if (raw === null || typeof raw !== 'object') fail('config must be a JSON object');
   const c = raw as Partial<RouterConfig>;
 
@@ -207,6 +236,20 @@ export function validateConfig(raw: unknown): RouterConfig {
   if (!isPositiveInt(la.timeoutMs)) fail('localAgent.timeoutMs must be a positive integer');
   if (!isPositiveInt(la.pollIntervalMs)) fail('localAgent.pollIntervalMs must be a positive integer');
 
+  // testMode (optional) — must be explicit and justified when present.
+  const tm = c.testMode;
+  if (tm !== undefined) {
+    if (tm === null || typeof tm !== 'object' || Array.isArray(tm)) {
+      fail('testMode must be an object when present');
+    }
+    if (typeof (tm as TestModeConfig).reason !== 'string' || (tm as TestModeConfig).reason.trim().length === 0) {
+      fail(
+        'testMode.reason must be a non-empty string — TEST-MODE (decorrelation downgraded to a ' +
+          'warning) requires an explicit justification',
+      );
+    }
+  }
+
   const config = c as RouterConfig;
 
   // Every node model must resolve to a family and have a price row.
@@ -218,19 +261,34 @@ export function validateConfig(raw: unknown): RouterConfig {
     }
   }
 
-  // THE DECORRELATION INVARIANT (memory 0013 / §10.1). Fail loudly.
+  // THE DECORRELATION INVARIANT (memory 0013 / §10.1). Fail loudly — unless an
+  // explicit testMode block downgrades a violation to an unmistakable warning.
+  const warn = opts.warn ?? console.warn;
+  const violated = (invariant: string, detail: string): void => {
+    if (config.testMode === undefined) fail(`decorrelation violated: ${detail}`);
+    warn(
+      `llm-router TEST-MODE WARNING — decorrelation invariant '${invariant}' is VIOLATED and ` +
+        `deliberately downgraded to this warning by config testMode ` +
+        `(reason: ${config.testMode.reason}): ${detail}. Verifier verdicts produced under this ` +
+        `posture are NOT independently verified and MUST carry the label ` +
+        `'${TEST_MODE_LABEL}'.`,
+    );
+  };
+
   const synthesisFamily = familyOf(config, config.nodes.synthesis.model);
   const verifierFamily = familyOf(config, config.nodes.verifier.model);
   if (synthesisFamily === verifierFamily) {
-    fail(
-      `decorrelation violated: synthesis ('${config.nodes.synthesis.model}', ${synthesisFamily}) and ` +
+    violated(
+      'family(synthesis) !== family(verifier)',
+      `synthesis ('${config.nodes.synthesis.model}', ${synthesisFamily}) and ` +
         `verifier ('${config.nodes.verifier.model}', ${verifierFamily}) are the same vendor family — ` +
         `a same-family verifier shares the synthesizer's blind spots (memory 0013)`,
     );
   }
   if (verifierFamily === 'anthropic') {
-    fail(
-      `decorrelation violated: verifier ('${config.nodes.verifier.model}') is Anthropic-family — ` +
+    violated(
+      "family(verifier) !== 'anthropic'",
+      `verifier ('${config.nodes.verifier.model}') is Anthropic-family — ` +
         `per architecture §10.1 the verifier MUST be non-Anthropic`,
     );
   }
@@ -239,7 +297,7 @@ export function validateConfig(raw: unknown): RouterConfig {
 }
 
 /** Load + validate the config file (default: the checked-in router.config.json). */
-export function loadConfig(configPath?: string): RouterConfig {
+export function loadConfig(configPath?: string, opts: ValidateOptions = {}): RouterConfig {
   const path = configPath ?? defaultConfigPath();
   let raw: unknown;
   try {
@@ -247,5 +305,5 @@ export function loadConfig(configPath?: string): RouterConfig {
   } catch (err) {
     fail(`cannot read/parse '${path}': ${err instanceof Error ? err.message : String(err)}`);
   }
-  return validateConfig(raw);
+  return validateConfig(raw, opts);
 }

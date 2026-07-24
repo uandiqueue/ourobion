@@ -7,11 +7,13 @@
 export {
   estimateTokens,
   LLM_NODE_IDS,
+  TEST_MODE_LABEL,
   type LlmNodeId,
   type LlmRequest,
   type LlmResponse,
   type LlmUsage,
   type RouteKind,
+  type TestModeState,
   type VendorFamily,
 } from './types.js';
 export {
@@ -34,6 +36,8 @@ export {
   type PriceEntry,
   type ProviderEntry,
   type RouterConfig,
+  type TestModeConfig,
+  type ValidateOptions,
 } from './config.js';
 export { BudgetLedger, costUsd, utcDayKey, type BudgetState, type NodeDayCounter, type RunCounter } from './budget.js';
 export {

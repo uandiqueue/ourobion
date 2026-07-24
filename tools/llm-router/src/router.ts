@@ -34,9 +34,11 @@ import { requestLocalAgent } from './routes/localAgent.js';
 import {
   estimateTokens,
   LLM_NODE_IDS,
+  TEST_MODE_LABEL,
   type LlmNodeId,
   type LlmRequest,
   type LlmResponse,
+  type TestModeState,
   type VendorFamily,
 } from './types.js';
 
@@ -119,7 +121,19 @@ export class LlmRouter {
     }
 
     this.ledger.record(req.nodeId, this.runId, node.model, response.usage);
-    return response;
+    const testMode = this.testModeState();
+    return testMode !== undefined ? { ...response, testMode } : response;
+  }
+
+  /**
+   * TEST-MODE state (label + reason) when the config carries a `testMode`
+   * block, else undefined. Attached to every route() result so downstream
+   * consumers can stamp verifier verdicts with {@link TEST_MODE_LABEL}.
+   */
+  testModeState(): TestModeState | undefined {
+    return this.config.testMode !== undefined
+      ? { reason: this.config.testMode.reason, label: TEST_MODE_LABEL }
+      : undefined;
   }
 
   /** Current budget snapshot (today's per-node spend + run totals). */
@@ -143,11 +157,17 @@ export interface NodeReportRow {
 export interface CheckConfigReport {
   nodes: NodeReportRow[];
   decorrelation: {
-    ok: true; // an invalid config cannot load, so a report implies ok
+    /**
+     * True when both decorrelation clauses hold. False is only reachable
+     * under TEST-MODE — outside it a violating config cannot load at all.
+     */
+    ok: boolean;
     synthesisFamily: VendorFamily;
     verifierFamily: VendorFamily;
-    verifierNonAnthropic: true;
+    verifierNonAnthropic: boolean;
   };
+  /** Present exactly when the config carries a `testMode` block. */
+  testMode?: TestModeState;
   /** env-var → present, for every provider referenced by the config. */
   keys: Record<string, boolean>;
   budget: BudgetState;
@@ -196,14 +216,20 @@ export function checkConfig(opts: CheckConfigOptions = {}): CheckConfigReport {
     };
   });
 
+  const synthesisFamily = familyOf(config, config.nodes.synthesis.model);
+  const verifierFamily = familyOf(config, config.nodes.verifier.model);
+  const verifierNonAnthropic = verifierFamily !== 'anthropic';
   return {
     nodes,
     decorrelation: {
-      ok: true,
-      synthesisFamily: familyOf(config, config.nodes.synthesis.model),
-      verifierFamily: familyOf(config, config.nodes.verifier.model),
-      verifierNonAnthropic: true,
+      ok: synthesisFamily !== verifierFamily && verifierNonAnthropic,
+      synthesisFamily,
+      verifierFamily,
+      verifierNonAnthropic,
     },
+    ...(config.testMode !== undefined
+      ? { testMode: { reason: config.testMode.reason, label: TEST_MODE_LABEL } }
+      : {}),
     keys,
     budget: ledger.state(),
   };

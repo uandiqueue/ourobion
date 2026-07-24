@@ -58,10 +58,23 @@ function main(argv: string[]): number {
           `maxOut=${String(n.maxOutputTokens).padEnd(6)} ${key}${n.priceProvisional ? ' (price provisional)' : ''}\n`,
       );
     }
-    process.stdout.write(
-      `\nDecorrelation: OK — synthesis=${report.decorrelation.synthesisFamily}, ` +
-        `verifier=${report.decorrelation.verifierFamily} (non-Anthropic enforced)\n`,
-    );
+    if (report.decorrelation.ok) {
+      process.stdout.write(
+        `\nDecorrelation: OK — synthesis=${report.decorrelation.synthesisFamily}, ` +
+          `verifier=${report.decorrelation.verifierFamily} (non-Anthropic enforced)\n`,
+      );
+    } else {
+      process.stdout.write(
+        `\nDecorrelation: VIOLATED (allowed by TEST-MODE) — synthesis=${report.decorrelation.synthesisFamily}, ` +
+          `verifier=${report.decorrelation.verifierFamily}\n`,
+      );
+    }
+    if (report.testMode !== undefined) {
+      process.stdout.write(
+        `\nTEST-MODE ACTIVE — reason: ${report.testMode.reason}\n` +
+          `  All results must carry the label: ${report.testMode.label}\n`,
+      );
+    }
     process.stdout.write('\nKeys:\n');
     for (const [envVar, present] of Object.entries(report.keys)) {
       process.stdout.write(`  ${envVar.padEnd(20)} ${present ? 'present' : 'absent'}\n`);
