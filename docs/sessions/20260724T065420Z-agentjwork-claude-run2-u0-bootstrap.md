@@ -94,5 +94,9 @@ NOT-live-verified list). U2 (O15 verifier grounding) marked in-progress and disp
   gate+proof. U9 done — PR #132 (edge-loader 56/56, nao 74/74, db reset, context_sync; live 6-step
   reject proof). D14 recorded; ledger row 10. U10 (O14 seeds-as-data + create() adoption) marked
   in-progress and dispatched.
+- U10 done — PR #133 (brain-ingest 353/353, nao 83/83, db reset, context_sync; live seed-add →
+  CLI merge → fail-soft + cap-override-blocks-real-verify proofs; C9 gate test-pinned). D15
+  recorded; ledger row 11; U8 carry-forward closed. U11 (O9 gap surfacing, feature d) marked
+  in-progress and dispatched.
 
 memory: Run 2.0 launched 2026-07-24 — resumable state = docs/temp/phase2-run-2/orchestration-log.md on the feat/phase2-run-2/* chain (worktree C:\project\ourobion-run2); inputs live ON the run branch, not dev-phase2.

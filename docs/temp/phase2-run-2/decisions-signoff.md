@@ -256,4 +256,22 @@ undersized maxOutputTokens yields empty visible text. Size generously in downstr
   `.contains()` array-arg serialization → `cs.{[object Object]}` 500) — pinned by a unit test.
   Validation of the recovery protocol: inherited work is never assumed correct.
 
+## D15 · U10 implementation choices (seeds-as-data) — U10
+
+- **Merge semantics:** static SEED_TOPICS win on slug collision (db row dropped + warned in the
+  pipeline; `shadowedByBuiltIn` flagged in the nao catalog; POST refuses built-in slugs 409);
+  db-vs-db dedupe first-wins. Fail-soft mirror of U8's pattern (no env → static-only + loud warn).
+- **C9 gate protected by tests, not trust:** db seed enters as an `st:` anchor with EMPTY
+  metricKeys exactly like a static topic; pair-bearing candidates proven byte-identical with/
+  without a db topic; LLM responses inventing pair keys for the new topic are rejected; the
+  candidates.ts "ONLY source of pairs / LLM must not add pairs" header is pinned verbatim.
+- **Run-now dropdown left static:** wiring db seeds into it drags the R2-control-doc + GH-Actions
+  dispatch contract in; the demo's "pipeline picks it up" proof is the CLI consumption. Deliberate
+  deferral, next cycle with the O10(c) ingestion boundary.
+- **UPDATE restricted to `enabled`** via Postgres column-level grant (row policy permits, grant
+  restricts) — a curator can toggle but not rewrite history.
+- **Carry-forward closed:** LlmRouter.create() adopted at brain-ingest's three construction sites
+  (verify/seeder/synth) — live proof: a nao-set per_run_token_cap=1 denied a REAL verify before any
+  API call.
+
 _(Further D-entries appended per unit as the run executes.)_
