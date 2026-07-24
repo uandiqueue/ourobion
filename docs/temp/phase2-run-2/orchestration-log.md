@@ -32,12 +32,14 @@ reproduces from a clean local stack.
 **Current state:** U0 done (#123) · U1 done (#124; router OpenAI-only TEST-MODE, caps 1.00 USD/day/
 node + 60k tok/run) · U2 done (#125; verifier grounded — evidence-bearing citations, fixture corpus,
 CLI retrieve wiring, acceptance (i) green). Local supabase stack UP (API 54321 / DB 54322). Chain
-tip: feat/phase2-run-2/u10-seeds-as-data (U10 done, #133 — feature c shipped; cap overrides now
-bind real brain-ingest runs). Tracking-doc updates ride the chain tip.
-Demo dev user on local stack: u6-demo@ourobion.local — NOTE: `supabase db reset` WIPES auth.users;
-recreate via admin API (uid changes each recreation; re-seed data after resets).
-**Next action:** U11 is `in-progress`. If resuming mid-U11: audit any uncommitted partial work
-against the U11 brief, finish cleanly, redo the FULL gate + live proof (PART R).
+tip: feat/phase2-run-2/u11-gap-surfacing (U11 done, #134 — feature d shipped; ALL PART-1 FEATURES
+BUILT). Tracking-doc updates ride the chain tip.
+Demo dev user on local stack: latest is u11-demo@ourobion.local (u6-demo wiped by resets) — NOTE:
+`supabase db reset` WIPES auth.users; recreate via admin API. JWT iat-skew: pause 2s after login.
+**Next action:** U12 (FINAL unit — e2e dry-run + runbook + the run's live-LLM proofs) is
+`in-progress`. If resuming mid-U12: audit any uncommitted partial work against the U12 brief,
+finish cleanly, redo the FULL gate + dry-run (PART R). After U12: run-close synthesis (final
+ledger, human-decisions review, backlog statuses in next-build-optimizations.md).
 BOTH keys present in tools/brain-ingest/.env (gitignored): OPENAI (≤20 SGD) + ANTHROPIC (≤2 SGD,
 optional verifier decorrelation — see Budget + D2 AMENDED).
 
@@ -60,8 +62,8 @@ One writer at a time; each unit stacks on the chain tip.
 | U8 | Model-config + spend boundaries (Supabase read surfaces for router config + ledger; caps-edit write path router honors) + nao panel (feature a) | O10 | done |
 | U9 | Claims curation + human REJECT: edge_human_verdicts migration, loader/view overlay (reject supersedes for serving), nao paper→claims page + reject action | O13 | done |
 | U10 | Seeds-as-data: seeds table migration, nao seed-add UI, seeder reads table as 4th candidate source (C9 pair-only gate intact) + adopt LlmRouter.create() in brain-ingest (U8 carry-forward) | O14 | done |
-| U11 | Gap surfacing: nao ingestion-view of gap_ledger (detection landed in U4); signal-no-edge → gap row → visible in nao | O9 slice | in-progress |
-| U12 | E2E demo dry-run: scripted full PART-1 flow (main loop 1–5 + features a–d) on local stack, live OpenAI for the essential proofs (ACCEPTANCE (iv), card copy inspected both orientations) + demo runbook (DoD v+vi) | DoD | queued |
+| U11 | Gap surfacing: nao ingestion-view of gap_ledger (detection landed in U4); signal-no-edge → gap row → visible in nao | O9 slice | done |
+| U12 | E2E demo dry-run: scripted full PART-1 flow (main loop 1–5 + features a–d) on local stack, live OpenAI for the essential proofs (ACCEPTANCE (iv), card copy inspected both orientations) + demo runbook (DoD v+vi) | DoD | in-progress |
 
 ## Test strategy (the BAR, binding on every unit)
 
@@ -144,6 +146,7 @@ load-bearing facts:
 | 9 | U8 | feat/phase2-run-2/u8-model-config-spend | #131 | llm-router tsc + 71/71; nao tsc + 63/63; db reset clean; LIVE publish→panel→cap-edit→effective-cap+fail-soft proofs; context_sync green | 0.00 | 0.0002 | O10 closed (feature a); boundaries as rebuildable projections; O10(c) ingestion boundary deliberately deferred (Overview covers demo). First U8 attempt died on transient ENOTFOUND pre-write; clean re-run |
 | 10 | U9 | feat/phase2-run-2/u9-claims-human-verdict | #132 | edge-loader tsc + 56/56; nao tsc + 74/74; db reset clean; LIVE 6-step reject proof incl. real loader path + before/after serving exclusion + rebuild-doesn't-clobber; context_sync green | 0.00 | 0.0002 | O13 closed (feature b). LIMIT HALT mid-unit (session cap, reset 21:20 MYT); second agent audited inherited work per PART R, found+fixed a real containment-serialization bug, redid full gate+proof. No shared/ change (no B8). No GIN (seq scan 0.085ms measured) |
 | 11 | U10 | feat/phase2-run-2/u10-seeds-as-data | #133 | brain-ingest tsc + 353/353; nao tsc + 83/83; db reset clean; LIVE seed-add→catalog→CLI-merge→fail-soft + cap-override-blocks-real-verify proofs; context_sync green | 0.00 | 0.0002 | O14 closed (feature c) + U8 carry-forward done (create() adopted in verify/seeder/synth — override denied a real verify pre-API-call). C9 gate pinned by tests (byte-identity + header pin). Run-now dropdown stays static (GH dispatch contract not dragged in) |
+| 12 | U11 | feat/phase2-run-2/u11-gap-surfacing | #134 | nao tsc + 94/94; context_sync green (no migration) | 0.00 | 0.0002 | O9 demo slice closed (feature d) — ALL PART-1 FEATURES BUILT. Gaps table (§A1 labels, demand-sorted, top-50 honest note) + human-in-the-loop add-as-seed prefill (headless-Chrome click-path proven); anon denied. Env finding: local-stack JWT iat skew — 2s pause after login (in session log) |
 
 **Carry-forwards (not lost, owned later):** `contradiction` → shared/brain `needsReview()` edge-flag
 not wired (U4 report; candidate for U9's serving-layer work or a backlog note at run end).

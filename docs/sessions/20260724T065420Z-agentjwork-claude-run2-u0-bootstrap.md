@@ -98,5 +98,8 @@ NOT-live-verified list). U2 (O15 verifier grounding) marked in-progress and disp
   CLI merge → fail-soft + cap-override-blocks-real-verify proofs; C9 gate test-pinned). D15
   recorded; ledger row 11; U8 carry-forward closed. U11 (O9 gap surfacing, feature d) marked
   in-progress and dispatched.
+- U11 done — PR #134 (nao 94/94, context_sync; live gaps read + headless-Chrome prefill proof +
+  anon denial). ALL PART-1 FEATURES BUILT. Ledger row 12. U12 (FINAL: e2e dry-run + runbook +
+  live-LLM proofs) marked in-progress and dispatched.
 
 memory: Run 2.0 launched 2026-07-24 — resumable state = docs/temp/phase2-run-2/orchestration-log.md on the feat/phase2-run-2/* chain (worktree C:\project\ourobion-run2); inputs live ON the run branch, not dev-phase2.
