@@ -29,6 +29,12 @@ import {
   type RouterConfig,
 } from './config.js';
 import { RouterConfigError } from './errors.js';
+import {
+  effectiveCapsFor,
+  fetchCapOverrides,
+  type CapOverrides,
+  type FetchCapOverridesOptions,
+} from './overrides.js';
 import { callApiWorker, type ApiWorkerOptions } from './routes/apiWorker.js';
 import { requestLocalAgent } from './routes/localAgent.js';
 import {
@@ -63,6 +69,13 @@ export interface LlmRouterOptions {
   /** api_worker retry tuning (tests). */
   maxAttempts?: number;
   baseDelayMs?: number;
+  /**
+   * O10 cap overrides (run-2 U8) applied to the budget ledger. The sync
+   * constructor never fetches — pass a pre-fetched map here, or use
+   * {@link LlmRouter.create} which fetches FAIL-SOFT from Supabase when
+   * SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are present in env.
+   */
+  capOverrides?: CapOverrides;
   /** local_agent timing overrides (default from config.localAgent). */
   localAgentTimeoutMs?: number;
   localAgentPollIntervalMs?: number;
@@ -82,6 +95,29 @@ export class LlmRouter {
       config: this.config,
       ...(opts.ledgerPath !== undefined ? { ledgerPath: opts.ledgerPath } : {}),
       ...(opts.now !== undefined ? { now: opts.now } : {}),
+      ...(opts.capOverrides !== undefined ? { overrides: opts.capOverrides } : {}),
+    });
+  }
+
+  /**
+   * Async factory — the O10 override seam for pipeline callers: fetch cap
+   * overrides from `llm_router_cap_overrides` (FAIL-SOFT: absent env or an
+   * unreachable Supabase → file caps + one loud warning, never a throw), then
+   * construct the router with them. Explicit `capOverrides` in opts wins
+   * (no fetch). The plain constructor stays sync and never touches the network.
+   */
+  static async create(
+    opts: LlmRouterOptions = {},
+    fetchOpts: FetchCapOverridesOptions = {},
+  ): Promise<LlmRouter> {
+    if (opts.capOverrides !== undefined) return new LlmRouter(opts);
+    const overrides = await fetchCapOverrides({
+      ...(opts.env !== undefined ? { env: opts.env } : {}),
+      ...fetchOpts,
+    });
+    return new LlmRouter({
+      ...opts,
+      ...(overrides !== undefined ? { capOverrides: overrides } : {}),
     });
   }
 
@@ -152,6 +188,12 @@ export interface NodeReportRow {
   priceProvisional: boolean;
   keyEnvVar: string;
   keyPresent: boolean;
+  /** EFFECTIVE per-day USD cap for this node (O10 override ?? file value). */
+  perDayUsdCap: number;
+  perDayUsdCapOverridden: boolean;
+  /** EFFECTIVE per-run output-token cap applied to this node's calls. */
+  perRunTokenCap: number;
+  perRunTokenCapOverridden: boolean;
 }
 
 export interface CheckConfigReport {
@@ -179,6 +221,11 @@ export interface CheckConfigOptions {
   env?: Record<string, string | undefined>;
   ledgerPath?: string;
   now?: () => number;
+  /**
+   * O10 cap overrides to report/apply (run-2 U8). checkConfig itself stays
+   * sync and never fetches — the CLI fetches (fail-soft) and passes them in.
+   */
+  capOverrides?: CapOverrides;
 }
 
 /**
@@ -193,6 +240,7 @@ export function checkConfig(opts: CheckConfigOptions = {}): CheckConfigReport {
     config,
     ...(opts.ledgerPath !== undefined ? { ledgerPath: opts.ledgerPath } : {}),
     ...(opts.now !== undefined ? { now: opts.now } : {}),
+    ...(opts.capOverrides !== undefined ? { overrides: opts.capOverrides } : {}),
   });
 
   const keys: Record<string, boolean> = {};
@@ -204,6 +252,7 @@ export function checkConfig(opts: CheckConfigOptions = {}): CheckConfigReport {
   const nodes: NodeReportRow[] = LLM_NODE_IDS.map((nodeId) => {
     const n = config.nodes[nodeId];
     const provider = providerFor(config, n.model)!; // validated config ⇒ defined
+    const caps = effectiveCapsFor(config, opts.capOverrides, nodeId);
     return {
       nodeId,
       model: n.model,
@@ -213,6 +262,10 @@ export function checkConfig(opts: CheckConfigOptions = {}): CheckConfigReport {
       priceProvisional: config.prices[n.model]?.provisional === true,
       keyEnvVar: provider.envKey,
       keyPresent: keys[provider.envKey] === true,
+      perDayUsdCap: caps.perDayUsd,
+      perDayUsdCapOverridden: caps.perDayOverridden,
+      perRunTokenCap: caps.perRunTokens,
+      perRunTokenCapOverridden: caps.perRunOverridden,
     };
   });
 

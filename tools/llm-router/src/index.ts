@@ -39,7 +39,26 @@ export {
   type TestModeConfig,
   type ValidateOptions,
 } from './config.js';
-export { BudgetLedger, costUsd, utcDayKey, type BudgetState, type NodeDayCounter, type RunCounter } from './budget.js';
+export {
+  BudgetLedger,
+  costUsd,
+  utcDayKey,
+  type BudgetState,
+  type LedgerFile,
+  type NodeDayCounter,
+  type RunCounter,
+} from './budget.js';
+export {
+  effectiveCapsFor,
+  fetchCapOverrides,
+  MAX_PER_DAY_USD_CAP,
+  MAX_PER_RUN_TOKEN_CAP,
+  type CapOverrides,
+  type EffectiveCaps,
+  type FetchCapOverridesOptions,
+  type NodeCapOverride,
+} from './overrides.js';
+export { buildStatusRows, type PublishRows, type SpendRow, type StatusRow } from './publish.js';
 export {
   callApiWorker,
   ANTHROPIC_MESSAGES_URL,

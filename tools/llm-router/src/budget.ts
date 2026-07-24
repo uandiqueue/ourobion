@@ -41,6 +41,7 @@ import { dirname } from 'node:path';
 import type { RouterConfig } from './config.js';
 import { resolveRepoPath } from './config.js';
 import { RouterBudgetExceededError, RouterConfigError } from './errors.js';
+import { effectiveCapsFor, type CapOverrides } from './overrides.js';
 import type { LlmNodeId, LlmUsage } from './types.js';
 
 /** One node's accumulated spend within one UTC day. */
@@ -57,8 +58,8 @@ export interface RunCounter {
   outputTokens: number;
 }
 
-/** On-disk ledger shape. */
-interface LedgerFile {
+/** On-disk ledger shape (exported for the O10 publish projection — publish.ts). */
+export interface LedgerFile {
   version: 1;
   /** UTC date (YYYY-MM-DD) → per-node counters. */
   days: Record<string, Partial<Record<LlmNodeId, NodeDayCounter>>>;
@@ -72,6 +73,13 @@ export interface BudgetLedgerOptions {
   ledgerPath?: string;
   /** Injectable clock for deterministic tests; default Date.now. */
   now?: () => number;
+  /**
+   * O10 cap overrides (nao's `llm_router_cap_overrides` write surface, run-2
+   * U8): where present, a node's override REPLACES the file cap for that node
+   * at spend-check time — the config's global caps stay untouched (smallest
+   * correct change; see overrides.ts). Absent/undefined → file caps only.
+   */
+  overrides?: CapOverrides;
 }
 
 /** UTC date key (YYYY-MM-DD) for the day containing `ms`. */
@@ -110,6 +118,8 @@ export interface BudgetState {
   hardStopFraction: number;
   nodes: Partial<Record<LlmNodeId, NodeDayCounter>>;
   runs: Record<string, RunCounter>;
+  /** Present when the ledger was constructed with O10 cap overrides (run-2 U8). */
+  capOverrides?: CapOverrides;
 }
 
 /**
@@ -121,12 +131,14 @@ export class BudgetLedger {
   private readonly config: RouterConfig;
   private readonly ledgerPath: string;
   private readonly now: () => number;
+  private readonly overrides: CapOverrides | undefined;
   private data: LedgerFile;
 
   constructor(opts: BudgetLedgerOptions) {
     this.config = opts.config;
     this.ledgerPath = opts.ledgerPath ?? resolveRepoPath(opts.config.budget.ledgerPath);
     this.now = opts.now ?? Date.now;
+    this.overrides = opts.overrides;
     this.data = this.load();
   }
 
@@ -245,15 +257,20 @@ export class BudgetLedger {
    * Which cap (if any) the projected spend would cross. `est` should be a
    * worst-case estimate (full maxOutputTokens); refusal happens when the
    * projection lands AT or BEYOND the hard-stop line, mirroring brain-ingest.
+   *
+   * Caps are the node's EFFECTIVE caps (O10 override ?? file value — see
+   * overrides.ts). The per-run token counter stays run-wide; the override
+   * changes the ceiling it is checked against for THIS node's calls.
    */
   wouldExceed(nodeId: LlmNodeId, runId: string, model: string, est: LlmUsage): 'day_usd' | 'run_tokens' | undefined {
-    const { perDayUsdPerNode, perRunOutputTokens, hardStopFraction } = this.config.budget;
+    const { hardStopFraction } = this.config.budget;
+    const caps = effectiveCapsFor(this.config, this.overrides, nodeId);
 
-    const usdHardStop = perDayUsdPerNode * hardStopFraction;
+    const usdHardStop = caps.perDayUsd * hardStopFraction;
     const projectedUsd = this.nodeSpendToday(nodeId).usd + costUsd(this.config, model, est);
     if (projectedUsd >= usdHardStop) return 'day_usd';
 
-    const tokenHardStop = perRunOutputTokens * hardStopFraction;
+    const tokenHardStop = caps.perRunTokens * hardStopFraction;
     const projectedTokens = this.runOutputTokens(runId) + est.outputTokens;
     if (projectedTokens >= tokenHardStop) return 'run_tokens';
 
@@ -264,19 +281,22 @@ export class BudgetLedger {
   assertCanSpend(nodeId: LlmNodeId, runId: string, model: string, est: LlmUsage): void {
     const cap = this.wouldExceed(nodeId, runId, model, est);
     if (cap === undefined) return;
-    const { perDayUsdPerNode, perRunOutputTokens, hardStopFraction } = this.config.budget;
+    const { hardStopFraction } = this.config.budget;
+    const caps = effectiveCapsFor(this.config, this.overrides, nodeId);
     if (cap === 'day_usd') {
       throw new RouterBudgetExceededError(
         'day_usd',
         `llm-router budget: node '${nodeId}' would cross the ${hardStopFraction * 100}% hard stop of its ` +
-          `US$${perDayUsdPerNode}/day cap (already spent US$${this.nodeSpendToday(nodeId).usd.toFixed(4)} today, ` +
+          `US$${caps.perDayUsd}/day cap${caps.perDayOverridden ? ' (CAP OVERRIDE active — llm_router_cap_overrides)' : ''} ` +
+          `(already spent US$${this.nodeSpendToday(nodeId).usd.toFixed(4)} today, ` +
           `worst-case call cost US$${costUsd(this.config, model, est).toFixed(4)}). Call denied.`,
       );
     }
     throw new RouterBudgetExceededError(
       'run_tokens',
       `llm-router budget: run '${runId}' would cross the ${hardStopFraction * 100}% hard stop of the ` +
-        `${perRunOutputTokens}-output-token per-run cap (already ${this.runOutputTokens(runId)} tokens, ` +
+        `${caps.perRunTokens}-output-token per-run cap${caps.perRunOverridden ? ' (CAP OVERRIDE active — llm_router_cap_overrides)' : ''} ` +
+        `(already ${this.runOutputTokens(runId)} tokens, ` +
         `this call may add ${est.outputTokens}). Call denied.`,
     );
   }
@@ -321,6 +341,7 @@ export class BudgetLedger {
       hardStopFraction: this.config.budget.hardStopFraction,
       nodes: this.data.days[dayKey] ?? {},
       runs: this.data.runs,
+      ...(this.overrides !== undefined ? { capOverrides: this.overrides } : {}),
     };
   }
 }
