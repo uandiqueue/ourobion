@@ -168,6 +168,56 @@
   grid-column: 1 / -1;
 }
 
+/* ── Claims panel (O13 /claims + per-paper section, run-2 U9) ─ */
+.claims-card {
+  grid-column: 1 / -1;
+}
+
+.claims-edgeid {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.claims-quote {
+  margin: 6px 0;
+  padding: 6px 10px;
+  border-left: 2px solid var(--hairline);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.claims-quote__src {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.claims-verdict {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--hairline);
+}
+
+.claims-stamp {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #e09e5a;
+}
+
+.claims-reject {
+  margin-top: 8px;
+}
+.claims-reject input[type='text'] {
+  width: 260px;
+}
+.claims-reject__btn {
+  border: 1px solid rgba(224, 101, 90, 0.55);
+  background: transparent;
+  color: #e0655a;
+}
+
 @media (max-width: 920px) {
   .ingest-grid {
     grid-template-columns: 1fr;

@@ -340,6 +340,10 @@ Deno.serve(async (req) => {
         .from("verified_edges")
         .select("edge_id, subject, object, relation, verified_at, edge_score, serving_band, claim")
         .in("serving_band", ["high", "mid"]) // hold is never served (shared/brain isServable)
+        // O13: a human REJECT supersedes the verifier FOR SERVING — a rejected edge must never
+        // be cited by a NEW card (already-served cards keep honest provenance via the O12 RPC).
+        // Null-safe on purpose: no human action (null) = the verifier default stands.
+        .or("human_verdict.is.null,human_verdict.neq.reject")
         .order("edge_id", { ascending: true })
         .range(from, to),
     )
