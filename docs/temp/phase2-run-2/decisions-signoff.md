@@ -164,4 +164,21 @@ undersized maxOutputTokens yields empty visible text. Size generously in downstr
 - **Carry-forward:** contradiction's shared/brain `needsReview()` edge-flag not wired (shared/ was
   out of U4 scope) — owned by a later unit / run-end backlog note.
 
+## D10 · U5 implementation choices (trigger + provenance + prune) — U5
+
+- **Empty-input prune policy (O19/A14):** failed S2 fetch → 500 before prune; successful ZERO-row
+  read → SKIP prune (suspect-input posture — a mass wipe is indistinguishable from a broken view at
+  that seam). Leftover rows stop refreshing and fall to the freshness filter: two-step decay, never
+  a one-shot wipe.
+- **Freshness filter shipped in-unit:** `SNAPSHOT_FRESHNESS_DAYS = 7` (one baseline window) as a
+  single `.gte(computed_at)` on generate-insights' baselines fetch; union line untouched. C-entry:
+  value 7, provisional, pending O2/O8-style calibration.
+- **Provenance RPC:** `get_insight_provenance(bigint)` — brief said uuid but insight_cards.id is a
+  bigint identity column; SCHEMA WINS. SECURITY INVOKER (caller's RLS; anon → 42501 proven).
+  Verdict pinned to the CITED verified_at version (not newest); edges = the card's own edge_refs
+  (O18-filtered). Null result deliberately conflates not-found/not-owned.
+- **No per-user pipeline scoping:** none of the three engines parses a request body — the trigger
+  runs the full pipeline (adding scoping = out of scope).
+- **evaluate-signals config.toml entry added** (it had none) — cron still NOT added (H3, Jayden's).
+
 _(Further D-entries appended per unit as the run executes.)_

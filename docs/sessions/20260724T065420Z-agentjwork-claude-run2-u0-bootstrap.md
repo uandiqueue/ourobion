@@ -71,5 +71,10 @@ NOT-live-verified list). U2 (O15 verifier grounding) marked in-progress and disp
   increment; RLS denial). gap_ledger shipped §A1-verbatim (D9 records the brief-vs-architecture
   divergence). Ledger row 5; carry-forward noted (needsReview wiring). U5 (trigger + provenance +
   O19 prune) marked in-progress and dispatched.
+- U5 done — PR #128, gates green (engine-stats 49/49, rules 82/82, db reset, context_sync) + LIVE
+  proofs: run-pipeline 3-stage sequence (evaluate-signals' first-ever serve-path run), provenance
+  JSON as authenticated user, prune/freshness/A14. D10 recorded; ledger row 6. Backend spine for
+  main loop 1–5 COMPLETE. U6 (nao simulated-data loader + nao CI job) marked in-progress and
+  dispatched.
 
 memory: Run 2.0 launched 2026-07-24 — resumable state = docs/temp/phase2-run-2/orchestration-log.md on the feat/phase2-run-2/* chain (worktree C:\project\ourobion-run2); inputs live ON the run branch, not dev-phase2.

@@ -32,11 +32,12 @@ reproduces from a clean local stack.
 **Current state:** U0 done (#123) · U1 done (#124; router OpenAI-only TEST-MODE, caps 1.00 USD/day/
 node + 60k tok/run) · U2 done (#125; verifier grounded — evidence-bearing citations, fixture corpus,
 CLI retrieve wiring, acceptance (i) green). Local supabase stack UP (API 54321 / DB 54322). Chain
-tip: feat/phase2-run-2/u4-card-semantics-gap-ledger (U4 done, #127 — orientation-aware cards,
-research-context gap-only, gap_ledger §A1). Tracking-doc updates ride the chain tip.
+tip: feat/phase2-run-2/u5-trigger-provenance-prune (U5 done, #128 — run-pipeline trigger,
+get_insight_provenance RPC, O19 prune; backend spine for main loop 1–5 COMPLETE). Tracking-doc
+updates ride the chain tip.
 BOTH keys present in tools/brain-ingest/.env (gitignored): OPENAI (≤20 SGD) + ANTHROPIC (≤2 SGD,
 optional verifier decorrelation — see Budget + D2 AMENDED).
-**Next action:** U5 is `in-progress` (marked before dispatch, per PART R). If resuming mid-U5:
+**Next action:** U6 is `in-progress` (marked before dispatch, per PART R). If resuming mid-U6:
 re-run the WHOLE unit — git status/diff the worktree, reset or finish partial work, redo gate +
 tests before its PR.
 
@@ -53,8 +54,8 @@ One writer at a time; each unit stacks on the chain tip.
 | U2 | Verifier grounding: evidence-bearing citation type (shared/, B8), fixture corpus file + loader, CLI retrieve wiring, evidence in prompt; ACCEPTANCE (i) integration test on the real CLI seam | O15 | done |
 | U3 | Contract hardening: servable band ⇒ quote-check pass (shared/ superRefine, B8; ACCEPTANCE (iii) loader test) + derivation copy-gate at synthesis + load | O17, O20 | done |
 | U4 | Card semantics: orientation-aware cards (ACCEPTANCE (ii) 8-vector matrix), research-context/contradiction gap-only (O18 decided), gap_ledger table + composer writes, kill pairEdges fallback (correlates/modulates never decorate) | O16, O18, O9-table | done |
-| U5 | Serve-pipeline on-demand trigger (runs compute-baselines → evaluate-signals → generate-insights; note: evaluate-signals has NO cron today), provenance read surface (card→edges→claims/citations view), baseline upsert-and-prune (+O19 test gates) | O12-backend, O19 | in-progress |
-| U6 | Simulated-data loader: nao page + API route writing biotope tables (provenance-flagged, incremental by-day) + FIRST nao unit adds nao CI job (typecheck+test) | O11 | queued |
+| U5 | Serve-pipeline on-demand trigger (runs compute-baselines → evaluate-signals → generate-insights; note: evaluate-signals has NO cron today), provenance read surface (card→edges→claims/citations view), baseline upsert-and-prune (+O19 test gates) | O12-backend, O19 | done |
+| U6 | Simulated-data loader: nao page + API route writing biotope tables (provenance-flagged, incremental by-day) + "Run analysis now" button (calls run-pipeline server-side) + FIRST nao unit adds nao CI job (typecheck+test) | O11 | in-progress |
 | U7 | biotope demo surfaces: trend/graph on metric_daily_values, provenance detail view (verified_edges/composed_insights read; handles "still researching"), post-trigger refresh | O12-app | queued |
 | U8 | Model-config + spend boundaries (Supabase read surfaces for router config + ledger; caps-edit write path router honors) + nao panel (feature a) | O10 | queued |
 | U9 | Claims curation + human REJECT: edge_human_verdicts migration, loader/view overlay (reject supersedes for serving), nao paper→claims page + reject action | O13 | queued |
@@ -137,8 +138,13 @@ load-bearing facts:
 | 4 | U3 | feat/phase2-run-2/u3-contract-hardening | #126 | shared tsc; edge-loader tsc + 50/50; brain-ingest tsc + 340/340; context_sync green | 0.00 | 0.0002 | O17+O20 closed; ACCEPTANCE (iii) mutation-proven (git-stash mutation, both O17 tests + O20 loader test fail pre-fix); shared/ superRefine clause → B8 |
 | 5 | U4 | feat/phase2-run-2/u4-card-semantics-gap-ledger | #127 | rules 82/82 + tsc; db reset clean; LIVE handler proof on local stack; context_sync green | 0.00 | 0.0002 | O16+O18 closed + gap_ledger shipped (§A1 verbatim); reproduced bug input → 0 wrong-metric cards + gap row; demand increment + RLS denial proven live. Deno typecheck deferred to CI (deno absent locally) |
 
+| 6 | U5 | feat/phase2-run-2/u5-trigger-provenance-prune | #128 | engine-stats 49/49 + tsc; rules 82/82 + tsc; db reset clean; LIVE 3-stage pipeline + authed provenance JSON + prune/freshness/A14 proofs; context_sync green | 0.00 | 0.0002 | O12-backend+O19 closed; run-pipeline + get_insight_provenance(bigint) shipped; SNAPSHOT_FRESHNESS_DAYS=7; evaluate-signals config.toml entry added (cron still H3) |
+
 **Carry-forwards (not lost, owned later):** `contradiction` → shared/brain `needsReview()` edge-flag
 not wired (U4 report; candidate for U9's serving-layer work or a backlog note at run end).
+run-pipeline stage summaries scale with users×metrics (fine at demo scale — flagged in its header
+for U6/U8 consumers). run-pipeline mid-sequence-failure path (502 + partial stages) not forced
+live — exercise or note in U12 runbook.
 
 ## Budget
 
