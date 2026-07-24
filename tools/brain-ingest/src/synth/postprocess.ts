@@ -14,7 +14,9 @@
  *   5. charStart/charEnd are BACKFILLED from A9 quoteCheck's computed offsets;
  *   6. the shared zod `validateClaim` hard-gate must pass;
  *   7. A9 quoteCheck against the ACTUAL paper text must find every span — a
- *      fabricated/paraphrased quote is rejected without any verifier spend.
+ *      fabricated/paraphrased quote is rejected without any verifier spend;
+ *   8. `derivation` must pass the shared copy gate (`validateCopyString`, O20/H3)
+ *      — diagnostic language is rejected before the artifact append.
  *
  * Provenance (`synthesisModel`, `promptVersion`, `synthesisedAt`) is stamped by
  * the pipeline, not the model. Pure: no I/O (texts + validator are injected).
@@ -23,7 +25,7 @@
  */
 
 import { checkClaimQuotes, type QuoteSpanInput } from '../verify/quoteCheck.js';
-import type { ClaimValidator } from './load.js';
+import type { ClaimValidator, CopyValidator } from './load.js';
 import type {
   ProcessResult,
   RejectedClaim,
@@ -40,6 +42,8 @@ export interface ProcessContext {
   texts: ReadonlyMap<string, string>;
   /** The shared zod gate (injected; loaded via synth/load.ts for a real run). */
   validateClaim: ClaimValidator;
+  /** The shared copy gate over `derivation` (injected; loaded via synth/load.ts for a real run). O20/H3. */
+  validateCopy: CopyValidator;
   /** Provenance stamps applied to every accepted claim. */
   synthesisModel: string;
   promptVersion: string;
@@ -198,6 +202,18 @@ export function processSynthesisResponse(rawText: string, ctx: ProcessContext): 
         edgeId,
         reason: 'quote-not-found',
         detail: `quoteCheck ${qc.quoteCheck.spansFound}/${qc.quoteCheck.spansTotal} present — ${bad.join('; ')}`,
+      });
+      continue;
+    }
+
+    // (8) O20/H3 copy gate — `derivation` is user-adjacent copy (nao evidence panels); a claim
+    // whose derivation carries diagnostic language is rejected here, before the artifact append
+    // (the loader re-checks the same gate at ingestion for artifacts that bypass this producer).
+    if (!ctx.validateCopy(validated.derivation)) {
+      rejected.push({
+        edgeId,
+        reason: 'copy-gate',
+        detail: 'derivation fails validateCopyString (diagnostic language)',
       });
       continue;
     }

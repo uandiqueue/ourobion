@@ -35,6 +35,25 @@ export async function loadClaimValidator(root = repoRoot()): Promise<ClaimValida
   return mod.validateClaim as ClaimValidator;
 }
 
+/** The shared copy gate (shared/constants/copy_guidelines.ts) — true iff the text is clean. */
+export type CopyValidator = (text: string) => boolean;
+
+/**
+ * Load `validateCopyString` from shared/constants/copy_guidelines.ts (O20/H3): the synthesized
+ * `derivation` is user-adjacent copy (nao evidence panels), so diagnostic language must be
+ * rejected BEFORE the artifact append — same runtime-import pattern as `loadClaimValidator`.
+ */
+export async function loadCopyValidator(root = repoRoot()): Promise<CopyValidator> {
+  const url = pathToFileURL(join(root, 'shared', 'constants', 'copy_guidelines.ts')).href;
+  const mod = (await import(url)) as { validateCopyString?: (t: string) => boolean };
+  if (typeof mod.validateCopyString !== 'function') {
+    throw new Error(
+      `synth: shared/constants/copy_guidelines.ts exported no validateCopyString (${url})`,
+    );
+  }
+  return mod.validateCopyString as CopyValidator;
+}
+
 /**
  * Load the set of ACTIVE registry metric keys (shared/metrics), so an explicit
  * `--pair` can be rejected early if an endpoint isn't a live metric — the same

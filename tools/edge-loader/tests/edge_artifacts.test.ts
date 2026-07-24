@@ -141,14 +141,56 @@ test('A3: a vacuous quoteCheck (spansFound:0, spansTotal:0, allPresent:true) is 
   assert.match(errors[0]!.message, /allPresent must equal/);
 });
 
-test('A3: the in-repo quoteCheck zero-span output (allPresent:false at 0/0) is accepted by the schema', () => {
+test('A3: the in-repo quoteCheck zero-span output (allPresent:false at 0/0) is accepted on a NON-SERVABLE verdict', () => {
   // brain-ingest quoteCheck.ts computes allPresent = spansTotal > 0 && …, so a zero-span block
-  // is {0,0,false} — the schema must accept exactly that encoding.
-  const zeroSpan = mutateLine(verificationsText, EDGE_SLEEP_RHR, (v) => {
+  // is {0,0,false} — the schema must accept exactly that encoding. Since O17, only on a
+  // non-servable verdict (zero-span `uncertain` records are intentionally retained); the fixture
+  // uncertain line (EDGE_STEPS_SLEEP) is the honest carrier for it.
+  const zeroSpan = mutateLine(verificationsText, EDGE_STEPS_SLEEP, (v) => {
     v.quoteCheck = { spansFound: 0, spansTotal: 0, allPresent: false };
   });
   const { errors } = parseVerifications(zeroSpan);
   assert.deepEqual(errors, []);
+});
+
+// ── O17: a servable verdict requires a PASSING quote check (verdict B3) ──────────────────────────
+
+test('O17: partial + zero-span quoteCheck ({0,0,false}) fails validation — never a servable band row', () => {
+  // EDGE_SLEEP_RHR's fixture verification is `partial` (servable) with a passing quoteCheck;
+  // strip its quote grounding entirely. Pre-O17 this validated and banded `mid`.
+  const broken = mutateLine(verificationsText, EDGE_SLEEP_RHR, (v) => {
+    v.quoteCheck = { spansFound: 0, spansTotal: 0, allPresent: false };
+  });
+  const { errors } = parseVerifications(broken);
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0]!.line, 3); // EDGE_SLEEP_RHR verification is fixture line 3
+  assert.match(errors[0]!.message, /servable verdict 'partial' requires a passing quote check/);
+  // Loader-seam consequence: the record is unloadable, so NO row (a fortiori no servable band
+  // row) can reach the serving tables for that edge.
+  const { verificationRows } = buildLoad(claimsText, broken);
+  assert.deepEqual(verificationRows.filter((r) => r.edge_id === EDGE_SLEEP_RHR), []);
+});
+
+test('O17: supported + partially-found quoteCheck ({1,3,false}) fails validation — never a servable band row', () => {
+  const broken = mutateLine(verificationsText, EDGE_SLEEP_RHR, (v) => {
+    v.verdict = 'supported'; // servable; fixture retrieval + corroboration already satisfy it
+    v.quoteCheck = { spansFound: 1, spansTotal: 3, allPresent: false };
+  });
+  const { errors } = parseVerifications(broken);
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0]!.line, 3);
+  assert.match(errors[0]!.message, /servable verdict 'supported' requires a passing quote check/);
+  const { verificationRows } = buildLoad(claimsText, broken);
+  assert.deepEqual(verificationRows.filter((r) => r.edge_id === EDGE_SLEEP_RHR), []);
+});
+
+test('O17: a servable verdict with a PASSING quote check still loads and bands (no over-blocking)', () => {
+  // The unmodified fixtures carry supported/partial lines with passing quoteChecks — they must
+  // stay loadable and servable-banded exactly as before.
+  const { errors, verificationRows } = buildLoad(claimsText, verificationsText);
+  assert.deepEqual(errors, []);
+  const partial = verificationRows.find((r) => r.edge_id === EDGE_SLEEP_RHR)!;
+  assert.equal(partial.serving_band, 'mid');
 });
 
 test('a claim endpoint that is not an active registry metric fails with its line number', () => {
@@ -160,6 +202,29 @@ test('a claim endpoint that is not an active registry metric fails with its line
   assert.equal(errors.length, 1);
   assert.equal(errors[0]!.line, 3); // EDGE_STEPS_SLEEP is fixture line 3
   assert.match(errors[0]!.message, /not an active shared\/metrics registry key/);
+});
+
+// ── O20: derivation copy gate re-checked at loader ingestion (verdict H3) ────────────────────────
+
+test('O20: a derivation with diagnostic language fails at the loader seam with its line number', () => {
+  const broken = mutateLine(claimsText, EDGE_SLEEP_RHR, (c) => {
+    c.derivation = 'Your condition is improving: sleep extension may be a treatment for elevated resting heart rate.';
+  });
+  const { errors } = parseClaims(broken);
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0]!.line, 2); // EDGE_SLEEP_RHR claim is fixture line 2
+  assert.match(errors[0]!.message, /derivation fails validateCopyString/);
+});
+
+test('O20: benign words containing forbidden fragments pass the loader copy gate (word boundaries)', () => {
+  // Mirrors tools/rules/tests/copy_guidelines.test.ts TRUE_NEGATIVES — "stillness" ⊃ "illness",
+  // "preconditioning" ⊃ "condition", "mistreatment" ⊃ "treatment": no over-blocking.
+  const benign = mutateLine(claimsText, EDGE_SLEEP_RHR, (c) => {
+    c.derivation =
+      'Preconditioning, stillness and the mistreatment of outliers are avoided in this reading of the fixture cohort quote.';
+  });
+  const { errors } = parseClaims(benign);
+  assert.deepEqual(errors, []);
 });
 
 test('a verification referencing an unclaimed edgeId is a hard error', () => {

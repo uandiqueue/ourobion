@@ -218,6 +218,21 @@ export const edgeVerificationSchema = z
         message: `${v.edgeId}: allPresent must equal (spansTotal > 0 && spansFound === spansTotal)`,
       });
     }
+    // O17 (verdict B3): a SERVABLE verdict requires a PASSING quote check. Mirrors
+    // shared/brain/index.ts SERVABLE_VERDICTS ({supported, partial}) — the only verdicts the band
+    // computation can serve — so the CONTRACT refuses a servable verdict whose grounding quotes
+    // were not all found (zero-span {0,0,false} or partially-found {n,m,false}); such a record
+    // could otherwise band `mid` through the loader. The pipeline's pre-LLM quote gate
+    // (brain-ingest verifier.ts) masks this for in-repo runs but is no guarantee for
+    // hand-authored / legacy / imported artifacts. Conditional on the verdict: zero-span
+    // `uncertain` / `unsupported` / `contradicted` records are intentionally retained (A3).
+    const servable = v.verdict === 'supported' || v.verdict === 'partial';
+    if (servable && !(v.quoteCheck.spansFound >= 1 && v.quoteCheck.allPresent === true)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `${v.edgeId}: servable verdict '${v.verdict}' requires a passing quote check (spansFound >= 1 && allPresent === true), got ${v.quoteCheck.spansFound}/${v.quoteCheck.spansTotal} allPresent=${v.quoteCheck.allPresent}`,
+      });
+    }
   });
 
 // ─── Compile-time AssertExact: zod-inferred types === hand-written interfaces ────────────────────

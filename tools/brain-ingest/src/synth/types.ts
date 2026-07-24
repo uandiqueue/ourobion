@@ -131,7 +131,8 @@ export type RejectionReason =
   | 'unrequested-pair' // endpoints are not the pair we asked about (C9)
   | 'foreign-paper' // cites a paperId outside the provided set
   | 'schema-invalid' // failed the shared zod validateClaim gate
-  | 'quote-not-found'; // A9 quoteCheck: a span is not literally in the text
+  | 'quote-not-found' // A9 quoteCheck: a span is not literally in the text
+  | 'copy-gate'; // O20: derivation fails the shared validateCopyString gate (diagnostic language)
 
 /** A claim the gate refused, with the reason + detail for the run log. */
 export interface RejectedClaim {

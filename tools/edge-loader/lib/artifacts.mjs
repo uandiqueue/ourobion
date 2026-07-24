@@ -36,6 +36,9 @@ const sharedUrl = (rel) => pathToFileURL(path.join(REPO_ROOT, 'shared', rel)).hr
 const schema = await import(sharedUrl('brain/relationships.schema.ts'));
 const brain = await import(sharedUrl('brain/index.ts')); // edgeScore/servingBand/EDGE_GATES live here
 const metrics = await import(sharedUrl('metrics/index.ts'));
+// O20 (verdict H3): the shared copy gate — `derivation` is user-adjacent copy (nao evidence
+// panels) and must never carry diagnostic language. Same import style as tools/rules/lib/blueprints.mjs.
+const copy = await import(sharedUrl('constants/copy_guidelines.ts'));
 
 export { schema as brainSchema, brain, metrics as metricsRegistry };
 
@@ -84,7 +87,11 @@ export function parseArtifactLines(text, validate, source) {
 /**
  * Parse + validate edges/claims.jsonl. Beyond the zod contract, enforces the contract-header
  * invariant that every endpoint resolves to an ACTIVE shared/metrics registry key
- * (relationships.ts: "validate with metrics.isActiveMetric").
+ * (relationships.ts: "validate with metrics.isActiveMetric"), and re-checks the O20 copy gate:
+ * `derivation` must pass validateCopyString (the producer gates it at synthesis, but
+ * hand-authored / legacy / imported artifacts bypass the producer — the loader is the last
+ * line before the serving tables). Both are line-numbered HARD-FAIL errors, same as the zod
+ * contract (fix the artifact / its producer, re-run).
  */
 export function parseClaims(text, source = R2_CLAIMS_KEY) {
   const { records, errors } = parseArtifactLines(text, schema.validateClaim, source);
@@ -99,6 +106,15 @@ export function parseClaims(text, source = R2_CLAIMS_KEY) {
           ),
         );
       }
+    }
+    if (!copy.validateCopyString(record.derivation)) {
+      errors.push(
+        problem(
+          source,
+          line,
+          `${record.edgeId}: derivation fails validateCopyString (diagnostic language)`,
+        ),
+      );
     }
   }
   return { records, errors };

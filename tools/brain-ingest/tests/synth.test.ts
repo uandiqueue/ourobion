@@ -21,6 +21,7 @@ import {
   dedupeAgainst,
   appendClaimsToDir,
   loadClaimValidator,
+  loadCopyValidator,
   pairFromKeys,
   processSynthesisResponse,
   segmentSentences,
@@ -79,12 +80,16 @@ function texts(): Map<string, string> {
   return new Map([[PAPER_ID, FIXTURE_TEXT]]);
 }
 
+// The REAL shared copy gate (O20) — loaded once; every ctx uses it unless a test overrides.
+const validateCopy = await loadCopyValidator();
+
 function ctxWith(validateClaim: ClaimValidator, over: Record<string, unknown> = {}) {
   return {
     pair: PAIR,
     allowedPaperIds: [PAPER_ID],
     texts: texts(),
     validateClaim,
+    validateCopy,
     synthesisModel: 'test-model',
     promptVersion: 'synthesis-test.1',
     now: () => Date.parse('2026-07-16T00:00:00.000Z'),
@@ -198,6 +203,35 @@ test('postprocess: unparseable JSON throws; an empty claims array is valid', asy
   assert.throws(() => processSynthesisResponse('not json', ctxWith(validateClaim)));
   const empty = processSynthesisResponse(JSON.stringify({ claims: [] }), ctxWith(validateClaim));
   assert.deepEqual(empty, { accepted: [], rejected: [] });
+});
+
+// ── O20 copy gate over derivation (production seam) ────────────────────────────
+
+test('O20: a derivation with diagnostic language is rejected by the copy gate', async () => {
+  const validateClaim = await loadClaimValidator();
+  const diagnostic = validRawClaim({
+    // Otherwise fully valid + grounded — only the derivation copy is diagnostic.
+    derivation: 'Consider treatment options: the sentence associates gut comfort with mood.',
+  });
+  const res = processSynthesisResponse(JSON.stringify({ claims: [diagnostic] }), ctxWith(validateClaim));
+  assert.equal(res.accepted.length, 0);
+  assert.equal(res.rejected.length, 1);
+  assert.equal(res.rejected[0]!.reason, 'copy-gate');
+  assert.match(res.rejected[0]!.detail, /validateCopyString/);
+});
+
+test('O20: benign words that merely CONTAIN a forbidden term pass the copy gate (word boundaries)', async () => {
+  // Mirrors tools/rules/tests/copy_guidelines.test.ts TRUE_NEGATIVES: "stillness" contains
+  // "illness", "preconditioning" contains "condition", "mistreatment" contains "treatment" —
+  // the word-boundary matcher must allow all of them (guard against over-blocking).
+  const validateClaim = await loadClaimValidator();
+  const benign = validRawClaim({
+    derivation:
+      'Preconditioning, stillness and the mistreatment of outliers do not change the reading: gut comfort correlates with mood.',
+  });
+  const res = processSynthesisResponse(JSON.stringify({ claims: [benign] }), ctxWith(validateClaim));
+  assert.deepEqual(res.rejected, []);
+  assert.equal(res.accepted.length, 1);
 });
 
 // ── artifact dedupe ────────────────────────────────────────────────────────────
