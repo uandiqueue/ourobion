@@ -46,6 +46,13 @@ PART 0 — Setup, toolchain, budget
 - BUDGET — HARD: total OpenAI spend ≤ 20 SGD for the whole run. Prefer fixtures/offline paths over live
   LLM calls; spend only on the ESSENTIAL end-to-end proofs. Set the router C7 caps low and stop well
   short of the cap. Report spend in the ledger.
+- ANTHROPIC KEY (added by Jayden 2026-07-24, after launch): ANTHROPIC_API_KEY is now ALSO set in
+  tools/brain-ingest/.env — available "just in case you need it for the verifier (different model)",
+  i.e. to restore a real family-decorrelated verifier (synthesis OpenAI × verifier Anthropic).
+  SEPARATE HARD BUDGET: total Anthropic spend ≤ 2 SGD. Optional, orchestrator's judgment — OpenAI-only
+  remains the primary posture (PART 3); if used, track Anthropic spend as its own ledger column and
+  note that the pre-O7 invariant clause `family(verifier) !== 'anthropic'` will flag it (TEST-MODE
+  covers this cycle; the general O7 fix still lands with B5).
 
 ═══════════════════════════════════════════════════════════════════════════════
 PART R — Resumability (READ FIRST, EVERY LAUNCH) — the run MUST survive a sudden halt
@@ -126,6 +133,12 @@ PART 3 — LLM testing posture (OpenAI-only)
   ADR amendment for retro-review (PART 7). Any verifier result is "scaffolded + unit-tested", NOT a
   demonstrated independent verification — reflect that wording in the demo/UI and logs (per the verdict).
 - Real decorrelated non-Anthropic verifier + attested model + ablation artifacts are a LATER cycle.
+- AMENDMENT (Jayden 2026-07-24, after launch): an ANTHROPIC_API_KEY is now loaded (≤ 2 SGD hard
+  budget — see PART 0) as an OPTION for the verifier only, restoring family decorrelation
+  (synthesis OpenAI × verifier Anthropic) if the orchestrator judges it needed. If exercised: keep
+  TEST-MODE (the pre-O7 clause `verifier !== 'anthropic'` still trips), label verdicts honestly
+  ("decorrelated but not attested/ablated"), and record the switch as a D-entry + ledger rows.
+  If not exercised, the OpenAI-only wording above stands unchanged.
 
 ═══════════════════════════════════════════════════════════════════════════════
 PART 4 — Scope

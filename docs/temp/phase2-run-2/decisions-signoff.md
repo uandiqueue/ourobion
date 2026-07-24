@@ -98,4 +98,31 @@ to keep Run 2.0's review surface in one doc.
 Operational note (U1 smoke): gpt-5-family models spend ~70 reasoning tokens on trivial prompts —
 undersized maxOutputTokens yields empty visible text. Size generously in downstream units.
 
+## D2 AMENDED (2026-07-24) · Anthropic key loaded — optional decorrelated verifier, ≤ 2 SGD
+
+- Jayden loaded ANTHROPIC_API_KEY (tools/brain-ingest/.env) mid-run with a separate **2 SGD hard
+  budget**, "just in case you need it for the verifier (different model)". The OpenAI-only posture
+  (D2) remains primary; switching the verifier node to a claude-* id is at the orchestrator's
+  judgment (likely decision point: U12 e2e). If exercised: TEST-MODE stays on (the pre-O7 clause
+  `family(verifier) !== 'anthropic'` still trips), verdict labels change to "decorrelated but not
+  attested/ablated" — NOT "demonstrated" — and the switch + spend get their own D-entry/ledger rows.
+  Launch prompt PART 0 + PART 3 amended in both copies (main checkout + run branch).
+
+## D7 · U2 implementation choices (verifier grounding) — U2
+
+- **Evidence bound:** `DEFAULT_MAX_EVIDENCE_CHARS_PER_SOURCE = 700` (config-overridable via
+  RetrieveOptions/mapper opts), sentence-level selection scored by distinct matched terms,
+  document-order emission, truncate-never-drop for a ranked hit's top sentence.
+- **Locator shape:** `chars:<start>-<end>` into the CorpusDoc canonical text (same offset space as
+  QuoteSpan); external candidates use `abstract:0-<n>`. Honest-carry rule: external candidates carry
+  only what exists (abstract), never fabricated passages.
+- **Fixture corpus:** 5 gut/mood CorpusDocs incl. one deliberate decoy (sleep/steps) + matched
+  claims fixture; the claim's cited paper is in-corpus for quoteCheck but echo-excluded from
+  retrieval. CLI: `--corpus` / `--edges-dir`; empty-corpus runs WARN loudly.
+- **[B8]** shared/brain: `EvidencePassage` type + optional `Citation.evidence` (additive,
+  AssertExact-guarded) — 2-reviewer retro-review. Note: shared/tsconfig excludes brain/ and shared's
+  npm test is a no-op echo — the schema guard was verified through edge-loader (its static
+  consumer); flagged for the retro-review to consider giving shared/brain its own typecheck.
+- **Prompt contract:** `VERIFIER_PROMPT_VERSION` bumped to `verifier-2026-07-24.1`.
+
 _(Further D-entries appended per unit as the run executes.)_

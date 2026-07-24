@@ -53,4 +53,14 @@ U1 done — PR #124, gate green (tsc + 56/56 + context_sync), live smoke US$0.00
 cumulative 0.0002 SGD). D6 + C2.1–C2.3 recorded; unit-signoff row added (sign-off pending, honest
 NOT-live-verified list). U2 (O15 verifier grounding) marked in-progress and dispatched.
 
+## Mid-run input from Jayden + U2 closed (orchestrator, same session)
+
+- Jayden loaded ANTHROPIC_API_KEY (≤ 2 SGD, optional decorrelated verifier). Launch prompt PART 0 +
+  PART 3 amended in BOTH copies (main checkout + this branch); D2 AMENDED; H1 updated; .env copied
+  into the worktree; Budget section gains the Anthropic line.
+- U2 done — PR #125, gates green (brain-ingest tsc + 338/338, shared tsc, edge-loader 45/45,
+  context_sync). ACCEPTANCE (i) proven on the real CLI argv seam and mutation-checked. [B8] shared/
+  Citation.evidence additive change flagged. D7 recorded; ledger row 3; U3 (O17+O20 contract
+  hardening) marked in-progress and dispatched.
+
 memory: Run 2.0 launched 2026-07-24 — resumable state = docs/temp/phase2-run-2/orchestration-log.md on the feat/phase2-run-2/* chain (worktree C:\project\ourobion-run2); inputs live ON the run branch, not dev-phase2.

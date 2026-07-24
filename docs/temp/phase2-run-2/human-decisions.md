@@ -20,6 +20,9 @@ Format: id · what stopped / what is decided · what is needed · what it gates.
 - **H1 · OpenAI-only / decorrelation-off posture** — AWAITS retro-review sign-off (see
   decisions-signoff.md D2). Gates nothing this cycle (it IS the cycle's posture); real decorrelated
   verifier + attested model + ablation artifacts are a later cycle (B5/O7).
+  **Update 2026-07-24 (Jayden):** ANTHROPIC_API_KEY loaded, ≤ 2 SGD — the verifier CAN be
+  decorrelated this cycle at the orchestrator's judgment (D2 AMENDED). Attestation/ablation still
+  later cycle.
 - **H2 · Baseline-confidence 3/7/14 vs 3/5/14 truth drift** (verdict debt note) — any change is
   config-behind + amendment-intent only; the VALUE choice awaits retro-review. Gates nothing (runtime
   already uses 3/7/14).

@@ -29,10 +29,13 @@ reproduces from a clean local stack.
 
 ## ▶ RESUME
 
-**Current state:** U0 done (PR #123) · U1 done (PR #124; router is now OpenAI-only TEST-MODE, caps
-1.00 USD/day/node + 60k tok/run). Local supabase stack UP (API 54321 / DB 54322). Chain tip:
-feat/phase2-run-2/u1-router-openai-posture. Tracking-doc updates ride the chain tip.
-**Next action:** U2 is `in-progress` (marked before dispatch, per PART R). If resuming mid-U2:
+**Current state:** U0 done (#123) · U1 done (#124; router OpenAI-only TEST-MODE, caps 1.00 USD/day/
+node + 60k tok/run) · U2 done (#125; verifier grounded — evidence-bearing citations, fixture corpus,
+CLI retrieve wiring, acceptance (i) green). Local supabase stack UP (API 54321 / DB 54322). Chain
+tip: feat/phase2-run-2/u2-verifier-grounding. Tracking-doc updates ride the chain tip.
+BOTH keys present in tools/brain-ingest/.env (gitignored): OPENAI (≤20 SGD) + ANTHROPIC (≤2 SGD,
+optional verifier decorrelation — see Budget + D2 AMENDED).
+**Next action:** U3 is `in-progress` (marked before dispatch, per PART R). If resuming mid-U3:
 re-run the WHOLE unit — git status/diff the worktree, reset or finish partial work, redo gate +
 tests before its PR.
 
@@ -46,8 +49,8 @@ One writer at a time; each unit stacks on the chain tip.
 |------|-------|---------|--------|
 | U0 | Run bootstrap: worktree, input docs, tracking docs, PR #123 | — | done |
 | U1 | Router OpenAI-only posture: TEST-MODE decorrelation override (labelled), all nodes → gpt-*/o* on api_worker, low C7 caps (C-entry), live smoke call (ledger row) | PART 3, D2 | done |
-| U2 | Verifier grounding: evidence-bearing citation type (shared/, B8), fixture corpus file + loader, CLI retrieve wiring, evidence in prompt; ACCEPTANCE (i) integration test on the real CLI seam | O15 | in-progress |
-| U3 | Contract hardening: servable band ⇒ quote-check pass (shared/ superRefine, B8; ACCEPTANCE (iii) loader test) + derivation copy-gate at synthesis + load | O17, O20 | queued |
+| U2 | Verifier grounding: evidence-bearing citation type (shared/, B8), fixture corpus file + loader, CLI retrieve wiring, evidence in prompt; ACCEPTANCE (i) integration test on the real CLI seam | O15 | done |
+| U3 | Contract hardening: servable band ⇒ quote-check pass (shared/ superRefine, B8; ACCEPTANCE (iii) loader test) + derivation copy-gate at synthesis + load | O17, O20 | in-progress |
 | U4 | Card semantics: orientation-aware cards (ACCEPTANCE (ii) 8-vector matrix), research-context/contradiction gap-only (O18 decided), gap_ledger table + composer writes, kill pairEdges fallback (correlates/modulates never decorate) | O16, O18, O9-table | queued |
 | U5 | Serve-pipeline on-demand trigger (runs compute-baselines → evaluate-signals → generate-insights; note: evaluate-signals has NO cron today), provenance read surface (card→edges→claims/citations view), baseline upsert-and-prune (+O19 test gates) | O12-backend, O19 | queued |
 | U6 | Simulated-data loader: nao page + API route writing biotope tables (provenance-flagged, incremental by-day) + FIRST nao unit adds nao CI job (typecheck+test) | O11 | queued |
@@ -129,10 +132,14 @@ load-bearing facts:
 |---|------|--------|----|------|--------------------|------------------|-------|
 | 1 | U0 | feat/phase2-run-2/u0-run-docs | #123 | context_sync green | 0.00 | 0.00 | docs-only bootstrap; inputs carried onto branch |
 | 2 | U1 | feat/phase2-run-2/u1-router-openai-posture | #124 | tsc + 56/56 tests + context_sync green | 0.0002 | 0.0002 | live smoke: gpt-5-mini via api_worker, US$0.00015125; gpt-5-family spends ~70 reasoning tokens even on trivial prompts — size maxOutputTokens generously downstream |
+| 3 | U2 | feat/phase2-run-2/u2-verifier-grounding | #125 | brain-ingest tsc + 338/338; shared tsc; edge-loader tsc + 45/45; context_sync green | 0.00 | 0.0002 | O15 closed; ACCEPTANCE (i) mutation-checked; shared/ Citation.evidence additive → B8. Anthropic spend to date: 0.00 / 2 SGD |
 
 ## Budget
 
-- Cap: **20 SGD** total OpenAI. Spent: **0.00 SGD**.
+- Cap: **20 SGD** total OpenAI. Spent: **0.0002 SGD**.
+- **Anthropic (added by Jayden 2026-07-24, post-launch): cap 2 SGD, spent 0.00.** Optional — verifier
+  decorrelation only (see launch prompt PART 0/PART 3 amendments + D2 AMENDED). Likely decision
+  point: U12 e2e. Track any Anthropic spend as its own ledger note per row.
 - Policy: fixtures/offline first; live calls only for the essential e2e proofs (mandatory acceptance
   test (iv) + the U12 dry-run; small calibration calls if a unit's integration test truly needs one).
 - Router C7 caps set low in U1 (value recorded as a C-entry when set).
