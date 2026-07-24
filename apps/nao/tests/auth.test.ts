@@ -9,7 +9,12 @@
 //      invalid-token path (stubbed jwtVerify throws → null), and that a
 //      missing/empty token short-circuits to null WITHOUT invoking jose.
 //
-// Run with: node --test (Node >= 22 for test.mock.module).
+// Run with: npm test (node --experimental-test-module-mocks --test — mock.module
+// is still flag-gated on Node 26).
+//
+// NOTE (run-2 U6): stub payloads carry role:'authenticated' — auth.ts pins the
+// audience AND rejects any token whose role claim is not 'authenticated', so a
+// stub without it exercises the rejection path, not the happy path.
 import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -87,7 +92,7 @@ test('verifyAccessToken(): missing token short-circuits to null without calling 
 test('verifyAccessToken(): valid token resolves to claims (stubbed jwtVerify)', async () => {
   resetJose();
   joseState.verifyResult = {
-    payload: { sub: 'user-123', email: 'a@b.co', user_role: 'admin' },
+    payload: { sub: 'user-123', email: 'a@b.co', user_role: 'admin', role: 'authenticated' },
   };
   const claims = await verifyAccessToken('header.payload.sig');
   assert.ok(claims);
@@ -119,7 +124,7 @@ test('verifyAccessToken(): JWKS set is built once and reused across calls', asyn
 test('getUser(): verifies Bearer token and maps to AuthUser', async () => {
   resetJose();
   joseState.verifyResult = {
-    payload: { sub: 'user-xyz', email: 'x@y.z', user_role: 'viewer' },
+    payload: { sub: 'user-xyz', email: 'x@y.z', user_role: 'viewer', role: 'authenticated' },
   };
   const req = new Request('https://nao.test/api', {
     headers: { authorization: 'Bearer some.jwt.token' },
@@ -140,7 +145,7 @@ test('getUser(): no Authorization header → null, jose untouched', async () => 
 
 test('getUser(): verified claims without sub → null', async () => {
   resetJose();
-  joseState.verifyResult = { payload: { email: 'no-sub@x.co' } };
+  joseState.verifyResult = { payload: { email: 'no-sub@x.co', role: 'authenticated' } };
   const req = new Request('https://nao.test/api', {
     headers: { authorization: 'Bearer t.o.k' },
   });
