@@ -29,17 +29,15 @@ reproduces from a clean local stack.
 
 ## ▶ RESUME
 
-**Current state:** U0 done (#123) · U1 done (#124; router OpenAI-only TEST-MODE, caps 1.00 USD/day/
-node + 60k tok/run) · U2 done (#125; verifier grounded — evidence-bearing citations, fixture corpus,
-CLI retrieve wiring, acceptance (i) green). Local supabase stack UP (API 54321 / DB 54322). Chain
-tip: feat/phase2-run-2/u11-gap-surfacing (U11 done, #134 — feature d shipped; ALL PART-1 FEATURES
-BUILT). Tracking-doc updates ride the chain tip.
-Demo dev user on local stack: latest is u11-demo@ourobion.local (u6-demo wiped by resets) — NOTE:
-`supabase db reset` WIPES auth.users; recreate via admin API. JWT iat-skew: pause 2s after login.
-**Next action:** U12 (FINAL unit — e2e dry-run + runbook + the run's live-LLM proofs) is
-`in-progress`. If resuming mid-U12: audit any uncommitted partial work against the U12 brief,
-finish cleanly, redo the FULL gate + dry-run (PART R). After U12: run-close synthesis (final
-ledger, human-decisions review, backlog statuses in next-build-optimizations.md).
+**RUN COMPLETE (2026-07-25).** All 13 units done (U0–U12, PRs #123–#135, stacked chain off
+origin/dev-phase2 @ e185cf0, tip feat/phase2-run-2/u12-demo-dryrun-runbook). Definition of done
+met: dry-run 21/21 PASS + clean-reset reproducibility 20/20 + docs/shared/phase2-demo-runbook.md.
+**Nothing is merged — every PR awaits Jayden's sign-off** (surface: unit-signoff-index.md; every
+row `pending`). Open items for humans: H1–H3 in human-decisions.md; B8 retro-reviews flagged on
+U2/U3; carry-forwards listed below the worklist.
+**If resuming:** there is no next build unit. Any follow-up work (sign-off fixes, next cycle) is a
+NEW run/session — do not extend this chain without Jayden's direction.
+Demo runbook: docs/shared/phase2-demo-runbook.md (reproduces from clean stack; prereqs inside).
 BOTH keys present in tools/brain-ingest/.env (gitignored): OPENAI (≤20 SGD) + ANTHROPIC (≤2 SGD,
 optional verifier decorrelation — see Budget + D2 AMENDED).
 
@@ -63,7 +61,7 @@ One writer at a time; each unit stacks on the chain tip.
 | U9 | Claims curation + human REJECT: edge_human_verdicts migration, loader/view overlay (reject supersedes for serving), nao paper→claims page + reject action | O13 | done |
 | U10 | Seeds-as-data: seeds table migration, nao seed-add UI, seeder reads table as 4th candidate source (C9 pair-only gate intact) + adopt LlmRouter.create() in brain-ingest (U8 carry-forward) | O14 | done |
 | U11 | Gap surfacing: nao ingestion-view of gap_ledger (detection landed in U4); signal-no-edge → gap row → visible in nao | O9 slice | done |
-| U12 | E2E demo dry-run: scripted full PART-1 flow (main loop 1–5 + features a–d) on local stack, live OpenAI for the essential proofs (ACCEPTANCE (iv), card copy inspected both orientations) + demo runbook (DoD v+vi) | DoD | in-progress |
+| U12 | E2E demo dry-run: scripted full PART-1 flow (main loop 1–5 + features a–d) on local stack, live OpenAI for the essential proofs (ACCEPTANCE (iv), card copy inspected both orientations) + demo runbook (DoD v+vi) | DoD | done |
 
 ## Test strategy (the BAR, binding on every unit)
 
@@ -147,6 +145,7 @@ load-bearing facts:
 | 10 | U9 | feat/phase2-run-2/u9-claims-human-verdict | #132 | edge-loader tsc + 56/56; nao tsc + 74/74; db reset clean; LIVE 6-step reject proof incl. real loader path + before/after serving exclusion + rebuild-doesn't-clobber; context_sync green | 0.00 | 0.0002 | O13 closed (feature b). LIMIT HALT mid-unit (session cap, reset 21:20 MYT); second agent audited inherited work per PART R, found+fixed a real containment-serialization bug, redid full gate+proof. No shared/ change (no B8). No GIN (seq scan 0.085ms measured) |
 | 11 | U10 | feat/phase2-run-2/u10-seeds-as-data | #133 | brain-ingest tsc + 353/353; nao tsc + 83/83; db reset clean; LIVE seed-add→catalog→CLI-merge→fail-soft + cap-override-blocks-real-verify proofs; context_sync green | 0.00 | 0.0002 | O14 closed (feature c) + U8 carry-forward done (create() adopted in verify/seeder/synth — override denied a real verify pre-API-call). C9 gate pinned by tests (byte-identity + header pin). Run-now dropdown stays static (GH dispatch contract not dragged in) |
 | 12 | U11 | feat/phase2-run-2/u11-gap-surfacing | #134 | nao tsc + 94/94; context_sync green (no migration) | 0.00 | 0.0002 | O9 demo slice closed (feature d) — ALL PART-1 FEATURES BUILT. Gaps table (§A1 labels, demand-sorted, top-50 honest note) + human-in-the-loop add-as-seed prefill (headless-Chrome click-path proven); anon denied. Env finding: local-stack JWT iat skew — 2s pause after login (in session log) |
+| 13 | U12 | feat/phase2-run-2/u12-demo-dryrun-runbook | #135 | dry-run 21/21 PASS (pass 1, live) + 20/20 PASS (pass 2, clean-reset reproducibility); flutter analyze clean + 111/111; context_sync green | 0.182 | 0.182 | **RUN DoD MET.** ACCEPTANCE (iv): card copy names fired metric, 0 mismatches. LIVE OpenAI verify (gpt-5, evidence-in-prompt): US$0.141315. **Anthropic decorrelated leg RAN** (claude-sonnet-5, one verify, "decorrelated but not attested/ablated", config restored): US$0.04266 ≈ 0.055 SGD of 2. Visual check on Android emulator (5 screenshots) caught+fixed real U7 bug (evidenceTier type mismatch — every real edge card's provenance screen threw). Exceptions: Windows-desktop launch blocked (Dev Mode off — manual step recorded); run-pipeline failure path not forced; verifier verdicts non-deterministic (runbook warns) |
 
 **Carry-forwards (not lost, owned later):** `contradiction` → shared/brain `needsReview()` edge-flag
 not wired (U4 report; candidate for U9's serving-layer work or a backlog note at run end).
@@ -156,12 +155,13 @@ live — exercise or note in U12 runbook. **LlmRouter.create() (the override-awa
 adopted by pipeline callers** (brain-ingest constructs the router directly) — cap overrides don't
 bind real verify runs until adopted; U10 (which owns brain-ingest CLI changes) adopts it.
 
-## Budget
+## Budget — FINAL
 
-- Cap: **20 SGD** total OpenAI. Spent: **0.0002 SGD**.
-- **Anthropic (added by Jayden 2026-07-24, post-launch): cap 2 SGD, spent 0.00.** Optional — verifier
-  decorrelation only (see launch prompt PART 0/PART 3 amendments + D2 AMENDED). Likely decision
-  point: U12 e2e. Track any Anthropic spend as its own ledger note per row.
+- OpenAI cap 20 SGD → spent **≈ 0.182 SGD** (US$0.14147: U1 smoke 0.00015125 + U12 verify legs
+  0.141315). 99.1% under cap.
+- Anthropic cap 2 SGD → spent **≈ 0.055 SGD** (US$0.04266, U12 decorrelated verifier leg per
+  D2 AMENDED). Config restored to OpenAI-only after the leg.
+- C7 caps (1.00 USD/day/node + 60k tok/run) never raised; both hard stops never approached.
 - Policy: fixtures/offline first; live calls only for the essential e2e proofs (mandatory acceptance
   test (iv) + the U12 dry-run; small calibration calls if a unit's integration test truly needs one).
 - Router C7 caps set low in U1 (value recorded as a C-entry when set).

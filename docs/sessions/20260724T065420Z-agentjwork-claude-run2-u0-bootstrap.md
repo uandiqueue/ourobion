@@ -101,5 +101,18 @@ NOT-live-verified list). U2 (O15 verifier grounding) marked in-progress and disp
 - U11 done — PR #134 (nao 94/94, context_sync; live gaps read + headless-Chrome prefill proof +
   anon denial). ALL PART-1 FEATURES BUILT. Ledger row 12. U12 (FINAL: e2e dry-run + runbook +
   live-LLM proofs) marked in-progress and dispatched.
+- Mid-U12, Jayden set the subagent model policy (Fable orchestrates only; Sonnet 5 routine / Opus 5
+  difficult; Opus advisor pattern) — recorded in launch prompt PART 0 (both copies) + D17; Opus 5
+  existence verified live via the Models API. U1–U12 all ran on Fable 5 (pre-policy, inherited).
+- U12 done — PR #135. RUN COMPLETE: dry-run 21/21 PASS + clean-reset 20/20; acceptance (iv) 0
+  orientation mismatches; LIVE OpenAI verify US$0.141315; Anthropic decorrelated leg US$0.04266
+  (D2-AMENDED option exercised, config restored); emulator screenshots; U7 evidenceTier bug found
+  by the visual check and fixed in-spirit; runbook at docs/shared/phase2-demo-runbook.md. D16+D17;
+  ledger row 13; Budget FINAL (0.182/20 + 0.055/2 SGD); backlog execution record appended to
+  next-build-optimizations.md. Every PR awaits Jayden's sign-off — nothing merged, nothing
+  self-signed.
+
+memory: Run 2.0 COMPLETE 2026-07-25 — 13 units, PRs #123–#135, DoD met via scripted dry-run +
+runbook; total LLM spend ≈ 0.24 SGD across both providers; sign-off queue = unit-signoff-index.md.
 
 memory: Run 2.0 launched 2026-07-24 — resumable state = docs/temp/phase2-run-2/orchestration-log.md on the feat/phase2-run-2/* chain (worktree C:\project\ourobion-run2); inputs live ON the run branch, not dev-phase2.

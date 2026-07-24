@@ -29,6 +29,28 @@ Status values: `open` (ready for the next run) · `done` (executed, with the com
 
 ---
 
+## Run 2.0 execution record (2026-07-24/25 — PR chain #123–#135, human-gated, none merged)
+
+Authoritative audit surface: `docs/temp/phase2-run-2/unit-signoff-index.md`. Per-item outcome:
+
+| Item | Outcome | PR(s) |
+|------|---------|-------|
+| O9 | **demo slice done** (gap_ledger §A1 + detection writes + nao surfacing + human add-as-seed); full autonomous gap→research loop stays gated on B5+U16 | #127, #134 |
+| O10 | **done** for (a) config + (b) spend boundaries + caps-edit write; (c) ingestion-progress boundary deliberately deferred (existing Overview covers demo) | #131 |
+| O11 | **done** (nao /loader, provenance-flagged, incremental backfill) | #129 |
+| O12 | **done** (run-pipeline trigger + get_insight_provenance RPC + biotope trend/provenance UI) | #128, #130 |
+| O13 | **done** (edge_human_verdicts, reject supersedes serving, claims UI; un-reject carried forward) | #132 |
+| O14 | **done** (ingestion_seeds table + nao UI + CLI merge; Run-now dropdown deliberately left static) | #133 |
+| O15 | **done for this cycle's scope** (evidence-bearing citations, fixture corpus, CLI wiring, acceptance (i)); LIVE web retrieval = next cycle per the item itself | #125 |
+| O16 | **done** (orientation-aware cards, acceptance (ii), live-proven) | #127 |
+| O17 | **done** (shared servable⇒quote-check clause, acceptance (iii); B8 retro-review) | #126 |
+| O18 | **done** per decision (a) gap-only | #127 |
+| O19 | **done** (upsert-and-prune + freshness filter + 3 test gates) | #128 |
+| O20 | **done** (derivation copy-gate at synthesis + load) | #126 |
+| O1–O8 | **untouched — remain open** (not demo-scoped this run; O7/O8 still land with B5) | — |
+
+---
+
 ## Demo acceptance target (hackathon) — what "dev-phase2 works" means
 
 The next backend run must make this end-to-end demo run on dev-phase2 (debugging flaws / unfinished

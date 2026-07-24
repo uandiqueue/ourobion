@@ -54,6 +54,19 @@ PART 0 — Setup, toolchain, budget
   note that the pre-O7 invariant clause `family(verifier) !== 'anthropic'` will flag it (TEST-MODE
   covers this cycle; the general O7 fix still lands with B5).
 
+- SUBAGENT MODEL POLICY (Jayden 2026-07-25): **Fable 5 is the ORCHESTRATOR only** — it never builds.
+  Dispatch build agents by difficulty via the Agent tool's `model` param:
+    • routine/mechanical units (doc moves, small UI panels, config plumbing, test backfills) →
+      **Sonnet 5** (`model: "sonnet"`);
+    • difficult builds (contract/schema changes, engine/verifier semantics, multi-package units,
+      recovery/audit re-runs) → **Opus 5** (`claude-opus-5`, live since ≤2026-07-25; the Agent
+      tool takes the alias `model: "opus"`, which resolves to the newest Opus the harness serves);
+    • a Sonnet build agent facing a hard design question should spawn a short **Opus advisor**
+      subagent (read-only, design brief in/answer out) rather than muddling through or escalating
+      the whole unit.
+  Read-only assessment/Explore fan-outs may stay on the session default. Record the chosen model
+  per unit in the orchestration-log ledger row.
+
 ═══════════════════════════════════════════════════════════════════════════════
 PART R — Resumability (READ FIRST, EVERY LAUNCH) — the run MUST survive a sudden halt
 ═══════════════════════════════════════════════════════════════════════════════

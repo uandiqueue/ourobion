@@ -274,4 +274,34 @@ undersized maxOutputTokens yields empty visible text. Size generously in downstr
   (verify/seeder/synth) — live proof: a nao-set per_run_token_cap=1 denied a REAL verify before any
   API call.
 
-_(Further D-entries appended per unit as the run executes.)_
+## D16 · U12 execution choices (dry-run + runbook) — U12
+
+- **Anthropic decorrelated leg EXERCISED** (per D2 AMENDED, orchestrator's judgment): verifier
+  flipped to claude-sonnet-5 for ONE verify run (pre-O7 clause warned as designed), verdict
+  recorded side-by-side with gpt-5's ("supported" vs "partial" — verdicts are non-deterministic;
+  runbook warns never to promise one on stage), labeled "decorrelated but not attested/ablated",
+  config restored byte-identically, scratch artifacts never DB-loaded. Spend US$0.04266.
+- **In-spirit bug fix within U12** (allowed by the brief's small-fix clause): U7's
+  ProvenanceCitation.evidenceTier was typed String? vs the numeric shared EvidenceTier — every
+  REAL edge card's provenance screen threw (masked by fixtures). Fixed model + copy gate + the
+  masking fixtures; flutter 111/111. The RPC's humanVerdict field remains UNRENDERED by the U7
+  screen — noted as carry-forward, not demo-blocking.
+- **Visual check pathway:** Windows desktop blocked by OS Developer Mode (non-admin) — Android
+  emulator used instead; 5 screenshots in docs/temp/phase2-run-2/assets/. The desktop launch is
+  the run's ONE unexercised launch path (manual step in runbook).
+- **Two documented local-stack retries** baked into the dry-run script (JWT iat-skew ≤4×3s; one
+  db-reset retry on health-probe timeout) — wrinkles, not failures; both in the runbook.
+
+## D17 · Subagent model policy (Jayden 2026-07-25) + run-close notes — orchestrator
+
+- **Policy (recorded mid-U12, applies from the NEXT dispatch/run):** Fable 5 orchestrates only;
+  build agents by difficulty — Sonnet 5 routine, **Opus 5** difficult (`claude-opus-5`, verified
+  live on the Models API 2026-07-25; Agent-tool alias `"opus"`); Sonnet builders may spawn a
+  read-only Opus advisor. Full text in launch prompt PART 0. **Historical note: U1–U12 all ran on
+  Fable 5** (inherited from the session, pre-policy).
+- **Backlog statuses:** rather than editing 12 per-item status lines in
+  next-build-optimizations.md, a single "Run 2.0 execution record" block was appended to it mapping
+  O-items → PRs → scope notes (see that doc). The unit-signoff-index remains the authoritative
+  audit surface.
+
+_(Run complete — no further D-entries. Retro-review queue: D1–D17 + C2, with B8 flags on U2/U3.)_
