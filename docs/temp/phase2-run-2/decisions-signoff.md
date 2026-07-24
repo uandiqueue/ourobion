@@ -239,4 +239,21 @@ undersized maxOutputTokens yields empty visible text. Size generously in downstr
 - **O10(c) ingestion-progress boundary deliberately deferred** (nao's existing Overview covers the
   demo; the full boundary is next-cycle work).
 
+## D14 · U9 implementation choices (human verdict override) — U9
+
+- **Append-only human truth:** edge_human_verdicts is reject-only this cycle (CHECK); un-reject/
+  restore semantics deliberately NOT invented — carried forward. No FK on edge_id on purpose (the
+  projection is rebuilt; human truth must survive rebuilds — live-proven: loader rebuild after
+  reject did NOT clobber the verdict). RLS forges-proof created_by.
+- **Serving vs history split:** generate-insights (the only new-card consumer) excludes rejects
+  null-safely ON TOP of the untouched band gate; provenance + claims UI never hide rejected edges
+  — they show verifier verdict + human verdict. Provenance `humanVerdict` is live-latest,
+  deliberately NOT pinned to the cited verified_at (the reject is a present-tense fact).
+- **No GIN index:** EXPLAIN ANALYZE at demo scale = seq scan 0.085 ms over 4 rows — measured, not
+  guessed; recorded in code comment.
+- **Limit-halt recovery note:** first U9 agent died on the session usage cap mid-unit; the second
+  agent ran audit-mode per PART R and found ONE real bug in the inherited work (postgrest-js
+  `.contains()` array-arg serialization → `cs.{[object Object]}` 500) — pinned by a unit test.
+  Validation of the recovery protocol: inherited work is never assumed correct.
+
 _(Further D-entries appended per unit as the run executes.)_

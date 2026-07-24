@@ -32,11 +32,12 @@ reproduces from a clean local stack.
 **Current state:** U0 done (#123) · U1 done (#124; router OpenAI-only TEST-MODE, caps 1.00 USD/day/
 node + 60k tok/run) · U2 done (#125; verifier grounded — evidence-bearing citations, fixture corpus,
 CLI retrieve wiring, acceptance (i) green). Local supabase stack UP (API 54321 / DB 54322). Chain
-tip: feat/phase2-run-2/u8-model-config-spend (U8 done, #131 — feature a shipped). Tracking-doc
-updates ride the chain tip.
+tip: feat/phase2-run-2/u9-claims-human-verdict (U9 done, #132 — feature b shipped; reject
+supersedes serving, provenance stays honest). Tracking-doc updates ride the chain tip.
 Demo dev user on local stack: u6-demo@ourobion.local — NOTE: `supabase db reset` WIPES auth.users;
-U8 recreated the user via admin API (uid changes each recreation; re-seed data after resets).
-**Next action:** U9 is `in-progress`. If resuming mid-U9: re-run the WHOLE unit.
+recreate via admin API (uid changes each recreation; re-seed data after resets).
+**Next action:** U10 is `in-progress`. If resuming mid-U10: audit any uncommitted partial work
+against the U10 brief, finish cleanly, redo the FULL gate + live proof (PART R).
 BOTH keys present in tools/brain-ingest/.env (gitignored): OPENAI (≤20 SGD) + ANTHROPIC (≤2 SGD,
 optional verifier decorrelation — see Budget + D2 AMENDED).
 
@@ -57,8 +58,8 @@ One writer at a time; each unit stacks on the chain tip.
 | U6 | Simulated-data loader: nao page + API route writing biotope tables (provenance-flagged, incremental by-day) + "Run analysis now" button (calls run-pipeline server-side) + FIRST nao unit adds nao CI job (typecheck+test) | O11 | done |
 | U7 | biotope demo surfaces: trend/graph on metric_daily_values, provenance detail view (get_insight_provenance RPC; handles "still researching"), post-trigger refresh | O12-app | done |
 | U8 | Model-config + spend boundaries (Supabase read surfaces for router config + ledger; caps-edit write path router honors) + nao panel (feature a) | O10 | done |
-| U9 | Claims curation + human REJECT: edge_human_verdicts migration, loader/view overlay (reject supersedes for serving), nao paper→claims page + reject action | O13 | in-progress |
-| U10 | Seeds-as-data: seeds table migration, nao seed-add UI, seeder reads table as 4th candidate source (C9 pair-only gate intact) | O14 | queued |
+| U9 | Claims curation + human REJECT: edge_human_verdicts migration, loader/view overlay (reject supersedes for serving), nao paper→claims page + reject action | O13 | done |
+| U10 | Seeds-as-data: seeds table migration, nao seed-add UI, seeder reads table as 4th candidate source (C9 pair-only gate intact) + adopt LlmRouter.create() in brain-ingest (U8 carry-forward) | O14 | in-progress |
 | U11 | Gap surfacing: nao ingestion-view of gap_ledger (detection landed in U4); signal-no-edge → gap row → visible in nao | O9 slice | queued |
 | U12 | E2E demo dry-run: scripted full PART-1 flow (main loop 1–5 + features a–d) on local stack, live OpenAI for the essential proofs (ACCEPTANCE (iv), card copy inspected both orientations) + demo runbook (DoD v+vi) | DoD | queued |
 
@@ -141,6 +142,7 @@ load-bearing facts:
 | 7 | U6 | feat/phase2-run-2/u6-nao-data-loader | #129 | nao tsc + 54/54; db reset clean; LIVE loader→rules-cards→backfill→11-patterns proof; context_sync green | 0.00 | 0.0002 | O11 closed; /loader page + routes + nao CI job; data_origin migration; auth-test stub repair in-commit; harness classifier warning reviewed (transient stage-2 error; actions in-brief) |
 | 8 | U7 | feat/phase2-run-2/u7-biotope-trend-provenance | #130 | flutter analyze clean + 111/111; context_sync green | 0.00 | 0.0002 | O12-app closed — MAIN LOOP 1–5 FULLY BUILT; CustomPaint trend on Home tab; provenance screen with TEST-MODE stamp under every edge verdict; live series+RPC proof via raw Dart client |
 | 9 | U8 | feat/phase2-run-2/u8-model-config-spend | #131 | llm-router tsc + 71/71; nao tsc + 63/63; db reset clean; LIVE publish→panel→cap-edit→effective-cap+fail-soft proofs; context_sync green | 0.00 | 0.0002 | O10 closed (feature a); boundaries as rebuildable projections; O10(c) ingestion boundary deliberately deferred (Overview covers demo). First U8 attempt died on transient ENOTFOUND pre-write; clean re-run |
+| 10 | U9 | feat/phase2-run-2/u9-claims-human-verdict | #132 | edge-loader tsc + 56/56; nao tsc + 74/74; db reset clean; LIVE 6-step reject proof incl. real loader path + before/after serving exclusion + rebuild-doesn't-clobber; context_sync green | 0.00 | 0.0002 | O13 closed (feature b). LIMIT HALT mid-unit (session cap, reset 21:20 MYT); second agent audited inherited work per PART R, found+fixed a real containment-serialization bug, redid full gate+proof. No shared/ change (no B8). No GIN (seq scan 0.085ms measured) |
 
 **Carry-forwards (not lost, owned later):** `contradiction` → shared/brain `needsReview()` edge-flag
 not wired (U4 report; candidate for U9's serving-layer work or a backlog note at run end).
