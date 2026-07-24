@@ -32,15 +32,13 @@ reproduces from a clean local stack.
 **Current state:** U0 done (#123) · U1 done (#124; router OpenAI-only TEST-MODE, caps 1.00 USD/day/
 node + 60k tok/run) · U2 done (#125; verifier grounded — evidence-bearing citations, fixture corpus,
 CLI retrieve wiring, acceptance (i) green). Local supabase stack UP (API 54321 / DB 54322). Chain
-tip: feat/phase2-run-2/u7-biotope-trend-provenance (U7 done, #130 — trend + provenance screens;
-MAIN LOOP 1–5 fully built, features a–d remain). Tracking-doc updates ride the chain tip.
-Demo dev user on local stack: u6-demo@ourobion.local (21 days simulated data + cards; password was
-reset by U7 via auth admin API — see U7 session log).
+tip: feat/phase2-run-2/u8-model-config-spend (U8 done, #131 — feature a shipped). Tracking-doc
+updates ride the chain tip.
+Demo dev user on local stack: u6-demo@ourobion.local — NOTE: `supabase db reset` WIPES auth.users;
+U8 recreated the user via admin API (uid changes each recreation; re-seed data after resets).
+**Next action:** U9 is `in-progress`. If resuming mid-U9: re-run the WHOLE unit.
 BOTH keys present in tools/brain-ingest/.env (gitignored): OPENAI (≤20 SGD) + ANTHROPIC (≤2 SGD,
 optional verifier decorrelation — see Budget + D2 AMENDED).
-**Next action:** U8 is `in-progress` (marked before dispatch, per PART R). If resuming mid-U8:
-re-run the WHOLE unit — git status/diff the worktree, reset or finish partial work, redo gate +
-tests before its PR.
 
 ## Worklist (FINAL — from assessment synthesis 2026-07-24)
 
@@ -58,8 +56,8 @@ One writer at a time; each unit stacks on the chain tip.
 | U5 | Serve-pipeline on-demand trigger (runs compute-baselines → evaluate-signals → generate-insights; note: evaluate-signals has NO cron today), provenance read surface (card→edges→claims/citations view), baseline upsert-and-prune (+O19 test gates) | O12-backend, O19 | done |
 | U6 | Simulated-data loader: nao page + API route writing biotope tables (provenance-flagged, incremental by-day) + "Run analysis now" button (calls run-pipeline server-side) + FIRST nao unit adds nao CI job (typecheck+test) | O11 | done |
 | U7 | biotope demo surfaces: trend/graph on metric_daily_values, provenance detail view (get_insight_provenance RPC; handles "still researching"), post-trigger refresh | O12-app | done |
-| U8 | Model-config + spend boundaries (Supabase read surfaces for router config + ledger; caps-edit write path router honors) + nao panel (feature a) | O10 | in-progress |
-| U9 | Claims curation + human REJECT: edge_human_verdicts migration, loader/view overlay (reject supersedes for serving), nao paper→claims page + reject action | O13 | queued |
+| U8 | Model-config + spend boundaries (Supabase read surfaces for router config + ledger; caps-edit write path router honors) + nao panel (feature a) | O10 | done |
+| U9 | Claims curation + human REJECT: edge_human_verdicts migration, loader/view overlay (reject supersedes for serving), nao paper→claims page + reject action | O13 | in-progress |
 | U10 | Seeds-as-data: seeds table migration, nao seed-add UI, seeder reads table as 4th candidate source (C9 pair-only gate intact) | O14 | queued |
 | U11 | Gap surfacing: nao ingestion-view of gap_ledger (detection landed in U4); signal-no-edge → gap row → visible in nao | O9 slice | queued |
 | U12 | E2E demo dry-run: scripted full PART-1 flow (main loop 1–5 + features a–d) on local stack, live OpenAI for the essential proofs (ACCEPTANCE (iv), card copy inspected both orientations) + demo runbook (DoD v+vi) | DoD | queued |
@@ -142,12 +140,15 @@ load-bearing facts:
 | 6 | U5 | feat/phase2-run-2/u5-trigger-provenance-prune | #128 | engine-stats 49/49 + tsc; rules 82/82 + tsc; db reset clean; LIVE 3-stage pipeline + authed provenance JSON + prune/freshness/A14 proofs; context_sync green | 0.00 | 0.0002 | O12-backend+O19 closed; run-pipeline + get_insight_provenance(bigint) shipped; SNAPSHOT_FRESHNESS_DAYS=7; evaluate-signals config.toml entry added (cron still H3) |
 | 7 | U6 | feat/phase2-run-2/u6-nao-data-loader | #129 | nao tsc + 54/54; db reset clean; LIVE loader→rules-cards→backfill→11-patterns proof; context_sync green | 0.00 | 0.0002 | O11 closed; /loader page + routes + nao CI job; data_origin migration; auth-test stub repair in-commit; harness classifier warning reviewed (transient stage-2 error; actions in-brief) |
 | 8 | U7 | feat/phase2-run-2/u7-biotope-trend-provenance | #130 | flutter analyze clean + 111/111; context_sync green | 0.00 | 0.0002 | O12-app closed — MAIN LOOP 1–5 FULLY BUILT; CustomPaint trend on Home tab; provenance screen with TEST-MODE stamp under every edge verdict; live series+RPC proof via raw Dart client |
+| 9 | U8 | feat/phase2-run-2/u8-model-config-spend | #131 | llm-router tsc + 71/71; nao tsc + 63/63; db reset clean; LIVE publish→panel→cap-edit→effective-cap+fail-soft proofs; context_sync green | 0.00 | 0.0002 | O10 closed (feature a); boundaries as rebuildable projections; O10(c) ingestion boundary deliberately deferred (Overview covers demo). First U8 attempt died on transient ENOTFOUND pre-write; clean re-run |
 
 **Carry-forwards (not lost, owned later):** `contradiction` → shared/brain `needsReview()` edge-flag
 not wired (U4 report; candidate for U9's serving-layer work or a backlog note at run end).
 run-pipeline stage summaries scale with users×metrics (fine at demo scale — flagged in its header
 for U6/U8 consumers). run-pipeline mid-sequence-failure path (502 + partial stages) not forced
-live — exercise or note in U12 runbook.
+live — exercise or note in U12 runbook. **LlmRouter.create() (the override-aware entry) is NOT yet
+adopted by pipeline callers** (brain-ingest constructs the router directly) — cap overrides don't
+bind real verify runs until adopted; U10 (which owns brain-ingest CLI changes) adopts it.
 
 ## Budget
 

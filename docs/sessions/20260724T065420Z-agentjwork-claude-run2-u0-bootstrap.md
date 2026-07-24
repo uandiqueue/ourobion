@@ -84,5 +84,10 @@ NOT-live-verified list). U2 (O15 verifier grounding) marked in-progress and disp
   proof (21-point series + provenance RPC parse as demo user). MAIN LOOP 1–5 FULLY BUILT. D12
   recorded (CustomPaint, TEST-MODE stamp, U21 tile-line flag); ledger row 8. U8 (O10 model-config +
   spend boundaries + nao panel, feature a) marked in-progress and dispatched.
+- U8 attempt 1 died on a transient API ENOTFOUND before any writes (worktree verified clean);
+  re-dispatched per PART R whole-unit re-run. U8 done — PR #131, gates green (llm-router 71/71,
+  nao 63/63, db reset, context_sync) + live publish→panel→cap-edit→effective-cap proofs. D13 +
+  C2.4 recorded; ledger row 9; carry-forward: U10 adopts LlmRouter.create() in brain-ingest. U9
+  (O13 claims curation + human REJECT, feature b) marked in-progress and dispatched.
 
 memory: Run 2.0 launched 2026-07-24 — resumable state = docs/temp/phase2-run-2/orchestration-log.md on the feat/phase2-run-2/* chain (worktree C:\project\ourobion-run2); inputs live ON the run branch, not dev-phase2.

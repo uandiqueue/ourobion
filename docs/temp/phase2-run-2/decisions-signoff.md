@@ -220,4 +220,23 @@ undersized maxOutputTokens yields empty visible text. Size generously in downstr
   (symlink creation); worktree needs gitignored apps/biotope/.env.public copied from the main
   checkout.
 
+## D13 · U8 implementation choices (model-config + spend boundaries) — U8
+
+- **Boundary tables are rebuildable PROJECTIONS** of router.config.json + ledger.json (two-tier
+  truth; table comments say so); publish is an EXPLICIT script this cycle (auto-publish noted as a
+  candidate improvement). Staleness surfaced honestly in the panel (>1h hint).
+- **Override semantics: REPLACE, not MIN** — an override can raise a cap up to the safety bound
+  (that is what "editable" means); the bound is the guardrail. Applied per-node at spend-check time
+  via effectiveCapsFor; sync LlmRouter constructor never touches the network; fetch is fail-soft
+  (unreachable/absent Supabase → file caps + one loud warning — the router can't be bricked by the
+  boundary).
+- **C2.4 (config values):** override bounds per_day_usd_cap ≤ 5.00 USD, per_run_token_cap ≤ 200000
+  (mirrored in migration CHECK + router re-validation + nao validation); usd numeric(14,8) (6dp
+  rounded U1's real 0.00015125 entry); node CHECK pins the six node ids (new node = new migration,
+  deliberate); no DELETE policy (clear = NULL).
+- **Carry-forward → U10:** pipeline callers still construct the router directly; LlmRouter.create()
+  (override-aware) must be adopted in brain-ingest's CLI so overrides bind real verify runs.
+- **O10(c) ingestion-progress boundary deliberately deferred** (nao's existing Overview covers the
+  demo; the full boundary is next-cycle work).
+
 _(Further D-entries appended per unit as the run executes.)_
