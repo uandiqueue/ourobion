@@ -60,6 +60,8 @@ abstract final class ProvenanceCopy {
   static const directionConsistent = 'direction consistent';
   static const directionInconsistent = 'direction inconsistent';
 
+  static const evidenceTierPrefix = 'evidence tier ';
+
   static const derivationLabel = 'HOW THIS LINK WAS DERIVED';
   static const populationPrefix = 'Studied scope: ';
   static const quotesLabel = 'SOURCE QUOTES';
@@ -95,6 +97,7 @@ abstract final class ProvenanceCopy {
     edgeScorePrefix,
     directionConsistent,
     directionInconsistent,
+    evidenceTierPrefix,
     derivationLabel,
     populationPrefix,
     quotesLabel,
@@ -710,7 +713,8 @@ class _CitationTile extends StatelessWidget {
       if (citation.year != null) '(${citation.year})',
     ].join(' ');
     final meta = [
-      if (citation.evidenceTier != null) citation.evidenceTier!,
+      if (citation.evidenceTier != null)
+        '${ProvenanceCopy.evidenceTierPrefix}${citation.evidenceTier}',
       if (citation.impactTier != null) citation.impactTier!,
       if (citation.stance != null) citation.stance!,
       if (citation.population != null) citation.population!,

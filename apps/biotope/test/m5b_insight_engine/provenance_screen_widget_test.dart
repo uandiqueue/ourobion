@@ -167,8 +167,8 @@ void main() {
                 paperId: 'paper-1',
                 title: 'Sleep and gut comfort: a cohort study',
                 year: 2023,
-                evidenceTier: 'cohort',
-                impactTier: 'mid',
+                evidenceTier: 4,
+                impactTier: 'moderate',
                 stance: 'supports',
                 evidence: [
                   ProvenanceEvidencePassage(

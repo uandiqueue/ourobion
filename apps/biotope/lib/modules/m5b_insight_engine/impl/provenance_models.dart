@@ -135,7 +135,10 @@ class ProvenanceCitation {
 
   /// Per-paper studied population, verbatim; null when the source states none.
   final String? population;
-  final String? evidenceTier;
+
+  /// Study-design strength 1..5 (shared/brain `EvidenceTier` — a NUMBER on the
+  /// wire; U12 fix: this was mistyped `String?` and threw on real pipeline data).
+  final int? evidenceTier;
   final String? impactTier;
 
   /// 'supports' | 'refutes' | 'mixed' | 'mentions'.
@@ -161,7 +164,7 @@ class ProvenanceCitation {
       title: json['title'] as String?,
       year: (json['year'] as num?)?.toInt(),
       population: json['population'] as String?,
-      evidenceTier: json['evidenceTier'] as String?,
+      evidenceTier: (json['evidenceTier'] as num?)?.toInt(),
       impactTier: json['impactTier'] as String?,
       stance: json['stance'] as String?,
       evidence: _asList(

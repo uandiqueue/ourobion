@@ -67,8 +67,8 @@ const _edgeCardJson = '''
           "title": "Sleep and gastrointestinal comfort: a cohort study",
           "year": 2023,
           "population": "shift workers, n=412",
-          "evidenceTier": "cohort",
-          "impactTier": "mid",
+          "evidenceTier": 4,
+          "impactTier": "moderate",
           "stance": "supports",
           "evidence": [
             {"text": "Comfort declined 0.4 points per lost hour.", "locator": "Table 2"}
@@ -79,7 +79,7 @@ const _edgeCardJson = '''
           "title": null,
           "year": null,
           "population": null,
-          "evidenceTier": "cross-sectional",
+          "evidenceTier": 3,
           "impactTier": "low",
           "stance": "mentions"
         }
@@ -193,8 +193,8 @@ void main() {
       expect(cites, hasLength(2));
       expect(cites.first.title, contains('cohort study'));
       expect(cites.first.year, 2023);
-      expect(cites.first.evidenceTier, 'cohort');
-      expect(cites.first.impactTier, 'mid');
+      expect(cites.first.evidenceTier, 4);
+      expect(cites.first.impactTier, 'moderate');
       expect(cites.first.stance, 'supports');
       expect(cites.first.evidence.single.text, contains('0.4 points'));
       expect(cites.first.evidence.single.locator, 'Table 2');
