@@ -7,12 +7,13 @@
 // rest of the app's page convention.
 import type { Metadata } from 'next';
 import { IngestControlPanel } from '@/components/IngestControlPanel';
-import { SeedsPanel } from '@/components/SeedsPanel';
+import { GapsAndSeeds } from '@/components/GapsAndSeeds';
 
 export const metadata: Metadata = {
   title: 'Ingestion control · ourobion nao',
   description:
-    'Pause/resume the ingestion CLI, queue a run, adjust budget limits, and manage ingestion seeds.',
+    'Pause/resume the ingestion CLI, queue a run, adjust budget limits, manage ingestion seeds, ' +
+    'and see the knowledge gaps the analysis has surfaced.',
 };
 
 export default function IngestControlPage() {
@@ -23,8 +24,9 @@ export default function IngestControlPage() {
         <h1 className="ingest__title">Ingestion control</h1>
       </div>
       <IngestControlPanel />
-      {/* O14 seeds-as-data (run-2 U10): human-added ingestion seeds. */}
-      <SeedsPanel />
+      {/* O14 seeds-as-data (U10) + O9 gap surfacing (U11): the seeds form and the
+          A1 knowledge-gap table, bridged by the human "Add as seed" prefill. */}
+      <GapsAndSeeds />
     </div>
   );
 }

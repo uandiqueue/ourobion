@@ -10,14 +10,29 @@
 // disable, don't erase). A seed is a discovery TOPIC/query, never a metric
 // pair — C9's candidate list stays the only pair source. The pipeline picks
 // db seeds up fail-soft on its next run (static wins on a slug collision).
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { deriveSeedSlug } from '@/lib/seedsControl';
 import type { SeedCatalogEntry } from '@/lib/seedsControl';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
-export function SeedsPanel() {
+/**
+ * A prefill request from the gaps panel's "Add as seed" bridge (run-2 U11):
+ * `nonce` increments per click so repeated clicks (even the same label)
+ * re-apply. Human-in-the-loop only — the seed is still reviewed + submitted
+ * by the user.
+ */
+export interface SeedPrefill {
+  label: string;
+  nonce: number;
+}
+
+export interface SeedsPanelProps {
+  prefill?: SeedPrefill | null;
+}
+
+export function SeedsPanel({ prefill }: SeedsPanelProps = {}) {
   const [state, setState] = useState<LoadState>('loading');
   const [catalog, setCatalog] = useState<SeedCatalogEntry[]>([]);
   const [busy, setBusy] = useState(false);
@@ -27,6 +42,18 @@ export function SeedsPanel() {
   const [label, setLabel] = useState('');
   const [queryHint, setQueryHint] = useState('');
   const slugPreview = deriveSeedSlug(label);
+  const labelInputRef = useRef<HTMLInputElement>(null);
+
+  // Gap → seed prefill (U11): apply the bridged label and bring the form into
+  // view so the human can review/edit before submitting.
+  useEffect(() => {
+    if (!prefill) return;
+    setLabel(prefill.label);
+    setMessage(null);
+    setError(null);
+    labelInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    labelInputRef.current?.focus({ preventScroll: true });
+  }, [prefill]);
 
   async function refresh(): Promise<void> {
     try {
@@ -158,6 +185,7 @@ export function SeedsPanel() {
 
       <form className="ingest-form seeds-form" onSubmit={submitAdd}>
         <input
+          ref={labelInputRef}
           type="text"
           value={label}
           onChange={(e) => setLabel(e.target.value)}

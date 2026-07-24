@@ -304,3 +304,47 @@
 .seeds-slug-preview {
   margin-top: 6px;
 }
+
+/* ── Knowledge gaps (O9 demo slice / feature (d), run-2 U11) ─────────────── */
+.gaps-panel {
+  margin-top: 18px;
+}
+
+.gaps-table-wrap {
+  overflow-x: auto;
+}
+.gaps-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+}
+.gaps-table th,
+.gaps-table td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--hairline);
+  white-space: nowrap;
+}
+.gaps-table th {
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.gaps-table td {
+  color: var(--text-primary);
+}
+
+.gaps-pair {
+  font-family: var(--font-mono);
+}
+.gaps-table .gaps-num {
+  text-align: right;
+}
+.gaps-when,
+.gaps-context {
+  color: var(--text-secondary);
+}
+.gaps-addseed {
+  font-size: 11px;
+  padding: 3px 10px;
+}
