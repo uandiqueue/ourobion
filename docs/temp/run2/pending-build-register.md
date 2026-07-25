@@ -1,6 +1,6 @@
 ---
 title: Pending-Build Register — where the project's gaps are
-summary: The standing map of everything known-unbuilt or known-gapped across the project (metric expansion, UI, brain/verifier, platform/process), with what gates each item. A gap RECORD, not a run worklist — items graduate into a run's backlog (next-build-optimizations.md style) only when Jayden locks a decision for them. Dev aid (docs/temp), not ground truth.
+summary: The SUPERSET map of everything known-unbuilt or known-gapped across the project (metric expansion, UI, brain/verifier, platform/process, Run-1 carry-forward, Run-2.0 review debt), with what gates each item. A gap RECORD, not a run worklist — items graduate into a run's backlog (next-build-optimizations.md, which is a strict subset of this register) only when Jayden locks a decision for them. Dev aid (docs/temp), not ground truth.
 type: plan
 scope: shared
 status: canonical
@@ -16,7 +16,21 @@ decision-locked entry in that run's backlog doc and a pointer back here.
 
 Sources folded in: the 100-metric integration analysis (2026-07-25), Run 2.0 carry-forwards
 (docs/temp/run2/orchestration-log.md), the Run 2.0 OUT-scope list (launch prompt PART 4),
-open O-items (next-build-optimizations.md), and the anchor decisions (docs/memory/0013 et al.).
+open O-items (next-build-optimizations.md), the anchor decisions (docs/memory/0013 et al.),
+**everything Run 1 left open** (§E), and **Run 2.0's own review debt** (§F).
+
+## How this register relates to the other two docs
+
+```
+pending-build-register.md   ← THIS DOC. Superset: every known gap, no priorities, no locked decisions.
+    ├── next-build-optimizations.md   ← Strict SUBSET: gaps Jayden has decision-locked for a run.
+    │                                    O1–O8 open · O9–O20 built by Run 2.0 · O21–O23 pending review.
+    └── carry-forward-from-run1.md    ← Detail sheet for §E (what Run 1 left open).
+```
+
+**Rule:** nothing may exist in `next-build-optimizations.md` or `carry-forward-from-run1.md` without a
+row here. Those docs hold the *detail*; this register holds the *complete list*. Every open O-item is
+mapped to its row in §G below — check that map before assuming an item is missing.
 
 ---
 
@@ -64,6 +78,9 @@ testing; iOS remains Mac + paid-Apple-account gated (memory 0010).
 | B-BR7 · Un-reject/restore on edge_human_verdicts | deliberately not invented (U9) | append-only, reject-only CHECK; semantics need a decision |
 | B-BR8 · O8 router-config calibration (maxOutputTokens, caps rationale) | open | with B5 real-run data |
 | B-BR9 · M6 InsightFiredEvent not emitted by generate-insights | integration gap (verdict debt note) | out-of-slice unless M6 is exercised |
+| B-BR10 · `contradiction` → shared/brain `needsReview()` edge-flag not wired | Run 2.0 carry-forward (U4 report) | never picked up by U9's serving-layer work; needs an owner |
+| B-BR11 · O22 known-venue override table for impactTier banding | open — **pending Jayden review** | locked-entry: next-build-optimizations.md O22. Needs a cited-source research pass (no LLM in the runtime lookup path); also gated on B11 (SJR dataset) |
+| B-BR12 · Verifier verdicts are non-deterministic across runs | inherent, documented | the demo runbook warns; matters for anyone treating a re-run as a regression check |
 
 ### B-BR4 detail — current stand-ins for the planned custom models
 
@@ -91,8 +108,71 @@ not existing yet (the NLI pre-filter — its absence costs verifier tokens, not 
 | B-PL7 · O6 CODEOWNERS + branch protection | open | needs Alton's GitHub handle |
 | B-PL8 · shared/brain has no own typecheck (verified via edge-loader consumer) | U2 finding | consider a tsc target in retro-review |
 | B-PL9 · iOS build/test path | env-gated | Mac + paid Apple account + real device (memory 0010) |
+| B-PL10 · **B8 · the two-reviewer rule for `shared/` has no second reviewer** | **blocking, accruing** | Alton is out, so the rule cannot be satisfied as written. Run-2.0 **U2 and U3 both touched `shared/`** and carry `[B8] retro-review` flags. Needs Jayden to grant a solo-review waiver or name a second reviewer. Detail: carry-forward-from-run1.md §2 |
+| B-PL11 · ADR amendment intents recorded but NOT applied | open | ADR-0002 is `status: accepted` and immutable to `context_sync --check`, so intents were recorded instead: **D3/F4** (deadbandK) and **D5/F6** (RU4d verify-first) from research-fixes, plus Run-2.0 **D2** (TEST-MODE decorrelation override). Each needs a human to apply it via the ADR 2-reviewer / supersede channel. Ties into B-PL10 |
+| B-PL12 · O21 location-fetch trigger config (per-source distance/refresh thresholds) | open — **pending Jayden review** | locked-entry: next-build-optimizations.md O21. Ops/engineering config, explicitly NOT a statistical parameter; gates nothing until env-API collectors exist (see A1 above) |
+| B-PL13 · O23 `brain-ingest` → `llm-router` is not a declared package dependency | open — **pending Jayden review** | locked-entry: next-build-optimizations.md O23. 7 files import across the package boundary by relative path; no `workspaces`, no declared dep. Nothing broken today; becomes a **blocker** for any build/publish step, and risks duplicate router module instances (two budget ledgers) |
+| B-PL14 · `deno check` cannot run locally | env-gated, structural | no deno on this machine; the CI `deno-check` job is the only type gate for the three edge functions, and it first runs on the PR |
+| B-PL15 · run-pipeline mid-sequence failure path never forced live | Run 2.0 carry-forward | straight branch, not exercised on the shared stack (U5/U12); 502 + partial-stage behaviour is untested |
+| B-PL16 · run-pipeline stage summaries scale with users × metrics | known, fine at demo scale | flagged in its own header for U6/U8 consumers; revisit before any non-demo load |
+
+---
+
+## E · Run-1 carry-forward — what the first run left open
+
+**Detail sheet: [`carry-forward-from-run1.md`](./carry-forward-from-run1.md).** Run 2.0 executed the
+O9–O20 backlog but closed none of the following. Summarised here so the register stays the superset.
+
+| Item | State | Gates / notes |
+|---|---|---|
+| B-R1-1 · **Run-1 unit sign-off review unfinished** | **open** | Of 24 unit rows in [`run1/unit-index.md`](../run1/unit-index.md), only **U1** is fully cleared; U3 (provisional), U4 (Alton) and U9 are individually signed; **~20 remain pending or deferred**. Authoritative ledger: [`run1/signoff-instructions.md`](../run1/signoff-instructions.md) §6. Stats-bearing rows are ⏸ deferred by design until O2 exists |
+| B-R1-2 · Human-gated / external-access blockers **B2–B12** | open | Cloudflare provisioning (B2) · nao Worker secrets + Supabase login user (B3) · GitHub repo secrets (B4) · **API keys for the LLM api-worker route (B5)** · GMI GPU credits (B6) · Apple Developer Program (B7) · B8 → see B-PL10 · hosted Supabase pg_cron (B9) · real Android device (B10) · SJR quartile dataset (B11) · branch-protection required checks (B12). Full detail: [`run1/blocked-register.md`](../run1/blocked-register.md) |
+| B-R1-3 · Calibration backlog **B1–B7** (research-fixes) | open | Mechanisms shipped, numbers need data: per-metric medium cutoff · persist edgeScore components · deadbandK intent + fire-rate · deseasonalize day-of-week before lag-7 · faithful xDF effective-N · field-normalized h-index · calibrate `EDGE_GATES`/`EDGE_WEIGHTS` vs GRADE. Several land naturally inside **O2 (MPR)**. Detail: [`run1/research-fixes/blocked-register.md`](../run1/research-fixes/blocked-register.md) |
+| B-R1-4 · Register hygiene: **B13 is resolved but still reads open** | trivial | PR #72 merged 2026-07-18 and `b774229` is an ancestor of `dev-phase2`; mark it closed on the next pass |
+
+## F · Run-2.0 review debt
+
+| Item | State | Gates / notes |
+|---|---|---|
+| B-R2-1 · **Every Run-2.0 unit sign-off is `pending`** | **open — the live task** | 14 rows, U0–U13. The orchestrator never self-signs. Review surface: [`README.md`](./README.md) → [`unit-signoff-index.md`](./unit-signoff-index.md) |
+| B-R2-2 · Orientation check not exercised in the decorrelated variant | accepted-as-honest | U13 served 0 edge cards (independent verifier held every directional edge below the servable floor — identical across 2 attempts, a genuine judgment). U12's OpenAI pass is what covers orientation |
+| B-R2-3 · PRs #123–#136 are Closed-not-Merged | recorded, not a defect | GitHub refuses to retarget a PR once the new base contains its commits. Content consolidated into `dev-phase2-run2` via `050b296`; no branches deleted |
+
+---
+
+## G · Subset map — every O-item ↔ its register row
+
+Proof that [`next-build-optimizations.md`](./next-build-optimizations.md) is fully contained here.
+If you add an O-item, add its row above and a line here.
+
+| O-item | Status in the backlog | Register row |
+|---|---|---|
+| O1 · deadbandK doc reconciliation | open | B-PL2 |
+| O2 · Method & Parameter Register (MPR) | open — **hard gate** on all stats sign-offs | B-PL3 (also absorbs much of B-R1-3) |
+| O3 · Registry catalog + review surface | open | B-PL4 |
+| O4 · `derived_metrics` select-only RLS | open | B-PL5 (prerequisite to A2) |
+| O5 · Storage-primitive coverage pass | open | B-PL6 (owns decisions A3/A5) |
+| O6 · CODEOWNERS + branch protection | open | B-PL7 (needs Alton's handle; relates to B-PL10) |
+| O7 · Generalize the decorrelation invariant | open — lands with B5 | B-BR2 |
+| O8 · Router config calibration | open — needs real-run data | B-BR8 |
+| O9 · Demand-side gap-driven seeding loop | **demo slice built** (U4+U11); autonomous loop open | B-BR6 |
+| O10 · nao control-plane read boundaries | **(a)+(b) built** (U8); **(c) deferred** | B-UI8 for (c) |
+| O11 · Simulated health-data loader | **built** (U6) | — (closed) |
+| O12 · Serve-pipeline trigger + provenance | **built** (U5 backend, U7 app) | — (closed) |
+| O13 · Human verdict override + claims UI | **built** (U9); un-reject not invented | B-BR7 for un-reject |
+| O14 · Manual seed-load write path | **built** (U10); Run-now dropdown static | B-UI6 for the dropdown |
+| O15 · Ground the adversarial verifier | **built for this cycle**; live retrieval open | B-BR3 |
+| O16 · Orientation-aware cards | **built** (U4), live-proven | — (closed) |
+| O17 · Servable ⇒ passing quote check | **built** (U3); B8 retro-review outstanding | B-PL10 |
+| O18 · research-context gap-only | **built** (U4) per decision (a) | — (closed) |
+| O19 · Baseline prune + freshness | **built** (U5) | — (closed) |
+| O20 · Copy-gate `derivation` | **built** (U3) | — (closed) |
+| O21 · Location-fetch trigger config | open — **pending Jayden review** | B-PL12 |
+| O22 · Known-venue override table | open — **pending Jayden review** | B-BR11 (+ B11 SJR dataset via B-R1-2) |
+| O23 · brain-ingest → llm-router real dependency | open — **pending Jayden review** | B-PL13 |
 
 ---
 
 *Update discipline: append/edit rows as gaps close or new ones surface; when an item graduates to a
-run backlog, replace its row's State with a pointer to the locked entry.*
+run backlog, replace its row's State with a pointer to the locked entry, and add a line to §G. When a
+gap closes, say which unit/PR closed it rather than deleting the row.*

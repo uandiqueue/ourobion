@@ -1,10 +1,10 @@
 ---
 title: Next-Build Optimizations — Jayden-approved backlog for the next long-horizon run
-summary: Optimizations surfaced during unit-by-unit sign-off review of the prior long-horizon runs (phase2-run, phase2-audit, phase2-research-fixes) and explicitly approved by Jayden for a FUTURE build run to execute. Each entry LOCKS the intent + architecture decision so the build agent executes, never re-decides. Dev aid (docs/temp), not ground truth.
+summary: Optimizations surfaced during unit-by-unit sign-off review of the prior long-horizon runs (phase2-run, phase2-audit, phase2-research-fixes) and explicitly approved by Jayden for a build run to execute. Each entry LOCKS the intent + architecture decision so the build agent executes, never re-decides. NOTE this doc is now BOTH backlog and record — Run 2.0 executed O9-O20, so read each item's Status line, not the title. O1-O8 open; O21-O23 pending Jayden review. Dev aid (docs/temp), not ground truth.
 type: plan
 scope: shared
 status: canonical
-updated: 2026-07-20
+updated: 2026-07-25
 ---
 
 # Next-Build Optimizations — approved backlog for the next long-horizon run
@@ -29,9 +29,15 @@ Status values: `open` (ready for the next run) · `done` (executed, with the com
 
 ---
 
-## Run 2.0 execution record (2026-07-24/25 — PR chain #123–#135, human-gated, none merged)
+## Run 2.0 execution record (2026-07-24/25 — PR chain #123–#136, human-gated)
 
-Authoritative audit surface: `docs/temp/run2/unit-signoff-index.md`. Per-item outcome:
+Authoritative audit surface: `docs/temp/run2/unit-signoff-index.md`. Per-item outcome below; each
+item's own **Status:** line carries the same verdict (reconciled 2026-07-25 — the run originally
+recorded results only in this table, leaving every per-item status still reading `open`).
+
+**Branch state (2026-07-25):** the whole chain was consolidated into `dev-phase2-run2`; PRs #123–#136
+are Closed-not-Merged (GitHub would not retarget them post-merge). **Unit sign-off is still pending for
+every unit** — "done" below means *built*, never *signed off*.
 
 | Item | Outcome | PR(s) |
 |------|---------|-------|
@@ -352,7 +358,9 @@ surfaces now; these O-items complete the demo when this backend run executes.
 
 - **Source:** U9 (agentic seeder) sign-off (Jayden). Architecture L7/L8 + the **A1 gap ledger**; worklist
   **U16** (stretch).
-- **Status:** open.
+- **Status:** **done (demo slice only)** — gap_ledger §A1 + detection writes + nao surfacing + human
+  add-as-seed (PRs #127, #134). The **full autonomous gap→research loop REMAINS OPEN**, gated on
+  B5 + U16 — do not read this item as closed.
 - **Intent (Jayden):** C9's predetermined seeder (registry `derivedFrom` + rule blueprints + static
   topics) is only the **cold-start / supply-side** answer to "what should the brain research" — kept
   deliberately conservative (no LLM-invented candidates) while the verifier can't yet police quality.
@@ -385,8 +393,9 @@ surfaces now; these O-items complete the demo when this backend run executes.
 - **Source:** UI-run Flag A decision (Jayden 2026-07-22). nao lane of the parallel UI build
   (`docs/temp/phase2-ui-run-prompt-draft.md`). Config source: C6/C7 / `router.config.json`, the
   llm-router **budget ledger**, and the **brain-ingest** pipeline.
-- **Status:** open — GATES the corresponding nao panels; those panels are deferred out of the UI run
-  until this lands.
+- **Status:** **done for (a) config + (b) spend boundaries + caps-edit write** (PR #131).
+  **(c) the ingestion-progress boundary was deliberately deferred** — the existing Overview covers the
+  demo — so that sub-item remains open.
 - **Intent (Jayden):** nao's required control-plane surfaces read data whose source of truth lives in
   `tools/` and the ingest pipeline — which the UI lane may NOT touch (path-disjoint ownership). Rather
   than build these panels against fixtures, Jayden chose to **gate them on the backend first exposing
@@ -420,7 +429,7 @@ surfaces now; these O-items complete the demo when this backend run executes.
 ## O11 · Simulated health-data loader (nao UI → biotope Supabase)
 
 - **Source:** UI-run demo definition (Jayden 2026-07-22), main-loop steps 1 & 3.
-- **Status:** open — **demo-critical**.
+- **Status:** **done** — nao `/loader`, provenance-flagged, incremental backfill (PR #129).
 - **Intent (Jayden):** a nao UI + Supabase write path that inserts **simulated** health data
   (self-report + passive metrics) into biotope's data tables so the analysis/engine has input —
   without hand-run SQL. Must support loading data **incrementally by day** so the demo can add more
@@ -438,7 +447,8 @@ surfaces now; these O-items complete the demo when this backend run executes.
 ## O12 · Serve-pipeline trigger + insight provenance for the app
 
 - **Source:** demo main-loop steps 2, 4, 5.
-- **Status:** open — **demo-critical**.
+- **Status:** **done** — run-pipeline trigger + `get_insight_provenance` RPC + biotope trend/provenance
+  UI (PRs #128, #130).
 - **Intent (Jayden):** an on-demand trigger to run the serve pipeline (compute-baselines →
   evaluate-signals → generate-insights) after data loads, so baselines/signals/**cards** appear; a
   **simple trend/graph** of the user's metrics in the biotope app; and each card's **provenance**
@@ -456,7 +466,8 @@ surfaces now; these O-items complete the demo when this backend run executes.
 ## O13 · Human verdict override (reject supersedes verifier) + nao claim-curation surface
 
 - **Source:** demo feature (b).
-- **Status:** open — **demo-critical**; verifier default = interim until **B5**.
+- **Status:** **done** — `edge_human_verdicts`, reject supersedes serving, claims UI (PR #132);
+  un-reject carried forward. Verifier default remains **interim until B5**.
 - **Intent (Jayden):** a nao surface showing a paper → its extracted **claims** (A8) → the verifier's
   **default verdict** (A10; interim/local until the B5 key) → a human **REJECT** action that
   **supersedes** the default verdict for serving. Default is *no human check* (verifier verdict
@@ -473,7 +484,8 @@ surfaces now; these O-items complete the demo when this backend run executes.
 ## O14 · Manual seed-load write path from nao
 
 - **Source:** demo feature (c).
-- **Status:** open — **demo-critical**.
+- **Status:** **done** — `ingestion_seeds` table + nao UI + CLI merge (PR #133); the Run-now dropdown
+  was deliberately left static.
 - **Intent (Jayden):** a nao UI + write path to add a **new ingestion seed** (topic/query) that the
   brain-ingest pipeline picks up — the human-added complement to C9's predetermined seeds and O9's
   gap-driven seeds.
@@ -495,8 +507,9 @@ needs an INTEGRATION test on the real seam, not an injected/mocked unit test.**
 
 ## O15 · Ground the adversarial verifier — real retrieval + evidence-in-prompt (verdict B1) — DEMO-CRITICAL (feature b)
 
-- **Source:** verdict B1. **Status:** open — demo-critical; central hackathon delta (full "demonstrated"
-  claim is a LATER cycle).
+- **Source:** verdict B1. **Status:** **done for this cycle's scope** — evidence-bearing citations,
+  fixture corpus, CLI retrieve wiring, acceptance (i) (PR #125). **LIVE web retrieval REMAINS OPEN**
+  (next cycle, per this item); the full "demonstrated independent verification" claim is still not made.
 - **Intent:** the operational `brain-ingest verify` retrieves ZERO sources (CLI never sets
   `runOpts.retrieve`) and evidence text is stripped before the prompt (`corpusHitToCitation` /
   `candidateToCitation` drop text/abstract; the prompt shows only paperId/year/tiers/title). An OpenAI
@@ -516,7 +529,8 @@ needs an INTEGRATION test on the real seam, not an injected/mocked unit test.**
 
 ## O16 · Orientation-aware cards — never state the wrong metric moved (verdict B2) — DEMO-CRITICAL
 
-- **Source:** verdict B2. **Status:** open — demo-critical (main loop 4/5 shows cards).
+- **Source:** verdict B2. **Status:** **done** — orientation-aware cards, acceptance (ii), live-proven
+  (PR #127).
 - **Intent:** an object-endpoint-only signal can enter `agree` and render "your <subject> shifted" when
   only the object metric moved (reproduced: an `hrv_sdnn` up signal → *"Your sleep duration data shifted
   upward today"*). Directional cards must not reverse an edge: only a **subject-endpoint** signal drives
@@ -528,7 +542,8 @@ needs an INTEGRATION test on the real seam, not an injected/mocked unit test.**
 
 ## O17 · Servable band requires a passing quote check (verdict B3)
 
-- **Source:** verdict B3. **Status:** open — trust/demo-relevant. **Touches shared/ → B8 retro-review.**
+- **Source:** verdict B3. **Status:** **done** — shared servable⇒quote-check clause, acceptance (iii)
+  (PR #126). **Touched shared/ → the B8 2-reviewer retro-review is still OUTSTANDING.**
 - **Intent:** the shared verification schema lets a `partial`/`supported` with a failed zero-span quote
   check (`{spansFound:0, spansTotal:0, allPresent:false}`) load into the `mid` band. Require, in the
   SHARED schema, that any servable verdict has ≥1 span AND `allPresent===true` (make it conditional on
@@ -539,7 +554,7 @@ needs an INTEGRATION test on the real seam, not an injected/mocked unit test.**
 
 ## O18 · Resolve `research-context`: gap-only (verdict H1) — DECIDED (a), Jayden 2026-07-24
 
-- **Source:** verdict H1. **Status:** open — **DECISION MADE: (a) gap-only.**
+- **Source:** verdict H1. **Status:** **done** per decision **(a) gap-only** (PR #127).
 - **Intent:** the authoritative architecture + the `composed_insights` migration comment say
   `research-context`/`contradiction` are **gap-only, never surfaced**; the handler surfaces
   `research-context` coincidence cards. Two incompatible truths. `correlates`/`modulates` are
@@ -552,7 +567,8 @@ needs an INTEGRATION test on the real seam, not an injected/mocked unit test.**
 
 ## O19 · Baseline projection lifecycle — prune + freshness (verdict H2)
 
-- **Source:** verdict H2. **Status:** open.
+- **Source:** verdict H2. **Status:** **done** — upsert-and-prune + freshness filter + 3 test gates
+  (PR #128).
 - **Intent:** `compute-baselines` upserts snapshots but never prunes rows absent from the current S2
   projection, and `generate-insights` includes users found only in `baseline_snapshots` → stale snapshots
   keep firing after raw deletion / metric deprecation, violating rebuildable-projection (two-tier truth).
@@ -562,7 +578,7 @@ needs an INTEGRATION test on the real seam, not an injected/mocked unit test.**
 
 ## O20 · Copy-gate `RelationshipClaim.derivation` at production + load (verdict H3)
 
-- **Source:** verdict H3. **Status:** open (matters for nao/evidence panels — feature b).
+- **Source:** verdict H3. **Status:** **done** — derivation copy-gate at synthesis + load (PR #126).
 - **Intent:** the contract says `derivation` is copy-gated before storage, but neither synthesis
   post-process nor the loader calls `validateCopyString`. Copy-gate the synthesized derivation before
   artifact append AND re-check at loader ingestion.
@@ -655,6 +671,55 @@ needs an INTEGRATION test on the real seam, not an injected/mocked unit test.**
   there for the metric-based path; this table is an ops/engineering supplement, not itself statistical).
 - **Gate / what it gates:** gates nothing; reduces C8's placeholder-number reliance ahead of real venue
   lookups running at scale.
+
+---
+
+## O23 · Make the `brain-ingest` → `llm-router` dependency a real package dependency
+
+- **Source:** surfaced 2026-07-25 while diagnosing a TS6 `rootDir` diagnostic on
+  `tools/brain-ingest/tsconfig.json`. **Not yet Jayden-reviewed** — a proposal, not a locked decision;
+  flag to Jayden before a build run executes it.
+- **Status:** open — **pending Jayden review**. **Nothing is broken today**; this is a latent issue with
+  a known trigger (the first time `brain-ingest` needs a real build).
+- **Intent:** `tools/brain-ingest` and `tools/llm-router` are separate npm packages, but brain-ingest
+  reaches across the boundary by filesystem path — `import { LlmRouter } from '../../llm-router/src/index.js'`
+  in 7 files (`src/cli.ts`, `src/seeder/index.ts`, `src/synth/index.ts`, `src/verify/verifier.ts`, and
+  the seeder/synth/verify tests). `llm-router` is named `@ourobion/llm-router`, but brain-ingest does
+  **not** list it as a dependency and there is **no npm `workspaces`** field at the root, so nothing
+  declares the relationship. Three consequences:
+  1. **Output layout.** tsc's computed common source directory becomes `tools/`, so an emit lands in
+     `dist/brain-ingest/…` + `dist/llm-router/…` rather than the `dist/` the config implies. (Worked
+     around in U-series follow-up by setting `noEmit: true` — correct today, since the package only ever
+     runs through `tsx`, but it silences the symptom, not the coupling.)
+  2. **Duplicate-module hazard (the one that matters).** A real build compiles a *private copy* of
+     llm-router into brain-ingest's output. Two compiled copies = two module instances = **two budget
+     ledgers and two config caches**. For the component whose job is enforcing C7 spend caps, two
+     ledgers that each believe they are authoritative is a correctness hazard, not a tidiness issue.
+  3. **Undeclared-dependency fragility.** CI runs `npm ci` inside `tools/brain-ingest` only, which never
+     installs llm-router's dependencies. This survives *purely* because llm-router currently has no
+     runtime `dependencies` — only devDependencies. The first runtime dep added to llm-router breaks
+     brain-ingest in CI, with an error that points somewhere unhelpful.
+- **Locked decision — do NOT re-decide** *(pending Jayden's confirmation, per the caveat above)*:
+  - The fix is to **declare the dependency**, not to keep widening path-based reaches. Cross-package
+    imports that address another package's `src/` by relative path are the anti-pattern being removed.
+  - **Do NOT vendor or copy** llm-router into brain-ingest, and do not resolve this by merging the two
+    packages — the router is deliberately a separate unit (memory 0013; C6–C7).
+- **Exactly what to do:**
+  1. Add an npm `workspaces` field at the repo root covering `tools/*` (or a `file:` dependency in
+     `tools/brain-ingest/package.json`) so `@ourobion/llm-router` resolves by name.
+  2. Replace the 7 relative imports with `import { LlmRouter } from '@ourobion/llm-router'`.
+  3. Give `llm-router` an `exports` entry naming its public surface, so consumers cannot reach into
+     `src/` internals again.
+  4. If/when either package needs to emit JS, add TypeScript **project references**: `llm-router` gets
+     `"composite": true`; `brain-ingest` gets `"references": [{ "path": "../llm-router" }]` and consumes
+     the generated `.d.ts` instead of source. At that point revisit the `noEmit: true` workaround.
+  5. Leave the other `tools/*` packages alone unless they show the same cross-package reach — audit
+     first, change second. (`engine-stats` deliberately includes `../../supabase/functions/...` and is a
+     different case: no `outDir`, so no layout question.)
+- **Composes with:** O3 (registry catalog — a workspaces root changes how packages are enumerated),
+  O8 (router config basis — same component), B5 (the api-key work touches these call sites).
+- **Gate / what it gates:** gates nothing today. Becomes a **blocker** for any future packaging, bundling,
+  or publish step for `brain-ingest`, and for any change that gives `llm-router` a runtime dependency.
 
 ---
 

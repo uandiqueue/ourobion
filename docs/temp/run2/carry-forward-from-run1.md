@@ -16,6 +16,10 @@ buried in a closed run's registers.
 This is a **pointer index**. Nothing here is a locked decision; each line says where the detail is and
 what kind of resolution it needs.
 
+> Every item below also has a row in **[`pending-build-register.md`](./pending-build-register.md) §E**,
+> which is the superset register for the whole project. This doc is the detail sheet; the register is
+> the complete list. Keep them in step — if you close something here, update its `B-R1-*` row there.
+
 ## 1 · The Run-1 unit sign-off review is unfinished
 
 Of 24 unit rows in [`../run1/unit-index.md`](../run1/unit-index.md), only **U1** is fully cleared.
