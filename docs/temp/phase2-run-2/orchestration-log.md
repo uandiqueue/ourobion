@@ -147,6 +147,7 @@ load-bearing facts:
 | 11 | U10 | feat/phase2-run-2/u10-seeds-as-data | #133 | brain-ingest tsc + 353/353; nao tsc + 83/83; db reset clean; LIVE seed-add→catalog→CLI-merge→fail-soft + cap-override-blocks-real-verify proofs; context_sync green | 0.00 | 0.0002 | O14 closed (feature c) + U8 carry-forward done (create() adopted in verify/seeder/synth — override denied a real verify pre-API-call). C9 gate pinned by tests (byte-identity + header pin). Run-now dropdown stays static (GH dispatch contract not dragged in) |
 | 12 | U11 | feat/phase2-run-2/u11-gap-surfacing | #134 | nao tsc + 94/94; context_sync green (no migration) | 0.00 | 0.0002 | O9 demo slice closed (feature d) — ALL PART-1 FEATURES BUILT. Gaps table (§A1 labels, demand-sorted, top-50 honest note) + human-in-the-loop add-as-seed prefill (headless-Chrome click-path proven); anon denied. Env finding: local-stack JWT iat skew — 2s pause after login (in session log) |
 | 13 | U12 | feat/phase2-run-2/u12-demo-dryrun-runbook | #135 | dry-run 21/21 PASS (pass 1, live) + 20/20 PASS (pass 2, clean-reset reproducibility); flutter analyze clean + 111/111; context_sync green | 0.182 | 0.182 | **RUN DoD MET.** ACCEPTANCE (iv): card copy names fired metric, 0 mismatches. LIVE OpenAI verify (gpt-5, evidence-in-prompt): US$0.141315. **Anthropic decorrelated leg RAN** (claude-sonnet-5, one verify, "decorrelated but not attested/ablated", config restored): US$0.04266 ≈ 0.055 SGD of 2. Visual check on Android emulator (5 screenshots) caught+fixed real U7 bug (evidenceTier type mismatch — every real edge card's provenance screen threw). Exceptions: Windows-desktop launch blocked (Dev Mode off — manual step recorded); run-pipeline failure path not forced; verifier verdicts non-deterministic (runbook warns) |
+| 14 | U13 | feat/phase2-run-2/u13-decorrelated-fullrun | #136 | attempt 2: 17/17 PASS + 1 by-design SKIP; router.config.json byte-identical; context_sync green | 0.00 | 0.182 | H1+H2 closed (Sonnet 5 builder — first model-policy dispatch). All 5 claims verified LIVE on claude-sonnet-5, IDENTICAL verdicts both attempts; genuine finding: independent verifier held every directional edge below the servable floor → 0 edge cards (DB-level verifierModel trace proves persistence; gut/mood cleared mid but is correlates → context-only per O18). Anthropic spend US$0.20439 ≈ 0.264 SGD (both attempts). H2: architecture §11 → 3/7/14 (RU5 verified); migration comment noted superseded |
 
 **Carry-forwards (not lost, owned later):** `contradiction` → shared/brain `needsReview()` edge-flag
 not wired (U4 report; candidate for U9's serving-layer work or a backlog note at run end).
@@ -160,8 +161,8 @@ bind real verify runs until adopted; U10 (which owns brain-ingest CLI changes) a
 
 - OpenAI cap 20 SGD → spent **≈ 0.182 SGD** (US$0.14147: U1 smoke 0.00015125 + U12 verify legs
   0.141315). 99.1% under cap.
-- Anthropic cap 2 SGD → spent **≈ 0.055 SGD** (US$0.04266, U12 decorrelated verifier leg per
-  D2 AMENDED). Config restored to OpenAI-only after the leg.
+- Anthropic cap 2 SGD → spent **≈ 0.319 SGD** (US$0.24705: U12 leg 0.04266 + U13 full-loop
+  simulation 0.20439 per Jayden's H1 directive). Config restored to OpenAI-only after each leg.
 - C7 caps (1.00 USD/day/node + 60k tok/run) never raised; both hard stops never approached.
 - Policy: fixtures/offline first; live calls only for the essential e2e proofs (mandatory acceptance
   test (iv) + the U12 dry-run; small calibration calls if a unit's integration test truly needs one).

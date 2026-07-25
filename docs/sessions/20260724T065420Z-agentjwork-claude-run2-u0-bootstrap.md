@@ -119,8 +119,16 @@ NOT-live-verified list). U2 (O15 verifier grounding) marked in-progress and disp
   reconciliation in U13). H3: answered Jayden's dashboard question (raw data live, cards batch;
   cron 18:15 recommended) — awaiting confirmation before building.
 
-memory: Run 2.0 COMPLETE 2026-07-25 — 13 units + U13 follow-up, PRs #123–#135, DoD met via
-scripted dry-run + runbook; total LLM spend ≈ 0.24 SGD across both providers; sign-off queue =
-unit-signoff-index.md.
+- U13 closed — PR #136 (Sonnet 5 builder, first model-policy dispatch): decorrelated full-loop
+  variant, 5/5 claims live on claude-sonnet-5, identical verdicts both attempts, honest 0-edge-card
+  outcome (independent verifier held directional edges in hold; DB trace proves persistence);
+  Anthropic spend US$0.20439; H2 docs reconciled to 3/7/14. Ledger row 14.
+- Jayden 2026-07-25: created docs/temp/pending-build-register.md — the standing gap map (metric
+  expansion buckets + 4 structural gates, UI pendings, brain/verifier pendings incl. custom-model
+  stand-ins, platform/process) — explicitly NOT a Run-3.0 worklist.
+
+memory: Run 2.0 COMPLETE 2026-07-25 — 14 units (U0–U13), PRs #123–#136, DoD met via scripted
+dry-run + runbook; total LLM spend ≈ 0.182 SGD OpenAI + 0.319 SGD Anthropic; sign-off queue =
+unit-signoff-index.md; gap map = docs/temp/pending-build-register.md.
 
 memory: Run 2.0 launched 2026-07-24 — resumable state = docs/temp/phase2-run-2/orchestration-log.md on the feat/phase2-run-2/* chain (worktree C:\project\ourobion-run2); inputs live ON the run branch, not dev-phase2.
