@@ -12,7 +12,7 @@ updated: 2026-07-22
 The **navigation map** for the sign-off review: every shipped unit, where its code lives, its session
 log, what it decided, and where it stands. The **authoritative sign-off record** is the ledger in
 [`signoff-instructions.md`](./signoff-instructions.md) §6; **build history** is
-[`phase2-run-orchestration-log.md`](./phase2-run-orchestration-log.md). This doc just ties them together
+[`orchestration-log.md`](./orchestration-log.md). This doc just ties them together
 + adds the code/log pointers.
 
 Session logs live in `docs/sessions/` (slug shown; all are `2026…Z-agentjwork-claude-<slug>.md`).
@@ -55,13 +55,13 @@ B8 solo-review waiver now that Alton is out).
 
 | Item | Sign-off | Owner | Pointers |
 |------|----------|-------|----------|
-| A1–A27 findings register (dispositions) | ⬜ B | B | `docs/temp/phase2-audit/audit-findings-register.md` + `audit-orchestration-log.md` — 26 fixed via U19–U28; A15→O4; A-D1/2/3 by-design; honesty A1(D16)/A12(B5) are J's |
+| A1–A27 findings register (dispositions) | ⬜ B | B | `docs/temp/run1/audit/findings-register.md` + `audit/orchestration-log.md` — 26 fixed via U19–U28; A15→O4; A-D1/2/3 by-design; honesty A1(D16)/A12(B5) are J's |
 
 ## Research-fixes run — ⏸ deferred (all statistical)
 
 | Units | Sign-off | Pointers |
 |-------|----------|----------|
-| F1–F8 (label, cutoff, edge-weights, deadbandK, lag, xDF, impactTier, gates) | ⏸ deferred → **O2** | `docs/temp/phase2-research-fixes/` (signoff/config/blocked/findings); session logs `2026071{9,20}…research-fixes-*` |
+| F1–F8 (label, cutoff, edge-weights, deadbandK, lag, xDF, impactTier, gates) | ⏸ deferred → **O2** | `docs/temp/run1/research-fixes/` (signoff/config/blocked/findings); session logs `2026071{9,20}…research-fixes-*` |
 
 ## Jayden's active queue (Alton out)
 

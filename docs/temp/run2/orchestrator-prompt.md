@@ -1,6 +1,6 @@
 ---
 title: Phase-2 Run 2.0 — Demo-MVP Orchestrator Prompt
-summary: Launch prompt for the single "mega" Phase-2 Run 2.0 (backend + frontend) whose end product is a working demo-test MVP — the full main-loop + features a–d exercised on a simplified (un-themed) UI. Orchestrator designs its own worklist + test strategy. Consumes docs/temp/next-build-optimizations.md. LLM testing is OpenAI-only, ≤20 SGD. Dev aid (docs/temp), not ground truth.
+summary: Launch prompt for the single "mega" Phase-2 Run 2.0 (backend + frontend) whose end product is a working demo-test MVP — the full main-loop + features a–d exercised on a simplified (un-themed) UI. Orchestrator designs its own worklist + test strategy. Consumes docs/temp/run2/next-build-optimizations.md. LLM testing is OpenAI-only, ≤20 SGD. Dev aid (docs/temp), not ground truth.
 type: plan
 scope: shared
 status: canonical
@@ -10,7 +10,7 @@ updated: 2026-07-24
 # Phase-2 Run 2.0 — Demo-MVP Orchestrator Prompt
 
 Paste the block below to launch the run. It is goal-first: the orchestrator decides HOW (worklist,
-unit/integration test counts) to reach the demo MVP, consuming `docs/temp/next-build-optimizations.md`.
+unit/integration test counts) to reach the demo MVP, consuming `docs/temp/run2/next-build-optimizations.md`.
 
 ```
 You are the orchestrator for OUROBION PHASE-2 RUN 2.0 on this repo (C:\project\ourobion). This is a
@@ -72,7 +72,7 @@ PART R — Resumability (READ FIRST, EVERY LAUNCH) — the run MUST survive a su
 ═══════════════════════════════════════════════════════════════════════════════
 Usage may hit a limit mid-run; a FRESH session with NO memory must resume from disk alone. This is the
 same "read this prompt file" launch every time, so it must be safe to re-run verbatim.
-- SINGLE SOURCE OF TRUTH: a tracking doc at docs/temp/phase2-run-2/orchestration-log.md holds the
+- SINGLE SOURCE OF TRUTH: a tracking doc at docs/temp/run2/orchestration-log.md holds the
   worklist, per-unit status (queued / in-progress / done), a ledger, and a ▶ RESUME pointer. COMMIT it
   (and push if on a pushed branch) EVERY time it changes, so it survives on disk + remote.
 - RESUME-FIRST — before doing anything else, check whether that tracking doc exists:
@@ -96,7 +96,7 @@ same "read this prompt file" launch every time, so it must be safe to re-run ver
 - BUDGET / LIMIT HALT: never start a unit you can't finish within budget. If spend nears the 20 SGD cap
   (or you sense a limit), STOP at a unit boundary, record remaining budget + the ▶ RESUME pointer in the
   ledger, and end cleanly.
-- The PART S sign-off docs live in the same docs/temp/phase2-run-2/ folder and are part of the resumable
+- The PART S sign-off docs live in the same docs/temp/run2/ folder and are part of the resumable
   state — commit them on the same per-unit cadence as the orchestration log.
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -117,19 +117,19 @@ Separate features (ALL required):
   (c) load a new ingestion seed from nao.
   (d) gap detector: biotope detects a missing edge → surfaced in nao during ingestion.
 This is the Phase-2 MVP. (The authoritative copy of this target + its backing work items lives in
-docs/temp/next-build-optimizations.md — "Demo acceptance target".)
+docs/temp/run2/next-build-optimizations.md — "Demo acceptance target".)
 
 ═══════════════════════════════════════════════════════════════════════════════
 PART 2 — Inputs (read first, in this order)
 ═══════════════════════════════════════════════════════════════════════════════
-1. docs/temp/next-build-optimizations.md — YOUR BACKLOG. The "Demo acceptance target" + O1–O20.
+1. docs/temp/run2/next-build-optimizations.md — YOUR BACKLOG. The "Demo acceptance target" + O1–O20.
    O9–O14 are the demo's backend paths (loader, engine trigger+provenance, model-config, verdict
    override, seed-load, gap surfacing). O15–O20 are the adversarial-verdict fixes — several are
    DEMO-CRITICAL (O16 wrong-metric card, O15 verifier retrieval for feature b, O17 servable invariant,
    O18 research-context DECISION). Execute the demo-relevant items; the doc's per-item "locked decision"
    is Jayden's decision — do NOT re-open it.
-2. docs/temp/phase2-backend-adversarial-verdict-2026-07-22.md — the full reasoning behind O15–O20.
-3. The run docs (docs/temp/phase2-run-orchestration-log.md + blocked-register + config/signoff
+2. docs/temp/run2/backend-adversarial-verdict-2026-07-22.md — the full reasoning behind O15–O20.
+3. The run docs (docs/temp/run1/orchestration-log.md + blocked-register + config/signoff
    decisions) — what U0–U18 shipped and the standing constraints.
 4. GROUND TRUTH to build against (docs/shared/): insight-engine-architecture.md, decisions/0001–0003;
    design docs docs/biotope/architecture-context.md, docs/nao/nao-app-design.md,
@@ -169,7 +169,7 @@ Boundaries: shared/ contract changes (e.g. O17) get the shared retro-review flag
 ═══════════════════════════════════════════════════════════════════════════════
 PART 5 — YOU design the plan + the test strategy
 ═══════════════════════════════════════════════════════════════════════════════
-On FIRST launch only (PART R), bootstrap the tracking doc at docs/temp/phase2-run-2/orchestration-log.md
+On FIRST launch only (PART R), bootstrap the tracking doc at docs/temp/run2/orchestration-log.md
 (worklist + per-unit status + ledger + ▶ RESUME pointer, per orchestrate-build-run conventions), then:
 - Decompose PART 1 into units across backend + frontend; sequence by dependency (backend path before
   the UI that consumes it; O16 wrong-metric fix BEFORE any card demo; O15 verifier wiring before
@@ -216,9 +216,9 @@ PART 7 — Two-tier truth, ADR amendments, escalation
 ═══════════════════════════════════════════════════════════════════════════════
 PART S — Human sign-off & decision record (mirror the first run)
 ═══════════════════════════════════════════════════════════════════════════════
-Alongside the orchestration log, maintain these in docs/temp/phase2-run-2/ — create on first launch,
+Alongside the orchestration log, maintain these in docs/temp/run2/ — create on first launch,
 UPDATE PER UNIT under the same commit-before-moving-on discipline (PART R), so they are resumable and
-form Jayden's review surface (the first run's equivalents are docs/temp/phase2-run-signoff-decisions.md,
+form Jayden's review surface (the first run's equivalents are docs/temp/run1/signoff-decisions.md,
 phase2-run-blocked-register.md, phase2-unit-index.md):
 - decisions-signoff.md — every NON-TRIVIAL choice you made autonomously (design, schema, contract,
   config value, test-strategy, the OpenAI-only decorrelation override, any ADR/architecture amendment):

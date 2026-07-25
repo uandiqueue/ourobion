@@ -56,7 +56,7 @@ keeps building; when an item unblocks, the orchestrator picks it up from here.
 - **Verification-integrity note (audit A12, per D15):** when the keys land, the first real-verifier
   runs must also verify the `local_agent` mailbox/attestation seam A12 describes — the response's
   `model` field is fulfiller-self-reported, so the decorrelation invariant is config-deep only until
-  the serving model is attested (see `docs/temp/phase2-audit/audit-findings-register.md` A12).
+  the serving model is attested (see `docs/temp/run1/audit/findings-register.md` A12).
 
 ## B6 · GMI GPU credits
 - **Stopped at:** support models a (NLI claim-support), b1 (study-design→tier), c (relation tagging) are

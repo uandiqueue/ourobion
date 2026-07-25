@@ -46,7 +46,7 @@ object, never an inline literal (ADR-0002 mandate). Companion to the architectur
 
 ## Related but separate
 
-- `docs/temp/phase2-audit/` — record-only audit runs (own orchestration log + findings
+- `docs/temp/run1/audit/` — record-only audit runs (own orchestration log + findings
   register, `A#` findings) feeding fix-unit worklists — protocol in the
   **record-only-audit** skill.
 - `docs/sessions/` — per-session logs (canonical tier, indexed, enforced) — the evidence

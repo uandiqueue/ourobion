@@ -90,7 +90,7 @@ non-zero-cross-correlation failure regime. The cross-correlation-aware **xDF** (
 ADR-0002 Open-Q8 candidate) is the principled fix (`decisions-evidence-review.md` §RU4d). Note the separate
 formula-constant worry is already resolved: verify-first **A1** confirmed the coded estimator is the
 canonical **2/N** Bartlett/Bayley–Hammersley/Pyper–Peterman form with the N/(N−j) correction (Open-Q1
-resolved-confirmed; `phase2-research-fixes-findings.md` §A1) — so F6 changes **nothing** about the P&P math.
+resolved-confirmed; `findings.md` §A1) — so F6 changes **nothing** about the P&P math.
 **Choice — why xDF is NOT hand-rolled in this run:** (1) the **exact Afyouni xDF equations are not
 obtainable from an accessible source** — the primary paper and the preprint are paywalled; only the
 algorithm *shape* is public. (2) A faithful xDF needs **FFT-based auto/cross-correlation** + a

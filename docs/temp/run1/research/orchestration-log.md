@@ -27,8 +27,8 @@ status is `in-progress` (redo it) or, if none, the first `next` unit.
 
 ## Ground rules
 
-- Decision docs (dev aids) live in `docs/temp/phase2-run-config-decisions.md` (C1–C12) and
-  `docs/temp/phase2-run-signoff-decisions.md` (D1–D15). Their scientific ground truth stays in
+- Decision docs (dev aids) live in `docs/temp/run1/config-decisions.md` (C1–C12) and
+  `docs/temp/run1/signoff-decisions.md` (D1–D15). Their scientific ground truth stays in
   `docs/shared/`: ADRs decisions/0001–0003, architecture §11 hyperparameter registry.
 - Use the deep-research approach (invoke the `deep-research` skill if available): fan out searches,
   fetch primary/authoritative sources, adversarially sanity-check before citing.

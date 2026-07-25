@@ -21,13 +21,13 @@ only when every required reviewer has signed it.
 
 ## 2. Where the things you're reviewing live
 
-- **Build/audit decisions to confirm:** `docs/temp/phase2-run-signoff-decisions.md` (D-entries) +
-  `docs/temp/phase2-run-config-decisions.md` (C-entries, numeric/config values).
-- **Audit findings:** `docs/temp/phase2-audit/audit-findings-register.md` (A1–A27 + dispositions).
-- **Research-fixes (deferred):** `docs/temp/phase2-research-fixes/`.
+- **Build/audit decisions to confirm:** `docs/temp/run1/signoff-decisions.md` (D-entries) +
+  `docs/temp/run1/config-decisions.md` (C-entries, numeric/config values).
+- **Audit findings:** `docs/temp/run1/audit/findings-register.md` (A1–A27 + dispositions).
+- **Research-fixes (deferred):** `docs/temp/run1/research-fixes/`.
 - **Per-unit detail:** each unit's `docs/sessions/…` log and its PR / commit (see the ledger for refs).
 - **This ledger:** §6 below.
-- **Forward optimizations (separate task, not sign-off):** `docs/temp/next-build-optimizations.md`.
+- **Forward optimizations (separate task, not sign-off):** `docs/temp/run2/next-build-optimizations.md`.
 
 ## 3. Who signs what (routing)
 
@@ -61,7 +61,7 @@ git checkout signoff/phase2
 git pull                                  # pick up others' merged sign-offs first
 git checkout -b signoff/u2-storage-primitives    # signoff/uN-<slug>
 #   … edit this unit's ledger row (§6) + complete the Sign-off line on its D-entry (§5) …
-git add docs/temp/phase2-run-signoff-decisions.md docs/temp/signoff-instructions.md
+git add docs/temp/run1/signoff-decisions.md docs/temp/run1/signoff-instructions.md
 git commit -m "docs(signoff): U2 storage primitives — Alton sign-off (D9)"
 git push -u origin signoff/u2-storage-primitives
 gh pr create --base signoff/phase2 --fill        # PR = the reviewable record
@@ -83,7 +83,7 @@ git push                                  # the PR auto-closes as merged
 
 ## 5. Annotation format
 
-On each decision you're signing (the `D`-entry in `phase2-run-signoff-decisions.md`), complete its
+On each decision you're signing (the `D`-entry in `signoff-decisions.md`), complete its
 **Sign-off** line; leave the **Review** line as-is. States: **✅** approved · **⬜** pending · **⏸** deferred.
 
 ```
@@ -108,7 +108,7 @@ One row per shipped unit. Update your rows as you sign. `commit/PR` is the thing
 **Deferred stat sub-decisions** inside a unit are called out so you sign only the engineering.
 
 > **Navigation:** for status + **code-path & session-log pointers** per unit, see the unit index —
-> [`phase2-unit-index.md`](./phase2-unit-index.md). This ledger stays the authoritative *sign-off* record.
+> [`unit-index.md`](./unit-index.md). This ledger stays the authoritative *sign-off* record.
 
 ### Build run (`phase2-run`)
 

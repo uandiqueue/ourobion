@@ -11,7 +11,7 @@ updated: 2026-07-18
 
 The resumable state of the automated Phase-2 build run started 2026-07-15 (orchestrator: Claude Code,
 device agentjwork). **A fresh session resumes here**: read this doc top-to-bottom, then the
-[blocked register](./phase2-run-blocked-register.md), then continue at the first `next` unit.
+[blocked register](./blocked-register.md), then continue at the first `next` unit.
 
 ## ⚠ 2026-07-18 — recovery + audit-fix phase (READ THIS FIRST)
 
@@ -30,7 +30,7 @@ the tip) — NOT from `dev-phase2`, which still lacks U1–U18.
 
 **Run docs moved to `docs/temp/`** (this file + the blocked/config/signoff registers): they are
 dev-aid tier, not canonical ground truth, so they now live index-exempt in `docs/temp/` — supersedes
-decision D6. The completed build audit lives beside them in `docs/temp/phase2-audit/`
+decision D6. The completed build audit lives beside them in `docs/temp/run1/audit/`
 (orchestration log + findings register: 27 findings A1–A27, 0 blocker/high, 5 medium).
 
 **New worklist — audit-fix units U19–U28** (from the audit's A1–A27; decisions D16–D19 govern the
@@ -62,7 +62,7 @@ Run protocol (per Jayden's instructions + AGENTS.md §7, with one waiver):
 - Testing gate before any PR: `flutter analyze` + `flutter test` + `node tools/context_sync.mjs --check`
   green (plus the touched package's own suite: `tsc --noEmit`, `npm test` in `tools/brain-ingest`, nao checks).
 - Session branches form a **stacked chain** (each cut from the previous session's tip) with one PR per
-  session; Jayden merges in order — see [sign-off decision D1 (amended)](./phase2-run-signoff-decisions.md).
+  session; Jayden merges in order — see [sign-off decision D1 (amended)](./signoff-decisions.md).
   **Never `main`** (the fold is human-gated).
 - Blocked-on-human ⇒ record in the register, skip, keep building what's unblocked.
 
@@ -137,7 +137,7 @@ tables + the S2 view) — it stays early because it's Track A's longest pole.
 | 2026-07-16 | U12 S7 composer + S8 cards | `feat/m5b-engine/s7-composer-s8-cards` / PR #67 (stacked on U11) | done; live-verified (a)–(f) |
 | 2026-07-16 | U13 L6 one-card slice | `feat/shared/l6-one-card-slice` / PR #69 (stacked on U12) | done; **memory 0016 added**; run's core scope complete |
 | 2026-07-16 | U18 CI node-suite wiring | `ci/node-tool-suites` (stacked on U13) | done; run **paused** after this — U14–U17 remain stretch |
-| 2026-07-17 | Build audit AU0–AU9 (record-only) | — (no code changes) | done; 27 findings → `docs/temp/phase2-audit/` |
+| 2026-07-17 | Build audit AU0–AU9 (record-only) | — (no code changes) | done; 27 findings → `docs/temp/run1/audit/` |
 | 2026-07-18 | R1 recovery + docs/temp move | `chore/run/chain-recovery-docs-move` (cut from chain tip `feat/shared/l6-one-card-slice`) / R1 PR #73 + recovery PR #72 | done; run docs now in docs/temp; D16–D20 recorded; B1 closed, B13 opened |
 | 2026-07-18 | U19 shared/brain safeguard hardening (audit A1–A5) | `fix/shared-brain/safeguard-hardening` (stacked on `chore/run/chain-recovery-docs-move`) / PR #75 · issue #74 | done; **shared/ retro-review** (B8); A1 D16 grounding, A2 corroboration cross-check, A3 quoteCheck invariant, A4 format tightening, A5 identity guard |
 | 2026-07-18 | U20 InsightCard contract catch-up (audit A6/A7/A20/A26) | `fix/shared-types/insight-card-catchup` (stacked on `fix/shared-brain/safeguard-hardening`) / PR #77 · issue #76 | done; **shared/ retro-review** (B8); D18 revive-the-mirror half — producer/insight_id/edge_refs + 'relationship' + numeric id + widened source unions; app-side import/retire deferred to the app units |

@@ -9,8 +9,8 @@ updated: 2026-07-24
 
 # Phase-2 Run 2.0 — Orchestration Log
 
-**Launch prompt:** `docs/temp/phase2-run-2-orchestrator-prompt.md` (committed on this branch).
-**Backlog consumed:** `docs/temp/next-build-optimizations.md` (Run-2.0 version, committed on this branch —
+**Launch prompt:** `docs/temp/run2/orchestrator-prompt.md` (committed on this branch).
+**Backlog consumed:** `docs/temp/run2/next-build-optimizations.md` (Run-2.0 version, committed on this branch —
 NOT the dev-phase2 copy, which predates O9–O20 + the demo target).
 **Goal:** working demo-test MVP — main loop 1–5 + features a–d (PART 1 of the launch prompt) on a
 simplified (existing-convention) UI. Definition of done = scripted e2e dry-run passes + demo runbook

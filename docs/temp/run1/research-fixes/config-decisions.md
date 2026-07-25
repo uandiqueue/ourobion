@@ -14,7 +14,7 @@ provisional-until-calibrated unless marked otherwise. Every value must live in a
 an inline literal (ADR-0002 mandate). Companion to `docs/shared/insight-engine-architecture.md` §11.
 
 These are *this run's* C-entries; the Phase-2 build run's originals stay in
-`docs/temp/phase2-run-config-decisions.md` (context only, not ground truth here).
+`docs/temp/run1/config-decisions.md` (context only, not ground truth here).
 
 ## Decisions
 
@@ -77,7 +77,7 @@ These are *this run's* C-entries; the Phase-2 build run's originals stay in
   test + lagDays:2 evaluation test in `tools/rules/tests/engine_condition_coverage.test.ts`.
   **Coincidence-path limitations recorded (A2 reframing — this is NOT the review's CCF rewrite):** this
   lag path is a **boolean conjunction of baseline leaves at lagged windows, not a rank cross-correlation**
-  (`phase2-research-fixes-findings.md` §A2), so (a) **serve-time prewhitening/deseasonalizing stays
+  (`findings.md` §A2), so (a) **serve-time prewhitening/deseasonalizing stays
   by-design offline per ADR-0002** — none added; (b) **"treat the 4 lags as one hypothesis" (RU7e) is moot
   as coded** — the lag path never enters the BH/FDR family (that family is the S5 lag-0 Spearman pair set
   only), so there is no lag multiplicity to correct; (c) **lag-7 ↔ weekly-periodicity (day-of-week)

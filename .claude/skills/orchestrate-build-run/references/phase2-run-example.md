@@ -36,6 +36,6 @@ An autonomous multi-unit build/fix run on this repo, 2026-07-15→18. Run slug
 
 ## Primary records
 
-`docs/temp/phase2-run-orchestration-log.md` (worklist + session ledger),
-`docs/temp/phase2-run-signoff-decisions.md`, `docs/temp/phase2-run-blocked-register.md`,
-`docs/temp/phase2-audit/`, and the per-session logs under `docs/sessions/`.
+`docs/temp/run1/orchestration-log.md` (worklist + session ledger),
+`docs/temp/run1/signoff-decisions.md`, `docs/temp/run1/blocked-register.md`,
+`docs/temp/run1/audit/`, and the per-session logs under `docs/sessions/`.

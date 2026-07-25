@@ -1,6 +1,6 @@
 ---
 title: Phase-2 Audit — Orchestration Log
-summary: Resumable state of the record-only audit of the Phase-2 build. Worklist, per-unit status, ledger, and where a fresh session resumes. Findings accumulate in audit-findings-register.md. Dev aid (docs/temp), not ground truth.
+summary: Resumable state of the record-only audit of the Phase-2 build. Worklist, per-unit status, ledger, and where a fresh session resumes. Findings accumulate in findings-register.md. Dev aid (docs/temp), not ground truth.
 type: plan
 scope: shared
 status: canonical
@@ -19,7 +19,7 @@ status is `in-progress` (redo it — it was interrupted) or, if none, the first 
 
 1. **One unit at a time.** Never start a second unit before closing the first.
 2. **Before starting a unit**, set its status to `in-progress` here and save.
-3. **While working a unit**, append findings to `audit-findings-register.md` *as you find them* —
+3. **While working a unit**, append findings to `findings-register.md` *as you find them* —
    do not hold them in your head to write "at the end." A killed session must lose at most the
    one in-flight unit.
 4. **When a unit is done**, set its status to `done`, add a ledger row (what you ran, what you
@@ -68,7 +68,7 @@ status is `in-progress` (redo it — it was interrupted) or, if none, the first 
 | 2026-07-17 | AU6 engine functions | read in full: evaluate-signals stats.ts/config.ts/index.ts, generate-insights composer.ts/evaluators.ts/render.ts/index.ts, compute-baselines index.ts + insight_cards migration; verified stats vs ADR-0002 (MAD/deadband/N_eff/BH/Fisher/stability), C3/C4/C5 constants, D14 branch disjointness, C10 lag set, dual copy gates, producer namespaces | A18 (snooze reactivation), A19 (stale personal_signals), A20 (source-vocab contract drift), A21 (agree-copy overstatement), A22/A23 (nits) |
 | 2026-07-17 | AU7 CI | read .github/workflows/ci.yml in full; traced which TS files each job actually compiles (transitive typecheck via tool-package tests vs the uncompiled Deno handler shells) | A24 (CI blind spots: handler index.ts files + migrations); offline-safety and drift-guard wiring verified sound |
 | 2026-07-17 | AU8 integration seams | grepped apps/biotope/lib for every phase-2 table/type touchpoint; read m5b insight_service.dart in full; confirmed the app reads ONLY insight_cards (none of verified_edges / composed_insights / personal_signals / continuity primitives) | A25 (relationship→descriptive mislabel + citations unreachable), A26 (shared InsightCard.id String vs bigint — shared Dart mirror would crash; app keeps a duplicate model), A27 (naive local-time expiry filter, frozen `now` in the watch stream) |
-| 2026-07-17 | AU9 synthesis | deduped the register (all 27 IDs distinct by file/line/summary), tallied severities, wrote the top-5-concerns summary + cross-cutting observations + 7 coverage-gap entries into audit-findings-register.md | **run complete** — 27 findings, 5 medium (A1, A6, A18, A19, A25), no blocker/high; static-audit-only caveat recorded |
+| 2026-07-17 | AU9 synthesis | deduped the register (all 27 IDs distinct by file/line/summary), tallied severities, wrote the top-5-concerns summary + cross-cutting observations + 7 coverage-gap entries into findings-register.md | **run complete** — 27 findings, 5 medium (A1, A6, A18, A19, A25), no blocker/high; static-audit-only caveat recorded |
 | 2026-07-19 | skill capture (post-run) | distilled this run's methodology into a Claude skill: **added** `.claude/skills/record-only-audit/` (SKILL.md + references/finding-hotspots.md); **edited** `.claude/skills/orchestrate-build-run/` (SKILL.md member-skills line + references/tracking-docs.md) to cross-link it | audit protocol + finding-hotspot lenses now durable outside docs/temp; no code touched |
 
 ## Notes for the resuming auditor
@@ -76,4 +76,4 @@ status is `in-progress` (redo it — it was interrupted) or, if none, the first 
 - If a live check needs infra you don't have (Docker DB, API keys), record it under "Coverage
   gaps" in the register as "not exercised" — never guess a pass.
 - Do not commit, push, or edit any code / run docs. The only files you write are this log and
-  `audit-findings-register.md`.
+  `findings-register.md`.

@@ -1,6 +1,6 @@
 ---
 title: Phase-2 Audit — Findings Register
-summary: The accumulating record of potential issues/bugs/risks found in the Phase-2 build. Appended to after every audit unit (never batched). Record-only — nothing here is fixed. Dev aid (docs/temp), not ground truth. Companion to audit-orchestration-log.md.
+summary: The accumulating record of potential issues/bugs/risks found in the Phase-2 build. Appended to after every audit unit (never batched). Record-only — nothing here is fixed. Dev aid (docs/temp), not ground truth. Companion to orchestration-log.md.
 type: plan
 scope: shared
 status: canonical
@@ -10,7 +10,7 @@ updated: 2026-07-17
 # Phase-2 Audit — Findings Register
 
 Record-only. Every finding gets an ID, is appended **as it is found** (see the resume protocol in
-`audit-orchestration-log.md`), and is **never fixed here**. Dedup by (file, line, summary) on resume.
+`orchestration-log.md`), and is **never fixed here**. Dedup by (file, line, summary) on resume.
 
 ## Findings
 

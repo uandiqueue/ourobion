@@ -71,7 +71,7 @@ export interface CoincidenceParams {
 }
 
 /**
- * C10 (docs/temp/phase2-run-config-decisions.md) + C4·F5 (phase2-research-fixes): the provisional
+ * C10 (docs/temp/run1/config-decisions.md) + C4·F5 (phase2-research-fixes): the provisional
  * cross-metric lag set is {0, 1, 2, 3, 7} days. The blueprint contract encodes lag 0 as
  * `lagDays: null` (schema forbids 0), so the non-null values the engine accepts are {1, 2, 3, 7}.
  * A coincidence rule carrying any other lag is skipped at load and logged — never silently

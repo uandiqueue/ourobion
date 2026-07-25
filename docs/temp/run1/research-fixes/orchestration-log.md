@@ -1,6 +1,6 @@
 ---
 title: Phase-2 Research-Fixes — Orchestration Log
-summary: Resumable state of the REMEDIATION run that applies the Phase-2 decisions evidence review (docs/temp/phase2-research/decisions-evidence-review.md) to the code. Worklist, per-unit lane classification (A verify-first / B safe-fix / C method-change), dependency spine, ledger, and the RESUME pointer. Dev aid (docs/temp), not ground truth.
+summary: Resumable state of the REMEDIATION run that applies the Phase-2 decisions evidence review (docs/temp/run1/research/decisions-evidence-review.md) to the code. Worklist, per-unit lane classification (A verify-first / B safe-fix / C method-change), dependency spine, ledger, and the RESUME pointer. Dev aid (docs/temp), not ground truth.
 type: plan
 scope: shared
 status: canonical
@@ -12,10 +12,10 @@ updated: 2026-07-20
 The resume point for the remediation run that turns the **evidence-review verdicts** into code/doc
 changes. Read this top-to-bottom, then the blocked register, then continue at the first `next` unit.
 
-**Source of work:** `docs/temp/phase2-research/decisions-evidence-review.md` (Executive summary +
+**Source of work:** `docs/temp/run1/research/decisions-evidence-review.md` (Executive summary +
 "Most urgent, in priority order"). Ground truth the verdicts are about: `docs/shared/decisions/0002`,
 `0003`, `docs/shared/insight-engine-architecture.md` §11. **Separate track — do NOT touch:**
-`docs/temp/phase2-audit/` (audit-driven fixes).
+`docs/temp/run1/audit/` (audit-driven fixes).
 
 ## ⚠ Read-this-first
 
@@ -54,7 +54,7 @@ stacked, human-gated PR chain off `dev-phase2` (`#99 → #101 → #103 → #105 
 ADR-0002/0003 retro-review (accepted-ADR bodies left byte-unchanged; the `context_sync --check`
 immutability guard blocks in-run appends). New/final chain tip =
 `docs/research-fixes/composite-gates-weights-calibration` (F8). Historical resume note (pre-F8): F0–F7 done; worklist below reflects the A1/A2 reframing
-(see `phase2-research-fixes-findings.md`). **A1: no change needed** (coded N_eff is the canonical 2/N
+(see `findings.md`). **A1: no change needed** (coded N_eff is the canonical 2/N
 Bartlett/P&P form; Open-Q1 resolved-confirmed). **A2: the review's "prewhiten-before-CCF" premise does
 not match the code — there is NO rank-CCF; prewhitening is by-design offline per ADR-0002** — so F5
 collapses to "add lag 2 + document limitations." **F1 (chain tip = `fix/research-fixes/rho-effect-size-label`,

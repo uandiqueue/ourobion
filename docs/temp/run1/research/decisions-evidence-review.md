@@ -1,6 +1,6 @@
 ---
 title: Phase-2 Decisions — Evidence Review
-summary: The accumulating cited evaluation of the Phase-2 run's empirical decisions. Appended per decision (never batched). Record-only — no decision is changed here. Dev aid (docs/temp), not ground truth. Companion to research-orchestration-log.md + references.md.
+summary: The accumulating cited evaluation of the Phase-2 run's empirical decisions. Appended per decision (never batched). Record-only — no decision is changed here. Dev aid (docs/temp), not ground truth. Companion to orchestration-log.md + references.md.
 type: plan
 scope: shared
 status: canonical
@@ -10,7 +10,7 @@ updated: 2026-07-18
 # Phase-2 Decisions — Evidence Review
 
 Record-only. Sections appended **as each decision is researched** (see the resume protocol in
-`research-orchestration-log.md`). Full citations collected in `references.md`.
+`orchestration-log.md`). Full citations collected in `references.md`.
 
 ## Triage (written in RU1)
 

@@ -9,12 +9,12 @@ updated: 2026-07-18
 
 # Backend test plan — prove the Phase-2 backend end-to-end without the app
 
-**Goal.** The UI is not built, and the [Phase-2 audit](../phase2-audit/audit-findings-register.md)
+**Goal.** The UI is not built, and the [Phase-2 audit](../run1/audit/findings-register.md)
 was static-only — its "Coverage gaps" section lists exactly what was never executed (migrations
 never applied, loaders never run against a DB, edge functions never invoked, network paths
 fixture-only). This plan turns those gaps plus the per-unit live proofs already recorded in the
 session logs into a **repeatable, no-app backend verification** of everything the run built
-([orchestration log](../phase2-run-orchestration-log.md), U0–U18 + R1 + audit-fix U19–U28), on the
+([orchestration log](../run1/orchestration-log.md), U0–U18 + R1 + audit-fix U19–U28), on the
 local stack, with **no LLM keys**. It deliberately does **not** duplicate
 [CI](../../../.github/workflows/ci.yml), which already asserts: context check, flutter
 analyze/test, shared `tsc`, the six node-tool suites + `rules`/`view` drift checks, `deno check`
@@ -129,7 +129,7 @@ loader flips band `hold` → `mid`/`high` → branch upgrades `idiosyncratic` �
 (this symmetric `correlates` pair tops out there by design), the cross rule fires, and the source
 panel lights up **from the card's** `edge_refs`.
 
-## 7 · NOT testable now ([blocked register](../phase2-run-blocked-register.md))
+## 7 · NOT testable now ([blocked register](../run1/blocked-register.md))
 
 - **Real A10 verifier** — B5 (non-Anthropic key); first real runs must also check the A12
   local-agent attestation seam (model field is fulfiller-self-reported — note under B5).

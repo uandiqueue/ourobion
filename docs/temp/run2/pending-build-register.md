@@ -15,7 +15,7 @@ this register has no priorities and no locked decisions; when an item is chosen 
 decision-locked entry in that run's backlog doc and a pointer back here.
 
 Sources folded in: the 100-metric integration analysis (2026-07-25), Run 2.0 carry-forwards
-(docs/temp/phase2-run-2/orchestration-log.md), the Run 2.0 OUT-scope list (launch prompt PART 4),
+(docs/temp/run2/orchestration-log.md), the Run 2.0 OUT-scope list (launch prompt PART 4),
 open O-items (next-build-optimizations.md), and the anchor decisions (docs/memory/0013 et al.).
 
 ---

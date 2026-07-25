@@ -1,6 +1,6 @@
 ---
 title: Phase-2 Run — Decisions for Human Sign-off
-summary: Every non-trivial choice the automated Phase-2 run made on Jayden's behalf, with the alternatives rejected and why — the retroactive-review queue for the run. Hard-coded numeric/config values live in phase2-run-config-decisions.md instead.
+summary: Every non-trivial choice the automated Phase-2 run made on Jayden's behalf, with the alternatives rejected and why — the retroactive-review queue for the run. Hard-coded numeric/config values live in config-decisions.md instead.
 type: plan
 scope: shared
 status: canonical
@@ -10,7 +10,7 @@ updated: 2026-07-18
 # Phase-2 Run — Decisions for Human Sign-off
 
 Non-trivial choices made autonomously during the run. Review order: D1 first (it colors everything).
-Numeric hyperparameters/config values are in [`phase2-run-config-decisions.md`](./phase2-run-config-decisions.md).
+Numeric hyperparameters/config values are in [`config-decisions.md`](./config-decisions.md).
 
 ## Sign-off protocol (added 2026-07-20)
 

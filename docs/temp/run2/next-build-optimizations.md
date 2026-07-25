@@ -31,7 +31,7 @@ Status values: `open` (ready for the next run) · `done` (executed, with the com
 
 ## Run 2.0 execution record (2026-07-24/25 — PR chain #123–#135, human-gated, none merged)
 
-Authoritative audit surface: `docs/temp/phase2-run-2/unit-signoff-index.md`. Per-item outcome:
+Authoritative audit surface: `docs/temp/run2/unit-signoff-index.md`. Per-item outcome:
 
 | Item | Outcome | PR(s) |
 |------|---------|-------|
@@ -289,7 +289,7 @@ surfaces now; these O-items complete the demo when this backend run executes.
 - **Status:** open.
 - **Intent (Jayden):** enforce the sign-off routing rule **automatically, per file path, on every future
   PR** (tool-enforced, not memory-enforced), so each reviewer only sees their domain. Mirrors the
-  sign-off protocol now in `docs/temp/phase2-run-signoff-decisions.md`.
+  sign-off protocol now in `docs/temp/run1/signoff-decisions.md`.
 - **Locked routing (tiers fixed; refine the globs as the repo grows):**
   - `shared/**` → **BOTH** (Jayden + Alton), **2 required approvals** — the memory-0002 rule / register B8.
   - **Jayden (agent-related — the hackathon deliverable)** — `tools/llm-router/**`, the synthesis /
@@ -487,7 +487,7 @@ surfaces now; these O-items complete the demo when this backend run executes.
 
 # Adversarial-verdict reconciliation (2026-07-22)
 
-Folded from `docs/temp/phase2-backend-adversarial-verdict-2026-07-22.md` (independent read-only
+Folded from `docs/temp/run2/backend-adversarial-verdict-2026-07-22.md` (independent read-only
 adversarial review; **no-go for Phase-2 sign-off / research-linked serving / a "verifier demonstrated"
 claim**). 529 Node tests passed but the failures are **semantic trust** seams tests didn't cover.
 O15–O20 are the blocking/high items. **The recurring lesson: unit-green ≠ seam-correct — each of these

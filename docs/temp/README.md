@@ -1,10 +1,10 @@
 ---
 title: Temp — in-building and promotable docs
-summary: TEMP is the staging area for docs still being built; dated briefs live in temp/briefs/ as YYYY-MM-DD-slug.md; lifecycle is draft in temp/ → promote to shared/nao/biotope → move the original to docs/archive/. Index source for the temp lifecycle.
+summary: TEMP is the staging area for docs still being built; long-horizon run records are filed per run under temp/run1/ and temp/run2/; dated briefs live in temp/briefs/ as YYYY-MM-DD-slug.md; lifecycle is draft in temp/ → promote to shared/nao/biotope → move the original to docs/archive/. Index source for the temp lifecycle.
 type: process
 scope: repo
 status: canonical
-updated: 2026-07-13
+updated: 2026-07-25
 ---
 
 # Temp — in-building and promotable docs
@@ -16,10 +16,26 @@ into the durable tree. It is not ground truth: anything canonical lives under `d
 ## What goes here
 
 - **Work in progress** — drafts of architecture notes, designs, or plans not yet ready to be canonical.
+- **Per-run records** — every long-horizon run keeps its tracking docs in its own `run<N>/` folder
+  (see the layout below). One folder per run; do not scatter run docs at the top level.
 - **Dated briefs** — plain-language stakeholder briefs go in `temp/briefs/` as `YYYY-MM-DD-slug.md`. Lead
   with the problem and the outcome, keep it to about one page, and link to the technical doc it summarizes.
 
-`temp/briefs/` is currently empty.
+## Run folders
+
+| Folder | Run | State |
+|--------|-----|-------|
+| [`run1/`](./run1/README.md) | Phase-2 build run (U1–U28) + its record-only audit, evidence review, and research-fixes remediation | **Build merged** into `dev-phase2`; **sign-off review incomplete** |
+| [`run2/`](./run2/README.md) | Phase-2 Run 2.0 — demo-slice build (U0–U13, O9–O20) | **Built, DoD met**; every unit sign-off still `pending` |
+
+Both folders use the same file names so the two runs read the same way: `orchestration-log.md`
+(build history), `config-decisions.md` / `signoff-decisions.md` (C- and D-entries),
+`blocked-register.md` (human-gated B-items), and a unit index.
+
+**Carry-forward rule.** A run folder is closed only when its open items are resolved. Anything Run 1
+left open is *not* buried in `run1/` — it is listed in
+[`run2/carry-forward-from-run1.md`](./run2/carry-forward-from-run1.md), which points back into `run1/`
+for the detail. A future `run3/` inherits the same rule from `run2/`.
 
 ## Lifecycle
 

@@ -21,7 +21,7 @@ import {
 } from '@/lib/modelsControl';
 
 // RUN budget context (labelled constants, NOT read from the boundary): the Phase-2
-// Run 2.0 caps set by Jayden — see docs/temp/phase2-run-2/orchestration-log.md
+// Run 2.0 caps set by Jayden — see docs/temp/run2/orchestration-log.md
 // "Budget" (20 SGD total OpenAI; 2 SGD Anthropic, verifier-decorrelation only).
 // The per-day USD caps below live in router.config.json; these run caps frame them.
 const RUN_CAP_SGD_OPENAI = 20;
@@ -240,7 +240,7 @@ export function ModelsPanel() {
         <p className="fmt__cap">
           Run 2.0 budget context: <strong>{RUN_CAP_SGD_OPENAI} SGD</strong> total OpenAI ·{' '}
           <strong>{RUN_CAP_SGD_ANTHROPIC} SGD</strong> Anthropic (verifier decorrelation only) —
-          per docs/temp/phase2-run-2/orchestration-log.md §Budget. Per-day caps above are
+          per docs/temp/run2/orchestration-log.md §Budget. Per-day caps above are
           router.config.json values; spend is the router&apos;s own ledger, republished on demand.
         </p>
       </div>

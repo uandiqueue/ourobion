@@ -2,7 +2,7 @@
 
 **Review date:** 2026-07-22  
 **Reviewed checkout:** `signoff/phase2`  
-**Primary review input:** `docs/temp/phase2-unit-index.md`  
+**Primary review input:** `docs/temp/run1/unit-index.md`  
 **Review posture:** independent, adversarial, read-only; app user, Ourobion developer, and hackathon judge perspectives
 
 ## Executive verdict
@@ -48,15 +48,15 @@ I evaluated the current checkout as the declared **L0–L6 backend slice**, not 
 **Affected users:** hackathon judge, developers, eventually app users  
 **Status:** newly identified; not resolved by the known B5 API-key blocker
 
-The CLI constructs `runOpts` with claims, edge directory, quote-check text loader, router, and a generic verifier model stamp, but it never assigns `runOpts.retrieve` ([`tools/brain-ingest/src/cli.ts:326`](../tools/brain-ingest/src/cli.ts#L326), especially lines 334–351). `verifyClaim` then calls:
+The CLI constructs `runOpts` with claims, edge directory, quote-check text loader, router, and a generic verifier model stamp, but it never assigns `runOpts.retrieve` ([`tools/brain-ingest/src/cli.ts:326`](../../../tools/brain-ingest/src/cli.ts#L326), especially lines 334–351). `verifyClaim` then calls:
 
 ```ts
 retrieveForClaim(claim, opts.retrieve ?? {})
 ```
 
-([`tools/brain-ingest/src/verify/verifier.ts:206`](../tools/brain-ingest/src/verify/verifier.ts#L206)). With `{}`, the corpus is empty and there are no external adapters. A real CLI run therefore retrieves zero verifier-owned sources. Adding an OpenAI/Agnes key cannot fix this wiring gap.
+([`tools/brain-ingest/src/verify/verifier.ts:206`](../../../tools/brain-ingest/src/verify/verifier.ts#L206)). With `{}`, the corpus is empty and there are no external adapters. A real CLI run therefore retrieves zero verifier-owned sources. Adding an OpenAI/Agnes key cannot fix this wiring gap.
 
-There is a second independent defect. Corpus ranking uses `CorpusDoc.text`, but `corpusHitToCitation()` drops the text ([`retrieval.ts:107`](../tools/brain-ingest/src/verify/retrieval.ts#L107), [`retrieval.ts:157`](../tools/brain-ingest/src/verify/retrieval.ts#L157)). External candidates contain abstracts, but `candidateToCitation()` drops those too ([`types.ts:129`](../tools/brain-ingest/src/types.ts#L129), [`retrieval.ts:187`](../tools/brain-ingest/src/verify/retrieval.ts#L187)). `buildVerifierPrompt()` accepts only `VerifyCitation[]`; its evidence block includes paper ID, year, tiers, and title—not an abstract, finding sentence, passage, or quote ([`prompt.ts:70`](../tools/brain-ingest/src/verify/prompt.ts#L70), [`prompt.ts:97`](../tools/brain-ingest/src/verify/prompt.ts#L97)).
+There is a second independent defect. Corpus ranking uses `CorpusDoc.text`, but `corpusHitToCitation()` drops the text ([`retrieval.ts:107`](../../../tools/brain-ingest/src/verify/retrieval.ts#L107), [`retrieval.ts:157`](../../../tools/brain-ingest/src/verify/retrieval.ts#L157)). External candidates contain abstracts, but `candidateToCitation()` drops those too ([`types.ts:129`](../../../tools/brain-ingest/src/types.ts#L129), [`retrieval.ts:187`](../../../tools/brain-ingest/src/verify/retrieval.ts#L187)). `buildVerifierPrompt()` accepts only `VerifyCitation[]`; its evidence block includes paper ID, year, tiers, and title—not an abstract, finding sentence, passage, or quote ([`prompt.ts:70`](../../../tools/brain-ingest/src/verify/prompt.ts#L70), [`prompt.ts:97`](../../../tools/brain-ingest/src/verify/prompt.ts#L97)).
 
 Focused reproduction with a corpus document containing a unique finding sentence produced:
 
@@ -69,7 +69,7 @@ Focused reproduction with a corpus document containing a unique finding sentence
 }
 ```
 
-The current end-to-end test succeeds only because it injects `retrieve: { corpus: [...] }` and a mock router that returns the expected stance ([`tools/brain-ingest/tests/verify.test.ts:330`](../tools/brain-ingest/tests/verify.test.ts#L330)). It does not assert that the corpus text appears in the prompt. The test named “claim + retrieved sources embedded” verifies citation metadata, not evidence content.
+The current end-to-end test succeeds only because it injects `retrieve: { corpus: [...] }` and a mock router that returns the expected stance ([`tools/brain-ingest/tests/verify.test.ts:330`](../../../tools/brain-ingest/tests/verify.test.ts#L330)). It does not assert that the corpus text appears in the prompt. The test named “claim + retrieved sources embedded” verifies citation metadata, not evidence content.
 
 **Impact:** the verifier cannot assess direction, claim-kind inflation, scope, or effect size from the shown sources. At best it infers from titles or model prior knowledge despite being told to judge only shown evidence. This invalidates “independent retrieval,” “source-grounded refutation,” and any supported/partial result produced through a hand-wired workaround.
 
@@ -81,9 +81,9 @@ The current end-to-end test succeeds only because it injects `retrieve: { corpus
 **Affected users:** app users; judges watching the card demo  
 **Status:** newly identified
 
-Edges are indexed under both subject and object ([`generate-insights/index.ts:375`](../supabase/functions/generate-insights/index.ts#L375)). For a fired single-metric signal, `edgeDirectionConsistent()` calls any monotonic edge “consistent” whenever either endpoint state is absent ([`composer.ts:82`](../supabase/functions/generate-insights/composer.ts#L82)). Thus an object-only signal can enter `agree`.
+Edges are indexed under both subject and object ([`generate-insights/index.ts:375`](../../../supabase/functions/generate-insights/index.ts#L375)). For a fired single-metric signal, `edgeDirectionConsistent()` calls any monotonic edge “consistent” whenever either endpoint state is absent ([`composer.ts:82`](../../../supabase/functions/generate-insights/composer.ts#L82)). Thus an object-only signal can enter `agree`.
 
-The handler records the actual fired metric as `pattern_metric_label`, but renders `metric_a_label` from `topEdge.subject` ([`generate-insights/index.ts:653`](../supabase/functions/generate-insights/index.ts#L653), lines 693–702). Both edge templates ignore `pattern_metric_label` and state that `metric_a_label` shifted ([`render.ts:120`](../supabase/functions/generate-insights/render.ts#L120)).
+The handler records the actual fired metric as `pattern_metric_label`, but renders `metric_a_label` from `topEdge.subject` ([`generate-insights/index.ts:653`](../../../supabase/functions/generate-insights/index.ts#L653), lines 693–702). Both edge templates ignore `pattern_metric_label` and state that `metric_a_label` shifted ([`render.ts:120`](../../../supabase/functions/generate-insights/render.ts#L120)).
 
 Focused reproduction using an `hrv_sdnn_ms: up` signal and the edge `sleep_duration_min increases hrv_sdnn_ms` returned:
 
@@ -104,9 +104,9 @@ No sleep shift was in the input. This is a false first-person health statement, 
 **Affected users:** developers and app users  
 **Status:** newly identified projection-boundary bypass
 
-The shared verification schema checks quote-count arithmetic and consistency of `allPresent`, but it does not require `quoteCheck.allPresent === true` for `supported` or `partial` ([`shared/brain/relationships.schema.ts:155`](../shared/brain/relationships.schema.ts#L155)). The loader relies on that schema and then computes the serving band ([`tools/edge-loader/lib/artifacts.mjs:145`](../tools/edge-loader/lib/artifacts.mjs#L145)).
+The shared verification schema checks quote-count arithmetic and consistency of `allPresent`, but it does not require `quoteCheck.allPresent === true` for `supported` or `partial` ([`shared/brain/relationships.schema.ts:155`](../../../shared/brain/relationships.schema.ts#L155)). The loader relies on that schema and then computes the serving band ([`tools/edge-loader/lib/artifacts.mjs:145`](../../../tools/edge-loader/lib/artifacts.mjs#L145)).
 
-The repository test explicitly accepts `{spansFound:0, spansTotal:0, allPresent:false}` ([`edge_artifacts.test.ts:144`](../tools/edge-loader/tests/edge_artifacts.test.ts#L144)). A focused loader reproduction changed the fixture `partial` verification to that quote block and produced:
+The repository test explicitly accepts `{spansFound:0, spansTotal:0, allPresent:false}` ([`edge_artifacts.test.ts:144`](../../../tools/edge-loader/tests/edge_artifacts.test.ts#L144)). A focused loader reproduction changed the fixture `partial` verification to that quote block and produced:
 
 ```json
 {
@@ -125,9 +125,9 @@ The normal in-repo verifier producer rejects a failed quote check before LLM spe
 
 ### H1 — `research-context` is surfaced despite the authoritative “gap only” rule
 
-The authoritative architecture says `research-context` and `contradiction` are not surfaced and become gap events only ([`docs/shared/insight-engine-architecture.md:67`](../docs/shared/insight-engine-architecture.md#L67), [`:353`](../docs/shared/insight-engine-architecture.md#L353)). The `composed_insights` migration repeats “never surfaced” ([`20260716050639...sql:35`](../supabase/migrations/20260716050639_create_m5b_composed_insights_and_card_producers.sql#L35)).
+The authoritative architecture says `research-context` and `contradiction` are not surfaced and become gap events only ([`docs/shared/insight-engine-architecture.md:67`](../../../docs/shared/insight-engine-architecture.md#L67), [`:353`](../../../docs/shared/insight-engine-architecture.md#L353)). The `composed_insights` migration repeats “never surfaced” ([`20260716050639...sql:35`](../../../supabase/migrations/20260716050639_create_m5b_composed_insights_and_card_producers.sql#L35)).
 
-The handler explicitly allows both `agree` and `research-context` to render a coincidence rule card ([`generate-insights/index.ts:611`](../supabase/functions/generate-insights/index.ts#L611)). D14 records “suppressed on contradiction,” implicitly preserving the deviation ([`phase2-run-signoff-decisions.md:168`](../docs/temp/phase2-run-signoff-decisions.md#L168)), but the authoritative architecture was not amended.
+The handler explicitly allows both `agree` and `research-context` to render a coincidence rule card ([`generate-insights/index.ts:611`](../../../supabase/functions/generate-insights/index.ts#L611)). D14 records “suppressed on contradiction,” implicitly preserving the deviation ([`phase2-run-signoff-decisions.md:168`](../../../docs/temp/run1/signoff-decisions.md#L168)), but the authoritative architecture was not amended.
 
 This matters most for `correlates`/`modulates` edges: they are context-only and can never carry direction, yet they can decorate a user card with research authority. Either behavior could be a defensible product choice, but the current repo contains two incompatible truths.
 
@@ -135,7 +135,7 @@ This matters most for `correlates`/`modulates` edges: they are context-only and 
 
 ### H2 — `baseline_snapshots` is upsert-only, so removed source series leave stale projections
 
-`compute-baselines` builds current snapshots and upserts them, but never reads existing keys or prunes rows absent from the current S2 projection ([`compute-baselines/index.ts:203`](../supabase/functions/compute-baselines/index.ts#L203)). `generate-insights` includes users found only in `baseline_snapshots` ([`generate-insights/index.ts:415`](../supabase/functions/generate-insights/index.ts#L415)).
+`compute-baselines` builds current snapshots and upserts them, but never reads existing keys or prunes rows absent from the current S2 projection ([`compute-baselines/index.ts:203`](../../../supabase/functions/compute-baselines/index.ts#L203)). `generate-insights` includes users found only in `baseline_snapshots` ([`generate-insights/index.ts:415`](../../../supabase/functions/generate-insights/index.ts#L415)).
 
 If a user deletes all tall `signals` rows for a metric (deletion is permitted), a sync replaces/removes a series, or a metric stops being baseline-applicable, the old snapshot remains. Trend/threshold rules can continue firing from old values and can be regenerated nightly. This violates the two-tier promise that projections are rebuildable from current raw truth.
 
@@ -143,7 +143,7 @@ If a user deletes all tall `signals` rows for a metric (deletion is permitted), 
 
 ### H3 — `RelationshipClaim.derivation` is documented as copy-gated but is not gated
 
-The contract says derivation is copy-gated before storage ([`shared/brain/relationships.ts:135`](../shared/brain/relationships.ts#L135), [`shared/brain/README.md:47`](../shared/brain/README.md#L47)). The schema only requires a non-empty string ([`relationships.schema.ts:95`](../shared/brain/relationships.schema.ts#L95)); synthesis post-processing performs schema, provenance, endpoint, quote, and offset checks but never calls `validateCopyString` ([`postprocess.ts:153`](../tools/brain-ingest/src/synth/postprocess.ts#L153)). The loader does not gate it either.
+The contract says derivation is copy-gated before storage ([`shared/brain/relationships.ts:135`](../../../shared/brain/relationships.ts#L135), [`shared/brain/README.md:47`](../../../shared/brain/README.md#L47)). The schema only requires a non-empty string ([`relationships.schema.ts:95`](../../../shared/brain/relationships.schema.ts#L95)); synthesis post-processing performs schema, provenance, endpoint, quote, and offset checks but never calls `validateCopyString` ([`postprocess.ts:153`](../../../tools/brain-ingest/src/synth/postprocess.ts#L153)). The loader does not gate it either.
 
 This field is not currently shown by the biotope card UI, so this is not an immediate exposure. It is nevertheless a false safety guarantee at the truth-artifact boundary and will matter for nao/evidence panels.
 
@@ -153,14 +153,14 @@ This field is not currently shown by the biotope card UI, so this is not an imme
 
 These do not explain the new no-go by themselves, but they limit any release claim:
 
-- **`derived_metrics` remains user-writable despite being a “never hand-edited” projection.** The migration grants insert/update/delete ([`20260715140420...sql:137`](../supabase/migrations/20260715140420_create_continuity_storage_primitives.sql#L137)). This is already accepted as O4. It is latent while the table is unused, but must be select-only before consumption.
+- **`derived_metrics` remains user-writable despite being a “never hand-edited” projection.** The migration grants insert/update/delete ([`20260715140420...sql:137`](../../../supabase/migrations/20260715140420_create_continuity_storage_primitives.sql#L137)). This is already accepted as O4. It is latent while the table is unused, but must be select-only before consumption.
 - **Model decorrelation is configured, not attested at execution.** Every shipped route is `local_agent`; the mailbox fulfiller’s real family is not bound to `verifierModel`. B5/O7 already acknowledge the key/model work. A real route must record the provider-returned model and reject family mismatch.
 - **The real applicability grader is a typed `unknown` stub.** This is honest and safe, not a bug, but no transferability claim should be made.
 - **Gap-ledger/L7–L8 loop, A4–A7 authoring support, S9 reporting, human curation, and the demand-side research loop are not built.** U9 is a valid cold-start seeder, not the self-improving loop.
-- **M6’s `InsightFiredEvent` contract is not emitted by the audited generator.** The contract says M5b fires it and M6 consumes it without reading cards ([`shared/SHARED-CONTEXT.md:210`](../shared/SHARED-CONTEXT.md#L210)); `generate-insights` only upserts composed insights and cards ([`generate-insights/index.ts:803`](../supabase/functions/generate-insights/index.ts#L803)). Treat this as an integration gap unless explicitly out of this slice.
+- **M6’s `InsightFiredEvent` contract is not emitted by the audited generator.** The contract says M5b fires it and M6 consumes it without reading cards ([`shared/SHARED-CONTEXT.md:210`](../../../shared/SHARED-CONTEXT.md#L210)); `generate-insights` only upserts composed insights and cards ([`generate-insights/index.ts:803`](../../../supabase/functions/generate-insights/index.ts#L803)). Treat this as an integration gap unless explicitly out of this slice.
 - **Statistical values remain provisional/deferred.** The engineering implementation is testable, but scientific suitability is not signed. Do not translate a green unit test into validated health inference.
-- **Baseline confidence documentation has drifted.** Runtime uses 3/7/14 ([`compute-baselines/index.ts:19`](../supabase/functions/compute-baselines/index.ts#L19)); the authoritative architecture and migration comment still describe 3/5/14 ([`insight-engine-architecture.md:198`](../docs/shared/insight-engine-architecture.md#L198), [`20260715154001...sql:37`](../supabase/migrations/20260715154001_alter_m5a_baseline_snapshots_baseline_v2.sql#L37)). The config decision records 3/7/14. Fix the truth hierarchy before sign-off.
-- **Most units remain formally unsigned.** The unit index shows only U1 cleared, U3/U4/U9 individually approved/provisional, and the remainder pending or deferred ([`phase2-unit-index.md:23`](../docs/temp/phase2-unit-index.md#L23)). Shared-contract B8 review/waiver is unresolved.
+- **Baseline confidence documentation has drifted.** Runtime uses 3/7/14 ([`compute-baselines/index.ts:19`](../../../supabase/functions/compute-baselines/index.ts#L19)); the authoritative architecture and migration comment still describe 3/5/14 ([`insight-engine-architecture.md:198`](../../../docs/shared/insight-engine-architecture.md#L198), [`20260715154001...sql:37`](../../../supabase/migrations/20260715154001_alter_m5a_baseline_snapshots_baseline_v2.sql#L37)). The config decision records 3/7/14. Fix the truth hierarchy before sign-off.
+- **Most units remain formally unsigned.** The unit index shows only U1 cleared, U3/U4/U9 individually approved/provisional, and the remainder pending or deferred ([`phase2-unit-index.md:23`](../../../docs/temp/run1/unit-index.md#L23)). Shared-contract B8 review/waiver is unresolved.
 
 I did **not** treat unfinished M3 Health Connect, M4 environment, M7 community, metric-wave breadth, UI visual polish, or unavailable API keys as newly discovered code regressions. They make full Phase 2 incomplete, but the unit index already says so.
 

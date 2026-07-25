@@ -287,7 +287,7 @@ undersized maxOutputTokens yields empty visible text. Size generously in downstr
   masking fixtures; flutter 111/111. The RPC's humanVerdict field remains UNRENDERED by the U7
   screen — noted as carry-forward, not demo-blocking.
 - **Visual check pathway:** Windows desktop blocked by OS Developer Mode (non-admin) — Android
-  emulator used instead; 5 screenshots in docs/temp/phase2-run-2/assets/. The desktop launch is
+  emulator used instead; 5 screenshots in docs/temp/run2/assets/. The desktop launch is
   the run's ONE unexercised launch path (manual step in runbook).
 - **Two documented local-stack retries** baked into the dry-run script (JWT iat-skew ≤4×3s; one
   db-reset retry on health-probe timeout) — wrinkles, not failures; both in the runbook.
