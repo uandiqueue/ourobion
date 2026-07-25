@@ -20,7 +20,9 @@ else is deterministic fixtures + the real engine.
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\demo-dryrun-run2.ps1            # full pass (live verifier call)
 powershell -ExecutionPolicy Bypass -File scripts\demo-dryrun-run2.ps1 -SkipLiveLlm   # reproducibility pass (reuses artifacts)
-# optional flags: -IncludeAnthropicLeg (decorrelated verifier, see §9), -KeepNao (leave nao up for a live demo)
+# optional flags: -IncludeAnthropicLeg (decorrelated ONE-call side-by-side, see §9),
+#                 -DecorrelatedFullRun (decorrelated verifier drives the WHOLE loop, see §11),
+#                 -KeepNao (leave nao up for a live demo)
 ```
 
 It prints PASS/FAIL + evidence per step and exits non-zero on any failure. The sections below are
@@ -240,6 +242,97 @@ earlier pass) — presented strictly as **"decorrelated but not attested/ablated
   seed form with the derived label (e.g. `body temp c and energy score`) — human reviews and
   submits through the §10 seed path; the autonomous gap→research loop stays B5+U16-gated.
 
+## 11 · Variant: decorrelated verifier run (U13, Jayden H1 directive)
+
+Jayden's H1: "we can actually simulate a full run with different model verifier" — go beyond §9's
+ONE-call side-by-side and run the **WHOLE loop** with the decorrelated verifier's output actually
+loaded and served. Flag: `-DecorrelatedFullRun` (mutually exclusive with `-SkipLiveLlm` and
+`-IncludeAnthropicLeg`):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\demo-dryrun-run2.ps1 -DecorrelatedFullRun
+```
+
+**What it does differently from a normal pass:**
+
+1. Flips ONLY the `verifier` node to `claude-sonnet-5` in `router.config.json` (backed up first).
+   The pre-O7 "verifier must not be Anthropic-family" clause trips — **EXPECTED, load-bearing**:
+   `llm-router TEST-MODE WARNING — decorrelation invariant 'family(verifier) !== 'anthropic'' is
+   VIOLATED...` — recorded verbatim in the session log.
+2. Verifies **ALL 5 fixture claims LIVE** (not just the U2 gut/mood one) against a corpus **built at
+   runtime**: the real `verify-corpus.jsonl` (5 docs) plus 4 synthesized `CorpusDoc`s — one per
+   edge-loader fixture claim, each built from that claim's OWN already-committed citation +
+   verbatim quote (never new "evidence" — a repackaging of the same FIXTURE material so quoteCheck,
+   which runs before any verifier spend, can resolve every citation without R2).
+3. Writes the 5 live verifications into the REAL `data/corpus/demo-edges` dir (not a scratch dir)
+   and loads them through the real A11 edge-loader, so the decorrelated verdicts actually become
+   `verified_edges` rows other people/steps read.
+4. Runs the FULL main loop (load → analysis → backfill → analysis → orientation → provenance) on
+   top of those decorrelated edges, then restores `router.config.json` byte-identically.
+5. Features (a)-(d) are **skipped by design** this variant — unchanged code paths, already proven
+   live in U12; skipping them keeps the decorrelated leg's spend/time bounded.
+
+**Results (U13, executed twice from a clean `db reset`; BOTH live passes produced IDENTICAL
+verdicts for all 5 claims — this looks like stable per-claim judgment under this specific thin
+corpus, not run-to-run noise, though verdicts remain non-deterministic in general per the §
+TEST-MODE wording above):**
+
+```text
+sleep_duration_min|increases|hrv_sdnn_ms     -> unsupported @ hold
+sleep_duration_min|decreases|resting_hr_bpm  -> unsupported @ hold
+step_count|increases|sleep_duration_min      -> supported  @ hold
+stool_form|correlates|gut_comfort_score      -> unsupported @ hold
+gut_comfort_score|correlates|mood_score      -> supported  @ mid
+```
+
+**A real, honest finding, not a bug:** every *directional* edge landed in the `hold` band (never
+served); the one edge that clears `mid` (gut/mood) is a non-monotonic `correlates` relation that
+never decorates a card (O18). Under this thin, single-source synthesized corpus, the independent
+Anthropic verifier is **more conservative** than the permissive hand-authored fixture verdicts
+(and than gpt-5's own live gut/mood calls in §2/§9) — it rated 3 of 5 claims `unsupported`. The
+practical consequence: **0 edge-producer cards fired** either pass. The dry-run script treats this
+as a non-fatal, honestly-reported outcome for this variant (not an assertion failure): main-loop
+steps 1-3 and the rules-producer cards (4 of them), 120 personal signals, and the gap ledger all
+ran/upserted normally; the orientation check (M4b) and the provenance RPC (M5) report **N/A this
+pass** (no edge card exists to inspect/query) instead of asserting a failure. M5 instead runs a
+**direct SQL trace** proving the decorrelated verdicts DID persist:
+
+```sql
+select edge_id || ' -> ' || (verification->>'verifierModel') || ' (verdict=' || verdict || ' band=' || serving_band || ')'
+from edge_verifications where status='active' order by edge_id;
+-- gut_comfort_score|correlates|mood_score     -> claude-sonnet-5 (verdict=supported   band=mid)
+-- sleep_duration_min|decreases|resting_hr_bpm -> claude-sonnet-5 (verdict=unsupported band=hold)
+-- sleep_duration_min|increases|hrv_sdnn_ms    -> claude-sonnet-5 (verdict=unsupported band=hold)
+-- step_count|increases|sleep_duration_min     -> claude-sonnet-5 (verdict=supported   band=hold)
+-- stool_form|correlates|gut_comfort_score     -> claude-sonnet-5 (verdict=unsupported band=hold)
+```
+
+Every row's `verifierModel` reads `claude-sonnet-5` — the decorrelated leg's output is what's
+actually stored, not a scratch artifact. (A pass where the live draw instead clears `mid`/`high` on
+a directional edge WOULD produce a servable edge card whose provenance traces the same way; that
+shape simply wasn't the draw either of these two runs got.)
+
+**Spend (exact, `data/llm-router/ledger.json`, `verifier` node — both attempts were 100% Anthropic
+today; no plain-OpenAI verify call ran on 2026-07-25):**
+
+- Attempt 1 (surfaced the M4 script-robustness gap below): US$0.10089000
+- Attempt 2 (final, clean 17/17 pass after the fix): US$0.10350000
+- **U13 total: US$0.20439000 (~SGD 0.2637 @ 1.29)** — well inside the ≤1.5 SGD (~1.1 USD) unit
+  budget; router C7 per-day-per-node cap (US$1, 95% hard stop) never approached, never raised.
+- `router.config.json` restored byte-identically after each attempt (`git diff` clean at commit).
+
+**Script robustness fix folded in from attempt 1:** the original M4 assertion
+(`no edge-producer card`) was written for the normal/OpenAI path, where the hand-authored fixture
+verdicts are tuned to always clear a serving band. It is too strict for THIS variant, whose entire
+point is an independent verifier's real judgment. Fixed by making the zero-edge-card outcome
+non-fatal **specifically under `-DecorrelatedFullRun`** (a `$script:NoEdgeCardThisPass` flag), with
+M4b/M5 degrading to an honest "N/A this pass" + the DB-level trace instead of asserting a failure.
+The normal/OpenAI path's strict assertion is unchanged.
+
+Standing label, unchanged: results are **"decorrelated but NOT attested/ablated"** — attestation /
+ablation (systematically flipping providers across many claims and grading agreement) is next
+cycle (backlog B5 / O7), not this run.
+
 ## Demo walk-through order (live audience)
 
 1. `/loader` — load 14 days, Run analysis (main loop 1–2).
@@ -272,7 +365,7 @@ earlier pass) — presented strictly as **"decorrelated but not attested/ablated
 - **Emulator networking:** inside the AVD the local stack is `http://10.0.2.2:54321`, not
   `127.0.0.1`.
 
-## Executed-vs-documented (U12 honesty record)
+## Executed-vs-documented (U12/U13 honesty record)
 
 - **Executed by U12 (scripted, twice):** §1–§5, §7, §8, §10 — full pass (live OpenAI verifier)
   and a second reproducibility pass from `supabase db reset` with `-SkipLiveLlm` (artifacts
@@ -280,6 +373,12 @@ earlier pass) — presented strictly as **"decorrelated but not attested/ablated
 - **Executed by U12 (manually):** §6 on the Android emulator (screenshots in
   `docs/temp/phase2-run-2/assets/`); Windows-desktop launch NOT exercised (Developer Mode off —
   see Known rough edges).
+- **Executed by U13 (scripted, `-DecorrelatedFullRun`, twice from a clean `db reset`):** §11 — the
+  first attempt surfaced a real script-robustness gap (M4's edge-card assertion too strict for a
+  variant whose verdicts can legitimately serve nothing); fixed in-script and the second attempt
+  ran clean end-to-end (17/17 PASS + 1 by-design SKIP). Both attempts produced identical per-claim
+  verdicts and identical spend order of magnitude; router.config.json restored byte-identically
+  both times.
 - **Documented-only:** browser-driven `/login` sign-in flow (the dry-run authenticates
   headlessly; the login page itself was rendered but not click-driven this unit — U8/U10 drove
   authenticated pages live); Run-now ingest dispatch (out of demo scope, GH-Actions-gated).

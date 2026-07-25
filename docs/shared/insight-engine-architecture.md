@@ -4,7 +4,7 @@ summary: The single authoritative end-to-end insight-engine spec — every stage
 type: architecture
 scope: shared
 status: canonical
-updated: 2026-07-16
+updated: 2026-07-25
 ---
 
 # Insight-engine architecture — ground truth
@@ -1029,7 +1029,7 @@ derivation, citation, or calibration behind it yet.
 | S5 correlation floor | S5 `stable` rule (`rho`) | \|ρ\| ≥ 0.3 | Minimum association strength |
 | S5 window | S5 `window_days` | 60 days | Joint-series evaluation window |
 | S5 stability runs | S5 `stable` rule | 3 runs | Sign-stability requirement |
-| S3 confidence cutoffs | S3 DDL comment (`baseline_snapshots`) | 3 / 5 / 14 days | `insufficient`/`low`/`medium`/`high` baseline confidence |
+| S3 confidence cutoffs | `BASELINE_CONFIG.confidence` in `supabase/functions/compute-baselines/index.ts` | 3 / 7 / 14 days | `insufficient`/`low`/`medium`/`high` baseline confidence |
 | Completeness weights | registry `dqs.weight` (`shared/metrics/registry.ts:62-63`), consumed in S7 §2 | per-key, provisional | Per-metric weighting of the completeness score |
 | S9 novelty-demotion window | S9 selection rule | 3 reports | Repeat-surfacing demotion of unchanged edge versions |
 | S9 staleness trigger | S9 transport | 7 days | Report regeneration on open |
@@ -1038,6 +1038,17 @@ derivation, citation, or calibration behind it yet.
 | Applicability plot bands | plot spec (U1) | 0.33 / 0.66 | Low/mid/high banding of the transferability axis |
 | Budget hard-stop line | `tools/brain-ingest/src/types.ts:214` (`wouldExceed95`) | 95% of daily cap | Fail-closed metered-source cutoff |
 | A3 per-item spend cap | `IngestQueueDoc.items[].maxPapers` (A3 §2) | per-item, TBD | Bounded spend per queue pair |
+
+**S3 confidence cutoffs — reconciliation note (H2, Jayden 2026-07-25).** This row previously read
+3 / 5 / 14 (U6 had lowered the medium tier 7→5, "no basis either way"). Evidence-review **RU5b**
+(`docs/temp/phase2-research/decisions-evidence-review.md`) found the confirmed literature mildly
+*favours* 6–7 nights for "medium/acceptable" reliability and nothing supports 5 — so config-decisions
+**C5** (`docs/temp/phase2-run-config-decisions.md`) reverted 5→7. The runtime (`BASELINE_CONFIG` in
+`supabase/functions/compute-baselines/index.ts`) already ships the correct **3/7/14**; this table row
+was the drifted one and is now corrected to match. The comment in migration
+`supabase/migrations/20260715154001_alter_m5a_baseline_snapshots_baseline_v2.sql` (which still reads
+3/5/14) is **superseded** — migrations are append-only so it is left as historical record, not edited;
+canonical = 3/7/14 per the runtime config + C5/RU5b above.
 
 **Hyperparameter provenance surface (stub — DEFERRED).** There is currently **no user-facing layer
 that exposes how any of these numbers was derived, its value, or a citation.** Future design: a
