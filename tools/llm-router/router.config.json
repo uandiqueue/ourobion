@@ -1,12 +1,15 @@
 {
   "version": 1,
+  "testMode": {
+    "reason": "Run 2.0 single-provider posture (Jayden, 2026-07-24): only OPENAI_API_KEY is provisioned, so all six nodes run OpenAI and the synthesis<->verifier family-decorrelation invariant is deliberately OFF. Verifier verdicts are scaffolded + unit-tested, NOT independently verified. Restore a second provider and delete this block to re-arm the hard invariant."
+  },
   "nodes": {
-    "seeder": { "model": "claude-sonnet-5", "route": "local_agent", "maxOutputTokens": 8000 },
-    "synthesis": { "model": "claude-sonnet-5", "route": "local_agent", "maxOutputTokens": 8000 },
-    "verifier": { "model": "gpt-5", "route": "local_agent", "maxOutputTokens": 8000 },
-    "phrasing_card": { "model": "claude-haiku-4-5", "route": "local_agent", "maxOutputTokens": 2000 },
-    "report_narrative": { "model": "claude-sonnet-5", "route": "local_agent", "maxOutputTokens": 4000 },
-    "extract_assist": { "model": "claude-haiku-4-5", "route": "local_agent", "maxOutputTokens": 2000 }
+    "seeder": { "model": "gpt-5-mini", "route": "api_worker", "maxOutputTokens": 8000 },
+    "synthesis": { "model": "gpt-5", "route": "api_worker", "maxOutputTokens": 8000 },
+    "verifier": { "model": "gpt-5", "route": "api_worker", "maxOutputTokens": 8000 },
+    "phrasing_card": { "model": "gpt-5-mini", "route": "api_worker", "maxOutputTokens": 2000 },
+    "report_narrative": { "model": "gpt-5-mini", "route": "api_worker", "maxOutputTokens": 4000 },
+    "extract_assist": { "model": "gpt-5-mini", "route": "api_worker", "maxOutputTokens": 2000 }
   },
   "providers": [
     { "prefix": "claude-", "family": "anthropic", "envKey": "ANTHROPIC_API_KEY" },
@@ -18,11 +21,12 @@
   "prices": {
     "claude-sonnet-5": { "inputUsdPerMTok": 3.0, "outputUsdPerMTok": 15.0, "provisional": true },
     "claude-haiku-4-5": { "inputUsdPerMTok": 1.0, "outputUsdPerMTok": 5.0, "provisional": true },
-    "gpt-5": { "inputUsdPerMTok": 1.25, "outputUsdPerMTok": 10.0, "provisional": true }
+    "gpt-5": { "inputUsdPerMTok": 1.25, "outputUsdPerMTok": 10.0, "provisional": true },
+    "gpt-5-mini": { "inputUsdPerMTok": 0.25, "outputUsdPerMTok": 2.0, "provisional": true }
   },
   "budget": {
-    "perRunOutputTokens": 200000,
-    "perDayUsdPerNode": 5.0,
+    "perRunOutputTokens": 60000,
+    "perDayUsdPerNode": 1.0,
     "hardStopFraction": 0.95,
     "ledgerPath": "data/llm-router/ledger.json",
     "retentionDays": 30

@@ -43,6 +43,28 @@ export const LLM_NODE_IDS: readonly LlmNodeId[] = [
 /** The two execution routes every node supports (memory 0013). */
 export type RouteKind = 'local_agent' | 'api_worker';
 
+/**
+ * The exact stamp downstream consumers MUST put on verifier verdicts / UI /
+ * logs produced while the router runs under TEST-MODE (config `testMode` —
+ * see config.ts). Wording is load-bearing (Run 2.0 posture decision): it says
+ * the verdict came from a single-provider setup with the synthesis↔verifier
+ * family-decorrelation invariant switched off, i.e. NOT an independent check.
+ */
+export const TEST_MODE_LABEL =
+  'scaffolded + unit-tested (TEST-MODE: single-provider, decorrelation OFF)' as const;
+
+/**
+ * Test-mode state attached to router results (and the operator report) when
+ * the config carries a `testMode` block, so downstream consumers can label
+ * verifier verdicts. Absent entirely outside test mode.
+ */
+export interface TestModeState {
+  /** The operator-supplied justification from config `testMode.reason`. */
+  reason: string;
+  /** Always {@link TEST_MODE_LABEL} — the exact stamp for verdicts/UI/logs. */
+  label: string;
+}
+
 /** Vendor family used for the decorrelation invariant. */
 export type VendorFamily = 'anthropic' | 'openai' | 'google';
 
@@ -91,6 +113,12 @@ export interface LlmResponse {
   model: string;
   /** Which route served the call. */
   route: RouteKind;
+  /**
+   * Present exactly when the router config carries a `testMode` block: the
+   * call was served under a posture where the decorrelation invariant may be
+   * off, and any verdict derived from it must carry `testMode.label`.
+   */
+  testMode?: TestModeState;
 }
 
 /**

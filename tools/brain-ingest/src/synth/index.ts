@@ -4,7 +4,7 @@
  * Wires the deterministic input assembly (load canonical text → select passages
  * → build the versioned prompt) to the router `synthesis` node (local_agent
  * mailbox per config) and the post-processing GATE (validateClaim + A9
- * quoteCheck + pair/foreign-paper checks), then appends accepted claims to the
+ * quoteCheck + pair/foreign-paper checks + O20 derivation copy gate), then appends accepted claims to the
  * append-safe `edges/claims.jsonl` the A11 edge-loader reads.
  *
  * Flow (a real run):
@@ -13,7 +13,7 @@
  *   → buildSynthesisPrompt (versioned)
  *   → router.route({ nodeId:'synthesis', expectJson:true })  [local_agent mailbox]
  *   → processSynthesisResponse (the gate: reject unrequested pair / foreign paper /
- *      schema-invalid / fabricated quote; backfill offsets; force edgeId)
+ *      schema-invalid / fabricated quote / copy-gated derivation; backfill offsets; force edgeId)
  *   → appendClaimsToDir (+ appendClaimsToR2 when --push-r2).
  *
  * ESM / NodeNext — imports use explicit `.js` extensions.
@@ -28,7 +28,14 @@ import { r2TextLoader, type PaperTextLoader } from '../verify/quoteCheck.js';
 import { readArtifact } from '../seeder/artifact.js';
 
 import { appendClaimsToDir, appendClaimsToR2, defaultEdgesDir } from './artifact.js';
-import { loadActiveMetricKeys, loadClaimValidator, repoRoot, type ClaimValidator } from './load.js';
+import {
+  loadActiveMetricKeys,
+  loadClaimValidator,
+  loadCopyValidator,
+  repoRoot,
+  type ClaimValidator,
+  type CopyValidator,
+} from './load.js';
 import { defaultTermsForKeys, selectPassages } from './passages.js';
 import { buildSynthesisPrompt, PROMPT_VERSION } from './prompt.js';
 import { processSynthesisResponse } from './postprocess.js';
@@ -145,6 +152,8 @@ export interface SynthesizeOptions {
   textLoader?: PaperTextLoader;
   /** Injected zod gate (tests); default loaded from shared/brain. */
   validateClaim?: ClaimValidator;
+  /** Injected copy gate over `derivation` (tests); default loaded from shared/constants (O20). */
+  validateCopy?: CopyValidator;
   /** Injected active-metric set (tests); default loaded from shared/metrics. */
   activeMetricKeys?: ReadonlySet<string>;
   /** Router per-run token cap identity. */
@@ -208,9 +217,14 @@ export async function synthesize(opts: SynthesizeOptions): Promise<SynthesizeRes
   if (missing.length > 0) log(`synth: no canonical text for ${missing.length} paper(s): ${missing.join(', ')}`);
   if (texts.size === 0) throw new Error('synth: no canonical text loaded for any requested paper');
 
+  // U8/D13 carry-forward: construct via the async factory so nao-edited cap
+  // overrides (llm_router_cap_overrides) bind this real pipeline call.
+  // Fail-soft: absent env / unreachable Supabase → file caps + one warning.
   const router: SynthesisRouter =
-    opts.router ?? new LlmRouter({ ...(opts.runId !== undefined ? { runId: opts.runId } : {}) });
+    opts.router ??
+    (await LlmRouter.create({ ...(opts.runId !== undefined ? { runId: opts.runId } : {}) }));
   const validateClaim = opts.validateClaim ?? (await loadClaimValidator(root));
+  const validateCopy = opts.validateCopy ?? (await loadCopyValidator(root));
 
   const outcomes: PairOutcome[] = [];
   const allAccepted: SynthClaim[] = [];
@@ -237,6 +251,7 @@ export async function synthesize(opts: SynthesizeOptions): Promise<SynthesizeRes
       allowedPaperIds: assembled.allowedPaperIds,
       texts,
       validateClaim,
+      validateCopy,
       synthesisModel: response.model,
       promptVersion: PROMPT_VERSION,
       ...(opts.now !== undefined ? { now: opts.now } : {}),
@@ -283,6 +298,6 @@ export {
   CLAIMS_BASENAME,
   R2_CLAIMS_KEY,
 } from './artifact.js';
-export { loadClaimValidator, loadActiveMetricKeys } from './load.js';
-export type { ClaimValidator } from './load.js';
+export { loadClaimValidator, loadCopyValidator, loadActiveMetricKeys } from './load.js';
+export type { ClaimValidator, CopyValidator } from './load.js';
 export type * from './types.js';

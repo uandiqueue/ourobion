@@ -40,6 +40,7 @@ import type {
   RetrievalResult,
   SynthClaim,
   VerifyCitation,
+  VerifyEvidencePassage,
   VerifyEvidenceTier,
   VerifyImpactTier,
 } from './types.js';
@@ -154,8 +155,110 @@ export function rankCorpus(
   return ranked.slice(0, limit);
 }
 
-/** Map a ranked corpus hit to a candidate Citation (neutral stance — LLM decides). */
-export function corpusHitToCitation(hit: RankedDoc): VerifyCitation {
+// ─────────────────────────────────────────────────────────────────────────────
+// Evidence passages (O15/B1 — the verifier judges ONLY shown evidence)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Per-source evidence budget, in characters (O15). Bounds how much passage text a
+ * single citation may carry into the verifier prompt, so a large corpus doc can
+ * never blow the prompt up. Config value, not an inline literal — override per
+ * call via `maxEvidenceCharsPerSource` ({@link RetrieveOptions}).
+ */
+export const DEFAULT_MAX_EVIDENCE_CHARS_PER_SOURCE = 700;
+
+/** One sentence of a doc's canonical text with its char span (end exclusive). */
+interface SentenceSpan {
+  text: string;
+  start: number;
+  end: number;
+}
+
+/** Split text into trimmed sentences, keeping each one's char span in the ORIGINAL text. */
+function sentenceSpans(text: string): SentenceSpan[] {
+  const out: SentenceSpan[] = [];
+  const pushSegment = (rawStart: number, rawEnd: number): void => {
+    const seg = text.slice(rawStart, rawEnd);
+    const lead = seg.length - seg.trimStart().length;
+    const trimmed = seg.trim();
+    if (trimmed.length === 0) return;
+    const start = rawStart + lead;
+    out.push({ text: trimmed, start, end: start + trimmed.length });
+  };
+  let segStart = 0;
+  const re = /[.!?]+(?=\s|$)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const segEnd = m.index + m[0].length;
+    pushSegment(segStart, segEnd);
+    segStart = segEnd;
+  }
+  pushSegment(segStart, text.length);
+  return out;
+}
+
+/**
+ * Extract bounded, provenance-addressable evidence passages from a corpus doc for
+ * the query terms that matched it (O15). Deterministic: sentences are scored by how
+ * many DISTINCT matched terms they contain, selected best-first (ties broken by
+ * document order) under the `maxChars` budget, then emitted in document order. Each
+ * passage's locator is `chars:<start>-<end>` into `doc.text` (the canonical
+ * extracted text — the same coordinate space as QuoteSpan offsets). When the best
+ * sentence alone exceeds the budget it is truncated (locator reflects the truncated
+ * span) so a ranked hit with a matching sentence is never silently evidence-less.
+ * No matching sentence (e.g. the terms only hit the title) → [] — evidence is
+ * carried honestly or not at all, never padded.
+ */
+export function extractEvidencePassages(
+  doc: CorpusDoc,
+  matchedTerms: readonly string[],
+  maxChars: number = DEFAULT_MAX_EVIDENCE_CHARS_PER_SOURCE,
+): VerifyEvidencePassage[] {
+  if (maxChars <= 0) return [];
+  const terms = new Set(matchedTerms.map((t) => t.toLowerCase()).filter((t) => t.length > 0));
+  if (terms.size === 0) return [];
+
+  const scored = sentenceSpans(doc.text)
+    .map((s, order) => {
+      const toks = new Set(tokenize(s.text));
+      let hits = 0;
+      for (const t of terms) if (toks.has(t)) hits++;
+      return { ...s, order, hits };
+    })
+    .filter((s) => s.hits > 0);
+  scored.sort((a, b) => b.hits - a.hits || a.order - b.order);
+
+  const chosen: Array<SentenceSpan & { order: number }> = [];
+  let used = 0;
+  for (const s of scored) {
+    if (used + s.text.length <= maxChars) {
+      chosen.push(s);
+      used += s.text.length;
+    } else if (chosen.length === 0) {
+      // Best sentence alone exceeds the budget → carry it truncated.
+      chosen.push({ text: s.text.slice(0, maxChars), start: s.start, end: s.start + maxChars, order: s.order });
+      break;
+    }
+  }
+  chosen.sort((a, b) => a.order - b.order);
+  return chosen.map((s) => ({ text: s.text, locator: `chars:${s.start}-${s.end}` }));
+}
+
+/**
+ * Map a ranked corpus hit to a candidate Citation (neutral stance — LLM decides),
+ * carrying bounded evidence passages from the doc's canonical text (O15): the
+ * verifier judges ONLY shown evidence, so the passage text must survive this
+ * mapping instead of being stripped at the type boundary.
+ */
+export function corpusHitToCitation(
+  hit: RankedDoc,
+  opts: { maxEvidenceChars?: number } = {},
+): VerifyCitation {
+  const evidence = extractEvidencePassages(
+    hit.doc,
+    hit.matchedTerms,
+    opts.maxEvidenceChars ?? DEFAULT_MAX_EVIDENCE_CHARS_PER_SOURCE,
+  );
   return {
     paperId: hit.doc.paperId,
     title: hit.doc.title,
@@ -164,6 +267,7 @@ export function corpusHitToCitation(hit: RankedDoc): VerifyCitation {
     evidenceTier: hit.doc.evidenceTier,
     impactTier: hit.doc.impactTier,
     stance: 'mentions',
+    ...(evidence.length > 0 ? { evidence } : {}),
   };
 }
 
@@ -184,8 +288,23 @@ export function candidatePaperId(c: Candidate): string {
   return `title:${slug}`;
 }
 
-/** Map a discovery candidate to a candidate Citation (neutral stance, conservative tiers). */
-export function candidateToCitation(c: Candidate): VerifyCitation {
+/**
+ * Map a discovery candidate to a candidate Citation (neutral stance, conservative
+ * tiers). External candidates have no canonical text yet — the only honest evidence
+ * available is the abstract, carried bounded with an `abstract:<start>-<end>`
+ * locator. No abstract → NO evidence (never fabricated): the prompt then shows the
+ * source as unable to ground the claim.
+ */
+export function candidateToCitation(
+  c: Candidate,
+  opts: { maxEvidenceChars?: number } = {},
+): VerifyCitation {
+  const maxChars = opts.maxEvidenceChars ?? DEFAULT_MAX_EVIDENCE_CHARS_PER_SOURCE;
+  const abstract = (c.abstract ?? '').trim();
+  const evidence: VerifyEvidencePassage[] =
+    abstract.length > 0 && maxChars > 0
+      ? [{ text: abstract.slice(0, maxChars), locator: `abstract:0-${Math.min(abstract.length, maxChars)}` }]
+      : [];
   return {
     paperId: candidatePaperId(c),
     title: c.title,
@@ -194,6 +313,7 @@ export function candidateToCitation(c: Candidate): VerifyCitation {
     evidenceTier: EXTERNAL_DEFAULT_EVIDENCE_TIER,
     impactTier: EXTERNAL_DEFAULT_IMPACT_TIER,
     stance: 'mentions',
+    ...(evidence.length > 0 ? { evidence } : {}),
   };
 }
 
@@ -214,7 +334,7 @@ export async function retrieveExternal(
   ctx: SourceCtx,
   seed: Seed,
   adapters: readonly ExternalAdapter[],
-  opts: { limit?: number; excludePaperIds?: ReadonlySet<string> } = {},
+  opts: { limit?: number; excludePaperIds?: ReadonlySet<string>; maxEvidenceChars?: number } = {},
 ): Promise<VerifyCitation[]> {
   const limit = opts.limit ?? 5;
   const exclude = opts.excludePaperIds ?? new Set<string>();
@@ -230,7 +350,10 @@ export async function retrieveExternal(
     }
     for (const c of candidates) {
       if (out.length >= limit) break;
-      const cite = candidateToCitation(c);
+      const cite = candidateToCitation(
+        c,
+        opts.maxEvidenceChars !== undefined ? { maxEvidenceChars: opts.maxEvidenceChars } : {},
+      );
       if (exclude.has(cite.paperId) || seen.has(cite.paperId)) continue;
       seen.add(cite.paperId);
       out.push(cite);
@@ -258,6 +381,11 @@ export interface RetrieveOptions {
   corpus?: readonly CorpusDoc[];
   /** Max corpus hits kept. */
   corpusLimit?: number;
+  /**
+   * Per-source evidence budget in characters (O15);
+   * default {@link DEFAULT_MAX_EVIDENCE_CHARS_PER_SOURCE}.
+   */
+  maxEvidenceCharsPerSource?: number;
   /** Live external top-up: adapters + ctx. Omit to skip external retrieval. */
   external?: { ctx: SourceCtx; adapters: readonly ExternalAdapter[]; limit?: number };
 }
@@ -276,10 +404,14 @@ export async function retrieveForClaim(
   const query = claimQueryTerms(claim);
   const ownIds = new Set(claim.citations.map((c) => c.paperId));
 
+  const evidenceOpts =
+    opts.maxEvidenceCharsPerSource !== undefined
+      ? { maxEvidenceChars: opts.maxEvidenceCharsPerSource }
+      : {};
   const corpusHits = rankCorpus(query, opts.corpus ?? [], { limit: opts.corpusLimit ?? 8 }).filter(
     (h) => !ownIds.has(h.doc.paperId),
   );
-  const sources: VerifyCitation[] = corpusHits.map(corpusHitToCitation);
+  const sources: VerifyCitation[] = corpusHits.map((h) => corpusHitToCitation(h, evidenceOpts));
   const have = new Set(sources.map((s) => s.paperId));
 
   let externalCount = 0;
@@ -289,7 +421,11 @@ export async function retrieveForClaim(
       opts.external.ctx,
       claimSeed(claim),
       opts.external.adapters,
-      { ...(opts.external.limit !== undefined ? { limit: opts.external.limit } : {}), excludePaperIds: exclude },
+      {
+        ...(opts.external.limit !== undefined ? { limit: opts.external.limit } : {}),
+        excludePaperIds: exclude,
+        ...evidenceOpts,
+      },
     );
     for (const c of external) {
       if (have.has(c.paperId)) continue;

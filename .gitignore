@@ -40,6 +40,11 @@ build/
 out/
 bin/
 target/
+# Next.js / OpenNext build output. Non-anchored (no leading slash) on purpose:
+# apps/nao/.gitignore anchors it as /.open-next/, but graphify's gitignore
+# matcher only honors non-anchored dir patterns — this keeps the codegraph clean.
+.open-next/
+.next/
 
 # Flutter/Native Builds
 **/doc/api/

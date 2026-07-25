@@ -16,6 +16,7 @@ import { notFound } from 'next/navigation';
 import type { PaperRecord } from '@/lib/types';
 import { getPaperMeta } from '@/lib/r2';
 import { CollapsibleAbstract } from '@/components/CollapsibleAbstract';
+import { ClaimsPanel } from '@/components/ClaimsPanel';
 import {
   oaColor,
   retrievabilityColor,
@@ -222,6 +223,16 @@ export default async function PaperDetailPage({ params }: { params: Promise<Para
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Claims & verdicts — O13 curation (run-2 U9): claims whose citations include this
+          paper (jsonb containment via /api/claims?paper=), their interim verifier verdicts
+          (TEST-MODE stamped) and the human REJECT action. */}
+      <div className="detail__section">
+        <div className="eyebrow panel__label" style={{ marginBottom: 6 }}>
+          Claims &amp; verdicts
+        </div>
+        <ClaimsPanel paperUid={paper.paperUid} />
       </div>
 
       {/* Errors */}

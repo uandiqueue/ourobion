@@ -11,18 +11,28 @@ import { defaultConfigPath, familyOf, loadConfig, providerFor, validateConfig } 
 import { RouterConfigError } from '../src/errors.js';
 import { baseConfigObject, testConfig } from './helpers.js';
 
-test('the shipped router.config.json loads, validates, and honours decorrelation', () => {
-  const config = loadConfig(defaultConfigPath());
-  // C6: synthesis sonnet-5, cheap tier haiku-4-5, verifier gpt-5-family.
-  assert.equal(config.nodes.synthesis.model, 'claude-sonnet-5');
-  assert.equal(config.nodes.phrasing_card.model, 'claude-haiku-4-5');
-  assert.equal(config.nodes.extract_assist.model, 'claude-haiku-4-5');
-  assert.equal(config.nodes.report_narrative.model, 'claude-sonnet-5');
-  assert.equal(familyOf(config, config.nodes.verifier.model), 'openai');
-  assert.notEqual(familyOf(config, config.nodes.verifier.model), 'anthropic');
-  // C7 caps: 200k output tokens/run, US$5/day/node, 95% hard stop.
-  assert.equal(config.budget.perRunOutputTokens, 200000);
-  assert.equal(config.budget.perDayUsdPerNode, 5.0);
+test('the shipped router.config.json loads: Run 2.0 OpenAI-only TEST-MODE posture', () => {
+  const warnings: string[] = [];
+  const config = loadConfig(defaultConfigPath(), { warn: (m) => warnings.push(m) });
+  // Run 2.0 posture: heavy nodes gpt-5, cheap tier gpt-5-mini, ALL api_worker.
+  assert.equal(config.nodes.synthesis.model, 'gpt-5');
+  assert.equal(config.nodes.verifier.model, 'gpt-5');
+  assert.equal(config.nodes.seeder.model, 'gpt-5-mini');
+  assert.equal(config.nodes.phrasing_card.model, 'gpt-5-mini');
+  assert.equal(config.nodes.extract_assist.model, 'gpt-5-mini');
+  assert.equal(config.nodes.report_narrative.model, 'gpt-5-mini');
+  for (const node of Object.values(config.nodes)) {
+    assert.equal(node.route, 'api_worker');
+    assert.equal(familyOf(config, node.model), 'openai');
+  }
+  // Single provider ⇒ decorrelation is violated but downgraded by testMode:
+  // the config loads AND a loud warning names the invariant.
+  assert.ok(config.testMode !== undefined && config.testMode.reason.length > 0);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0]!, /family\(synthesis\) !== family\(verifier\)/);
+  // C7 caps set LOW for the 20-SGD run: US$1/day/node, 60k output tokens/run.
+  assert.equal(config.budget.perRunOutputTokens, 60000);
+  assert.equal(config.budget.perDayUsdPerNode, 1.0);
   assert.equal(config.budget.hardStopFraction, 0.95);
   // Shipped prices are all explicitly provisional.
   for (const price of Object.values(config.prices)) {

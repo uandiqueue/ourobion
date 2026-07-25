@@ -68,7 +68,7 @@ import { loadConfig } from './config.js';
 import { createRateLimiter } from './limits/rateLimiter.js';
 import { createBudgetGuard } from './limits/budget.js';
 import { resolveDedup, reconcileByIdentifiers, mergeIdentifiers, normalizeIdentifiers } from './identity.js';
-import { SEEDS, seedByTopic, SEED_TOPICS } from './seeds.js';
+import { SEEDS } from './seeds.js';
 import { Manifest, parseJsonl, type ManifestSummary } from './manifest.js';
 import { R2Store, pdfKey, jatsKey, textKey, sha256, MANIFEST_KEY, metaKey } from './storage/r2.js';
 import { extractFromPdf, extractFromJats } from './extract.js';
@@ -135,6 +135,15 @@ export interface RunOptions {
    * `src/control.ts`'s docstring.)
    */
   controlFromR2?: boolean;
+  /**
+   * The seed-topic pool `selectSeeds` draws from (O14 seeds-as-data, run-2
+   * U10): the CLI passes the MERGED static + `ingestion_seeds` pool
+   * (`seeder/dbSeeds.ts`, fetched fail-soft) so human-added db seeds drive
+   * discovery and are valid `--seed` selectors. `undefined` (tests /
+   * programmatic callers) ⇒ the static `SEEDS` — `run()` itself never touches
+   * the Supabase boundary, keeping it hermetic.
+   */
+  seedPool?: readonly Seed[];
 }
 
 /** Outcome of a {@link run} — the numbers the CLI prints. */
@@ -679,21 +688,24 @@ function errMsg(err: unknown): string {
 
 /**
  * Resolve the seed list. An explicit `--seed <topic>` always selects a single
- * STATIC topic (explicit selection wins). Otherwise, when the agentic seeder's
- * `seed-queries.json` artifact is present in `corpusDir` and non-empty, its
- * generated queries drive discovery (superseding the static list); absent or
- * empty, the static six topics are the fallback (soft). `log` reports which.
+ * topic from `pool` (explicit selection wins). Otherwise, when the agentic
+ * seeder's `seed-queries.json` artifact is present in `corpusDir` and
+ * non-empty, its generated queries drive discovery (superseding the topic
+ * pool); absent or empty, the pool topics are the fallback (soft). `log`
+ * reports which. `pool` defaults to the static `SEEDS`; the CLI passes the
+ * merged static + db pool (O14 seeds-as-data — see `RunOptions.seedPool`).
  */
 function selectSeeds(
   seedTopic: string | undefined,
   corpusDir: string,
   log: (line: string) => void,
+  pool: readonly Seed[] = SEEDS,
 ): Seed[] {
   if (seedTopic !== undefined) {
-    const seed = seedByTopic(seedTopic);
+    const seed = pool.find((s) => s.topic === seedTopic);
     if (seed === undefined) {
       throw new Error(
-        `unknown --seed '${seedTopic}'. Known topics: ${SEED_TOPICS.join(', ')}`,
+        `unknown --seed '${seedTopic}'. Known topics: ${pool.map((s) => s.topic).join(', ')}`,
       );
     }
     return [seed];
@@ -709,7 +721,7 @@ function selectSeeds(
       return seeds;
     }
   }
-  return [...SEEDS];
+  return [...pool];
 }
 
 /**
@@ -765,7 +777,7 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
     await hydrateManifestFromR2(manifest, store, log);
   }
 
-  const seeds = selectSeeds(opts.seed, corpusDir, log);
+  const seeds = selectSeeds(opts.seed, corpusDir, log, opts.seedPool);
   log(`ingest: seeds=[${seeds.map((s) => s.topic).join(', ')}]${opts.dryRun ? ' (dry-run)' : ''}`);
 
   // ── Steps 1–4: discover → dedup → record → OA-locate → classify ─────────────

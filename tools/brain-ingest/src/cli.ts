@@ -6,6 +6,9 @@
  * / `resume`, which delegate to `run.ts` (the §10.6 orchestrator).
  */
 
+import { realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
 import { inspectConfig, loadConfig, sourceEnablement, REQUIRED_VARS } from './config.js';
 import { run, statusReport, type RunResult } from './run.js';
 import { SEED_TOPICS } from './seeds.js';
@@ -16,12 +19,15 @@ import {
   candidateCounts,
   enumerateSeederCandidates,
   generateSeedQueries,
+  loadMergedSeeds,
+  type MergedSeeds,
 } from './seeder/index.js';
 import { pairFromKeys, synthesize, claimsPath, defaultEdgesDir } from './synth/index.js';
 import { repoRoot } from './seeder/load.js';
 import { R2Store } from './storage/r2.js';
 import { r2TextLoader } from './verify/quoteCheck.js';
 import { verify } from './verify/verifier.js';
+import { corpusTexts, loadCorpusFromFile } from './verify/corpus.js';
 import { LlmRouter } from '../../llm-router/src/index.js';
 
 const USAGE = `ourobion brain-ingest — open-access-first paper-corpus fetcher
@@ -45,12 +51,17 @@ Commands:
                                                    A8 synthesis: load canonical text → passages → LLM
                                                    RelationshipClaims (via router), quoteCheck-gated;
                                                    appends data/corpus/edges/claims.jsonl (edge-loader reads it)
-  verify [--from-claims <path>] [--edge <edgeId>] [--dry-run] [--triage-only]
+  verify [--from-claims <path>] [--corpus <path>] [--edge <edgeId>]
+         [--edges-dir <dir>] [--dry-run] [--triage-only]
                                                    A10 adversarial verification: A9 quoteCheck →
                                                    budget triage (C7) → verifier-owned retrieval →
                                                    refute-first LLM (router node 'verifier',
                                                    non-Anthropic) → schema-enforced EdgeVerification;
-                                                   appends data/corpus/edges/verifications.jsonl.
+                                                   appends <edges-dir>/verifications.jsonl.
+                                                   --corpus <path>: JSONL of CorpusDoc lines the
+                                                   verifier retrieves over (O15; corpus texts also
+                                                   serve the quoteCheck for papers they cover);
+                                                   WITHOUT it retrieval runs over an EMPTY corpus.
                                                    --triage-only / --dry-run make no LLM call.
   venue --issn <issn> [--sjr-quartile 1-4]         b2 venue lookup: OpenAlex Source stats +
                                                    C8 impactTier band (per-ISSN cache)
@@ -202,11 +213,28 @@ function parseCap(options: Map<string, string>): number | undefined {
 }
 
 /**
+ * Log the O14 topic-pool header ("topics: N static + M db") so every run makes
+ * the seeds source visible; the merge itself is `seeder/dbSeeds.ts` (fail-soft:
+ * no/unreachable Supabase → static only + one loud warning on stderr).
+ */
+async function loadTopicPool(log: (line: string) => void): Promise<MergedSeeds> {
+  const merged = await loadMergedSeeds({ warn: (m) => process.stderr.write(m + '\n') });
+  log(
+    `topics: ${merged.staticCount} static + ${merged.dbCount} db` +
+      (merged.dbAvailable ? '' : ' (db seeds unavailable — static only)'),
+  );
+  return merged;
+}
+
+/**
  * `seed-queries` — the agentic seeder (design steps 1–3).
  *  - `--candidates-only`: print the deterministic candidate list, no LLM call.
  *  - `--dry-run`: print candidates + the prompt that WOULD be sent, no call/write.
  *  - default: call the router (local_agent mailbox per config), validate, and
  *    write `data/corpus/seed-queries.json`.
+ * Topic anchors are the MERGED static + `ingestion_seeds` pool (O14
+ * seeds-as-data): a db seed anchors candidates exactly like a static topic;
+ * the C9 pair gate is untouched.
  */
 async function runSeedQueries(
   flags: Set<string>,
@@ -214,9 +242,10 @@ async function runSeedQueries(
 ): Promise<number> {
   const cap = parseCap(options);
   const log = (line: string) => process.stdout.write(line + '\n');
+  const topics = (await loadTopicPool(log)).seeds;
 
   if (flags.has('candidates-only')) {
-    const candidates = await enumerateSeederCandidates();
+    const candidates = await enumerateSeederCandidates({ topics });
     const counts = candidateCounts(candidates);
     log(
       `candidates: ${candidates.length} (derivedFrom=${counts.derivedFrom} ` +
@@ -227,7 +256,7 @@ async function runSeedQueries(
   }
 
   if (flags.has('dry-run')) {
-    const candidates = await enumerateSeederCandidates();
+    const candidates = await enumerateSeederCandidates({ topics });
     const counts = candidateCounts(candidates);
     const { system, prompt } = buildSeederPrompt(candidates);
     log(
@@ -240,6 +269,7 @@ async function runSeedQueries(
   }
 
   const result = await generateSeedQueries({
+    topics,
     ...(cap !== undefined ? { capPerCandidate: cap } : {}),
     log,
   });
@@ -316,8 +346,14 @@ async function runSynthesize(
 
 /**
  * `verify` — the A10 adversarial verifier (design steps 1–4).
- *  - `--from-claims <path>`: claims.jsonl to verify (default data/corpus/edges/claims.jsonl).
+ *  - `--from-claims <path>`: claims.jsonl to verify (default <edges-dir>/claims.jsonl).
+ *  - `--corpus <path>`: JSONL corpus (one CorpusDoc per line) the verifier's OWN retrieval
+ *    ranks over (O15/B1 — without it retrieval runs over an EMPTY corpus and is logged
+ *    loudly). Corpus texts also serve the A9 quoteCheck for the papers they cover; the
+ *    R2 text loader fills cited ids the corpus lacks. Live retrieval is a later cycle.
  *  - `--edge <edgeId>`: verify only this edge.
+ *  - `--edges-dir <dir>`: where claims.jsonl defaults from / verifications.jsonl is written
+ *    (default data/corpus/edges).
  *  - `--triage-only`: print the budget-triage decision per claim; no retrieval / LLM / write.
  *  - `--dry-run`: run quoteCheck + retrieval + assemble the prompt; no LLM call / no write.
  *  - default: full run — routes the verifier node (api_worker per config; real runs need the
@@ -326,7 +362,7 @@ async function runSynthesize(
 async function runVerify(flags: Set<string>, options: Map<string, string>): Promise<number> {
   const log = (line: string) => process.stdout.write(line + '\n');
   const root = repoRoot();
-  const edgesDir = defaultEdgesDir(root);
+  const edgesDir = options.get('edges-dir') ?? defaultEdgesDir(root);
   const claimsFile = options.get('from-claims') ?? claimsPath(edgesDir);
   const triageOnly = flags.has('triage-only');
   const dryRun = flags.has('dry-run');
@@ -344,10 +380,32 @@ async function runVerify(flags: Set<string>, options: Map<string, string>): Prom
   // The quoteCheck / retrieval / LLM path needs paper text + the router; --triage-only needs neither.
   if (!triageOnly) {
     runOpts.textLoader = r2TextLoader(new R2Store(loadConfig()));
+
+    // O15: feed the verifier's own retrieval. A committed fixture corpus is the
+    // supported source this cycle; a live-retrieval adapter is a LATER cycle.
+    const corpusFile = options.get('corpus');
+    if (corpusFile !== undefined) {
+      const corpus = loadCorpusFromFile(corpusFile);
+      runOpts.retrieve = { corpus };
+      // Corpus texts also serve the A9 quoteCheck for papers the corpus holds;
+      // the R2 loader (above) fills only the cited ids the corpus lacks.
+      runOpts.texts = corpusTexts(corpus);
+      log(`verify: corpus loaded — ${corpus.length} doc(s) from ${corpusFile}`);
+    } else {
+      log(
+        'verify: WARNING — no --corpus supplied: verifier-owned retrieval will run over an ' +
+          'EMPTY corpus (ZERO sources retrieved for every claim), so full-mode verdicts cannot ' +
+          'be grounded. Pass --corpus <path> (JSONL of CorpusDoc lines, e.g. ' +
+          'tools/brain-ingest/fixtures/verify-corpus.jsonl). Live retrieval is a later cycle.',
+      );
+    }
+
     if (!dryRun) {
       // The router config enforces the non-Anthropic decorrelation invariant at load;
       // a real dispatch surfaces the missing key (run decision D4 / register B5).
-      runOpts.router = new LlmRouter();
+      // U8/D13 carry-forward: the async factory fetches nao's cap overrides
+      // (llm_router_cap_overrides) FAIL-SOFT so they bind this real verify run.
+      runOpts.router = await LlmRouter.create();
       runOpts.verifierModel = 'router:verifier-node';
     }
   }
@@ -391,6 +449,9 @@ export async function main(argv: string[]): Promise<number> {
         return 0;
 
       case 'ingest': {
+        // O14 seeds-as-data: discovery draws from the merged static + db pool
+        // (fail-soft; a db slug is also a valid --seed selector on real runs).
+        const pool = await loadTopicPool((line) => process.stdout.write(line + '\n'));
         const result = await run({
           seed: options.get('seed'),
           limit: parseLimit(options),
@@ -401,6 +462,7 @@ export async function main(argv: string[]): Promise<number> {
           memoryGuard: {},
           // Opt-in: read control/ingest-config.json from R2 (src/control.ts).
           controlFromR2: flags.has('remote-control'),
+          seedPool: pool.seeds,
         });
         printRunResult(result);
         return 0;
@@ -410,12 +472,14 @@ export async function main(argv: string[]): Promise<number> {
         // Resume is `ingest` without a dry-run: already-'fetched' papers are
         // skipped (run() resumes from the manifest), so this picks up where an
         // interrupted multi-day run stopped.
+        const pool = await loadTopicPool((line) => process.stdout.write(line + '\n'));
         const result = await run({
           seed: options.get('seed'),
           limit: parseLimit(options),
           dryRun: false,
           memoryGuard: {},
           controlFromR2: flags.has('remote-control'),
+          seedPool: pool.seeds,
         });
         printRunResult(result);
         return 0;
@@ -448,4 +512,27 @@ export async function main(argv: string[]): Promise<number> {
   }
 }
 
-main(process.argv.slice(2)).then((code) => process.exit(code));
+/**
+ * True when this module is the directly-invoked script (`tsx src/cli.ts …`,
+ * `npm start -- …`) rather than an import (the CLI integration tests import
+ * {@link main} and drive it with argv arrays — auto-running here would make the
+ * test process print usage and exit). Windows: realpath + case-insensitive
+ * compare (drive-letter casing varies by invoker).
+ */
+function isDirectCliRun(): boolean {
+  const invoked = process.argv[1];
+  if (invoked === undefined) return false;
+  try {
+    const self = realpathSync(fileURLToPath(import.meta.url));
+    const target = realpathSync(invoked);
+    return process.platform === 'win32'
+      ? self.toLowerCase() === target.toLowerCase()
+      : self === target;
+  } catch {
+    return false;
+  }
+}
+
+if (isDirectCliRun()) {
+  main(process.argv.slice(2)).then((code) => process.exit(code));
+}

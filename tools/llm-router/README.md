@@ -25,9 +25,11 @@ npx tsx src/cli.ts check-config   # operator report (also: ledger)
 | `local_agent` | Filesystem mailbox fulfilled by the **hosting agent session** (e.g. the Claude Code session orchestrating a run) | none | prepopulation / dev runs inside an agent session (§10.1 "off-API terminal rows") |
 | `api_worker` | Native-fetch adapters: **Anthropic Messages API** + **OpenAI Chat Completions** | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / (`GOOGLE_API_KEY` reserved — no adapter yet) | metered runtime (CLI on CI, server-side generation) |
 
-The route is **per node in config**, never in node code. The shipped default routes every node
-through `local_agent` because this machine has no API keys (blocked-on-key register B5); flipping a
-node to `api_worker` is a one-line config change once its key is provisioned.
+The route is **per node in config**, never in node code. The shipped config (Run 2.0 posture)
+routes **all six nodes through `api_worker` on OpenAI** — `gpt-5` for synthesis/verifier, `gpt-5-mini`
+for the rest — under an explicit **TEST-MODE** block (see below), because `OPENAI_API_KEY` is the
+only provisioned key. Flipping a node back to `local_agent` (or another provider) is a one-line
+config change.
 
 ## How nodes consume it
 
@@ -140,8 +142,11 @@ atomically, repeat.
 ```jsonc
 {
   "version": 1,
-  "nodes": {                    // all six node ids REQUIRED; models per C6
-    "synthesis": { "model": "claude-sonnet-5", "route": "local_agent", "maxOutputTokens": 8000 }
+  "testMode": {                 // OPTIONAL — downgrades decorrelation violations to warnings (see above)
+    "reason": "non-empty justification (REQUIRED when the block is present)"
+  },
+  "nodes": {                    // all six node ids REQUIRED; models per C6 (Run 2.0: all OpenAI)
+    "synthesis": { "model": "gpt-5", "route": "api_worker", "maxOutputTokens": 8000 }
     // seeder, verifier, phrasing_card, report_narrative, extract_assist …
   },
   "providers": [                // model-id prefix → vendor family + key env var (first match wins)
@@ -152,11 +157,12 @@ atomically, repeat.
   "prices": {                   // USD per 1M tokens — ALL PROVISIONAL (C7), used only for budget accounting
     "claude-sonnet-5":  { "inputUsdPerMTok": 3.0,  "outputUsdPerMTok": 15.0, "provisional": true },
     "claude-haiku-4-5": { "inputUsdPerMTok": 1.0,  "outputUsdPerMTok": 5.0,  "provisional": true },
-    "gpt-5":            { "inputUsdPerMTok": 1.25, "outputUsdPerMTok": 10.0, "provisional": true }
+    "gpt-5":            { "inputUsdPerMTok": 1.25, "outputUsdPerMTok": 10.0, "provisional": true },
+    "gpt-5-mini":       { "inputUsdPerMTok": 0.25, "outputUsdPerMTok": 2.0,  "provisional": true }
   },
-  "budget": {                   // C7 caps
-    "perRunOutputTokens": 200000,   // output tokens per run (runId)
-    "perDayUsdPerNode": 5.0,        // USD per UTC day per node/stage
+  "budget": {                   // C7 caps — set LOW for Run 2.0 (whole-run budget ≈ US$14.7 / 20 SGD)
+    "perRunOutputTokens": 60000,    // output tokens per run (runId)
+    "perDayUsdPerNode": 1.0,        // USD per UTC day per node/stage
     "hardStopFraction": 0.95,       // refuse the call that would cross this line
     "ledgerPath": "data/llm-router/ledger.json",  // repo-root-relative unless absolute
     "retentionDays": 30             // optional (default 30): ledger entries older than this are pruned
@@ -177,12 +183,33 @@ invariant**:
 > `family(nodes.verifier.model) !== 'anthropic'`
 
 A same-family verifier shares the synthesizer's blind spots (memory 0013 / brain-synthesis-design);
-per architecture §10.1 the verifier is non-Anthropic. No violating config can be constructed.
+per architecture §10.1 the verifier is non-Anthropic. No violating config can be constructed —
+**except under TEST-MODE**:
+
+### TEST-MODE (`testMode` block)
+
+```jsonc
+"testMode": { "reason": "why decorrelation is deliberately off (REQUIRED, non-empty)" }
+```
+
+Presence of this block downgrades the two decorrelation clauses from hard load failures to a
+**loud warning naming the violated invariant** (everything else still fails hard). It exists for
+the Run 2.0 single-provider posture: only `OPENAI_API_KEY` is provisioned, so synthesis and
+verifier share a family and verifier verdicts are *not* independently verified. While it is set:
+
+- config load / `check-config` warn and report `decorrelation.ok: false` + the test-mode state;
+- every `route()` result carries `testMode: { reason, label }`, where `label` is the exported
+  constant `TEST_MODE_LABEL` — exactly
+  `scaffolded + unit-tested (TEST-MODE: single-provider, decorrelation OFF)` — which downstream
+  units MUST stamp on verifier verdicts / UI / logs.
+
+Delete the block (and restore a second provider) to re-arm the hard invariant; without the flag,
+validation behaves exactly as before.
 
 ## Budget / ledger
 
 Two caps, both hard-stopped at 95% (mirrors `tools/brain-ingest/src/limits/budget.ts` semantics):
-per-day **per-node** USD ($5) and per-run output tokens (200k). The gate is **pre-call and
+per-day **per-node** USD ($1, Run 2.0 low posture) and per-run output tokens (60k). The gate is **pre-call and
 fail-closed**: worst-case estimate = prompt-length input (~4 chars/token) + the call's full output
 ceiling; the call is refused before dispatch when the projection lands at or beyond the hard-stop
 line, and actual usage is recorded after. The ledger is a small JSON file (atomic tmp+rename
@@ -217,9 +244,22 @@ npx tsx src/cli.ts ledger         # today's per-node spend + per-run output toke
 `check-config` exit codes: `0` valid · `1` invalid config (incl. decorrelation violations) ·
 `2` valid but an `api_worker`-routed node is missing its provider key (blocked-on-key, B5).
 
+## Live smoke script (costs money)
+
+`scripts/smoke-openai.ts` is a **manual, run-once** proof of the real OpenAI api_worker path. It is
+NOT part of `npm test` and **spends real USD** (well under $0.01/run): it loads `OPENAI_API_KEY`
+from `tools/brain-ingest/.env`, routes one tiny request through `phrasing_card` (gpt-5-mini), and
+prints the router result plus the ledger entry it recorded.
+
+```
+cd tools/llm-router && npx tsx scripts/smoke-openai.ts
+```
+
 ## Testing
 
-`npm test` — 48 tests, fully offline: config validation incl. every decorrelation failure mode;
+`npm test` — 56 tests, fully offline: config validation incl. every decorrelation failure mode
+and the TEST-MODE downgrade contract (single-provider hard-fails without the flag, warns with it,
+`reason` required, results carry `TEST_MODE_LABEL`);
 both adapters against mocked fetch (wire shapes, 429 backoff, 5xx exhaustion, non-retryable 400,
 key-missing before any network); mailbox round-trip with the response written by the test playing
 the fulfilling agent (timeout, error responses, half-written-JSON tolerance); both budget hard

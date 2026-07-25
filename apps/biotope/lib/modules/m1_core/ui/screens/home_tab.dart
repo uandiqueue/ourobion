@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme.dart';
 import '../../impl/auth_service.dart';
 import '../../impl/profile_service.dart';
+import '../../../m5a_baselines/ui/widgets/metric_trend_section.dart';
 import '../../../m6_engagement/index.dart';
 import 'sign_in_screen.dart';
 
@@ -24,6 +25,7 @@ class HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
   double? _todayDqs;
   EngagementState _engagement = EngagementState.zero;
   bool _loading = true;
+  final _trendKey = GlobalKey<MetricTrendSectionState>();
 
   @override
   void initState() {
@@ -47,6 +49,11 @@ class HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
   }
 
   Future<void> _load({bool animate = true}) async {
+    // Post-analysis hygiene (U7): re-fetch the trend chart whenever the Home
+    // tab reloads (tab re-focus via AppShell). Fire-and-forget — the section
+    // manages its own loading state.
+    _trendKey.currentState?.reload();
+
     final client = Supabase.instance.client;
     final userId = client.auth.currentUser!.id;
     final today = _dateStr(DateTime.now());
@@ -216,6 +223,13 @@ class HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
                     longestStreak: _engagement.longestStreakDays,
                     dqs7DayAvg: _engagement.dqs7DayAvg,
                   ),
+
+                  const SizedBox(height: 20),
+
+                  // ── Metric trends (demo main-loop step 2) ─────────
+                  _Eyebrow(TrendCopy.eyebrow),
+                  const SizedBox(height: 10),
+                  MetricTrendSection(key: _trendKey),
 
                   const SizedBox(height: 20),
 

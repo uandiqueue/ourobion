@@ -1,13 +1,14 @@
 name: CI
 
 # The non-bypassable backstop: mirrors the local pre-push gate (skippable with --no-verify) and adds
-# the checks that can only run in CI. Six jobs:
+# the checks that can only run in CI. Seven jobs:
 #   - context     : node tools/context_sync.mjs --check (sessions / memory / decisions / index / couplings)
 #   - flutter     : flutter analyze + flutter test (with the public env file built from secrets)
 #   - typescript  : tsc --noEmit over the shared/ contracts
 #   - node-tools  : matrix over the tools/* node packages — npm ci + typecheck + test, plus the
 #                   DB-free drift guards (rules --check, metric-view --check). All suites are
 #                   offline-first: no Docker, no DB, no network, no secrets.
+#   - nao         : apps/nao typecheck + node:test suites (no build — needs CF bindings)
 #   - deno-check       : deno check over the three edge-function handler entrypoints (audit A24) —
 #                        the only compile pass the Deno.serve shells get before deploy.
 #   - migrations-apply : applies supabase/migrations/*.sql in filename order against a vanilla
@@ -148,6 +149,36 @@ jobs:
         if: matrix.drift_check
         working-directory: ${{ matrix.package }}
         run: npm run check
+
+  # ─── nao (apps/nao, Next.js on OpenNext/Cloudflare) — typecheck + node:test suites (run-2 U6,
+  # the first nao code unit adds the job). Offline-first like node-tools: fixtures/stubs only, no
+  # Docker, no DB, no secrets. Deliberately NO `next build` step: the OpenNext build needs
+  # Cloudflare bindings (wrangler.jsonc R2/D1) that CI does not have.
+  nao:
+    name: nao — typecheck & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          # apps/nao declares engines.node >=26 (its node:test suites import .ts directly).
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: apps/nao/package-lock.json
+
+      - name: Install dependencies
+        working-directory: apps/nao
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: apps/nao
+        run: npm run typecheck
+
+      - name: Test
+        working-directory: apps/nao
+        run: npm test
 
   # ─── Audit A24: the three Deno handler shells (Deno.serve + jsr: imports) are imported by
   # nothing the node jobs compile — this is their only type check before deploy. Runs from each

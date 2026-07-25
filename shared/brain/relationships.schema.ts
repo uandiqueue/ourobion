@@ -16,6 +16,7 @@
 import { z } from 'zod';
 import type {
   Citation,
+  EvidencePassage,
   QuoteSpan,
   RelationshipClaim,
   EdgeVerification,
@@ -47,6 +48,15 @@ export const evidenceTierSchema = z.union([
 export const impactTierSchema = z.enum(['high', 'moderate', 'low', 'preprint']);
 export const verificationStatusSchema = z.enum(['active', 'stale', 'superseded']);
 
+// O15/B1: bounded, provenance-addressable evidence passage carried on a citation. ADDITIVE +
+// OPTIONAL (accepted-contract discipline: fields are added optional, never removed/renamed) so
+// every pre-existing record without `evidence` still validates. Producers bound the text size
+// (brain-ingest `maxEvidenceCharsPerSource`); the schema only requires non-emptiness.
+export const evidencePassageSchema = z.object({
+  text: z.string().min(1),
+  locator: z.string().min(1),
+});
+
 export const citationSchema = z.object({
   paperId: z.string().min(1),
   title: z.string().min(1),
@@ -55,6 +65,7 @@ export const citationSchema = z.object({
   evidenceTier: evidenceTierSchema,
   impactTier: impactTierSchema,
   stance: z.enum(['supports', 'refutes', 'mixed', 'mentions']),
+  evidence: z.array(evidencePassageSchema).readonly().optional(),
 });
 
 export const quoteSpanSchema = z
@@ -207,6 +218,21 @@ export const edgeVerificationSchema = z
         message: `${v.edgeId}: allPresent must equal (spansTotal > 0 && spansFound === spansTotal)`,
       });
     }
+    // O17 (verdict B3): a SERVABLE verdict requires a PASSING quote check. Mirrors
+    // shared/brain/index.ts SERVABLE_VERDICTS ({supported, partial}) — the only verdicts the band
+    // computation can serve — so the CONTRACT refuses a servable verdict whose grounding quotes
+    // were not all found (zero-span {0,0,false} or partially-found {n,m,false}); such a record
+    // could otherwise band `mid` through the loader. The pipeline's pre-LLM quote gate
+    // (brain-ingest verifier.ts) masks this for in-repo runs but is no guarantee for
+    // hand-authored / legacy / imported artifacts. Conditional on the verdict: zero-span
+    // `uncertain` / `unsupported` / `contradicted` records are intentionally retained (A3).
+    const servable = v.verdict === 'supported' || v.verdict === 'partial';
+    if (servable && !(v.quoteCheck.spansFound >= 1 && v.quoteCheck.allPresent === true)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `${v.edgeId}: servable verdict '${v.verdict}' requires a passing quote check (spansFound >= 1 && allPresent === true), got ${v.quoteCheck.spansFound}/${v.quoteCheck.spansTotal} allPresent=${v.quoteCheck.allPresent}`,
+      });
+    }
   });
 
 // ─── Compile-time AssertExact: zod-inferred types === hand-written interfaces ────────────────────
@@ -217,16 +243,19 @@ type Exact<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B 
   ? true
   : false;
 
+type ZodEvidencePassage = z.infer<typeof evidencePassageSchema>;
 type ZodCitation = z.infer<typeof citationSchema>;
 type ZodQuoteSpan = z.infer<typeof quoteSpanSchema>;
 type ZodClaim = z.infer<typeof relationshipClaimSchema>;
 type ZodVerification = z.infer<typeof edgeVerificationSchema>;
 
 // If any line errors, relationships.ts and relationships.schema.ts have drifted apart.
+const _assertEvidencePassage: Exact<ZodEvidencePassage, EvidencePassage> = true;
 const _assertCitation: Exact<ZodCitation, Citation> = true;
 const _assertQuoteSpan: Exact<ZodQuoteSpan, QuoteSpan> = true;
 const _assertClaim: Exact<ZodClaim, RelationshipClaim> = true;
 const _assertVerification: Exact<ZodVerification, EdgeVerification> = true;
+void _assertEvidencePassage;
 void _assertCitation;
 void _assertQuoteSpan;
 void _assertClaim;

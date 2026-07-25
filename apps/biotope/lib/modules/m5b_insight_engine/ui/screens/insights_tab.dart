@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme.dart';
 import '../../index.dart';
+import 'insight_provenance_screen.dart';
 
 /// User-facing copy for the relationship-card affordances. Public so the copy
 /// gate test can run every string through the shared non-diagnostic validator
@@ -16,6 +17,7 @@ abstract final class InsightCardCopy {
   static const stillResearchingLabel = 'Still researching';
   static const stillResearchingBody =
       'This pattern comes from your own data. No published research link yet.';
+  static const howGenerated = 'How this was generated';
 
   static const all = [
     relationshipCategoryLabel,
@@ -25,6 +27,7 @@ abstract final class InsightCardCopy {
     verifiedPrefix,
     stillResearchingLabel,
     stillResearchingBody,
+    howGenerated,
   ];
 }
 
@@ -68,6 +71,15 @@ class _InsightsTabState extends State<InsightsTab> {
     setState(() => _cards.removeWhere((c) => c.id == card.id));
   }
 
+  /// Demo main-loop step 5: tapping a card opens its provenance detail.
+  void _openProvenance(InsightCard card) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => InsightProvenanceScreen(card: card),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -104,6 +116,7 @@ class _InsightsTabState extends State<InsightsTab> {
                             itemBuilder: (_, i) => _InsightCardTile(
                               card: _cards[i],
                               onDismiss: () => _dismiss(_cards[i]),
+                              onTap: () => _openProvenance(_cards[i]),
                             ),
                           ),
                         ),
@@ -173,7 +186,12 @@ class _EmptyState extends StatelessWidget {
 class _InsightCardTile extends StatelessWidget {
   final InsightCard card;
   final VoidCallback onDismiss;
-  const _InsightCardTile({required this.card, required this.onDismiss});
+  final VoidCallback onTap;
+  const _InsightCardTile({
+    required this.card,
+    required this.onDismiss,
+    required this.onTap,
+  });
 
   static IconData _icon(InsightCategory cat) => switch (cat) {
         InsightCategory.hydration => Icons.water_drop_outlined,
@@ -222,113 +240,141 @@ class _InsightCardTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final iconColor = _iconColor(card.category);
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: OurobionColors.surfaceLowest,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: OurobionColors.outlineVariant),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A191c1c),
-            blurRadius: 24,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: _iconBg(card.category),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(_icon(card.category), size: 22, color: iconColor),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _categoryLabel(card.category),
-                      style: GoogleFonts.manrope(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.4,
-                        color: iconColor,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      card.title,
-                      style: GoogleFonts.manrope(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: OurobionColors.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            card.body,
-            style: GoogleFonts.manrope(
-              fontSize: 13,
-              color: OurobionColors.onSurfaceVariant,
-              height: 1.5,
+    // Whole tile taps through to the provenance detail (demo step 5); the
+    // inner dismiss / research-basis gesture detectors win their hit tests.
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: OurobionColors.surfaceLowest,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: OurobionColors.outlineVariant),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A191c1c),
+              blurRadius: 24,
+              offset: Offset(0, 8),
             ),
-          ),
-          if (card.isResearchLinked) ...[
-            const SizedBox(height: 12),
-            _ResearchBasis(edgeRefs: card.edgeRefs),
-          ] else if (card.isStillResearching) ...[
-            const SizedBox(height: 12),
-            const _StillResearchingNote(),
           ],
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: OurobionColors.surfaceContainer,
-                  borderRadius: BorderRadius.circular(6),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: _iconBg(card.category),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child:
+                      Icon(_icon(card.category), size: 22, color: iconColor),
                 ),
-                child: Text(
-                  _confidenceLabel(card.confidenceScore),
-                  style: GoogleFonts.manrope(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: OurobionColors.onSurfaceVariant,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _categoryLabel(card.category),
+                        style: GoogleFonts.manrope(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.4,
+                          color: iconColor,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        card.title,
+                        style: GoogleFonts.manrope(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: OurobionColors.onSurface,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              card.body,
+              style: GoogleFonts.manrope(
+                fontSize: 13,
+                color: OurobionColors.onSurfaceVariant,
+                height: 1.5,
               ),
-              const Spacer(),
-              GestureDetector(
-                onTap: onDismiss,
-                child: Text(
-                  'Dismiss',
+            ),
+            if (card.isResearchLinked) ...[
+              const SizedBox(height: 12),
+              _ResearchBasis(edgeRefs: card.edgeRefs),
+            ] else if (card.isStillResearching) ...[
+              const SizedBox(height: 12),
+              const _StillResearchingNote(),
+            ],
+            const SizedBox(height: 12),
+            // Provenance affordance (demo main-loop step 5) — the whole tile
+            // is tappable; this line makes the detail screen discoverable.
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  InsightCardCopy.howGenerated,
                   style: GoogleFonts.manrope(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: OurobionColors.outline,
+                    color: OurobionColors.primary,
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 16,
+                  color: OurobionColors.primary,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: OurobionColors.surfaceContainer,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    _confidenceLabel(card.confidenceScore),
+                    style: GoogleFonts.manrope(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: OurobionColors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: onDismiss,
+                  child: Text(
+                    'Dismiss',
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: OurobionColors.outline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

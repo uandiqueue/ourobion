@@ -78,7 +78,11 @@ export interface VerifyClaimOptions {
   router?: VerifierRouter;
   /** Text loader for the A9 quoteCheck (injected in tests). */
   textLoader?: PaperTextLoader;
-  /** Pre-supplied paper texts for quoteCheck (alternative to textLoader). */
+  /**
+   * Pre-supplied paper texts for quoteCheck. MERGED with `textLoader`: these seed
+   * the text map and the loader fills only cited ids missing from it (e.g. a
+   * --corpus run supplies corpus texts here and R2 covers the rest).
+   */
   texts?: ReadonlyMap<string, string>;
   /** The shared zod gate (injected in tests); default loaded from shared/brain. */
   validateVerification?: VerificationValidator;
@@ -97,17 +101,21 @@ export interface VerifyClaimOptions {
 
 const NOOP = (): void => {};
 
-/** Run the A9 quoteCheck for a claim, resolving each cited paper's text once. */
+/**
+ * Run the A9 quoteCheck for a claim, resolving each cited paper's text once.
+ * `opts.texts` seeds the map; `opts.textLoader` fills only the cited ids the seed
+ * is missing (so a corpus-backed run never touches R2 for papers the corpus holds).
+ */
 async function runQuoteCheck(
   claim: SynthClaim,
   opts: VerifyClaimOptions,
 ): Promise<QuoteCheckBlock> {
-  if (opts.texts) {
-    return checkClaimQuotes({ quoteSpans: claim.quoteSpans }, opts.texts).quoteCheck;
-  }
   const texts = new Map<string, string>();
+  if (opts.texts) {
+    for (const [uid, t] of opts.texts) texts.set(uid, t);
+  }
   if (opts.textLoader) {
-    const uids = [...new Set(claim.quoteSpans.map((s) => s.paperId))];
+    const uids = [...new Set(claim.quoteSpans.map((s) => s.paperId))].filter((u) => !texts.has(u));
     for (const uid of uids) {
       try {
         const t = await opts.textLoader(uid);
@@ -363,9 +371,17 @@ export {
   candidateToCitation,
   candidatePaperId,
   corpusHitToCitation,
+  extractEvidencePassages,
+  DEFAULT_MAX_EVIDENCE_CHARS_PER_SOURCE,
   claimSeed,
   tokenize,
 } from './retrieval.js';
+export {
+  loadCorpusFromFile,
+  loadCorpusFromText,
+  parseCorpusDoc,
+  corpusTexts,
+} from './corpus.js';
 export {
   enforceVerification,
   parseVerifierResponse,
