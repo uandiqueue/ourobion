@@ -112,7 +112,15 @@ NOT-live-verified list). U2 (O15 verifier grounding) marked in-progress and disp
   next-build-optimizations.md. Every PR awaits Jayden's sign-off — nothing merged, nothing
   self-signed.
 
-memory: Run 2.0 COMPLETE 2026-07-25 — 13 units, PRs #123–#135, DoD met via scripted dry-run +
-runbook; total LLM spend ≈ 0.24 SGD across both providers; sign-off queue = unit-signoff-index.md.
+## Post-run: Jayden's H1–H3 responses (same session)
+
+- H1 resolved as directive (full decorrelated-verifier run simulation) → U13 dispatched (Sonnet 5
+  per the new model policy — its first application). H2 decided (3/7/14 per RU5; doc
+  reconciliation in U13). H3: answered Jayden's dashboard question (raw data live, cards batch;
+  cron 18:15 recommended) — awaiting confirmation before building.
+
+memory: Run 2.0 COMPLETE 2026-07-25 — 13 units + U13 follow-up, PRs #123–#135, DoD met via
+scripted dry-run + runbook; total LLM spend ≈ 0.24 SGD across both providers; sign-off queue =
+unit-signoff-index.md.
 
 memory: Run 2.0 launched 2026-07-24 — resumable state = docs/temp/phase2-run-2/orchestration-log.md on the feat/phase2-run-2/* chain (worktree C:\project\ourobion-run2); inputs live ON the run branch, not dev-phase2.

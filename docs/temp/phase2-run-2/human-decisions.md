@@ -35,3 +35,19 @@ Format: id · what stopped / what is decided · what is needed · what it gates.
   trigger runs all three), but production needs a decision: add a `evaluate-signals` cron between
   the two (plus its missing `config.toml` entry)? What cadence? Gates: nightly-schedule correctness
   only; nothing in this run.
+  **Update 2026-07-25 (Jayden asked; orchestrator answered):** clarified that the raw-data
+  dashboard/trends are LIVE (metric_daily_values reads raw tables directly) — only insight cards
+  are batch. Orchestrator recommends adding the missing cron at 18:15 nightly (deterministic, no
+  LLM cost). AWAITING Jayden's confirmation before building.
+
+## Resolved by Jayden (2026-07-25)
+
+- **H1 → RESOLVED as a directive:** the Anthropic key was loaded to SIMULATE A FULL RUN with a
+  different-model verifier (not merely the single U12 leg). Executed as follow-up unit U13
+  (decorrelated full-loop simulation). Posture labels unchanged: "decorrelated but not
+  attested/ablated" — attestation/ablation still next cycle (B5/O7).
+- **H2 → DECIDED:** science-based config follows the evidence-review outputs
+  (docs/temp/phase2-research-fixes* + docs/temp/phase2-research*). For the baseline-confidence
+  drift: RU5 keeps 7 → canonical = **3/7/14** (runtime already correct); doc reconciliation
+  (architecture §11 + superseding note for the stale migration comment) folded into U13 under
+  O1's discipline.

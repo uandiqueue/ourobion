@@ -62,6 +62,7 @@ One writer at a time; each unit stacks on the chain tip.
 | U10 | Seeds-as-data: seeds table migration, nao seed-add UI, seeder reads table as 4th candidate source (C9 pair-only gate intact) + adopt LlmRouter.create() in brain-ingest (U8 carry-forward) | O14 | done |
 | U11 | Gap surfacing: nao ingestion-view of gap_ledger (detection landed in U4); signal-no-edge → gap row → visible in nao | O9 slice | done |
 | U12 | E2E demo dry-run: scripted full PART-1 flow (main loop 1–5 + features a–d) on local stack, live OpenAI for the essential proofs (ACCEPTANCE (iv), card copy inspected both orientations) + demo runbook (DoD v+vi) | DoD | done |
+| U13 | FOLLOW-UP (Jayden 2026-07-25, H1+H2): full-loop simulation with DECORRELATED verifier (all fixture claims verified live on anthropic family, loaded, pipeline run, cards+provenance checked; runbook variant section) + H2 doc reconciliation (3/7/14 per RU5) | H1, H2 | in-progress |
 
 ## Test strategy (the BAR, binding on every unit)
 
