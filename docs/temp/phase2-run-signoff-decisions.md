@@ -12,6 +12,26 @@ updated: 2026-07-18
 Non-trivial choices made autonomously during the run. Review order: D1 first (it colors everything).
 Numeric hyperparameters/config values are in [`phase2-run-config-decisions.md`](./phase2-run-config-decisions.md).
 
+## Sign-off protocol (added 2026-07-20)
+
+Each decision carries a **Review** line (who must approve) and a **Sign-off** line
+(✅ approved / ⬜ pending / ⏸ deferred · reviewer · date · comment). A decision is **cleared** only
+when every required reviewer has signed. Routing for the two-person team (Jayden + Alton):
+
+- **`shared/` contracts → BOTH** (memory 0002 2-reviewer rule; register B8) — non-negotiable.
+- **Agent-related** (LLM router, synthesis, adversarial verifier, seeder, prompts — the hackathon
+  deliverable) **→ Jayden.**
+- **Build / app / tools / CI / DB migrations / deterministic engine → Alton.**
+- **Statistical method or number decisions → DEFERRED (⏸)** until the **Methodology & Parameter
+  Register** is built next build (next-build `O2`); a stats team then reviews the science through it.
+  Neither teammate signs the *science* now; Alton may still sign a stats unit's **engineering**
+  correctness (built as specified, tests green).
+
+**Sign-off git flow:** each unit signs off on its **own branch → PR → merged (CLI) into the
+`signoff/phase2` integration branch** (only `dev-phase2` / `main` carry merge protection, so the
+integration branch takes CLI merges). Path-based enforcement of the routing is proposed as a
+`CODEOWNERS` file (next-build `O6`).
+
 ## D1 · Session PRs are self-merged into `dev-phase2`; `shared/` PRs flagged for retro-review
 - **Choice:** each session PR is merged by the orchestrator once the testing gate is green
   (`flutter analyze` + `flutter test` + `context_sync --check` + touched package suites). PRs touching
@@ -55,6 +75,12 @@ Numeric hyperparameters/config values are in [`phase2-run-config-decisions.md`](
   `deadbandSigma: 0.5` (mean/SD).
 - **Alternative rejected:** shipping the superseded name/semantics and migrating later — a contract
   field rename is exactly the churn the 2-reviewer rule exists to prevent.
+- **Review:** BOTH (shared/ L0 contract — 2-reviewer rule) · lead **Jayden** (brain/agent contract).
+- **Sign-off:** ✅ **Jayden 2026-07-20** — approved (contract/semantics): `deadbandK` = ADR-0002
+  robust-σ̂ semantics, correctly superseding `deadbandSigma`. Reconciled against live code this review.
+  Doc drift in §7/§9/§11 → **O1** (next build); the **method validity + the value `1.0` are statistics
+  → ⏸ deferred** (methodology register **O2** / backlog **B3**), not signed here.
+  ✅ **Alton 2026-07-20** — approved (naming/semantics call, not the value); co-sign complete.
 
 ## D6 · Run-tracking docs live in `docs/shared/` as indexed canonical docs
 - **Choice:** the four `phase2-run-*` docs sit in `docs/shared/` with full front-matter, picked up by
@@ -76,6 +102,10 @@ Numeric hyperparameters/config values are in [`phase2-run-config-decisions.md`](
 - **Rationale:** memory 0002's optional-with-default rule protects existing instances; the build agent
   verified there are zero persisted claim/verification instances and zero constructors in code, so
   strictness is free now and saves a tightening migration later.
+- **Review:** BOTH (shared/ brain contract — 2-reviewer rule) · lead **Jayden**.
+- **Sign-off:** ✅ **Jayden 2026-07-20** — approved; required / required-nullable is the right call, and
+  the zero-persisted-instances + zero-constructors basis was re-verified against live code this review.
+  ✅ **Alton 2026-07-20** — approved (required/required-nullable, zero-instance basis is sound); co-sign complete.
 
 ## D9 · Storage-primitive schema judgment calls (U2)
 - **Choices (full list + rationale in session log `20260715T140420Z-…storage-primitives.md`):** jsonb
@@ -86,6 +116,16 @@ Numeric hyperparameters/config values are in [`phase2-run-config-decisions.md`](
 - **The one precedent conflict:** `derived_metrics` got all four RLS policies while `baseline_snapshots`
   is select-only — followed the session spec (client-side derivation already exists in M2; "never
   hand-edit" is a process rule, not an RLS rule). Flag if you'd rather match the select-only precedent.
+- **Review:** Alton (build/plumbing — storage primitives; not a shared/ contract change).
+- **Sign-off:** ✅ Alton 2026-07-20 — approved. Schema/PK/jsonb judgment calls (D9) confirmed sound:
+                 jsonb vs fixed-width value columns, `signals`' natural composite PK, `daily_log`
+                 deferral, no overlap-exclusion on `state_bands` — all reasonable engineering calls.
+                 The one flagged precedent conflict is resolved: **derived_metrics should be
+                 server-side-only** — concur with Jayden's pre-flag and **O4** (revert to select-only,
+                 matching `baseline_snapshots`/`personal_signals`/`composed_insights`). M2's on-device
+                 derivation writes `daily_gut_rows`, not `derived_metrics`, so D9's client-write premise
+                 doesn't actually apply here; nothing writes the table today, so the revert is free.
+                 O4 is now unblocked to execute.
 
 ## D10 · Rule-blueprint contract judgment calls (U5)
 - **Choices where the design doc was silent** (full detail in session log `20260715T152517Z-…rules-as-data.md`):
