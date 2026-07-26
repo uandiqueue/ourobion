@@ -18,9 +18,14 @@ name: CI
 #                        in CI, where no supabase stack exists.
 on:
   push:
-    branches: [main, dev-phase2]
+    branches: [main, dev-phase2, dev-phase2-run3]
   pull_request:
-    branches: [main, dev-phase2]
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Exact checked-out SHA expected for this manual evidence run.
+        required: true
+        type: string
 
 jobs:
   context:
@@ -39,6 +44,23 @@ jobs:
 
       - name: Context check
         run: node tools/context_sync.mjs --check
+
+      - name: Assert exact dispatched SHA
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -eu
+          actual_sha="$(git rev-parse HEAD)"
+          test "$actual_sha" = "$EXPECTED_SHA" || {
+            echo "Expected $EXPECTED_SHA but checked out $actual_sha" >&2
+            exit 1
+          }
+
+      - name: Verify Deno matrix covers every configured function
+        run: |
+          node --test tools/check_supabase_deno_matrix.test.mjs
+          node tools/check_supabase_deno_matrix.mjs
 
       - name: Human graph view — renderer tests and single-view invariant
         run: |
@@ -201,18 +223,19 @@ jobs:
           - compute-baselines
           - evaluate-signals
           - generate-insights
+          - run-pipeline
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Deno
         uses: denoland/setup-deno@v2
         with:
-          # supabase/config.toml pins edge_runtime deno_version = 2.
-          deno-version: v2.x
+          # O24 pins the CI runtime to the version that generated supabase/deno.lock.
+          deno-version: v2.8.1
 
       - name: Type check handler
         working-directory: supabase/functions/${{ matrix.function }}
-        run: deno check --no-lock index.ts
+        run: deno check --frozen index.ts
 
   # ─── Audit A24: shadow-apply every migration, in filename order, on vanilla postgres:17
   # (major version = supabase/config.toml `major_version`). Complements — does NOT replace —
