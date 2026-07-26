@@ -1,3 +1,71 @@
+# Graphify prefers this file over the root .gitignore, so machine-local,
+# secret, dependency, build, and runtime exclusions must be repeated here.
+
+# Secrets and local agent state.
+.env
+.env.*
+!.env.example
+!.env.public.example
+.env.keys
+.env.local
+.dev.vars
+.dev.vars.*
+.claude/settings.local.json
+.agents/
+
+# Dependencies and tool caches.
+node_modules/
+vendor/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+
+# Generated build output.
+dist/
+build/
+out/
+bin/
+target/
+.open-next/
+.next/
+coverage/
+**/Flutter/ephemeral/
+**/Flutter/flutter_export_environment.sh
+apps/biotope/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+apps/biotope/ios/Runner/GeneratedPluginRegistrant.h
+apps/biotope/ios/Runner/GeneratedPluginRegistrant.m
+apps/nao/next-env.d.ts
+apps/nao/scratch/
+
+# Logs, editor state, and local Supabase state.
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*.class
+.branches/
+.temp/
+
+# Rebuildable or ephemeral project data.
+graphify-out/
+data/corpus/
+data/llm-router/
+
 # Historical provenance is not active agent context.
 docs/archive/
 
