@@ -71,6 +71,11 @@ is active and asked for no separate session/worktree)
 - `graphify-out/wiki/index.md` is referenced conditionally by `CLAUDE.md`/`GEMINI.md` but has never
   existed in this repo. Harmless (the reference is guarded by "if it exists"), left alone.
 
+- Normalized memory `0008`'s `updated:` from `2026-07-27` to `2026-07-26`. The pre-push gate correctly
+  refused the modified record because `updated:` had not moved, and `2026-07-27` was a local-timezone
+  date inconsistent with the UTC convention every session filename in this run uses (including
+  `20260726T163505Z`, the session that had set it). `2026-07-26` is the true UTC date of this edit.
+
 ## Blockers
 
 - None. `graph:view:test` 9/9, `graph:view:check` passes, `context_sync --check` passes. The new stray-view

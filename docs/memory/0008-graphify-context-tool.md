@@ -5,7 +5,7 @@ summary: graphify indexes the repo into a gitignored machine graph plus one gene
 type: memory
 status: accepted
 decided: 2026-07-13
-updated: 2026-07-27
+updated: 2026-07-26
 ---
 
 # 0008 — graphify is the semantic context tool; complementary to the deferred structural graph
@@ -27,8 +27,8 @@ graph is a rebuildable projection, never hand-edited ([0001-two-tier-truth](0001
   uncommitted, never deployed; same framing as the rest of the toolchain, AGENTS.md §4). It is on PATH
   after `. .\scripts\biotope-env.ps1`; rebuild the graph with `scripts/graphify-build.ps1` (bootstraps
   the venv on first run).
-- **Output: repo-root `graphify-out/`, gitignored** (`graph.json` + `graph.html` + AST cache +
-  manifest) — a rebuildable projection. Promote `graph.json` to committed + add a regenerate/diff check
+- **Output: repo-root `graphify-out/`, gitignored** (`graph.json` + `graph.html` + `semantic-graph.html`
+  + AST cache + manifest) — a rebuildable projection. Promote `graph.json` to committed + add a regenerate/diff check
   to `tools/context_sync.mjs --check` once a path-normalizer (port NUSPlan's
   `tools/normalize_deps_graph.mjs`) makes it diff cleanly cross-machine. `graph.html` stays gitignored.
 - **One tracked view, and it is Markdown.** `tools/graph-view/generate_graph_view.mjs` deterministically
