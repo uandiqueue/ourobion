@@ -107,7 +107,8 @@ User taps logging UI
 
 ## Database Table Overview
 
-> Full schema definitions in `shared/types/`. Tables listed here for orientation only.
+> Supabase migrations in `supabase/migrations/` are the full schema truth. Tables listed here are an
+> intentionally small module-orientation view, not a complete database inventory.
 
 | Table | Owner Module |
 |---|---|

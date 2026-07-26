@@ -4,7 +4,7 @@ summary: The deterministic PDF → JSON-blueprint → Postgres rules pipeline th
 type: design
 scope: biotope
 status: canonical
-updated: 2026-07-13
+updated: 2026-07-26
 ---
 # Insights Engine — Design (Phase 2, W2 / Track B)
 
@@ -16,13 +16,14 @@ The detailed design for ourobion's **data-driven insights engine**: a PDF → st
 pipeline that replaces the MVP's hardcoded rules. Sequencing, ownership, and the gate live in
 [`phase-2-plan.md`](../shared/phase-2-plan.md); this doc is the **contract + step detail**.
 
-## Why
+## Why and current state
 
-ourobion's MVP analysis is shallow: `supabase/functions/generate-insights/index.ts` evaluates **6
-hardcoded TypeScript rules** (`condition: (s: BaselineSnapshot) => boolean`, single-metric only). The
-rules are **code, not data**, so adding/editing one means redeploying an edge function, and cross-metric
-patterns are impossible. The engine makes rules **reviewable data**, adds **cross-metric** evaluation,
-and lets cards explain **why** they fired — all **deterministic**, with no LLM in the hot path.
+The MVP began with six hardcoded, single-metric TypeScript rules. The data-driven refactor described
+here is now implemented: reviewed JSON blueprints load into the `rules` table, the edge function reads
+active rules, and deterministic evaluators cover single-metric and cross-metric coincidence (including
+lag alignment). The design remains useful because it defines the truth/projection boundary and safe
+extension path; it is no longer a future-tense proposal. Calibration, additional rule leaves, and
+production evidence remain separate work.
 
 ## The pattern (two-tier truth, adapted to Postgres)
 

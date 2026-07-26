@@ -1,10 +1,10 @@
 ---
 title: docs/graph — code-relationship awareness index
-summary: What docs/graph holds — the curated couplings.yaml semantic/data-coupling guards that static analysis cannot see, the graphify semantic context layer, and why the auto-generated structural import graph is deferred; the boundary reference for the deferred structural graph.
+summary: What docs/graph holds — curated coupling guards, the single generated human-readable Graphify view, the machine-local semantic context layer, and the boundary reference for the deferred structural import graph.
 type: index
 scope: repo
 status: canonical
-updated: 2026-07-13
+updated: 2026-07-26
 ---
 # docs/graph — code-relationship awareness
 
@@ -18,6 +18,10 @@ auto-generated structural graph, run a semantic context graph for agents, and en
   parity of the shared types and copy rules). Each edge names a **`guard:` test** that makes the
   coupling executable. `node tools/context_sync.mjs --check` fails if a named guard file is missing.
   Guard tests live in `apps/biotope/test/guards/` and run with `flutter test`.
+- **`semantic-graph.md`** — the **only tracked human-readable graph view**. It is generated
+  deterministically from the machine-local `graphify-out/graph.json` and compresses the graph into a
+  community map, connection table, bridge-node list, hyperedges, and full community directory. It is a
+  lossy projection for orientation, never architecture truth and never hand-edited.
 
 The curated **module dependency graph and interface rules** are not duplicated here — they live in
 [`../biotope/architecture-context.md`](../biotope/architecture-context.md), which is the boundary reference today.
@@ -32,12 +36,22 @@ structural import-graph below** (it is multi-modal/semantic; the deferred one is
 - **Rebuild:** `scripts/graphify-build.ps1` (AST-only, local, no LLM, no network) — bootstraps a
   project-bounded venv in `..\biotope-toolchain\graphify-venv` on first run, and is on PATH after
   `. .\scripts\biotope-env.ps1`. graphify is **build tooling, not a repo/runtime dependency**
-  (machine-local, uncommitted, never deployed).
+  (machine-local, uncommitted, never deployed). Both platform wrappers refresh
+  [`semantic-graph.md`](./semantic-graph.md) after updating the machine graph.
 - **Output:** repo-root **`graphify-out/`** (`graph.json` + `graph.html` + AST cache + manifest),
   **gitignored** — a rebuildable **projection**, never hand-edited ([two-tier-truth](../memory/0001-two-tier-truth.md)).
   Gitignored until a path-normalizer (port NUSPlan's `tools/normalize_deps_graph.mjs`) makes `graph.json`
   diff cleanly cross-machine — then promote it to committed + add a regenerate/diff check to
   `tools/context_sync.mjs --check`.
+- **Human-view refresh:** if an agent invokes `graphify update .` or performs the semantic pass
+  directly instead of using the wrapper, it must then run `npm run graph:view:write`. The local
+  pre-push hook always verifies there is exactly one generated human graph view; when
+  `graphify-out/graph.json` exists it also compares the content hashes and rendering. CI can enforce
+  uniqueness/existence but cannot compare the gitignored machine graph. The renderer and its tests
+  live under `tools/graph-view/`.
+- **Exclusions:** `.graphifyignore` removes `docs/archive/` and the generated human view from both
+  extraction modes. This keeps historical/superseded material out of active context and prevents the
+  projection from indexing itself.
 - **Agent integration (pre-wired, committed):** PreToolUse hooks remind the agent to query the graph
   (`graphify query|path|explain`) before grepping/reading source — for **Claude Code**
   (`.claude/settings.json` + `CLAUDE.md` + a `/graphify` skill in `.claude/skills/graphify/`), **Codex**
@@ -47,6 +61,10 @@ structural import-graph below** (it is multi-modal/semantic; the deferred one is
 - **Semantic pass (LLM):** `/graphify .` in Claude Code (session model, no key) or headless
   `graphify extract --backend ollama|claude|gemini` adds inferred cross-language edges + community names.
   It is *probabilistic* — `couplings.yaml` stays the enforced source for cross-language data contracts.
+- **Incremental cadence:** AST updates are cheap and may run after code changes. A semantic pass need
+  only process manifest entries whose semantic hash is missing or invalidated; run that incremental
+  pass at session close instead of allowing unprocessed entries to accumulate into another full-repo
+  batch. Re-render the human view after the semantic update.
 - **No API key:** AST extraction is fully local (tree-sitter; Dart + TS + more). The cross-language
   semantic pass uses the **host Claude Code session model** when invoked inside the assistant.
 

@@ -21,18 +21,21 @@ sets, and split sizes below are observed, not assumed).
 
 > **Licensing:** non-commercial status does not make an unconfirmed licence acceptable. Every training
 > source, transform, base model and redistributed artifact needs an explicit recorded licence and
-> attribution decision before use. Run 3 O30 uses SciFact only and excludes HealthVer until reusable
-> permission/licensing is documented. JCR/Impact Factor remains dropped (paid Clarivate), with the
+> attribution decision before use. The isolated `zebra-nli-shadow-v0` experiment uses SciFact only
+> and excludes HealthVer until reusable permission/licensing is documented. JCR/Impact Factor remains
+> dropped (paid Clarivate), with the
 > deterministic venue lookup using SJR + OpenAlex instead.
 
 ---
 
 ## 0 · The shared idea
 
-None of the three trains on ourobion data (we have **no edges/verifications yet**, and only ~190
-papers). Each is a **fine-tune of a small biomedical encoder on existing public labelled data**, with an
-explicit **label-mapping layer** onto our contract enums. Our own verified edges become a **held-out eval
-set + a late fine-tune** once Track B produces them. At inference each model **populates or cross-checks a
+None of the three trains on ourobion data: the product now has generated relationship claims and
+verifications, but it does **not** yet have an approved, independently human-labelled training corpus.
+Each model is a **fine-tune of a small biomedical encoder on existing public labelled data**, with an
+explicit **label-mapping layer** onto our contract enums. A future approved set of human-adjudicated
+ourobion edges may become a **held-out evaluation set first**, and only a separately approved late
+fine-tune later. At inference each model **populates or cross-checks a
 specific `EdgeVerification` / `Citation` field**, so it removes an LLM call rather than adding one.
 
 | Model | Trains on | Populates / checks | Base encoder |
@@ -51,9 +54,9 @@ the **parquet mirrors** noted per-model below — the field shapes are identical
 
 ## 1 · Model (a) — claim-support / NLI
 
-> **Run-3 boundary:** the broader candidate recipe below remains roadmap context. O30 trains one
-> SciFact-only BiomedBERT pilot under `docs/temp/run3/custom-model-training-plan.md`; HealthVer,
-> PUBHEALTH and SciNLI are not Run-3 inputs.
+> **Experiment boundary:** the broader candidate recipe below remains roadmap context. The standalone
+> [`zebra-nli-shadow-v0` plan](../temp/model-training/zebra-nli-shadow-v0-training-plan.md) trains and
+> evaluates one SciFact-only BiomedBERT pilot; HealthVer, PUBHEALTH and SciNLI are not Zebra inputs.
 
 **Task.** Cross-encoder: `[CLS] claim [SEP] evidence-text` → **supported / contradicted / uncertain**
 (our `verdict`, collapsed to 3 for the model; `partial`/`unsupported` are recovered downstream from the
@@ -202,13 +205,15 @@ and a sanity check on `relation` — deterministic corroboration of the most dam
 
 ## 4 · Sequencing & honest limits
 
-1. **Run 3 trains only (a)** as the non-serving NLI Shadow v0 SciFact pilot. Model (c) stays deferred.
+1. The isolated model-training workstream trains only **(a)** as the non-serving
+   `zebra-nli-shadow-v0` SciFact pilot. It is not a Run-3 unit. Model (c) stays deferred.
 2. **(b2)** already ships as a lookup (no training). **(b1)** and (c) remain later work.
 3. When the pipeline produces independently human-labelled `(claim, quote, verdict)` tuples, use them
    first as a **held-out eval set**, not automatic training labels; only a later approved phase may
    fine-tune on them.
 4. When sufficient reviewed labels exist, consider a late fine-tune and separately decide whether to
-   run (a) in shadow. Do not let Run-3 scores short-circuit the verifier.
+   run (a) in shadow. Zebra scores never short-circuit the verifier unless a later product decision,
+   safety review, and serving contract explicitly authorize that change.
 
 **Limits to keep visible:** (1) domain gap — SciFact/BioRED skew to biomedical abstracts; our
 hydration/vector/environment metric pairs are under-represented, so the late in-house fine-tune matters.

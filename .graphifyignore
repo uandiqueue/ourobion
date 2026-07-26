@@ -1,0 +1,5 @@
+# Historical provenance is not active agent context.
+docs/archive/
+
+# Generated from graphify-out/graph.json; indexing it would create a feedback loop.
+docs/graph/semantic-graph.md

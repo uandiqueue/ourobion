@@ -80,16 +80,17 @@ runtime (the jobs `validateClaim` / `validateVerification` their own output befo
 compile-time `AssertExact<>` fails `tsc` if the hand-written interfaces and the zod-inferred types
 drift apart.
 
-## Deferred (lands with the first persistence + consumer)
+## Guards and remaining parity
 
-TS-first, like the registry was before its env metrics landed:
+- **Landed:** `brain-edge-schema` couples the relationship contract to the
+  `relationship_claims`/`edge_verifications` migration through
+  `tools/edge-loader/tests/edge_table_schema.test.ts`.
+- **Landed:** `brain-endpoints-metrics-registry` asserts every edge endpoint resolves to an active
+  registry metric through `tools/edge-loader/tests/edge_endpoints_registry.test.ts`.
+- **Still deferred:** `relationships.dart` plus TS↔Dart parity, because Flutter consumes the
+  provenance/card RPC shape rather than mirroring the full authoring contract today. Add the mirror
+  only when a real Dart consumer needs it.
 
-- **`relationships.dart` + a `brain-relationships-ts-dart-parity` guard** — when the Flutter app
-  renders edges.
-- **A `brain-edge-to-schema` guard** — when the graph is persisted to a table/migration.
-- **A `brain-endpoint-to-registry` guard** — asserting every edge endpoint resolves to an active
-  registry metric (`metrics.isActiveMetric`).
-
-These follow the `couplings.yaml` pattern in [`docs/biotope/metrics-registry-design.md`](../../docs/biotope/metrics-registry-design.md);
-they aren't added yet because there's no Dart consumer or DB table to hold honest. See
-`docs/nao/brain-synthesis-design.md` → "Guards (deferred)".
+The executable coupling declarations live in
+[`docs/graph/couplings.yaml`](../../docs/graph/couplings.yaml). See the broader guard design in
+[`docs/nao/brain-synthesis-design.md`](../../docs/nao/brain-synthesis-design.md).

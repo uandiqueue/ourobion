@@ -42,14 +42,16 @@ blueprint guard, render.
 
 ## Condition AST
 
-A zod `discriminatedUnion` on `type`; one pure evaluator per leaf lands with the engine refactor.
+A zod `discriminatedUnion` on `type`; the deterministic edge-function evaluator implements each
+currently registered leaf.
 
 - `trend` — `{ metricKey, equals: rising|falling|stable, minConfidence }`
 - `threshold` — `{ metricKey, field: mean|std_dev|min|max, op: lt|lte|gt|gte|eq, value, minConfidence }`
 - `coincidence` — `{ metricKeys: [K1, K2], both: [leaf-on-K1, leaf-on-K2], lagDays, minConfidence }` —
   the cross-metric conjunction over two `baseline_snapshots` rows. Named **coincidence, not
   correlation** (insight-engine-architecture §S4): real cross-metric relations are D1/D2 territory.
-  `lagDays` (null = same window) reserves lagged evaluation for windowed baselines later.
+  `lagDays` (null = same window) is implemented by aligning the two metric windows before evaluating
+  the child leaves; the shipped lag-1 blueprint exercises it.
 
 `minConfidence` (`low|medium|high`) generalizes the MVP's scattered `notInsufficient(s)` checks —
 the snapshot's confidence must be at or above the floor. `deviation`/`all`/`any` leaves are
@@ -68,7 +70,7 @@ Registered in [`docs/graph/couplings.yaml`](../../docs/graph/couplings.yaml): bl
 templates↔copy-guidelines (`tools/rules/tests/rule_blueprint.test.ts`), schema↔rules-table
 (`tools/rules/tests/rules_table_schema.test.ts`), rules-table↔insight_cards CHECK parity
 (`apps/biotope/test/guards/rules_table_contract_test.dart`), blueprint↔engine condition coverage
-(`tools/rules/tests/engine_condition_coverage.test.ts`, planned until the engine refactor).
+(`tools/rules/tests/engine_condition_coverage.test.ts`).
 
 **TS-only by design** (rules-engine-design open item 2): the app renders `insight_cards`, never raw
 rule metadata, so there is no Dart mirror. This package is a `shared/` contract surface — changes

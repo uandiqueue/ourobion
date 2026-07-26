@@ -14,11 +14,11 @@ is only in someone's head or a closed run's carry-forward list. **Not everything
 this register has no priorities and no locked decisions; when an item is chosen for a run, it gets a
 decision-locked entry in that run's backlog doc and a pointer back here.
 
-Sources folded in: the 100-metric integration analysis (2026-07-25), Run 2.0 carry-forwards
-(docs/temp/run2/orchestration-log.md), the Run 2.0 OUT-scope list (launch prompt PART 4),
-open O-items (next-build-optimizations.md), the anchor decisions (docs/memory/0013 et al.),
-**everything Run 1 left open** (§E), **Run 2.0's own review debt** (§F), and the independent
-[Run-2 adversarial audit](../run2/adversarial-audit-2026-07-26.md) (§§G–H).
+Sources folded in: the 100-metric integration analysis (2026-07-25), Run-2 carry-forwards and
+OUT-scope list, open O-items, anchor decisions (docs/memory/0013 et al.), **everything Run 1 left
+open** (§E), **Run 2's own review debt** (§F), and the 2026-07-26 independent audit (§§G–H). The
+Run-1/Run-2 source records are now frozen at `docs/archive/runs/`; all actionable content is repeated
+here so this live register never depends on an archive.
 
 ## How this register relates to the other two docs
 
@@ -26,13 +26,12 @@ open O-items (next-build-optimizations.md), the anchor decisions (docs/memory/00
 pending-build-register.md   ← THIS DOC. Superset: every known gap, no priorities, no locked decisions.
     ├── next-build-optimizations.md   ← Strict SUBSET: gaps Jayden has decision-locked for a run.
     │                                    O1–O8 open · O9–O20 built by Run 2.0 · O21–O23 pending review
-    │                                    · O24–O30 locked as the seven-unit Run 3 tranche.
-    └── ../run2/carry-forward-from-run1.md  ← Historical detail sheet for §E.
+    │                                    · O24–O29 locked as the six-unit product-only Run 3 tranche.
+    └── docs/archive/runs/             ← Provenance only; never an execution source.
 ```
 
-**Rule:** nothing may exist in `next-build-optimizations.md` or Run 2's
-`carry-forward-from-run1.md` without a row here. Those docs hold the *detail*; this register holds the
-*complete list*. Every open O-item is
+**Rule:** nothing may exist in `next-build-optimizations.md` without a row here. Archived run records
+may explain provenance, but this register must carry the complete actionable detail. Every open O-item is
 mapped to its row in §I below — check that map before assuming an item is missing.
 
 ---
@@ -78,7 +77,7 @@ testing; iOS remains Mac + paid-Apple-account gated (memory 0010).
 | B-BR1 · Real attested decorrelated verifier | partially simulated — **Run 3 O29** | require provider-returned model/version and usage fields, response-schema validation, family-mismatch fail-close, run trace, ablation/miss/cost-latency/human-label artifacts; a configured model id is not attestation |
 | B-BR2 · O7 general decorrelation invariant (family(verifier) !== family(synthesis), no hardcoded vendor) | open — **Run 3 O29** | land with live key integration; family separation mitigates self-preference but does not prove independent errors |
 | B-BR3 · Live web retrieval for the verifier | open — **Run 3 O29** | fixture corpus proves plumbing only; add bounded live retrieval, evidence snapshots and echo/source isolation; do not call the result scientifically validated without labelled evaluation |
-| B-BR4 · **Custom support models (the 0013 roster)** | one bounded pilot promoted — **Run 3 O30** | train/evaluate SciFact-only NLI Shadow v0 under the fixed [GMI training plan](./custom-model-training-plan.md); no serving influence. Every dataset needs explicit licence approval; HealthVer stays excluded until permission is documented; active short-circuit and models (b)/(c) remain backlog |
+| B-BR4 · **Custom support models (the 0013 roster)** | open product capability; one isolated experiment planned **outside Run 3** | [`zebra-nli-shadow-v0`](../model-training/zebra-nli-shadow-v0-training-plan.md) trains/evaluates a SciFact-only research pilot with no serving influence and does not close this product gap by itself. Every dataset needs explicit licence approval; HealthVer stays excluded until permission is documented; active short-circuit and models (b)/(c) remain backlog |
 | B-BR5 · Presentation agent (haiku-tier phrasing of card copy) | not wired | engine cards are deterministic templates (memory 0007: LLM summarization is a LATER ADDITIVE phase); phrasing_card router node exists, unused by the engine |
 | B-BR6 · Autonomous gap→research loop (A3 queue, dispatch, weekly A1 classifier) | detection+surfacing shipped (Run 2.0); auto-acting NOT | B5 + U16 gated (locked in O9); human add-as-seed is the current bridge |
 | B-BR7 · Human-verdict write and revision semantics | partially built; security slice in **O25**, presentation slice in **O27** | direct authenticated inserts bypass route existence checks; verdict is relation-key-only and can poison a future/rebuilt claim; revoke direct writes, use curator RPC, bind disposition to artifact revision/hash or explicitly decide relation-wide semantics, add re-review/restore + audit history |
@@ -122,29 +121,31 @@ it is not itself proof for or against correctness, because the LLM verifier stil
 | B-PL14 · Exact-tip CI / Deno release evidence is missing | **release-blocking — Run 3 O24** | PR #123 bootstrap has 13 green checks; #124–#136 have zero because stacked bases miss the workflow filter; consolidated branch also misses push filter; Deno matrix omits `run-pipeline` and uses fresh `--no-lock` resolution. Require full green workflow on the final cumulative SHA with all handlers and pinned resolution |
 | B-PL15 · run-pipeline mid-sequence failure path never forced live | open — **Run 3 O26** | this row owns forced stage-failure/partial-result verification only; B-DATA2 owns idempotency, demand semantics and transactional publication so the two rows do not duplicate |
 | B-PL16 · run-pipeline stage summaries scale with users × metrics | known, fine at demo scale | flagged in its own header for U6/U8 consumers; revisit before any non-demo load |
-| B-PL17 · Semantic graph freshness/integrity is not enforced at session end | open — outside locked Run 3 | Graphify 0.8.40 `graphify update .` / `scripts/graphify-build.ps1` stamps AST only; host-model `/graphify . --update` is the semantic incremental path. The audit's full-endpoint check also found 11 retained hyperedges referencing 31 absent node IDs that a pair-edge-only check missed. Add a session/unit-end convention plus local pre-push gate for zero semantic pending/deleted files, `built_at_commit == HEAD`, valid schema, and zero dangling pair-edge/hyperedge endpoints; do not use silent `graphify check-update .` or pretend CI can regenerate a machine-local host-model projection |
+| B-PL17 · Semantic graph freshness is not mechanically enforced at session end | partially mitigated — outside locked Run 3 | This session repaired the stale projection and validated 829/829 manifest entries with semantic hashes, zero pending/deleted files, and zero dangling pair-edge or hyperedge endpoints. The remaining gap is enforcement: Graphify 0.8.40 `graphify update .` / `scripts/graphify-build.ps1` performs structural extraction, while the host-model semantic pass cannot run in CI. Keep the fast/low-effort semantic session convention, then add a local session-end checker for zero pending/deleted files, a current revision stamp, valid schema, and complete endpoints; do not treat silent `graphify check-update .` as proof of semantic freshness. |
 | B-PL18 · Semantic graph broad-query ranking is noisy | open — outside locked Run 3 | post-bootstrap exact-ID/source navigation passes, but vocabulary-expanded BFS over-ranks generic AST symbols. Add a representative ranked-query benchmark, node-type-aware semantic/AST hybrid filtering, generic-node suppression and relevance regression gate; freshness proves coverage, not retrieval quality |
 | B-PL19 · Hosted Supabase schema + brain-artifact release/promotion isolation | **production blocker — Run 3 O29** | The 2026-07-26 read-only probe reached Auth/PostgREST on demo `bewwvcksgpxoomyjavjp`, but the Run-2 brain tables were absent; clean production reserve `jscxvnettbvkboijczav` has not been migration/promotion rehearsed. R2 corpus/edge artifacts are canonical: the pinned corpus manifest rebuilds the D1 search index, while pinned edge JSONL rebuilds the Supabase serving projection. Today `edge-loader --from-r2` reads mutable keys and there is no exact migration ledger, explicit release selector, immutable namespace/manifest, checksummed promotion, target-load provenance, rollback, or cross-environment verdict policy. Apply append-only migrations to a clean target, freeze one reviewed corpus/claim/verification/run manifest, promote identical source bytes without another LLM run, rebuild each projection independently, and mechanically exclude auth users, simulated/personal rows, cards/job state and other demo-only data. Hosted writes require Jayden's separate approval of named isolated rehearsal resources; default evidence is local/offline |
+| B-PL20 · Canonical orientation docs lag long-horizon builds | open — **agent-safety prerequisite outside locked Run 3** | The [2026-07-26 freshness audit](../documentation-freshness-audit-2026-07-26.md) found materially stale current-state claims in `next-steps`, `phase-2-plan`, M1/M2 context, nao design/README, architecture/table inventory and shared/brain prose. Run one bounded docs-only reconciliation against the integration SHA before unattended Run-3 work; add active-link and status-freshness automation. This does not add a seventh Run-3 product unit |
+| B-PL21 · `PaperRecord` crosses the ingestion/nao boundary without a shared contract | open — **contract integrity outside locked Run 3** | `tools/brain-ingest/src/types.ts` and `apps/nao/src/lib/types.ts` independently define the manifest record that nao consumes. Promote one additive, versioned `PaperRecord` contract through `shared/brain/`; generate or map TS consumers from that source; add ingestion-to-nao fixture/parity tests and migration compatibility; then remove the duplicate definitions. Because this changes `shared/`, B-PL10's two-reviewer rule applies. Do not fold this engineering work into the B-PL20 docs-only reconciliation or use it as a seventh Run-3 unit |
 
 ---
 
 ## E · Run-1 carry-forward — what the first run left open
 
-**Detail sheet: [`carry-forward-from-run1.md`](../run2/carry-forward-from-run1.md).** Run 2.0 executed the
-O9–O20 backlog but closed none of the following. Summarised here so the register stays the superset.
+Run 2.0 executed the O9–O20 backlog but closed none of the following. Historical detail is frozen under
+`docs/archive/runs/run1/` and `docs/archive/runs/run2/`; the rows below are deliberately self-contained.
 
 | Item | State | Gates / notes |
 |---|---|---|
-| B-R1-1 · **Run-1 unit sign-off review unfinished** | **open** | Of 24 unit rows in [`run1/unit-index.md`](../run1/unit-index.md), only **U1** is fully cleared; U3 (provisional), U4 (Alton) and U9 are individually signed; **~20 remain pending or deferred**. Authoritative ledger: [`run1/signoff-instructions.md`](../run1/signoff-instructions.md) §6. Stats-bearing rows are ⏸ deferred by design until O2 exists |
-| B-R1-2 · Human-gated / external-access blockers **B2–B12** | open | Cloudflare provisioning (B2) · nao Worker secrets + Supabase login user (B3) · GitHub repo secrets (B4) · **API keys for the LLM api-worker route (B5)** · GMI organization/container entitlement, credits, storage, SSH and cost approval (B6; [O30 setup](./custom-model-training-plan.md#31-human-owned-gmi-setup-checklist)) · Apple Developer Program (B7) · B8 → see B-PL10 · hosted Supabase pg_cron (B9) · real Android device (B10) · SJR quartile dataset (B11) · branch-protection required checks (B12). Full detail: [`run1/blocked-register.md`](../run1/blocked-register.md) |
-| B-R1-3 · Calibration backlog **B1–B7** (research-fixes) | open | Mechanisms shipped, numbers need data: per-metric medium cutoff · persist edgeScore components · deadbandK intent + fire-rate · deseasonalize day-of-week before lag-7 · faithful xDF effective-N · field-normalized h-index · calibrate `EDGE_GATES`/`EDGE_WEIGHTS` vs GRADE. Several land naturally inside **O2 (MPR)**. Detail: [`run1/research-fixes/blocked-register.md`](../run1/research-fixes/blocked-register.md) |
+| B-R1-1 · **Run-1 unit sign-off review unfinished** | **open** | Of 24 unit rows, only **U1** is fully cleared; U3 (provisional), U4 (Alton) and U9 are individually signed; **~20 remain pending or deferred**. Stats-bearing rows are ⏸ deferred by design until O2 exists. Historical ledger: `docs/archive/runs/run1/signoff-instructions.md` §6 |
+| B-R1-2 · Human-gated / external-access blockers **B2–B12** | open | Cloudflare provisioning (B2) · nao Worker secrets + Supabase login user (B3) · GitHub repo secrets (B4) · **API keys for the LLM api-worker route (B5)** · GMI access/cost approval (B6, transferred to the [separate Zebra plan](../model-training/zebra-nli-shadow-v0-training-plan.md#31-human-owned-gmi-setup-checklist), not a Run-3 blocker) · Apple Developer Program (B7) · B8 → B-PL10 · hosted Supabase pg_cron (B9) · real Android device (B10) · SJR quartile dataset (B11) · branch-protection required checks (B12) |
+| B-R1-3 · Calibration backlog **B1–B7** (research-fixes) | open | Mechanisms shipped, numbers need data: per-metric medium cutoff · persist edgeScore components · deadbandK intent + fire-rate · deseasonalize day-of-week before lag-7 · faithful xDF effective-N · field-normalized h-index · calibrate `EDGE_GATES`/`EDGE_WEIGHTS` vs GRADE. Several land naturally inside **O2 (MPR)**. Historical detail: `docs/archive/runs/run1/research-fixes/blocked-register.md` |
 | B-R1-4 · Register hygiene: **B13 is resolved but still reads open** | trivial | PR #72 merged 2026-07-18 and `b774229` is an ancestor of `dev-phase2`; mark it closed on the next pass |
 
 ## F · Run-2.0 review debt
 
 | Item | State | Gates / notes |
 |---|---|---|
-| B-R2-1 · **Every Run-2.0 unit sign-off is `pending`** | **open — the live task** | 14 rows, U0–U13. The orchestrator never self-signs. Review surface: [`README.md`](../run2/README.md) → [`unit-signoff-index.md`](../run2/unit-signoff-index.md) |
+| B-R2-1 · **Every Run-2.0 unit sign-off is `pending`** | **open — human review debt** | 14 rows, U0–U13. The orchestrator never self-signs. Historical evidence is frozen at `docs/archive/runs/run2/README.md` and `unit-signoff-index.md`; this row owns the actionable debt |
 | B-R2-2 · Orientation check not exercised in the decorrelated variant | accepted-as-honest | U13 served 0 edge cards twice; treat this as a conservative cross-family model judgment and fail-closed plumbing proof, **not** statistically independent or scientific validation. U12's OpenAI pass is what covers orientation |
 | B-R2-3 · PRs #123–#136 are Closed-not-Merged | recorded, not a defect | GitHub refuses to retarget a PR once the new base contains its commits. Content consolidated into `dev-phase2-run2` via `050b296`; no branches deleted |
 
@@ -229,7 +230,6 @@ If you add an O-item, add its row above and a line here.
 | O27 · Scientific provenance semantics + artifact trust posture | **Run 3 unit 4 — locked** | B-SCI1; B-SCI2 safe-vocabulary slice; B-UI3; B-UI9; B-BR7 revision/presentation slice |
 | O28 · Plain-language + accessible client insights | **Run 3 unit 5 — locked** | B-UI10; B-UI11 |
 | O29 · Live verifier/model attestation + migrated immutable release promotion | **Run 3 unit 6 — locked** | B-BR1; B-BR2; B-BR3; B-PL19 |
-| O30 · NLI Shadow v0 training/evaluation, non-serving | **Run 3 unit 7 — locked** | B-BR4(a); all other support-model work remains open |
 
 ---
 

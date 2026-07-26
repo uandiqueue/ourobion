@@ -1,6 +1,6 @@
 ---
 title: Run 3 Next-Build Optimizations — locked tranche and execution record
-summary: Run 3's living scope authority. The independent Run-2 audit locks O24-O30 as a seven-unit, half-sized, remediation-first tranche; this document also preserves the O1-O23 decision and execution trail needed to understand that promotion. Dev aid (docs/temp), not ground truth.
+summary: Run 3's living scope authority. O24-O29 form a six-unit, product-only remediation tranche within the half-Run-2 ceiling; standalone Zebra model training is tracked separately. This document also preserves the O1-O23 decision and execution trail. Dev aid (docs/temp), not ground truth.
 type: plan
 scope: shared
 status: canonical
@@ -25,8 +25,8 @@ whose local status still says `open`.
 - **Two-tier truth still applies.** Accepted ADR bodies remain immutable (`context_sync --check`); if an
   item would touch one, it records amendment intent for retro-review instead (as the research-fixes run did).
 - **The tranche is the scope authority.** O1–O8 remain valid backlog, but they are not implicitly part
-  of Run 3. O21–O23 are proposals pending human review. Do not pull either group into Run 3 without
-  removing an equal-sized locked item and recording Jayden's decision.
+  of Run 3. O21–O23 are proposals pending human review. Do not pull either group into Run 3 without a
+  new explicit Jayden decision. Moving model training out does not create a replacement slot.
 
 Status values: `run3-locked` · `open` (backlog, not automatically in the tranche) ·
 `pending-review` · `done` · `dropped` (with why).
@@ -35,18 +35,19 @@ Status values: `run3-locked` · `open` (backlog, not automatically in the tranch
 
 ## Run 3.0 locked tranche — half-sized remediation run (2026-07-26)
 
-**Authority:** Jayden asked that Run 3 be half the size of Run 2 and include current-feature extension,
-client UI optimization, and one custom-model training pilot. This tranche applies the independent
-[Run-2 adversarial audit](../run2/adversarial-audit-2026-07-26.md) while respecting that cap.
+**Authority:** Jayden asked that Run 3 be at most half the size of Run 2, then separated custom-model
+training as an independent task. Run 3 therefore contains only the six product-remediation and UI/
+feature-extension items O24–O29. The 2026-07-26 independent audit supplied their promotion rationale;
+its historical record is archived, while every actionable finding is reproduced in the live register.
 
 ### Hard size envelope
 
 Run 2 used 14 units, changed 170 files, and added approximately 17,273 lines. Run 3 is bounded to:
 
-- **at most 7 units** — O24 through O30, one unit each;
+- exactly **6 planned product units** — O24 through O29, one unit each;
 - **at most 85 changed files** across the cumulative run;
 - **at most 8,650 added lines** across the cumulative run;
-- no eighth “small follow-up” unit: move unfinished/non-acceptance work back to
+- no follow-up or replacement unit: move unfinished/non-acceptance work back to
   [pending-build-register.md](./pending-build-register.md).
 
 Generated lockfiles count as files and lines. A unit may be smaller than its predecessor; the caps are
@@ -63,25 +64,24 @@ later unit to defer.
 | U3 | O27 | scientifically faithful provenance contract and trust posture | B8 second review or explicit waiver is available for shared-contract work |
 | U4 | O28 | plain-language, accessible client insights/provenance | O27 contract is stable |
 | U5 | O29 | live verifier/model attestation + immutable schema/artifact promotion | O24–O25 are green; promotion slice waits for O27; provider calls remain budget-capped |
-| U6 | O30 | train/evaluate one non-serving NLI pilot + cumulative closeout | O29 freezes the evidence input contract; licence/GMI gates satisfied |
 
-**Promotion boundary:** O30 trains and evaluates a model but does not route it into serving. O2/MPR,
-B-COST1, active support-model integration, metric expansion, user-facing production cutover/hosting, visual reskinning,
-O1–O8, O21–O23, and Graphify process/ranker work B-PL17/B-PL18 remain outside this tranche.
-Consequently, Run 3 still cannot claim production or scientific validation merely because all seven
-units pass. O29's clean-target schema/artifact rehearsal is a prerequisite, not authorization to cut
+**Promotion boundary:** O2/MPR, B-COST1, all custom-model training or integration, metric expansion,
+user-facing production cutover/hosting, visual reskinning, O1–O8, O21–O23, and Graphify process/ranker
+work B-PL17/B-PL18 remain outside this tranche. Consequently, Run 3 still cannot claim production or
+scientific validation merely because all six units pass. O29's clean-target schema/artifact rehearsal
+is a prerequisite, not authorization to cut
 traffic over or copy the demo database.
 
 **Provider budget:** all deterministic/offline gates first. Across Run 3, Anthropic must remain at or
 below **2 SGD** and OpenAI at or below **20 SGD**; every live unit records provider, model-returned id,
-call count, tokens, USD and SGD. O24/O25/O26/O27/O28/O30 require no Anthropic/OpenAI calls.
+call count, tokens, USD and SGD. O24/O25/O26/O27/O28 require no Anthropic/OpenAI calls.
 
 ---
 
 ## Run 2.0 execution record (2026-07-24/25 — PR chain #123–#136, human-gated)
 
-Authoritative audit surface: `docs/temp/run2/unit-signoff-index.md`. Per-item outcome below; each
-item's own **Status:** line carries the same verdict (reconciled 2026-07-25 — the run originally
+Historical audit surface: `docs/archive/runs/run2/unit-signoff-index.md` (provenance only). Per-item
+outcome below; each item's own **Status:** line carries the same verdict (reconciled 2026-07-25 — the run originally
 recorded results only in this table, leaving every per-item status still reading `open`).
 
 **Branch state (2026-07-25):** the whole chain was consolidated into `dev-phase2-run2`; PRs #123–#136
@@ -344,7 +344,7 @@ surfaces now; these O-items complete the demo when this backend run executes.
 - **Status:** open.
 - **Intent (Jayden):** enforce the sign-off routing rule **automatically, per file path, on every future
   PR** (tool-enforced, not memory-enforced), so each reviewer only sees their domain. Mirrors the
-  sign-off protocol now in `docs/temp/run1/signoff-decisions.md`.
+  sign-off protocol now archived at `docs/archive/runs/run1/signoff-decisions.md`.
 - **Locked routing (tiers fixed; refine the globs as the repo grows):**
   - `shared/**` → **BOTH** (Jayden + Alton), **2 required approvals** — the memory-0002 rule / register B8.
   - **Jayden (agent-related — the hackathon deliverable)** — `tools/llm-router/**`, the synthesis /
@@ -548,7 +548,7 @@ surfaces now; these O-items complete the demo when this backend run executes.
 
 # Adversarial-verdict reconciliation (2026-07-22)
 
-Folded from `docs/temp/run2/backend-adversarial-verdict-2026-07-22.md` (independent read-only
+Folded from `docs/archive/runs/run2/backend-adversarial-verdict-2026-07-22.md` (independent read-only
 adversarial review; **no-go for Phase-2 sign-off / research-linked serving / a "verifier demonstrated"
 claim**). 529 Node tests passed but the failures are **semantic trust** seams tests didn't cover.
 O15–O20 are the blocking/high items. **The recurring lesson: unit-green ≠ seam-correct — each of these
@@ -982,49 +982,8 @@ needs an INTEGRATION test on the real seam, not an injected/mocked unit test.**
   isolated local targets only.
 - **Provider budget:** cumulative Run-3 caps remain Anthropic ≤2 SGD and OpenAI ≤20 SGD. Stop before a
   request that could cross either cap; record actual USD+SGD and restore config byte-for-byte.
-- **Not this item:** support-model training (O30), active custom-model routing, general scientific
-  calibration (O2), cloning a hosted database, or user-facing production cutover.
-
----
-
-## O30 · Train and evaluate NLI Shadow v0 — no serving influence
-
-- **Source:** Jayden's custom-model request; memory 0013 roster model (a); independent Run-2 audit;
-  register B-BR4.
-- **Status:** `run3-locked` — **U6**, gated by GMI access and dataset licence review.
-- **Intent:** create one reproducible learned claim/evidence baseline, measure it honestly in-domain,
-  and stop before runtime promotion.
-- **Execution annex:** [`custom-model-training-plan.md`](./custom-model-training-plan.md) fixes the
-  SciFact-only data boundary, self-managed GMI container setup, external model-lab repository, grouped
-  splits, training recipe, audit set, metrics, artifact contract, budget, reproducibility and stop gates.
-- **Locked data decision:** use SciFact only after recording its exact licences (claim/evidence
-  annotations CC BY 4.0, abstracts ODC-By 1.0, code Apache 2.0) and attribution. HealthVer is excluded
-  until an explicit reusable licence/permission is documented; its COVID focus would not establish
-  Ourobion-domain validity anyway. Remove the design rule that “unconfirmed” licences are acceptable.
-- **Locked execution:**
-  1. Train in the approved external GMI/model environment. Ourobion remains Python-free; do not add a
-     Python training stack, environment or downloaded dataset to this repo.
-  2. Pin base encoder revision, data URLs/versions/hashes, preprocessing, label mapping, seed, split and
-     environment. Split by source paper/claim family rather than random pairs.
-  3. Before training, preregister the size/strata/reviewer process for a frozen human-labelled Ourobion
-     audit set spanning gut, hydration, wearables and environment. If independent review/adjudication is
-     unavailable, label all in-domain results preliminary.
-  4. Report prevalence, confusion matrix, per-class precision/recall/F1, macro F1, Brier score/ECE,
-     reliability curve, abstention coverage/selective risk, latency, uncertainty intervals, majority
-     baseline and current-verifier comparison. Treat open-domain degradation as expected risk, not an
-     inconvenient benchmark exception.
-  5. Commit only a model card, licence/attribution and immutable manifests/hashes, evaluation artifacts,
-     external model-artifact pointer and an explicit limitations/promotion decision. Do not commit raw
-     third-party data or silently treat weights as deployable.
-- **Hard non-serving boundary:** NLI output does not modify `RelationshipClaim`, `EdgeVerification`,
-  edge score/band, cards, UI, verifier calls or spend in Run 3. No contradicted/uncertain short-circuit.
-- **Acceptance:** a clean external rerun reproduces the recorded model/eval hashes within documented
-  tolerance; licence and data lineage review passes; evaluation includes the frozen in-domain set and
-  failure slices. Runtime shadow integration becomes a later separately approved item.
-- **Closeout:** rerun O24's full cumulative exact-SHA gate, reconcile both registers, and write the Run-3
-  sign-off cockpit. If GMI/licensing blocks training, stop with O30 blocked; do not replace it with an
-  eighth feature unit.
-- **Provider budget:** no Anthropic/OpenAI calls are required for training/evaluation.
+- **Not this item:** the independent `zebra-nli-shadow-v0` experiment, active custom-model routing,
+  general scientific calibration (O2), cloning a hosted database, or user-facing production cutover.
 
 ---
 

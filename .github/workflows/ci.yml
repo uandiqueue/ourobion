@@ -2,7 +2,7 @@ name: CI
 
 # The non-bypassable backstop: mirrors the local pre-push gate (skippable with --no-verify) and adds
 # the checks that can only run in CI. Seven jobs:
-#   - context     : node tools/context_sync.mjs --check (sessions / memory / decisions / index / couplings)
+#   - context     : context integrity + single generated human graph-view invariant
 #   - flutter     : flutter analyze + flutter test (with the public env file built from secrets)
 #   - typescript  : tsc --noEmit over the shared/ contracts
 #   - node-tools  : matrix over the tools/* node packages — npm ci + typecheck + test, plus the
@@ -39,6 +39,11 @@ jobs:
 
       - name: Context check
         run: node tools/context_sync.mjs --check
+
+      - name: Human graph view — renderer tests and single-view invariant
+        run: |
+          node --test tools/graph-view/tests/*.test.mjs
+          node tools/graph-view/generate_graph_view.mjs --check
 
   flutter:
     name: Flutter — Analyze & Test

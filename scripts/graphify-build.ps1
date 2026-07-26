@@ -6,16 +6,17 @@
 #
 # graphify is the SEMANTIC / agent-context layer (memory 0008); it is complementary to the
 # structural import-graph that docs/graph/README.md still marks DEFERRED. The graph it writes to
-# graphify-out/ is a rebuildable PROJECTION (two-tier-truth) - gitignored, never hand-edited.
+# graphify-out/ is a rebuildable PROJECTION (two-tier-truth) - gitignored, never hand-edited. This
+# script also refreshes the single tracked, lossy human view in docs/graph/semantic-graph.md.
 #
 # graphify is build tooling, NOT a repo/runtime dependency: it installs into a project-bounded venv
 # inside the toolchain (default ..\biotope-toolchain\graphify-venv), nothing touches the global PATH,
 # and the venv is never committed or deployed. This script bootstraps that venv on first run.
 #
 # AST extraction is fully local (tree-sitter) - Dart + TS + the rest of the repo, no key needed.
-# The optional cross-language SEMANTIC pass (Dart <-> TS concept merging) is NOT run here: per the
-# repo's repo-consistent wiring decision we do NOT register graphify's skill/hook, so that pass is
-# driven on demand by the local Claude Code agent (the host session model) - no ANTHROPIC_API_KEY.
+# The optional cross-language SEMANTIC pass (Dart <-> TS concept merging) is NOT run here. It is driven
+# on demand by the host AI assistant or a separately configured headless backend. The host session
+# model needs no separately loaded provider key.
 
 param(
     [switch]$Cluster
@@ -59,11 +60,19 @@ try {
         Write-Host "Building graph (AST-only, no LLM)..." -ForegroundColor Cyan
         & $Graphify update . --no-cluster
     }
+    if ($LASTEXITCODE -ne 0) {
+        throw "graphify update failed with exit code $LASTEXITCODE"
+    }
+
+    & node tools/graph-view/generate_graph_view.mjs --write
+    if ($LASTEXITCODE -ne 0) {
+        throw "human graph-view generation failed with exit code $LASTEXITCODE"
+    }
 }
 finally {
     Pop-Location
 }
 
 Write-Host ""
-Write-Host "Graph written to graphify-out\graph.json (gitignored, rebuildable projection)." -ForegroundColor Green
+Write-Host "Graph written to graphify-out\graph.json and human view refreshed at docs\graph\semantic-graph.md." -ForegroundColor Green
 Write-Host "Query it:  & '$Graphify' query `"what connects auth to the database?`"" -ForegroundColor DarkGray

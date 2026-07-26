@@ -27,9 +27,11 @@ surface **descriptive** patterns in gut health, hydration, and vector exposure. 
   degradation; PDPA; privacy-safe community) live there — read them before touching user-facing copy
   or data isolation.
 
-Repo shape: a Flutter (Dart) app in `apps/biotope/`, a Supabase backend in `supabase/` (Postgres migrations +
-TypeScript edge functions), and shared Dart/TS contracts in `shared/`. Node is present only for the
-Supabase CLI and these `tools/`. **There is no Python in this repo — do not introduce any.**
+Repo shape: a Flutter (Dart) app in `apps/biotope/`, a Next.js/TypeScript brain-operations app in
+`apps/nao/`, a Supabase backend in `supabase/` (Postgres migrations + TypeScript edge functions), and
+shared Dart/TS contracts in `shared/`. Node drives nao, the Supabase CLI, and `tools/`. **There is no
+Python in this repo — do not introduce any.** Model-training Python belongs in the separate private
+model-lab repository, never here.
 
 ## 2. Core principle — TWO-TIER TRUTH (read this first)
 
@@ -85,8 +87,8 @@ auto-generate a structural import graph yet — see §8 and [`docs/graph/README.
 
 ## 4. Environment & commands
 
-ourobion has **two toolchains**: **Flutter/Dart** (the app, in `apps/biotope/`) and **Node + Supabase CLI** (the
-backend + these `tools/`). There is **no Python**.
+ourobion has **two toolchains**: **Flutter/Dart** (biotope, in `apps/biotope/`) and **Node + Supabase
+CLI** (nao, the backend, and `tools/`). There is **no Python** in this repository.
 
 > **Windows-native dev (no WSL):** `scripts/setup.ps1` installs the whole toolchain **bounded to the
 > project** in a sibling `..\biotope-toolchain\` (Miniconda env = Node + JDK 17, Flutter SDK, Android
@@ -318,15 +320,22 @@ graph for agent context, and enforce what we keep:
   whole tree. **Complementary to — not a substitute for — the deferred structural graph** (it is
   semantic/multi-modal; AST coverage includes Dart). It is **build tooling, project-bounded** (a venv in
   `..\biotope-toolchain`, on PATH after `. .\scripts\biotope-env.ps1`, never global/committed); rebuild
-  with **`scripts/graphify-build.ps1`**. Output is repo-root **`graphify-out/`** (gitignored — a
-  rebuildable projection, never hand-edited). Query it with `graphify query "<question>"`,
+  with **`scripts/graphify-build.ps1`**. The machine output is repo-root **`graphify-out/`**
+  (gitignored — a rebuildable projection, never hand-edited); the wrapper also refreshes the single
+  tracked human view at **`docs/graph/semantic-graph.md`**. Query it with `graphify query "<question>"`,
   `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"`; after code changes run
-  `graphify update .`. **Pre-wired PreToolUse hooks** remind the agent to consult the graph before
+  `graphify update .`, then `npm run graph:view:write` (the wrapper performs both). `.graphifyignore`
+  excludes `docs/archive/` and the generated view itself. **Pre-wired PreToolUse hooks** remind the agent to consult the graph before
   grepping/reading source for **Claude Code** (`.claude/settings.json` + `CLAUDE.md` + a `/graphify`
   skill in `.claude/skills/graphify/`), **Codex** (`.codex/hooks.json`), and **Gemini CLI**
   (`.gemini/settings.json` + `GEMINI.md`); any other tool runs the CLI manually. In Claude Code,
-  `/graphify .` runs the full pipeline (incl. the LLM semantic pass) using the session model — no key. The semantic pass needs **no API key** inside an AI assistant (it uses the host
-  session model). Detail: [`docs/graph/README.md`](docs/graph/README.md),
+  `/graphify .` runs the full pipeline (incl. the LLM semantic pass) using the session model — no key.
+  Refresh the human view after it finishes. Graphify semantic extraction is routine housekeeping: use
+  the **fastest capable subagent model at low effort by default**, escalating only when validation
+  rejects its output. At session close, process only new/invalidated manifest entries so semantic work
+  stays incremental; reserve a full rebuild for extractor/schema changes or repair. The semantic pass
+  needs **no API key** inside an AI assistant (it uses the host session model). Detail:
+  [`docs/graph/README.md`](docs/graph/README.md),
   [`docs/memory/0008-graphify-context-tool.md`](docs/memory/0008-graphify-context-tool.md).
 
 ## 9. Enforced context maintenance (automated, not trust-based)
