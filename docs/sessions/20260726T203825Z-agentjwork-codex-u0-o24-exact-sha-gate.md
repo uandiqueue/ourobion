@@ -53,3 +53,9 @@ Branch: `ci/run3-o24-exact-sha-gate` (base candidate
   CI-created, gitignored `.env.public` asset; a temporary example-derived file enabled a clean run.
 
 memory: none
+
+## PR state
+
+- PR #144 opened directly against `dev-phase2-run3`. The subsequent tracking-state commit changed the
+  candidate SHA, so the required exact GitHub Actions evidence must be taken from the newest pushed
+  commit rather than from the original implementation commit.
