@@ -70,4 +70,4 @@ data/llm-router/
 docs/archive/
 
 # Generated from graphify-out/graph.json; indexing it would create a feedback loop.
-docs/graph/semantic-graph.html
+docs/graph/semantic-graph.md

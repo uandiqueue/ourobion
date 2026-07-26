@@ -118,7 +118,7 @@ The repo indexes its **own source** into a queryable semantic graph
 ([graphify](https://github.com/safishamsi/graphify)) so an assistant (or you) can pull a small,
 relevant slice instead of grepping the whole tree. It is **dev tooling** — not part of the app —
 bounded to the project toolchain. The machine graph lands in gitignored `graphify-out/`; its single
-tracked, generated human overview is [`docs/graph/semantic-graph.html`](docs/graph/semantic-graph.html).
+tracked, generated human overview is [`docs/graph/semantic-graph.md`](docs/graph/semantic-graph.md).
 
 ```bash
 graphify query "<question>"      # the relevant subgraph for a question

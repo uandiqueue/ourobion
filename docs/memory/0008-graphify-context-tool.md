@@ -31,8 +31,13 @@ graph is a rebuildable projection, never hand-edited ([0001-two-tier-truth](0001
   manifest) — a rebuildable projection. Promote `graph.json` to committed + add a regenerate/diff check
   to `tools/context_sync.mjs --check` once a path-normalizer (port NUSPlan's
   `tools/normalize_deps_graph.mjs`) makes it diff cleanly cross-machine. `graph.html` stays gitignored.
-- **One tracked human view.** `tools/graph-view/generate_graph_view.mjs` deterministically renders
-  `docs/graph/semantic-graph.html` from `graph.json`. The Graphify build wrappers refresh it; direct
+- **One tracked view, and it is Markdown.** `tools/graph-view/generate_graph_view.mjs` deterministically
+  renders `docs/graph/semantic-graph.md` from `graph.json`. Markdown is the tracked format because
+  `docs/graph/` travels across machines while all of `graphify-out/` is machine-local, so on a fresh
+  clone this file is the only graph context an agent has — and an agent cannot read an HTML canvas. The
+  interactive view is generated to gitignored `graphify-out/semantic-graph.html` instead, and the
+  generator refuses to run if a `semantic-graph.*` file other than the Markdown appears in
+  `docs/graph/`. The Graphify build wrappers refresh it; direct
   Graphify updates must be followed by `npm run graph:view:write`. Pre-push always enforces one
   generated view and, when a local graph exists, fails if its content is stale. CI can enforce the
   single-view invariant but skips only the machine-local content comparison.

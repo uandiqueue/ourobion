@@ -36,7 +36,7 @@ ourobion/
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── tools/                     # Node-stdlib enforcement + multi-agent helpers (no Python)
 │   ├── brain-ingest/          # TS paper-corpus ingestion pipeline (see docs/nao/brain-ingestion-design.md)
-│   ├── graph-view/            # Deterministic graph.json -> docs/graph/semantic-graph.html renderer + tests
+│   ├── graph-view/            # Deterministic graph.json -> docs/graph/semantic-graph.md renderer + tests
 │   ├── context_sync.mjs       # --session-start briefing / --check enforcement
 │   ├── setup_agent_worktree.mjs # create an isolated git worktree + configure hooks
 │   └── shared_memory.mjs      # task-claim coordinator (.agents/session-log.json, gitignored)
@@ -105,7 +105,7 @@ ourobion/
 ```
 
 > `graphify-out/` and the `..\biotope-toolchain\graphify-venv` that produces it are machine-local and
-> uncommitted. `docs/graph/semantic-graph.html` is the one tracked, generated human view. Rebuild both
+> uncommitted. `docs/graph/semantic-graph.md` is the one tracked, generated human view. Rebuild both
 > with `scripts/graphify-build.ps1`; direct Graphify updates must be followed by
 > `npm run graph:view:write`. See [`graph/README.md`](../graph/README.md).
 

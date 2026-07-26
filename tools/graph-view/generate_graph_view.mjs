@@ -6,11 +6,16 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { graphContentSha256, renderGraphView } from './lib/render_graph_view.mjs';
+import { renderGraphHtml } from './lib/render_graph_html.mjs';
 
 const TOOL_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TOOL_DIR, '..', '..');
 const DEFAULT_INPUT = path.join(REPO_ROOT, 'graphify-out', 'graph.json');
-const DEFAULT_OUTPUT = path.join(REPO_ROOT, 'docs', 'graph', 'semantic-graph.html');
+const DEFAULT_OUTPUT = path.join(REPO_ROOT, 'docs', 'graph', 'semantic-graph.md');
+// The interactive HTML view is a machine-local convenience, not repo truth. It lands in the gitignored
+// graphify-out/ beside graph.json, so it cannot drift from the tracked Markdown, cannot bloat the repo
+// with a ~1.3MB generated blob, and is never the thing an agent is pointed at (agents cannot read it).
+const LOCAL_HTML_OUTPUT = path.join(REPO_ROOT, 'graphify-out', 'semantic-graph.html');
 // Front-matter date for the renderer schema, not the machine-local graph snapshot. Keeping it explicit
 // makes --write/--check deterministic even in sandboxes where Node cannot spawn `git show`.
 const VIEW_SCHEMA_UPDATED = '2026-07-26';
@@ -36,25 +41,35 @@ function normalizeNewlines(value) {
 
 function validateSingleHumanView(output) {
   const graphDocsDirectory = path.join(REPO_ROOT, 'docs', 'graph');
-  const candidateFiles = readdirSync(graphDocsDirectory, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && /\.(?:md|html)$/i.test(entry.name))
+  const markdownFiles = readdirSync(graphDocsDirectory, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
     .map((entry) => path.join(graphDocsDirectory, entry.name));
   const canonical = path.resolve(output);
-  const unexpectedViews = candidateFiles.filter((file) => {
+  // docs/graph is the layer that travels across machines and agents, so it carries exactly one
+  // generated view and that view must be readable text. A semantic-graph.html here is a regression.
+  const strayViews = readdirSync(graphDocsDirectory, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.startsWith('semantic-graph.'))
+    .map((entry) => path.join(graphDocsDirectory, entry.name))
+    .filter((file) => path.resolve(file) !== canonical);
+  if (strayViews.length) {
+    const found = strayViews.map((file) => path.relative(REPO_ROOT, file).replace(/\\/g, '/')).join(', ');
+    throw new Error(`docs/graph tracks only the Markdown view; the interactive HTML belongs in graphify-out/. Remove: ${found}`);
+  }
+  const unexpectedMarkdown = markdownFiles.filter((file) => {
     const resolved = path.resolve(file);
-    return resolved !== canonical && (path.basename(file).startsWith('semantic-graph.') || /generated_by[^>\n]{0,90}tools\/graph-view\/generate_graph_view\.mjs/i.test(readFileSync(file, 'utf8')));
+    return path.basename(file) !== 'README.md' && resolved !== canonical;
   });
-  if (unexpectedViews.length) {
-    const found = unexpectedViews.map((file) => path.relative(REPO_ROOT, file).replace(/\\/g, '/')).join(', ');
-    throw new Error(`expected exactly one generated human graph view; unexpected candidates: ${found}`);
+  if (unexpectedMarkdown.length) {
+    const found = unexpectedMarkdown.map((file) => path.relative(REPO_ROOT, file).replace(/\\/g, '/')).join(', ');
+    throw new Error(`docs/graph permits one index and one human graph view; unexpected Markdown: ${found}`);
   }
 
-  const generatedViews = candidateFiles
-    .filter((file) => /generated_by[^>\n]{0,90}tools\/graph-view\/generate_graph_view\.mjs/i.test(readFileSync(file, 'utf8')));
+  const generatedViews = markdownFiles
+    .filter((file) => /\ngenerated_by:\s*tools\/graph-view\/generate_graph_view\.mjs\s*\n/.test(`\n${readFileSync(file, 'utf8')}`));
 
   if (generatedViews.length !== 1 || path.resolve(generatedViews[0] ?? '') !== canonical) {
     const found = generatedViews.map((file) => path.relative(REPO_ROOT, file).replace(/\\/g, '/')).join(', ') || 'none';
-    throw new Error(`expected exactly one generated human graph view at docs/graph/semantic-graph.html; found: ${found}`);
+    throw new Error(`expected exactly one generated human graph view at docs/graph/semantic-graph.md; found: ${found}`);
   }
 }
 
@@ -110,6 +125,17 @@ const outputRelative = path.relative(REPO_ROOT, options.output).replace(/\\/g, '
 if (options.mode === 'write') {
   writeFileSync(options.output, rendered, 'utf8');
   console.log(`graph-view: wrote ${outputRelative}`);
+  // Best-effort local companion. A failure here must not block the tracked view, but it must be loud.
+  try {
+    writeFileSync(LOCAL_HTML_OUTPUT, renderGraphHtml(graph, {
+      updatedDate: VIEW_SCHEMA_UPDATED,
+      sourceSha256: crypto.createHash('sha256').update(raw).digest('hex'),
+      contentSha256: graphContentSha256(graph),
+    }), 'utf8');
+    console.log(`graph-view: wrote ${path.relative(REPO_ROOT, LOCAL_HTML_OUTPUT).replace(/\\/g, '/')} (local only, gitignored)`);
+  } catch (error) {
+    console.warn(`graph-view: tracked view written, but the local HTML companion failed: ${error.message}`);
+  }
 } else if (options.mode === 'check') {
   if (!existsSync(options.output)) {
     console.error(`graph-view: ${outputRelative} is missing; run npm run graph:view:write`);

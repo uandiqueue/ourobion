@@ -322,7 +322,12 @@ graph for agent context, and enforce what we keep:
   `..\biotope-toolchain`, on PATH after `. .\scripts\biotope-env.ps1`, never global/committed); rebuild
   with **`scripts/graphify-build.ps1`**. The machine output is repo-root **`graphify-out/`**
   (gitignored — a rebuildable projection, never hand-edited); the wrapper also refreshes the single
-  tracked human view at **`docs/graph/semantic-graph.html`**. Query it with `graphify query "<question>"`,
+  tracked view at **`docs/graph/semantic-graph.md`**. **That view is Markdown on purpose:** `docs/graph/`
+  is the layer that travels across machines and agents, and everything in `graphify-out/` — `graph.json`,
+  `GRAPH_REPORT.md`, and the interactive `semantic-graph.html` — is machine-local, so on a fresh clone the
+  tracked Markdown is the *only* graph context an agent has. An interactive HTML view is still generated,
+  into gitignored `graphify-out/semantic-graph.html`, for humans; never point an agent at it (it is a
+  ~1.3MB blob of embedded JSON and minified JS). Query it with `graphify query "<question>"`,
   `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"`; after code changes run
   `graphify update .`, then `npm run graph:view:write` (the wrapper performs both). `.graphifyignore`
   excludes `docs/archive/` and the generated view itself. **Pre-wired PreToolUse hooks** remind the agent to consult the graph before

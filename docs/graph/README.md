@@ -18,11 +18,22 @@ auto-generated structural graph, run a semantic context graph for agents, and en
   parity of the shared types and copy rules). Each edge names a **`guard:` test** that makes the
   coupling executable. `node tools/context_sync.mjs --check` fails if a named guard file is missing.
   Guard tests live in `apps/biotope/test/guards/` and run with `flutter test`.
-- **[`semantic-graph.html`](./semantic-graph.html)** — the **only tracked human-readable graph view**.
-  It is a self-contained, offline interactive canvas generated deterministically from the machine-local
-  `graphify-out/graph.json`. It defaults to a performant community overview, with pan/zoom, filters,
-  search, hover/click details, and a textual fallback. It is a lossy projection for orientation, never
-  architecture truth and never hand-edited.
+- **[`semantic-graph.md`](./semantic-graph.md)** — the **only tracked graph view**, generated
+  deterministically from the machine-local `graphify-out/graph.json`. It is a community map plus a
+  node directory: readable in a diff, reviewable in a PR, and — because it is Markdown — usable by
+  **agents as well as humans**. It is a lossy projection for orientation, never architecture truth and
+  never hand-edited.
+
+  **Why Markdown is the tracked format.** `docs/graph/` is the layer that travels across machines and
+  agents; everything under `graphify-out/` is gitignored and machine-local. On a fresh clone, or in any
+  session where the graph has not been rebuilt, this file is the *only* graph context that exists —
+  `graph.json`, `GRAPH_REPORT.md` and the HTML view are all absent.
+
+  An **interactive** view is still generated for humans, at gitignored
+  **`graphify-out/semantic-graph.html`** — a self-contained offline canvas with pan/zoom, filters,
+  search and hover/click details. Open it locally; never point an agent at it, since it is a ~1.3MB
+  blob of embedded JSON and minified JS. `generate_graph_view.mjs` refuses to run if a
+  `semantic-graph.*` file other than the canonical Markdown appears in `docs/graph/`.
 
 The curated **module dependency graph and interface rules** are not duplicated here — they live in
 [`../biotope/architecture-context.md`](../biotope/architecture-context.md), which is the boundary reference today.
@@ -38,8 +49,8 @@ structural import-graph below** (it is multi-modal/semantic; the deferred one is
   project-bounded venv in `..\biotope-toolchain\graphify-venv` on first run, and is on PATH after
   `. .\scripts\biotope-env.ps1`. graphify is **build tooling, not a repo/runtime dependency**
   (machine-local, uncommitted, never deployed). Both platform wrappers refresh
-  [`semantic-graph.html`](./semantic-graph.html) after updating the machine graph.
-- **Output:** repo-root **`graphify-out/`** (`graph.json` + `graph.html` + AST cache + manifest),
+  [`semantic-graph.md`](./semantic-graph.md) after updating the machine graph.
+- **Output:** repo-root **`graphify-out/`** (`graph.json` + `graph.html` + `semantic-graph.html` + AST cache + manifest),
   **gitignored** — a rebuildable **projection**, never hand-edited ([two-tier-truth](../memory/0001-two-tier-truth.md)).
   Gitignored until a path-normalizer (port NUSPlan's `tools/normalize_deps_graph.mjs`) makes `graph.json`
   diff cleanly cross-machine — then promote it to committed + add a regenerate/diff check to
