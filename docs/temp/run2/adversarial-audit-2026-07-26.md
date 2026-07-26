@@ -78,15 +78,19 @@ This was a source-and-evidence audit, not a review of the README in isolation. I
 
 Graphify was stale before the audit. A delegated deterministic refresh first brought its AST/Markdown
 projection to Run 2 HEAD `b55ce29`, then a user-requested host-model semantic bootstrap completed
-without a paid API or network call. The final projection has 6,872 nodes, 8,905 links, 83 hyperedges,
-and 716 communities; all 882 manifest entries have both AST and semantic hashes, with zero pending or
-deleted AST/semantic sources, zero schema issues, and zero dangling edges. The semantic cache covers
-446 document/paper/image sources, including visual inspection of all 135 images (five initially
-unrenderable SVGs were rasterized directly from their source with local Sharp/libvips). Graphify did
-not expose host-subagent token telemetry, so its zero-valued token fields are not treated as zero
-compute. Exact-node/source navigation passed representative Run 2 queries; broad natural-language
-ranking remained noisy and is separately registered as B-PL18. Material audit conclusions were still
-verified directly in source and artifacts rather than inferred from graph rank alone.
+without a paid API or network call. That Run-2 baseline projection had 6,872 nodes, 8,905 links,
+83 hyperedges, and 716 communities; all 882 manifest entries had both AST and semantic hashes, with
+zero pending/deleted AST or semantic sources and zero schema or pair-edge issues under the initial
+validator. The semantic cache covered 446 document/paper/image sources, including visual inspection of
+all 135 images (five initially unrenderable SVGs were rasterized directly from their source with local
+Sharp/libvips). A stricter post-commit endpoint audit then found 11 retained hyperedges referencing 31
+removed/deduplicated node IDs: five stale changed-source groups and six pre-existing dangling groups.
+The derived projection filter removed all 11; B-PL17 now requires both pair-edge and hyperedge endpoint
+validation rather than repeating the narrower claim. Graphify did not expose host-subagent token
+telemetry, so its zero-valued token fields are not treated as zero compute. Exact-node/source
+navigation passed representative Run 2 queries; broad natural-language ranking remained noisy and is
+separately registered as B-PL18. Material audit conclusions were still verified directly in source and
+artifacts rather than inferred from graph rank alone.
 
 ### Independent verification performed
 
@@ -115,7 +119,7 @@ verified directly in source and artifacts rather than inferred from graph rank a
 | F8 | P1 | Scientific calibration | “Confidence” and “evidence tier” imply more certainty than the current uncalibrated rank and study-design proxy support | B-SCI2, B-PL3, B-R1-3 |
 | F9 | P1 | Cost / reliability | Router spend limits are non-atomic under concurrency and have no true global cap | B-COST1 |
 | F10 | P2 | Reproducibility / privacy | Provider responses and Deno dependencies fail open in places; exact small-cohort gap counts are exposed | B-BR1, B-PL14, B-SEC1 |
-| F11 | P2 | Agent context / process | The documented Graphify update command refreshes AST only; semantic freshness has no session-end or pre-push gate | B-PL17 |
+| F11 | P2 | Agent context / process | The documented Graphify update command refreshes AST only; semantic freshness and full endpoint integrity have no session-end or pre-push gate | B-PL17 |
 | F12 | P2 | Agent context / retrieval | Graphify exact-node/source navigation works, but broad natural-language BFS over-ranks generic AST symbols | B-PL18 |
 
 ### Primary repository evidence anchors
@@ -132,7 +136,7 @@ verified directly in source and artifacts rather than inferred from graph rank a
 | F8 | `shared/brain/index.ts:24–62`; Flutter `insights_tab.dart:232–237`; provenance screen score/tier labels; `brain-support-models-design.md:101–132`; demo runbook verdict/band explanation |
 | F9 | `tools/llm-router/src/budget.ts:125–301`; `router.ts:132–159`; router config; `20260724130000_create_o10_llm_router_boundaries.sql` |
 | F10 | `tools/llm-router/src/routes/apiWorker.ts:65–207`; CI Deno command/imports; gap-ledger SELECT policy + nao gaps route |
-| F11 | `scripts/graphify-build.ps1`; Graphify 0.8.40 `watch._rebuild_code` + AST manifest behavior; pre-audit `graphify-out/manifest.json` had 882 AST hashes and zero semantic hashes |
+| F11 | `scripts/graphify-build.ps1`; Graphify 0.8.40 `watch._rebuild_code` + AST manifest behavior; pre-audit `graphify-out/manifest.json` had 882 AST hashes and zero semantic hashes; post-commit full-endpoint validation found 11 stale/dangling hyperedges referencing 31 absent node IDs |
 | F12 | Post-bootstrap query QA against Run 2 README, pending register, and Serving-Band Gating / Adversarial Edge Verification nodes; exact-ID explanations passed while vocabulary-expanded queries ranked generic `source`, `client`, `FIXTURE`, `pending`, and `quote` nodes above richer semantic matches |
 
 ## Detailed audit
@@ -162,9 +166,10 @@ also not a semantic proof because it reads only a watcher flag.
 
 After this one-time bootstrap, require the active agent to run semantic incremental update at session
 end (or after each long-run unit). A machine-local pre-push check can enforce zero semantic pending/
-deleted files and `graph.json.built_at_commit == HEAD`; it cannot generate semantics in CI from a
-gitignored, host-session projection. This prevents another whole-corpus catch-up without turning derived
-graph output into repository truth.
+deleted files, `graph.json.built_at_commit == HEAD`, valid schema, and zero dangling pair-edge or
+hyperedge endpoints; it cannot generate semantics in CI from a gitignored, host-session projection.
+This prevents another whole-corpus catch-up or a hash-fresh-but-internally-dangling projection without
+turning derived graph output into repository truth.
 
 #### F12 — broad semantic retrieval still needs a ranker quality gate
 

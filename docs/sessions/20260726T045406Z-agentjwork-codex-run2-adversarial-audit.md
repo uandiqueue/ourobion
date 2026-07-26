@@ -86,17 +86,24 @@ Task claim: `run2-adversarial-signoff-audit` / `codex` / `agentjwork`
 
 - Completed the one-time semantic bootstrap at Run-2 HEAD `b55ce292`: 882/882 AST hashes and 882/882
   semantic hashes; zero pending/deleted AST or semantic inputs; `built_at_commit == HEAD`.
-- Final projection: 6,872 nodes, 8,905 links, 83 hyperedges, and 716 communities, with zero schema
-  issues or dangling edges. The cache covers all 446 assigned semantic sources: 311 documents/paper
-  sources and 135/135 visually inspected images.
+- Run-2 baseline projection: 6,872 nodes, 8,905 links, 83 hyperedges, and 716 communities, with zero
+  schema or pair-edge issues under the initial validator. The cache covers all 446 assigned semantic
+  sources: 311 documents/paper sources and 135/135 visually inspected images.
 - Five SVGs that the image viewer could not render were rasterized directly from the SVG sources with
   the repo's local Sharp/libvips and then visually inspected. No filename-counterpart inference was
   accepted. HTML was intentionally skipped because the graph exceeds Graphify's 5,000-node safety cap.
 - Exact-node explanation and source navigation passed representative Run-2 checks. Broad natural-
   language ranking still overweights generic AST nodes; B-PL18 records that distinct quality gap.
+- After the first audit commit was folded at `e6a2676`, an incremental six-document refresh reached
+  884/884 AST + semantic hashes, zero pending/deleted inputs, and exact-source QA for the verdict,
+  B-PL18/F12, and Sol-Max policy. A stricter endpoint audit found 11 retained hyperedges referencing 31
+  removed/deduplicated node IDs; the derived merge removed five stale changed-source and six
+  pre-existing dangling groups, leaving zero pair-edge or hyperedge endpoint issues. B-PL17 now owns
+  that integrity gate as well as freshness.
 - The first semantic workers inherited the root session model/effort; later workers used
   `gpt-5.6-terra` at medium effort to bound latency. Host-subagent token telemetry was unavailable, so
   Graphify's zero token fields are not interpreted as zero compute. Paid API/network spend remained
-  0 SGD. The final audit commit requires only a small incremental semantic refresh for changed docs.
+  0 SGD. The evidence-correction commit is followed by one final changed-document semantic restamp;
+  final HEAD/hash evidence is recorded on issue #137.
 
 memory: none
