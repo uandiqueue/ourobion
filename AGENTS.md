@@ -283,6 +283,26 @@ small JSON file managed by the Shared Memory Coordinator (`tools/shared_memory.m
 - **Claim:** `node tools/shared_memory.mjs claim --task "<name>" --agent "<agent>" --device "<device>"`
 - **Release:** `node tools/shared_memory.mjs release --task "<name>"`
 
+### Model-tier delegation (Sol Max)
+
+When the primary session uses **`gpt-5.6-sol` at max effort**, reserve it for orchestration,
+architecture/adversarial analysis, synthesis, evaluation, and final quality control. It should choose
+the model and reasoning effort for each delegated task to minimise total tokens and latency while
+preserving the required quality.
+
+- Delegate bounded search, repository inventory, extraction, routine test execution, mechanical edits,
+  and straightforward implementation to appropriately cheaper/faster subagents.
+- Give every subagent a concrete scope, expected artifact, validation rule, and stop condition; use
+  parallel workers only where their work is genuinely independent.
+- The Sol Max primary must inspect and validate material findings or changes before accepting them; a
+  subagent report is evidence to review, not an automatic conclusion.
+- Direct execution by Sol Max is acceptable when delegation is unavailable, the task is too small to
+  justify hand-off, the work is tightly coupled to the primary analysis, or safety/security requires
+  the primary to retain the operation. Record the reason when the exception is material.
+- Do not use a high-cost subagent where a lower-cost model/effort can meet the bounded task's acceptance
+  criteria. Conversely, escalate model or effort when validation shows the cheaper attempt is
+  insufficient.
+
 ## 8. Code-relationship awareness (know a change's blast radius)
 
 Curate what isn't derivable, defer the auto-generated **structural** graph for now, run a **semantic**

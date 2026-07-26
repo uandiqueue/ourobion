@@ -4,7 +4,7 @@ summary: The report on Phase-2 Run 2.0 (demo-slice build, U0–U13, PRs #123–#
 type: log
 scope: shared
 status: canonical
-updated: 2026-07-25
+updated: 2026-07-26
 ---
 
 # Run 2.0 — build report & sign-off cockpit
@@ -15,6 +15,13 @@ prove is named rather than implied.
 
 > **Nothing here is signed off.** The orchestrator never self-signs. Every unit's sign-off is
 > `pending` until Jayden reviews it. "done" below always means **built**, never **accepted**.
+
+> **Independent audit (2026-07-26):**
+> [`adversarial-audit-2026-07-26.md`](./adversarial-audit-2026-07-26.md) recommends **not signing the
+> current tip yet**. After exact-cumulative-SHA CI, an explicit internal-demo-only acceptance boundary,
+> and resolution of the B8 shared-contract review debt, it recommends conditional Run-2 acceptance and
+> a remediation-first Run 3 capped at seven units. It does not alter any pending per-unit sign-off on
+> Jayden's behalf.
 
 ## Where to put your review output
 

@@ -1,17 +1,17 @@
 ---
-title: Next-Build Optimizations — Jayden-approved backlog for the next long-horizon run
-summary: Optimizations surfaced during unit-by-unit sign-off review of the prior long-horizon runs (phase2-run, phase2-audit, phase2-research-fixes) and explicitly approved by Jayden for a build run to execute. Each entry LOCKS the intent + architecture decision so the build agent executes, never re-decides. NOTE this doc is now BOTH backlog and record — Run 2.0 executed O9-O20, so read each item's Status line, not the title. O1-O8 open; O21-O23 pending Jayden review. Dev aid (docs/temp), not ground truth.
+title: Next-Build Optimizations — locked run backlogs and execution record
+summary: Decision-locked build items promoted from the pending-build register. Run 2 executed O9-O20. The independent Run-2 audit locks O24-O30 as Run 3's seven-unit, half-sized, remediation-first tranche; O1-O8 remain open backlog and O21-O23 remain pending review rather than silently joining Run 3. Dev aid (docs/temp), not ground truth.
 type: plan
 scope: shared
 status: canonical
-updated: 2026-07-25
+updated: 2026-07-26
 ---
 
 # Next-Build Optimizations — approved backlog for the next long-horizon run
 
-This doc accumulates optimizations that Jayden approved during the **unit-by-unit sign-off review** of
-the prior long-horizon runs. It is the input a future build run consumes: read this top-to-bottom,
-execute each open `O`-item as specified.
+This doc accumulates optimizations approved during sign-off review. It is both backlog and execution
+record. A build run executes only the items named in its **locked tranche**, not every historical item
+whose local status still says `open`.
 
 ## The contract (read before executing any item)
 
@@ -24,8 +24,56 @@ execute each open `O`-item as specified.
 - **Source-traceable.** Each item names the sign-off unit it came from so the reasoning trail is intact.
 - **Two-tier truth still applies.** Accepted ADR bodies remain immutable (`context_sync --check`); if an
   item would touch one, it records amendment intent for retro-review instead (as the research-fixes run did).
+- **The tranche is the scope authority.** O1–O8 remain valid backlog, but they are not implicitly part
+  of Run 3. O21–O23 are proposals pending human review. Do not pull either group into Run 3 without
+  removing an equal-sized locked item and recording Jayden's decision.
 
-Status values: `open` (ready for the next run) · `done` (executed, with the commit/PR) · `dropped` (with why).
+Status values: `run3-locked` · `open` (backlog, not automatically in the tranche) ·
+`pending-review` · `done` · `dropped` (with why).
+
+---
+
+## Run 3.0 locked tranche — half-sized remediation run (2026-07-26)
+
+**Authority:** Jayden asked that Run 3 be half the size of Run 2 and include current-feature extension,
+client UI optimization, and one custom-model training pilot. This tranche applies the independent
+[Run-2 adversarial audit](./adversarial-audit-2026-07-26.md) while respecting that cap.
+
+### Hard size envelope
+
+Run 2 used 14 units, changed 170 files, and added approximately 17,273 lines. Run 3 is bounded to:
+
+- **at most 7 units** — O24 through O30, one unit each;
+- **at most 85 changed files** across the cumulative run;
+- **at most 8,650 added lines** across the cumulative run;
+- no eighth “small follow-up” unit: move unfinished/non-acceptance work back to
+  [pending-build-register.md](./pending-build-register.md).
+
+Generated lockfiles count as files and lines. A unit may be smaller than its predecessor; the caps are
+ceilings, not targets. If a required safety fix would exceed the envelope, stop and ask Jayden which
+later unit to defer.
+
+### Order and gates
+
+| Run 3 unit | Locked item | Outcome | May start when |
+|---|---|---|---|
+| U0 | O24 | exact-tip, complete, reproducible CI evidence | immediately |
+| U1 | O25 | nao authorization + cross-user privacy boundary | O24 workflow change is green |
+| U2 | O26 | raw-truth-safe demo load + retry-safe serve pipeline | O25 blocks ordinary-account access |
+| U3 | O27 | scientifically faithful provenance contract and trust posture | B8 second review or explicit waiver is available for shared-contract work |
+| U4 | O28 | plain-language, accessible client insights/provenance | O27 contract is stable |
+| U5 | O29 | live verifier retrieval + actual model/family attestation | O24–O25 are green; provider calls remain budget-capped |
+| U6 | O30 | train/evaluate one non-serving NLI pilot + cumulative closeout | O29 freezes the evidence input contract; licence/GMI gates satisfied |
+
+**Promotion boundary:** O30 trains and evaluates a model but does not route it into serving. O2/MPR,
+B-COST1, active support-model integration, metric expansion, production hosting, visual reskinning,
+O1–O8, O21–O23, and Graphify process/ranker work B-PL17/B-PL18 remain outside this tranche.
+Consequently, Run 3 still cannot claim production or scientific validation merely because all seven
+units pass.
+
+**Provider budget:** all deterministic/offline gates first. Across Run 3, Anthropic must remain at or
+below **2 SGD** and OpenAI at or below **20 SGD**; every live unit records provider, model-returned id,
+call count, tokens, USD and SGD. O24/O25/O26/O27/O28/O30 require no Anthropic/OpenAI calls.
 
 ---
 
@@ -720,6 +768,223 @@ needs an INTEGRATION test on the real seam, not an injected/mocked unit test.**
   O8 (router config basis — same component), B5 (the api-key work touches these call sites).
 - **Gate / what it gates:** gates nothing today. Becomes a **blocker** for any future packaging, bundling,
   or publish step for `brain-ingest`, and for any change that gives `llm-router` a runtime dependency.
+
+---
+
+## O24 · Exact-tip release gate + complete, reproducible Deno CI
+
+- **Source:** independent Run-2 audit F1; register B-PL14.
+- **Status:** `run3-locked` — **U0**.
+- **Intent:** restore the repo's non-bypassable verification claim before extending code. PR #123 ran
+  CI only for the U0 documentation bootstrap; PRs #124–#136 have zero checks because their stacked
+  bases miss the workflow branch filter, and `run-pipeline` is absent from the Deno matrix.
+- **Locked work:**
+  1. Make CI run for every PR regardless of stacked feature base, or provide an equivalent explicit
+     dispatch that records the exact SHA. Keep the required `dev-phase2`/`main` integration gates.
+  2. Add `workflow_dispatch` and a guard that fails when a Supabase function entrypoint is not represented
+     in the Deno check set.
+  3. Include `run-pipeline`; pin Deno/JSR resolution with a committed lock and stop using fresh
+     `--no-lock` resolution in the release gate.
+  4. Run the full workflow on the cumulative Run-2+O24 SHA and record the SHA/check URLs in U0 evidence.
+- **Acceptance:** context, Flutter analyze/test, every Node/nao suite, all four Deno handlers, and shadow
+  migration apply are green on one exact cumulative SHA. A local pass or an older-commit check is not
+  acceptable evidence.
+- **Not this item:** nao production/OpenNext deployment (B-UI7), package-boundary O23, semantic-graph
+  session enforcement (B-PL17), graph query-ranker work (B-PL18), or feature fixes exposed by CI.
+  Record a newly exposed defect in the register and let Jayden trade scope.
+- **Provider budget:** zero paid model calls.
+
+---
+
+## O25 · Enforce nao RBAC/RLS and redact the global-job boundary
+
+- **Source:** independent Run-2 audit F2; register B-SEC1 plus B-BR7's direct-write slice.
+- **Status:** `run3-locked` — **U1**; production blocker.
+- **Intent:** make the implementation match the canonical `viewer` / `curator` / `admin` architecture.
+  Authentication alone is not authorization.
+- **Locked role matrix:**
+  - unprovisioned/ordinary biotope account: no nao access;
+  - viewer: read-only staff surfaces;
+  - curator: viewer + claim disposition and seed curation;
+  - admin: curator + cap changes, simulation loader, and global pipeline jobs.
+- **Locked work:**
+  1. Choose one explicit membership source (`nao_members` or immutable `app_metadata.nao_role`) and use
+     the same vocabulary in middleware, route helpers, JWT/RLS policy and tests. Never default an
+     unprovisioned account into nao.
+  2. Enforce permissions in both Next routes and Postgres. Revoke broad authenticated writes; expose
+     narrow, role-checking RPCs for global mutations so direct PostgREST cannot bypass validation.
+  3. Make the global run asynchronous or return only an opaque run id plus redacted aggregates. Never
+     relay per-user UUIDs, rule ids, pair context, or raw stage diagnostics to the caller.
+  4. Attribute append-only control events for cap changes, seed toggles and verdict writes.
+  5. Keep exact gap demand staff-only; before any external/community exposure, require a reviewed
+     small-cell/cohort-suppression decision rather than assuming “no user id” means anonymous.
+- **Acceptance:** negative integration matrix for unauthenticated, ordinary account, unprovisioned,
+  viewer, curator and admin across UI route, API route, direct table/RPC and global-job response. A UI
+  hide/show test alone does not pass.
+- **Not this item:** whether a verdict applies to one artifact revision or a relation forever (O27), or
+  loader/pipeline correctness (O26).
+- **Provider budget:** zero paid model calls.
+
+---
+
+## O26 · Make the demo control path raw-truth-safe and retry-safe
+
+- **Source:** independent Run-2 audit F3/F5; register B-DATA1, B-DATA2 and B-PL15.
+- **Status:** `run3-locked` — **U2**; production blocker.
+- **Intent:** retain the useful one-click demo without letting simulation or retries corrupt raw truth,
+  demand ranking, or derived publication.
+- **Loader work:**
+  1. Mechanically disable simulation outside an explicit demo environment and require a dedicated
+     throwaway demo account/tenant or equivalent isolated namespace.
+  2. Plan from both raw tables and write gut + wearable rows in one transactional RPC.
+  3. Refuse conflicts with any non-simulated row; handle sparse/mismatched ranges deliberately.
+  4. Make real writers replace simulated provenance and clear stale generated fields. Preserve origin
+     through the downstream metric view rather than hard-coding it away.
+  5. Provide bounded preview, cleanup and repair for simulated batches.
+- **Pipeline/gap work:**
+  1. Add durable `pipeline_runs` with idempotency key, input/data watermark, actor, stage state and a
+     single-flight guard.
+  2. Give demand a durable event identity (user + normalized pair + evaluated date/data version), then
+     expose only privacy-safe aggregates. Preserve counts per reason/status; do not last-write-win
+     incompatible reasons into one total.
+  3. Make partial publication retryable without double-incrementing demand or skipping a stage.
+- **Acceptance:** tests cover wearable-only history, mismatched/sparse ranges, real-row conflicts,
+  simulated→real conversion, failure between the two raw writes, failure before/after each pipeline
+  stage, repeated same-key calls, changed-watermark calls, and truly concurrent triggers. Force at least
+  one live local-stack stage failure to prove the 502/repair path in B-PL15.
+- **Not this item:** authorization/response redaction (O25) or UX language (O27/O28).
+- **Provider budget:** zero paid model calls.
+
+---
+
+## O27 · Preserve scientific semantics and artifact trust through provenance
+
+- **Source:** independent Run-2 audit F4/F6/F8; register B-SCI1, B-SCI2's vocabulary slice, B-UI3,
+  B-UI9 and B-BR7's revision/presentation slice.
+- **Status:** `run3-locked` — **U3**; client-trust blocker.
+- **Intent:** the client must never infer more causality, certainty, or verification than the stored
+  artifact supports.
+- **Locked work:**
+  1. Carry source `claimKind` and verifier-assessed supported kind through the serving edge, insight,
+     provenance RPC/model and renderer. Additive shared fields follow compatibility defaults and B8's
+     second-review/explicit-waiver gate.
+  2. Lock copy by kind: correlational → “was associated with”; mechanistic → mechanism language;
+     causal verbs only when both source claim and verifier support causal kind.
+  3. Persist artifact posture (`fixture|live`), simulated-personal-data state, provider-returned
+     verifier/model version, family/decorrelation state and attestation result. Replace the global
+     hard-coded TEST-MODE notice with artifact-derived disclosure.
+  4. Render “Demo fixture — not a real paper result” on the card before its claim. Production serving
+     fails closed for fixture artifacts or missing required attestation.
+  5. Parse/render expert disposition + timestamp. Keep a rejected machine result only as clearly
+     historical/superseded evidence. Bind the disposition to an artifact revision/hash, or record an
+     explicit reviewed decision for relation-wide semantics and mandatory re-review on replacement.
+  6. Until O2 calibration, hide the numeric rank from ordinary clients or label it “prototype support
+     rank”; render publication type as “study-design tier” and “certainty not assessed.”
+- **Acceptance:** cross-product tests for relation × claim kind × verifier supported kind × expert
+  state × fixture/live × attested/unattested; mutation tests prove causal wording, ordinary fixture
+  serving and superseded expert state fail closed. Correct the Run-2 fixture's association→causal
+  inflation and the runbook's one-to-one verdict→band simplification.
+- **Not this item:** metric label translation and accessibility mechanics (O28), live retrieval (O29),
+  or calibrated certainty (O2 remains the hard gate).
+- **Provider budget:** zero paid model calls.
+
+---
+
+## O28 · Translate provenance into plain language and establish accessibility
+
+- **Source:** Jayden's Run-3 UI request + independent Run-2 audit F7; register B-UI10/B-UI11.
+- **Status:** `run3-locked` — **U4**.
+- **Intent:** retain traceability without making a client read repository identifiers or analyst notation.
+- **Locked work:**
+  1. Build a client provenance view model from the metrics registry: approved name, unit, abbreviation
+     expansion and one-sentence meaning. `sleep_duration_min` becomes “Sleep duration”; `hrv_sdnn_ms`
+     becomes “Heart-rate variability (SDNN)” with an explanation.
+  2. Use progressive disclosure: “What changed for me?”, “What research was linked?”, “How directly
+     does it apply?”, “Source details”, then an explicitly advanced technical section.
+  3. Keep raw pattern keys, branches, enum values, fixture ids, `rho`, `nEff`, `q`, edge-score components
+     and derivation modes out of ordinary client copy. Add a guard test for snake_case/raw enums and
+     unexplained symbols.
+  4. Distinguish loading, empty, stale and failed states; provide retry and never translate a network
+     error into “no patterns.”
+  5. Add chart semantics and a values-list equivalent; explicit labels/roles/states and adequate hit
+     areas; repair small-text contrast; test 200% text scaling, focus order and keyboard paths where
+     supported; complete one manual TalkBack traversal.
+  6. Fix the demo JSONL path's UTF-8 read/write handling and add a non-ASCII round-trip fixture so
+     `—` cannot become `â€”` again.
+- **Acceptance:** Flutter widget/semantics/golden or screenshot evidence for every state and both compact
+  and large text; copy gate green; no banned internal token in ordinary rendered strings; manual
+  TalkBack checklist attached to U4.
+- **Not this item:** porcelain-luxury visual reskin (B-UI1), formal longitudinal user testing (B-UI2),
+  or scientific contract semantics (O27).
+- **Provider budget:** zero paid model calls.
+
+---
+
+## O29 · Add live verifier retrieval and attest the real model/family boundary
+
+- **Source:** remaining O15 scope + O7; independent Run-2 audit scientific boundary; register
+  B-BR1/B-BR2/B-BR3.
+- **Status:** `run3-locked` — **U5**.
+- **Intent:** move from fixture-grounded plumbing to bounded real-source verification without claiming
+  validation from one successful demo.
+- **Locked work:**
+  1. Add the verifier-side live retrieval adapter with bounded queries, source allow/deny policy,
+     quote/locator capture, immutable evidence snapshot hashes and explicit failure states.
+  2. Preserve echo/source isolation: synthesis citations cannot silently count as independent verifier
+     evidence; record what was excluded and why.
+  3. Validate the provider response schema. Persist the provider-returned model/version, usage, request
+     trace, synthesis family and verifier family. Missing model/usage is an error, never “configured id”
+     or zero-cost success.
+  4. Enforce vendor-agnostic family mismatch on real routes and fail closed when attestation is absent.
+  5. Add request deadline/cancellation, `Retry-After` + jitter, unique call ids and ambiguous-completion
+     accounting. Record retrieval misses, latency, cost and a small human-labelled disagreement/ablation
+     report.
+- **Acceptance:** offline fixtures first, then a budgeted live smoke covering retrieval hit, miss,
+  source echo, family match rejection, provider schema failure and persisted model trace. The evidence
+  report must call this an engineering validation unless a preregistered labelled evaluation supports
+  a stronger claim.
+- **Provider budget:** cumulative Run-3 caps remain Anthropic ≤2 SGD and OpenAI ≤20 SGD. Stop before a
+  request that could cross either cap; record actual USD+SGD and restore config byte-for-byte.
+- **Not this item:** support-model training (O30), active custom-model routing, or general scientific
+  calibration (O2).
+
+---
+
+## O30 · Train and evaluate NLI Shadow v0 — no serving influence
+
+- **Source:** Jayden's custom-model request; memory 0013 roster model (a); independent Run-2 audit;
+  register B-BR4.
+- **Status:** `run3-locked` — **U6**, gated by GMI access and dataset licence review.
+- **Intent:** create one reproducible learned claim/evidence baseline, measure it honestly in-domain,
+  and stop before runtime promotion.
+- **Locked data decision:** use SciFact only after recording its exact licences (claim/evidence
+  annotations CC BY 4.0, abstracts ODC-By 1.0, code Apache 2.0) and attribution. HealthVer is excluded
+  until an explicit reusable licence/permission is documented; its COVID focus would not establish
+  Ourobion-domain validity anyway. Remove the design rule that “unconfirmed” licences are acceptable.
+- **Locked execution:**
+  1. Train in the approved external GMI/model environment. Ourobion remains Python-free; do not add a
+     Python training stack, environment or downloaded dataset to this repo.
+  2. Pin base encoder revision, data URLs/versions/hashes, preprocessing, label mapping, seed, split and
+     environment. Split by source paper/claim family rather than random pairs.
+  3. Before training, preregister the size/strata/reviewer process for a frozen human-labelled Ourobion
+     audit set spanning gut, hydration, wearables and environment. If independent review/adjudication is
+     unavailable, label all in-domain results preliminary.
+  4. Report prevalence, confusion matrix, per-class precision/recall/F1, macro F1, Brier score/ECE,
+     reliability curve, abstention coverage/selective risk, latency, uncertainty intervals, majority
+     baseline and current-verifier comparison. Treat open-domain degradation as expected risk, not an
+     inconvenient benchmark exception.
+  5. Commit only a model card, licence/attribution and immutable manifests/hashes, evaluation artifacts,
+     external model-artifact pointer and an explicit limitations/promotion decision. Do not commit raw
+     third-party data or silently treat weights as deployable.
+- **Hard non-serving boundary:** NLI output does not modify `RelationshipClaim`, `EdgeVerification`,
+  edge score/band, cards, UI, verifier calls or spend in Run 3. No contradicted/uncertain short-circuit.
+- **Acceptance:** a clean external rerun reproduces the recorded model/eval hashes within documented
+  tolerance; licence and data lineage review passes; evaluation includes the frozen in-domain set and
+  failure slices. Runtime shadow integration becomes a later separately approved item.
+- **Closeout:** rerun O24's full cumulative exact-SHA gate, reconcile both registers, and write the Run-3
+  sign-off cockpit. If GMI/licensing blocks training, stop with O30 blocked; do not replace it with an
+  eighth feature unit.
+- **Provider budget:** no Anthropic/OpenAI calls are required for training/evaluation.
 
 ---
 
