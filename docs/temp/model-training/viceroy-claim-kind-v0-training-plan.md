@@ -1,5 +1,5 @@
 ---
-title: Zebra Claim-Kind v0 — GMI training plan
+title: Viceroy Claim-Kind v0 — GMI training plan
 summary: Preregistered plan for a causal-language classifier over conclusion sentences that fills EdgeVerification.claimKindCheck, kept as a separate model because its input granularity and GPL-3.0 data licence must not entangle the relation/direction weights. Its no-relationship class is also the only licensed supervision found for the long-standing no_effect gap.
 type: plan
 scope: model-training
@@ -7,7 +7,7 @@ status: draft
 updated: 2026-07-26
 ---
 
-# Zebra Claim-Kind v0 — GMI training plan
+# Viceroy Claim-Kind v0 — GMI training plan
 
 > **Shared execution substrate.** GMI gates, container/network/secret posture, durable storage, the
 > external `ourobion-model-lab` repository shape, and the release/provenance contract are defined once
@@ -17,11 +17,11 @@ updated: 2026-07-26
 
 ## 1. Decision summary
 
-`zebra-claim-kind-v0` reads a paper's **conclusion sentence** and classifies the strength of causal
+`viceroy-claim-kind-v0` reads a paper's **conclusion sentence** and classifies the strength of causal
 language it uses. It fills the second half of model **(c)** from
 [memory 0013](../../memory/0013-brain-pipeline-and-support-models-decision.md) — the half deliberately
 carved out of
-[`zebra-relation-direction-v0-training-plan.md`](./zebra-relation-direction-v0-training-plan.md).
+[`salmon-relation-direction-v0-training-plan.md`](./salmon-relation-direction-v0-training-plan.md).
 
 **Why a separate model rather than a third head on the relation encoder.** Three independent reasons,
 any one of which would be sufficient:
@@ -35,7 +35,7 @@ any one of which would be sufficient:
 3. It can be built, evaluated, and discarded independently — a `no-go` here does not touch the
    relation/direction result.
 
-Same bounded-pilot terms as every other zebra model: non-serving; no influence on any contract field,
+Same bounded-pilot terms as every other model in this roster: non-serving; no influence on any contract field,
 edge score, band, card, routing, or spend; offline-only by the serve-path determinism invariant
 ([`decisions/0003-paper-reliability.md`](../../shared/decisions/0003-paper-reliability.md)); a
 documented `no-go` is a valid completion.
@@ -144,7 +144,7 @@ What the licence reviewer must decide, in writing, before any GPU is provisioned
 Risk-containment measures, applied regardless of the outcome:
 
 - this model's weights, code, and release prefix stay in a **separate namespace** from every other
-  zebra model — no shared checkpoints, no merged artifacts, no joint release manifest;
+  model in this roster — no shared checkpoints, no merged artifacts, no joint release manifest;
 - the release manifest names the GPL-3.0 dependency explicitly and prominently;
 - if the reviewer cannot resolve it, **this model blocks**. It does not proceed under an assumption,
   and it is not quietly folded into the relation/direction model.
@@ -300,7 +300,7 @@ an hour of H100 time.
 - auto-pay off; checkpoint upload after every job.
 
 The real costs are the licence review and the human audit labelling. Consider running this model on the
-**same container session** as another zebra model to avoid paying provisioning overhead twice — the
+**same container session** as another model in this roster to avoid paying provisioning overhead twice — the
 job ledgers are independent, but the container need not be, provided artifacts go to separate release
 prefixes (§4.2).
 

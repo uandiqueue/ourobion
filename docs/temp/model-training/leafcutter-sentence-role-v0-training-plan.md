@@ -1,13 +1,13 @@
 ---
-title: Zebra Sentence-Role v0 — training plan (mostly not a GMI job)
-summary: Preregistered plan for the A4 sentence-role tagger that replaces the Haiku cold-start classifier, trained public-data-first on PubMed 200k RCT and exported to ONNX so the TypeScript ingest CLI can run it. Unlike the other zebra models this one is a cost/latency distillation, needs little or no GPU, and must be judged on cost-per-paper as much as on F1.
+title: Leafcutter Sentence-Role v0 — training plan (mostly not a GMI job)
+summary: Preregistered plan for the A4 sentence-role tagger that replaces the Haiku cold-start classifier, trained public-data-first on PubMed 200k RCT and exported to ONNX so the TypeScript ingest CLI can run it. Unlike the other models in this roster this one is a cost/latency distillation, needs little or no GPU, and must be judged on cost-per-paper as much as on F1.
 type: plan
 scope: model-training
 status: draft
 updated: 2026-07-26
 ---
 
-# Zebra Sentence-Role v0 — training plan (mostly not a GMI job)
+# Leafcutter Sentence-Role v0 — training plan (mostly not a GMI job)
 
 > **Shared execution substrate.** If a GPU is used at all, the GMI gates, container posture, storage,
 > external-repository, and release rules in the NLI plan
@@ -17,7 +17,7 @@ updated: 2026-07-26
 
 ## 1. Decision summary
 
-`zebra-sentence-role-v0` classifies each sentence of a structured paper into
+`leafcutter-sentence-role-v0` classifies each sentence of a structured paper into
 `'finding' | 'method' | 'background' | 'hedge' | 'other'`, filling
 `StructuredPaper.sentences[].role` at **A4 · Structure**
 ([`insight-engine-architecture.md`](../../shared/insight-engine-architecture.md) §A4).
@@ -27,7 +27,7 @@ architecture's own deferred-models table, which names the cold-start substitute 
 the swap plan: *"distil into a small TS-runnable classifier (logistic over n-grams or ONNX minilm) once
 ≥5k labelled sentences accumulate."*
 
-It differs from every other zebra model in three ways that change how it should be planned:
+It differs from every other model in this roster in three ways that change how it should be planned:
 
 1. **It is a cost/latency distillation, not a capability model.** Haiku already does this acceptably.
    The model's job is to do the same thing for near-zero marginal cost on every future paper.
@@ -42,7 +42,7 @@ propagates quietly into candidate enumeration. That argues for care in evaluatio
 
 ## 2. Why LLM labels are permitted here, when they are forbidden elsewhere
 
-Every other zebra plan bans LLM-generated training labels. This one **explicitly allows** them as a
+Every other plan in this roster bans LLM-generated training labels. This one **explicitly allows** them as a
 later stage, and the distinction is not a loophole:
 
 - For NLI verdicts, study-design tiers, or claim-kind, training on the LLM's own labels would be
@@ -190,7 +190,7 @@ the honest outcome is `no-go` — keep Haiku, and record that the distillation w
 - **Preferred outcome: USD 0 compute.** The logistic baseline needs no rented hardware.
 - If the encoder candidate is trained: one GPU, at most **2 GPU-hours**, at most **USD 8 compute** and
   **USD 12 all-in**. 2.3M sentences × 3 epochs at 128 tokens is roughly an hour on one H100.
-- Run it on an existing zebra container session if one is already provisioned, rather than paying
+- Run it on an existing model-training container session if one is already provisioned, rather than paying
   provisioning overhead for a job this small.
 
 ## 10. Completion and outcome gates

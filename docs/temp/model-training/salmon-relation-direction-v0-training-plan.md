@@ -1,5 +1,5 @@
 ---
-title: Zebra Relation/Direction v0 — GMI training plan
+title: Salmon Relation/Direction v0 — GMI training plan
 summary: Preregistered plan for training and evaluating one biomedical relation-type + direction cross-encoder on a self-managed GMI GPU container, to cross-check the synthesis LLM's relation and direction at A10. Public-domain/CC-BY corpora only; claim-kind is split into a separate model; no_effect and confounds are explicitly out of scope for lack of supervision.
 type: plan
 scope: model-training
@@ -7,7 +7,7 @@ status: draft
 updated: 2026-07-26
 ---
 
-# Zebra Relation/Direction v0 — GMI training plan
+# Salmon Relation/Direction v0 — GMI training plan
 
 > **Shared execution substrate.** GMI account/entitlement gates, container configuration, network and
 > secret posture, durable-storage rules, the external `ourobion-model-lab` repository shape, and the
@@ -19,7 +19,7 @@ updated: 2026-07-26
 
 ## 1. Decision summary
 
-`zebra-relation-direction-v0` is a biomedical relation-extraction encoder that reads a passage with two
+`salmon-relation-direction-v0` is a biomedical relation-extraction encoder that reads a passage with two
 marked metric mentions — `[E1]…[/E1]`, `[E2]…[/E2]` — and predicts two things:
 
 1. a **relation type**, mapped onto a strict subset of the `RelationKind` contract enum;
@@ -28,7 +28,7 @@ marked metric mentions — `[E1]…[/E1]`, `[E2]…[/E2]` — and predicts two t
 It implements the relation/direction half of model **(c)** in
 [memory 0013](../../memory/0013-brain-pipeline-and-support-models-decision.md). The claim-kind half is
 deliberately **not** in this model; it has different input granularity and an incompatible data licence,
-and is planned separately in [`zebra-claim-kind-v0-training-plan.md`](./zebra-claim-kind-v0-training-plan.md).
+and is planned separately in [`viceroy-claim-kind-v0-training-plan.md`](./viceroy-claim-kind-v0-training-plan.md).
 
 This is a bounded research pilot on the same terms as the NLI pilot:
 
@@ -350,7 +350,7 @@ Everything in the NLI plan's §14, plus:
 
 ## 15. Deferred beyond v0
 
-- claim-kind — separate model, [`zebra-claim-kind-v0-training-plan.md`](./zebra-claim-kind-v0-training-plan.md);
+- claim-kind — separate model, [`viceroy-claim-kind-v0-training-plan.md`](./viceroy-claim-kind-v0-training-plan.md);
 - `no_effect` and `confounds` coverage — unsourced, needs new annotation;
 - PubMedCausal, SemEval-2010, and DDI-2013 ingestion;
 - joint multi-task training with the NLI or claim-kind models — do it only after per-head baselines exist;

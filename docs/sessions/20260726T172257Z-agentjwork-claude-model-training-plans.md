@@ -31,15 +31,15 @@ Task claim: `model-training-plans-remaining-support-models` / `claude` / `agentj
 
 ## Changed
 
-- Added `docs/temp/model-training/zebra-study-design-v0-training-plan.md` — model (b1) → `evidenceTier`
+- Added `docs/temp/model-training/giraffe-study-design-v0-training-plan.md` — model (b1) → `evidenceTier`
   at A5. Rebuilt label construction (PT for tiers 4–5, MeSH headings + check tags for 1–3), MEDLINE
   baseline FTP as the source, StudyTypeTeller (CC-BY) as the independent gold set.
-- Added `docs/temp/model-training/zebra-relation-direction-v0-training-plan.md` — model (c) part one →
+- Added `docs/temp/model-training/salmon-relation-direction-v0-training-plan.md` — model (c) part one →
   `directionCheck` at A10. Two heads over one encoder, mandatory `symmetric` direction class,
   BioREDirect as the gating dependency.
-- Added `docs/temp/model-training/zebra-claim-kind-v0-training-plan.md` — model (c) part two →
+- Added `docs/temp/model-training/viceroy-claim-kind-v0-training-plan.md` — model (c) part two →
   `claimKindCheck`. Split out deliberately on input-granularity and GPL-3.0 licence-isolation grounds.
-- Added `docs/temp/model-training/zebra-sentence-role-v0-training-plan.md` — the A4 tagger from the
+- Added `docs/temp/model-training/leafcutter-sentence-role-v0-training-plan.md` — the A4 tagger from the
   insight-engine deferred-models table, not from the memory-0013 roster.
 - Added `docs/temp/model-training/model-roster.md` — the decision register: four planned models, one
   shipped lookup, one previously rejected model, nine researched-and-rejected candidates with evidence,
@@ -67,6 +67,17 @@ Task claim: `model-training-plans-remaining-support-models` / `claude` / `agentj
   the sentence-role tagger likely needs no GPU at all. Licences and human annotation are the real cost.
 - Plans were written into `docs/temp/model-training/` to converge with #139, which is concurrently
   creating that folder and moving the NLI plan into it.
+- **Codenames are per-model, not a family prefix.** `zebra` denotes the NLI model specifically — its
+  stark black/white stripes stand for the supported vs not-supported binary — so it must not be reused
+  as a prefix. Jayden confirmed the rest: `giraffe` (study-design; height = position on the 1–5 evidence
+  ladder), `salmon` (relation/direction; knows upstream from downstream), `viceroy` (claim-kind; the
+  butterfly that mimics the Monarch, as correlation mimics causation), `leafcutter` (sentence-role;
+  cuts a paper into labelled pieces at near-zero marginal cost). Scheme recorded in `model-roster.md` §1.1.
+- **Base branch is `dev-phase2-run3`**, created at the local `dev-phase2-run2` tip (`1a69650`) on
+  Jayden's instruction, since it did not exist locally or on the remote. Retargeting also fixed a real
+  problem: with `dev-phase2-run2` as base, PR #141 showed 7 commits / 26 files, because local run-2 was
+  7 commits ahead of `origin/dev-phase2-run2` and this branch had been cut mid-stack. Against run3 the
+  PR shows only this session's commits.
 
 ## Left
 

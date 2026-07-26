@@ -22,20 +22,35 @@ Research date for all external claims: **2026-07-26**.
 
 ## 1. The roster
 
-| # | Candidate | Contract field / stage | Verdict | Plan |
-|---|---|---|---|---|
-| (a) | NLI claim/evidence cross-encoder | `EdgeVerification.verdict` · A10 | **TRAIN** — planned | [NLI plan](../run3/custom-model-training-plan.md) |
-| (b1) | Study-design → evidence tier | `Citation.evidenceTier` · A5 | **TRAIN** — best supervision in the roster | [study-design](./zebra-study-design-v0-training-plan.md) |
-| (b2) | Venue → impact tier | `Citation.impactTier` | **NO — shipped deterministically** | — |
-| (c-i) | Relation type + direction | `directionCheck` · A10/A8 | **TRAIN** — gated on one licence | [relation-direction](./zebra-relation-direction-v0-training-plan.md) |
-| (c-ii) | Claim kind (causal vs correlational) | `claimKindCheck` · A10 | **TRAIN** — gated on GPL-3.0 review | [claim-kind](./zebra-claim-kind-v0-training-plan.md) |
-| (d) | Sentence-role tagger | `sentences[].role` · A4 | **TRAIN** — but probably without a GPU | [sentence-role](./zebra-sentence-role-v0-training-plan.md) |
-| — | ML reliability regressor | `edgeScore` | **REJECTED** (pre-existing) | §4 |
-| — | 9 further candidates | various | **DO NOT TRAIN** | §3 |
+| # | Codename | Candidate | Contract field / stage | Verdict | Plan |
+|---|---|---|---|---|---|
+| (a) | `zebra` | NLI claim/evidence cross-encoder | `EdgeVerification.verdict` · A10 | **TRAIN** — planned | [NLI plan](../run3/custom-model-training-plan.md) |
+| (b1) | `giraffe` | Study-design → evidence tier | `Citation.evidenceTier` · A5 | **TRAIN** — best supervision in the roster | [study-design](./giraffe-study-design-v0-training-plan.md) |
+| (b2) | — | Venue → impact tier | `Citation.impactTier` | **NO — shipped deterministically** | — |
+| (c-i) | `salmon` | Relation type + direction | `directionCheck` · A10/A8 | **TRAIN** — gated on one licence | [relation-direction](./salmon-relation-direction-v0-training-plan.md) |
+| (c-ii) | `viceroy` | Claim kind (causal vs correlational) | `claimKindCheck` · A10 | **TRAIN** — gated on GPL-3.0 review | [claim-kind](./viceroy-claim-kind-v0-training-plan.md) |
+| (d) | `leafcutter` | Sentence-role tagger | `sentences[].role` · A4 | **TRAIN** — but probably without a GPU | [sentence-role](./leafcutter-sentence-role-v0-training-plan.md) |
+| — | — | ML reliability regressor | `edgeScore` | **REJECTED** (pre-existing) | §4 |
+| — | — | 9 further candidates | various | **DO NOT TRAIN** | §3 |
 
 Four new plans accompany this document. Combined bounded budget across all four is **≤14 GPU-hours and
 ≤USD 55 all-in** — and one of them is likely to need no GPU at all. Compute is not the constraint
 anywhere in this roster; **licences and human annotation are**.
+
+### 1.1 The codename scheme
+
+Each codename encodes what the model actually discriminates, so the name carries information rather
+than being decoration. Pattern: `<codename>-<function>-v<n>`.
+
+| Codename | Why |
+|---|---|
+| `zebra` | Distinct black-and-white stripes — the stark binary of a supporting vs non-supporting verdict |
+| `giraffe` | Height is the whole point: the model ranks papers by how high they sit on the 1–5 evidence ladder |
+| `salmon` | Knows upstream from downstream — orientation against a current, i.e. which entity is the subject |
+| `viceroy` | The butterfly that mimics the Monarch; correlation dressed as causation is the same look-alike problem |
+| `leafcutter` | Cuts a paper into labelled pieces at near-zero marginal cost per piece, at colony-scale throughput |
+
+`zebra` refers **only** to the NLI model. Do not use it as a family prefix for the others.
 
 ## 2. What changed as a result of this research
 
@@ -109,7 +124,7 @@ API lookup, not a model.
 >20k sentences, academic use) and the task is cheap. It is rejected for v0 only because it duplicates a
 field the synthesis LLM already emits, and because the hedge axis is already contested inside our own
 contract (`role='hedge'` vs `assertion='hedged'` — see the
-[sentence-role plan](./zebra-sentence-role-v0-training-plan.md) §4). Revisit **only** if evidence
+[sentence-role plan](./leafcutter-sentence-role-v0-training-plan.md) §4). Revisit **only** if evidence
 strength becomes a first-class graded output rather than a byproduct.
 
 ## 4. Previously rejected, still rejected
@@ -133,7 +148,7 @@ Re-checking confirmed why:
 
 **The one lead:** Yu, Li & Wang's causal-language corpus carries an explicit `no relationship` class
 over 1,356 human-labelled PubMed conclusion sentences. It is folded into the
-[claim-kind plan](./zebra-claim-kind-v0-training-plan.md), which trains and measures it but explicitly
+[claim-kind plan](./viceroy-claim-kind-v0-training-plan.md), which trains and measures it but explicitly
 does **not** authorize populating `no_effect` from it — the class is claim-level while `no_effect` is
 edge-level, and meta-research finds **>80% of titles misinterpret non-significance as support for the
 null** ([iScience 2024](https://www.cell.com/iscience/fulltext/S2589-0042(24)02903-1)), meaning a

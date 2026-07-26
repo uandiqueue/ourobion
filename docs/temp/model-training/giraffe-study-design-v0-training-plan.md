@@ -1,5 +1,5 @@
 ---
-title: Zebra Study-Design v0 — GMI training plan
+title: Giraffe Study-Design v0 — GMI training plan
 summary: Preregistered plan for training and evaluating a five-class study-design classifier that fills Citation.evidenceTier, using self-derived MEDLINE labels and an independent CC-BY gold evaluation set. Corrects the earlier recipe's two false assumptions — that PublicationType can express cohort/cross-sectional tiers, and that Cochrane Crowd is reusable.
 type: plan
 scope: model-training
@@ -7,7 +7,7 @@ status: draft
 updated: 2026-07-26
 ---
 
-# Zebra Study-Design v0 — GMI training plan
+# Giraffe Study-Design v0 — GMI training plan
 
 > **Shared execution substrate.** GMI gates, container/network/secret posture, durable storage, the
 > external `ourobion-model-lab` repository shape, and the release/provenance contract are defined once
@@ -17,7 +17,7 @@ updated: 2026-07-26
 
 ## 1. Decision summary
 
-`zebra-study-design-v0` maps a paper's text to `EvidenceTier` — `1 | 2 | 3 | 4 | 5`
+`giraffe-study-design-v0` maps a paper's text to `EvidenceTier` — `1 | 2 | 3 | 4 | 5`
 (`shared/brain/relationships.ts:64`), the study-design strength of a supporting source. It implements
 model **(b1)** from [memory 0013](../../memory/0013-brain-pipeline-and-support-models-decision.md).
 
@@ -25,7 +25,7 @@ Of the four models in that roster, this one has the **best supervision available
 decades of human MEDLINE indexing rather than from an LLM or a small hand-annotated set. It is the
 strongest candidate to actually work.
 
-Same bounded-pilot terms as the other zebra models: non-serving, no influence on any contract field,
+Same bounded-pilot terms as the other models in this roster: non-serving, no influence on any contract field,
 edge score, card, or routing; a documented `no-go` is a valid completion; and because serve-time is a
 pure read over precomputed columns
 ([`decisions/0003-paper-reliability.md`](../../shared/decisions/0003-paper-reliability.md)), it could
@@ -127,7 +127,7 @@ records, plus the code that rebuilds the text from the baseline.
 - **PubMed 200k RCT** and **CSAbstruct** — despite the name, these are *sentence-level rhetorical role*
   datasets (BACKGROUND/METHOD/RESULT/…), not document-level study design. Wrong task. Noted because the
   name invites exactly this mistake. (They are, however, relevant to a different model — see
-  [`zebra-sentence-role-v0-training-plan.md`](./zebra-sentence-role-v0-training-plan.md).)
+  [`leafcutter-sentence-role-v0-training-plan.md`](./leafcutter-sentence-role-v0-training-plan.md).)
 - **EBM-NLP** — PICO span NER, wrong task, and no declared licence.
 - **Ourobion personal data** and **LLM-generated tier labels** — excluded from train, validation, and
   evaluation. In particular, A5's existing Haiku assist output must not become training data: the model
