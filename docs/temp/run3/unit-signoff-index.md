@@ -11,7 +11,7 @@ updated: 2026-07-27
 
 | Unit | Locked item | Implementation state | Human sign-off | Evidence |
 |---|---|---|---|---|
-| U0 | O24 exact-tip release gate and reproducible Deno CI | in-progress | pending | Issue #143; worktree `ci/run3-o24-exact-sha-gate`. |
+| U0 | O24 exact-tip release gate and reproducible Deno CI | pr-open | pending | PR #144; exact GitHub evidence and human acceptance pending. |
 | U1 | O25 nao authorization and named server key | queued | pending | Not started. |
 | U2 | O26 raw-truth-safe demo and retry-safe pipeline | queued | pending | Not started. |
 | U3 | O27 provenance semantics and trust posture | queued | pending | Not started. |

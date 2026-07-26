@@ -25,7 +25,7 @@ updated: 2026-07-27
 
 | Unit | Locked item | Status | Evidence / note |
 |---|---|---|---|
-| U0 | O24 exact-tip release gate and reproducible Deno CI | in-progress | Issue #143; implementation and validation in this worktree. |
+| U0 | O24 exact-tip release gate and reproducible Deno CI | pr-open | PR #144 targets `dev-phase2-run3`; awaiting exact-SHA GitHub evidence and human acceptance. |
 | U1 | O25 nao authorization and named server key | queued | Waits for U0 workflow green. |
 | U2 | O26 raw-truth-safe demo and retry-safe pipeline | queued | Not started. |
 | U3 | O27 provenance semantics and trust posture | queued | Not started. |
@@ -34,5 +34,5 @@ updated: 2026-07-27
 
 ## RESUME
 
-**RESUME POINTER: U0 / O24 remains in-progress.** Complete the exact-tip CI and Deno reproducibility
-work, record exact evidence, then leave U0 at `pr-open` pending merge and human acceptance.
+**RESUME POINTER: U0 / O24 is pr-open.** Wait for and record exact GitHub CI evidence for the newest
+PR SHA. U0 remains pending merge and human acceptance; do not advance to U1.
