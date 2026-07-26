@@ -24,6 +24,8 @@ in the living register below.
 |---|---|
 | [`next-build-optimizations.md`](./next-build-optimizations.md) | **Scope authority:** order, gates, caps, and locked O24–O29 definitions |
 | [`pending-build-register.md`](./pending-build-register.md) | **Gap superset:** every known open product gap, including work outside Run 3 |
+| [`orchestrator-prompt.md`](./orchestrator-prompt.md) | Paste-ready, resumable launch prompt for the six-unit Run 3 product build |
+| [`model-training-code-build-orchestrator-prompt.md`](./model-training-code-build-orchestrator-prompt.md) | Paste-ready prompt for the independent five-model code-build workstream; stored here by human request, not a Run 3 unit |
 | [`../model-training/README.md`](../model-training/README.md) | Separate model-training workstream; not a Run-3 unit or implementation dependency |
 
 ## Locked size and order

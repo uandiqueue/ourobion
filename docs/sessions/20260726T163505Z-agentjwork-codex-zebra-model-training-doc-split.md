@@ -31,6 +31,12 @@ Task claim: `zebra-model-training-doc-split-audit` / `codex` / `agentjwork`
 - Checked active Markdown links, Run-3 unit separation, generated graph parity/uniqueness, renderer
   determinism/malformed-input behavior, context/index integrity, and whitespace cleanliness. No app,
   backend, hosted database, GMI, or model-training operation was in scope.
+- Merged Claude's PR #141 into `dev-phase2-run3`, then reconciled the stale concurrent-work links and
+  model-training index entries called out in that PR. A fast/low semantic agent extracted the nine
+  changed documents; a second fast/low agent adversarially validated and repaired that fragment.
+- Reopened the graph-view implementation after the user clarified that "human-readable" meant a
+  graphical surface rather than Markdown. Browser QA caught and rejected a blank-canvas JavaScript
+  defect before commit; the repaired self-contained HTML was then re-rendered and checked in Chrome.
 
 ## Changed
 
@@ -51,6 +57,13 @@ Task claim: `zebra-model-training-doc-split-audit` / `codex` / `agentjwork`
   projection of machine-local `graphify-out/graph.json`, never a replacement for curated architecture.
 - Updated the Graphify memory and front-door docs to distinguish AST coverage, semantic freshness, and
   view parity; repaired all active missing Markdown targets found by the audit.
+- Integrated PR #141's four additional support-model plans and roster, moved every shared-substrate
+  reference to the sibling Zebra plan, and added all five planned models to the isolated workstream
+  index without changing the six-unit Run-3 product tranche.
+- Replaced the generated Markdown graph projection with one offline interactive HTML graph in
+  `docs/graph/semantic-graph.html`, including a community overview, node search, filters, pan/zoom,
+  details, and a textual accessibility fallback. The semantic refresh places Zebra and the four new
+  candidates in a dedicated `Custom Model Training` community.
 
 ## Decided
 
@@ -66,6 +79,8 @@ Task claim: `zebra-model-training-doc-split-audit` / `codex` / `agentjwork`
   local graph is absent; B-PL17 retains the stronger commit/session freshness enforcement gap.
 - `PaperRecord` promotion is engineering/contract work governed by the shared two-reviewer rule, not a
   documentation edit hidden inside B-PL20.
+- The sole tracked human graph view is graphical HTML. Markdown reports remain machine-local Graphify
+  diagnostics and are not the user-facing repository graph surface.
 
 ## Left
 

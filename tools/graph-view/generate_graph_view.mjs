@@ -10,7 +10,7 @@ import { graphContentSha256, renderGraphView } from './lib/render_graph_view.mjs
 const TOOL_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TOOL_DIR, '..', '..');
 const DEFAULT_INPUT = path.join(REPO_ROOT, 'graphify-out', 'graph.json');
-const DEFAULT_OUTPUT = path.join(REPO_ROOT, 'docs', 'graph', 'semantic-graph.md');
+const DEFAULT_OUTPUT = path.join(REPO_ROOT, 'docs', 'graph', 'semantic-graph.html');
 // Front-matter date for the renderer schema, not the machine-local graph snapshot. Keeping it explicit
 // makes --write/--check deterministic even in sandboxes where Node cannot spawn `git show`.
 const VIEW_SCHEMA_UPDATED = '2026-07-26';
@@ -36,25 +36,25 @@ function normalizeNewlines(value) {
 
 function validateSingleHumanView(output) {
   const graphDocsDirectory = path.join(REPO_ROOT, 'docs', 'graph');
-  const markdownFiles = readdirSync(graphDocsDirectory, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+  const candidateFiles = readdirSync(graphDocsDirectory, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /\.(?:md|html)$/i.test(entry.name))
     .map((entry) => path.join(graphDocsDirectory, entry.name));
   const canonical = path.resolve(output);
-  const unexpectedMarkdown = markdownFiles.filter((file) => {
+  const unexpectedViews = candidateFiles.filter((file) => {
     const resolved = path.resolve(file);
-    return path.basename(file) !== 'README.md' && resolved !== canonical;
+    return resolved !== canonical && (path.basename(file).startsWith('semantic-graph.') || /generated_by[^>\n]{0,90}tools\/graph-view\/generate_graph_view\.mjs/i.test(readFileSync(file, 'utf8')));
   });
-  if (unexpectedMarkdown.length) {
-    const found = unexpectedMarkdown.map((file) => path.relative(REPO_ROOT, file).replace(/\\/g, '/')).join(', ');
-    throw new Error(`docs/graph permits one index and one human graph view; unexpected Markdown: ${found}`);
+  if (unexpectedViews.length) {
+    const found = unexpectedViews.map((file) => path.relative(REPO_ROOT, file).replace(/\\/g, '/')).join(', ');
+    throw new Error(`expected exactly one generated human graph view; unexpected candidates: ${found}`);
   }
 
-  const generatedViews = markdownFiles
-    .filter((file) => /\ngenerated_by:\s*tools\/graph-view\/generate_graph_view\.mjs\s*\n/.test(`\n${readFileSync(file, 'utf8')}`));
+  const generatedViews = candidateFiles
+    .filter((file) => /generated_by[^>\n]{0,90}tools\/graph-view\/generate_graph_view\.mjs/i.test(readFileSync(file, 'utf8')));
 
   if (generatedViews.length !== 1 || path.resolve(generatedViews[0] ?? '') !== canonical) {
     const found = generatedViews.map((file) => path.relative(REPO_ROOT, file).replace(/\\/g, '/')).join(', ') || 'none';
-    throw new Error(`expected exactly one generated human graph view at docs/graph/semantic-graph.md; found: ${found}`);
+    throw new Error(`expected exactly one generated human graph view at docs/graph/semantic-graph.html; found: ${found}`);
   }
 }
 

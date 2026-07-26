@@ -104,7 +104,7 @@ signal; contradiction with truth-tier source is the defect.
   architecture schema pointer, and the time-bounded hackathon snapshot.
 - Added `.graphifyignore` so archive material and the generated graph view cannot pollute semantic
   orientation.
-- Added the one generated [human-readable semantic graph](../graph/semantic-graph.md) plus a local
+- Added the one generated [human-readable semantic graph](../graph/semantic-graph.html) plus a local
   parity/uniqueness gate. This gate detects drift between an available machine graph and its human
   projection; it does not prove semantic freshness. B-PL17 remains the semantic-freshness gap.
 

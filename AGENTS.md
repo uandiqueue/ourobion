@@ -322,7 +322,7 @@ graph for agent context, and enforce what we keep:
   `..\biotope-toolchain`, on PATH after `. .\scripts\biotope-env.ps1`, never global/committed); rebuild
   with **`scripts/graphify-build.ps1`**. The machine output is repo-root **`graphify-out/`**
   (gitignored — a rebuildable projection, never hand-edited); the wrapper also refreshes the single
-  tracked human view at **`docs/graph/semantic-graph.md`**. Query it with `graphify query "<question>"`,
+  tracked human view at **`docs/graph/semantic-graph.html`**. Query it with `graphify query "<question>"`,
   `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"`; after code changes run
   `graphify update .`, then `npm run graph:view:write` (the wrapper performs both). `.graphifyignore`
   excludes `docs/archive/` and the generated view itself. **Pre-wired PreToolUse hooks** remind the agent to consult the graph before

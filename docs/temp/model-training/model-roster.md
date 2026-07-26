@@ -1,6 +1,6 @@
 ---
 title: Custom-model roster — what we train, what we don't, and why
-summary: The decision register for every custom-model candidate in Ourobion's brain pipeline. Records four planned models, one shipped deterministic lookup, one previously rejected model, and nine researched candidates that should NOT be trained — with the evidence for each negative verdict so they are not re-researched later.
+summary: The decision register for every custom-model candidate in Ourobion's brain pipeline. Records five planned models, one shipped deterministic lookup, one previously rejected model, and nine researched candidates that should NOT be trained — with the evidence for each negative verdict so they are not re-researched later.
 type: plan
 scope: model-training
 status: draft
@@ -15,16 +15,14 @@ invites the same research to be redone every few months.
 
 Research date for all external claims: **2026-07-26**.
 
-> **Path note.** This folder is being created concurrently by #139, which moves the NLI plan from
-> `docs/temp/run3/custom-model-training-plan.md` to `zebra-nli-shadow-v0-training-plan.md` here. Links
-> in these documents point at the **current** path so they resolve today; update them to the sibling
-> path once #139 lands.
+The Zebra NLI plan and all four additional plans now live together in this isolated model-training
+folder. None is a Run-3 product unit.
 
 ## 1. The roster
 
 | # | Codename | Candidate | Contract field / stage | Verdict | Plan |
 |---|---|---|---|---|---|
-| (a) | `zebra` | NLI claim/evidence cross-encoder | `EdgeVerification.verdict` · A10 | **TRAIN** — planned | [NLI plan](../run3/custom-model-training-plan.md) |
+| (a) | `zebra` | NLI claim/evidence cross-encoder | `EdgeVerification.verdict` · A10 | **TRAIN** — planned | [NLI plan](./zebra-nli-shadow-v0-training-plan.md) |
 | (b1) | `giraffe` | Study-design → evidence tier | `Citation.evidenceTier` · A5 | **TRAIN** — best supervision in the roster | [study-design](./giraffe-study-design-v0-training-plan.md) |
 | (b2) | — | Venue → impact tier | `Citation.impactTier` | **NO — shipped deterministically** | — |
 | (c-i) | `salmon` | Relation type + direction | `directionCheck` · A10/A8 | **TRAIN** — gated on one licence | [relation-direction](./salmon-relation-direction-v0-training-plan.md) |

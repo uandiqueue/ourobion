@@ -5,7 +5,7 @@ summary: graphify indexes the repo into a gitignored machine graph plus one gene
 type: memory
 status: accepted
 decided: 2026-07-13
-updated: 2026-07-26
+updated: 2026-07-27
 ---
 
 # 0008 — graphify is the semantic context tool; complementary to the deferred structural graph
@@ -32,7 +32,7 @@ graph is a rebuildable projection, never hand-edited ([0001-two-tier-truth](0001
   to `tools/context_sync.mjs --check` once a path-normalizer (port NUSPlan's
   `tools/normalize_deps_graph.mjs`) makes it diff cleanly cross-machine. `graph.html` stays gitignored.
 - **One tracked human view.** `tools/graph-view/generate_graph_view.mjs` deterministically renders
-  `docs/graph/semantic-graph.md` from `graph.json`. The Graphify build wrappers refresh it; direct
+  `docs/graph/semantic-graph.html` from `graph.json`. The Graphify build wrappers refresh it; direct
   Graphify updates must be followed by `npm run graph:view:write`. Pre-push always enforces one
   generated view and, when a local graph exists, fails if its content is stale. CI can enforce the
   single-view invariant but skips only the machine-local content comparison.

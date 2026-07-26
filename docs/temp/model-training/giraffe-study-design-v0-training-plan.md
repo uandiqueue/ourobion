@@ -11,8 +11,7 @@ updated: 2026-07-26
 
 > **Shared execution substrate.** GMI gates, container/network/secret posture, durable storage, the
 > external `ourobion-model-lab` repository shape, and the release/provenance contract are defined once
-> in the NLI plan ([`../run3/custom-model-training-plan.md`](../run3/custom-model-training-plan.md) §3,
-> §4, §12 — moving to `zebra-nli-shadow-v0-training-plan.md` under #139). Only deltas appear here.
+> in the [Zebra NLI plan](./zebra-nli-shadow-v0-training-plan.md) (§3, §4, §12). Only deltas appear here.
 > `GMI-H7` must be re-approved for this model's licence manifest, which is different.
 
 ## 1. Decision summary

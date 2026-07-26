@@ -8,7 +8,7 @@
 # graphify is the SEMANTIC / agent-context layer (memory 0008); it is complementary to the structural
 # import-graph that docs/graph/README.md marks DEFERRED. The graph it writes to graphify-out/ is a
 # rebuildable PROJECTION (two-tier-truth) - gitignored, never hand-edited. This script also refreshes
-# the single tracked, lossy human view in docs/graph/semantic-graph.md.
+# the single tracked, interactive human view in docs/graph/semantic-graph.html.
 #
 # graphify is build tooling, NOT a repo/runtime dependency: it installs into a project-bounded venv
 # inside the toolchain (default ../biotope-toolchain/graphify-venv), nothing touches the global PATH,
@@ -53,5 +53,5 @@ fi
 node tools/graph-view/generate_graph_view.mjs --write
 
 echo ""
-echo "Graph written to graphify-out/graph.json and human view refreshed at docs/graph/semantic-graph.md."
+echo "Graph written to graphify-out/graph.json and human view refreshed at docs/graph/semantic-graph.html."
 echo "Query it:  $GRAPHIFY query \"what connects auth to the database?\""

@@ -11,8 +11,7 @@ updated: 2026-07-26
 
 > **Shared execution substrate.** If a GPU is used at all, the GMI gates, container posture, storage,
 > external-repository, and release rules in the NLI plan
-> ([`../run3/custom-model-training-plan.md`](../run3/custom-model-training-plan.md) §3, §4, §12 —
-> moving to `zebra-nli-shadow-v0-training-plan.md` under #139) apply unchanged. **Read §3 of this plan
+> ([`zebra-nli-shadow-v0-training-plan.md`](./zebra-nli-shadow-v0-training-plan.md) §3, §4, §12) apply unchanged. **Read §3 of this plan
 > first: the recommended path provisions no GPU at all**, and the GMI gates are then moot.
 
 ## 1. Decision summary

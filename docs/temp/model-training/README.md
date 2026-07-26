@@ -19,6 +19,12 @@ unit or silently become product integration work.
 | Model | State | Plan | Runtime posture |
 |---|---|---|---|
 | `zebra-nli-shadow-v0` | planned; no training or GMI provisioning performed | [`zebra-nli-shadow-v0-training-plan.md`](./zebra-nli-shadow-v0-training-plan.md) | research-only; no serving or shadow telemetry |
+| `giraffe-study-design-v0` | planned; dataset and licence gates remain | [`giraffe-study-design-v0-training-plan.md`](./giraffe-study-design-v0-training-plan.md) | research-only; offline evidence-tier evaluation |
+| `salmon-relation-direction-v0` | planned; BioREDirect licence is unresolved | [`salmon-relation-direction-v0-training-plan.md`](./salmon-relation-direction-v0-training-plan.md) | research-only; offline relation/direction evaluation |
+| `viceroy-claim-kind-v0` | planned; GPL-3.0 review is required | [`viceroy-claim-kind-v0-training-plan.md`](./viceroy-claim-kind-v0-training-plan.md) | research-only; offline causal-language evaluation |
+| `leafcutter-sentence-role-v0` | planned; CPU-first baseline precedes any GPU | [`leafcutter-sentence-role-v0-training-plan.md`](./leafcutter-sentence-role-v0-training-plan.md) | research-only; no serving or pipeline substitution |
+
+The full train/do-not-train decision record is [`model-roster.md`](./model-roster.md).
 
 ## Repository boundary
 

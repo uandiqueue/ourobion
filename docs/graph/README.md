@@ -18,10 +18,11 @@ auto-generated structural graph, run a semantic context graph for agents, and en
   parity of the shared types and copy rules). Each edge names a **`guard:` test** that makes the
   coupling executable. `node tools/context_sync.mjs --check` fails if a named guard file is missing.
   Guard tests live in `apps/biotope/test/guards/` and run with `flutter test`.
-- **`semantic-graph.md`** — the **only tracked human-readable graph view**. It is generated
-  deterministically from the machine-local `graphify-out/graph.json` and compresses the graph into a
-  community map, connection table, bridge-node list, hyperedges, and full community directory. It is a
-  lossy projection for orientation, never architecture truth and never hand-edited.
+- **[`semantic-graph.html`](./semantic-graph.html)** — the **only tracked human-readable graph view**.
+  It is a self-contained, offline interactive canvas generated deterministically from the machine-local
+  `graphify-out/graph.json`. It defaults to a performant community overview, with pan/zoom, filters,
+  search, hover/click details, and a textual fallback. It is a lossy projection for orientation, never
+  architecture truth and never hand-edited.
 
 The curated **module dependency graph and interface rules** are not duplicated here — they live in
 [`../biotope/architecture-context.md`](../biotope/architecture-context.md), which is the boundary reference today.
@@ -37,7 +38,7 @@ structural import-graph below** (it is multi-modal/semantic; the deferred one is
   project-bounded venv in `..\biotope-toolchain\graphify-venv` on first run, and is on PATH after
   `. .\scripts\biotope-env.ps1`. graphify is **build tooling, not a repo/runtime dependency**
   (machine-local, uncommitted, never deployed). Both platform wrappers refresh
-  [`semantic-graph.md`](./semantic-graph.md) after updating the machine graph.
+  [`semantic-graph.html`](./semantic-graph.html) after updating the machine graph.
 - **Output:** repo-root **`graphify-out/`** (`graph.json` + `graph.html` + AST cache + manifest),
   **gitignored** — a rebuildable **projection**, never hand-edited ([two-tier-truth](../memory/0001-two-tier-truth.md)).
   Gitignored until a path-normalizer (port NUSPlan's `tools/normalize_deps_graph.mjs`) makes `graph.json`
