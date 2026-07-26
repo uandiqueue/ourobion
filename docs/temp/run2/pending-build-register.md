@@ -123,6 +123,7 @@ it is not itself proof for or against correctness, because the LLM verifier stil
 | B-PL16 · run-pipeline stage summaries scale with users × metrics | known, fine at demo scale | flagged in its own header for U6/U8 consumers; revisit before any non-demo load |
 | B-PL17 · Semantic graph freshness/integrity is not enforced at session end | open — outside locked Run 3 | Graphify 0.8.40 `graphify update .` / `scripts/graphify-build.ps1` stamps AST only; host-model `/graphify . --update` is the semantic incremental path. The audit's full-endpoint check also found 11 retained hyperedges referencing 31 absent node IDs that a pair-edge-only check missed. Add a session/unit-end convention plus local pre-push gate for zero semantic pending/deleted files, `built_at_commit == HEAD`, valid schema, and zero dangling pair-edge/hyperedge endpoints; do not use silent `graphify check-update .` or pretend CI can regenerate a machine-local host-model projection |
 | B-PL18 · Semantic graph broad-query ranking is noisy | open — outside locked Run 3 | post-bootstrap exact-ID/source navigation passes, but vocabulary-expanded BFS over-ranks generic AST symbols. Add a representative ranked-query benchmark, node-type-aware semantic/AST hybrid filtering, generic-node suppression and relevance regression gate; freshness proves coverage, not retrieval quality |
+| B-PL19 · Hosted Supabase schema + brain-artifact release/promotion isolation | **production blocker — Run 3 O29** | The 2026-07-26 read-only probe reached Auth/PostgREST on demo `bewwvcksgpxoomyjavjp`, but the Run-2 brain tables were absent; clean production reserve `jscxvnettbvkboijczav` has not been migration/promotion rehearsed. R2 corpus/edge artifacts are canonical: the pinned corpus manifest rebuilds the D1 search index, while pinned edge JSONL rebuilds the Supabase serving projection. Today `edge-loader --from-r2` reads mutable keys and there is no exact migration ledger, explicit release selector, immutable namespace/manifest, checksummed promotion, target-load provenance, rollback, or cross-environment verdict policy. Apply append-only migrations to a clean target, freeze one reviewed corpus/claim/verification/run manifest, promote identical source bytes without another LLM run, rebuild each projection independently, and mechanically exclude auth users, simulated/personal rows, cards/job state and other demo-only data. Hosted writes require Jayden's separate approval of named isolated rehearsal resources; default evidence is local/offline |
 
 ---
 
@@ -153,6 +154,7 @@ O9–O20 backlog but closed none of the following. Summarised here so the regist
 | Item | State | Gates / notes |
 |---|---|---|
 | B-SEC1 · nao RBAC/RLS and global-job privacy boundary | **production blocker — Run 3 O25** | canonical docs require viewer/curator/admin, but code/RLS admit every authenticated biotope user to global reads/writes; any account can trigger an all-user service-role run whose verbatim summary can expose other users' UUIDs + processing context. Enforce explicit membership/role in routes and DB, revoke broad writes, redact async job responses, add direct-REST and role-matrix negative tests; keep exact small-cohort gap counts staff-only/suppressed |
+| B-SEC2 · Legacy `service_role` Bearer dependency and server-key rotation | **production blocker — Run 3 O25** | nao's run relay sends the legacy JWT as both Bearer and `apikey`, while `run-pipeline` compares Bearer directly to `SUPABASE_SERVICE_ROLE_KEY`; Supabase's replacement `sb_secret_…` keys are not JWTs and must travel on `apikey`, so this cannot be fixed by renaming an env value. Following the [Supabase key-migration contract](https://supabase.com/docs/guides/getting-started/migrating-to-new-api-keys), move every Worker/Edge Function/cron/`pg_net` caller to a supported named-secret flow (`SUPABASE_SECRET_KEYS` or supported server auth) with explicit internal/admin authorization, backend-only storage, staged rotation/revocation and negative leak/header tests before legacy-key retirement; never expose either key to Flutter or `NEXT_PUBLIC_*` |
 | B-DATA1 · Simulated loader can corrupt the raw truth layer | **production blocker — Run 3 O26** | date plan reads gut only, then gut/wearable commit separately; can overwrite wearable-only real dates, strand partial loads, mishandle holes, and retain simulated provenance/stale fields after a real edit. Hard demo-environment/tenant gate, atomic two-table RPC, non-sim conflict refusal, cleanup/repair, explicit real-writer provenance replacement, forced-failure tests |
 | B-DATA2 · Pipeline idempotency, gap-demand semantics, and atomic publication | open — **Run 3 O26** | repeated/retried unchanged runs inflate demand; JS keys by pair+status while DB keys by pair and last status wins; gap write can commit before card failure. Add durable run/idempotency key + input watermark + single-flight, stable per-user/pair/evaluation event, per-status aggregation, retryable stage state and concurrency/failure tests |
 | B-COST1 · Router budget enforcement is not atomic or globally capped | open — outside locked Run 3 after cap reconciliation | concurrent callers can all pass stale prechecks; file merge/temp path is not locked; corrupt ledger resets to zero; six raiseable 5-USD node caps imply 30 USD/day, not the stated run ceiling. Add central atomic reservation/reconciliation, true global cap, unique call IDs, fail-closed corruption, timeouts/schema validation/ambiguous-call accounting and concurrent stress tests. B-BR8 owns values, not enforcement |
@@ -173,6 +175,7 @@ O9–O20 backlog but closed none of the following. Summarised here so the regist
 | Boundary | Canonical owner | Explicitly not owned there |
 |---|---|---|
 | Who may access/mutate nao and what a global job returns | B-SEC1 | claim revision/disposition semantics (B-BR7) |
+| Server-to-server key format, header, storage and rotation | B-SEC2 | human/app role authorization and response privacy (B-SEC1) |
 | Loading simulated raw rows | B-DATA1 | derived pipeline replay/demand (B-DATA2) |
 | Pipeline replay, aggregation and publication | B-DATA2 | forced 502/partial response proof only (B-PL15) |
 | Causal vs correlational wording | B-SCI1 | score calibration and evidence appraisal (B-SCI2/B-PL3) |
@@ -181,12 +184,15 @@ O9–O20 backlog but closed none of the following. Summarised here so the regist
 | Source/type/release checks | B-PL14 | deployed nao bundle/secrets proof (B-UI7) |
 | Whether the semantic graph is current | B-PL17 | broad-query relevance/ranking (B-PL18) |
 | Whether broad graph queries rank useful context | B-PL18 | freshness/completeness (B-PL17) |
+| Hosted schema migration plus immutable science release packaging/cross-environment load | B-PL19 | artifact meaning/disclosure (B-UI9), verdict semantics (B-BR7), or demo/user data (never promoted) |
 
-**Reconciliation result:** 54 canonical row definitions, 54 unique IDs, zero duplicate definitions.
+**Reconciliation result:** 56 canonical row definitions, 56 unique IDs, zero duplicate definitions.
 Findings that sharpened an existing root cause were merged into that row (B-PL14, B-PL15, B-BR1,
 B-BR4, B-BR7, B-BR8, B-UI3) rather than receiving a second item. F10's provider/Deno/privacy details
-are likewise owned by B-BR1/B-PL14/B-SEC1. Cross-references in the O-map are implementation composition,
-not duplicate gap ownership; the table above states the boundary where two rows meet.
+are likewise owned by B-BR1/B-PL14/B-SEC1. F13/B-PL19 owns schema and immutable projection promotion,
+not deployed-bundle configuration (B-UI7) or verdict meaning (B-BR7); F14/B-SEC2 owns the machine-key
+protocol, not human/app authorization (B-SEC1). Cross-references in the O-map are implementation
+composition, not duplicate gap ownership; the table above states the boundary where two rows meet.
 
 Proof that [`next-build-optimizations.md`](./next-build-optimizations.md) is fully contained here.
 If you add an O-item, add its row above and a line here.
@@ -217,11 +223,11 @@ If you add an O-item, add its row above and a line here.
 | O22 · Known-venue override table | open — **pending Jayden review** | B-BR11 (+ B11 SJR dataset via B-R1-2) |
 | O23 · brain-ingest → llm-router real dependency | open — **pending Jayden review** | B-PL13 |
 | O24 · Exact-tip release gate + complete/reproducible Deno CI | **Run 3 unit 1 — locked** | B-PL14 |
-| O25 · nao RBAC/RLS + redacted global-job boundary | **Run 3 unit 2 — locked** | B-SEC1; B-BR7 direct-write slice |
+| O25 · nao RBAC/RLS + redacted global-job boundary + named server-key rotation | **Run 3 unit 2 — locked** | B-SEC1; B-SEC2; B-BR7 direct-write slice |
 | O26 · Raw-truth-safe demo loader + retry-safe pipeline | **Run 3 unit 3 — locked** | B-DATA1; B-DATA2; B-PL15 |
 | O27 · Scientific provenance semantics + artifact trust posture | **Run 3 unit 4 — locked** | B-SCI1; B-SCI2 safe-vocabulary slice; B-UI3; B-UI9; B-BR7 revision/presentation slice |
 | O28 · Plain-language + accessible client insights | **Run 3 unit 5 — locked** | B-UI10; B-UI11 |
-| O29 · Live verifier retrieval + model/family attestation | **Run 3 unit 6 — locked** | B-BR1; B-BR2; B-BR3 |
+| O29 · Live verifier/model attestation + migrated immutable release promotion | **Run 3 unit 6 — locked** | B-BR1; B-BR2; B-BR3; B-PL19 |
 | O30 · NLI Shadow v0 training/evaluation, non-serving | **Run 3 unit 7 — locked** | B-BR4(a); all other support-model work remains open |
 
 ---

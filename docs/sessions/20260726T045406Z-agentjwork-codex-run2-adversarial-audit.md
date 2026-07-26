@@ -1,6 +1,6 @@
 ---
 title: Run-2 independent adversarial sign-off audit and Run-3 scope lock
-summary: Cross-platform Codex audit of the Run-2 sign-off package, including architecture/security/privacy/raw-truth, UX/accessibility, scientific semantics, model readiness, GitHub check evidence, graph freshness, register reconciliation, and a seven-unit half-sized Run-3 tranche.
+summary: Cross-platform Codex audit of the Run-2 sign-off package, including architecture/security/privacy/raw-truth, UX/accessibility, scientific semantics, hosted Supabase promotion/key migration, model readiness, GitHub check evidence, graph freshness, register reconciliation, and a seven-unit half-sized Run-3 tranche.
 type: session
 scope: shared
 status: canonical
@@ -24,6 +24,10 @@ Task claim: `run2-adversarial-signoff-audit` / `codex` / `agentjwork`
 - Queried GitHub PR #123–#136 check rollups and CI configuration; reviewed exact Run-2 diff size.
 - Checked current Supabase RBAC/RLS, W3C/Flutter accessibility, Cochrane evidence-certainty, SciFact,
   SciFact-Open, SciFact licence, and HealthVer primary sources.
+- Validated the ignored nao/biotope environment files without exposing values, generated nao's ignored
+  `.env.local`/`.dev.vars`, and made read-only Auth/PostgREST probes against the configured hosted demo.
+  Access succeeded, but the current Run-2 brain tables were not exposed; no migration, function,
+  ingestion, projection load, or other cloud write was attempted.
 - Ran offline typechecks/tests for brain-ingest, llm-router, edge-loader, rules, engine-stats, and nao.
   No Anthropic/OpenAI request was made (audit spend: 0 SGD).
 - Refreshed graphify's deterministic AST/Markdown projection through Run-2 HEAD, then completed the
@@ -36,10 +40,13 @@ Task claim: `run2-adversarial-signoff-audit` / `codex` / `agentjwork`
   with a conditional sign-off verdict, evidence matrix, P0–P2 findings, model advice, and Run-3 order.
 - Updated [`docs/temp/run2/README.md`](../temp/run2/README.md) to surface the independent verdict without
   changing Jayden's pending per-unit sign-offs.
-- Reconciled [`docs/temp/run2/pending-build-register.md`](../temp/run2/pending-build-register.md): 54
+- Reconciled [`docs/temp/run2/pending-build-register.md`](../temp/run2/pending-build-register.md): 56
   unique canonical row definitions, no duplicate definitions, explicit ownership boundaries, existing
   rows expanded where root causes overlapped, and new security/data/science/cost/platform rows only
   where distinct.
+- Added B-PL19 for hosted schema/immutable science-release promotion and B-SEC2 for the legacy
+  `service_role` Bearer dependency; promoted both into existing O29/O25 rather than creating an eighth
+  Run-3 unit.
 - Promoted O24–O30 into [`docs/temp/run2/next-build-optimizations.md`](../temp/run2/next-build-optimizations.md)
   as a locked seven-unit tranche with an 85-file / 8,650-added-line cumulative ceiling.
 - Added no production code, migration, memory/ADR record, model artifact, dataset, or repo-local skill.
@@ -63,6 +70,15 @@ Task claim: `run2-adversarial-signoff-audit` / `codex` / `agentjwork`
   backlog surfaces. Reconsider extraction only after a second audit demonstrates a stable reusable core.
 - Sol-Max orchestration is now durable repo policy: choose subagent model/effort per bounded task,
   minimise total token/latency cost, and retain final verification at the primary.
+- One Supabase project/database serves both nao and biotope per environment. The agreed topology is
+  local Docker for local work, existing `bewwvcksgpxoomyjavjp` as demo/staging, and clean
+  `jscxvnettbvkboijczav` as the production reserve. Production receives the Git migration ledger plus
+  an immutable reviewed science release—not a full demo-DB clone and not another LLM ingestion run.
+  Its corpus manifest rebuilds the D1 search index; its edge JSONL separately rebuilds Supabase serving
+  tables. Human verdict truth is not part of either automatic projection promotion.
+- The currently configured legacy `service_role` key remains compatible with the demo code, but it is
+  temporary. A new `sb_secret_…` value is not a Bearer/JWT drop-in; O25 must migrate caller, function
+  authorization, header, secret storage, rotation and revocation together.
 
 ## Left
 
@@ -71,6 +87,11 @@ Task claim: `run2-adversarial-signoff-audit` / `codex` / `agentjwork`
 - Execute or explicitly waive the B8 shared-contract second-review requirement.
 - Keep nao undeployed to ordinary accounts and keep the simulated loader away from real/valued data
   until O25/O26 pass.
+- Do not push hosted migrations or load the science projection until O29's target preflight, immutable
+  release manifest, exclusion check and rollback rehearsal exist, and Jayden separately authorizes the
+  exact isolated non-serving Supabase/R2/D1 targets. Default evidence remains local/offline; this audit
+  authorized no cloud writes. Do not deactivate the legacy key
+  until O25 proves every Worker/Edge Function/cron/`pg_net` caller on a named secret and tests rotation.
 - O1–O8, O21–O23, O2/MPR, B-COST1, production hosting, visual reskinning, metric expansion, active
   support-model integration, and the full autonomous research loop remain outside Run 3.
 

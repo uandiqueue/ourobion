@@ -58,18 +58,19 @@ later unit to defer.
 | Run 3 unit | Locked item | Outcome | May start when |
 |---|---|---|---|
 | U0 | O24 | exact-tip, complete, reproducible CI evidence | immediately |
-| U1 | O25 | nao authorization + cross-user privacy boundary | O24 workflow change is green |
+| U1 | O25 | nao authorization, cross-user privacy + named server-key rotation | O24 workflow change is green |
 | U2 | O26 | raw-truth-safe demo load + retry-safe serve pipeline | O25 blocks ordinary-account access |
 | U3 | O27 | scientifically faithful provenance contract and trust posture | B8 second review or explicit waiver is available for shared-contract work |
 | U4 | O28 | plain-language, accessible client insights/provenance | O27 contract is stable |
-| U5 | O29 | live verifier retrieval + actual model/family attestation | O24–O25 are green; provider calls remain budget-capped |
+| U5 | O29 | live verifier/model attestation + immutable schema/artifact promotion | O24–O25 are green; promotion slice waits for O27; provider calls remain budget-capped |
 | U6 | O30 | train/evaluate one non-serving NLI pilot + cumulative closeout | O29 freezes the evidence input contract; licence/GMI gates satisfied |
 
 **Promotion boundary:** O30 trains and evaluates a model but does not route it into serving. O2/MPR,
-B-COST1, active support-model integration, metric expansion, production hosting, visual reskinning,
+B-COST1, active support-model integration, metric expansion, user-facing production cutover/hosting, visual reskinning,
 O1–O8, O21–O23, and Graphify process/ranker work B-PL17/B-PL18 remain outside this tranche.
 Consequently, Run 3 still cannot claim production or scientific validation merely because all seven
-units pass.
+units pass. O29's clean-target schema/artifact rehearsal is a prerequisite, not authorization to cut
+traffic over or copy the demo database.
 
 **Provider budget:** all deterministic/offline gates first. Across Run 3, Anthropic must remain at or
 below **2 SGD** and OpenAI at or below **20 SGD**; every live unit records provider, model-returned id,
@@ -796,12 +797,13 @@ needs an INTEGRATION test on the real seam, not an injected/mocked unit test.**
 
 ---
 
-## O25 · Enforce nao RBAC/RLS and redact the global-job boundary
+## O25 · Enforce nao RBAC/RLS, redact global jobs, and rotate the server key
 
-- **Source:** independent Run-2 audit F2; register B-SEC1 plus B-BR7's direct-write slice.
+- **Source:** independent Run-2 audit F2/F14; register B-SEC1/B-SEC2 plus B-BR7's direct-write slice.
 - **Status:** `run3-locked` — **U1**; production blocker.
 - **Intent:** make the implementation match the canonical `viewer` / `curator` / `admin` architecture.
-  Authentication alone is not authorization.
+  Authentication alone is not authorization, and a legacy JWT service key is not a durable
+  server-to-server identity contract.
 - **Locked role matrix:**
   - unprovisioned/ordinary biotope account: no nao access;
   - viewer: read-only staff surfaces;
@@ -818,11 +820,20 @@ needs an INTEGRATION test on the real seam, not an injected/mocked unit test.**
   4. Attribute append-only control events for cap changes, seed toggles and verdict writes.
   5. Keep exact gap demand staff-only; before any external/community exposure, require a reviewed
      small-cell/cohort-suppression decision rather than assuming “no user id” means anonymous.
+  6. Replace the `SUPABASE_SERVICE_ROLE_KEY` Bearer/direct-equality path end to end. Provision a distinct
+     named `sb_secret_…` key for the nao pipeline backend; store it only as a Cloudflare Worker secret
+     and through hosted Edge Function `SUPABASE_SECRET_KEYS`/Vault; send it on `apikey`, and use
+     Supabase-supported `auth: 'secret:<name>'` or an equivalently reviewed explicit authorization
+     check. Inventory nested stage calls, cron/`pg_net`, CI and deployment callers. Exercise a bounded
+     dual-key rotation, switch all callers, prove revocation, and only then deactivate legacy keys. This
+     is a caller/callee protocol migration, not an environment-variable rename.
 - **Acceptance:** negative integration matrix for unauthenticated, ordinary account, unprovisioned,
   viewer, curator and admin across UI route, API route, direct table/RPC and global-job response. A UI
-  hide/show test alone does not pass.
+  hide/show test alone does not pass. The named-key matrix also proves `apikey` succeeds only for the
+  intended backend, Bearer/new-secret misuse and invalid/retired keys fail, staged rotation has no
+  outage, and no server key appears in a client bundle, `NEXT_PUBLIC_*`, response, trace, or log.
 - **Not this item:** whether a verdict applies to one artifact revision or a relation forever (O27), or
-  loader/pipeline correctness (O26).
+  loader/pipeline correctness (O26), or user-facing production deployment.
 - **Provider budget:** zero paid model calls.
 
 ---
@@ -920,13 +931,14 @@ needs an INTEGRATION test on the real seam, not an injected/mocked unit test.**
 
 ---
 
-## O29 · Add live verifier retrieval and attest the real model/family boundary
+## O29 · Attest live verification and promote one immutable science release
 
-- **Source:** remaining O15 scope + O7; independent Run-2 audit scientific boundary; register
-  B-BR1/B-BR2/B-BR3.
+- **Source:** remaining O15 scope + O7; independent Run-2 audit F13 and scientific boundary; register
+  B-BR1/B-BR2/B-BR3/B-PL19.
 - **Status:** `run3-locked` — **U5**.
 - **Intent:** move from fixture-grounded plumbing to bounded real-source verification without claiming
-  validation from one successful demo.
+  validation from one successful demo, then prove that the exact reviewed bytes can be rebuilt into a
+  clean migrated environment without another ingestion/model run.
 - **Locked work:**
   1. Add the verifier-side live retrieval adapter with bounded queries, source allow/deny policy,
      quote/locator capture, immutable evidence snapshot hashes and explicit failure states.
@@ -939,14 +951,39 @@ needs an INTEGRATION test on the real seam, not an injected/mocked unit test.**
   5. Add request deadline/cancellation, `Retry-After` + jitter, unique call ids and ambiguous-completion
      accounting. Record retrieval misses, latency, cost and a small human-labelled disagreement/ablation
      report.
+  6. Freeze an immutable release id plus dedicated prefix or bucket and manifest for the reviewed
+     corpus, claims, verifications and run outcome. Pin source/contract git SHA, schema version, every
+     object hash and row count,
+     provider-returned model/version, prompt/config identity, timestamps and attestation state. The
+     corpus indexer and edge loader must accept an explicit release selector and consume that exact
+     release, never mutable canonical manifest/`edges/` keys.
+  7. Add a guarded promotion/rebuild command that first verifies a clean target's complete append-only
+     Supabase migration ledger, validates release hashes/contracts, rebuilds the D1 corpus index and
+     transactionally loads the Supabase serving projection from the distinct release inputs. Require a
+     separately bound target D1 database and Supabase project. Record target identifiers/environment,
+     release id, source checksums, expected/actual per-projection counts and loader/indexer versions;
+     make repeated same-release loads idempotent; define rollback to the prior release. Mechanically
+     refuse auth users, personal/simulated rows, cards, pipeline/job state and other demo-only data.
+  8. Default all implementation and acceptance evidence to local/offline resources. A hosted rehearsal
+     may run only after Jayden separately approves/provisions the exact isolated, non-serving Supabase
+     project, R2 bucket/prefix and D1 database. Never mutate an existing demo or production resource,
+     shared binding, customer/auth data, or copy a database under authority inferred from this item.
+  9. O29 never migrates `edge_human_verdicts`. Any later import is separately authorized only after
+     O27's revision-bound re-review policy and a valid target curator identity are implemented.
 - **Acceptance:** offline fixtures first, then a budgeted live smoke covering retrieval hit, miss,
   source echo, family match rejection, provider schema failure and persisted model trace. The evidence
   report must call this an engineering validation unless a preregistered labelled evaluation supports
-  a stronger claim.
+  a stronger claim. Separately, an authorized clean-target rehearsal applies the exact migration ledger
+  and promotes one manifest-selected release with **zero retrieval/LLM calls**. The load receipt preserves
+  the immutable R2 source hashes and independently verifies the expected schema and counts for the D1
+  corpus index and Supabase edge projection; the selected target bindings match the approved rehearsal
+  resources, a second load is a no-op, a forced failure leaves the prior release servable, and the
+  exclusion scan finds zero demo/user data. Without hosted-write approval, prove the same contract using
+  isolated local targets only.
 - **Provider budget:** cumulative Run-3 caps remain Anthropic ≤2 SGD and OpenAI ≤20 SGD. Stop before a
   request that could cross either cap; record actual USD+SGD and restore config byte-for-byte.
-- **Not this item:** support-model training (O30), active custom-model routing, or general scientific
-  calibration (O2).
+- **Not this item:** support-model training (O30), active custom-model routing, general scientific
+  calibration (O2), cloning a hosted database, or user-facing production cutover.
 
 ---
 

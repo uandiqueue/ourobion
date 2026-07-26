@@ -69,7 +69,8 @@ This was a source-and-evidence audit, not a review of the README in isolation. I
   non-diagnostic language, and the deferred support-model design;
 - primary external guidance where the recommendation depends on it: Supabase’s
   [RBAC](https://supabase.com/docs/guides/api/custom-claims-and-role-based-access-control-rbac) and
-  [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security) guidance, W3C’s
+  [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security) guidance and
+  [publishable/secret-key migration contract](https://supabase.com/docs/guides/getting-started/migrating-to-new-api-keys), W3C’s
   [text-alternative guidance](https://www.w3.org/WAI/fundamentals/accessibility-principles/), Flutter's
   [mobile accessibility testing guidance](https://docs.flutter.dev/ui/accessibility/accessibility-testing), Cochrane’s
   [certainty-of-evidence framework](https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-14),
@@ -121,6 +122,8 @@ artifacts rather than inferred from graph rank alone.
 | F10 | P2 | Reproducibility / privacy | Provider responses and Deno dependencies fail open in places; exact small-cohort gap counts are exposed | B-BR1, B-PL14, B-SEC1 |
 | F11 | P2 | Agent context / process | The documented Graphify update command refreshes AST only; semantic freshness and full endpoint integrity have no session-end or pre-push gate | B-PL17 |
 | F12 | P2 | Agent context / retrieval | Graphify exact-node/source navigation works, but broad natural-language BFS over-ranks generic AST symbols | B-PL18 |
+| F13 | P1 | Release / environment integrity | Hosted Supabase has not received the Run-2 brain schema, and there is no immutable, checksummed route from one reviewed R2 release into the distinct D1 corpus index and Supabase edge projection | B-PL19 |
+| F14 | P1 | Credential security / operability | The server path depends on the legacy JWT `service_role` key as Bearer; Supabase's new named secret keys are not JWT-compatible drop-ins and no migration/rotation proof exists | B-SEC2 |
 
 ### Primary repository evidence anchors
 
@@ -138,6 +141,8 @@ artifacts rather than inferred from graph rank alone.
 | F10 | `tools/llm-router/src/routes/apiWorker.ts:65–207`; CI Deno command/imports; gap-ledger SELECT policy + nao gaps route |
 | F11 | `scripts/graphify-build.ps1`; Graphify 0.8.40 `watch._rebuild_code` + AST manifest behavior; pre-audit `graphify-out/manifest.json` had 882 AST hashes and zero semantic hashes; post-commit full-endpoint validation found 11 stale/dangling hyperedges referencing 31 absent node IDs |
 | F12 | Post-bootstrap query QA against Run 2 README, pending register, and Serving-Band Gating / Adversarial Edge Verification nodes; exact-ID explanations passed while vocabulary-expanded queries ranked generic `source`, `client`, `FIXTURE`, `pending`, and `quote` nodes above richer semantic matches |
+| F13 | `tools/edge-loader/load_edges.mjs:4–27,83–105,205–305`; brain-edge migrations beginning `20260716031048`; `20260724150000_create_o13_edge_human_verdicts.sql:5–48`; read-only hosted probe on 2026-07-26 (demo Auth/PostgREST reachable, current Run-2 brain tables absent) |
+| F14 | `apps/nao/src/app/(app)/api/loader/run-pipeline/route.ts:7–8,42–62`; `supabase/functions/run-pipeline/index.ts:12–18,42–78`; pg_net cron migrations `20260515100001` and `20260515110001`; Supabase's [new-key migration guide](https://supabase.com/docs/guides/getting-started/migrating-to-new-api-keys) |
 
 ## Detailed audit
 
@@ -179,6 +184,52 @@ symbols such as `source`, `client`, `FIXTURE`, `pending`, and `quote` ahead of m
 nodes. Freshness therefore proves coverage, not retrieval relevance. Keep exact IDs/source paths as the
 reliable workflow; add a benchmark query set, node-type-aware hybrid ranking, generic-node suppression,
 and ranked-relevance regression gate before treating broad natural-language retrieval as dependable.
+
+#### F13 — hosted schema access is not yet a reproducible science-release promotion path
+
+Both local app configurations currently target the intended demo project `bewwvcksgpxoomyjavjp`. A
+read-only 2026-07-26 probe returned HTTP 200 from Auth and the PostgREST root, proving that the URL and
+keys reach that project, but its exposed schema did not contain `relationship_claims`,
+`edge_verifications`, or `verified_edges`. The clean reserve project `jscxvnettbvkboijczav` is intended
+for production and was deliberately not mutated by this audit. Working credentials are therefore not
+evidence that either hosted target has received and passed the current append-only migration chain.
+
+Production should not clone the demo database or pay to re-ingest the same papers. Git migrations are
+schema truth and the reviewed R2 corpus/claim/verification artifacts are science truth. They produce two
+distinct rebuildable projections: the pinned R2 corpus manifest rebuilds the D1 corpus-search index;
+the pinned R2 edge JSONL rebuilds Supabase `relationship_claims`/`edge_verifications`/`verified_edges`.
+The current edge loader can validate local files or fetch mutable `edges/claims.jsonl` and
+`edges/verifications.jsonl` keys from R2, but it cannot select and prove one exact release. Add an
+immutable release id/prefix or bucket plus manifest containing the source commit/contract, object hashes,
+run/model/prompt identity and expected per-projection counts; require an explicit release selector;
+apply and verify the exact migration ledger on a clean target; independently rebuild and receipt the
+separately bound target D1 and Supabase projections; and rehearse idempotency, rollback, and disaster
+recovery. Promotion must mechanically reject auth users, simulated/personal raw rows, derived cards/job
+state, and all other demo-only data.
+
+Run-3 implementation and acceptance default to local/offline resources. Any hosted rehearsal requires
+Jayden's separate approval of the exact isolated, non-serving Supabase project, R2 bucket/prefix and D1
+database. It may not mutate the existing demo, production, customer/auth data, or a real shared binding
+by inference from this backlog item.
+
+`edge_human_verdicts` is different: it is non-derived truth whose `created_by` identity belongs to one
+Auth project. O29 never migrates it. Any later import must be separately authorized only after O27 binds
+and re-reviews decisions against the promoted artifact revision and establishes a target curator identity.
+
+#### F14 — the legacy server key cannot be retired by changing one environment value
+
+nao's server route currently sends `SUPABASE_SERVICE_ROLE_KEY` as both `Authorization: Bearer …` and
+`apikey`; `run-pipeline` authorizes by direct equality with that Bearer string and forwards it to every
+stage. That works with the current legacy JWT `service_role` key, but couples access to one highly
+privileged credential and prevents a safe drop-in move to Supabase's new named secret keys.
+
+Supabase documents that `sb_secret_…` keys are not JWTs: they travel on `apikey`, Edge Functions expose
+them through the JSON `SUPABASE_SECRET_KEYS` variable, and a function must use supported secret-key
+authorization or `verify_jwt = false` plus its own authorization. Use a separately named key per server
+component, keep it only in Worker/Edge Function/Vault secret stores, and migrate the caller and callee
+contract together. Inventory nao, nested stage calls, CI/deployment, webhooks, cron and `pg_net`; support
+a bounded dual-key rotation window; prove the old and invalid keys fail after cutover; then deactivate
+the legacy key. No server key may enter Flutter, `NEXT_PUBLIC_*`, a response, or logs.
 
 #### F2 — nao’s implemented trust boundary contradicts its canonical architecture
 
@@ -360,11 +411,11 @@ bounded to approximately half the Run 2 change surface: **at most 7 units, 85 ch
 added lines**. The order is deliberate:
 
 1. restore trustworthy release evidence;
-2. close role and cross-user privacy boundaries;
+2. close role/cross-user privacy boundaries and replace the legacy server-key contract;
 3. make the demo control path safe for raw truth and retries;
 4. repair scientific provenance semantics and artifact trust posture;
 5. translate the UI and establish accessibility;
-6. add live retrieval plus actual verifier/model attestation;
+6. add live retrieval/model attestation and rehearse immutable artifact promotion into a migrated target;
 7. train and evaluate one non-serving NLI pilot, then close the run.
 
 If any unit exceeds its allocation, move its non-acceptance work back to the pending register. Do not add
