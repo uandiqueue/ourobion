@@ -59,3 +59,16 @@ memory: none
 - PR #144 opened directly against `dev-phase2-run3`. The subsequent tracking-state commit changed the
   candidate SHA, so the required exact GitHub Actions evidence must be taken from the newest pushed
   commit rather than from the original implementation commit.
+
+## Correction pass
+
+- Corrected the O24 accounting, stale CI comments, matrix parser scope, and exact-SHA assertion after
+  adversarial review. The parser now reads only `jobs.deno-check`, with decoy, extra, and duplicate
+  negative coverage in addition to the original missing-function and missing-entrypoint cases.
+- Rejected the evaluator's proposed direct-dispatch blocker: run `30219602308` checked immutable
+  synthetic merge `d14857e7fa6bb357d9a9bd14b3d7782483fca672`, whose parents are baseline
+  `9b41f4abc0a52e2c3ebfebb6b6fe6b375709dca3` and PR head
+  `d7405259e7ab6166665d763427857234f0789cd6`. The evidence wording, not cumulative tree coverage,
+  required correction.
+- The always-on CI assertion now logs and proves the actual checked SHA equals `GITHUB_SHA`; manual
+  dispatches additionally compare the checked SHA with the env-bound, quoted `expected_sha` input.

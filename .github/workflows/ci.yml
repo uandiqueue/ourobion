@@ -1,21 +1,9 @@
 name: CI
 
-# The non-bypassable backstop: mirrors the local pre-push gate (skippable with --no-verify) and adds
-# the checks that can only run in CI. Seven jobs:
-#   - context     : context integrity + single generated human graph-view invariant
-#   - flutter     : flutter analyze + flutter test (with the public env file built from secrets)
-#   - typescript  : tsc --noEmit over the shared/ contracts
-#   - node-tools  : matrix over the tools/* node packages — npm ci + typecheck + test, plus the
-#                   DB-free drift guards (rules --check, metric-view --check). All suites are
-#                   offline-first: no Docker, no DB, no network, no secrets.
-#   - nao         : apps/nao typecheck + node:test suites (no build — needs CF bindings)
-#   - deno-check       : deno check over the three edge-function handler entrypoints (audit A24) —
-#                        the only compile pass the Deno.serve shells get before deploy.
-#   - migrations-apply : applies supabase/migrations/*.sql in filename order against a vanilla
-#                        postgres:17 service (audit A24). A shadow apply: it complements — does
-#                        NOT replace — the local `npx supabase db reset` on the real supabase
-#                        image; its job is catching SQL syntax/ordering/constraint-name breaks
-#                        in CI, where no supabase stack exists.
+# The non-bypassable backstop mirrors local pre-push checks and adds CI-only verification.
+# It covers context, Flutter, shared TypeScript, all Node/nao suites, all four configured Deno
+# handlers, and the Postgres shadow migration apply. Deno handlers use their local import maps, the
+# committed shared frozen lock, and the pinned runtime that generated that lock.
 on:
   push:
     branches: [main, dev-phase2, dev-phase2-run3]
@@ -45,17 +33,25 @@ jobs:
       - name: Context check
         run: node tools/context_sync.mjs --check
 
-      - name: Assert exact dispatched SHA
-        if: github.event_name == 'workflow_dispatch'
+      - name: Assert exact checked SHA
         env:
           EXPECTED_SHA: ${{ inputs.expected_sha }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -eu
           actual_sha="$(git rev-parse HEAD)"
-          test "$actual_sha" = "$EXPECTED_SHA" || {
-            echo "Expected $EXPECTED_SHA but checked out $actual_sha" >&2
+          echo "Checked SHA: $actual_sha"
+          echo "GitHub SHA: $GITHUB_SHA"
+          test "$actual_sha" = "$GITHUB_SHA" || {
+            echo "Checked SHA does not match GITHUB_SHA" >&2
             exit 1
           }
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            test "$actual_sha" = "$EXPECTED_SHA" || {
+              echo "Expected $EXPECTED_SHA but checked out $actual_sha" >&2
+              exit 1
+            }
+          fi
 
       - name: Verify Deno matrix covers every configured function
         run: |
@@ -207,12 +203,9 @@ jobs:
         working-directory: apps/nao
         run: npm test
 
-  # ─── Audit A24: the three Deno handler shells (Deno.serve + jsr: imports) are imported by
-  # nothing the node jobs compile — this is their only type check before deploy. Runs from each
-  # function's directory so its deno.json (the same file config.toml points at as import_map) is
-  # the discovered config and the walk never reaches the repo-root package.json. --no-lock:
-  # no deno.lock is committed (deno is not installed on dev machines; the supabase CLI bundler
-  # owns dependency resolution at deploy time), so jsr deps resolve fresh per run.
+  # Audit A24/O24: all four configured Deno handlers are checked before deploy. The context guard
+  # compares this explicit matrix with config.toml. Each handler uses its local import map, the
+  # committed shared frozen lock, and pinned Deno 2.8.1, which generated that lock.
   deno-check:
     name: Deno — ${{ matrix.function }}
     runs-on: ubuntu-latest

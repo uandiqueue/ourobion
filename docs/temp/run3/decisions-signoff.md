@@ -18,6 +18,13 @@ updated: 2026-07-27
 - This implements the locked O24 reproducibility requirement; it does not change function behaviour
   or deployment configuration.
 
+## D2 — O24 exact-SHA evidence semantics (2026-07-27)
+
+- A pull-request run's immutable synthetic merge commit is valid exact cumulative evidence when the
+  context job proves `git rev-parse HEAD == GITHUB_SHA` and the merge parents are the base and PR head.
+- The run's head association and its checked synthetic merge SHA are recorded distinctly in the final
+  PR evidence comment. A direct dispatch of the branch head is not required for this O24 acceptance.
+
 ## Sign-off state
 
 Human acceptance and merge are pending for every Run 3 unit.

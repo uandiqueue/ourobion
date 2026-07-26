@@ -6,7 +6,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const CONFIG_SECTION = /^\[functions\.([A-Za-z0-9_-]+)]\s*$/m
 const ENTRYPOINT = /^entrypoint\s*=\s*"([^"]+)"\s*$/m
-const MATRIX = /^\s{8}function:\s*\n((?:\s{10}- [A-Za-z0-9_-]+\s*\n)+)/m
+const DENO_CHECK_JOB = /^  deno-check:\s*\n([\s\S]*?)(?=^  [A-Za-z0-9_-]+:\s*$|(?![\s\S]))/m
+const FUNCTION_MATRIX = /^        function:\s*\n((?:          - [A-Za-z0-9_-]+\s*\n)+)/m
 
 function fileText(path) {
   return readFileSync(path, 'utf8').replace(/\r\n/g, '\n')
@@ -23,7 +24,9 @@ export function configuredFunctions(configText) {
 }
 
 export function denoMatrixFunctions(workflowText) {
-  const matrix = workflowText.match(MATRIX)?.[1]
+  const job = workflowText.match(DENO_CHECK_JOB)?.[1]
+  if (!job) throw new Error('CI deno-check job was not found')
+  const matrix = job.match(FUNCTION_MATRIX)?.[1]
   if (!matrix) throw new Error('CI deno-check function matrix was not found')
   return matrix.match(/^\s{10}- ([A-Za-z0-9_-]+)\s*$/gm)?.map((line) => line.trim().slice(2)) ?? []
 }
