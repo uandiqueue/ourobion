@@ -208,10 +208,13 @@ These hold for every model in this roster, without exception:
 - **Offline only.** Serve-time is a pure weighted read over precomputed columns
   ([`decisions/0003-paper-reliability.md`](../../shared/decisions/0003-paper-reliability.md)); no model
   may enter the serve path.
-- **Python stays out of this repository.** Training lives in the external private `ourobion-model-lab`;
-  only manifests, hashes, licences, aggregate evaluation output, model cards, and artifact pointers
-  come back. The one runtime exception is an **ONNX** artifact for the sentence-role tagger, which the
-  TypeScript ingest CLI can execute without a Python dependency.
+- **Python is isolated to `model-training/`.** Training/evaluation/export code lives in this
+  repository's dedicated `model-training/` workspace (task-fit polyglot rule, see
+  [`AGENTS.md`](../../../AGENTS.md) §1/§4 and [`code-build-decisions.md`](./code-build-decisions.md)
+  D1–D2); it is never imported by `apps/`, `supabase/`, `shared/`, or `tools/`, and no training is
+  executed inside this repository's CI. Raw datasets, checkpoints, and weights are still never
+  committed. The one product-runtime exception remains an **ONNX** artifact for the sentence-role
+  tagger, which the TypeScript ingest CLI can execute without a Python dependency.
 - **No user data leaves Ourobion.** No `daily_gut_rows`, wearable/environment rows, user UUIDs, cards,
   Supabase exports, or production telemetry may enter any training environment.
 - **A `no-go` is a completed experiment**, not a failure to be tuned away.

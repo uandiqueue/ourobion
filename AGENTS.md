@@ -29,9 +29,24 @@ surface **descriptive** patterns in gut health, hydration, and vector exposure. 
 
 Repo shape: a Flutter (Dart) app in `apps/biotope/`, a Next.js/TypeScript brain-operations app in
 `apps/nao/`, a Supabase backend in `supabase/` (Postgres migrations + TypeScript edge functions), and
-shared Dart/TS contracts in `shared/`. Node drives nao, the Supabase CLI, and `tools/`. **There is no
-Python in this repo — do not introduce any.** Model-training Python belongs in the separate private
-model-lab repository, never here.
+shared Dart/TS contracts in `shared/`. Node drives nao, the Supabase CLI, and `tools/`.
+
+**Language is task-fit, not blanket-banned.** Python is permitted **only** inside the isolated
+top-level `model-training/` workspace, for the five planned custom models' training, evaluation,
+export, and reproducibility tooling. TypeScript/Node is the choice for ONNX-runtime parity checks and
+runtime-contract verification. Every other surface — `apps/`, `supabase/`, `shared/`, `tools/` — stays
+Flutter/Dart or Node/TypeScript, exactly as before; no other language enters without a concrete
+task-fit reason recorded as a decision. This supersedes the former blanket "no Python in this repo"
+rule and the model-training plans' requirement that training code live only in a separate
+`ourobion-model-lab` repository — both superseded by Jayden's explicit decision (see
+[`docs/temp/model-training/code-build-decisions.md`](docs/temp/model-training/code-build-decisions.md)
+D1). **It does not weaken any other boundary:** data-isolation, licensing, security, scientific,
+non-serving, and two-tier-truth rules are unchanged. `model-training/` code may only read fixtures and
+manifests it owns, may never be imported by `apps/`, `supabase/`, `shared/`, or `tools/brain-ingest`,
+and never integrates a trained model into product serving — see
+[`docs/temp/model-training/README.md`](docs/temp/model-training/README.md) and
+[`docs/temp/model-training/model-roster.md`](docs/temp/model-training/model-roster.md) §8 for the
+standing boundaries.
 
 ## 2. Core principle — TWO-TIER TRUTH (read this first)
 
@@ -87,8 +102,12 @@ auto-generate a structural import graph yet — see §8 and [`docs/graph/README.
 
 ## 4. Environment & commands
 
-ourobion has **two toolchains**: **Flutter/Dart** (biotope, in `apps/biotope/`) and **Node + Supabase
-CLI** (nao, the backend, and `tools/`). There is **no Python** in this repository.
+ourobion has **two toolchains for product code**: **Flutter/Dart** (biotope, in `apps/biotope/`) and
+**Node + Supabase CLI** (nao, the backend, and `tools/`). A third, narrowly scoped toolchain — **Python
+≥3.10, isolated to `model-training/`** — exists for the five planned custom-model training/evaluation/
+export pipelines (see §1 and
+[`docs/temp/model-training/README.md`](docs/temp/model-training/README.md)); it is never installed into,
+or imported by, `apps/`, `supabase/`, `shared/`, or `tools/`.
 
 > **Windows-native dev (no WSL):** `scripts/setup.ps1` installs the whole toolchain **bounded to the
 > project** in a sibling `..\biotope-toolchain\` (Miniconda env = Node + JDK 17, Flutter SDK, Android

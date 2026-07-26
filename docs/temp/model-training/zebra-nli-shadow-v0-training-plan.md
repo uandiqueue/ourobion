@@ -38,7 +38,7 @@ reuse a compatible frozen evaluation artifact, but neither workstream is a prere
 | Evaluation | Untouched SciFact dev plus a frozen, independently labelled Ourobion-domain audit set |
 | Model selection | Fixed recipe and preselected seed `42`; no leaderboard-driven hyperparameter search |
 | Compute | One self-managed, pay-as-you-go GMI GPU container; one GPU only |
-| Code location | Separate private `ourobion-model-lab` repository; **no Python is added to this repository** |
+| Code location | This repository's isolated `model-training/` workspace (`ourobion_model_lab.models.zebra_nli_shadow`); Python confined there per the task-fit polyglot rule, never in `apps/`/`supabase/`/`shared/`/`tools/` |
 | Durable artifacts | Private, append-only release namespace with hashes; call it immutable only if an enforced storage retention/versioning/deny-overwrite control is verified |
 | Runtime posture | Research-only and non-serving, regardless of scores |
 
@@ -70,7 +70,7 @@ No paid GPU may be provisioned until every `GMI-H` row is recorded in the Zebra 
 | GMI-H3 | Contact GMI Support from the console and request **Container** entitlement (and Cold Storage if used). Ask for one-GPU H100 availability, region, billing granularity, product ID, and any minimum rental | support ticket/reference; enabled products; region; live console price |
 | GMI-H4 | Import a project-specific Ed25519 public key under organization SSH Keys. Keep the private key outside git and outside shared chat | SSH key name/fingerprint; owner; rotation date |
 | GMI-H5 | Choose durable storage: GMI S3-compatible Cold Storage or an approved private Cloudflare R2 prefix. Create a narrowly scoped read/write credential for only the model-lab prefix | bucket/prefix; region/endpoint; credential owner and expiry; never the secret |
-| GMI-H6 | Approve a separate private `ourobion-model-lab` Git repository for Python training code and grant only the people/agent identity needed for Zebra | repository URL; default branch protections; owner |
+| GMI-H6 | Confirm this repository's isolated `model-training/` workspace (established by build unit MT0; supersedes the earlier separate-repository requirement) as Zebra's code location, and grant only the people/agent identity needed for Zebra's execution run | workspace path; branch protections; owner |
 | GMI-H7 | Approve the frozen SciFact licence manifest and confirm that the pilot remains non-serving/non-production | reviewer, date, approved uses, attribution location |
 | GMI-H8 | Approve the GPU-hour and total-cost stop limits after viewing the live console estimate | SKU; hourly price; GPU-hour cap; compute cap; all-in cap |
 
@@ -92,8 +92,8 @@ Python 3.10.12, JupyterLab, and OpenSSH with ports 8888 and 22. Record the actua
 documented runtime. Record an image digest only if the console/API exposes it or it can be captured
 inside the container; otherwise record `digest unavailable from platform` and retain the exact
 template metadata plus installed-package/environment manifest. The authoritative run is a CLI job
-checked out from `ourobion-model-lab`; a notebook may inspect data but is not the training source of
-truth.
+run from this repository's `model-training/` workspace; a notebook may inspect data but is not the
+training source of truth.
 
 Security defaults:
 
@@ -138,29 +138,27 @@ upload Supabase, Anthropic, OpenAI, production R2, or personal-data credentials.
 
 ## 4. Training-code source of truth
 
-Ourobion's main repository remains Dart/TypeScript/SQL only. Create a separate private repository with
-this minimum shape:
+Ourobion's product surfaces (`apps/`, `supabase/`, `shared/`, `tools/`) remain Dart/TypeScript/SQL
+only. Training code for all five models lives together in this repository's isolated top-level
+`model-training/` workspace (task-fit polyglot rule; see [`AGENTS.md`](../../../AGENTS.md) §1/§4 and
+[`code-build-decisions.md`](./code-build-decisions.md) D1), established once by build unit MT0 rather
+than duplicated per model. Its shape, as built:
 
 ```text
-ourobion-model-lab/
+model-training/
   README.md
-  pyproject.toml
-  uv.lock                         # or an equivalently fully pinned lockfile
-  Dockerfile                     # optional; base image pinned by digest
-  configs/zebra-nli-shadow-v0.yaml
-  src/model_lab/data_scifact.py
-  src/model_lab/train_nli.py
-  src/model_lab/evaluate_nli.py
-  src/model_lab/build_release.py
-  tests/test_label_mapping.py
-  tests/test_group_splits.py
-  tests/test_evidence_windows.py
-  tests/test_manifest_hashes.py
-  licences/
-  manifests/
+  pyproject.toml                  # requires-python>=3.10; exact-pinned optional extras (ml, dev)
+  constraints.txt                  # mirrors the exact pins; hash-pinned lock is a human gate (D4)
+  src/ourobion_model_lab/
+    config.py, environment.py, manifests.py, data_guard.py, splits.py,
+    metrics.py, release.py, storage.py, gmi_preflight.py, job.py, cli.py   # shared substrate (MT0)
+    models/zebra_nli_shadow/       # Zebra-specific code lands here (MT3)
+  tests/                            # stdlib unittest suite; zero installs required
+  licences/                          # per-dataset licence manifests (this model's slice)
+  manifests/                         # dataset/hash/provenance manifests (this model's slice)
 ```
 
-The external repository commit SHA, lockfile hash, template ID/runtime metadata, available image digest
+The in-repo commit SHA, exact-pin manifest hash, template ID/runtime metadata, available image digest
 (or an explicit unavailable marker), environment manifest, and training-config hash are mandatory
 inputs to the release manifest. A notebook cannot substitute for those files.
 
@@ -502,7 +500,8 @@ finding changes the product roadmap. Do not replace Zebra with another model or 
 ## 15. Execution order
 
 1. **T0 — human/platform gate:** finish GMI-H1–H8; freeze cost and access evidence.
-2. **T1 — external repo gate:** create/pin `ourobion-model-lab`, lock dependencies, pass unit tests.
+2. **T1 — workspace gate:** confirm the in-repo `model-training/` workspace (MT0), pin/verify its
+   exact-pinned dependency manifest, and pass unit tests for this model's code.
 3. **T2 — licence/data gate:** download official inputs, hash them, build grouped splits, publish the
    class/length/leakage report without using a GPU.
 4. **T3 — audit-set gate:** freeze the public-paper candidate pool, complete blinded dual review and

@@ -33,7 +33,9 @@ Batch **extract** (PDF → JSON via Claude API + human review) → **load/normal
 engine**; the LLM is confined to the offline extract step with cost discipline. (Pattern borrowed from
 sister repo NUSPlan; the **rules engine** targets Postgres — the **brain's graph is served as a
 relational 1-hop lookup over the Postgres `verified_edges` view** (no graph DB), see
-[`../nao/brain-synthesis-design.md`](../nao/brain-synthesis-design.md) — and ourobion uses **no Python**.)
+[`../nao/brain-synthesis-design.md`](../nao/brain-synthesis-design.md) — and ourobion's serving/runtime
+path uses **no Python** here; Python is permitted only in the isolated `model-training/` workspace per
+[AGENTS.md](../../AGENTS.md).)
 
 This maps onto ourobion's [two-tier truth](../memory/0001-two-tier-truth.md): `data/rules/**.json` join raw
 rows + migrations + `shared/` as TRUTH; the `rules` table joins `baseline_snapshots` + `insight_cards`

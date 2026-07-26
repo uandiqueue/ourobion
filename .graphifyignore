@@ -26,6 +26,12 @@ env/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
+# model-training/ (AGENTS.md §1/§4) tool caches -- __pycache__/venv/ above
+# already cover it non-anchored; these three are model-training-only additions
+# to the root .gitignore that this file must mirror per the header note.
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
 
 # Generated build output.
 dist/
@@ -65,6 +71,13 @@ Thumbs.db
 graphify-out/
 data/corpus/
 data/llm-router/
+# model-training/ (AGENTS.md §1/§4): no training/export has run in this
+# code-build, but these never carry semantic value for a code-context graph
+# even once it does -- mirrors the root .gitignore's model-training section.
+checkpoints/
+predictions/
+mlruns/
+wandb/
 
 # Historical provenance is not active agent context.
 docs/archive/

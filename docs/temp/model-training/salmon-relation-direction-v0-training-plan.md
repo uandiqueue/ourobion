@@ -10,7 +10,7 @@ updated: 2026-07-26
 # Salmon Relation/Direction v0 — GMI training plan
 
 > **Shared execution substrate.** GMI account/entitlement gates, container configuration, network and
-> secret posture, durable-storage rules, the external `ourobion-model-lab` repository shape, and the
+> secret posture, durable-storage rules, the in-repo `model-training/` workspace shape, and the
 > release/provenance contract are defined once in the NLI plan
 > ([`zebra-nli-shadow-v0-training-plan.md`](./zebra-nli-shadow-v0-training-plan.md) §3, §4, §12). This plan does **not** restate them; it records
 > only the deltas. Everything in `GMI-H1`–`GMI-H8` must be satisfied before this model provisions a GPU,
@@ -87,7 +87,7 @@ The source doc should be corrected under its own change, not silently here.
 | Evaluation | Held-out BioRED/BioREDirect test split plus a frozen, independently labelled Ourobion-domain audit set |
 | Model selection | Fixed recipe, preselected seed `42`; no leaderboard-driven search |
 | Compute | One self-managed pay-as-you-go GMI GPU container; one GPU |
-| Code location | Separate private `ourobion-model-lab` repository; **no Python enters this repository** |
+| Code location | This repository's isolated `model-training/` workspace (`ourobion_model_lab.models.salmon_relation_direction`); Python confined there per the task-fit polyglot rule, never in `apps/`/`supabase/`/`shared/`/`tools/` |
 | Runtime posture | Non-serving, unconditionally |
 
 ## 4. Dataset and licence gate
@@ -336,7 +336,7 @@ Everything in the NLI plan's §14, plus:
 ## 14. Execution order
 
 1. **T0** — GMI-H1–H8 satisfied; **GMI-H7 re-approved for this licence manifest**, BioREDirect resolved.
-2. **T1** — `ourobion-model-lab` pinned; unit tests for label mapping, marker insertion, PMID dedup, and
+2. **T1** — the `model-training/` workspace (`ourobion_model_lab.models.salmon_relation_direction`) pinned; unit tests for label mapping, marker insertion, PMID dedup, and
    the symmetric-direction rule pass.
 3. **T2** — download, hash, de-duplicate by PMID, build grouped splits, publish class/leakage report. CPU only.
 4. **T3** — freeze the in-domain audit set via blinded dual review; hash it.

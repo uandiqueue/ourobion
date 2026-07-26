@@ -1,6 +1,6 @@
 ---
 title: Model training — isolated research workstreams
-summary: Staging home for custom-model experiments that are operationally independent from Ourobion product build runs. Each model owns its external code, compute, budget, data, evaluation, and closeout; only frozen evaluation artifacts may cross into this repository.
+summary: Staging home for custom-model experiments that are operationally independent from Ourobion product build runs. Code lives in this repository's isolated model-training/ workspace; each model still owns its own compute, budget, data, evaluation, and closeout, and no training is executed here — only code, manifests, and frozen evaluation artifacts belong in this repository.
 type: plan
 scope: model-training
 status: draft
@@ -11,8 +11,10 @@ updated: 2026-07-26
 
 Custom-model training is **not a Run-3 unit** and is not governed by a product run's unit, file, line,
 provider, or sign-off envelope. It has its own issue/session, human approvals, budget, completion state,
-and external execution repository. A blocked experiment remains blocked; it cannot consume a product
-unit or silently become product integration work.
+and an isolated in-repo code workspace (`model-training/`; see
+[`AGENTS.md`](../../../AGENTS.md) §1/§4 and
+[`code-build-decisions.md`](./code-build-decisions.md) D1). A blocked experiment remains blocked; it
+cannot consume a product unit or silently become product integration work.
 
 ## Workstreams
 
@@ -28,10 +30,15 @@ The full train/do-not-train decision record is [`model-roster.md`](./model-roste
 
 ## Repository boundary
 
-- Python training code, dependency locks, raw datasets, checkpoints, and weights live in the separate
-  private `ourobion-model-lab` repository and approved object storage. Ourobion remains Python-free.
-- This repository may retain only reviewable manifests, hashes, licences/attribution, aggregate
-  evaluation outputs, a model card, spend evidence, and an external artifact pointer.
+- Python training/evaluation/export code lives in this repository's isolated `model-training/`
+  workspace (see [`AGENTS.md`](../../../AGENTS.md) §1/§4 and
+  [`code-build-decisions.md`](./code-build-decisions.md) D1) — never inside `apps/`, `supabase/`,
+  `shared/`, or `tools/`. Raw datasets, checkpoints, and model weights are still never committed: they
+  stay in local/ephemeral storage or an approved external object-storage bucket, excluded by
+  `.gitignore` by construction.
+- This repository retains the `model-training/` code itself, plus reviewable manifests, hashes,
+  licences/attribution, aggregate evaluation outputs, a model card, spend evidence, and an external
+  artifact pointer — never a raw dataset, a checkpoint, or a model weight.
 - No personal rows, Supabase exports, production telemetry, secrets, or model weights cross into the
   training environment.
 - Training completion does not authorize model serving, verifier short-circuiting, prediction logging,

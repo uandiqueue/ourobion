@@ -34,7 +34,8 @@ ourobion/
 │   │   ├── bug_report.yml
 │   │   └── feature_request.yml
 │   └── PULL_REQUEST_TEMPLATE.md
-├── tools/                     # Node-stdlib enforcement + multi-agent helpers (no Python)
+├── tools/                     # Node-stdlib enforcement + multi-agent helpers (TypeScript/Node only —
+│                              #   Python is isolated to model-training/, see AGENTS.md §1/§4)
 │   ├── brain-ingest/          # TS paper-corpus ingestion pipeline (see docs/nao/brain-ingestion-design.md)
 │   ├── graph-view/            # Deterministic graph.json -> docs/graph/semantic-graph.md renderer + tests
 │   ├── context_sync.mjs       # --session-start briefing / --check enforcement
@@ -81,6 +82,9 @@ ourobion/
 │   ├── biotope-env.ps1        # Windows: per-shell activation of the bounded toolchain
 │   ├── graphify-build.ps1     # Update machine graph + refresh tracked human graph view
 │   └── seed-test-data.ps1     # Inject backdated rows + rebuild projections for local testing
+├── model-training/            # Isolated Python workspace: training/eval/export/release code for the
+│                              #   five planned custom models (AGENTS.md D1). No real training runs
+│                              #   here — see docs/temp/model-training/README.md and human-gates.md.
 ├── shared/                    # Code shared across frontend and backend boundaries
 │   ├── SHARED-CONTEXT.md      # Shared types and integration contracts
 │   ├── types/                 # Shared data models (TypeScript + Dart)
