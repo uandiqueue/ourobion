@@ -27,12 +27,13 @@ prove is named rather than implied.
 
 | You want to record… | Put it in |
 |---|---|
-| A gap, bug, missing piece, or comment found while auditing | [`pending-build-register.md`](./pending-build-register.md) — the standing gap map |
+| A gap, bug, missing piece, or comment found while auditing | [`../run3/pending-build-register.md`](../run3/pending-build-register.md) — the standing gap map |
 | A per-unit sign-off / rejection | [`unit-signoff-index.md`](./unit-signoff-index.md) — the `SIGN-OFF` column |
 | A decision that changes locked intent | [`decisions-signoff.md`](./decisions-signoff.md) (D-entries) |
 
-`pending-build-register.md` is the **superset**: everything unbuilt or gapped, from any source.
-[`next-build-optimizations.md`](./next-build-optimizations.md) is the **subset** of that register
+Run 3's [`pending-build-register.md`](../run3/pending-build-register.md) is the **superset**: everything
+unbuilt or gapped, from any source. [`next-build-optimizations.md`](../run3/next-build-optimizations.md)
+is the **subset** of that register
 already decision-locked for a future run, and
 [`carry-forward-from-run1.md`](./carry-forward-from-run1.md) covers what Run 1 left open. Both are
 pointed to from the register so nothing lives in only one place.
@@ -48,7 +49,7 @@ pointed to from the register so nothing lives in only one place.
 | **Base** | `dev-phase2` @ `e185cf0` |
 | **Units** | 14 rows, **U0–U13** |
 | **PRs** | **#123–#136**, stacked chain |
-| **Backlog consumed** | O9–O20 from [`next-build-optimizations.md`](./next-build-optimizations.md) |
+| **Backlog consumed** | O9–O20, preserved in the frozen [`next-build-optimizations-run2-snapshot.md`](./next-build-optimizations-run2-snapshot.md) |
 | **Launch prompt** | [`orchestrator-prompt.md`](./orchestrator-prompt.md) |
 | **Definition of done** | Scripted e2e dry-run passes + demo runbook reproduces from a clean stack |
 | **DoD result** | **MET** — dry-run **21/21** (live pass) + **20/20** (clean-reset reproducibility) + [`docs/shared/phase2-demo-runbook.md`](../../shared/phase2-demo-runbook.md) |
@@ -179,5 +180,5 @@ mid-sequence-failure path never forced live.
 3. Reproduce the demo from a clean stack with
    [`docs/shared/phase2-demo-runbook.md`](../../shared/phase2-demo-runbook.md).
 4. Record every gap, bug, or comment you find in
-   [`pending-build-register.md`](./pending-build-register.md).
+   [`../run3/pending-build-register.md`](../run3/pending-build-register.md).
 5. Sign off (or reject) per unit in the `SIGN-OFF` column of `unit-signoff-index.md`.

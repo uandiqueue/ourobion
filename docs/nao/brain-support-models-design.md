@@ -4,7 +4,7 @@ summary: How the three small biomedical encoders (NLI pre-filter, study-design +
 type: design
 scope: nao
 status: deferred
-updated: 2026-07-13
+updated: 2026-07-26
 ---
 # Brain support models — training design (public-data-first)
 
@@ -19,9 +19,11 @@ sets, and split sizes below are observed, not assumed).
 - The contract fields these models populate/verify: [`brain-synthesis-design.md`](brain-synthesis-design.md) +
   [`../../shared/brain/relationships.ts`](../../shared/brain/relationships.ts).
 
-> **Licensing:** ourobion is a **non-commercial demo**, so CC BY-NC / ShareAlike / unconfirmed licenses
-> are all usable here. Every source below is **free and needs no payment**. The only dropped source is
-> **JCR/Impact Factor** (paid Clarivate) — replaced by SJR + OpenAlex, which are free.
+> **Licensing:** non-commercial status does not make an unconfirmed licence acceptable. Every training
+> source, transform, base model and redistributed artifact needs an explicit recorded licence and
+> attribution decision before use. Run 3 O30 uses SciFact only and excludes HealthVer until reusable
+> permission/licensing is documented. JCR/Impact Factor remains dropped (paid Clarivate), with the
+> deterministic venue lookup using SJR + OpenAlex instead.
 
 ---
 
@@ -48,6 +50,10 @@ the **parquet mirrors** noted per-model below — the field shapes are identical
 ---
 
 ## 1 · Model (a) — claim-support / NLI
+
+> **Run-3 boundary:** the broader candidate recipe below remains roadmap context. O30 trains one
+> SciFact-only BiomedBERT pilot under `docs/temp/run3/custom-model-training-plan.md`; HealthVer,
+> PUBHEALTH and SciNLI are not Run-3 inputs.
 
 **Task.** Cross-encoder: `[CLS] claim [SEP] evidence-text` → **supported / contradicted / uncertain**
 (our `verdict`, collapsed to 3 for the model; `partial`/`unsupported` are recovered downstream from the
@@ -196,11 +202,13 @@ and a sanity check on `relation` — deterministic corroboration of the most dam
 
 ## 4 · Sequencing & honest limits
 
-1. **Train (a) and (c) now** on public data (the GMI credits) — no dependency on Track B.
-2. **(b2)** ships immediately as a lookup (no training). **(b1)** trains from self-labelled PubMed +
-   Cochrane.
-3. When Track B produces in-house `(claim, quote, verdict)` tuples, use them as a **held-out eval set**,
-   then a **late fine-tune**; swap (a) in as the verifier pre-filter to cut LLM spend as the corpus grows.
+1. **Run 3 trains only (a)** as the non-serving NLI Shadow v0 SciFact pilot. Model (c) stays deferred.
+2. **(b2)** already ships as a lookup (no training). **(b1)** and (c) remain later work.
+3. When the pipeline produces independently human-labelled `(claim, quote, verdict)` tuples, use them
+   first as a **held-out eval set**, not automatic training labels; only a later approved phase may
+   fine-tune on them.
+4. When sufficient reviewed labels exist, consider a late fine-tune and separately decide whether to
+   run (a) in shadow. Do not let Run-3 scores short-circuit the verifier.
 
 **Limits to keep visible:** (1) domain gap — SciFact/BioRED skew to biomedical abstracts; our
 hydration/vector/environment metric pairs are under-represented, so the late in-house fine-tune matters.
@@ -208,7 +216,7 @@ hydration/vector/environment metric pairs are under-represented, so the late in-
 **assist** the two brain LLMs; they don't replace the independent-retrieval + adversarial verification that
 makes an edge servable.
 
-## 5 · Data sources (all free, verified 2026-07-01)
+## 5 · Candidate data sources (availability observed 2026-07-01; licences rechecked per run)
 
 SciFact `allenai/scifact_entailment` / `bigbio/scifact` · HealthVer `dwadden/healthver_entailment`
 (mirror `jpd459/healthver_resplit`) · PUBHEALTH `ImperialCollegeLondon/health_fact` (mirror

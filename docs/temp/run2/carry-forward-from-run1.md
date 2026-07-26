@@ -4,7 +4,7 @@ summary: The single list of everything Run 1 (Phase-2 build, audit, evidence rev
 type: plan
 scope: shared
 status: canonical
-updated: 2026-07-25
+updated: 2026-07-26
 ---
 
 # Carry-forward from Run 1
@@ -16,7 +16,7 @@ buried in a closed run's registers.
 This is a **pointer index**. Nothing here is a locked decision; each line says where the detail is and
 what kind of resolution it needs.
 
-> Every item below also has a row in **[`pending-build-register.md`](./pending-build-register.md) §E**,
+> Every item below also has a row in **[`pending-build-register.md`](../run3/pending-build-register.md) §E**,
 > which is the superset register for the whole project. This doc is the detail sheet; the register is
 > the complete list. Keep them in step — if you close something here, update its `B-R1-*` row there.
 
@@ -91,7 +91,7 @@ project does not have yet:
 
 ## 6 · Backlog items Run 2.0 did not touch
 
-From [`next-build-optimizations.md`](./next-build-optimizations.md):
+From [`next-build-optimizations.md`](../run3/next-build-optimizations.md):
 
 - **O1–O8 remain open** — not demo-scoped. O7 (generalize the decorrelation invariant) and O8 (router
   config basis) are gated on B5.
@@ -103,6 +103,6 @@ From [`next-build-optimizations.md`](./next-build-optimizations.md):
 
 The adversarial verdict recorded a baseline-confidence drift (runtime 3/7/14 vs docs 3/5/14). **U13
 reconciled the architecture doc and the migration comment** to 3/7/14. Remaining drift items are listed
-under *Verdict debt notes* in [`next-build-optimizations.md`](./next-build-optimizations.md) — notably
+under *Verdict debt notes* in [`next-build-optimizations.md`](../run3/next-build-optimizations.md) — notably
 `derived_metrics` still user-writable (→ O4) and M6's `InsightFiredEvent` not emitted by
 `generate-insights`.

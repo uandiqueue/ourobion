@@ -21,7 +21,7 @@ and only with the bounded acceptance statement in this section. Then continue to
 | Production deployment or use with ordinary biotope accounts | **Reject** |
 | Privacy/security readiness | **Reject** |
 | Scientific validation or “independent verification” | **Reject** |
-| Continue to Run 3 | **Yes**, with the locked seven-unit scope in [next-build-optimizations.md](./next-build-optimizations.md) |
+| Continue to Run 3 | **Yes**, with the locked seven-unit scope in [next-build-optimizations.md](../run3/next-build-optimizations.md) |
 
 ### Immediate gates before Jayden signs
 
@@ -405,10 +405,11 @@ after licensing, in-domain evaluation, calibration, and independent review.
 
 ## Run 3 recommendation
 
-The reconciled, promoted tranche is in
-[next-build-optimizations.md](./next-build-optimizations.md). It contains exactly seven units and is
-bounded to approximately half the Run 2 change surface: **at most 7 units, 85 changed files, and 8,650
-added lines**. The order is deliberate:
+The promoted tranche reviewed here is preserved in the frozen
+[Run-2 snapshot](./next-build-optimizations-run2-snapshot.md); its living Run-3 execution authority is
+[next-build-optimizations.md](../run3/next-build-optimizations.md). It contains exactly seven units and
+is bounded to approximately half the Run 2 change surface: **at most 7 units, 85 changed files, and
+8,650 added lines**. The order is deliberate:
 
 1. restore trustworthy release evidence;
 2. close role/cross-user privacy boundaries and replace the legacy server-key contract;

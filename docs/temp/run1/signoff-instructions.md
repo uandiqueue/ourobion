@@ -4,7 +4,7 @@ summary: Runbook for the human-gated unit-by-unit sign-off of the phase-2 runs (
 type: process
 scope: shared
 status: canonical
-updated: 2026-07-20
+updated: 2026-07-26
 ---
 
 # Phase-2 Sign-off — Instructions & Ledger
@@ -27,7 +27,7 @@ only when every required reviewer has signed it.
 - **Research-fixes (deferred):** `docs/temp/run1/research-fixes/`.
 - **Per-unit detail:** each unit's `docs/sessions/…` log and its PR / commit (see the ledger for refs).
 - **This ledger:** §6 below.
-- **Forward optimizations (separate task, not sign-off):** `docs/temp/run2/next-build-optimizations.md`.
+- **Forward optimizations (separate task, not sign-off):** `docs/temp/run3/next-build-optimizations.md`.
 
 ## 3. Who signs what (routing)
 
