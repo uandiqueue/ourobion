@@ -190,7 +190,7 @@ Sign in as the demo user → Home shows the **TRENDS** section (gut_comfort_scor
 21-day line with the 3-day dip visible) → Insights tab lists the cards from §4 → tapping a card
 opens **"How this was generated"** (the §5 provenance: pattern, coverage, personal stats,
 research links with quotes/citations, every verdict stamped with the TEST-MODE label).
-Screenshots from the U12 dry-run: `docs/temp/run2/assets/`.
+Screenshots from the U12 dry-run: `docs/archive/runs/run2/assets/` (historical evidence only).
 
 ## 7 · Feature (a): models panel + editable caps
 
@@ -371,7 +371,7 @@ cycle (backlog B5 / O7), not this run.
   and a second reproducibility pass from `supabase db reset` with `-SkipLiveLlm` (artifacts
   reused; the runbook's LLM step was executed live in the first pass). §9 executed once.
 - **Executed by U12 (manually):** §6 on the Android emulator (screenshots in
-  `docs/temp/run2/assets/`); Windows-desktop launch NOT exercised (Developer Mode off —
+  `docs/archive/runs/run2/assets/`, historical evidence only); Windows-desktop launch NOT exercised (Developer Mode off —
   see Known rough edges).
 - **Executed by U13 (scripted, `-DecorrelatedFullRun`, twice from a clean `db reset`):** §11 — the
   first attempt surfaced a real script-robustness gap (M4's edge-card assertion too strict for a

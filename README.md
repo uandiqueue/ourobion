@@ -23,7 +23,7 @@ consent is granular, and community aggregates only publish above per-region thre
 | Surface | What it is | Run it |
 |---|---|---|
 | 🌱 **biotope** | The mobile app (Flutter, iOS + Android) — 30-second daily logging + descriptive insight cards. | [`apps/biotope/README.md`](apps/biotope/README.md) |
-| 🧠 **nao** | The web "window into the brain" — a Next.js dashboard over the research corpus (search, facets, coverage), deployed on Cloudflare. | [`apps/nao/README.md`](apps/nao/README.md) |
+| 🧠 **nao** | The web "window into the brain" — a Next.js research/claims operations dashboard built for Cloudflare; production deployment evidence is still pending. | [`apps/nao/README.md`](apps/nao/README.md) |
 
 Product principles in full: [`docs/shared/project-context.md`](docs/shared/project-context.md).
 
@@ -117,13 +117,14 @@ machine-enforced artifact**. The durable *why* is here; the agent-facing *how* i
 The repo indexes its **own source** into a queryable semantic graph
 ([graphify](https://github.com/safishamsi/graphify)) so an assistant (or you) can pull a small,
 relevant slice instead of grepping the whole tree. It is **dev tooling** — not part of the app —
-bounded to the project toolchain (never global, never committed; output lands in the gitignored
-`graphify-out/`).
+bounded to the project toolchain. The machine graph lands in gitignored `graphify-out/`; its single
+tracked, generated human overview is [`docs/graph/semantic-graph.md`](docs/graph/semantic-graph.md).
 
 ```bash
 graphify query "<question>"      # the relevant subgraph for a question
 graphify path "<A>" "<B>"        # shortest relationship between two symbols
 graphify explain "<concept>"     # a node and its neighbours
+npm run graph:view:write         # refresh the tracked human view after a direct update
 ```
 
 Auto-installed by the setup scripts; pre-wired for Claude Code / Codex / Gemini CLI. Full detail

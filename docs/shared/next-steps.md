@@ -29,12 +29,12 @@ gate, see [`phase-2-plan.md`](./phase-2-plan.md).
    seeder (U9), the real A8 synthesis run (U10), the A10 verifier scaffold (U11), the S7 composer + S8
    card producer (U12), and the **L6 one-card end-to-end slice** (U13) — one pair
    (`gut_comfort_score × mood_score`) wired claim→card with its source-panel dataset. Reproduce it via
-   [`insight-slice-demo-runbook.md`](./insight-slice-demo-runbook.md); run history in
-   [`phase2-run-orchestration-log.md`](./phase2-run-orchestration-log.md) and `docs/sessions/`.
+   [`insight-slice-demo-runbook.md`](./insight-slice-demo-runbook.md); run history lives in
+   [`docs/sessions/`](../sessions/).
    **Remaining:** L7 (S9 report + surfaced_cards; A1 ledger + A3 transport + A12 coverage), L8 (the full
    gap→queue→dispatch→new-edge loop), the A4–A7 structure/tiering/mention/gate stages, the U1 real
    applicability grader, and — gating a real verifier verdict on the L6 edge — the non-Anthropic
-   verifier key ([B5](./phase2-run-blocked-register.md); L6 ships an interim key-blocked-honest
+   verifier key ([memory 0016](../memory/0016-insight-engine-l6-one-card-slice.md); L6 ships an interim key-blocked-honest
    verification). Calibration is item 6.
 
 3. **biotope UI — develop the app UI using the AI-generated starter assets** in the

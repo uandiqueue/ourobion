@@ -1,0 +1,86 @@
+# Graphify prefers this file over the root .gitignore, so machine-local,
+# secret, dependency, build, and runtime exclusions must be repeated here.
+
+# Secrets and local agent state.
+.env
+.env.*
+!.env.example
+!.env.public.example
+.env.keys
+.env.local
+.dev.vars
+.dev.vars.*
+.claude/settings.local.json
+.agents/
+
+# Dependencies and tool caches.
+node_modules/
+vendor/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+# model-training/ (AGENTS.md §1/§4) tool caches -- __pycache__/venv/ above
+# already cover it non-anchored; these three are model-training-only additions
+# to the root .gitignore that this file must mirror per the header note.
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Generated build output.
+dist/
+build/
+out/
+bin/
+target/
+.open-next/
+.next/
+coverage/
+**/Flutter/ephemeral/
+**/Flutter/flutter_export_environment.sh
+apps/biotope/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+apps/biotope/ios/Runner/GeneratedPluginRegistrant.h
+apps/biotope/ios/Runner/GeneratedPluginRegistrant.m
+apps/nao/next-env.d.ts
+apps/nao/scratch/
+
+# Logs, editor state, and local Supabase state.
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*.class
+.branches/
+.temp/
+
+# Rebuildable or ephemeral project data.
+graphify-out/
+data/corpus/
+data/llm-router/
+# model-training/ (AGENTS.md §1/§4): no training/export has run in this
+# code-build, but these never carry semantic value for a code-context graph
+# even once it does -- mirrors the root .gitignore's model-training section.
+checkpoints/
+predictions/
+mlruns/
+wandb/
+
+# Historical provenance is not active agent context.
+docs/archive/
+
+# Generated from graphify-out/graph.json; indexing it would create a feedback loop.
+docs/graph/semantic-graph.md

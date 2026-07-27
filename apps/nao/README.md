@@ -1,8 +1,9 @@
 # ourobion nao
 
-The web **window into the brain** — a corpus dashboard over the ourobion paper corpus.
-v1 reflects the ingestion pipeline's work (coverage, retrievability, fetch, format conversion) and lets
-you search / filter / inspect papers. No quality/rating and no knowledge graph yet (those are v2).
+The web **window into the brain**. It now covers the paper corpus, relationship claims and human
+review, ingestion seeds/gaps, loader and pipeline controls, and model/spend status. It is built for
+OpenNext on Cloudflare Workers, but a production deployment and production-grade role/RLS boundary
+are **not yet proven**; do not read the presence of routes as deployment evidence.
 
 **Stack:** Next.js (App Router) → **OpenNext on Cloudflare Workers**; **R2** (native binding) for
 per-paper metadata; **Cloudflare D1 + FTS5** as a derived search index; **Supabase Auth** (edge-verified
@@ -20,7 +21,7 @@ JWT) as the access gate. Design tokens: dark "bio-neo-mythical" theme, Outfit + 
 |---|---|---|
 | Node.js | **≥ 26** | nao pins `engines.node >=26` (newer than biotope's Node 18+). Use `nvm` or Homebrew. |
 | npm | bundled with Node | |
-| A Supabase project for **nao** | — | URL + anon (publishable) key; at least one user (no public sign-up). |
+| The selected environment's Supabase project | — | Shared identity/data plane with biotope: URL + anon (publishable) key; at least one user (no public sign-up). |
 | R2 S3 credentials | — | Only for the local/CI **ETL** that builds the D1 index. The running Worker uses the native R2 binding (no creds). |
 
 On macOS, get Node ≥26 with **nvm** (recommended for an exact version):
@@ -70,8 +71,9 @@ npm run dev          # → http://localhost:3000
 ### What you'll see
 - `/` redirects to **`/login`** — the app is auth-gated. Sign in with a user from your nao Supabase
   project (**Dashboard → Authentication → Add user**; there is no public sign-up).
-- After login: **Overview** and **Papers** render from the local D1 index (search, facets, sort,
-  funnel, breakdowns) — all real data.
+- After login: **Overview**, **Papers**, **Claims**, **Ingest**, **Loader**, and **Models** expose the
+  implemented read/control surfaces. Availability depends on the matching D1, R2, Supabase schema,
+  role, and server-secret setup; fixture/demo state must remain visibly distinguishable from live data.
 - **Paper detail** (`/paper/[uid]`) reads the **R2 binding**, which is empty under the local `next dev`
   simulator → detail pages 404 locally. To exercise them, run against the real bucket with
   `npx wrangler dev --remote`, or use a deployed environment.

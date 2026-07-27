@@ -4,7 +4,7 @@ summary: How ourobion acquires the scientific-literature corpus edges are synthe
 type: design
 scope: nao
 status: canonical
-updated: 2026-07-13
+updated: 2026-07-26
 ---
 # The Brain — Ingestion (paper corpus) Design
 
@@ -174,7 +174,8 @@ guarantees one uid per paper even when discovery sources expose disjoint identif
 ## 5 · Tooling — fetch, capture, extract (TypeScript, no Python)
 
 Lives in a new **`tools/brain-ingest/`** (Node/TS, run on the project toolchain — Node 26). No Python
-([AGENTS.md](../../AGENTS.md) hard rule).
+here — `tools/` stays Node/TypeScript per [AGENTS.md](../../AGENTS.md)'s task-fit language rule, which
+confines Python to the isolated `model-training/` workspace only.
 
 | Concern | Choice | Why |
 |---|---|---|
@@ -433,7 +434,8 @@ plan that lives on the session issue + `docs/sessions/` log (AGENTS §7).
 
 ### 10.0 · Ground rules
 
-- **Stack:** Node 26 + TypeScript, ESM, run via `tsx`/`node`. **No Python** (AGENTS hard rule). Deps per
+- **Stack:** Node 26 + TypeScript, ESM, run via `tsx`/`node`. **No Python** in `tools/` (AGENTS.md's
+  task-fit rule confines Python to `model-training/` only). Deps per
   §5: `fast-xml-parser`, `unpdf`, `@aws-sdk/client-s3`, `p-limit`, `playwright` (deferred to a later step).
 - **Where it runs:** standalone tool, not bundled into the app and not a Supabase function. Secrets come
   **only** from `tools/brain-ingest/.env` via the config loader (10.1) — never inlined, never logged.
