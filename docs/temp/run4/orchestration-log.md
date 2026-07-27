@@ -4,10 +4,18 @@ summary: Resumable Run 4 record for the accepted envelope and qualified local U0
 type: plan
 scope: run4-preflight
 status: draft
-updated: 2026-07-27
+updated: 2026-07-28
 ---
 
 # Run 4 Pre-Flight Orchestration Log
+
+## 2026-07-28 execution update
+
+R4-U0 merged through PR #161 at `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`. Exact merge-SHA CI workflow run `30285010079` passed 19/19. Jayden instructed continuous local Run 4 completion on 2026-07-28. R4-U1 is separately owned and integrates only after its main workflow; this record does not claim its implementation or merge.
+
+R4-U5 / pass-2 is admitted and **IN PROGRESS** under issue #167 from its named branch/worktree, based on `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`. It is local-only: no provider calls, hosted writes, shared-contract changes, or `/model-training` work. Estimate: 6 paths / about 1,900 additions; the U0+U5 projection is 28 paths / about 3,609 additions against 115 / 8,500 and must be remeasured before merge. Human signoff remains pending.
+
+U5 acceptance chain is: DOI `10.1016/j.isci.2026.116224` -> explicit local-agent synthesis artifact -> deterministic checks -> visible `INTERIM` uncertain/hold verification -> local edge load -> later health/insight/provenance evidence. Canonical paper files are absent locally and must first be locally cached without hosted writes; no acceptance is claimed before that condition and the chain are evidenced.
 
 ## Historical pre-flight control state
 

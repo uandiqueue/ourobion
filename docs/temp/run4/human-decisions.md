@@ -4,7 +4,7 @@ summary: Decision sheet for the accepted Run 4 envelope and active operating con
 type: decision-sheet
 scope: run4-preflight
 status: draft
-updated: 2026-07-27
+updated: 2026-07-28
 ---
 
 # Run 4 Human Decisions
@@ -18,6 +18,13 @@ updated: 2026-07-27
 - P3 model training is paused/excluded: train nothing; MT1–MT5 do not enter product.
 - P5 is local-only with no hosted writes/deploy/key changes. P6 keeps O29 deferred and provider spend at zero.
 - PR #156 must target `dev-phase2-run4` and may merge there, never `dev-phase2`.
+
+## Recorded 2026-07-28 direction
+
+- R4-U0 merged via PR #161 at `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`; exact merge-SHA CI run `30285010079` passed 19/19. Historical provenance and U0 gate constants remain unchanged.
+- Jayden instructed continuous local Run 4 completion. R4-U1 is separately owned and may integrate only after its main workflow.
+- R4-U5 / pass-2 is admitted in progress under issue #167, its named branch/worktree, and base `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`. It remains local-only: no provider calls, hosted writes, shared changes, or `/model-training` work. Its estimate is 6 paths / about 1,900 additions; U0+U5 projects to 28 paths / about 3,609 additions against 115 / 8,500 and must be remeasured before merge. Human signoff remains pending.
+- U5 may be accepted only through DOI `10.1016/j.isci.2026.116224` -> explicit local-agent synthesis artifact -> deterministic checks -> visible `INTERIM` uncertain/hold verification -> local edge load -> later health/insight/provenance evidence. Canonical paper files are absent locally and must be locally cached without hosted writes before acceptance.
 
 ## Active operating posture
 

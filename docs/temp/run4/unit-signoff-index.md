@@ -4,10 +4,16 @@ summary: Locked Run 4 unit scope, estimates, dependencies, and current signoff s
 type: signoff-index
 scope: run4-preflight
 status: draft
-updated: 2026-07-27
+updated: 2026-07-28
 ---
 
 # Run 4 Unit Signoff Index
+
+## 2026-07-28 current execution status
+
+R4-U0 merged via PR #161 at `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`; exact merge-SHA CI run `30285010079` passed 19/19. U1 is separately owned and integrates only after its main workflow.
+
+R4-U5 / pass-2 is admitted **IN PROGRESS** under issue #167, its named branch/worktree, and base `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`. It is local-only with no provider, hosted-write, shared, or model-training work; estimate 6 paths / ~1,900 additions. U0+U5 projects to 28 paths / ~3,609 additions against 115/8,500 and must be remeasured before merge. Acceptance requires DOI `10.1016/j.isci.2026.116224` -> local-agent synthesis artifact -> deterministic checks -> visible `INTERIM` uncertain/hold verification -> local edge load -> later health/insight/provenance evidence. Canonical paper files are absent locally and must be locally cached without hosted writes before acceptance. Human signoff remains pending.
 
 Triplets are low / expected / high. Human signoff is pending for every row.
 

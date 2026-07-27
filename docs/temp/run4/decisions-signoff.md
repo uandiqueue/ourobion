@@ -4,7 +4,7 @@ summary: Human-owned acceptance register for the accepted Run 4 envelope and its
 type: decision-register
 scope: run4-preflight
 status: draft
-updated: 2026-07-27
+updated: 2026-07-28
 ---
 
 # Run 4 Pre-Flight Decisions and Signoff
@@ -25,6 +25,9 @@ The accepted envelope is recorded below. U0 implementation is locally authorized
 | P5 | Name-only credential posture, local-only; no hosted/deployment/key changes | Accepted constraint | ACCEPTED |
 | P6 | O29 deferred; zero provider calls; OpenAI TEST-MODE | Accepted constraint | ACCEPTED |
 | P7 | PR #144 closed/superseded; checks stale | Recorded only | COMPLETE (record only) |
+| U0 | PR #161 merged at `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`; exact merge-SHA CI run `30285010079` passed 19/19 | Record completed U0 evidence; preserve historical provenance and U0 gate constants | COMPLETE (evidenced) |
+| CONTINUATION | Jayden instructed continuous local Run 4 completion on 2026-07-28; U1 remains separately owned and integrates only after its main workflow | Record sequencing only; no U1 implementation or merge is accepted here | RECORDED |
+| U5 / pass-2 | Admit local paper-to-Biotope acceptance slice, issue #167, based on U0 merge SHA `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa` | Local-only/no provider/no hosted writes/no shared/no model-training; estimate 6 paths / ~1,900 additions, projected U0+U5 28 / ~3,609 against 115 / 8,500; remeasure before merge | IN PROGRESS; human signoff pending |
 
 Historical-envelope rationale: the full non-shallow Run 2 SHA is live `origin/dev-phase2-run2`; `dev-phase2` omits 169 paths / +16,992, while run3 adds 100 paths / +11,706 / -1,079 including contamination and Run 4 docs. The original bootstrap/envelope record and earlier `837b7e690f92dc1669428a2476c9d8d0456020e8` U0 unit base are retained for provenance. Neither is the active U0 cap base after consolidation; the unit begins at exact consolidated tip `77c98213e23ad56ae37c86201b39ef4e7543a543`.
 
@@ -33,3 +36,5 @@ BRANCH, LOCK, P1, and P4 are accepted/recorded. U0 implementation is authorized 
 Historical bootstrap evidence: workflow run `30267437774` self-triggered on PR #156 CI-enablement commit `f60650838428d871690d6f83358e0fb05387d0bc` targeting `dev-phase2-run4`, and all 14 jobs passed. That evidence does not test later commits. Any Run 4 issue, branch, PR, or merge operation targets `dev-phase2-run4` only, never `dev-phase2` or `main`; full-suite and PR-CI evidence remain pending for the current U0 work.
 
 Current local qualification is not completion: gate 9/9, four frozen Deno checks, fresh local-only attestation verification, 23/23 shadow migrations, context/shared/package checks, and 710 package tests passed. Root clean-install and Flutter are locally environment-blocked; exact PR-head Linux CI remains pending. Hosted parity is not claimed.
+
+U5 acceptance is deliberately staged: DOI `10.1016/j.isci.2026.116224` must yield an explicit local-agent synthesis artifact, pass deterministic checks, show visible `INTERIM` uncertain/hold verification, load edges locally, and only then provide later health/insight/provenance evidence. Canonical paper files are absent locally; they must be locally cached without hosted writes before acceptance.
