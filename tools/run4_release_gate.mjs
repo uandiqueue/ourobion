@@ -20,28 +20,15 @@ export function hashTextEvidence(value) {
   return sha(text.replaceAll('\r\n', '\n'));
 }
 
-// This is deliberately the CURRENT unit boundary, not the original Run 4 envelope/bootstrap SHA.
-// Consolidated Run 3/MT3 history landed before the U0 reconciliation and was excluded by selecting
-// the exact post-consolidation integration tip as that unit's explicit starting point.
-//
-// ADVANCE THIS PER UNIT. run-envelope.json accepts the caps for `RUN4_UNIT_BASE_SHA..HEAD` ONLY,
-// and orchestration-log.md recorded the previous value as "ACCEPTED for U0 only" — the caps are a
-// per-unit landing budget, never a whole-run total. Freezing one SHA across the run charges every
-// later unit for everything that landed on the integration branch after it. That is not theoretical:
-// R4-U1 (PR #170) failed with `landing delta has 12957 added lines; cap is 8500` because the
-// model-training MT4 merge (PR #169) had advanced the base and alone consumed 7,897 of the 8,500
-// lines, leaving 603 for any unit. The same class of failure is recorded for Run 3 in
-// docs/temp/run4/README.md ("MT0 added 59 files / 5,362 insertions after the candidate baseline and
-// broke U0's evidence and mergeability").
-//
-// So: at the start of each unit, set this to that unit's exact base SHA and re-record the deploy
-// attestation (`record-attestation`), which binds these same three constants at :577. The caps
-// themselves (115 / 8,500) are unchanged and still fail closed.
-//
-// Superseded values, retained as provenance:
-//   837b7e690f92dc1669428a2476c9d8d0456020e8  (earliest U0 unit base)
-//   77c98213e23ad56ae37c86201b39ef4e7543a543  (U0 unit base — consolidated Run 3/MT3 tip)
-export const RUN4_UNIT_BASE_SHA = 'c558c04f1b661a59c8987c96770768eeea46e0cc';
+// Final Run 4 acceptance is one immutable product union. MT4 is excluded only through its exact
+// first-parent merge delta, whose paths and resulting blobs are checked below. The old moving unit
+// boundary remains local-attestation provenance only; it cannot satisfy the product-cap gate.
+export const RUN4_PRODUCT_BASE_SHA = '77c98213e23ad56ae37c86201b39ef4e7543a543';
+export const RUN4_MT4_PARENT_SHA = '66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa';
+export const RUN4_MT4_MERGE_SHA = 'c558c04f1b661a59c8987c96770768eeea46e0cc';
+export const RUN4_MT4_EXCLUSION_COUNT = 28;
+export const RUN4_MT4_EXCLUSION_SHA256 = 'd848a20c263eae7255c532e358605f17aa07e1f17d3dd526825860d767e5bfd6';
+export const RUN4_NON_ACCEPTANCE_UNIT_BASE_SHA = RUN4_MT4_MERGE_SHA;
 export const RUN4_MAX_CHANGED_PATHS = 115;
 export const RUN4_MAX_ADDED_LINES = 8500;
 export const RUN4_FUNCTIONS = Object.freeze([
@@ -173,7 +160,7 @@ function exactRun(job, jobName, stepName, command, options) {
 
 const REQUIRED_JOB_STEP_SETS = Object.freeze({
   context: ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Node:actions/setup-node@v4', 'run:Context check', 'run:Human graph view — renderer tests and single-view invariant'],
-  'run4-release': ['uses:<unnamed>:actions/checkout@v4', 'uses:<unnamed>:actions/setup-node@v4', 'uses:<unnamed>:denoland/setup-deno@v2', 'run:Install release-gate dependencies', 'run:Assert exact landing SHA and U0 unit base', 'run:Verify parsed function and workflow invariants', 'run:Recompute frozen graphs and verify local-only runtime attestation'],
+  'run4-release': ['uses:<unnamed>:actions/checkout@v4', 'uses:<unnamed>:actions/setup-node@v4', 'uses:<unnamed>:denoland/setup-deno@v2', 'run:Install release-gate dependencies', 'run:Assert immutable product landing SHA and cap', 'run:Verify parsed function and workflow invariants', 'run:Recompute frozen graphs and verify local-only runtime attestation'],
   flutter: ['uses:<unnamed>:actions/checkout@v4', 'uses:Setup Flutter:subosito/flutter-action@v2', 'run:Create public env file', 'run:Install dependencies', 'run:Analyze', 'run:Test'],
   typescript: ['uses:<unnamed>:actions/checkout@v4', 'uses:Setup Node:actions/setup-node@v4', 'run:Install dependencies', 'run:Type check shared types'],
   'node-tools': ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Node:actions/setup-node@v4', 'run:Install shared contract dependencies', 'run:Install dependencies', 'run:Typecheck', 'run:Test', 'run:Drift check'],
@@ -234,7 +221,7 @@ const REQUIRED_JOB_ENVS = Object.freeze({
   'migrations-apply': Object.freeze({ PGHOST: 'localhost', PGUSER: 'postgres', PGDATABASE: 'postgres', PGPASSWORD: 'postgres' }),
 });
 const REQUIRED_STEP_ENVS = Object.freeze({
-  'run4-release:Assert exact landing SHA and U0 unit base': Object.freeze({ RUN4_UNIT_BASE_SHA, RUN4_MAX_CHANGED_PATHS, RUN4_MAX_ADDED_LINES }),
+  'run4-release:Assert immutable product landing SHA and cap': Object.freeze({ RUN4_PRODUCT_BASE_SHA, RUN4_MAX_CHANGED_PATHS, RUN4_MAX_ADDED_LINES }),
   'run4-gate:Fail unless every required dependency succeeded': Object.freeze({ NEEDS_JSON: '${{ toJson(needs) }}' }),
   'model-training-core:Unit tests (stdlib unittest, zero installs)': Object.freeze({ PYTHONPATH: 'src' }),
   'model-training-core:Config validation (dry-run resolves the fixture job without executing it)': Object.freeze({ PYTHONPATH: 'src' }),
@@ -315,13 +302,13 @@ export function validateRun4Workflow(workflowText) {
   if (release.if !== RUN4_EVENT_SCOPE) fail('run4-release is not scoped exactly to dev-phase2-run4 events');
   validateCheckout(release, 'run4-release');
   if (exactStep(release, 'Install release-gate dependencies').run !== 'npm ci') fail('run4-release must install with exact npm ci');
-  const landing = exactStep(release, 'Assert exact landing SHA and U0 unit base');
-  if (landing.env?.RUN4_UNIT_BASE_SHA !== RUN4_UNIT_BASE_SHA || Number(landing.env?.RUN4_MAX_CHANGED_PATHS) !== RUN4_MAX_CHANGED_PATHS || Number(landing.env?.RUN4_MAX_ADDED_LINES) !== RUN4_MAX_ADDED_LINES) fail('run4-release landing constants drifted');
+  const landing = exactStep(release, 'Assert immutable product landing SHA and cap');
+  if (landing.env?.RUN4_PRODUCT_BASE_SHA !== RUN4_PRODUCT_BASE_SHA || Number(landing.env?.RUN4_MAX_CHANGED_PATHS) !== RUN4_MAX_CHANGED_PATHS || Number(landing.env?.RUN4_MAX_ADDED_LINES) !== RUN4_MAX_ADDED_LINES) fail('run4-release landing constants drifted');
   const landingLines = String(landing.run).trim().split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   const expectedLandingLines = [
-    'git fetch --no-tags origin "$RUN4_UNIT_BASE_SHA"',
+    'git fetch --no-tags origin "$RUN4_PRODUCT_BASE_SHA" "' + RUN4_MT4_PARENT_SHA + '" "' + RUN4_MT4_MERGE_SHA + '"',
     'node tools/run4_release_gate.mjs provenance --event-path "$GITHUB_EVENT_PATH" --github-sha "$GITHUB_SHA"',
-    'node tools/run4_release_gate.mjs landing --base "$RUN4_UNIT_BASE_SHA" --head "$GITHUB_SHA" --max-paths "$RUN4_MAX_CHANGED_PATHS" --max-added "$RUN4_MAX_ADDED_LINES"',
+    'node tools/run4_release_gate.mjs landing --base "$RUN4_PRODUCT_BASE_SHA" --head "$GITHUB_SHA" --max-paths "$RUN4_MAX_CHANGED_PATHS" --max-added "$RUN4_MAX_ADDED_LINES"',
   ];
   if (JSON.stringify(landingLines) !== JSON.stringify(expectedLandingLines)) fail('run4-release landing commands drifted');
   const config = exactStep(release, 'Verify parsed function and workflow invariants');
@@ -410,8 +397,43 @@ function gitText(git, args, options = {}) {
   return git('git', args, { cwd: repo, encoding: 'utf8', ...options });
 }
 
-export function checkLandingDelta({ base, head = 'HEAD', maxPaths, maxAdded, git = execFileSync }) {
-  if (base !== RUN4_UNIT_BASE_SHA) fail(`base must equal accepted U0 unit SHA ${RUN4_UNIT_BASE_SHA}`);
+function parseNameStatus(text, label) {
+  const tokens = text.split('\0');
+  if (tokens.at(-1) === '') tokens.pop();
+  const records = [];
+  for (let index = 0; index < tokens.length;) {
+    const status = tokens[index++];
+    if (!/^[ACDMRTUXB][0-9]*$/.test(status ?? '')) fail(`unparsable ${label} name-status token: ${status ?? '<missing>'}`);
+    if (/^[RC]/.test(status)) fail(`rename/copy diff is ambiguous for ${label}`);
+    const path = tokens[index++];
+    if (!path) fail(`${label} diff contains an empty path`);
+    records.push({ status, path });
+  }
+  if (new Set(records.map((record) => record.path)).size !== records.length) fail(`${label} diff contains duplicate paths`);
+  return records;
+}
+
+function resolveBlob(git, commit, path, label) {
+  const blob = gitText(git, ['rev-parse', `${commit}:${path}`]).trim();
+  if (!/^[0-9a-f]{40}$/i.test(blob)) fail(`${label} path blob is unavailable or ambiguous: ${path}`);
+  return blob;
+}
+
+export function mt4ExclusionManifest({ git = execFileSync } = {}) {
+  const clean = (...args) => gitText(git, args).trim();
+  for (const commit of [RUN4_PRODUCT_BASE_SHA, RUN4_MT4_PARENT_SHA, RUN4_MT4_MERGE_SHA]) {
+    if (clean('cat-file', '-t', commit) !== 'commit') fail(`MT4 provenance commit is unavailable: ${commit}`);
+  }
+  const parents = clean('rev-list', '--parents', '-n', '1', RUN4_MT4_MERGE_SHA).split(/\s+/);
+  if (parents.length !== 3 || parents[0] !== RUN4_MT4_MERGE_SHA || parents[1] !== RUN4_MT4_PARENT_SHA) fail('MT4 exclusion merge provenance drifted');
+  if (clean('merge-base', RUN4_PRODUCT_BASE_SHA, RUN4_MT4_PARENT_SHA) !== RUN4_PRODUCT_BASE_SHA || clean('merge-base', RUN4_MT4_PARENT_SHA, RUN4_MT4_MERGE_SHA) !== RUN4_MT4_PARENT_SHA) fail('MT4 exclusion provenance is not rooted at the product base');
+  const records = parseNameStatus(gitText(git, ['diff', '--name-status', '-z', '--find-renames', `${RUN4_MT4_PARENT_SHA}..${RUN4_MT4_MERGE_SHA}`]), 'MT4 exclusion').map(({ status, path }) => ({ status, path, blob: resolveBlob(git, RUN4_MT4_MERGE_SHA, path, 'MT4 exclusion') }));
+  if (records.length !== RUN4_MT4_EXCLUSION_COUNT || sha(JSON.stringify(records)) !== RUN4_MT4_EXCLUSION_SHA256) fail('MT4 exclusion path/count/hash drifted');
+  return records;
+}
+
+export function checkLandingDelta({ base, head = 'HEAD', maxPaths, maxAdded, excludedPaths, git = execFileSync }) {
+  if (base !== RUN4_PRODUCT_BASE_SHA) fail(`base must equal immutable product SHA ${RUN4_PRODUCT_BASE_SHA}`);
   if (!Number.isSafeInteger(maxPaths) || maxPaths < 0 || maxPaths !== RUN4_MAX_CHANGED_PATHS) fail(`maxPaths must equal accepted cap ${RUN4_MAX_CHANGED_PATHS}`);
   if (!Number.isSafeInteger(maxAdded) || maxAdded < 0 || maxAdded !== RUN4_MAX_ADDED_LINES) fail(`maxAdded must equal accepted cap ${RUN4_MAX_ADDED_LINES}`);
   const clean = (...args) => gitText(git, args).trim();
@@ -420,34 +442,35 @@ export function checkLandingDelta({ base, head = 'HEAD', maxPaths, maxAdded, git
   const resolvedHead = clean('rev-parse', head);
   if (!/^[0-9a-f]{40}$/i.test(resolvedHead)) fail('head did not resolve to an immutable SHA');
   if (clean('merge-base', base, resolvedHead) !== base) fail(`base ${base} is not the merge-base of landing ${resolvedHead}`);
+  const exclusions = mt4ExclusionManifest({ git });
+  if (clean('merge-base', RUN4_MT4_MERGE_SHA, resolvedHead) !== RUN4_MT4_MERGE_SHA) fail('landing does not contain the exact MT4 exclusion merge');
+  const exclusionPaths = exclusions.map(({ path }) => path);
+  if (excludedPaths !== undefined) sameSet(excludedPaths, exclusionPaths, 'requested MT4 exclusions');
 
-  const nameTokens = gitText(git, ['diff', '--name-status', '-z', '--find-renames', `${base}..${resolvedHead}`]).split('\0');
-  if (nameTokens.at(-1) === '') nameTokens.pop();
-  const names = [];
-  for (let index = 0; index < nameTokens.length;) {
-    const status = nameTokens[index++];
-    if (!/^[ACDMRTUXB][0-9]*$/.test(status ?? '')) fail(`unparsable name-status token: ${status ?? '<missing>'}`);
-    if (/^[RC]/.test(status)) fail('rename/copy diff is ambiguous for the landing path budget');
-    const path = nameTokens[index++];
-    if (!path) fail('landing diff contains an empty path');
-    names.push(path);
+  const names = parseNameStatus(gitText(git, ['diff', '--name-status', '-z', '--find-renames', `${base}..${resolvedHead}`]), 'product landing');
+  const namesByPath = new Map(names.map((record) => [record.path, record]));
+  for (const exclusion of exclusions) {
+    if (namesByPath.get(exclusion.path)?.status !== exclusion.status) fail(`MT4 excluded path status drifted: ${exclusion.path}`);
+    if (resolveBlob(git, resolvedHead, exclusion.path, 'MT4 excluded') !== exclusion.blob) fail(`MT4 excluded path content drifted: ${exclusion.path}`);
   }
-  if (new Set(names).size !== names.length) fail('landing diff contains duplicate paths');
 
   const statRows = gitText(git, ['diff', '--numstat', '-z', `${base}..${resolvedHead}`]).split('\0');
   if (statRows.at(-1) === '') statRows.pop();
   let added = 0;
+  const statPaths = [];
   for (const row of statRows) {
     const match = /^(\d+)\t(\d+)\t([^\0]+)$/.exec(row);
     if (!match) fail(`binary/unparsable diff row: ${row}`);
     const plus = Number(match[1]);
     if (!Number.isSafeInteger(plus) || !Number.isSafeInteger(added + plus)) fail('landing added-line count overflowed');
-    added += plus;
+    statPaths.push(match[3]);
+    if (!exclusionPaths.includes(match[3])) added += plus;
   }
-  if (statRows.length !== names.length) fail('name-status and numstat path counts differ');
-  if (names.length > maxPaths) fail(`landing delta has ${names.length} paths; cap is ${maxPaths}`);
+  if (statRows.length !== names.length || new Set(statPaths).size !== statPaths.length || statPaths.some((path) => !namesByPath.has(path))) fail('name-status and numstat path sets differ');
+  const productPaths = names.filter(({ path }) => !exclusionPaths.includes(path));
+  if (productPaths.length > maxPaths) fail(`landing delta has ${productPaths.length} paths; cap is ${maxPaths}`);
   if (added > maxAdded) fail(`landing delta has ${added} added lines; cap is ${maxAdded}`);
-  return { base, head: resolvedHead, changedPaths: names.length, addedLines: added };
+  return { base, head: resolvedHead, changedPaths: productPaths.length, addedLines: added, excludedPaths: exclusionPaths.length };
 }
 
 export function checkWorkflowProvenance({ eventPath, githubSha, git = execFileSync }) {
@@ -582,13 +605,15 @@ export function buildLocalAttestation({ graphDir, supabaseCli, routes, run = exe
     routes,
   });
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     scope: 'local-only',
     hostedDeployParityClaimed: false,
+    productCapAcceptanceClaimed: false,
     replayBoundary: 'CI recomputes frozen graphs and validates this local evidence, but does not replay local serve or claim hosted deploy parity.',
     generator: RUN4_ATTESTATION_GENERATOR,
     provenance: {
-      unitBaseSha: RUN4_UNIT_BASE_SHA,
+      localAttestationBaseSha: RUN4_NON_ACCEPTANCE_UNIT_BASE_SHA,
+      productCapBaseSha: RUN4_PRODUCT_BASE_SHA,
       maxChangedPaths: RUN4_MAX_CHANGED_PATHS,
       maxAddedLines: RUN4_MAX_ADDED_LINES,
     },
@@ -607,8 +632,11 @@ export function checkDeployAttestation({ manifestPath = resolve(repo, 'supabase/
   const lockPath = resolve(repo, 'supabase/deno.lock');
   if (!existsSync(lockPath)) fail('local runtime attestation BLOCKED: shared supabase/deno.lock is absent');
   const cliOutput = checkToolVersion(supabaseCli, /^2\.81\.2$/m, 'repository-local Supabase CLI', run);
-  if (manifest.schemaVersion !== 1 || manifest.scope !== 'local-only' || manifest.hostedDeployParityClaimed !== false || manifest.replayBoundary !== 'CI recomputes frozen graphs and validates this local evidence, but does not replay local serve or claim hosted deploy parity.' || manifest.generator !== RUN4_ATTESTATION_GENERATOR) fail('local runtime attestation must explicitly deny hosted deploy parity');
-  if (!isObject(manifest.provenance) || manifest.provenance.unitBaseSha !== RUN4_UNIT_BASE_SHA || manifest.provenance.maxChangedPaths !== RUN4_MAX_CHANGED_PATHS || manifest.provenance.maxAddedLines !== RUN4_MAX_ADDED_LINES) fail('local runtime attestation provenance drifted');
+  if (manifest.schemaVersion !== 2 || manifest.scope !== 'local-only' || manifest.hostedDeployParityClaimed !== false || manifest.replayBoundary !== 'CI recomputes frozen graphs and validates this local evidence, but does not replay local serve or claim hosted deploy parity.' || manifest.generator !== RUN4_ATTESTATION_GENERATOR) fail('local runtime attestation must explicitly deny hosted deploy parity');
+  if (manifest.productCapAcceptanceClaimed !== false) fail('local runtime attestation must explicitly deny product-cap acceptance');
+  if (!isObject(manifest.provenance)) fail('local runtime attestation provenance drifted');
+  sameSet(Object.keys(manifest.provenance), ['localAttestationBaseSha', 'productCapBaseSha', 'maxChangedPaths', 'maxAddedLines'], 'local runtime attestation provenance fields');
+  if (manifest.provenance.localAttestationBaseSha !== RUN4_NON_ACCEPTANCE_UNIT_BASE_SHA || manifest.provenance.productCapBaseSha !== RUN4_PRODUCT_BASE_SHA || manifest.provenance.maxChangedPaths !== RUN4_MAX_CHANGED_PATHS || manifest.provenance.maxAddedLines !== RUN4_MAX_ADDED_LINES) fail('local runtime attestation provenance drifted');
   if (manifest.cliVersion !== cliOutput || manifest.denoVersion !== '2.8.1') fail('local runtime attestation tool versions drifted');
   if (manifest.configSha256 !== hashTextEvidence(readFileSync(configPath)) || manifest.lockSha256 !== hashTextEvidence(readFileSync(lockPath))) fail('local runtime attestation config/lock hash mismatch');
 

@@ -5,7 +5,9 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import {
-  RUN4_UNIT_BASE_SHA,
+  RUN4_MT4_EXCLUSION_COUNT,
+  RUN4_MT4_EXCLUSION_SHA256,
+  RUN4_PRODUCT_BASE_SHA,
   RUN4_FUNCTIONS,
   RUN4_MAX_ADDED_LINES,
   RUN4_MAX_CHANGED_PATHS,
@@ -20,6 +22,7 @@ import {
   collectCurrentFunctionEvidence,
   hashModuleGraph,
   hashTextEvidence,
+  mt4ExclusionManifest,
   parseFunctionConfig,
   validateFunctionConfig,
   validateRun4Workflow,
@@ -137,19 +140,19 @@ test('runtime aggregate requires the exact twelve successful dependencies', () =
   assert.throws(() => checkAggregateNeeds(JSON.stringify({ ...good, 'secret-scan': { result: 'skipped' } })), /secret-scan=skipped/);
 });
 
-test('landing delta fixes accepted constants and rejects shallow, rename, binary, and overflow input', () => {
-  const head = 'b'.repeat(40);
+test('product landing delta fixes immutable provenance and rejects a moving base, shallow history, extra exclusions, and landed U2', () => {
   const mock = (responses) => (_command, args) => `${responses[args.join(' ')] ?? responses[args[0]] ?? ''}`;
-  const common = {
+  const shallow = {
     'rev-parse --is-shallow-repository': 'false\n',
-    [`cat-file -t ${RUN4_UNIT_BASE_SHA}`]: 'commit\n',
-    'rev-parse HEAD': `${head}\n`,
-    [`merge-base ${RUN4_UNIT_BASE_SHA} ${head}`]: `${RUN4_UNIT_BASE_SHA}\n`,
   };
-  assert.throws(() => checkLandingDelta({ base: 'a'.repeat(40), maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock(common) }), /accepted U0 unit SHA/);
-  assert.throws(() => checkLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock({ ...common, 'rev-parse --is-shallow-repository': 'true\n' }) }), /shallow/);
-  assert.throws(() => checkLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock({ ...common, [`diff --name-status -z --find-renames ${RUN4_UNIT_BASE_SHA}..${head}`]: 'R100\0old\0new\0' }) }), /rename\/copy/);
-  assert.throws(() => checkLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock({ ...common, [`diff --name-status -z --find-renames ${RUN4_UNIT_BASE_SHA}..${head}`]: 'M\0asset.bin\0', [`diff --numstat -z ${RUN4_UNIT_BASE_SHA}..${head}`]: '-\t-\tasset.bin\0' }) }), /binary\/unparsable/);
+  assert.throws(() => checkLandingDelta({ base: 'a'.repeat(40), maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock(shallow) }), /immutable product SHA/);
+  assert.throws(() => checkLandingDelta({ base: RUN4_PRODUCT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock({ ...shallow, 'rev-parse --is-shallow-repository': 'true\n' }) }), /shallow/);
+  const exclusions = mt4ExclusionManifest();
+  assert.equal(exclusions.length, RUN4_MT4_EXCLUSION_COUNT);
+  assert.equal(hashTextEvidence(JSON.stringify(exclusions)), RUN4_MT4_EXCLUSION_SHA256);
+  assert.deepEqual(checkLandingDelta({ base: RUN4_PRODUCT_BASE_SHA, head: 'b3867f0f92ce685a86b0c0aaaff0afb164b84224', maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES }), { base: RUN4_PRODUCT_BASE_SHA, head: 'b3867f0f92ce685a86b0c0aaaff0afb164b84224', changedPaths: 33, addedLines: 7044, excludedPaths: 28 });
+  assert.throws(() => checkLandingDelta({ base: RUN4_PRODUCT_BASE_SHA, head: 'b3867f0f92ce685a86b0c0aaaff0afb164b84224', maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, excludedPaths: [...exclusions.map(({ path }) => path), 'unexpected'] }), /requested MT4 exclusions mismatch/);
+  assert.throws(() => checkLandingDelta({ base: RUN4_PRODUCT_BASE_SHA, head: 'ad8ef178053c7e6514283f19ee7a4f3f0829dc0c', maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES }), /binary\/unparsable|landing delta has/);
 });
 
 test('workflow provenance binds exact Run 4 PR merge parents and rejects shallow checkout', () => {
@@ -222,6 +225,9 @@ test('local-only attestation generator and verifier reject provenance, source, g
     assert.doesNotThrow(() => checkDeployAttestation({ manifestPath, graphDir, supabaseCli: 'supabase', run }));
     verify((value) => { value.cliVersion = '2.81.1'; }, /tool versions drifted/);
     verify((value) => { value.hostedDeployParityClaimed = true; }, /explicitly deny hosted deploy parity/);
+    verify((value) => { delete value.productCapAcceptanceClaimed; }, /explicitly deny product-cap acceptance/);
+    verify((value) => { value.productCapAcceptanceClaimed = true; }, /explicitly deny product-cap acceptance/);
+    verify((value) => { value.provenance.productCapBaseSha = value.provenance.localAttestationBaseSha; }, /provenance drifted/);
     verify((value) => { value.configSha256 = 'b'.repeat(64); }, /config\/lock hash mismatch/);
     verify((value) => { value.lockSha256 = 'b'.repeat(64); }, /config\/lock hash mismatch/);
     verify((value) => { value.functions[0].entrypointSha256 = 'b'.repeat(64); }, /source\/config drift/);
@@ -230,7 +236,8 @@ test('local-only attestation generator and verifier reject provenance, source, g
     verify((value) => { value.serveProbe.routes.pop(); }, /route set/);
     verify((value) => { value.serveProbe.routes.push(structuredClone(value.serveProbe.routes[0])); }, /duplicates/);
     verify((value) => { value.serveProbe.command = 'supabase functions deploy'; }, /normalized local serve evidence/);
-    verify((value) => { value.provenance.unitBaseSha = 'b'.repeat(40); }, /provenance drifted/);
+    verify((value) => { value.provenance.localAttestationBaseSha = 'b'.repeat(40); }, /provenance drifted/);
+    verify((value) => { value.provenance.unexpectedAcceptanceBaseSha = value.provenance.localAttestationBaseSha; }, /provenance fields mismatch/);
     assert.deepEqual(collectCurrentFunctionEvidence(graphDir).functions.map((item) => item.name).sort(), [...RUN4_FUNCTIONS].sort());
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
