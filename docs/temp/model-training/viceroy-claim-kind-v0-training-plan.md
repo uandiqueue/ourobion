@@ -10,8 +10,9 @@ updated: 2026-07-26
 # Viceroy Claim-Kind v0 — GMI training plan
 
 > **Shared execution substrate.** GMI gates, container/network/secret posture, durable storage, the
-> external `ourobion-model-lab` repository shape, and the release/provenance contract are defined once
-> in the [Zebra NLI plan](./zebra-nli-shadow-v0-training-plan.md) (§3, §4, §12). Only deltas appear here.
+> in-repo `model-training/` workspace shape (with this model's release namespace isolated from every
+> other model's), and the release/provenance contract are defined once in the
+> [Zebra NLI plan](./zebra-nli-shadow-v0-training-plan.md) (§3, §4, §12). Only deltas appear here.
 > **`GMI-H7` requires a specifically stricter licence review for this model** (§4.2).
 
 ## 1. Decision summary
@@ -318,8 +319,9 @@ Everything in the NLI plan's §14, plus:
 ## 13. Execution order
 
 1. **T0** — GMI-H1–H8; **the GPL-3.0 determination is recorded in writing** before anything else.
-2. **T1** — `ourobion-model-lab` pinned in a separate namespace; unit tests for the label map, the
-   abstain-on-`no relationship` rule, and the never-predict-`mechanistic` rule pass.
+2. **T1** — the `model-training/` workspace (`ourobion_model_lab.models.viceroy_claim_kind`, in its
+   own isolated release namespace) pinned; unit tests for the label map, the abstain-on-`no
+   relationship` rule, and the never-predict-`mechanistic` rule pass.
 3. **T2** — download, hash, de-duplicate, build stratified grouped folds, publish class report. CPU only.
 4. **T3** — freeze the in-domain audit set via blinded dual review using the corpus's own rubric; hash it.
 5. **T4** — GMI smoke: environment recorded, 64-example run, checkpoint round-trip, cost meter verified.

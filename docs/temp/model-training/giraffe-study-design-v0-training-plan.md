@@ -10,7 +10,7 @@ updated: 2026-07-26
 # Giraffe Study-Design v0 — GMI training plan
 
 > **Shared execution substrate.** GMI gates, container/network/secret posture, durable storage, the
-> external `ourobion-model-lab` repository shape, and the release/provenance contract are defined once
+> in-repo `model-training/` workspace shape, and the release/provenance contract are defined once
 > in the [Zebra NLI plan](./zebra-nli-shadow-v0-training-plan.md) (§3, §4, §12). Only deltas appear here.
 > `GMI-H7` must be re-approved for this model's licence manifest, which is different.
 
@@ -87,7 +87,7 @@ claim is not.
 | Sampling | ~15–20k per tier, ~60–100k total, stratified |
 | Model selection | Fixed recipe, preselected seed `42` |
 | Compute | One self-managed GMI GPU container; one GPU |
-| Code location | Separate private `ourobion-model-lab`; **no Python enters this repository** |
+| Code location | This repository's isolated `model-training/` workspace (`ourobion_model_lab.models.giraffe_study_design`); Python confined there per the task-fit polyglot rule, never in `apps/`/`supabase/`/`shared/`/`tools/` |
 | Runtime posture | Non-serving, unconditionally |
 
 ## 4. Dataset and licence gate
@@ -334,7 +334,7 @@ Everything in the NLI plan's §14, plus:
 ## 14. Execution order
 
 1. **T0** — GMI-H1–H8; **GMI-H7 re-approved** for the MEDLINE + StudyTypeTeller manifest.
-2. **T1** — `ourobion-model-lab` pinned; unit tests for the label rules, the max-tier resolution, the
+2. **T1** — the `model-training/` workspace (`ourobion_model_lab.models.giraffe_study_design`) pinned; unit tests for the label rules, the max-tier resolution, the
    D016449/D016032 guard, and the StudyTypeTeller collapse map pass.
 3. **T2** — download and hash the baseline, apply label rules, stratify, assert PMID disjointness and
    the StudyTypeTeller leak check, publish the class/provenance report. **CPU only.**

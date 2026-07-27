@@ -1,0 +1,70 @@
+[project]
+name = "ourobion-model-lab"
+version = "0.0.1"
+description = "Reproducible training/evaluation/release code for Ourobion's planned custom models. No real training runs here; see README.md."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Proprietary" }
+authors = [{ name = "Ourobion" }]
+
+# D2 (docs/temp/model-training/code-build-decisions.md): the core substrate above
+# (everything importable as plain `ourobion_model_lab`) depends on the standard
+# library ONLY. Nothing in [project] `dependencies` may appear here -- there is
+# no such key on purpose. Heavy ML packages are declared below as optional
+# extras and must only be imported lazily, inside `ourobion_model_lab.models.*`
+# model code, never at package import time.
+
+[project.optional-dependencies]
+# Installed only by model code (MT1-MT5) that actually trains/evaluates/exports.
+# Exact `==` pins per D4 -- see ../constraints.txt, which mirrors this list, and
+# human-gates.md for the deferred hash-pinned lock.
+ml = [
+  "numpy==1.26.4",
+  "scipy==1.13.1",
+  "scikit-learn==1.5.1",
+  "torch==2.4.1",
+  "transformers==4.44.2",
+  "datasets==2.20.0",
+  "onnx==1.16.2",
+  "onnxruntime==1.18.1",
+]
+# Local/CI tooling only -- never imported by package code.
+dev = [
+  "ruff==0.6.9",
+  "mypy==1.11.2",
+]
+
+[project.scripts]
+ourobion-model-lab = "ourobion_model_lab.cli:main"
+
+[build-system]
+requires = ["setuptools==69.5.1", "wheel==0.43.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# UP (pyupgrade) is capped by target-version=py310, so it will not suggest
+# syntax newer than 3.10 (D3).
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.10"
+mypy_path = "src"
+files = ["src"]
+disallow_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+# The ml extras (torch, transformers, ...) are not installed in the core
+# type-check job (D2) and most ship no inline stubs; do not fail the fast
+# lint/type job over their absence.
+ignore_missing_imports = true

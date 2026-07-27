@@ -1,0 +1,8 @@
+{
+  "model_name": "self-check",
+  "seed": 13,
+  "output_dir": "build/self-check-smoke",
+  "dataset_manifest_path": null,
+  "licence_approval_path": null,
+  "extras_required": []
+}

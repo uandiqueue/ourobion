@@ -10,7 +10,7 @@ updated: 2026-07-26
 # Leafcutter Sentence-Role v0 — training plan (mostly not a GMI job)
 
 > **Shared execution substrate.** If a GPU is used at all, the GMI gates, container posture, storage,
-> external-repository, and release rules in the NLI plan
+> in-repo `model-training/` workspace, and release rules in the NLI plan
 > ([`zebra-nli-shadow-v0-training-plan.md`](./zebra-nli-shadow-v0-training-plan.md) §3, §4, §12) apply unchanged. **Read §3 of this plan
 > first: the recommended path provisions no GPU at all**, and the GMI gates are then moot.
 
@@ -31,7 +31,10 @@ It differs from every other model in this roster in three ways that change how i
 1. **It is a cost/latency distillation, not a capability model.** Haiku already does this acceptably.
    The model's job is to do the same thing for near-zero marginal cost on every future paper.
 2. **It must run inside the TypeScript ingest CLI**, so the deliverable is an **ONNX artifact**, not a
-   safetensors checkpoint. Ourobion stays Python-free at runtime; only training is external.
+   safetensors checkpoint. Ourobion's serving/runtime path stays Python-free — only an ONNX artifact
+   ships there. The training code itself now lives in this repository's isolated `model-training/`
+   workspace (task-fit polyglot rule; see [`AGENTS.md`](../../../AGENTS.md) §1/§4 and
+   [`code-build-decisions.md`](./code-build-decisions.md) D1), not an external repository.
 3. **It is not obviously a GPU job.** The architecture's own suggestion — logistic regression over
    n-grams — trains on a laptop CPU in seconds.
 
@@ -220,7 +223,7 @@ everything downstream — that is an ingestion-wide change, not a drop-in.
 ## 12. Execution order
 
 1. **T0** — licence manifest for PubMed 200k RCT / MEDLINE approved; confirm no GPU is needed yet.
-2. **T1** — `ourobion-model-lab` pinned; unit tests for the label map, the `CONCLUSIONS`→`finding`
+2. **T1** — the `model-training/` workspace (`ourobion_model_lab.models.leafcutter_sentence_role`) pinned; unit tests for the label map, the `CONCLUSIONS`→`finding`
    decision, and the hedge secondary-output rule pass.
 3. **T2** — build splits, assert dedup/grouping, publish class report. **CPU only.**
 4. **T3** — hand-label the ≥300-sentence full-text corpus slice; hash it.
