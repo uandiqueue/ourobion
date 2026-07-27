@@ -16,7 +16,7 @@ The accepted envelope is recorded below. U0 implementation is locally authorized
 | BRANCH | `dev-phase2-run4` at `854aa471970b61afdc59205ded0b1c8a9ab3f270` | Accepted and created | ACCEPTED |
 | LOCK | Lock `R4-U0`–`R4-U3`; defer `R4-U4` | Accepted; U4 deferred for no available second shared reviewer and no waiver | ACCEPTED / DEFERRED |
 | P4 | Immutable base `854aa471970b61afdc59205ded0b1c8a9ab3f270`; caps 115 paths / 8,500 added lines | Accepted for current lock; extra local fixture-backed paper-to-Biotope slice requires separate sizing/admission | ACCEPTED |
-| U0 gate reconciliation | Historical Run 4 envelope/bootstrap SHA remains `854aa471970b61afdc59205ded0b1c8a9ab3f270`; active U0 unit base is `837b7e690f92dc1669428a2476c9d8d0456020e8` | Owner instructed the separately owned model-training session be ignored. The active cap measures only `RUN4_UNIT_BASE_SHA..HEAD`; its already-landed delta is not recast as U0 work | ACCEPTED |
+| U0 gate reconciliation | Historical Run 4 envelope/bootstrap SHA remains `854aa471970b61afdc59205ded0b1c8a9ab3f270`; earlier U0 unit base `837b7e690f92dc1669428a2476c9d8d0456020e8` is retained as superseded provenance; active U0 unit base is consolidated tip `77c98213e23ad56ae37c86201b39ef4e7543a543` | The active cap measures only `RUN4_UNIT_BASE_SHA..HEAD`; inherited Run 3/MT3 history is not recast as U0 work, while its two real CI jobs are mandatory Run 4 Gate dependencies | ACCEPTED |
 | P1 | `dev-phase2-run4` protection posture | User override: intentionally unprotected; no administrator action is requested | ACCEPTED OVERRIDE |
 | P1 | `Run 4 Gate` uses `if: always()` and explicit needs including `run-pipeline` | U0 implements stable CI evidence only; it is not GitHub branch protection | IN PROGRESS |
 | U0 local qualification | 719 package/gate tests plus local release evidence | Passed locally with qualified environment blocks; exact PR-head Linux root install, Flutter, and PR CI remain pending | IN PROGRESS |
@@ -26,7 +26,7 @@ The accepted envelope is recorded below. U0 implementation is locally authorized
 | P6 | O29 deferred; zero provider calls; OpenAI TEST-MODE | Accepted constraint | ACCEPTED |
 | P7 | PR #144 closed/superseded; checks stale | Recorded only | COMPLETE (record only) |
 
-Historical-envelope rationale: the full non-shallow Run 2 SHA is live `origin/dev-phase2-run2`; `dev-phase2` omits 169 paths / +16,992, while run3 adds 100 paths / +11,706 / -1,079 including contamination and Run 4 docs. The original bootstrap/envelope record is retained for provenance. It is not the active U0 cap base after the concurrent-session reconciliation: the unit begins at exact post-concurrent-session tip `837b7e690f92dc1669428a2476c9d8d0456020e8`.
+Historical-envelope rationale: the full non-shallow Run 2 SHA is live `origin/dev-phase2-run2`; `dev-phase2` omits 169 paths / +16,992, while run3 adds 100 paths / +11,706 / -1,079 including contamination and Run 4 docs. The original bootstrap/envelope record and earlier `837b7e690f92dc1669428a2476c9d8d0456020e8` U0 unit base are retained for provenance. Neither is the active U0 cap base after consolidation; the unit begins at exact consolidated tip `77c98213e23ad56ae37c86201b39ef4e7543a543`.
 
 BRANCH, LOCK, P1, and P4 are accepted/recorded. U0 implementation is authorized on the intentionally unprotected `dev-phase2-run4`; `Run 4 Gate` is exact-current-SHA CI evidence, not branch-setting enforcement. P2 alone gates shared work, so U4 remains deferred. Cap breach returns the unit to pending.
 

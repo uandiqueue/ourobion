@@ -42,14 +42,15 @@ On 2026-07-27, PR #144 was **CLOSED**, not merged, at `2026-07-27T08:03:15Z`; ba
 | --- | --- | --- |
 | Integration branch | `dev-phase2-run4` at `854aa471970b61afdc59205ded0b1c8a9ab3f270` | ACCEPTED / intentionally unprotected |
 | Historical envelope/bootstrap base | `854aa471970b61afdc59205ded0b1c8a9ab3f270` (`origin/dev-phase2-run2`) | RETAINED FOR PROVENANCE; not an active whole-run gate |
-| Active U0 unit base | `837b7e690f92dc1669428a2476c9d8d0456020e8` (post-concurrent-session `origin/dev-phase2-run4` tip) | ACCEPTED for U0 only |
+| Earlier U0 unit base | `837b7e690f92dc1669428a2476c9d8d0456020e8` | SUPERSEDED; retained for provenance |
+| Active U0 unit base | `77c98213e23ad56ae37c86201b39ef4e7543a543` (consolidated Run 3/MT3 `origin/dev-phase2-run4` tip) | ACCEPTED for U0 only |
 | Locked units | `R4-U0`, `R4-U1`, `R4-U2`, `R4-U3` | ACCEPTED |
 | U4 | no available second shared reviewer; two-reviewer rule not waived | DEFERRED |
 | U0 landing caps | `MAX_CHANGED_PATHS=115`, `MAX_ADDED_LINES=8500` | ACCEPTED for `RUN4_UNIT_BASE_SHA..HEAD` only |
 
 The accepted base is a full commit object and the repository is not shallow. `dev-phase2` is its ancestor and omits Run 2's 169 paths / +16,992. Run 3 adds 100 paths / +11,706 / -1,079 after Run 2, including model-training contamination and Run 4 documents. The six Run 4 planning authority files absent from the candidate base have been copied byte-for-byte and count in the cap. This pre-flight tracking packet and later approval updates also count, but are not immutable byte-for-byte promotion material. Current `dev-phase2`, `dev-phase2-run3`, and PR #144 head remain rejected base alternatives.
 
-U0 reconciliation: the owner instructed this unit to ignore the separately owned model-training session. Its concurrent delta had already landed at `837b7e690f92dc1669428a2476c9d8d0456020e8`, so U0's active fail-closed gate measures only unique paths and added lines in `RUN4_UNIT_BASE_SHA..HEAD` from that exact unit base. Generated/lock/session/tracking/corrections still count; missing base, shallow history, parse, rename, or binary ambiguity still fails. This is not a retroactive whole-run subtraction and does not redefine the historical envelope. The 115/8,500 cap returns an exceeding U0 landing to pending.
+U0 reconciliation: Run 3 and completed MT3 history were consolidated through exact `dev-phase2-run4` tip `77c98213e23ad56ae37c86201b39ef4e7543a543`. U0's active fail-closed gate measures only unique paths and added lines in `RUN4_UNIT_BASE_SHA..HEAD` from that exact unit base. Generated/lock/session/tracking/corrections still count; missing base, shallow history, parse, rename, or binary ambiguity still fails. This does not redefine the historical `854aa471970b61afdc59205ded0b1c8a9ab3f270` envelope or erase the earlier `837b7e690f92dc1669428a2476c9d8d0456020e8` unit-base record. The separately owned model-training files were not edited; their `model-training-core` and `model-training-lint-type` jobs are now mandatory aggregate dependencies. The 115/8,500 cap returns an exceeding U0 landing to pending.
 
 ## CI evidence posture
 
@@ -71,6 +72,8 @@ P1 is an accepted user override: no branch protection or ADMIN/settings action i
 - `Deno — generate-insights`
 - `Deno — run-pipeline`
 - `Migrations — shadow apply (postgres:17)`
+- `model-training — core (stdlib only, zero installs)`
+- `model-training — lint / format / type-check`
 - `Run 4 Gate`
 
 U0 provides aggregate `Run 4 Gate` evidence with `if: always()` and explicit `needs`, including `run-pipeline`. It does not configure or imply branch protection; a base advance, workflow edit, or different head invalidates older evidence.

@@ -92,11 +92,15 @@ test('actual Run 4 workflow has exact aggregate structure and executable gates',
   const workflow = readFileSync(resolve('.github/workflows/ci.yml'), 'utf8');
   assert.doesNotThrow(() => validateRun4Workflow(workflow));
   assert.throws(() => validateRun4Workflow(workflow.replace('needs: [context, ', 'needs: [')), /needs.*mismatch/);
+  assert.throws(() => validateRun4Workflow(workflow.replace(', model-training-core, model-training-lint-type]', ']')), /needs.*mismatch/);
   assert.throws(() => validateRun4Workflow(workflow.replace('node tools/run4_release_gate.mjs aggregate', 'echo node tools/run4_release_gate.mjs aggregate')), /runtime assertion drifted/);
   assert.throws(() => validateRun4Workflow(workflow.replace('      - name: Fail unless every required dependency succeeded', '      - name: Fail unless every required dependency succeeded\n        if: ${{ 1 == 0 }}')), /cannot set if/);
   assert.throws(() => validateRun4Workflow(workflow.replace('      - name: Recompute frozen graphs and verify local-only runtime attestation', '      - name: Recompute frozen graphs and verify local-only runtime attestation\n        continue-on-error: ${{ true }}')), /cannot set continue-on-error/);
   assert.throws(() => validateRun4Workflow(workflow.replace('run: node tools/context_sync.mjs --check', 'run: echo node tools/context_sync.mjs --check')), /context step Context check command drifted/);
   assert.throws(() => validateRun4Workflow(workflow.replace('run: flutter test', 'run: echo flutter test')), /flutter step Test command drifted/);
+  assert.throws(() => validateRun4Workflow(workflow.replace('run: python -m unittest discover -s tests -v', 'run: echo python -m unittest discover -s tests -v')), /model-training-core step Unit tests.*command drifted/);
+  assert.throws(() => validateRun4Workflow(workflow.replace('run: ruff check .', 'run: echo ruff check .')), /model-training-lint-type step Lint command drifted/);
+  assert.throws(() => validateRun4Workflow(workflow.replace("python-version: '3.10'", "python-version: '3.11'")), /model-training-core must use exact Python 3\.10 setup/);
   assert.throws(() => validateRun4Workflow(workflow.replace('      - name: Apply migrations in filename order', '      - name: Apply migrations in filename order\n        continue-on-error: ${{ true }}')), /cannot set continue-on-error/);
   assert.throws(() => validateRun4Workflow(workflow.replace(/          - tools\/brain-ingest\r?\n/, '')), /node-tools package matrix mismatch/);
   assert.throws(() => validateRun4Workflow(workflow.replace(/          - tools\/metric-view\r?\n/, '          - tools/not-a-package\n')), /node-tools package matrix mismatch/);
@@ -107,6 +111,7 @@ test('actual Run 4 workflow has exact aggregate structure and executable gates',
   assert.throws(() => validateRun4Workflow(workflow.replace(/      - name: Test\r?\n        working-directory: apps\/nao/, '      - name: Test\n        working-directory: tools/rules')), /nao step Test working-directory drifted/);
   assert.throws(() => validateRun4Workflow(workflow.replace(/name: CI\r?\n/, 'name: CI\ndefaults:\n  run:\n    shell: true {0}\n')), /workflow cannot set defaults/);
   assert.throws(() => validateRun4Workflow(workflow.replace(/  context:\r?\n/, '  context:\n    defaults:\n      run:\n        working-directory: tools/rules\n')), /context job cannot set defaults/);
+  assert.throws(() => validateRun4Workflow(workflow.replace(/(  model-training-core:[\s\S]*?working-directory: )model-training/, '$1tools/rules')), /model-training-core job defaults must use only model-training/);
   assert.throws(() => validateRun4Workflow(workflow.replace(/name: CI\r?\n/, 'name: CI\nenv:\n  NODE_OPTIONS: --require ./evil.cjs\n')), /workflow env cannot set NODE_OPTIONS/);
   assert.throws(() => validateRun4Workflow(workflow.replace(/  context:\r?\n/, '  context:\n    env:\n      BASH_ENV: ./evil.sh\n')), /context job env cannot set BASH_ENV/);
   assert.throws(() => validateRun4Workflow(workflow.replace(/(  run4-release:[\s\S]*?    runs-on: )ubuntu-latest/, '$1self-hosted')), /run4-release must run on exact ubuntu-latest/);
@@ -114,14 +119,16 @@ test('actual Run 4 workflow has exact aggregate structure and executable gates',
   assert.deepEqual([...RUN4_NODE_TOOL_DRIFT_PACKAGES].length, 2);
 });
 
-test('runtime aggregate requires the exact eight successful dependencies', () => {
+test('runtime aggregate requires the exact ten successful dependencies', () => {
   const good = Object.fromEntries(RUN4_REQUIRED_JOBS.map((name) => [name, { result: 'success' }]));
-  assert.equal(Object.keys(checkAggregateNeeds(JSON.stringify(good))).length, 8);
+  assert.equal(Object.keys(checkAggregateNeeds(JSON.stringify(good))).length, 10);
   const missing = { ...good }; delete missing.context;
   assert.throws(() => checkAggregateNeeds(JSON.stringify(missing)), /runtime needs.*mismatch/);
   const collision = { ...good }; delete collision.context; delete collision['deno-check']; collision['context|deno-check'] = { result: 'success' };
   assert.throws(() => checkAggregateNeeds(JSON.stringify(collision)), /runtime needs.*mismatch/);
   assert.throws(() => checkAggregateNeeds(JSON.stringify({ ...good, context: { result: 'skipped' } })), /not successful/);
+  assert.throws(() => checkAggregateNeeds(JSON.stringify({ ...good, 'model-training-core': { result: 'failure' } })), /model-training-core=failure/);
+  assert.throws(() => checkAggregateNeeds(JSON.stringify({ ...good, 'model-training-lint-type': { result: 'skipped' } })), /model-training-lint-type=skipped/);
 });
 
 test('landing delta fixes accepted constants and rejects shallow, rename, binary, and overflow input', () => {

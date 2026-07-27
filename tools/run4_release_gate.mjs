@@ -15,9 +15,9 @@ const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 const isObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
 // This is deliberately the U0 unit boundary, not the original Run 4 envelope/bootstrap SHA.
-// The concurrent model-training session landed before U0 reconciliation and is excluded only by
-// selecting the post-concurrent integration tip as the unit's explicit starting point.
-export const RUN4_UNIT_BASE_SHA = '837b7e690f92dc1669428a2476c9d8d0456020e8';
+// Consolidated Run 3/MT3 history landed before this U0 reconciliation and is excluded only by
+// selecting the exact post-consolidation integration tip as the unit's explicit starting point.
+export const RUN4_UNIT_BASE_SHA = '77c98213e23ad56ae37c86201b39ef4e7543a543';
 export const RUN4_MAX_CHANGED_PATHS = 115;
 export const RUN4_MAX_ADDED_LINES = 8500;
 export const RUN4_FUNCTIONS = Object.freeze([
@@ -35,6 +35,8 @@ export const RUN4_REQUIRED_JOBS = Object.freeze([
   'nao',
   'deno-check',
   'migrations-apply',
+  'model-training-core',
+  'model-training-lint-type',
 ]);
 export const RUN4_NODE_TOOL_PACKAGES = Object.freeze([
   'tools/brain-ingest',
@@ -137,7 +139,7 @@ function exactRun(job, jobName, stepName, command, options) {
 }
 
 const REQUIRED_JOB_STEP_SETS = Object.freeze({
-  context: ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Node:actions/setup-node@v4', 'run:Context check'],
+  context: ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Node:actions/setup-node@v4', 'run:Context check', 'run:Human graph view — renderer tests and single-view invariant'],
   'run4-release': ['uses:<unnamed>:actions/checkout@v4', 'uses:<unnamed>:actions/setup-node@v4', 'uses:<unnamed>:denoland/setup-deno@v2', 'run:Install release-gate dependencies', 'run:Assert exact landing SHA and U0 unit base', 'run:Verify parsed function and workflow invariants', 'run:Recompute frozen graphs and verify local-only runtime attestation'],
   flutter: ['uses:<unnamed>:actions/checkout@v4', 'uses:Setup Flutter:subosito/flutter-action@v2', 'run:Create public env file', 'run:Install dependencies', 'run:Analyze', 'run:Test'],
   typescript: ['uses:<unnamed>:actions/checkout@v4', 'uses:Setup Node:actions/setup-node@v4', 'run:Install dependencies', 'run:Type check shared types'],
@@ -145,6 +147,8 @@ const REQUIRED_JOB_STEP_SETS = Object.freeze({
   nao: ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Node:actions/setup-node@v4', 'run:Install dependencies', 'run:Typecheck', 'run:Test'],
   'deno-check': ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Deno:denoland/setup-deno@v2', 'run:Type check handler'],
   'migrations-apply': ['uses:<unnamed>:actions/checkout@v4', 'run:Install pg_cron/pg_net stubs into the service container', 'run:Bootstrap supabase-shaped primitives', 'run:Apply migrations in filename order'],
+  'model-training-core': ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Python:actions/setup-python@v5', 'run:Unit tests (stdlib unittest, zero installs)', 'run:Config validation (dry-run resolves the fixture job without executing it)', 'run:Offline smoke (tiny local fixture only — no network, no real data)'],
+  'model-training-lint-type': ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Python:actions/setup-python@v5', 'run:Install the dev extra only (ruff + mypy)', 'run:Format check', 'run:Lint', 'run:Type check'],
   'run4-gate': ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Node:actions/setup-node@v4', 'run:Install release-gate dependencies', 'run:Fail unless every required dependency succeeded'],
 });
 
@@ -153,7 +157,15 @@ function validateWorkflowDefaults(workflow) {
 }
 
 function validateRequiredJobSteps(job, jobName) {
-  if (own(job, 'defaults')) fail(`${jobName} job cannot set defaults that change required execution`);
+  const modelTrainingJob = jobName === 'model-training-core' || jobName === 'model-training-lint-type';
+  if (modelTrainingJob) {
+    const defaults = job.defaults;
+    if (!isObject(defaults) || Object.keys(defaults).join('|') !== 'run' || !isObject(defaults.run) || Object.keys(defaults.run).join('|') !== 'working-directory' || defaults.run['working-directory'] !== 'model-training') {
+      fail(`${jobName} job defaults must use only model-training as the working directory`);
+    }
+  } else if (own(job, 'defaults')) {
+    fail(`${jobName} job cannot set defaults that change required execution`);
+  }
   const expected = REQUIRED_JOB_STEP_SETS[jobName];
   if (!expected) fail(`no required step set for ${jobName}`);
   const actual = job.steps.map((step) => {
@@ -188,6 +200,9 @@ const REQUIRED_JOB_ENVS = Object.freeze({
 const REQUIRED_STEP_ENVS = Object.freeze({
   'run4-release:Assert exact landing SHA and U0 unit base': Object.freeze({ RUN4_UNIT_BASE_SHA, RUN4_MAX_CHANGED_PATHS, RUN4_MAX_ADDED_LINES }),
   'run4-gate:Fail unless every required dependency succeeded': Object.freeze({ NEEDS_JSON: '${{ toJson(needs) }}' }),
+  'model-training-core:Unit tests (stdlib unittest, zero installs)': Object.freeze({ PYTHONPATH: 'src' }),
+  'model-training-core:Config validation (dry-run resolves the fixture job without executing it)': Object.freeze({ PYTHONPATH: 'src' }),
+  'model-training-core:Offline smoke (tiny local fixture only — no network, no real data)': Object.freeze({ PYTHONPATH: 'src' }),
 });
 
 function validateExactEnvironment(value, label, expected) {
@@ -291,6 +306,7 @@ export function validateRun4Workflow(workflowText) {
 
   const context = workflow.jobs.context;
   exactRun(context, 'context', 'Context check', 'node tools/context_sync.mjs --check');
+  exactRun(context, 'context', 'Human graph view — renderer tests and single-view invariant', 'node --test tools/graph-view/tests/*.test.mjs\nnode tools/graph-view/generate_graph_view.mjs --check\n');
   const flutter = workflow.jobs.flutter;
   exactRun(flutter, 'flutter', 'Install dependencies', 'flutter pub get');
   exactRun(flutter, 'flutter', 'Analyze', 'flutter analyze');
@@ -316,6 +332,21 @@ export function validateRun4Workflow(workflowText) {
   const migrations = workflow.jobs['migrations-apply'];
   exactRun(migrations, 'migrations-apply', 'Bootstrap supabase-shaped primitives', 'psql -v ON_ERROR_STOP=1 -q -f ci/migrations-bootstrap.sql');
   exactRun(migrations, 'migrations-apply', 'Apply migrations in filename order', 'set -eu\nfor f in $(ls supabase/migrations/*.sql | sort); do\n  echo "== $f"\n  psql -v ON_ERROR_STOP=1 -q -f "$f"\ndone\n');
+
+  const modelCore = workflow.jobs['model-training-core'];
+  const modelCorePython = exactStep(modelCore, 'Set up Python');
+  if (modelCorePython.uses !== 'actions/setup-python@v5' || Object.keys(modelCorePython.with ?? {}).join('|') !== 'python-version' || modelCorePython.with?.['python-version'] !== '3.10') fail('model-training-core must use exact Python 3.10 setup');
+  exactRun(modelCore, 'model-training-core', 'Unit tests (stdlib unittest, zero installs)', 'python -m unittest discover -s tests -v');
+  exactRun(modelCore, 'model-training-core', 'Config validation (dry-run resolves the fixture job without executing it)', 'python -m ourobion_model_lab.cli dry-run --model self-check --config tests/fixtures/example_config.json\n');
+  exactRun(modelCore, 'model-training-core', 'Offline smoke (tiny local fixture only — no network, no real data)', 'python -m ourobion_model_lab.cli smoke --model self-check --config tests/fixtures/example_config.json\n');
+
+  const modelLint = workflow.jobs['model-training-lint-type'];
+  const modelLintPython = exactStep(modelLint, 'Set up Python');
+  if (modelLintPython.uses !== 'actions/setup-python@v5' || Object.keys(modelLintPython.with ?? {}).join('|') !== 'python-version' || modelLintPython.with?.['python-version'] !== '3.10') fail('model-training-lint-type must use exact Python 3.10 setup');
+  exactRun(modelLint, 'model-training-lint-type', 'Install the dev extra only (ruff + mypy)', 'pip install -c constraints.txt -e ".[dev]"');
+  exactRun(modelLint, 'model-training-lint-type', 'Format check', 'ruff format --check .');
+  exactRun(modelLint, 'model-training-lint-type', 'Lint', 'ruff check .');
+  exactRun(modelLint, 'model-training-lint-type', 'Type check', 'mypy src');
 
   const aggregate = workflow.jobs['run4-gate'];
   assertNoFailOpen(aggregate, 'run4-gate job');

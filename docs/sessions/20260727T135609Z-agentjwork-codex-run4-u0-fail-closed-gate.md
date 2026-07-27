@@ -56,6 +56,13 @@ attestation, as intended. The artifact provenance was corrected to the exact `un
 the attestation schema emitted by the renamed gate and leaves its source, graph, route, and local-only
 evidence unchanged.
 
+The later consolidated Run 3/MT3 base advanced to `77c98213e23ad56ae37c86201b39ef4e7543a543`.
+U0 merged that base normally, preserved its graph-view check, branch triggers, and two real
+model-training jobs without editing model-training files, then made both jobs exact mandatory
+dependencies of `Run 4 Gate`. The earlier `854aa471970b61afdc59205ded0b1c8a9ab3f270`
+envelope and `837b7e690f92dc1669428a2476c9d8d0456020e8` U0 base remain historical provenance;
+the active cap and attestation provenance now use the consolidated tip.
+
 ## Left
 
 - Run a clean root install plus exact PR-head Linux Flutter analyze/test and full PR CI.
