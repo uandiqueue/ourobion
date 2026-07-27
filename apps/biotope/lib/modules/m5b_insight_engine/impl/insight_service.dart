@@ -211,6 +211,21 @@ class InsightService {
         .toList();
   }
 
+  /// Fetches `snoozed` insight cards for the user — the Archive tab's "saved"
+  /// list. `snoozed` is reused as "saved" (no dedicated `archived` status
+  /// exists yet; see docs/sessions/ reskin session log Decided #4) via the
+  /// same [updateStatus] call the deck's swipe-right already makes.
+  Future<List<InsightCard>> getSnoozedInsights(String userId) async {
+    final data = await _client
+        .from('insight_cards')
+        .select()
+        .eq('user_id', userId)
+        .eq('status', 'snoozed') as List<dynamic>;
+    return data
+        .map((row) => InsightCard.fromJson(row as Map<String, dynamic>))
+        .toList();
+  }
+
   /// Realtime stream of active insight cards. Updates whenever the nightly job
   /// writes new cards or the user changes a card's status. The expiry cutoff is
   /// re-evaluated on every emission (not frozen at subscription — A27).
