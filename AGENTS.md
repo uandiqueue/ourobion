@@ -283,6 +283,16 @@ small JSON file managed by the Shared Memory Coordinator (`tools/shared_memory.m
 - **Claim:** `node tools/shared_memory.mjs claim --task "<name>" --agent "<agent>" --device "<device>"`
 - **Release:** `node tools/shared_memory.mjs release --task "<name>"`
 
+### Model-tier delegation (orchestrator convention)
+
+Whenever the user says the primary is **"the orchestrator"**, it decomposes work, assigns bounded
+ownership, prevents collisions, reviews evidence, decides architecture and scope, and coordinates the
+PR/merge. It delegates implementation, mechanical edits, routine searches, test execution, and device
+interaction: use Terra low/medium for inventory, docs, routine tests, and device UX; Terra high for
+substantial implementation; and Sol high/max for architecture, adversarial review, synthesis, and hard
+blockers. Explicitly select each subagent's model and effort, minimise full-history forks, and reserve
+direct work for tiny orchestration or safety-critical checks; state any material exception.
+
 ## 8. Code-relationship awareness (know a change's blast radius)
 
 Curate what isn't derivable, defer the auto-generated **structural** graph for now, run a **semantic**

@@ -1,6 +1,6 @@
 ---
 title: Phase-2 Run 4 — preflight-gated remediation orchestrator prompt
-summary: Paste-ready Run 4 prompt technically signed off after the Run 3 adversarial audit. It starts with a human-gated preflight, rebuilds the release gate on a fresh base, limits the priority tranche to R4-U0-R4-U4, and defers O28/O29 by default. Dormant until explicitly started.
+summary: Paste-ready Run 4 prompt for the accepted envelope. It rebuilds the release gate on a fresh base, limits the priority tranche to R4-U0-R4-U4, and defers O28/O29 by default.
 type: plan
 scope: shared
 status: canonical
@@ -13,8 +13,8 @@ Technical sign-off: **Codex, issue #150, 2026-07-27.** The sign-off covers promp
 sequencing, and scope containment. It is not acceptance of any implementation and does not authorize
 execution, hosted changes, provider calls, PR merges, or a waiver of repository policy.
 
-**Current state: DORMANT. Do not run this prompt yet.** Paste the block below only when Jayden
-explicitly says to start Run 4.
+**Current state: ACTIVE under the accepted envelope.** U0 is locally authorized; full-suite and PR-CI
+evidence remain pending for its exact current SHA.
 
 ```text
 You are the lead orchestrator for OUROBION PHASE-2 RUN 4 in:
@@ -89,10 +89,10 @@ Preflight must produce a decision packet with:
   long-lived exception to AGENTS.md without approval.
 - `RUN4_BASE_SHA`: the exact immutable commit from which every Run 4 landing delta is measured.
 - `MAX_CHANGED_PATHS` and `MAX_ADDED_LINES`: explicit caps approved after a source-based unit estimate.
-- Required-status posture: protect the integration branch before implementation. Prefer one stable
-  aggregate `Run 4 Gate` check with `if: always()` and explicit `needs` that fails unless every
-  required dependency succeeded; until it exists, record and require the current stable check set.
-  Missing/skipped required checks must not pass silently.
+- Required CI-evidence posture: `dev-phase2-run4` intentionally remains unprotected by user override.
+  Use one stable aggregate `Run 4 Gate` check with `if: always()` and explicit `needs` that fails unless
+  every required dependency succeeds. Missing/skipped required checks must not pass silently, but the
+  gate is exact-current-SHA evidence only, not GitHub branch-setting enforcement.
 - P2: the named second reviewer for any `shared/` change. A prompt, orchestrator, or owner convenience
   cannot waive this repository rule.
 - P3: the human-approved integration target for the separate model-training workstream, if MT1-MT5 are
@@ -108,8 +108,8 @@ Use final landing-delta semantics: unique paths and added lines in `RUN4_BASE_SH
 and corrections count. Missing base objects, shallow history, parse failures, or ambiguous rename/
 binary handling fail the cap gate. Do not retroactively subtract "unrelated" merges from an old base.
 
-Present the packet and STOP. Do not start R4-U0 until Jayden records the accepted values and locked
-unit list. The preflight may shrink the recommended tranche. It may not add a unit.
+Present the packet and STOP only when the accepted values are absent. For the current accepted envelope,
+start or continue R4-U0 locally; the preflight may shrink the recommended tranche but may not add a unit.
 
 ===============================================================================
 PART 3 — RECOMMENDED MAXIMUM PRIORITY TRANCHE
@@ -119,7 +119,8 @@ R4-U0 / O24 + O31-O34 — trustworthy release gate
 
 - Rebuild O24 on the fresh base; do not merge or mechanically cherry-pick PR #144.
 - Add fail-closed landing-delta enforcement from the approved base/caps.
-- Establish and record required-status protection, preferably through one stable aggregate gate.
+- Establish and record exact-current-SHA CI evidence through one stable aggregate gate; do not claim or
+  attempt branch protection.
 - Every required job must check the same current landing SHA. PR synthetic-merge evidence is valid only
   while it contains the current base and head; any base advance, conflict, or workflow edit invalidates
   old evidence. A default checkout followed by `HEAD == GITHUB_SHA` is not, by itself, useful proof.

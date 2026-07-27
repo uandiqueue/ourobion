@@ -17,6 +17,9 @@
     "edges:test": "npm --prefix tools/edge-loader test"
   },
   "devDependencies": {
-    "supabase": "^2.81.2"
+    "@iarna/toml": "2.2.5",
+    "deno": "2.8.1",
+    "supabase": "2.81.2",
+    "yaml": "2.9.0"
   }
 }

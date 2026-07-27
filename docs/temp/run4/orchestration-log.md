@@ -1,6 +1,6 @@
 ---
 title: Run 4 Pre-Flight Orchestration Log
-summary: Resumable pre-flight record for the proposed Run 4 integration envelope; no implementation is authorised.
+summary: Resumable Run 4 record for the accepted envelope and qualified local U0 evidence; U0 remains in progress pending exact PR-head Linux CI.
 type: plan
 scope: run4-preflight
 status: draft
@@ -9,9 +9,9 @@ updated: 2026-07-27
 
 # Run 4 Pre-Flight Orchestration Log
 
-## Control state
+## Historical pre-flight control state
 
-This is **pre-flight only**. The governing prompt permits no product implementation until Jayden accepts the exact integration branch, immutable base, caps, required checks, reviewer, and locked list. Nothing here is an approval or self-signature.
+This section records the original pre-flight state. The later accepted envelope supersedes its product-implementation freeze; U0 is locally authorized and remains in progress. Nothing here is a self-signature.
 
 - Issue #155; claim `run4-preflight-decision-packet` by `codex@agentjwork`.
 - Worktree `C:\project\ourobion-run4-preflight-155`; branch `docs/run4-preflight-155`.
@@ -22,7 +22,7 @@ This is **pre-flight only**. The governing prompt permits no product implementat
 
 Jayden accepted BRANCH/base, the U0–U3 lock, and the 115-path / 8,500-addition cap for the currently locked envelope. `dev-phase2-run4` was created at exact SHA `854aa471970b61afdc59205ded0b1c8a9ab3f270`. The six Run 4 planning authority files were copied byte-for-byte and count in the cap. The pre-flight tracking packet and later approval updates also count, but are not byte-for-byte authority material.
 
-P1 has human approval, but remains an operational **BLOCKER**: the current GitHub token is WRITE rather than ADMIN, and classic protection PUT returned 404. The exact required checks are therefore not yet enforced. Product implementation, including U0, remains gated; no protection, merge, or implementation is recorded as complete. The sole exception is bootstrap PR #156: workflow run `30267437774` self-triggered on CI-enablement commit `f60650838428d871690d6f83358e0fb05387d0bc` targeting `dev-phase2-run4`, with all 14 jobs passed. The later evidence-recording commit is not claimed tested; bootstrap merge remains conditional on all 14 checks being green on the then-current PR head and installs only authority/tracking docs plus minimal Run 4 CI branch-filter enablement. After merge, the new push filter must produce all 14 green checks on the exact merge SHA; U0/product remains frozen until that exact-SHA proof and ADMIN protection.
+Historical note (superseded as an operating constraint): the WRITE-token protection probe returned 404 and workflow run `30267437774` passed all 14 jobs on CI-enablement commit `f60650838428d871690d6f83358e0fb05387d0bc`. That run does not test later commits. The current user-approved posture is that `dev-phase2-run4` intentionally remains unprotected; no ADMIN or settings action is requested. U0 is locally authorized, and `Run 4 Gate` is exact-current-SHA CI evidence only. Full-suite and PR-CI evidence remain pending.
 
 ## Verified live state
 
@@ -36,11 +36,11 @@ On 2026-07-27, PR #144 was **CLOSED**, not merged, at `2026-07-27T08:03:15Z`; ba
 
 `dev-phase2-run4` now exists at `854aa471970b61afdc59205ded0b1c8a9ab3f270`. The previously observed `dev-phase2` and `dev-phase2-run3` protections were false. One ruleset applies only to `main` and has no required status checks. No Run 4 protection enforcement is recorded.
 
-## Accepted envelope, operationally blocked
+## Accepted envelope and active constraints
 
 | Field | Value | State |
 | --- | --- | --- |
-| Integration branch | `dev-phase2-run4` at `854aa471970b61afdc59205ded0b1c8a9ab3f270` | ACCEPTED / enforcement blocked |
+| Integration branch | `dev-phase2-run4` at `854aa471970b61afdc59205ded0b1c8a9ab3f270` | ACCEPTED / intentionally unprotected |
 | Immutable base | `854aa471970b61afdc59205ded0b1c8a9ab3f270` (`origin/dev-phase2-run2`) | ACCEPTED |
 | Locked units | `R4-U0`, `R4-U1`, `R4-U2`, `R4-U3` | ACCEPTED |
 | U4 | no available second shared reviewer; two-reviewer rule not waived | DEFERRED |
@@ -50,10 +50,11 @@ The accepted base is a full commit object and the repository is not shallow. `de
 
 Measure caps as unique paths and added lines in `RUN4_BASE_SHA..HEAD`; generated/lock/session/tracking/corrections count. Missing base, shallow history, parse, rename, or binary ambiguity fails. All-five coupling is likely 135–155 paths and 8,250–9,000 added lines, hence U0–U3 lock. The 115/8,500 cap includes promoted Run 4 docs/tracking and returns an exceeding unit to pending. A local fixture-backed paper-to-Biotope slice must be separately sized and admitted only if it fits the accepted cap.
 
-## Bootstrap gate before implementation
+## CI evidence posture
 
-P1 human approval is recorded. An ADMIN-capable owner must enforce these exact checks; missing/skipped fails. Current WRITE-token classic protection PUT returned 404, so enforcement is blocked and implementation remains gated:
+P1 is an accepted user override: no branch protection or ADMIN/settings action is requested. Missing or skipped checks fail the local/CI evidence gate, which must be evaluated on the exact current SHA:
 
+- `Run 4 release evidence`
 - `Context — sessions / memory / decisions / index / couplings`
 - `Flutter — Analyze & Test`
 - `TypeScript — Type Check`
@@ -67,9 +68,11 @@ P1 human approval is recorded. An ADMIN-capable owner must enforce these exact c
 - `Deno — compute-baselines`
 - `Deno — evaluate-signals`
 - `Deno — generate-insights`
+- `Deno — run-pipeline`
 - `Migrations — shadow apply (postgres:17)`
+- `Run 4 Gate`
 
-U0 then proposes aggregate `Run 4 Gate` with `if: always()` and explicit `needs`, including `run-pipeline`; protection changes only after exact current-SHA proof.
+U0 provides aggregate `Run 4 Gate` evidence with `if: always()` and explicit `needs`, including `run-pipeline`. It does not configure or imply branch protection; a base advance, workflow edit, or different head invalidates older evidence.
 
 ## Pending posture
 
@@ -79,9 +82,21 @@ P5 is accepted as local-only: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `R2_ENDPOIN
 
 P6 defaults to O29 deferred and zero provider calls. Anthropic key presence does not approve a second-family configuration/budget; router remains single-provider OpenAI TEST-MODE.
 
+## U0 local qualification evidence
+
+- Gate tests 9/9, config/workflow validation, four frozen Deno checks, fresh graph plus local-only attestation verification, `context_sync --check`, shared TypeScript, all named package typechecks, and rules/metric drift checks passed.
+- Supabase CLI 2.81.2 and Deno 2.8.1 were used for the local release path. A disposable Postgres 17 shadow applied 23/23 migrations and was removed.
+- 710 package tests passed: brain-ingest 353, llm-router 71, rules 82, edge-loader 56, engine-stats 49, metric-view 5, and nao 94. Including the gate tests, the total is 719.
+- All package-scoped `npm ci` operations succeeded after scoped Windows EPERM escalation. Root `npm ci` is locally blocked because the sandbox cannot replace root `node_modules`; clean root install remains pending Linux CI.
+- Flutter is locally blocked, not failed. With Windows Developer Mode off, isolated-worktree `pub get` cannot create plugin symlinks; the analyze dependency cascade is invalid evidence and zero Flutter tests ran. Cache reuse was refused because the other workspace's inputs were not byte-identical. Exact PR-head Linux Flutter analyze/test remain pending.
+- Audit notices are recorded without remediation: shared 1 high; brain-ingest 1 moderate, 2 high, 1 critical; nao 6 high.
+- The previously recorded four-route local serve probe reached handler-level 401 responses and was stopped. It used no secrets, hosted resources, or provider calls. Hosted parity is explicitly not claimed.
+
+This local result does not complete U0 and does not claim PR CI green.
+
 ## Evidence ledger and resume
 
-All material claims are source/Git/GitHub-verified. Graphify was stale/noisy and rejected as evidence. Read-only checks: `context_sync --session-start`, Git status/worktree/ref/diff/ancestry/cat-file checks, GitHub PR/branch/ruleset/PR-list reads, secret-name classification, rejected Graphify query; adb probe timed out. No tests ran.
+The historical pre-flight claims were source/Git/GitHub-verified. Current local U0 qualification is recorded above with its environment limits; no hosted or provider operation ran.
 
 | Work | Model | State |
 | --- | --- | --- |
@@ -91,4 +106,4 @@ All material claims are source/Git/GitHub-verified. Graphify was stale/noisy and
 | Packet writer | `gpt-5.6-terra` medium | draft complete |
 | Primary orchestration | `gpt-5.6-sol` max | pending human direction |
 
-Provider spend is 0. RESUME: an ADMIN-capable owner enforces the exact checks on `dev-phase2-run4`; separately size the local fixture-backed paper-to-Biotope slice before admitting it under cap. P2 remains unavailable and P3 remains paused/excluded.
+Provider spend is 0. RESUME: obtain clean root install, exact PR-head Linux Flutter analyze/test, and full PR-CI evidence; do not mark U0 complete before those results and review. Separately size the local fixture-backed paper-to-Biotope slice before admitting it under cap. P2 remains unavailable and P3 remains paused/excluded. All Run 4 issue, branch, PR, and merge operations target `dev-phase2-run4` only.

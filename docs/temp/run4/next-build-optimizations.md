@@ -1,6 +1,6 @@
 ---
 title: Run 4 — reviewed candidate scope and priority tranche
-summary: Run 4's technically reviewed scope: corrected preconditions, O31-O40 enforcement candidates, the promoted pending-build register, and a smaller priority tranche that rebuilds O24 before security, raw-truth, and scientific-semantics work. Prompt signed; execution not authorized.
+summary: Run 4's active reviewed scope: accepted envelope, O31-O40 enforcement candidates, promoted pending-build register, and a priority tranche that rebuilds O24 before security, raw-truth, and scientific-semantics work.
 type: plan
 scope: shared
 status: draft
@@ -9,10 +9,10 @@ updated: 2026-07-27
 
 # Run 4 — reviewed candidate scope and priority tranche
 
-**Status: technically reviewed; execution not authorized.** The priority order below is the subset
-recommended for preflight. Run 4 begins only after Jayden explicitly starts it and accepts the fresh
-base, required-check posture, cap definition, reviewer availability, and exact locked units. The audit
-that produced the candidate list is [`run3-audit-findings.md`](./run3-audit-findings.md).
+**Status: active under the accepted envelope.** U0 is locally authorized and in progress; its full
+suite and PR CI remain pending. The accepted base, cap, locked units, and intentionally unprotected
+`dev-phase2-run4` posture are recorded in the companion decision documents. The audit that produced the
+candidate list is [`run3-audit-findings.md`](./run3-audit-findings.md).
 
 **Relationship to Run 3.** Run 3 is closing without an accepted unit. PR #144 must not merge in its
 audited state; O24-O29 are therefore unfinished and have been promoted into
@@ -25,7 +25,7 @@ These are not build units. Most are settings or decisions, and several block Run
 
 | ID | What | Why it blocks | Who |
 |---|---|---|---|
-| P1 | **Add required status checks** on `dev-phase2` and the human-approved Run 4 integration branch | Audit A1: both inspected working branches were `protected: false` with no required checks. Protect the successor before implementation; a closed Run 3 branch need not remain an integration target | Jayden (repo admin) |
+| P1 | **Exact-current-SHA CI evidence** on `dev-phase2-run4` | User override: the branch intentionally remains unprotected; `Run 4 Gate` is evidence only, not GitHub branch-setting enforcement. No ADMIN or settings action is requested | U0 / CI |
 | P2 | **Resolve B8 by naming a second `shared/` reviewer** | Audit A4: `shared/` work requires two reviewers under AGENTS.md. A run prompt cannot waive that repository rule. O27/O38 and any other shared-contract work stay blocked until the reviewer exists | Jayden |
 | P3 | **Separate model-training from the Run 4 integration base before MT1 is cut** | Audit A3: MT0 alone changed 59 files / added 5,362 lines after the Run 3 candidate baseline and broke U0's mergeability. The exact model-training integration target is a human decision; do not invent a long-lived branch contrary to the normal workflow | Jayden + orchestrator |
 | P4 | **Approve a fresh immutable Run 4 base and one cap metric** | Do not retroactively exclude merged work. Define the run budget as the final landing delta from the accepted Run 4 base (`base..HEAD`), including generated/tracking files, with unique changed paths and added lines counted mechanically. Record the base SHA and cap before implementation | Jayden |
@@ -49,13 +49,12 @@ counts unique changed paths plus added lines in `base..HEAD`. This is a **landin
 changed paths. Needs P4; missing base, shallow-history failure, or unparsable output fails the gate.
 *Source: audit, corrected in issue #150.*
 
-### O32 · Required-status-check configuration as recorded state
-P1 sets the checks; this item records *which* checks are required, where, and adds a periodic
-verification that the setting still holds. Prefer one stable aggregate `Run 4 Gate` job with
-`if: always()` and explicit `needs` that fails unless every required dependency succeeded, over
-requiring a variable set of matrix/path-filtered jobs. Until that aggregate exists, protect the branch
-with the current stable checks and record the transition.
-Repo-settings drift must fail visibly. *Source: audit A1, corrected in issue #150.*
+### O32 · Exact-current-SHA CI evidence
+Record the required jobs and run one stable aggregate `Run 4 Gate` with `if: always()` and explicit
+`needs` that fails unless every required dependency succeeds. Evaluate that evidence only for the exact
+current SHA: base advances, workflow edits, or a different head invalidate older evidence. The branch
+intentionally remains unprotected, so O32 neither configures nor claims GitHub branch-setting
+enforcement; no ADMIN or settings action is part of this run. *Source: audit A1; current Run 4 override.*
 
 ### O33 · Fix the fail-open coverage guard
 `tools/check_supabase_deno_matrix.mjs` silently discards `[functions.*]` sections its regex cannot
@@ -124,13 +123,13 @@ study-design copy off its semantics. Resolving (b) needs a superseding ADR, not 
 
 ## 3. Recommended priority tranche
 
-This is the largest tranche this review signs off for **preflight**. It is not authorized to execute
-until P1-P7 and the base/cap/reviewer decisions are recorded. The preflight may shrink it; it may not
+This is the largest tranche accepted for the locked envelope. U0 is authorized; P2 continues to defer
+U4, while P3 excludes training and P5/P6 retain local-only, zero-provider constraints. The run may not
 silently add O28, O29, O37, O39, O40, or any other register row.
 
 | Priority | Candidate unit | Contents | Start gate |
 |---|---|---|---|
-| 1 | R4-U0 · trustworthy release gate | Rebuild O24 with O31-O34; stable required aggregate, current landing-SHA evidence, fail-closed config/matrix coverage, and deploy-path dependency proof | P1, P4, P7; fresh Run 4 base |
+| 1 | R4-U0 · trustworthy release gate | Rebuild O24 with O31-O34; stable required aggregate, current landing-SHA evidence, fail-closed config/matrix coverage, and deploy-path dependency proof | In progress; full suite and PR CI pending on the exact current SHA |
 | 2 | R4-U1 · mechanical boundaries | O35 + O36; polyglot import/path guard and pinned secret scanning | R4-U0 gate is required and green |
 | 3 | R4-U2 · authorization and key boundary | O25; nao RBAC/RLS, redacted global jobs, named server-key migration | Credential decisions recorded; no hosted mutation without exact approval |
 | 4 | R4-U3 · raw-truth and retry safety | O26; atomic demo loading and idempotent/single-flight pipeline publication | R4-U2 blocks ordinary-account access |

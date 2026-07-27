@@ -1,6 +1,6 @@
 ---
 title: Run 4 Human Decisions
-summary: Decision sheet for resuming Run 4 from pre-flight without implying implementation approval.
+summary: Decision sheet for the accepted Run 4 envelope and active operating constraints.
 type: decision-sheet
 scope: run4-preflight
 status: draft
@@ -18,19 +18,16 @@ updated: 2026-07-27
 - P5 is local-only with no hosted writes/deploy/key changes. P6 keeps O29 deferred and provider spend at zero.
 - PR #156 must target `dev-phase2-run4` and may merge there, never `dev-phase2`.
 
-## Remaining required action
+## Active operating posture
 
-P1 has human approval but is operationally blocked: the current GitHub token is WRITE rather than ADMIN and classic protection PUT returned 404. The exact 14 checks are not enforced. Workflow run `30267437774` self-triggered on PR #156 CI-enablement commit `f60650838428d871690d6f83358e0fb05387d0bc` targeting `dev-phase2-run4`, and all 14 jobs passed. The later evidence-recording commit is not claimed tested. Product implementation remains gated; do not infer protection, a merge, or implementation.
+P1 is an accepted override: `dev-phase2-run4` intentionally has no branch protection, and no ADMIN or settings action is requested. `Run 4 Gate` provides CI evidence only. It must be evaluated on the exact current SHA; it does not imply GitHub branch-setting enforcement.
 
-Before implementation, an ADMIN-capable owner must:
-
-1. Enforce the exact bootstrap checks on `dev-phase2-run4` and supply proof at the current SHA.
-2. Separately size the local fixture-backed paper-to-Biotope slice before admitting it under the accepted cap.
+Before admitting the additional local fixture-backed paper-to-Biotope slice, size it separately against the accepted cap.
 
 P2 remains blocked; shared work cannot start without an available second reviewer.
 
-Not authorised: product edits, settings changes, hosted/provider calls, hosted Supabase, Cloudflare/R2 writes, deployment, key mutation/revocation, changes to PR #144, or a merge to `dev-phase2`. Bootstrap PR #156 may merge only to `dev-phase2-run4` when all 14 checks are green on the then-current PR head. Workflow run `30267437774` passed all 14 jobs on CI-enablement commit `f60650838428d871690d6f83358e0fb05387d0bc`; the later evidence-recording commit is not claimed tested. It installs authority/tracking docs plus minimal Run 4 CI branch-filter enablement only. The new push filter must produce all 14 green checks on exact merge SHA; U0 and product remain frozen until that proof and ADMIN-capable branch protection.
+Not authorised: settings changes, hosted/provider calls, hosted Supabase, Cloudflare/R2 writes, deployment, key mutation/revocation, changes to PR #144, or a merge to `dev-phase2` or `main`. Run 4 product work is locally authorized within the locked envelope. All Run 4 issue, branch, PR, and merge operations affect `dev-phase2-run4` only. Full-suite and PR-CI evidence for the current U0 SHA remain pending.
 
 Name-only local credentials: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `OPENALEX_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and Nao/Biotope public Supabase variables. No values belong here. Local Nao uses process-scoped local Supabase URL/anon/service-role values, never hosted file defaults. Android adb timed out; independent connection state is unverified.
 
-O29 remains deferred: zero provider calls and single-provider OpenAI TEST-MODE. No unit is in progress, shipped, or tested.
+O29 remains deferred: zero provider calls and single-provider OpenAI TEST-MODE. U0 is in progress; no full-suite, PR-CI, or merge result is claimed.
