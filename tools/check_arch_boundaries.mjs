@@ -100,8 +100,9 @@ const R2C_PATH_SCOPE = ['apps/', 'supabase/', 'shared/', 'tools/brain-ingest/'];
 
 // Matches a model-training path reference: the literal segment "model-training"
 // preceded by start-of-string, '.', or '/', and followed by '/' or end-of-string.
-const MODEL_TRAINING_PATH_RE = /(^|[./])model-training(\/|$)/;
+const MODEL_TRAINING_PATH_RE = /(^|[.\\/])model-training([\\/]|$)/;
 const OUROBION_MODEL_LAB_MARKER = 'ourobion_model_lab';
+const RELEVANT_UNRESOLVED_IMPORT_RE = /(?:model-training|ourobion_model_lab|modules[\\/].*[\\/]impl[\\/])/;
 
 // ---------------------------------------------------------------------------
 // GuardError — thrown for every fail-closed condition the analyzer detects.
@@ -574,7 +575,7 @@ export function owningModuleOf(filePath, presentModuleIds = new Set()) {
 
 const JS_IMPORT_RE = /\bimport\s+(?:[^;'"()]*?\bfrom\s*)?(['"])([^'"]+)\1/g;
 const JS_EXPORT_FROM_RE = /\bexport\s+(?:[^;'"()]*?\bfrom\s*)?(['"])([^'"]+)\1/g;
-const JS_DYNAMIC_IMPORT_RE = /\bimport\s*\(\s*(['"])([^'"]+)\1\s*\)/g;
+const JS_DYNAMIC_IMPORT_RE = /\bimport\s*\(\s*(['"`])([^'"`]*)\1\s*\)/g;
 const JS_REQUIRE_RE = /\brequire\s*\(\s*(['"])([^'"]+)\1\s*\)/g;
 const DART_IMPORT_RE = /\b(?:import|export|part)\s+(['"])([^'"]+)\1/g;
 
@@ -596,6 +597,17 @@ export function extractImports(strippedContent, isDart) {
       m = re.exec(strippedContent);
     }
   }
+  if (!isDart) {
+    const calls = findSubprocessCalls(strippedContent, [/\bimport\s*\(/g]);
+    for (const call of calls) {
+      const closeIndex = findMatchingParen(strippedContent, call.openIndex);
+      const args = closeIndex === -1 ? strippedContent.slice(call.openIndex + 1) : strippedContent.slice(call.openIndex + 1, closeIndex);
+      const staticLiteral = /^\s*(['"`])[\s\S]*\1\s*$/.test(args) && !args.includes('${');
+      if (!staticLiteral && RELEVANT_UNRESOLVED_IMPORT_RE.test(args)) {
+        throw new GuardError(`unresolved dynamic import at line ${lineOf(strippedContent, call.matchStart)} reaches a protected boundary: ${args.trim()}`);
+      }
+    }
+  }
   return results;
 }
 
@@ -613,9 +625,9 @@ function stringHasModelTrainingReference(s) {
   return MODEL_TRAINING_PATH_RE.test(s) || s.includes(OUROBION_MODEL_LAB_MARKER);
 }
 
-function findSubprocessCalls(strippedContent) {
+function findSubprocessCalls(strippedContent, patterns = SUBPROCESS_CALL_PATTERNS) {
   const calls = [];
-  for (const pattern of SUBPROCESS_CALL_PATTERNS) {
+  for (const pattern of patterns) {
     pattern.lastIndex = 0;
     let m = pattern.exec(strippedContent);
     while (m !== null) {
@@ -700,7 +712,7 @@ function checkR2aImport(filePath, specifier, index, strippedContent, classified,
   // while still being a model-training reference; this branch keeps that
   // visible instead of letting successful resolution swallow it.
   const firstSegment = specifier.split('/')[0];
-  if (firstSegment === 'model-training') {
+  if (firstSegment === 'model-training' || MODEL_TRAINING_PATH_RE.test(specifier)) {
     violations.push({
       rule: 'R2a',
       file: filePath,
@@ -714,7 +726,13 @@ function checkR2b(filePath, strippedContent, violations) {
   const calls = findSubprocessCalls(strippedContent);
   for (const call of calls) {
     const closeIndex = findMatchingParen(strippedContent, call.openIndex);
-    if (closeIndex === -1) continue; // malformed/truncated call text; nothing to analyze
+    if (closeIndex === -1) {
+      const tail = strippedContent.slice(call.openIndex + 1);
+      if (RELEVANT_UNRESOLVED_IMPORT_RE.test(tail)) {
+        throw new GuardError(`${filePath}:${lineOf(strippedContent, call.matchStart)}: unresolved subprocess call reaches model-training`);
+      }
+      continue;
+    }
     const window = strippedContent.slice(call.openIndex + 1, closeIndex);
     const literals = scanStringLiterals(window);
     const hit = literals.find((lit) => stringHasModelTrainingReference(lit.content));
@@ -725,6 +743,8 @@ function checkR2b(filePath, strippedContent, violations) {
         line: lineOf(strippedContent, call.matchStart),
         detail: `subprocess call "${call.matchText.trim()}" references model-training via literal "${hit.content}"`,
       });
+    } else if (/\b(?:MODEL_TRAINING\w*|modelTraining\w*|ourobionModelLab\w*)\b/.test(window)) {
+      throw new GuardError(`${filePath}:${lineOf(strippedContent, call.matchStart)}: subprocess call uses an unresolved model-training identifier`);
     }
   }
 }

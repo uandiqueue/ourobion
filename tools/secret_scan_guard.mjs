@@ -171,12 +171,7 @@ function* walk(root) {
   const stack = [root];
   while (stack.length) {
     const dir = stack.pop();
-    let entries;
-    try {
-      entries = readdirSync(dir, { withFileTypes: true });
-    } catch {
-      continue;
-    }
+    const entries = readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
@@ -322,9 +317,10 @@ export function checkConfigPolicy(configText) {
 
   // §C.5 / §B.0: broad gitleaks-native suppression keys must never appear in our authored
   // config, anchored to line-start key assignments (not prose that happens to contain the word).
-  const bannedKeyRe = /^\s*(paths|regexes|stopwords|regexTarget)\s*=/m;
-  if (bannedKeyRe.test(configText)) {
-    violations.push({ id: 'POLICY_BROAD_NATIVE_ALLOWLIST_KEY', detail: 'paths/regexes/stopwords/regexTarget key present' });
+  const nativeAllowlistTableRe = /^\s*\[{1,2}[^\]\r\n]*\ballowlists?\b[^\]\r\n]*\]{1,2}\s*$/mi;
+  const bannedKeyRe = /^\s*(allowlists?|paths|regexes|stopwords|regexTarget|commits)\s*=/m;
+  if (nativeAllowlistTableRe.test(configText) || bannedKeyRe.test(configText)) {
+    violations.push({ id: 'POLICY_BROAD_NATIVE_ALLOWLIST_KEY', detail: 'native allowlist table or suppression key present' });
   }
 
   return { violations, declaredIds };
@@ -787,6 +783,9 @@ function findTaintedIdentifiers(text) {
 }
 
 function textIsTainted(argText, tainted) {
+  if (/(?:^|[([{,=:]\s*)process\.env\b(?!\s*[.[])/.test(argText) || /\bDeno\.env\.toObject\s*\(/.test(argText)) {
+    return { tainted: true, reason: 'bare/bulk environment object' };
+  }
   for (const name of SERVER_ONLY_NAMES) {
     if (buildTsJsReferenceRegex(name).test(argText)) return { tainted: true, reason: `direct reference to ${name}` };
   }
@@ -823,7 +822,7 @@ function checkBiotope(repoRoot, violations, surfaces) {
   const pubspecPath = path.join(repoRoot, 'apps/biotope/pubspec.yaml');
   const pubspecText = readTextIfExists(pubspecPath);
   if (pubspecText === null) {
-    surfaces.push({ surface: 'apps/biotope/pubspec.yaml', status: 'SKIPPED_ABSENT', reason: 'file not found' });
+    surfaces.push({ surface: 'apps/biotope/pubspec.yaml', status: 'REQUIRED_MISSING', reason: 'file not found' });
   } else {
     surfaces.push({ surface: 'apps/biotope/pubspec.yaml', status: 'SCANNED' });
     const assetsBlockMatch = pubspecText.match(/^\s*assets:\s*\n((?:^\s{2,}-.*\n?)+)/m);
@@ -840,7 +839,7 @@ function checkBiotope(repoRoot, violations, surfaces) {
 
   const libDir = path.join(repoRoot, 'apps/biotope/lib');
   if (!existsSync(libDir)) {
-    surfaces.push({ surface: 'apps/biotope/lib/**', status: 'SKIPPED_ABSENT', reason: 'directory not found' });
+    surfaces.push({ surface: 'apps/biotope/lib/**', status: 'REQUIRED_MISSING', reason: 'directory not found' });
     return;
   }
   surfaces.push({ surface: 'apps/biotope/lib/**', status: 'SCANNED' });
@@ -943,10 +942,10 @@ function resolveRelativeImport(fromFile, specifier) {
   return null;
 }
 
-function transitiveClosure(roots) {
+function transitiveClosure(roots, aliasRoot) {
   const seen = new Set(roots);
   const queue = [...roots];
-  const importRe = /(?:import|export)\s+(?:[\s\S]*?from\s+)?(['"])(\.[^'"]*)\1/g;
+  const importRe = /(?:import|export)\s+(?:[\s\S]*?from\s+)?(['"])(\.[^'"]*|@\/[^'"]*)\1/g;
   while (queue.length) {
     const file = queue.shift();
     const text = readTextIfExists(file);
@@ -954,7 +953,9 @@ function transitiveClosure(roots) {
     let m;
     importRe.lastIndex = 0;
     while ((m = importRe.exec(text)) !== null) {
-      const resolved = resolveRelativeImport(file, m[2]);
+      const resolved = m[2].startsWith('@/')
+        ? resolveRelativeImport(path.join(aliasRoot, '_alias.ts'), `./${m[2].slice(2)}`)
+        : resolveRelativeImport(file, m[2]);
       if (resolved && !seen.has(resolved)) {
         seen.add(resolved);
         queue.push(resolved);
@@ -967,12 +968,12 @@ function transitiveClosure(roots) {
 function checkNaoClientSurface(repoRoot, violations, surfaces) {
   const srcDir = path.join(repoRoot, 'apps/nao/src');
   if (!existsSync(srcDir)) {
-    surfaces.push({ surface: 'apps/nao/src/**', status: 'SKIPPED_ABSENT', reason: 'directory not found' });
+    surfaces.push({ surface: 'apps/nao/src/**', status: 'REQUIRED_MISSING', reason: 'directory not found' });
     return;
   }
   const roots = findUseClientRoots(srcDir);
   surfaces.push({ surface: `apps/nao/src/** ('use client' closure, ${roots.length} root(s))`, status: 'SCANNED' });
-  const closure = transitiveClosure(roots);
+  const closure = transitiveClosure(roots, srcDir);
   for (const file of closure) {
     const text = readTextIfExists(file);
     if (text === null) continue;
@@ -989,7 +990,7 @@ function checkNaoClientSurface(repoRoot, violations, surfaces) {
 function checkNextPublic(repoRoot, violations, surfaces) {
   const naoDir = path.join(repoRoot, 'apps/nao');
   if (!existsSync(naoDir)) {
-    surfaces.push({ surface: 'apps/nao/**', status: 'SKIPPED_ABSENT', reason: 'directory not found' });
+    surfaces.push({ surface: 'apps/nao/**', status: 'REQUIRED_MISSING', reason: 'directory not found' });
     return;
   }
   surfaces.push({ surface: 'apps/nao/** (NEXT_PUBLIC_* scan)', status: 'SCANNED' });
@@ -1002,11 +1003,7 @@ function checkNextPublic(repoRoot, violations, surfaces) {
   for (const file of walk(naoDir)) {
     if (/node_modules|\.next[\\/]|\.open-next[\\/]/.test(file)) continue;
     let text;
-    try {
-      text = readFileSync(file, 'utf8');
-    } catch {
-      continue;
-    }
+    text = readFileSync(file, 'utf8');
     const rel = relFrom(repoRoot, file);
     let m;
     nextPublicNameRe.lastIndex = 0;
@@ -1045,7 +1042,7 @@ function checkNextPublic(repoRoot, violations, surfaces) {
   const templatePath = path.join(naoDir, '.env.public.example');
   const templateText = readTextIfExists(templatePath);
   if (templateText === null) {
-    surfaces.push({ surface: 'apps/nao/.env.public.example', status: 'SKIPPED_ABSENT', reason: 'file not found' });
+    surfaces.push({ surface: 'apps/nao/.env.public.example', status: 'REQUIRED_MISSING', reason: 'file not found' });
   } else {
     surfaces.push({ surface: 'apps/nao/.env.public.example', status: 'SCANNED' });
     const declared = new Set();
@@ -1075,7 +1072,7 @@ function checkNextPublic(repoRoot, violations, surfaces) {
   const genEnvPath = path.join(naoDir, 'scripts/gen-env.mjs');
   const genEnvText = readTextIfExists(genEnvPath);
   if (genEnvText === null) {
-    surfaces.push({ surface: 'apps/nao/scripts/gen-env.mjs', status: 'SKIPPED_ABSENT', reason: 'file not found' });
+    surfaces.push({ surface: 'apps/nao/scripts/gen-env.mjs', status: 'REQUIRED_MISSING', reason: 'file not found' });
   } else {
     surfaces.push({ surface: 'apps/nao/scripts/gen-env.mjs', status: 'SCANNED' });
     checkGenEnvDirection(genEnvText, violations);
@@ -1193,7 +1190,7 @@ function checkHeaderResponseAndLogSurfaces(repoRoot, violations, surfaces) {
   for (const rel of hScopeDirs) {
     const abs = path.join(repoRoot, rel);
     if (!existsSync(abs)) {
-      surfaces.push({ surface: `${rel}/** (H1-H4)`, status: 'SKIPPED_ABSENT', reason: 'directory not found' });
+      surfaces.push({ surface: `${rel}/** (H1-H4)`, status: 'REQUIRED_MISSING', reason: 'directory not found' });
       continue;
     }
     surfaces.push({ surface: `${rel}/** (H1-H4)`, status: 'SCANNED' });
@@ -1245,7 +1242,7 @@ function checkHeaderResponseAndLogSurfaces(repoRoot, violations, surfaces) {
   for (const rel of lScopeDirs) {
     const abs = path.join(repoRoot, rel);
     if (!existsSync(abs)) {
-      surfaces.push({ surface: `${rel}/** (L1-L4)`, status: 'SKIPPED_ABSENT', reason: 'directory not found' });
+      surfaces.push({ surface: `${rel}/** (L1-L4)`, status: 'REQUIRED_MISSING', reason: 'directory not found' });
       continue;
     }
     surfaces.push({ surface: `${rel}/** (L1-L4)`, status: 'SCANNED' });
@@ -1265,12 +1262,7 @@ function checkHeaderResponseAndLogSurfaces(repoRoot, violations, surfaces) {
         // test suite's fixture strings as if they were real production taint.
         if (/\.test\.(mjs|cjs|[jt]sx?)$/.test(relPath)) continue;
       }
-      let text;
-      try {
-        text = readFileSync(file, 'utf8');
-      } catch {
-        continue;
-      }
+      const text = readFileSync(file, 'utf8');
       const tainted = findTaintedIdentifiers(text);
       checkCalleeGroup(text, relPath, tainted, LOG_CALLEES, violations);
       checkCalleeGroup(text, relPath, tainted, THROW_CALLEES, violations);
@@ -1325,7 +1317,7 @@ export function computeClientSurface({ repoRoot = REPO_ROOT_DEFAULT } = {}) {
   checkHeaderResponseAndLogSurfaces(repoRoot, violations, surfaces);
 
   for (const s of surfaces) {
-    if (s.status !== 'SCANNED' && s.status !== 'SKIPPED_ABSENT') {
+    if (s.status !== 'SCANNED') {
       violations.push({ id: 'SURFACE_MANIFEST_INVALID', detail: `surface "${s.surface}" has invalid status "${s.status}"` });
     }
   }
@@ -1365,6 +1357,22 @@ export function clientSurface({ repoRoot = REPO_ROOT_DEFAULT, surfaceReportPath 
       (advisoryViolations.length ? `, ${advisoryViolations.length} advisory\n` : '\n')
   );
   return { violations, surfaces };
+}
+
+/** Inspect the actual Next client output produced by CI. This is local bundle evidence only. */
+export function inspectClientBundle({ bundleDir, canary }) {
+  if (!bundleDir || !canary) fail('inspect-client-bundle requires --dir and --canary');
+  if (!existsSync(bundleDir) || !statSync(bundleDir).isDirectory()) fail(`client bundle directory is missing: ${bundleDir}`);
+  let files = 0;
+  for (const file of walk(bundleDir)) {
+    files += 1;
+    if (readFileSync(file).includes(Buffer.from(canary))) {
+      fail(`synthetic server-only canary reached client bundle file ${path.relative(bundleDir, file)}`);
+    }
+  }
+  if (files === 0) fail(`client bundle directory is empty: ${bundleDir}`);
+  process.stdout.write(`[secret-scan-guard] client bundle inspection OK: ${files} local artifact(s), synthetic canary absent; no hosted/deployed proof claimed\n`);
+  return { files };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1473,8 +1481,10 @@ export function runCli(argv) {
       return clientSurface({ repoRoot: args['repo-root'] || REPO_ROOT_DEFAULT, surfaceReportPath: args['surface-report'] });
     case 'local-artifacts':
       return localArtifacts({ repoRoot: args['repo-root'] || REPO_ROOT_DEFAULT });
+    case 'inspect-client-bundle':
+      return inspectClientBundle({ bundleDir: args.dir, canary: args.canary });
     default:
-      fail(`unknown subcommand "${command}". Expected one of: verify-binary, policy, canary, verify-report, client-surface, local-artifacts`);
+      fail(`unknown subcommand "${command}". Expected one of: verify-binary, policy, canary, verify-report, client-surface, inspect-client-bundle, local-artifacts`);
   }
   return undefined;
 }

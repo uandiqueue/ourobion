@@ -237,6 +237,26 @@ test(`negative R2b: tools/ subprocess call referencing a ${MT}/ path is flagged`
   assert.match(hits[0].detail, new RegExp(SPAWN));
 });
 
+test('dynamic template imports are enforced, including protected interpolated forms', () => {
+  const staticSource = `${IMPORT_KW}(\`../b/impl/secret.ts\`);`;
+  const result = analyze({ files: [
+    { path: 'apps/x/src/modules/a/index.ts', content: staticSource },
+    { path: 'apps/x/src/modules/b/impl/secret.ts', content: 'export {};' },
+  ] });
+  expectOne(result, 'R1', 'apps/x/src/modules/a/index.ts');
+  const interpolated = `${IMPORT_KW}(\`../../${MT}/src/\${name}.ts\`);`;
+  assert.throws(() => analyze({ files: [{ path: 'apps/x/src/load.ts', content: interpolated }] }), /unresolved dynamic import.*protected boundary/);
+});
+
+test(`negative R2b: Windows ${MT} paths and unresolved training identifiers fail closed`, () => {
+  const windowsPath = ['..', '..', MT, 'src', 'run.py'].join('\\\\');
+  const hit = analyze({ files: [{ path: 'tools/x.mjs', content: call(SPAWN, `'python', [${JSON.stringify(windowsPath)}]`) }] });
+  expectOne(hit, 'R2b', 'tools/x.mjs');
+  expectOne(analyze({ files: [{ path: 'tools/x.mjs', content: imp(windowsPath, 'x') }] }), 'R2a', 'tools/x.mjs');
+  const identifier = `MODEL_${'TRAINING'}_DIR`;
+  assert.throws(() => analyze({ files: [{ path: 'tools/x.mjs', content: call(SPAWN, `'python', [${identifier}]`) }] }), /unresolved model-training identifier/);
+});
+
 test(`negative R2c: shared/ string literal referencing a ${MT} path is flagged`, () => {
   const files = [
     {

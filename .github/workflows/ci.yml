@@ -262,7 +262,7 @@ jobs:
   run4-gate:
     name: Run 4 Gate
     if: ${{ always() && ((github.event_name == 'push' && github.ref == 'refs/heads/dev-phase2-run4') || (github.event_name == 'pull_request' && github.base_ref == 'dev-phase2-run4')) }}
-    needs: [context, run4-release, flutter, typescript, node-tools, nao, deno-check, migrations-apply, model-training-core, model-training-lint-type]
+    needs: [context, run4-release, flutter, typescript, node-tools, nao, deno-check, migrations-apply, model-training-core, model-training-lint-type, arch-boundaries, secret-scan]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -398,12 +398,8 @@ jobs:
         run: mypy src
 
   # ─── Run 4 O35 / O36 (unit R4-U1) ──────────────────────────────────────────────────────────
-  # Two STANDALONE gates, deliberately NOT in run4-gate.needs. tools/run4_release_gate.mjs
-  # asserts set equality against the frozen RUN4_REQUIRED_JOBS constant (line 35, checked at
-  # line 362) and hard-fails for any required job lacking a REQUIRED_JOB_STEP_SETS entry
-  # (line 175). Both are U0-owned and outside R4-U1's authority to edit, so promoting these
-  # two jobs into the required aggregate is a REPORTED integration requirement, never a
-  # silent edit. Each job still fails closed on its own and produces its own red check-run.
+  # Required by Run 4 Gate. tools/run4_release_gate.mjs freezes both jobs' step sets and complete
+  # parsed-job hashes, so removal, command drift, action-pin drift, or aggregate omission fails CI.
   #
   # Invariants, all load-bearing:
   #   * no continue-on-error, no `|| true`, no `set +e`, no per-step `if:`, no always()
@@ -460,7 +456,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
+          node-version: '26'
 
       - name: Resolve pinned scanner
         run: |
@@ -558,4 +554,21 @@ jobs:
           set -euo pipefail
           node tools/secret_scan_guard.mjs client-surface \
             --surface-report "$GITLEAKS_REPORT_DIR/surfaces.json"
+
+      - name: Install nao dependencies for local client canary
+        working-directory: apps/nao
+        run: npm ci
+
+      - name: Build and inspect local Next client canary
+        working-directory: apps/nao
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.invalid
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: synthetic-public-anon
+          NEXT_PUBLIC_APP_ENV: ci
+          SUPABASE_SERVICE_ROLE_KEY: run4-u1-synthetic-server-canary-178-not-a-secret
+        run: |
+          set -euo pipefail
+          npm run build
+          node ../../tools/secret_scan_guard.mjs inspect-client-bundle \
+            --dir .next/static --canary "$SUPABASE_SERVICE_ROLE_KEY"
 

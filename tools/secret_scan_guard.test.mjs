@@ -333,6 +333,11 @@ test('checkConfigPolicy: rejects a bare "paths =" key (broad native allowlist)',
   assert.ok(violations.some((v) => v.id === 'POLICY_BROAD_NATIVE_ALLOWLIST_KEY'));
 });
 
+test('checkConfigPolicy: rejects native TOML allowlist tables including commit suppression', () => {
+  const result = guard.checkConfigPolicy(`${GOOD_CONFIG}\n[[allowlists]]\ncommits = ["${'a'.repeat(40)}"]\n`);
+  assert.ok(result.violations.some((v) => v.id === 'POLICY_BROAD_NATIVE_ALLOWLIST_KEY'));
+});
+
 test('checkConfigPolicy: does NOT false-positive on the word "paths" inside prose/description', () => {
   const { violations } = guard.checkConfigPolicy(
     '[extend]\nuseDefault = true\n\n[[rules]]\nid = "ourobion-canary"\ndescription = "mentions paths in prose, not as a key"\n'
@@ -848,6 +853,7 @@ function buildBaseRepo(dir) {
       "writeFileSync(p('.dev.vars'), serialize(secretPairs));\n"
   );
   write(dir, 'supabase/functions/.gitkeep', '');
+  write(dir, 'tools/.gitkeep', '');
   write(dir, '.gitignore', '.env\n.env.*\n!.env.example\n!.env.public.example\n.env.local\n.dev.vars\napps/nao/.gitignore-marker\nbuild/\n');
   write(dir, 'apps/nao/.gitignore', '/.next/\n/.open-next/\n');
   const files = [
@@ -857,6 +863,7 @@ function buildBaseRepo(dir) {
     'apps/nao/.env.public.example',
     'apps/nao/scripts/gen-env.mjs',
     'supabase/functions/.gitkeep',
+    'tools/.gitkeep',
     '.gitignore',
     'apps/nao/.gitignore',
   ];
@@ -922,6 +929,16 @@ test('F4_CLIENT_TS_ENV_READ: fires when a "use client" file transitively imports
     runGit(dir, ['add', 'apps/nao/src/lib/helper.ts', 'apps/nao/src/app/login/page.tsx']);
     const result = guard.computeClientSurface({ repoRoot: dir });
     assert.ok(result.violations.some((v) => v.id === 'F4_CLIENT_TS_ENV_READ'));
+  });
+});
+
+test('F4_CLIENT_TS_ENV_READ: follows the active @/ alias transitively', () => {
+  withTmpDir((dir) => {
+    buildBaseRepo(dir);
+    write(dir, 'apps/nao/src/lib/alias-helper.ts', 'export const bad = process.env.SUPABASE_SERVICE_ROLE_KEY;\n');
+    write(dir, 'apps/nao/src/app/login/page.tsx', "'use client';\nimport { bad } from '@/lib/alias-helper';\nexport default function Page() { return String(bad); }\n");
+    runGit(dir, ['add', 'apps/nao/src/lib/alias-helper.ts', 'apps/nao/src/app/login/page.tsx']);
+    assert.ok(guard.computeClientSurface({ repoRoot: dir }).violations.some((v) => v.id === 'F4_CLIENT_TS_ENV_READ'));
   });
 });
 
@@ -1116,6 +1133,15 @@ test('H3_NO_BULK_ENV: fires on a bulk env-dump pattern anywhere in the H-scope',
   });
 });
 
+test('H1_RESPONSE_BODY: rejects a bare process.env response', () => {
+  withTmpDir((dir) => {
+    buildBaseRepo(dir);
+    write(dir, 'apps/nao/src/app/api/leak/route.ts', 'export const GET = () => Response.json(process.env);\n');
+    runGit(dir, ['add', 'apps/nao/src/app/api/leak/route.ts']);
+    assert.ok(guard.computeClientSurface({ repoRoot: dir }).violations.some((v) => v.id === 'H1_RESPONSE_BODY'));
+  });
+});
+
 // --- H4_NO_COOKIE_TAINT ---
 test('H4_NO_COOKIE_TAINT: fires when a tainted value is written into a cookie', () => {
   withTmpDir((dir) => {
@@ -1160,6 +1186,15 @@ test('L2_BULK_ENV_LOG: fires when a log call argument contains a bulk env-dump p
     runGit(dir, ['add', 'apps/nao/scripts/leaky2.mjs']);
     const result = guard.computeClientSurface({ repoRoot: dir });
     assert.ok(result.violations.some((v) => v.id === 'L2_BULK_ENV_LOG'));
+  });
+});
+
+test('L1_LOG_CALL: rejects a bare process.env log argument', () => {
+  withTmpDir((dir) => {
+    buildBaseRepo(dir);
+    write(dir, 'apps/nao/scripts/leaky-env.mjs', 'console.log(process.env);\n');
+    runGit(dir, ['add', 'apps/nao/scripts/leaky-env.mjs']);
+    assert.ok(guard.computeClientSurface({ repoRoot: dir }).violations.some((v) => v.id === 'L1_LOG_CALL'));
   });
 });
 
@@ -1217,7 +1252,37 @@ test('clientSurface: writes a machine-readable surface report when --surface-rep
     guard.clientSurface({ repoRoot: dir, surfaceReportPath: reportPath });
     const parsed = JSON.parse(readFileSync(reportPath, 'utf8'));
     assert.ok(Array.isArray(parsed.surfaces));
-    assert.ok(parsed.surfaces.every((s) => s.status === 'SCANNED' || s.status === 'SKIPPED_ABSENT'));
+    assert.ok(parsed.surfaces.every((s) => s.status === 'SCANNED'));
+  });
+});
+
+test('clientSurface: required missing surfaces make manifest-invalid reachable', () => {
+  withTmpDir((dir) => {
+    buildBaseRepo(dir);
+    rmSync(path.join(dir, 'apps/nao/src'), { recursive: true });
+    assert.ok(guard.computeClientSurface({ repoRoot: dir }).violations.some((v) => v.id === 'SURFACE_MANIFEST_INVALID'));
+  });
+});
+
+test('clientSurface: required surface read failures are fatal', () => {
+  withTmpDir((dir) => {
+    buildBaseRepo(dir);
+    const target = path.join(dir, 'apps/biotope/pubspec.yaml');
+    rmSync(target);
+    mkdirSync(target);
+    assert.throws(() => guard.computeClientSurface({ repoRoot: dir }), /EISDIR|illegal operation|directory/i);
+  });
+});
+
+test('inspectClientBundle: requires non-empty output and rejects the synthetic canary', () => {
+  withTmpDir((dir) => {
+    const bundle = path.join(dir, 'static');
+    mkdirSync(bundle);
+    assert.throws(() => guard.inspectClientBundle({ bundleDir: bundle, canary: 'synthetic-canary' }), /empty/);
+    writeFileSync(path.join(bundle, 'chunk.js'), 'safe client code');
+    assert.equal(guard.inspectClientBundle({ bundleDir: bundle, canary: 'synthetic-canary' }).files, 1);
+    writeFileSync(path.join(bundle, 'chunk.js'), 'contains synthetic-canary');
+    assert.throws(() => guard.inspectClientBundle({ bundleDir: bundle, canary: 'synthetic-canary' }), /reached client bundle/);
   });
 });
 
