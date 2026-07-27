@@ -13,8 +13,30 @@ Issue: [#152](https://github.com/uandiqueue/ourobion/issues/152)
 Branch/worktree: `feat/model-training/mt3-zebra` in `C:\project\ourobion-mt3`
 Task claim: `mt3-zebra-training` / `claude` / `agentjwork`
 
-**▶ RESUME AT: S2 — fold Z1/Z2/Z3/Z5 into the Zebra plan.** S0 and S1 are done; the environment is
-built and the interpreter blocker is resolved.
+**▶ RESUME AT: S6 — write the Python training code into `src/zebra/`.**
+
+S0–S2 are done. The bundle is now being made **portable for an Apple Silicon Mac Mini**, because
+training on the Windows laptop would contend with the concurrent Run 4 build. Measured on 2026-07-27:
+**2.4 GB RAM free of 15.7 GB, commit charge 43.1 GB** (heavy paging), WSL uncapped with no
+`.wslconfig`. Training needs 3–5 GB host RAM on top of that, so it would degrade both workloads.
+
+### Portable bundle status (2026-07-27)
+
+| File | State |
+|---|---|
+| `OWNER-NOTE.md` | **done** — resource disclosure to hand the machine's owner |
+| `requirements-macos.txt` | **done** — arm64 pins matching `model-training/constraints.txt` |
+| `setup-macos.sh` | **done** — creates `.venv`, installs pins, verifies MPS with a real matmul; refuses to install Python itself and exits with guidance instead |
+| `src/zebra/**` | **not written** — two agent dispatches hit API 529 Overloaded (server-side, unrelated to local RAM) |
+| `tests/**` | **not written** |
+| `fetch_assets.py` | **not written** |
+| `licence-approval.example.json` | **not written** |
+
+Sizes measured for the owner note: mac arm64 wheels **121 MB** total (torch is 59 MB with Metal built
+in, vs 190 MB on Windows); BiomedBERT `pytorch_model.bin` **420 MB** — the repo totals 838 MB but the
+418 MB Flax copy is not fetched.
+
+Nothing has been downloaded, installed, or trained on any machine.
 
 Operating constraints for this build, set by Jayden:
 
