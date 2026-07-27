@@ -1,31 +1,68 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../core/generated_assets.dart';
 import '../../../../core/theme.dart';
-import '../../impl/auth_service.dart';
+import '../../../../core/widgets/gold_card.dart';
 import '../../impl/profile_service.dart';
+import '../../models/user_profile.dart';
+import '../../../m5a_baselines/index.dart';
+import '../../../m5a_baselines/ui/widgets/metric_tile.dart';
 import '../../../m5a_baselines/ui/widgets/metric_trend_section.dart';
+import '../../../m5b_insight_engine/index.dart';
 import '../../../m6_engagement/index.dart';
-import 'sign_in_screen.dart';
+
+/// Home-grid metric keys → real registry keys (shared/metrics/registry.dart).
+/// "Gut comfort" is the closest real signal to a composite "gut score" — it's
+/// a 1-5 self-report ordinal, not a composite index, so it's labelled and
+/// scaled accordingly rather than overclaiming a /10 score the mock implied.
+const _kSleepMetric = 'sleep_duration_min';
+const _kGutMetric = 'gut_comfort_score';
+const _kHrvMetric = 'hrv_sdnn_ms';
+const _kStepsMetric = 'step_count';
 
 class HomeTab extends StatefulWidget {
-  final VoidCallback onLogTodayTap;
-  const HomeTab({super.key, required this.onLogTodayTap});
+  final VoidCallback onScanTap;
+  final VoidCallback onInsightsTap;
+  final VoidCallback onProfileTap;
+  const HomeTab({
+    super.key,
+    required this.onScanTap,
+    required this.onInsightsTap,
+    required this.onProfileTap,
+  });
 
   @override
   State<HomeTab> createState() => HomeTabState();
 }
 
-class HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
+class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
   late final AnimationController _anim;
   late final Animation<double> _opacity;
   late final Animation<Offset> _slide;
+  late final AnimationController _ticker;
 
   String _displayName = '';
   double? _todayDqs;
   EngagementState _engagement = EngagementState.zero;
+  int _activeInsightCount = 0;
+  final Map<String, BaselineSnapshot?> _baselines = {};
+  final Map<String, List<MetricDailyPoint>> _series = {};
   bool _loading = true;
+  bool _refreshing = false;
   final _trendKey = GlobalKey<MetricTrendSectionState>();
+
+  // Decorative only — cycles static, copy-compliant strings. Not derived from
+  // any real ingestion/telemetry feed (none exists yet); see session log.
+  static const _tickerLines = [
+    'Reviewing your last 7 days',
+    'Cross-checking sleep and gut patterns',
+    'Watching for new research matches',
+  ];
+  int _tickerIndex = 0;
+  Timer? _tickerTimer;
 
   @override
   void initState() {
@@ -39,12 +76,20 @@ class HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
       begin: const Offset(0, 0.05),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _anim, curve: Curves.easeOut));
+    _ticker = AnimationController(vsync: this, duration: const Duration(seconds: 1))
+      ..repeat(reverse: true);
+    _tickerTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted) return;
+      setState(() => _tickerIndex = (_tickerIndex + 1) % _tickerLines.length);
+    });
     _load();
   }
 
   @override
   void dispose() {
     _anim.dispose();
+    _ticker.dispose();
+    _tickerTimer?.cancel();
     super.dispose();
   }
 
@@ -58,20 +103,32 @@ class HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
     final userId = client.auth.currentUser!.id;
     final today = _dateStr(DateTime.now());
 
-    final profile = await ProfileService(client).getProfile(userId);
+    final baselineService = BaselineService(client);
+    final seriesService = MetricSeriesService(client);
+    const metricKeys = [_kSleepMetric, _kGutMetric, _kHrvMetric, _kStepsMetric];
 
-    final todayRowFuture = client
-        .from('daily_gut_rows')
-        .select('log_completeness')
-        .eq('user_id', userId)
-        .eq('log_date', today)
-        .maybeSingle();
+    final results = await Future.wait<dynamic>([
+      ProfileService(client).getProfile(userId),
+      client
+          .from('daily_gut_rows')
+          .select('log_completeness')
+          .eq('user_id', userId)
+          .eq('log_date', today)
+          .maybeSingle(),
+      EngagementService(client).getEngagementState(userId),
+      InsightService(client).getInsights(userId),
+      for (final key in metricKeys) baselineService.getBaseline(userId, key),
+      for (final key in metricKeys) seriesService.getSeries(userId, key, windowDays: 14),
+    ]);
 
-    final engagementFuture =
-        EngagementService(client).getEngagementState(userId);
-
-    final todayRow = await todayRowFuture;
-    final engagement = await engagementFuture;
+    var i = 0;
+    final profile = results[i++] as UserProfile?;
+    final todayRow = results[i++] as Map<String, dynamic>?;
+    final engagement = results[i++] as EngagementState?;
+    final insights = results[i++] as List<InsightCard>;
+    final baselineResults = results.sublist(i, i + metricKeys.length);
+    i += metricKeys.length;
+    final seriesResults = results.sublist(i, i + metricKeys.length);
 
     if (!mounted) return;
     setState(() {
@@ -80,12 +137,23 @@ class HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
           ? (todayRow['log_completeness'] as num?)?.toDouble()
           : null;
       _engagement = engagement ?? EngagementState.zero;
+      _activeInsightCount = insights.length;
+      for (var k = 0; k < metricKeys.length; k++) {
+        _baselines[metricKeys[k]] = baselineResults[k] as BaselineSnapshot?;
+        _series[metricKeys[k]] = seriesResults[k] as List<MetricDailyPoint>;
+      }
       _loading = false;
+      _refreshing = false;
     });
     if (animate) _anim.forward();
   }
 
   Future<void> reload() => _load(animate: false);
+
+  Future<void> _onRefresh() async {
+    setState(() => _refreshing = true);
+    await _load(animate: false);
+  }
 
   String _dateStr(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -97,160 +165,172 @@ class HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
     return 'Good evening';
   }
 
-  Future<void> _signOut() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Sign out?',
-          style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: Text('Sign out', style: GoogleFonts.manrope()),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    await Supabase.instance.client.auth.signOut();
-    if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (_) => SignInScreen(
-          authService: AuthService(Supabase.instance.client),
-        ),
-      ),
-      (_) => false,
-    );
+  /// Categorical status word derived from a real number (7-day DQS average),
+  /// not a fabricated composite — observational per copy_guidelines.dart.
+  String get _statusWord {
+    final v = _engagement.dqs7DayAvg ?? _todayDqs;
+    if (v == null) return 'Getting started';
+    if (v >= 80) return 'Thriving';
+    if (v >= 60) return 'Balanced';
+    if (v >= 40) return 'Settling in';
+    return 'Getting started';
   }
 
   @override
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
-        backgroundColor: OurobionColors.surface,
+        backgroundColor: OurobionColors.background,
         body: Center(child: CircularProgressIndicator()),
       );
     }
     return Scaffold(
-      backgroundColor: OurobionColors.surface,
+      backgroundColor: OurobionColors.background,
       body: SafeArea(
         child: FadeTransition(
           opacity: _opacity,
           child: SlideTransition(
             position: _slide,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 24),
+            child: RefreshIndicator(
+              onRefresh: _onRefresh,
+              color: OurobionColors.primary,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 24),
 
-                  // ── Header ────────────────────────────────────────
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _greeting.toUpperCase(),
-                              style: GoogleFonts.manrope(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1.6,
-                                color: OurobionColors.primary,
+                    // ── Header ────────────────────────────────────────
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _greeting.toUpperCase(),
+                                style: GoogleFonts.manrope(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1.6,
+                                  color: OurobionColors.primary,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _displayName.isNotEmpty ? _displayName : 'Biome',
-                              style: GoogleFonts.manrope(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: -0.4,
-                                color: OurobionColors.onSurface,
+                              const SizedBox(height: 2),
+                              Text(
+                                _displayName.isNotEmpty ? _displayName : 'Biome',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: -0.4,
+                                  color: OurobionColors.onSurface,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: _signOut,
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: OurobionColors.surfaceLowest,
-                            border: Border.all(color: OurobionColors.outlineVariant),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.person_outline_rounded,
-                            size: 20,
-                            color: OurobionColors.onSurfaceVariant,
+                            ],
                           ),
                         ),
+                        GestureDetector(
+                          onTap: widget.onProfileTap,
+                          child: Container(
+                            width: 46,
+                            height: 46,
+                            decoration: BoxDecoration(
+                              color: OurobionColors.surfaceLowest,
+                              border: Border.all(
+                                color: OurobionColors.primary.withValues(alpha: 0.5),
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(15),
+                              child: Image.asset(
+                                BiotopeGeneratedAssets.profileBotanicalCrest,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stack) => const Icon(
+                                  Icons.person_outline_rounded,
+                                  size: 20,
+                                  color: OurobionColors.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // ── System status hero ─────────────────────────────
+                    _SystemStatusHero(
+                      statusWord: _statusWord,
+                      index: (_engagement.dqs7DayAvg ?? _todayDqs)?.round(),
+                      streak: _engagement.currentStreakDays,
+                    ),
+
+                    const SizedBox(height: 13),
+
+                    // ── Knowledge base ticker (decorative) ─────────────
+                    _KnowledgeTicker(
+                      line: _refreshing ? 'Ingesting new batch…' : _tickerLines[_tickerIndex],
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    // ── Signals grid ────────────────────────────────────
+                    _Eyebrow('SIGNALS'),
+                    const SizedBox(height: 10),
+                    _SignalsGrid(baselines: _baselines, series: _series),
+
+                    const SizedBox(height: 20),
+
+                    // ── Coverage / Scan CTA ─────────────────────────────
+                    _CoverageCard(dqs: _todayDqs, onTap: widget.onScanTap),
+
+                    const SizedBox(height: 20),
+
+                    // ── Streak ────────────────────────────────────────
+                    _Eyebrow('YOUR STREAK'),
+                    const SizedBox(height: 10),
+                    _StreakCard(
+                      streak: _engagement.currentStreakDays,
+                      longestStreak: _engagement.longestStreakDays,
+                      dqs7DayAvg: _engagement.dqs7DayAvg,
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // ── Metric trends (demo main-loop step 2) ─────────
+                    _Eyebrow(TrendCopy.eyebrow),
+                    const SizedBox(height: 10),
+                    MetricTrendSection(key: _trendKey),
+
+                    const SizedBox(height: 20),
+
+                    // ── Titles ────────────────────────────────────────
+                    if (_engagement.totalLogs > 0) ...[
+                      const SizedBox(height: 20),
+                      _Eyebrow('TITLES'),
+                      const SizedBox(height: 10),
+                      _TitlesRow(
+                        unlockedTitles: _engagement.unlockedTitles,
                       ),
                     ],
-                  ),
 
-                  const SizedBox(height: 28),
-
-                  // ── Today's log ───────────────────────────────────
-                  _Eyebrow('TODAY'),
-                  const SizedBox(height: 10),
-                  _TodayCard(dqs: _todayDqs, onTap: widget.onLogTodayTap),
-
-                  const SizedBox(height: 20),
-
-                  // ── Streak ────────────────────────────────────────
-                  _Eyebrow('YOUR STREAK'),
-                  const SizedBox(height: 10),
-                  _StreakCard(
-                    streak: _engagement.currentStreakDays,
-                    longestStreak: _engagement.longestStreakDays,
-                    dqs7DayAvg: _engagement.dqs7DayAvg,
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // ── Metric trends (demo main-loop step 2) ─────────
-                  _Eyebrow(TrendCopy.eyebrow),
-                  const SizedBox(height: 10),
-                  MetricTrendSection(key: _trendKey),
-
-                  const SizedBox(height: 20),
-
-                  // ── Titles ────────────────────────────────────────
-                  if (_engagement.totalLogs > 0) ...[
+                    // ── Insights teaser ───────────────────────────────
                     const SizedBox(height: 20),
-                    _Eyebrow('TITLES'),
+                    _Eyebrow('INSIGHTS'),
                     const SizedBox(height: 10),
-                    _TitlesRow(
-                      unlockedTitles: _engagement.unlockedTitles,
+                    _InsightsTeaser(
+                      activeCount: _activeInsightCount,
+                      onTap: widget.onInsightsTap,
                     ),
+
+                    const SizedBox(height: 32),
                   ],
-
-                  // ── Insights teaser ───────────────────────────────
-                  const SizedBox(height: 20),
-                  _Eyebrow('INSIGHTS'),
-                  const SizedBox(height: 10),
-                  _InsightsTeaser(streak: _engagement.currentStreakDays),
-
-                  const SizedBox(height: 32),
-                ],
+                ),
               ),
             ),
           ),
@@ -280,147 +360,384 @@ class _Eyebrow extends StatelessWidget {
   }
 }
 
-class _TodayCard extends StatelessWidget {
+class _SystemStatusHero extends StatelessWidget {
+  final String statusWord;
+  final int? index;
+  final int streak;
+  const _SystemStatusHero({required this.statusWord, required this.index, required this.streak});
+
+  @override
+  Widget build(BuildContext context) {
+    return GoldCard(
+      emphasized: true,
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -30,
+            bottom: -18,
+            child: Opacity(
+              opacity: 0.9,
+              child: Image.asset(
+                BiotopeGeneratedAssets.homeHeroRobotHandMain,
+                width: 190,
+                height: 220,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stack) => const SizedBox(width: 190, height: 220),
+              ),
+            ),
+          ),
+          FractionallySizedBox(
+            widthFactor: 0.6,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'SYSTEM STATUS',
+                  style: GoogleFonts.manrope(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.6,
+                    color: OurobionColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 11),
+                Text(
+                  statusWord,
+                  style: GoogleFonts.manrope(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -1,
+                    color: OurobionColors.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  height: 1,
+                  width: 60,
+                  color: OurobionColors.primary.withValues(alpha: 0.5),
+                ),
+                const SizedBox(height: 12),
+                if (index != null)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        '$index',
+                        style: GoogleFonts.manrope(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.6,
+                          color: OurobionColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '/100 coverage',
+                        style: GoogleFonts.manrope(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: OurobionColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                if (streak > 0) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: OurobionColors.deltaPositive.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: OurobionColors.deltaPositive.withValues(alpha: 0.18)),
+                    ),
+                    child: Text(
+                      '$streak DAY STREAK',
+                      style: GoogleFonts.manrope(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1,
+                        color: OurobionColors.deltaPositive,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _KnowledgeTicker extends StatelessWidget {
+  final String line;
+  const _KnowledgeTicker({required this.line});
+
+  @override
+  Widget build(BuildContext context) {
+    return GoldCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: OurobionColors.brandGold,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'KNOWLEDGE BASE',
+                  style: GoogleFonts.manrope(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.4,
+                    color: OurobionColors.brandGoldLight,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: Text(
+                    line,
+                    key: ValueKey(line),
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: OurobionColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SignalsGrid extends StatelessWidget {
+  final Map<String, BaselineSnapshot?> baselines;
+  final Map<String, List<MetricDailyPoint>> series;
+  const _SignalsGrid({required this.baselines, required this.series});
+
+  Color _trendColor(BaselineTrend? t) => switch (t) {
+        BaselineTrend.rising => OurobionColors.deltaPositive,
+        BaselineTrend.falling => OurobionColors.deltaNegative,
+        _ => OurobionColors.onSurfaceVariant,
+      };
+
+  String _deltaLabel(String metricKey, List<MetricDailyPoint> pts, BaselineSnapshot? b) {
+    if (pts.isEmpty) return 'No data yet';
+    if (b?.mean == null) return 'Building baseline';
+    final delta = pts.last.value - b!.mean!;
+    switch (metricKey) {
+      case _kSleepMetric:
+        final m = delta.round();
+        return '${m >= 0 ? '+' : ''}${m}m vs avg';
+      case _kHrvMetric:
+        final m = delta.round();
+        return '${m >= 0 ? '+' : ''}$m ms vs avg';
+      case _kStepsMetric:
+        final m = delta.round();
+        return '${m >= 0 ? '+' : ''}$m vs avg';
+      case _kGutMetric:
+        return switch (b.trend) {
+          BaselineTrend.rising => 'Rising',
+          BaselineTrend.falling => 'Falling',
+          _ => 'Steady',
+        };
+      default:
+        return '';
+    }
+  }
+
+  String _formatSleep(double minutes) {
+    final h = minutes ~/ 60;
+    final m = (minutes % 60).round();
+    return '${h}h ${m}m';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sleep = series[_kSleepMetric] ?? const [];
+    final gut = series[_kGutMetric] ?? const [];
+    final hrv = series[_kHrvMetric] ?? const [];
+    final steps = series[_kStepsMetric] ?? const [];
+
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 11,
+      crossAxisSpacing: 11,
+      childAspectRatio: 1.3,
+      children: [
+        MetricTile(
+          label: 'Sleep',
+          value: sleep.isNotEmpty ? _formatSleep(sleep.last.value) : '—',
+          deltaLabel: _deltaLabel(_kSleepMetric, sleep, baselines[_kSleepMetric]),
+          deltaColor: _trendColor(baselines[_kSleepMetric]?.trend),
+          series: sleep,
+        ),
+        MetricTile(
+          label: 'Gut comfort',
+          value: gut.isNotEmpty ? gut.last.value.toStringAsFixed(1) : '—',
+          valueSuffix: gut.isNotEmpty ? '/5' : null,
+          deltaLabel: _deltaLabel(_kGutMetric, gut, baselines[_kGutMetric]),
+          deltaColor: _trendColor(baselines[_kGutMetric]?.trend),
+          series: gut,
+          style: MetricSparklineStyle.bars,
+        ),
+        MetricTile(
+          label: 'HRV',
+          value: hrv.isNotEmpty ? hrv.last.value.round().toString() : '—',
+          valueSuffix: hrv.isNotEmpty ? 'ms' : null,
+          deltaLabel: _deltaLabel(_kHrvMetric, hrv, baselines[_kHrvMetric]),
+          deltaColor: _trendColor(baselines[_kHrvMetric]?.trend),
+          series: hrv,
+        ),
+        MetricTile(
+          label: 'Movement',
+          value: steps.isNotEmpty ? steps.last.value.round().toString() : '—',
+          deltaLabel: _deltaLabel(_kStepsMetric, steps, baselines[_kStepsMetric]),
+          deltaColor: _trendColor(baselines[_kStepsMetric]?.trend),
+          series: steps,
+        ),
+      ],
+    );
+  }
+}
+
+class _CoverageCard extends StatelessWidget {
   final double? dqs;
   final VoidCallback onTap;
-  const _TodayCard({required this.dqs, required this.onTap});
+  const _CoverageCard({required this.dqs, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final logged = dqs != null;
     final streakWorthy = (dqs ?? 0) >= 60;
 
-    return GestureDetector(
+    return GoldCard(
       onTap: streakWorthy ? null : onTap,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: OurobionColors.surfaceLowest,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: streakWorthy
-                ? OurobionColors.primaryContainer
-                : OurobionColors.outlineVariant,
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0A191c1c),
-              blurRadius: 24,
-              offset: Offset(0, 8),
+      emphasized: !streakWorthy,
+      child: logged
+          ? Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: streakWorthy
+                        ? OurobionColors.primaryFixed
+                        : OurobionColors.surfaceContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    streakWorthy ? Icons.check_circle_rounded : Icons.radar_rounded,
+                    color: streakWorthy ? OurobionColors.primary : OurobionColors.outline,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        streakWorthy ? 'Every channel captured today' : 'Coverage in progress',
+                        style: GoogleFonts.manrope(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: OurobionColors.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        streakWorthy
+                            ? '${dqs!.toInt()} pts — great work today'
+                            : '${dqs!.toInt()} / 100 pts — run a sweep to close the gap',
+                        style: GoogleFonts.manrope(
+                          fontSize: 12,
+                          color: OurobionColors.outline,
+                        ),
+                      ),
+                      if (!streakWorthy) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Run sweep →',
+                          style: GoogleFonts.manrope(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: OurobionColors.primary,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: OurobionColors.primaryFixed,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.radar_rounded,
+                    color: OurobionColors.primary,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "You haven't swept today",
+                        style: GoogleFonts.manrope(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: OurobionColors.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Takes under 30 seconds',
+                        style: GoogleFonts.manrope(
+                          fontSize: 12,
+                          color: OurobionColors.outline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  'Run sweep →',
+                  style: GoogleFonts.manrope(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: OurobionColors.primary,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: logged
-            ? Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: streakWorthy
-                          ? OurobionColors.primaryFixed
-                          : OurobionColors.surfaceContainer,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      streakWorthy
-                          ? Icons.check_circle_rounded
-                          : Icons.edit_note_rounded,
-                      color: streakWorthy
-                          ? OurobionColors.primary
-                          : OurobionColors.outline,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          streakWorthy ? 'Streak-worthy log ✓' : 'Partially logged',
-                          style: GoogleFonts.manrope(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: OurobionColors.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          streakWorthy
-                              ? '${dqs!.toInt()} pts — great work today'
-                              : '${dqs!.toInt()} / 100 pts — log more to reach 60',
-                          style: GoogleFonts.manrope(
-                            fontSize: 12,
-                            color: OurobionColors.outline,
-                          ),
-                        ),
-                        if (!streakWorthy) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            'Complete →',
-                            style: GoogleFonts.manrope(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: OurobionColors.primary,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-              )
-            : Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: OurobionColors.primaryFixed,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.edit_note_rounded,
-                      color: OurobionColors.primary,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "You haven't logged today",
-                          style: GoogleFonts.manrope(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: OurobionColors.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Takes under 30 seconds',
-                          style: GoogleFonts.manrope(
-                            fontSize: 12,
-                            color: OurobionColors.outline,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    'Log now →',
-                    style: GoogleFonts.manrope(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: OurobionColors.primary,
-                    ),
-                  ),
-                ],
-              ),
-      ),
     );
   }
 }
@@ -438,20 +755,7 @@ class _StreakCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final showStats = longestStreak > 0 || dqs7DayAvg != null;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: OurobionColors.surfaceLowest,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: OurobionColors.outlineVariant),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A191c1c),
-            blurRadius: 24,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
+    return GoldCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -503,7 +807,7 @@ class _StreakCard extends StatelessWidget {
           ),
           if (showStats) ...[
             const SizedBox(height: 16),
-            const Divider(height: 1, color: OurobionColors.outlineVariant),
+            Divider(height: 1, color: OurobionColors.primary.withValues(alpha: 0.2)),
             const SizedBox(height: 14),
             Row(
               children: [
@@ -676,100 +980,80 @@ class _StatChip extends StatelessWidget {
 }
 
 class _InsightsTeaser extends StatelessWidget {
-  final int streak;
-  const _InsightsTeaser({required this.streak});
+  final int activeCount;
+  final VoidCallback onTap;
+  const _InsightsTeaser({required this.activeCount, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    const kGoal = 7;
-    final progress = (streak / kGoal).clamp(0.0, 1.0);
-    final unlocked = streak >= kGoal;
+    final hasInsights = activeCount > 0;
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: OurobionColors.surfaceLowest,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: OurobionColors.outlineVariant),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A191c1c),
-            blurRadius: 24,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return GoldCard(
+      onTap: hasInsights ? onTap : null,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: unlocked
-                      ? OurobionColors.primaryFixed
-                      : OurobionColors.surfaceContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  unlocked
-                      ? Icons.lightbulb_rounded
-                      : Icons.lock_outline_rounded,
-                  color: unlocked
-                      ? OurobionColors.primary
-                      : OurobionColors.outline,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      unlocked ? 'Insights available' : 'Insights locked',
-                      style: GoogleFonts.manrope(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: OurobionColors.onSurface,
-                      ),
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: OurobionColors.surfaceContainer,
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: OurobionColors.primary.withValues(alpha: 0.4)),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: hasInsights
+                ? Image.asset(
+                    BiotopeGeneratedAssets.insightsBiomechHeartBloom,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stack) => const Icon(
+                      Icons.lightbulb_rounded,
+                      color: OurobionColors.primary,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      unlocked
-                          ? 'Check the Insights tab'
-                          : '$streak / $kGoal streak-worthy days',
-                      style: GoogleFonts.manrope(
-                        fontSize: 12,
-                        color: OurobionColors.outline,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+                  )
+                : const Icon(
+                    Icons.lock_outline_rounded,
+                    color: OurobionColors.outline,
+                  ),
           ),
-          if (!unlocked) ...[
-            const SizedBox(height: 14),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: progress),
-                duration: const Duration(milliseconds: 600),
-                curve: Curves.easeOut,
-                builder: (context, value, child) => LinearProgressIndicator(
-                  value: value,
-                  minHeight: 5,
-                  backgroundColor: OurobionColors.surfaceContainer,
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    OurobionColors.secondary,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hasInsights
+                      ? '$activeCount new insight${activeCount == 1 ? '' : 's'}'
+                      : 'No new insights yet',
+                  style: GoogleFonts.manrope(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.4,
+                    color: OurobionColors.brandGoldLight,
                   ),
                 ),
+                const SizedBox(height: 6),
+                Text(
+                  hasInsights
+                      ? 'Open the Insights deck to review'
+                      : 'Keep logging — patterns take a few days to appear',
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: OurobionColors.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (hasInsights)
+            Text(
+              '→',
+              style: GoogleFonts.manrope(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: OurobionColors.brandGoldLight,
               ),
             ),
-          ],
         ],
       ),
     );
