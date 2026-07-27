@@ -18,9 +18,9 @@ name: CI
 #                        in CI, where no supabase stack exists.
 on:
   push:
-    branches: [main, dev-phase2]
+    branches: [main, dev-phase2, dev-phase2-run4]
   pull_request:
-    branches: [main, dev-phase2]
+    branches: [main, dev-phase2, dev-phase2-run4]
 
 jobs:
   context:
