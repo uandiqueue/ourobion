@@ -4,7 +4,7 @@ summary: nao is ourobion's expert web window into the brain (query/visualise the
 type: design
 scope: nao
 status: canonical
-updated: 2026-07-13
+updated: 2026-07-26
 ---
 # Ourobion nao — Design (brain inspection & curation)
 
@@ -23,12 +23,13 @@ how edges are synthesised + verified is [`brain-synthesis-design.md`](brain-synt
 acquired is [`brain-ingestion-design.md`](brain-ingestion-design.md); how biotope *consumes* the brain is
 [`../biotope/rules-engine-design.md`](../biotope/rules-engine-design.md) and [`../phase-2-plan.md`](../shared/phase-2-plan.md) (Track B/W2).
 
-> **Status (current reality).** The brain has a **contract** (`shared/brain/`, TRUTH, 2-reviewer-guarded)
-> and a **paper corpus** (on Cloudflare R2, see ingestion design) — but **no edges yet**: the synthesis
-> LLM, the verification LLM, and a runtime edge store are unbuilt (Track B). So nao's graph/evidence
-> features depend on work that does not exist, while a **paper-corpus dashboard ships from R2 today.**
-> **v1 is therefore the corpus dashboard;** the graph, evidence, ingestion, and LLM features land in
-> phases as the brain fills in (§5).
+> **Status (current reality, 2026-07-26).** The contract, R2 corpus, synthesis/verification tooling,
+> edge artifacts, deterministic Supabase loader/projection, and nao corpus/claims/seed/gap/model/run
+> surfaces now exist in the repo. That does **not** prove a production deployment: hosted migration
+> parity, explicit role/RLS enforcement, real verifier attestation/retrieval, and immutable release
+> promotion remain open. Current build gaps are reconciled in
+> [`pending-build-register.md`](../temp/run3/pending-build-register.md); the phasing below explains the
+> intended product shape, not a live implementation-status ledger.
 
 ## 1 · What nao is (three capability pillars)
 
@@ -191,12 +192,12 @@ deep, glowing *brain*. Tokens come from
   (`MANIFEST_KEY`, `metaKey`, `pdfKey`/`jatsKey`/`textKey`) + S3 client setup.
 - [`assets/ourobion-brand/`](../../assets/ourobion-brand/) — palette (`color/colors.json`), logo SVGs.
 
-**Create:**
+**Implemented foundation:**
 
-- A repo-root `package.json` with workspaces so `apps/nao` can import `shared/`.
-- `apps/nao/` — the Next.js app: an R2 reader in a server route, Supabase auth + role gate, the corpus
-  dashboard UI, and a design-token module derived from the brand palette.
-- (v2+) the truth-tier edge store + the edge loader that builds the relational `verified_edges` projection.
+- The repo-root package boundary and `apps/nao/` Next.js application.
+- R2/D1 corpus reads, Supabase auth, corpus/claims/operations surfaces, and the shared design tokens.
+- R2 edge artifacts plus the deterministic `tools/edge-loader/` projection into
+  `relationship_claims`, `edge_verifications`, and the relational `verified_edges` view.
 
 ## 9 · Verification (v1 acceptance)
 
@@ -209,14 +210,14 @@ deep, glowing *brain*. Tokens come from
 
 ## 10 · Deferred / open
 
-- **Brain synthesis + verification pipeline** (Track B) — the real critical path for everything past v1;
-  nao v2 cannot render a real graph until edges exist. See [`brain-synthesis-design.md`](brain-synthesis-design.md).
-- **Truth-tier edge store + relational `verified_edges` projection** — **shape now decided** (R2 JSONL
-  edge artifacts + the contract = truth; a deterministic edge loader → the relational Postgres
-  `verified_edges` projection, a 1-hop lookup, no graph DB) per the
-  [pipeline decision](../memory/0013-brain-pipeline-and-support-models-decision.md); build lands with v2.
+- **Production brain path** — the synthesis/verifier/loader foundation exists; real verifier
+  attestation and retrieval, hosted migration parity, immutable release selection/promotion, rollback,
+  and production evidence remain open. See [`brain-synthesis-design.md`](brain-synthesis-design.md).
+- **Role and privacy boundary** — explicit viewer/curator/admin membership, direct-write revocation,
+  redacted global-job responses, and negative role/RLS tests remain release blockers.
 - **Source-reliability grading standard** — **decided**: an `evidenceTier` study-design classifier + an
   `impactTier` venue lookup (SJR + OpenAlex; JCR dropped as paid), per
   [`brain-support-models-design.md`](brain-support-models-design.md). Extends `impactTier` (§6) — no new evidence model.
-- **`apps/biotope/` move** — relocating the Flutter app under `apps/` is optional housekeeping.
+- **Deployment proof** — exact-tip Cloudflare build/deploy evidence and an environment-matched
+  D1/R2/Supabase verification run are still required.
 - **External users / richer roles** — Supabase Auth was chosen partly to keep this open.

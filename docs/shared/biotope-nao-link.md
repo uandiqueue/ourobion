@@ -4,7 +4,7 @@ summary: The seam view of how biotope (consumer app) and nao (brain curation sur
 type: architecture
 scope: shared
 status: canonical
-updated: 2026-07-15
+updated: 2026-07-26
 ---
 
 # biotope ↔ nao — the runtime link
@@ -26,8 +26,12 @@ updated: 2026-07-15
 biotope and nao **never call each other**. No shared API, no cross-app navigation, no direct network
 path. Everything they share is indirect, through three things:
 
-1. **Shared identity** — one Supabase Auth project. biotope gates per-user (RLS on personal rows); nao
-   gates by role (`viewer`/`curator`/`admin`) since the brain is a shared asset, not per-user data.
+1. **Shared identity** — one Supabase Auth project. biotope gates per-user (RLS on personal rows).
+   nao's product contract requires `viewer`/`curator`/`admin`, but the current middleware enforces
+   authentication only; explicit membership/role enforcement and negative RLS tests remain the O25 /
+   B-SEC1 production blocker in the
+   [`pending-build-register`](../temp/run3/pending-build-register.md). Never infer authorization from
+   the current route existing.
 2. **Shared code contracts** — both import `shared/brain/` (the `RelationshipClaim`/`EdgeVerification`
    types + `edgeScore`/`servingBand` gating) and `shared/metrics/` via the repo-root npm workspace.
    Either app changing these needs a 2-reviewer PR.

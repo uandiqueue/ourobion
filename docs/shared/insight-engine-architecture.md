@@ -1041,9 +1041,9 @@ derivation, citation, or calibration behind it yet.
 
 **S3 confidence cutoffs — reconciliation note (H2, Jayden 2026-07-25).** This row previously read
 3 / 5 / 14 (U6 had lowered the medium tier 7→5, "no basis either way"). Evidence-review **RU5b**
-(`docs/temp/run1/research/decisions-evidence-review.md`) found the confirmed literature mildly
+(`docs/archive/runs/run1/research/decisions-evidence-review.md`, historical rationale) found the confirmed literature mildly
 *favours* 6–7 nights for "medium/acceptable" reliability and nothing supports 5 — so config-decisions
-**C5** (`docs/temp/run1/config-decisions.md`) reverted 5→7. The runtime (`BASELINE_CONFIG` in
+**C5** (`docs/archive/runs/run1/config-decisions.md`, historical rationale) reverted 5→7. The runtime (`BASELINE_CONFIG` in
 `supabase/functions/compute-baselines/index.ts`) already ships the correct **3/7/14**; this table row
 was the drifted one and is now corrected to match. The comment in migration
 `supabase/migrations/20260715154001_alter_m5a_baseline_snapshots_baseline_v2.sql` (which still reads

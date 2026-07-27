@@ -4,6 +4,10 @@
   "scripts": {
     "context:start": "node tools/context_sync.mjs --session-start",
     "context:check": "node tools/context_sync.mjs --check",
+    "graph:view:gen": "node tools/graph-view/generate_graph_view.mjs",
+    "graph:view:write": "node tools/graph-view/generate_graph_view.mjs --write",
+    "graph:view:check": "node tools/graph-view/generate_graph_view.mjs --check",
+    "graph:view:test": "node --test tools/graph-view/tests/*.test.mjs",
     "rules:load": "node tools/rules/load_rules.mjs",
     "rules:check": "node tools/rules/load_rules.mjs --check",
     "rules:test": "npm --prefix tools/rules test",

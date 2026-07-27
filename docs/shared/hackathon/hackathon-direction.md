@@ -4,7 +4,7 @@ summary: The single canonical hackathon-strategy doc — track choice (Agentic S
 type: process
 scope: repo
 status: canonical
-updated: 2026-07-13
+updated: 2026-07-26
 ---
 
 # hackathon-direction.md — Ourobion @ Launchpad 2026 AI Challenge
@@ -14,7 +14,8 @@ updated: 2026-07-13
 > those rules into a decision: which track, how we position, what counts as prior work vs. the scored
 > delta, which sponsor tools we integrate, and how we win each judging pillar.
 >
-> **Owner:** Jayden · **Status:** direction locked, execution starting · **Window:** 3–31 Jul 2026.
+> **Owner:** Jayden · **Status:** direction locked, execution under way; current implementation status
+> lives in sessions and the Run-3 cockpit · **Window:** 3–31 Jul 2026.
 
 ---
 
@@ -260,7 +261,8 @@ and we win the Honesty pillar for free.
   (hardcoded) insights, M6 engagement. Working CRUD self-report loop (~May–Jun 2026).
 - **Metric platform** — registry v2, tier-aware DQS, TS/Dart parity guards (Jun 22).
 - **The brain *contract*** — `shared/brain/` schema + gating (`edgeScore`/`servingBand`, the grounding
-  invariants). Truth-tier, 2-reviewer-guarded (Jun 25). *Zero edges exist.*
+  invariants). Truth-tier, 2-reviewer-guarded (Jun 25). *Zero edges existed at the prebuild cutoff;
+  post-cutoff edge artifacts and projections count only as delta.*
 - **The ingestion pipeline** — `tools/brain-ingest/` discovery/dedup/OA-retrieval/R2 storage (Jun 29),
   **plus** its Jul 2–3 hardening (PR #38: directOa, CORE rate-limit fix, host-memory guard, the GitHub
   Actions control plane). *Conservatively declared prebuild even though dated the boundary day —
