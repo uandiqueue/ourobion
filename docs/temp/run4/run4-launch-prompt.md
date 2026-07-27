@@ -78,9 +78,47 @@ Every brief must be self-contained — assume the subagent has no memory of this
 state: scope, the exact files it may touch, constraints, how to verify, what "done" means, and
 the required report format. Tell writers explicitly not to run git write commands; you own git.
 
+=== AUTONOMOUS OPERATION: JAYDEN IS AFK ===
+
+Do NOT ask for permission and do NOT stop to check in. Run continuously until the work is done or
+genuinely blocked.
+
+PRE-AUTHORIZED — proceed without asking, as long as it stays LOCAL:
+
+  - the Android device is UNLOCKED and available: install, run, drive the Biotope app on it,
+    including TalkBack and accessibility traversal;
+  - run local nao (dev server, its API routes, its UI click-paths);
+  - run local Supabase (Docker), migrations against it, seeding, resets;
+  - run the full local harness scripts/demo-dryrun-run2.ps1 and anything in
+    docs/shared/phase2-demo-runbook.md;
+  - flutter analyze / flutter test / node + Deno suites / context_sync;
+  - create branches, worktrees, commits, and PRs; install local dev dependencies.
+
+IF SOMETHING NEEDS A HUMAN, SKIP IT AND CONTINUE — never idle waiting:
+
+  - record the exact blocker in the run's blocked register: where it stopped, what is needed,
+    what it gates;
+  - move immediately to the next unblocked unit;
+  - at the end, report every skipped item together so Jayden can clear them in one pass.
+
+Known human-gated items you should expect to skip rather than solve:
+
+  - P1 required status checks and P7 closing PR #144  -> repo-settings/owner actions
+  - P2 second `shared/` reviewer -> you may BUILD work that touches shared/ and open its PR, but
+    it cannot merge; mark the PR blocked on P2 and keep going
+  - anything hosted or cloud: hosted Supabase writes, the cloud demo database, production
+    deployment, promotion past the section 3c exit gate
+  - provisioning new paid accounts, credentials, or entitlements
+
+Sequential units normally wait on a merge. Since you must not merge, stack the next branch on the
+previous one rather than idling — see the stacked-pr-chain skill for the chain mechanics and the
+recovery procedure.
+
 === HARD CONSTRAINTS ===
 
 - Do not merge anything. Merging is Jayden's decision. Never target main.
+- Local is authorized; hosted, cloud, and production are not. If an action would write outside
+  this machine, skip it and record it.
 - Do not start a unit whose preconditions (P1-P7) are unrecorded. Record the blocker and move to
   the next unblocked unit instead of improvising around it.
 - No model training in Run 4. That workstream is docs/temp/model-training/ with its own gates.
@@ -92,12 +130,21 @@ the required report format. Tell writers explicitly not to run git write command
 
 === FINISHING ===
 
-The run ends at the section 3c exit gate, not at the last unit: both local passes must be green
-before anything is promoted to the cloud demo database, and the artifacts promoted must be the
-same ones that passed.
+The run ends at the section 3c exit gate, not at the last unit. Both local passes must be green:
 
-Begin with the orchestrator-prompt.md preflight. Report the preflight result and your proposed
-unit sequence, then stop for my confirmation before dispatching the first writer.
+  Pass 1 - API integrity: scripts/demo-dryrun-run2.ps1, every endpoint and stage assertion green.
+  Pass 2 - real-paper authoring: regenerate a relationship from doi:10.1016/j.isci.2026.116224,
+           verify it, load it, generate Biotope health data, confirm the insight and provenance.
+           Do NOT use the D1 paper; it is searchable but not connected to the demo insight chain.
+
+Both passes are LOCAL, so both are pre-authorized - run them. Promotion to the cloud demo database
+is NOT: stop at the gate, report the result, and leave promotion to Jayden.
+
+Begin with the orchestrator-prompt.md preflight, then keep going without pausing. Record the
+preflight result and your unit sequence in the tracking docs rather than waiting on approval.
+
+Final report: what shipped, what actually ran versus what was only statically checked, every
+skipped/blocked item with what it needs, and the two exit-gate results.
 ```
 
 ---
@@ -116,6 +163,18 @@ stated as an absolute rather than a preference.
 the dangerous one is a cheap model deciding an RLS boundary. The tiering above names which is which
 so the orchestrator does not have to re-derive it under time pressure.
 
-**It stops after preflight.** Run 4's preconditions are mostly human decisions — required status
-checks, the second `shared/` reviewer, the base and cap. A prompt that charges past them would
-produce work that cannot merge.
+**It runs autonomously, and skips rather than waits.** Jayden is AFK, so the prompt no longer stops
+for confirmation. Run 4's preconditions are still mostly human decisions — required status checks, the
+second `shared/` reviewer, closing PR #144 — but an agent that idles on them achieves nothing. The
+resolution is to *record and skip*: build what is buildable, open PRs that cannot yet merge with the
+blocker named, and hand back one consolidated list of what needs a human.
+
+**The local/hosted line is the real safety boundary now**, replacing per-action approval. Everything on
+this machine is pre-authorized, including the unlocked Android device, local nao and local Supabase.
+Anything that writes beyond it — hosted Supabase, the cloud demo database, production, new paid
+accounts — is skipped and recorded. That line is checkable by the agent without asking, which is what
+makes autonomous operation safe rather than merely fast.
+
+**Merging stays out of scope, so units stack.** Sequential units would normally wait on a merge; with
+merging reserved for Jayden, the chain is built by stacking each branch on the last. Without that
+instruction an autonomous run would deadlock at the first dependent unit.
