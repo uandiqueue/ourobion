@@ -39,6 +39,6 @@ Base: `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`
 ## Blockers
 
 - The U2-owned active edge-runtime mount is the current execution blocker; do not restart or rebind it from this unit.
-- U4 implementation is unblocked, but its cap review/admission and the two actual shared-contract PR reviews remain mandatory; this does not authorize U6.
+- U4 implementation is unblocked, but current cap admission is NO-GO (+344 remaining versus +1,600 low) and the two actual shared-contract PR reviews remain mandatory; this does not authorize U6.
 
 memory: none

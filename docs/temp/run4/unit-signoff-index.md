@@ -27,8 +27,8 @@ hosted calls remain zero. U2 PR is not open; UI PR #175 remains deferred until t
 R4-U5/B-PL22 sentence provenance: **PLANNING ADMITTED; IMPLEMENTATION SPLIT/DEFERRED**. Snapshot
 `f2f2dac` from base `77c982` includes U1 `baab1536` + U5 `cdc16f9`, excludes MT4 paths/session, and is the
 historical pre-overlay 38 / +8,002 / -162 snapshot, leaving 77 / +498. The later final pre-commit overlay
-(U5 docs + harness script + 44-line session) was independently audited at 40 / +8,146 / -185, leaving 75 /
-+354. The minimal slice needs four new / ~+1,900 and does not fit; U2/U3 expected additions also do not fit.
+(U5 docs + harness script + 44-line session) was independently audited at 40 / +8,156 / -195, leaving 75 /
++344. The minimal slice needs four new / ~+1,900 and does not fit; U2/U3 expected additions also do not fit.
 Exact pre-merge remeasurement remains mandatory. Persisted/UI remains P2-blocked. It must preserve deterministic
 sentence/citation/root traces; frozen/mock LlmRouter `INTERIM:` output may suggest only and all missing
 provenance/evidence failures hold closed. Separately, O29 defers provider/model execution. No
@@ -42,6 +42,6 @@ Triplets are low / expected / high. Human signoff remains pending for non-comple
 | R4-U1 | 10 actual | 5,060 actual | no migration/shared | 21/21 PR checks green | security; PR #170 draft/open, CLEAN | COMPLETE EXTERNALLY at `baab1536`; UNMERGED |
 | R4-U2 | 28 / 40 / 55 | 1,100 / 1,900 / 3,100 | 2–3 migrations; no shared expected | 25 likely min | security/privacy + RLS; P5/role policy | DEFERRED BY CAP pending later envelope |
 | R4-U3 | 20 / 31 / 46 | 1,000 / 1,800 / 3,200 | 2–3 migrations; no shared unless provenance promoted | 35 likely min | raw-truth/concurrency + M2/M3; depends U2 | DEFERRED BY CAP pending later envelope |
-| R4-U4 | 38 / 54 / 74 | 1,600 / 3,000 / 5,000 | 1–2 migrations; definite 5–8 shared paths | 40 likely min | Alton + Jayden named reviewers; both actual reviews required before shared-contract PR merge | IMPLEMENTATION UNBLOCKED; cap admission remains separate; no U6 authority |
+| R4-U4 | 38 / 54 / 74 | 1,600 / 3,000 / 5,000 | 1–2 migrations; definite 5–8 shared paths | 40 likely min | Alton + Jayden named; implementation approved; both actual shared-contract PR reviews required | REVIEWER UNBLOCKED; CURRENT CAP NO-GO/PENDING (+344 versus +1,600 low); no U6 authority |
 
 All-five union is likely 135–155 paths and 8,250–9,000 lines. Accepted U0–U3 cap is 115/8,500 inclusive of promoted Run 4 docs/tracking. A local fixture-backed paper-to-Biotope slice requires separate sizing and admission only if it fits. A breach returns the unit to pending. `dev-phase2-run4` intentionally remains unprotected; `Run 4 Gate` is exact-current-SHA CI evidence only.

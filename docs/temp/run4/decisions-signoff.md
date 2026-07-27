@@ -20,7 +20,7 @@ The accepted envelope is recorded below. U0 completed through PR #161 at `66bfde
 | P1 | `dev-phase2-run4` protection posture | User override: intentionally unprotected; no administrator action is requested | ACCEPTED OVERRIDE |
 | P1 | `Run 4 Gate` uses `if: always()` and explicit needs including `run-pipeline` | U0 stable evidence completed at exact merge SHA; it is not GitHub branch protection | COMPLETE: CI `30285010079` 19/19 |
 | U0 local qualification | 719 package/gate tests plus local release evidence | Historical pre-merge qualification with then-current environment blocks; later exact merge-SHA CI completed U0 | HISTORICAL; U0 COMPLETE |
-| P2 / U4 only | Named shared reviewers: Alton and Jayden | Both approve unblocking U4 implementation; any shared-contract PR still requires both actual reviews before merge. No U6 approval and no cap admission is implied. | IMPLEMENTATION UNBLOCKED; MERGE REVIEW + CAP ADMISSION STILL REQUIRED |
+| P2 / U4 only | Named shared reviewers: Alton and Jayden | Both approve U4 implementation; any shared-contract PR still requires both actual reviews. Current cap admission fails (+344 remains versus +1,600 low); no U6 approval. | REVIEWER UNBLOCKED; CURRENT CAP NO-GO/PENDING |
 | P3 | Model training | Paused/excluded; train nothing; product excludes MT1–MT5 | ACCEPTED |
 | P5 | Name-only credential posture, local-only; no hosted/deployment/key changes | Accepted constraint | ACCEPTED |
 | P6 | O29 deferred; zero provider calls; OpenAI TEST-MODE | Accepted constraint | ACCEPTED |
@@ -33,7 +33,7 @@ The accepted envelope is recorded below. U0 completed through PR #161 at `66bfde
 
 Historical-envelope rationale: the full non-shallow Run 2 SHA is live `origin/dev-phase2-run2`; `dev-phase2` omits 169 paths / +16,992, while run3 adds 100 paths / +11,706 / -1,079 including contamination and Run 4 docs. The original bootstrap/envelope record and earlier `837b7e690f92dc1669428a2476c9d8d0456020e8` U0 unit base are retained for provenance. Neither is the active U0 cap base after consolidation; the unit begins at exact consolidated tip `77c98213e23ad56ae37c86201b39ef4e7543a543`.
 
-BRANCH, LOCK, P1, and P4 are accepted/recorded. U0 is complete through PR #161 at `66bfde5` with exact merge-SHA CI 19/19. `Run 4 Gate` is evidence, not branch-setting enforcement. P2 reviewer availability is resolved for U4 implementation; both actual reviews remain mandatory for a shared-contract PR, and cap admission remains separate. Cap breach returns a later unit to pending.
+BRANCH, LOCK, P1, and P4 are accepted/recorded. U0 is complete through PR #161 at `66bfde5` with exact merge-SHA CI 19/19. `Run 4 Gate` is evidence, not branch-setting enforcement. P2 reviewer availability is resolved for U4 implementation and both actual PR reviews remain mandatory; current cap admission fails (+344 remains versus +1,600 low), so U4 is NO-GO/pending under this envelope. No U6 authority follows.
 
 Historical bootstrap evidence: workflow run `30267437774` self-triggered on PR #156 CI-enablement commit `f60650838428d871690d6f83358e0fb05387d0bc` targeting `dev-phase2-run4`, and all 14 jobs passed. That evidence did not test later commits; U0 later completed through PR #161 and exact merge-SHA CI `30285010079` 19/19. Any Run 4 issue, branch, PR, or merge operation targets `dev-phase2-run4` only, never `dev-phase2` or `main`.
 

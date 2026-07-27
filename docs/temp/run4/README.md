@@ -12,7 +12,7 @@ updated: 2026-07-28
 Run 4 is active under its accepted envelope. U0 merged through PR #161 at
 `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`; exact merge-SHA CI run `30285010079` passed 19/19.
 `dev-phase2-run4` remains intentionally unprotected; `Run 4 Gate` is exact-current-SHA CI evidence,
-not branch-setting enforcement. P2 still defers U4; P3 excludes training; P5/P6 keep the run local-only
+not branch-setting enforcement. U4 reviewer availability is resolved, but current cap admission is NO-GO/pending (+344 remains versus +1,600 low); P3 excludes training; P5/P6 keep the run local-only
 with no provider calls and O29 deferred.
 
 ## Documents
@@ -42,8 +42,8 @@ into the Run 4 prompt.** Codex rechecked the audit on 2026-07-27 at local integr
 
 Corrections applied before sign-off:
 
-1. A prompt cannot waive AGENTS.md's two-reviewer rule for `shared/`; R4-U4 remains blocked until a
-   second reviewer exists.
+1. Historically, a prompt could not waive AGENTS.md's two-reviewer rule and U4 was blocked while no
+   second reviewer existed. On 2026-07-28 Alton and Jayden approved U4 implementation; both actual PR reviews remain required, and current cap admission separately remains NO-GO/pending.
 2. Run 4 uses a fresh immutable base and an explicitly defined **landing-delta** cap. It does not
    retroactively subtract unrelated merges from an old baseline.
 3. Supabase deploy/lock behavior is treated as unproven until the pinned CLI bundle path is exercised;
@@ -74,9 +74,9 @@ frozen Run-2 snapshot, which `AGENTS.md` forbids building from. Docs still sayin
 2. **Run 3's change budget and landing state diverged**, because MT0 added 59 files / 5,362 insertions
    after the candidate baseline and broke U0's evidence and mergeability. Run 4 starts from a fresh
    exact base; model training must not share its integration branch. **Preconditions P3 and P4.**
-3. **O27 and O29 cannot complete as written today.** O27 requires a real second `shared/` reviewer;
-   O29 requires a second provider posture and release inputs that do not exist. O27 stays gated and
-   O29 is deferred by default. **Preconditions P2 and P6.**
+3. **Historical audit finding:** O27 required a real second `shared/` reviewer; O29 required a second
+   provider posture and unavailable release inputs. Alton and Jayden now resolve O27/U4 reviewer
+   availability; both actual PR reviews remain mandatory, U4 is current-cap NO-GO/pending, and O29 remains deferred. **Preconditions P2 and P6.**
 
 ## The pattern Run 4 should attack
 
@@ -144,7 +144,7 @@ Historical pre-overlay snapshot `f2f2dac` is the conflict-free merge tree of com
 with U5 `cdc16f9`, including U0 and PR #172 shared-gate updates, and excluding only separately owned MT4
 paths and its MT4 session log. It measures 38 product paths / +8,002 / -162, leaving 77 / +498 under the
 115 / +8,500 cap. Later final pre-commit overlay (U5 docs + harness script + 44-line session) was
-independently audited at 40 paths / +8,146 / -185, leaving 75 / +354. U1 therefore fits. U2/U3 expected additions and the minimal sentence tranche (six
+independently audited at 40 paths / +8,156 / -195, leaving 75 / +344. U1 therefore fits. U2/U3 expected additions and the minimal sentence tranche (six
 touched paths, two reused, four new, ~+1,900) do not fit the remaining line budget and are deferred by
 cap pending an explicit later envelope decision. Exact pre-merge remeasurement remains mandatory. No silent cap expansion is authorized.
 

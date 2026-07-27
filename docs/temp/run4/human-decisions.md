@@ -32,7 +32,7 @@ Inside existing R4-U5/B-PL22 only, planning is **ADMITTED** while implementation
 Historical pre-overlay combined product snapshot `f2f2dac` from base `77c982` includes U1 `baab1536` and
 U5 `cdc16f9`, excludes MT4 paths/session, and measures 38 / +8,002 / -162, leaving 77 / +498. The later
 final pre-commit overlay (U5 docs + harness script + 44-line session) was independently audited at 40 /
-+8,146 / -185, leaving 75 / +354. U1 fits. U2/U3
++8,156 / -195, leaving 75 / +344. U1 fits. U2/U3
 expected additions and the minimal sentence slice (six touched, two reused, four new, ~+1,900) do not
 fit and are cap-deferred pending an explicit later envelope decision. Exact pre-merge remeasurement is
 outside the snapshot; remeasure before merge. No cap expansion is authorized.
@@ -48,7 +48,7 @@ P1 is an accepted override: `dev-phase2-run4` intentionally has no branch protec
 
 Before admitting the additional local fixture-backed paper-to-Biotope slice, size it separately against the accepted cap.
 
-Alton and Jayden are the named reviewers and both approve unblocking **R4-U4 implementation**. This does not waive the two-reviewer rule: any U4 shared-contract PR still requires both actual reviews before merge. It does not authorize U6 or silently admit U4 under the cap; those decisions remain separate.
+Alton and Jayden are the named reviewers and both approve unblocking **R4-U4 implementation**. This does not waive the two-reviewer rule: any U4 shared-contract PR still requires both actual reviews before merge. Current cap admission fails (+344 remains versus U4 low +1,600), so U4 is NO-GO/pending under this envelope; no U6 authority follows.
 
 Not authorised: settings changes, hosted/provider calls, hosted Supabase, Cloudflare/R2 writes, deployment, key mutation/revocation, changes to PR #144, or a merge to `dev-phase2` or `main`. Run 4 product work is locally authorized within the locked envelope. All Run 4 issue, branch, PR, and merge operations affect `dev-phase2-run4` only. U0 is complete through PR #161 at `66bfde5`; exact merge-SHA CI run `30285010079` passed 19/19.
 

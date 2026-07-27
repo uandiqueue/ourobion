@@ -80,7 +80,7 @@ On 2026-07-27, PR #144 was **CLOSED**, not merged, at `2026-07-27T08:03:15Z`; ba
 | Earlier U0 unit base | `837b7e690f92dc1669428a2476c9d8d0456020e8` | SUPERSEDED; retained for provenance |
 | Active U0 unit base | `77c98213e23ad56ae37c86201b39ef4e7543a543` (consolidated Run 3/MT3 `origin/dev-phase2-run4` tip) | ACCEPTED for U0 only |
 | Historical locked units | `R4-U0`, `R4-U1`, `R4-U2`, `R4-U3` | ACCEPTED THEN; U2/U3 NOW CAP-DEFERRED |
-| U4 | Alton and Jayden approve implementation; both actual reviews remain required before a shared-contract PR merge | IMPLEMENTATION UNBLOCKED; cap admission separate; no U6 authority |
+| U4 | Alton and Jayden approve implementation; both actual reviews remain required before a shared-contract PR merge | REVIEWER UNBLOCKED; CURRENT CAP NO-GO/PENDING (+344 versus +1,600 low); no U6 authority |
 | U0 landing caps | `MAX_CHANGED_PATHS=115`, `MAX_ADDED_LINES=8500` | ACCEPTED for `RUN4_UNIT_BASE_SHA..HEAD` only |
 
 The accepted base is a full commit object and the repository is not shallow. `dev-phase2` is its ancestor and omits Run 2's 169 paths / +16,992. Run 3 adds 100 paths / +11,706 / -1,079 after Run 2, including model-training contamination and Run 4 documents. The six Run 4 planning authority files absent from the candidate base have been copied byte-for-byte and count in the cap. This pre-flight tracking packet and later approval updates also count, but are not immutable byte-for-byte promotion material. Current `dev-phase2`, `dev-phase2-run3`, and PR #144 head remain rejected base alternatives.
@@ -115,7 +115,7 @@ U0 provides aggregate `Run 4 Gate` evidence with `if: always()` and explicit `ne
 
 ## Pending posture
 
-P2 reviewer availability is resolved for U4 implementation only: Alton and Jayden approve it, while both actual reviews remain mandatory before any U4 shared-contract PR merge. U4 cap admission is separate and no U6 authority follows. Other P2-blocked shared/persisted/served scopes remain blocked. P3: model training is paused/excluded; train nothing and the product candidate must not receive MT1–MT5. P7 is complete only as PR #144 closed/superseded.
+P2 reviewer availability is resolved for U4 implementation: Alton and Jayden approve it, while both actual reviews remain mandatory before any U4 shared-contract PR merge. Current cap admission fails (+344 remains versus +1,600 low), so U4 is NO-GO/pending under this envelope; no U6 authority follows. Other P2-blocked shared/persisted/served scopes remain blocked. P3: model training is paused/excluded; train nothing and the product candidate must not receive MT1–MT5. P7 is complete only as PR #144 closed/superseded.
 
 P5 is accepted as local-only: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `OPENALEX_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and Nao/Biotope public Supabase variables remain name-only. No values are recorded. `apps/nao/.env.public` is hosted-classified; `apps/biotope/.env.public` local-classified. Local Nao must use process-scoped local Supabase URL/anon/service-role values, never file defaults. Android is operator-authorized/unlocked, but adb timed out and connection state is unattested. Hosted Supabase, Cloudflare/R2 writes, deployment, and key mutation/revocation remain forbidden.
 
@@ -145,4 +145,4 @@ The historical pre-flight claims were source/Git/GitHub-verified. Historical loc
 | Packet writer | `gpt-5.6-terra` medium | draft complete |
 | Primary orchestration | `gpt-5.6-sol` max | pending human direction |
 
-Provider spend is 0. RESUME: U1 is complete externally but PR #170 remains draft/unmerged; U2/U3 and sentence implementation are cap-deferred. U5 canonical DB run is complete; obtain health/insight evidence next. U4 implementation is unblocked under the named-reviewer constraint, while its cap admission remains separate; O29 is deferred and P3 paused/excluded. All Run 4 integration targets `dev-phase2-run4` only.
+Provider spend is 0. RESUME: U1 is complete externally but PR #170 remains draft/unmerged; U2/U3, U4, and sentence implementation are cap-deferred/pending. U5 canonical DB run is complete; obtain health/insight evidence next. U4's reviewer gate is resolved, but current cap admission is NO-GO (+344 versus +1,600 low); O29 is deferred and P3 paused/excluded. All Run 4 integration targets `dev-phase2-run4` only.

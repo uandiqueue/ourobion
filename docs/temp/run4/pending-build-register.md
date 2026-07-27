@@ -14,8 +14,8 @@ run4_u5_sentence_provenance: planning-admitted; implementation-cap-deferred-pend
 > `INTERIM:` LlmRouter seams. Verified combined snapshot `f2f2dac` from base `77c982` includes completed
 > U1 head `baab1536` and U5 `cdc16f9`, excludes only separately owned MT4 paths/session, and is the
 > historical pre-overlay 38 / +8,002 / -162 snapshot, leaving 77 / +498. The later final pre-commit
-> overlay (U5 docs + harness script + 44-line session) was independently audited at 40 / +8,146 / -185,
-> leaving 75 / +354. The minimal six-path slice reuses two paths but needs four new / ~+1,900, so it is
+> overlay (U5 docs + harness script + 44-line session) was independently audited at 40 / +8,156 / -195,
+> leaving 75 / +344. The minimal six-path slice reuses two paths but needs four new / ~+1,900, so it is
 > cap-deferred; U2/U3 expected additions also do not fit. Exact pre-merge remeasurement remains mandatory.
 > Persisted/served/UI is P2-blocked; O29 is deferred.
 > Missing
@@ -161,7 +161,7 @@ Two constraints on that unit:
 | B-PL7 · O6 CODEOWNERS + branch protection | open | needs Alton's GitHub handle |
 | B-PL8 · shared/brain has no own typecheck (verified via edge-loader consumer) | U2 finding | consider a tsc target in retro-review |
 | B-PL9 · iOS build/test path | env-gated | Mac + paid Apple account + real device (memory 0010) |
-| B-PL10 · **B8 · the two-reviewer rule for `shared/` has no second reviewer** | **blocking, accruing** | The rule cannot be satisfied today. Run-2.0 **U2 and U3 both touched `shared/`** and carry `[B8] retro-review` flags. Name a second reviewer before any new `shared/` change; a run prompt cannot waive the repository rule. Detail: carry-forward-from-run1.md §2 |
+| B-PL10 · **B8 · two-reviewer rule for `shared/`** | **historical U4 availability blocker resolved; review rule active** | On 2026-07-28 Alton and Jayden were named and approved U4 implementation; both actual U4 shared-contract PR reviews remain required. Current U4 cap admission is NO-GO/pending (+344 remains versus +1,600 low); no U6 approval. Run-2.0 U2/U3 retro-review flags remain. Detail: carry-forward-from-run1.md §2 |
 | B-PL11 · ADR amendment intents recorded but NOT applied | open | ADR-0002 is `status: accepted` and immutable to `context_sync --check`, so intents were recorded instead: **D3/F4** (deadbandK) and **D5/F6** (RU4d verify-first) from research-fixes, plus Run-2.0 **D2** (TEST-MODE decorrelation override). Each needs a human to apply it via the ADR 2-reviewer / supersede channel. Ties into B-PL10 |
 | B-PL12 · O21 location-fetch trigger config (per-source distance/refresh thresholds) | open — **pending Jayden review** | locked-entry: next-build-optimizations.md O21. Ops/engineering config, explicitly NOT a statistical parameter; gates nothing until env-API collectors exist (see A1 above) |
 | B-PL13 · O23 `brain-ingest` → `llm-router` is not a declared package dependency | open — **pending Jayden review** | locked-entry: next-build-optimizations.md O23. 7 files import across the package boundary by relative path; no `workspaces`, no declared dep. Nothing broken today; becomes a **blocker** for any build/publish step, and risks duplicate router module instances (two budget ledgers) |
@@ -275,7 +275,7 @@ If you add an O-item, add its row above and a line here.
 | O24 · Exact-tip release gate + complete/reproducible Deno CI | **Run 4 priority U0 candidate; rebuild, do not merge #144** | B-PL14; O31-O34 |
 | O25 · nao RBAC/RLS + redacted global-job boundary + named server-key rotation | **Run 4 priority U2 candidate** | B-SEC1; B-SEC2; B-BR7 direct-write slice |
 | O26 · Raw-truth-safe demo loader + retry-safe pipeline | **Run 4 priority U3 candidate** | B-DATA1; B-DATA2; B-PL15 |
-| O27 · Scientific provenance semantics + artifact trust posture | **Run 4 priority U4 candidate; requires second `shared/` reviewer** | B-SCI1; B-SCI2 safe-vocabulary slice; B-UI3; B-UI9; B-BR7 revision/presentation slice; O38 |
+| O27 · Scientific provenance semantics + artifact trust posture | **Run 4 U4: reviewer-unblocked, current-cap NO-GO/pending** | Alton + Jayden named; both actual PR reviews required; +344 remains versus +1,600 low; no U6 authority. B-SCI1; B-SCI2; B-UI3; B-UI9; B-BR7; O38 |
 | O28 · Plain-language + accessible client insights | **candidate; deferred by default from priority tranche** | B-UI10; B-UI11; O37 |
 | O29 · Live verifier/model attestation + migrated immutable release promotion | **candidate; deferred by default pending provider and release gates** | B-BR1; B-BR2; B-BR3; B-PL19 |
 
@@ -293,7 +293,7 @@ lives in [`next-build-optimizations.md`](./next-build-optimizations.md).
 | O35 · Import/boundary enforcement | Run 4 priority U1 candidate | Cover TS, Dart, Python-workspace references and forbidden `/impl` imports with fixture-tested guards |
 | O36 · Secret scanning on push and PR | Run 4 priority U1 candidate | Pin scanner/action; retain targeted bundle/header/log negative tests |
 | O37 · Golden-test determinism prerequisite | candidate; deferred by default | Run 4 defaults to widget + semantics assertions; introduce goldens only with proven cross-platform determinism |
-| O38 · Shared trust-label parity | Run 4 priority U4 candidate | Requires second `shared/` reviewer; use TS/Dart generated or parity-guarded constants, not a cross-language direct import |
+| O38 · Shared trust-label parity | Run 4 U4 reviewer-unblocked; current-cap NO-GO/pending | Alton + Jayden named and both actual PR reviews required; use TS/Dart generated or parity-guarded constants, not a cross-language direct import; no U6 authority |
 | O39 · Dependency update channel | candidate; deferred by default | Separate maintenance policy; do not mix with release-blocker remediation |
 | O40 · Documentation status hygiene | Run 4 preflight / closeout candidate | Run 3 closure routing plus a superseding ADR for the accepted/proposed mismatch |
 

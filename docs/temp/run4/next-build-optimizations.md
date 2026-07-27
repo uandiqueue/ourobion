@@ -16,8 +16,8 @@ updated: 2026-07-28
 > tranche is split/deferred; persisted/served/UI is P2-blocked. Verified combined product snapshot
 > `f2f2dac` (base `77c982`; U1 `baab1536` + U5 `cdc16f9`; MT4 paths/session excluded) is the historical
 > pre-overlay 38 / +8,002 / -162 snapshot, leaving 77 / +498. The later final pre-commit overlay (U5
-> docs + harness script + 44-line session) was independently audited at 40 / +8,146 / -185, leaving 75 /
-> +354. U1 fits, but U2/U3 expected additions and the minimal sentence tranche
+> docs + harness script + 44-line session) was independently audited at 40 / +8,156 / -195, leaving 75 /
+> +344. U1 fits, but U2/U3 expected additions and the minimal sentence tranche
 > (six touched, two reused, four new, ~+1,900) do not fit the line budget and are cap-deferred pending a
 > later envelope decision. Exact pre-merge remeasurement remains mandatory. Separately, O29 defers provider/model execution under the zero-call posture.
 
@@ -45,7 +45,7 @@ These are not build units. Most are settings or decisions, and several block Run
 | ID | What | Why it blocks | Who |
 |---|---|---|---|
 | P1 | **Exact-current-SHA CI evidence** on `dev-phase2-run4` | User override: the branch intentionally remains unprotected; `Run 4 Gate` is evidence only, not GitHub branch-setting enforcement. No ADMIN or settings action is requested | U0 / CI |
-| P2 | **Resolve B8 by naming a second `shared/` reviewer** | Audit A4: `shared/` work requires two reviewers under AGENTS.md. A run prompt cannot waive that repository rule. O27/O38 and any other shared-contract work stay blocked until the reviewer exists | Jayden |
+| P2 | **Two named `shared/` reviewers** | Historical audit A4 blocker resolved for U4 on 2026-07-28: Alton and Jayden approve implementation; both actual PR reviews remain required. Current cap admission separately fails (+344 remains versus U4 low +1,600); no U6 approval. | Alton + Jayden |
 | P3 | **Separate model-training from the Run 4 integration base before MT1 is cut** | Audit A3: MT0 alone changed 59 files / added 5,362 lines after the Run 3 candidate baseline and broke U0's mergeability. The exact model-training integration target is a human decision; do not invent a long-lived branch contrary to the normal workflow | Jayden + orchestrator |
 | P4 | **Approve a fresh immutable Run 4 base and one cap metric** | Do not retroactively exclude merged work. Define the run budget as the final landing delta from the accepted Run 4 base (`base..HEAD`), including generated/tracking files, with unique changed paths and added lines counted mechanically. Record the base SHA and cap before implementation | Jayden |
 | P5 | **Record every credential/resource gate in Run 4 `human-decisions.md`** — B2/B3 (Cloudflare Worker + hosted Supabase secret keys), B5 (second provider key), B10 (Android device) | Record names and approval state only, never secret values. Missing external authority blocks only the affected unit; it cannot be inferred from this prompt | orchestrator |
@@ -143,8 +143,8 @@ study-design copy off its semantics. Resolving (b) needs a superseding ADR, not 
 ## 3. Recommended priority tranche
 
 This is the largest tranche accepted for the locked envelope. U0 is complete through PR #161 with
-exact merge-SHA CI run `30285010079` passing 19/19; P2 continues to defer
-U4, while P3 excludes training and P5/P6 retain local-only, zero-provider constraints. The run may not
+exact merge-SHA CI run `30285010079` passing 19/19; Alton and Jayden resolve U4's reviewer gate, but
+the current cap keeps U4 pending/NO-GO; P3 excludes training and P5/P6 retain local-only, zero-provider constraints. The run may not
 silently add O28, O29, O37, O39, O40, or any other register row.
 
 | Priority | Candidate unit | Contents | Start gate |
@@ -153,7 +153,7 @@ silently add O28, O29, O37, O39, O40, or any other register row.
 | 2 | R4-U1 · mechanical boundaries | O35 + O36; polyglot import/path guard and pinned secret scanning | COMPLETE externally at `baab1536`; PR #170 remains draft/open and unmerged, CLEAN, 21/21 green |
 | 3 | R4-U2 · authorization and key boundary | O25; nao RBAC/RLS, redacted global jobs, named server-key migration | DEFERRED BY CAP pending explicit later envelope decision |
 | 4 | R4-U3 · raw-truth and retry safety | O26; atomic demo loading and idempotent/single-flight pipeline publication | DEFERRED BY CAP with U2 pending explicit later envelope decision |
-| 5 | R4-U4 · scientific semantics | O27 + O38; claim-kind preservation, artifact trust, revision-bound dispositions, TS/Dart trust-label parity | P2 second reviewer; R4-U0 green; O27 contract brief accepted |
+| 5 | R4-U4 · scientific semantics | O27 + O38; claim-kind preservation, artifact trust, revision-bound dispositions, TS/Dart trust-label parity | Reviewer gate resolved (Alton + Jayden; both PR reviews mandatory); current cap NO-GO/pending (+344 versus +1,600 low); no U6 authority |
 
 Default deferrals:
 
