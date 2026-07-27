@@ -25,12 +25,13 @@ import {
 } from './synth/load.js';
 import { buildQuoteOnlyRecord } from './verify/enforce.js';
 import { loadVerificationValidator } from './verify/load.js';
+import { normalizeDoi } from './identity.js';
 import type { SynthClaim, SynthPair } from './synth/types.js';
 import type { VerificationValidator, VerifyRecord } from './verify/types.js';
 
 const RECEIPT = 'single-paper-receipt.json';
 const RESPONSE = 'synthesis-response.json';
-const GATE_REVISION = 'single-paper-gates:r4-u5-pass2';
+const GATE_REVISION = 'single-paper-gates:r4-u5-pass3';
 const sha = (value: string) => createHash('sha256').update(value).digest('hex');
 
 export interface SinglePaperOptions {
@@ -70,7 +71,8 @@ function canonical(value: unknown): string {
 }
 
 export function normaliseDoi(value: string): string {
-  const doi = value.trim().replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, '').replace(/^doi:\s*/i, '').toLowerCase();
+  const doi = normalizeDoi(value);
+  if (doi === null) throw new Error(`invalid DOI '${value}'`);
   if (!/^10\.\d{4,9}\/[\-._;()/:a-z0-9]+$/i.test(doi)) throw new Error(`invalid DOI '${value}'`);
   return doi;
 }
@@ -297,9 +299,13 @@ function runDbStage(
 /** No R2, router, provider, hosted endpoint, or network API is imported or called. */
 export async function runSinglePaper(options: SinglePaperOptions): Promise<Record<string, unknown>> {
   const doi = normaliseDoi(options.doi), root = safeRoot(options.localDir);
+  const paperUid = `doi:${doi}`;
   const paperPath = regularFile(root, 'paper.json', true)!, textPath = regularFile(root, 'text.txt', true)!;
   const paper = jsonObject(paperPath), text = readFileSync(textPath, 'utf8');
   if (typeof paper.doi !== 'string' || normaliseDoi(paper.doi) !== doi) throw new Error('paper.json DOI does not match --doi');
+  if (Object.prototype.hasOwnProperty.call(paper, 'paperUid') && paper.paperUid !== paperUid) {
+    throw new Error(`paper.json paperUid must exactly match canonical '${paperUid}'`);
+  }
   if (!text.trim()) throw new Error('text.txt must not be empty');
   const canonicalDbUrl = options.loadLocalDb ? normaliseLocalDbUrl(options.loadLocalDb) : undefined;
   const explicitTerms = Boolean(options.terms?.length);
@@ -309,11 +315,12 @@ export async function runSinglePaper(options: SinglePaperOptions): Promise<Recor
   if (options.pair[0] === options.pair[1]) throw new Error('single-paper: pair endpoints must differ');
   const pair: SynthPair = { id: `local:${doi}:${options.pair.join('|')}`, metricKeys: options.pair, label: `Local relationship between "${options.pair[0]}" and "${options.pair[1]}"`, terms };
   const passages = selectPassages(text, terms, { maxPassages: 12 });
-  const papers = [{ paperUid: doi, title: typeof paper.title === 'string' ? paper.title : null, charCount: text.length, passages }];
+  const papers = [{ paperUid, title: typeof paper.title === 'string' ? paper.title : null, charCount: text.length, passages }];
   const assembled = buildSynthesisPrompt(pair, papers);
   const activeKeys = [...active].sort();
   const input = {
     doi,
+    paperUid,
     pair: pair.metricKeys,
     terms,
     termsSource: explicitTerms ? 'explicit' : 'derived-default',
@@ -346,7 +353,7 @@ export async function runSinglePaper(options: SinglePaperOptions): Promise<Recor
     }
     return { ...prior, ...(options.resume ? { resumed: true } : { repeated: true }), ...(options.dryRun ? { dryRun: true, dbWrites: 0 } : {}) };
   }
-  const processed = processSynthesisResponse(response, { pair, allowedPaperIds: [doi], texts: new Map([[doi, text]]), validateClaim, validateCopy, synthesisModel: 'local-host-supplied', promptVersion: PROMPT_VERSION, now: () => Date.parse(deterministicAt(synthesisRunId)) });
+  const processed = processSynthesisResponse(response, { pair, allowedPaperIds: [paperUid], texts: new Map([[paperUid, text]]), validateClaim, validateCopy, synthesisModel: 'local-host-supplied', promptVersion: PROMPT_VERSION, now: () => Date.parse(deterministicAt(synthesisRunId)) });
   const verifications = processed.accepted.map((claim) => buildQuoteOnlyRecord({
     claim,
     quoteCheck: { spansFound: claim.quoteSpans.length, spansTotal: claim.quoteSpans.length, allPresent: claim.quoteSpans.length > 0 },

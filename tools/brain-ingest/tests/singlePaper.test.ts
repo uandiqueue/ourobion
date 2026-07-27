@@ -6,14 +6,15 @@ import { join } from 'node:path';
 import { normaliseDoi, normaliseLocalDbUrl, runSinglePaper, type LoaderRunner } from '../src/singlePaper.js';
 
 const DOI = '10.1234/local.paper';
+const PAPER_UID = `doi:${DOI}`;
 function dir() {
   const d = mkdtempSync(join(tmpdir(), 'ourobion-single-paper-'));
-  writeFileSync(join(d, 'paper.json'), JSON.stringify({ doi: `https://doi.org/${DOI}`, title: 'Local paper' }));
+  writeFileSync(join(d, 'paper.json'), JSON.stringify({ doi: `https://doi.org/${DOI}`, paperUid: PAPER_UID, title: 'Local paper' }));
   writeFileSync(join(d, 'text.txt'), 'Stool form correlates with urine colour in this observational sample.');
   return d;
 }
-function response(quote = 'Stool form correlates with urine colour in this observational sample.') {
-  return JSON.stringify({ claims: [{ edgeId: 'ignored', subject: 'stool_form', object: 'urine_colour', relation: 'correlates', claimKind: 'correlational', effect: { size: null, unit: null, ci: null }, population: 'observational sample', citations: [{ paperId: DOI, title: 'Local paper', year: null, population: 'observational sample', evidenceTier: 2, impactTier: 'low', stance: 'supports' }], quoteSpans: [{ paperId: DOI, quote, locator: null, charStart: null, charEnd: null }], derivation: 'The quoted observational result describes a correlation.' }] });
+function response(quote = 'Stool form correlates with urine colour in this observational sample.', paperId = PAPER_UID) {
+  return JSON.stringify({ claims: [{ edgeId: 'ignored', subject: 'stool_form', object: 'urine_colour', relation: 'correlates', claimKind: 'correlational', effect: { size: null, unit: null, ci: null }, population: 'observational sample', citations: [{ paperId, title: 'Local paper', year: null, population: 'observational sample', evidenceTier: 2, impactTier: 'low', stance: 'supports' }], quoteSpans: [{ paperId, quote, locator: null, charStart: null, charEnd: null }], derivation: 'The quoted observational result describes a correlation.' }] });
 }
 
 test('normalises DOI forms and rejects malformed DOI', () => {
@@ -49,10 +50,14 @@ test('single-paper requests host response without artifacts, then writes gated I
   try {
     const requested = await runSinglePaper({ doi: DOI, localDir: d, pair: ['stool_form', 'urine_colour'] });
     assert.equal(requested.status, 'request-needed');
+    assert.equal((requested.input as Record<string, unknown>).paperUid, PAPER_UID);
     assert.equal(existsSync(join(d, 'edges', 'claims.jsonl')), false);
     writeFileSync(join(d, 'synthesis-response.json'), response());
     const done = await runSinglePaper({ doi: DOI, localDir: d, pair: ['stool_form', 'urine_colour'] });
     assert.equal(done.status, 'completed');
+    const claim = JSON.parse(readFileSync(join(d, 'edges', 'claims.jsonl'), 'utf8').trim()) as Record<string, any>;
+    assert.equal(claim.citations[0].paperId, PAPER_UID);
+    assert.equal(claim.quoteSpans[0].paperId, PAPER_UID);
     const verification = done.verification as Record<string, unknown>;
     assert.equal(verification.verdict, 'uncertain');
     assert.equal(verification.status, 'active');
@@ -128,6 +133,8 @@ test('completed core receipt runs every explicit DB stage, redacts its operation
     assert.doesNotMatch(dbReceiptText, /s3cret|localuser|postgresql:\/\//);
     const dbReceipt = JSON.parse(dbReceiptText) as Record<string, any>;
     const core = JSON.parse(coreBefore) as Record<string, any>;
+    assert.equal(core.input.paperUid, PAPER_UID);
+    assert.equal(core.input.assembled.papers[0].paperUid, PAPER_UID);
     assert.equal(dbReceipt.coreRunId, core.runId);
     assert.equal(dbReceipt.claimsSha256, core.artifacts.claimsSha256);
     assert.equal(dbReceipt.verificationsSha256, core.artifacts.verificationsSha256);
@@ -201,13 +208,14 @@ test('single-paper rejects missing/mismatched inputs, inactive metrics, foreign 
     await assert.rejects(() => runSinglePaper({ doi: DOI, localDir: join(d, 'missing'), pair: ['stool_form', 'urine_colour'] }), /local-dir must exist/);
     writeFileSync(join(d, 'paper.json'), JSON.stringify({ doi: '10.9999/other' }));
     await assert.rejects(() => runSinglePaper({ doi: DOI, localDir: d, pair: ['stool_form', 'urine_colour'] }), /does not match/);
-    writeFileSync(join(d, 'paper.json'), JSON.stringify({ doi: DOI }));
+    writeFileSync(join(d, 'paper.json'), JSON.stringify({ doi: DOI, paperUid: PAPER_UID }));
     await assert.rejects(() => runSinglePaper({ doi: DOI, localDir: d, pair: ['not_a_metric', 'urine_colour'] }), /not an active/);
-    const foreign = JSON.parse(response()) as { claims: Array<Record<string, unknown>> };
-    (foreign.claims[0]!.citations as Array<Record<string, unknown>>)[0]!.paperId = 'foreign-paper';
-    writeFileSync(join(d, 'synthesis-response.json'), JSON.stringify(foreign));
+    writeFileSync(join(d, 'synthesis-response.json'), response(undefined, DOI));
     const foreignResult = await runSinglePaper({ doi: DOI, localDir: d, pair: ['stool_form', 'urine_colour'], dryRun: true });
-    assert.match(JSON.stringify(foreignResult.rejected), /foreign-paper/);
+    const foreignRejected = foreignResult.rejected as Array<{ reason: string; detail: string }>;
+    assert.equal(foreignRejected.length, 1);
+    assert.equal(foreignRejected[0]!.reason, 'foreign-paper');
+    assert.match(foreignRejected[0]!.detail, new RegExp(DOI.replaceAll('.', '\\.')));
     const diagnostic = JSON.parse(response()) as { claims: Array<Record<string, unknown>> };
     diagnostic.claims[0]!.derivation = 'This diagnoses a condition.';
     writeFileSync(join(d, 'synthesis-response.json'), JSON.stringify(diagnostic));
@@ -215,6 +223,33 @@ test('single-paper rejects missing/mismatched inputs, inactive metrics, foreign 
     assert.match(JSON.stringify(dry.rejected), /copy-gate/);
     assert.equal(existsSync(join(d, 'edges')), false);
     await assert.rejects(() => runSinglePaper({ doi: DOI, localDir: d, pair: ['stool_form', 'urine_colour'], loadLocalDb: 'postgresql://example.com/db' }), /localhost/);
+  } finally { rmSync(d, { recursive: true, force: true }); }
+});
+
+test('paper.json rejects a non-canonical paperUid before artifacts or DB invocation', async () => {
+  const d = dir();
+  let loaderCalls = 0;
+  const loaderRunner: LoaderRunner = () => {
+    loaderCalls++;
+    return { status: 0, stdout: 'unexpected', stderr: '' };
+  };
+  try {
+    writeFileSync(join(d, 'paper.json'), JSON.stringify({ doi: DOI, paperUid: DOI, title: 'Local paper' }));
+    writeFileSync(join(d, 'synthesis-response.json'), response());
+    await assert.rejects(
+      () => runSinglePaper({
+        doi: DOI,
+        localDir: d,
+        pair: ['stool_form', 'urine_colour'],
+        loadLocalDb: 'postgresql://localhost/postgres',
+        loaderRunner,
+      }),
+      /paperUid must exactly match canonical/,
+    );
+    assert.equal(loaderCalls, 0);
+    assert.equal(existsSync(join(d, 'edges')), false);
+    assert.equal(existsSync(join(d, 'single-paper-receipt.json')), false);
+    assert.equal(existsSync(join(d, 'db-load-receipt.json')), false);
   } finally { rmSync(d, { recursive: true, force: true }); }
 });
 
