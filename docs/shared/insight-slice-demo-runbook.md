@@ -17,7 +17,7 @@ Slice definition: [`insight-engine-architecture.md`](./insight-engine-architectu
 
 The real synthesised edge is `gut_comfort_score|correlates|mood_score` (A8 run U10, verbatim-quote
 grounded, A9-gated). The decorrelated **A10 verifier cannot run for real** — it needs a non-Anthropic
-key (run decision D4, blocked register [B5](./phase2-run-blocked-register.md)) and must not use the
+key (run decision D4, durable caveat [memory 0016](../memory/0016-insight-engine-l6-one-card-slice.md)) and must not use the
 Anthropic-family local-agent route (decorrelation). So the slice ships an **interim, key-blocked-honest
 verification**:
 

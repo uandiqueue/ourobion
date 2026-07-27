@@ -3,9 +3,10 @@
 Dual-route LLM dispatch for every LLM node in the brain pipeline (agentic seeder, A8 synthesis,
 A10 verifier, S8/S9 presentation, A4/A5 extract-assist). Decision anchor:
 [`docs/memory/0013-brain-pipeline-and-support-models-decision.md`](../../docs/memory/0013-brain-pipeline-and-support-models-decision.md)
-("every LLM node has local-agent and API-worker routes; build the LLM-router first"). Model ids and
-budget caps: [`docs/shared/phase2-run-config-decisions.md`](../../docs/shared/phase2-run-config-decisions.md) C6–C7;
-node inventory: [`docs/shared/insight-engine-architecture.md`](../../docs/shared/insight-engine-architecture.md) §10.1.
+("every LLM node has local-agent and API-worker routes; build the LLM-router first"). Current model ids
+and file caps live in [`router.config.json`](./router.config.json) and are enforced by `src/config.ts`
+plus `src/budget.ts`; node inventory:
+[`docs/shared/insight-engine-architecture.md`](../../docs/shared/insight-engine-architecture.md) §10.1.
 
 Zero runtime dependencies (native `fetch`, no SDKs). Importing or constructing the router **never
 requires an API key** — keys are checked only when an `api_worker`-routed node is actually

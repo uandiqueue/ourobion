@@ -1,8 +1,8 @@
 name: CI
 
 # The non-bypassable backstop: mirrors the local pre-push gate (skippable with --no-verify) and adds
-# the checks that can only run in CI. Seven jobs:
-#   - context     : node tools/context_sync.mjs --check (sessions / memory / decisions / index / couplings)
+# the checks that can only run in CI. Nine jobs:
+#   - context     : context integrity + single generated human graph-view invariant
 #   - flutter     : flutter analyze + flutter test (with the public env file built from secrets)
 #   - typescript  : tsc --noEmit over the shared/ contracts
 #   - node-tools  : matrix over the tools/* node packages — npm ci + typecheck + test, plus the
@@ -16,11 +16,17 @@ name: CI
 #                        NOT replace — the local `npx supabase db reset` on the real supabase
 #                        image; its job is catching SQL syntax/ordering/constraint-name breaks
 #                        in CI, where no supabase stack exists.
+#   - model-training-core      : model-training/'s stdlib `unittest` suite + CLI config-validation/
+#                                offline-smoke commands. NO `pip install` step at all (D2,
+#                                docs/temp/model-training/code-build-decisions.md) — proves the
+#                                core substrate really needs zero installed packages.
+#   - model-training-lint-type : ruff format/lint + mypy over model-training/. Installs only the
+#                                `dev` extra (ruff/mypy) — never the heavy `ml` extra.
 on:
   push:
-    branches: [main, dev-phase2, dev-phase2-run4]
+    branches: [main, dev-phase2, dev-phase2-run3, dev-phase2-run4]
   pull_request:
-    branches: [main, dev-phase2, dev-phase2-run4]
+    branches: [main, dev-phase2, dev-phase2-run3, dev-phase2-run4]
 
 jobs:
   context:
@@ -39,6 +45,11 @@ jobs:
 
       - name: Context check
         run: node tools/context_sync.mjs --check
+
+      - name: Human graph view — renderer tests and single-view invariant
+        run: |
+          node --test tools/graph-view/tests/*.test.mjs
+          node tools/graph-view/generate_graph_view.mjs --check
 
   flutter:
     name: Flutter — Analyze & Test
@@ -255,3 +266,73 @@ jobs:
             echo "== $f"
             psql -v ON_ERROR_STOP=1 -q -f "$f"
           done
+
+  # ─── model-training/ core substrate (build unit MT0). CI pins Python 3.10 to match the
+  # documented GMI runtime (CUDA 12.4 / Python 3.10.12; D3, code-build-decisions.md). This job
+  # installs NOTHING beyond the interpreter itself — D2's whole point is that
+  # ourobion_model_lab's core substrate depends on the stdlib only, so the offline `unittest`
+  # suite, config validation, and offline smoke below must pass with zero installed packages.
+  # Never downloads a dataset or pretrained weight.
+  model-training-core:
+    name: model-training — core (stdlib only, zero installs)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: model-training
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Unit tests (stdlib unittest, zero installs)
+        env:
+          PYTHONPATH: src
+        run: python -m unittest discover -s tests -v
+
+      - name: Config validation (dry-run resolves the fixture job without executing it)
+        env:
+          PYTHONPATH: src
+        run: >
+          python -m ourobion_model_lab.cli dry-run --model self-check
+          --config tests/fixtures/example_config.json
+
+      - name: Offline smoke (tiny local fixture only — no network, no real data)
+        env:
+          PYTHONPATH: src
+        run: >
+          python -m ourobion_model_lab.cli smoke --model self-check
+          --config tests/fixtures/example_config.json
+
+  # ─── model-training/ lint/format/type-check (build unit MT0). Separate from
+  # model-training-core on purpose: this is the one job allowed to `pip install` anything, and it
+  # only ever installs the `dev` extra (ruff + mypy, exact-pinned in constraints.txt) — never the
+  # heavy `ml` extra.
+  model-training-lint-type:
+    name: model-training — lint / format / type-check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: model-training
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install the dev extra only (ruff + mypy)
+        run: pip install -c constraints.txt -e ".[dev]"
+
+      - name: Format check
+        run: ruff format --check .
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Type check
+        run: mypy src
+
