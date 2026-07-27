@@ -21,6 +21,7 @@
 - Recorded PR #144 as closed/superseded; checks are stale evidence only. P2/P3 remain human-owned; O29 remains deferred with zero provider calls.
 - Jayden accepted BRANCH/base, U0–U3 lock, and cap. `dev-phase2-run4` was created at `854aa471970b61afdc59205ded0b1c8a9ab3f270`; the six planning authorities were copied byte-for-byte and count in cap. U4 remains deferred because no second shared reviewer is available and the rule is not waived.
 - P3 is paused/excluded: train nothing. P5 is local-only; P6 remains O29 deferred/zero calls. A local fixture-backed paper-to-Biotope slice needs separate sizing/admission under cap.
+- Recorded the narrow bootstrap-only exception: PR #156 may merge to `dev-phase2-run4` after all exact 14 checks are green at current head, installing authority/tracking docs only; U0 and product implementation remain gated on ADMIN-capable protection enforcement.
 
 ## Left
 

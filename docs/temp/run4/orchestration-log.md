@@ -15,14 +15,14 @@ This is **pre-flight only**. The governing prompt permits no product implementat
 
 - Issue #155; claim `run4-preflight-decision-packet` by `codex@agentjwork`.
 - Worktree `C:\project\ourobion-run4-preflight-155`; branch `docs/run4-preflight-155`.
-- PR #156 must target `dev-phase2-run4`; it may merge there, never `dev-phase2`, and remains unmerged/pre-flight-only.
+- Bootstrap PR #156 must target `dev-phase2-run4`; after all exact 14 checks are green at current head, it may merge there (never `dev-phase2`) as a bootstrap-only authority/tracking-docs exception. It remains unmerged/pre-flight-only.
 - No hosted writes, provider calls, product edits, settings changes, merges, or PR #144 changes.
 
 ## 2026-07-27 human decision and operational blocker
 
 Jayden accepted BRANCH/base, the U0–U3 lock, and the 115-path / 8,500-addition cap for the currently locked envelope. `dev-phase2-run4` was created at exact SHA `854aa471970b61afdc59205ded0b1c8a9ab3f270`. The six Run 4 planning authority files were copied byte-for-byte and count in the cap. The pre-flight tracking packet and later approval updates also count, but are not byte-for-byte authority material.
 
-P1 has human approval, but remains an operational **BLOCKER**: the current GitHub token is WRITE rather than ADMIN, and classic protection PUT returned 404. The exact required checks are therefore not yet enforced. Product implementation remains gated; no protection, check, merge, or implementation is recorded as complete.
+P1 has human approval, but remains an operational **BLOCKER**: the current GitHub token is WRITE rather than ADMIN, and classic protection PUT returned 404. The exact required checks are therefore not yet enforced. Product implementation, including U0, remains gated; no protection, check, merge, or implementation is recorded as complete. The sole exception is bootstrap PR #156: it may merge only after all exact 14 checks are green at current head, and installs only authority/tracking docs.
 
 ## Verified live state
 
