@@ -1,0 +1,27 @@
+{
+  "_comment": "This is an EXAMPLE, not an approval. A human must copy this file to licence-approval.json in this bundle's root, actually review the licence terms below (they may have changed since this file was written), fill in the fields truthfully, and set status to \"approved\" only once that review is done. cli.py's preflight/train/evaluate gates refuse to run (exit code 2) unless licence-approval.json exists with status == \"approved\". Never fabricate this file or its approval on the human's behalf.",
+
+  "status": "pending",
+  "approved_by": "example-approver@example.invalid",
+  "date": "2026-01-01",
+
+  "sources": [
+    {
+      "name": "allenai/scifact_entailment",
+      "licence": "Inherits SciFact's licence (CC BY-NC 2.0 at authoring time) — verify current terms on the HF Hub dataset card before relying on this.",
+      "url": "https://huggingface.co/datasets/allenai/scifact_entailment"
+    },
+    {
+      "name": "microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext",
+      "licence": "MIT",
+      "url": "https://huggingface.co/microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext"
+    }
+  ],
+
+  "approved_uses": [
+    "non-commercial research pilot (Zebra NLI Shadow v0) — non-serving, no production traffic",
+    "NOT approved by this template: production/serving use, redistribution of raw SciFact data, any commercial use"
+  ],
+
+  "notes": "Replace with the actual reviewer's reasoning once reviewed — e.g. which licence terms were checked, on what date, and any conditions attached. Do not leave this placeholder text in the real licence-approval.json."
+}
