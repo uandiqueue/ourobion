@@ -14,6 +14,12 @@ const fail = (message) => { throw new Error(message); };
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 const isObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
+/** Hash repository text canonically so Windows CRLF and Linux LF checkouts attest identically. */
+export function hashTextEvidence(value) {
+  const text = Buffer.isBuffer(value) ? value.toString('utf8') : String(value);
+  return sha(text.replaceAll('\r\n', '\n'));
+}
+
 // This is deliberately the U0 unit boundary, not the original Run 4 envelope/bootstrap SHA.
 // Consolidated Run 3/MT3 history landed before this U0 reconciliation and is excluded only by
 // selecting the exact post-consolidation integration tip as the unit's explicit starting point.
@@ -467,7 +473,7 @@ export function hashModuleGraph(graphText, { repoRoot = repo, readBytes = readFi
     dependencies.sort((a, b) => `${a.kind}:${a.specifier}`.localeCompare(`${b.kind}:${b.specifier}`));
     return {
       specifier: local?.specifier ?? module.specifier,
-      sourceSha256: local ? sha(readBytes(local.path)) : null,
+      sourceSha256: local ? hashTextEvidence(readBytes(local.path)) : null,
       dependencies,
     };
   }).sort((a, b) => a.specifier.localeCompare(b.specifier));
@@ -501,8 +507,8 @@ export function collectCurrentFunctionEvidence(graphDir) {
   const configured = parseFunctionConfig(readFileSync(configPath, 'utf8'));
   sameSet(configured.map((fn) => fn.name), RUN4_FUNCTIONS, 'evidence function set');
   return {
-    configSha256: sha(readFileSync(configPath)),
-    lockSha256: sha(readFileSync(lockPath)),
+    configSha256: hashTextEvidence(readFileSync(configPath)),
+    lockSha256: hashTextEvidence(readFileSync(lockPath)),
     functions: configured.map((fn) => {
       const entrypointPath = resolve(repo, 'supabase', fn.entrypoint.slice(2));
       const importMapPath = resolve(repo, 'supabase', fn.importMap.slice(2));
@@ -512,8 +518,8 @@ export function collectCurrentFunctionEvidence(graphDir) {
         name: fn.name,
         entrypoint: fn.entrypoint,
         importMap: fn.importMap,
-        entrypointSha256: sha(readFileSync(entrypointPath)),
-        importMapSha256: sha(readFileSync(importMapPath)),
+        entrypointSha256: hashTextEvidence(readFileSync(entrypointPath)),
+        importMapSha256: hashTextEvidence(readFileSync(importMapPath)),
         moduleGraphSha256: hashModuleGraph(readFileSync(graphPath, 'utf8')),
       };
     }),
@@ -570,7 +576,7 @@ export function checkDeployAttestation({ manifestPath = resolve(repo, 'supabase/
   if (manifest.schemaVersion !== 1 || manifest.scope !== 'local-only' || manifest.hostedDeployParityClaimed !== false || manifest.replayBoundary !== 'CI recomputes frozen graphs and validates this local evidence, but does not replay local serve or claim hosted deploy parity.' || manifest.generator !== RUN4_ATTESTATION_GENERATOR) fail('local runtime attestation must explicitly deny hosted deploy parity');
   if (!isObject(manifest.provenance) || manifest.provenance.unitBaseSha !== RUN4_UNIT_BASE_SHA || manifest.provenance.maxChangedPaths !== RUN4_MAX_CHANGED_PATHS || manifest.provenance.maxAddedLines !== RUN4_MAX_ADDED_LINES) fail('local runtime attestation provenance drifted');
   if (manifest.cliVersion !== cliOutput || manifest.denoVersion !== '2.8.1') fail('local runtime attestation tool versions drifted');
-  if (manifest.configSha256 !== sha(readFileSync(configPath)) || manifest.lockSha256 !== sha(readFileSync(lockPath))) fail('local runtime attestation config/lock hash mismatch');
+  if (manifest.configSha256 !== hashTextEvidence(readFileSync(configPath)) || manifest.lockSha256 !== hashTextEvidence(readFileSync(lockPath))) fail('local runtime attestation config/lock hash mismatch');
 
   const configured = parseFunctionConfig(readFileSync(configPath, 'utf8'));
   sameSet(configured.map((fn) => fn.name), RUN4_FUNCTIONS, 'attested configured function set');
@@ -583,7 +589,7 @@ export function checkDeployAttestation({ manifestPath = resolve(repo, 'supabase/
     const entrypointPath = resolve(repo, 'supabase', fn.entrypoint.slice(2));
     const importMapPath = resolve(repo, 'supabase', fn.importMap.slice(2));
     if (record.entrypoint !== fn.entrypoint || record.importMap !== fn.importMap) fail(`local runtime attestation mapping drift for ${fn.name}`);
-    if (record.entrypointSha256 !== sha(readFileSync(entrypointPath)) || record.importMapSha256 !== sha(readFileSync(importMapPath))) fail(`local runtime attestation source/config drift for ${fn.name}`);
+    if (record.entrypointSha256 !== hashTextEvidence(readFileSync(entrypointPath)) || record.importMapSha256 !== hashTextEvidence(readFileSync(importMapPath))) fail(`local runtime attestation source/config drift for ${fn.name}`);
     const graphPath = resolve(graphDir, `${fn.name}.json`);
     if (!existsSync(graphPath)) fail(`local runtime attestation missing current graph for ${fn.name}`);
     if (hashModuleGraph(readFileSync(graphPath, 'utf8')) !== record.moduleGraphSha256) fail(`local runtime attestation module graph drift for ${fn.name}`);

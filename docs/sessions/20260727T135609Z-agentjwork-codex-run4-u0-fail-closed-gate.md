@@ -63,6 +63,12 @@ dependencies of `Run 4 Gate`. The earlier `854aa471970b61afdc59205ded0b1c8a9ab3f
 envelope and `837b7e690f92dc1669428a2476c9d8d0456020e8` U0 base remain historical provenance;
 the active cap and attestation provenance now use the consolidated tip.
 
+PR CI run `30283551199` then exposed a cross-platform attestation bug: raw-byte hashing made the
+Windows-generated config/lock hashes differ from Linux solely because of CRLF versus LF checkout
+endings. U0 now canonicalizes CRLF to LF for all attested repository text while continuing to bind
+every config, lock, entrypoint, import map, and local module source byte otherwise; focused tests cover
+the line-ending invariant. The attestation was regenerated through its canonical generator.
+
 ## Left
 
 - Run a clean root install plus exact PR-head Linux Flutter analyze/test and full PR CI.

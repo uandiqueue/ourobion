@@ -19,6 +19,7 @@ import {
   checkWorkflowProvenance,
   collectCurrentFunctionEvidence,
   hashModuleGraph,
+  hashTextEvidence,
   parseFunctionConfig,
   validateFunctionConfig,
   validateRun4Workflow,
@@ -175,6 +176,9 @@ test('module graph hash ignores cache paths but binds local source bytes and dep
     ] };
     const first = hashModuleGraph(JSON.stringify(graph), { repoRoot: dir });
     graph.modules[0].local = '/different/cache';
+    assert.equal(hashModuleGraph(JSON.stringify(graph), { repoRoot: dir }), first);
+    assert.equal(hashTextEvidence('line one\r\nline two\r\n'), hashTextEvidence('line one\nline two\n'));
+    writeFileSync(source, 'export const value = 1;\r\n');
     assert.equal(hashModuleGraph(JSON.stringify(graph), { repoRoot: dir }), first);
     writeFileSync(source, 'export const value = 2;\n');
     assert.notEqual(hashModuleGraph(JSON.stringify(graph), { repoRoot: dir }), first);
