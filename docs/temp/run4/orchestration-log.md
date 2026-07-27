@@ -15,6 +15,7 @@ This is **pre-flight only**. The governing prompt permits no product implementat
 
 - Issue #155; claim `run4-preflight-decision-packet` by `codex@agentjwork`.
 - Worktree `C:\project\ourobion-run4-preflight-155`; branch `docs/run4-preflight-155`.
+- Pre-flight PR #156 targets `dev-phase2`; it remains unmerged and pre-flight-only.
 - No hosted writes, provider calls, product edits, settings changes, merges, or PR #144 changes.
 
 ## Verified live state

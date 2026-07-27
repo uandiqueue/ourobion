@@ -12,6 +12,7 @@
 ## Changed
 
 - Added only the allowed Run 4 orchestration, decision/signoff, human-decision, unit-signoff, JSON envelope, and session-log files.
+- Opened PR #156 into `dev-phase2`; it remains unmerged and pre-flight-only.
 
 ## Decided
 

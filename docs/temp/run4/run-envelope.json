@@ -2,6 +2,7 @@
   "title": "Run 4 pre-flight candidate envelope",
   "status": "draft",
   "approved": null,
+  "preflightPr": 156,
   "date": "2026-07-27",
   "issue": 155,
   "claim": { "task": "run4-preflight-decision-packet", "agent": "codex", "device": "agentjwork" },
