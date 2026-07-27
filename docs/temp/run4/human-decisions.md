@@ -29,7 +29,7 @@ Before implementation, an ADMIN-capable owner must:
 
 P2 remains blocked; shared work cannot start without an available second reviewer.
 
-Not authorised: product edits, settings changes, hosted/provider calls, hosted Supabase, Cloudflare/R2 writes, deployment, key mutation/revocation, changes to PR #144, or a merge to `dev-phase2`. Bootstrap PR #156 may merge only to `dev-phase2-run4` after all exact 14 checks are green at current head; it installs authority/tracking docs only. U0 and all product implementation remain gated until an ADMIN-capable owner enforces branch protection.
+Not authorised: product edits, settings changes, hosted/provider calls, hosted Supabase, Cloudflare/R2 writes, deployment, key mutation/revocation, changes to PR #144, or a merge to `dev-phase2`. Bootstrap PR #156 may merge only to `dev-phase2-run4` when parent head `792f8ad` has 14 green and final delta is only CI filter plus tracking and passes local/context/diff validation; it installs authority/tracking docs plus minimal Run 4 CI branch-filter enablement only. The prior 14-green run does not test the final delta. The new push filter must produce all 14 green checks on exact merge SHA; U0 and product remain frozen until that proof and ADMIN-capable branch protection.
 
 Name-only local credentials: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `OPENALEX_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and Nao/Biotope public Supabase variables. No values belong here. Local Nao uses process-scoped local Supabase URL/anon/service-role values, never hosted file defaults. Android adb timed out; independent connection state is unverified.
 
