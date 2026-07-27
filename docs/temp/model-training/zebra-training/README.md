@@ -19,6 +19,25 @@ Everything this bundle needs or produces lives **inside this one folder**. See `
 for a short, honest account of what this does to the machine (disk, memory, network, compute
 time) — hand that to whoever owns the Mac Mini before running anything.
 
+## Read these before drawing any conclusion
+
+This folder is self-contained, which also means it arrives **without the project context** that
+explains what the numbers mean. Two documents supply it:
+
+| Document | Read it when |
+|---|---|
+| **[`CONTEXT.md`](./CONTEXT.md)** | **Before running.** What the model is for, what the three classes mean, the non-serving boundary, why the evidence pipeline is label-blind, and the preregistration rule — *do not tune the recipe* |
+| **[`INTERPRETING-RESULTS.md`](./INTERPRETING-RESULTS.md)** | **Before concluding anything.** How to tell a genuine result from a bug, the outcome thresholds, and what this run cannot tell you |
+
+The single most useful heuristic, expanded in `INTERPRETING-RESULTS.md`: **suspicion should scale with
+how good the number looks.** A 110M model on 919 examples is not supposed to be excellent. A macro F1
+above ~0.90 is far more likely to be leakage or a label shortcut than success — whereas a mediocre
+score with clean diagnostics may be a perfectly honest `no-go`, which is a valid outcome here.
+
+Note also that **`eligible-for-shadow-review` is unreachable in this run by construction**: it requires
+an independently labelled, dual-reviewed audit set that does not exist. The realistic outcomes are
+`research-complete` or `no-go`.
+
 ## 0. One-time setup
 
 ```bash

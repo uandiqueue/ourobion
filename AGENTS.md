@@ -27,9 +27,26 @@ surface **descriptive** patterns in gut health, hydration, and vector exposure. 
   degradation; PDPA; privacy-safe community) live there — read them before touching user-facing copy
   or data isolation.
 
-Repo shape: a Flutter (Dart) app in `apps/biotope/`, a Supabase backend in `supabase/` (Postgres migrations +
-TypeScript edge functions), and shared Dart/TS contracts in `shared/`. Node is present only for the
-Supabase CLI and these `tools/`. **There is no Python in this repo — do not introduce any.**
+Repo shape: a Flutter (Dart) app in `apps/biotope/`, a Next.js/TypeScript brain-operations app in
+`apps/nao/`, a Supabase backend in `supabase/` (Postgres migrations + TypeScript edge functions), and
+shared Dart/TS contracts in `shared/`. Node drives nao, the Supabase CLI, and `tools/`.
+
+**Language is task-fit, not blanket-banned.** Python is permitted **only** inside the isolated
+top-level `model-training/` workspace, for the five planned custom models' training, evaluation,
+export, and reproducibility tooling. TypeScript/Node is the choice for ONNX-runtime parity checks and
+runtime-contract verification. Every other surface — `apps/`, `supabase/`, `shared/`, `tools/` — stays
+Flutter/Dart or Node/TypeScript, exactly as before; no other language enters without a concrete
+task-fit reason recorded as a decision. This supersedes the former blanket "no Python in this repo"
+rule and the model-training plans' requirement that training code live only in a separate
+`ourobion-model-lab` repository — both superseded by Jayden's explicit decision (see
+[`docs/temp/model-training/code-build-decisions.md`](docs/temp/model-training/code-build-decisions.md)
+D1). **It does not weaken any other boundary:** data-isolation, licensing, security, scientific,
+non-serving, and two-tier-truth rules are unchanged. `model-training/` code may only read fixtures and
+manifests it owns, may never be imported by `apps/`, `supabase/`, `shared/`, or `tools/brain-ingest`,
+and never integrates a trained model into product serving — see
+[`docs/temp/model-training/README.md`](docs/temp/model-training/README.md) and
+[`docs/temp/model-training/model-roster.md`](docs/temp/model-training/model-roster.md) §8 for the
+standing boundaries.
 
 ## 2. Core principle — TWO-TIER TRUTH (read this first)
 
@@ -85,8 +102,12 @@ auto-generate a structural import graph yet — see §8 and [`docs/graph/README.
 
 ## 4. Environment & commands
 
-ourobion has **two toolchains**: **Flutter/Dart** (the app, in `apps/biotope/`) and **Node + Supabase CLI** (the
-backend + these `tools/`). There is **no Python**.
+ourobion has **two toolchains for product code**: **Flutter/Dart** (biotope, in `apps/biotope/`) and
+**Node + Supabase CLI** (nao, the backend, and `tools/`). A third, narrowly scoped toolchain — **Python
+≥3.10, isolated to `model-training/`** — exists for the five planned custom-model training/evaluation/
+export pipelines (see §1 and
+[`docs/temp/model-training/README.md`](docs/temp/model-training/README.md)); it is never installed into,
+or imported by, `apps/`, `supabase/`, `shared/`, or `tools/`.
 
 > **Windows-native dev (no WSL):** `scripts/setup.ps1` installs the whole toolchain **bounded to the
 > project** in a sibling `..\biotope-toolchain\` (Miniconda env = Node + JDK 17, Flutter SDK, Android
@@ -283,6 +304,26 @@ small JSON file managed by the Shared Memory Coordinator (`tools/shared_memory.m
 - **Claim:** `node tools/shared_memory.mjs claim --task "<name>" --agent "<agent>" --device "<device>"`
 - **Release:** `node tools/shared_memory.mjs release --task "<name>"`
 
+### Model-tier delegation (Sol Max)
+
+When the primary session uses **`gpt-5.6-sol` at max effort**, reserve it for orchestration,
+architecture/adversarial analysis, synthesis, evaluation, and final quality control. It should choose
+the model and reasoning effort for each delegated task to minimise total tokens and latency while
+preserving the required quality.
+
+- Delegate bounded search, repository inventory, extraction, routine test execution, mechanical edits,
+  and straightforward implementation to appropriately cheaper/faster subagents.
+- Give every subagent a concrete scope, expected artifact, validation rule, and stop condition; use
+  parallel workers only where their work is genuinely independent.
+- The Sol Max primary must inspect and validate material findings or changes before accepting them; a
+  subagent report is evidence to review, not an automatic conclusion.
+- Direct execution by Sol Max is acceptable when delegation is unavailable, the task is too small to
+  justify hand-off, the work is tightly coupled to the primary analysis, or safety/security requires
+  the primary to retain the operation. Record the reason when the exception is material.
+- Do not use a high-cost subagent where a lower-cost model/effort can meet the bounded task's acceptance
+  criteria. Conversely, escalate model or effort when validation shows the cheaper attempt is
+  insufficient.
+
 ### Model-tier delegation (orchestrator convention)
 
 Whenever the user says the primary is **"the orchestrator"**, it decomposes work, assigns bounded
@@ -308,15 +349,27 @@ graph for agent context, and enforce what we keep:
   whole tree. **Complementary to — not a substitute for — the deferred structural graph** (it is
   semantic/multi-modal; AST coverage includes Dart). It is **build tooling, project-bounded** (a venv in
   `..\biotope-toolchain`, on PATH after `. .\scripts\biotope-env.ps1`, never global/committed); rebuild
-  with **`scripts/graphify-build.ps1`**. Output is repo-root **`graphify-out/`** (gitignored — a
-  rebuildable projection, never hand-edited). Query it with `graphify query "<question>"`,
+  with **`scripts/graphify-build.ps1`**. The machine output is repo-root **`graphify-out/`**
+  (gitignored — a rebuildable projection, never hand-edited); the wrapper also refreshes the single
+  tracked view at **`docs/graph/semantic-graph.md`**. **That view is Markdown on purpose:** `docs/graph/`
+  is the layer that travels across machines and agents, and everything in `graphify-out/` — `graph.json`,
+  `GRAPH_REPORT.md`, and the interactive `semantic-graph.html` — is machine-local, so on a fresh clone the
+  tracked Markdown is the *only* graph context an agent has. An interactive HTML view is still generated,
+  into gitignored `graphify-out/semantic-graph.html`, for humans; never point an agent at it (it is a
+  ~1.3MB blob of embedded JSON and minified JS). Query it with `graphify query "<question>"`,
   `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"`; after code changes run
-  `graphify update .`. **Pre-wired PreToolUse hooks** remind the agent to consult the graph before
+  `graphify update .`, then `npm run graph:view:write` (the wrapper performs both). `.graphifyignore`
+  excludes `docs/archive/` and the generated view itself. **Pre-wired PreToolUse hooks** remind the agent to consult the graph before
   grepping/reading source for **Claude Code** (`.claude/settings.json` + `CLAUDE.md` + a `/graphify`
   skill in `.claude/skills/graphify/`), **Codex** (`.codex/hooks.json`), and **Gemini CLI**
   (`.gemini/settings.json` + `GEMINI.md`); any other tool runs the CLI manually. In Claude Code,
-  `/graphify .` runs the full pipeline (incl. the LLM semantic pass) using the session model — no key. The semantic pass needs **no API key** inside an AI assistant (it uses the host
-  session model). Detail: [`docs/graph/README.md`](docs/graph/README.md),
+  `/graphify .` runs the full pipeline (incl. the LLM semantic pass) using the session model — no key.
+  Refresh the human view after it finishes. Graphify semantic extraction is routine housekeeping: use
+  the **fastest capable subagent model at low effort by default**, escalating only when validation
+  rejects its output. At session close, process only new/invalidated manifest entries so semantic work
+  stays incremental; reserve a full rebuild for extractor/schema changes or repair. The semantic pass
+  needs **no API key** inside an AI assistant (it uses the host session model). Detail:
+  [`docs/graph/README.md`](docs/graph/README.md),
   [`docs/memory/0008-graphify-context-tool.md`](docs/memory/0008-graphify-context-tool.md).
 
 ## 9. Enforced context maintenance (automated, not trust-based)
