@@ -147,6 +147,135 @@ Default deferrals:
 - **O40:** perform only the Run 3→Run 4 routing needed for safe launch. Superseding ADR work remains a
   separately reviewed decision change.
 
+## 3b. Jayden's product brief (2026-07-27) — reconciled against the tranche above
+
+The §3 tranche was signed off **before** Jayden's product brief and is infrastructure-first. The brief
+adds three product goals it does not cover, and adds a capability that changes what is testable. This
+section reconciles the two; it does not replace §3.
+
+**New capability — the full local test suite now exists.** A real **Android device** is available and
+**local nao runs live**. This is the largest change entering Run 4: `B-UI2`, `B-UI5`, `B-UI6`,
+`B-UI11`, the O28 TalkBack traversal, and human blocker `B10(access)` all move from *blocked* to
+*doable*. Several §3 default-deferrals were justified partly by untestability and should be re-examined
+on that basis — O28 in particular.
+
+**No model training in Run 4.** It lives in [`../model-training/`](../model-training/) with its own
+units, budget and gates. Run 4 may consume a frozen artifact but never waits on one. The Zebra build
+log has moved out of this folder.
+
+### Coverage of the six priorities
+
+| # | Priority | Covered by | Status |
+|---|---|---|---|
+| 1 | Auth split: dev vs user; dev reaches nao; nao shows ingestion + biotope data | R4-U2 (O25) | **partial** — R4-U2 is the RBAC/key boundary; the dev/user *split* and dev-facing nao data population are additional |
+| 2 | All pending Run-3 optimisations | R4-U0/U2/U3/U4 | covered, minus deferred O28/O29 |
+| 3 | Single-paper ingestion, no empty checkpoints, LLM stand-ins | — | **not covered** → R4-U5 below |
+| 4 | biotope metrics, EASY + MEDIUM | — | **not covered** → R4-U6 below |
+| 5 | biotope UX revamp | — | **not covered** → R4-U7 below |
+| 6 | As much of the register as fits | R4-U1 partially | partial |
+
+### Additional candidate units
+
+**R4-U5 · Single-paper end-to-end ingestion with LLM stand-ins.** Closes register **section C**. One
+real paper, start to finish, with **no empty checkpoints** — each planned custom-model slot filled by a
+cheap lightweight OpenAI call, or by the deterministic path where one exists (`impactTier` is already
+OpenAlex + SJR and needs nothing). The per-checkpoint stand-in contract is in the register §C.1.
+
+> Two constraints. **A stand-in is an LLM call, not a custom model** — it reduces no tokens and proves
+> no model works, so every output carries an `INTERIM:` provenance marker. And `router.config.json`
+> runs `testMode` ON with all six nodes on OpenAI because only one key is provisioned, so this unit
+> **cannot** also satisfy `B-BR1`/`B-BR2` decorrelation. Scope it to *pipeline completeness only*;
+> decorrelation stays with the deferred O29. If a second family is wanted cheaply, GMI **serverless
+> inference** is OpenAI-compatible and is **not** behind the delayed container entitlement.
+
+**R4-U6 · biotope metrics, EASY + MEDIUM (~50).** Split into **U6a/U6b/U6c**.
+
+> **This is not a metric-authoring unit.** EASY metrics need `register A5` (generalise `daily_log`) and
+> MEDIUM metrics need `register A4` (extend `metric_daily_values`, or events/state_bands stay
+> dashboard-invisible). Both are structural schema work owned by `B-PL6`/O5. Sizing U6 without them
+> under-scopes it by the entire storage-primitive workstream. U6a is those primitives; U6b is EASY;
+> U6c is MEDIUM. Touches `shared/metrics` → **P2**.
+
+**R4-U7 · biotope UX revamp.** `B-UI1`, the porcelain-luxury re-skin, excluded from Runs 2 and 3 as
+needing human supervision — now viable with a device in hand. Sequence **after** any accessibility work
+so it is not redone. `B-UI2` formal user testing also becomes possible, but needs a protocol, not just
+hardware.
+
+### Sizing reality
+
+§3's five units were deliberately capped as "the largest tranche this review signs off for preflight".
+Adding U5–U7 roughly doubles it, and three of the additions (U2's split extension, U6a, U6c) are
+substantially greenfield. On Run-3 calibration the combined scope plausibly lands at **150–250 changed
+paths** against a landing-delta cap.
+
+Recommended: **do not lock all eight.** Sequence by demonstrable value —
+
+**R4-U5 → R4-U2(+auth split) → R4-U0 → R4-U6a → R4-U6b → R4-U4 → R4-U7 → R4-U6c → R4-U1**
+
+R4-U5 first because a complete pipeline on one real paper is the highest-value demonstrable outcome and
+is nearly independent of the rest; the auth split second because dev access is what makes everything
+else testable. Anything not reached rolls to Run 5 rather than inflating the cap.
+
+## 3c. Run 4 exit gate — local qualification before cloud promotion
+
+**This runs after every locked unit is complete, and it gates promotion to the cloud demo database.**
+Nothing is promoted until both passes below are green. Jayden's specification, 2026-07-27.
+
+### Why two passes and not one
+
+The existing harness proves **API integrity**, not **end-to-end authoring**. Those are different
+claims and conflating them is the trap this gate exists to prevent.
+
+`scripts/demo-dryrun-run2.ps1` (756 lines; canonical procedure in
+[`phase2-demo-runbook.md`](../../shared/phase2-demo-runbook.md)) already verifies relationship claims
+and verified edges in Postgres, simulated Biotope rows through nao `/api/loader`,
+`compute-baselines → evaluate-signals → generate-insights`, insight cards and provenance, the claims /
+rejection / models / caps / seeds / gap endpoints, and Biotope rendering on Android — **21/21 at last
+run**.
+
+But it does so from **four hand-authored relationship fixtures**, one fixture claim with a real live
+verifier call, real local edge loading and insight-engine execution, and **simulated,
+provenance-labelled** Biotope health data. So it validates every implemented application API while
+proving nothing about whether an arbitrary newly ingested paper becomes a relationship. That gap is
+register row **`B-PL22`**: the nao ingestion button stops after the GitHub Actions paper-ingestion job,
+and synthesis, verification and edge loading remain separate CLI stages.
+
+### Pass 1 — API integrity
+
+Run the official full harness. **Every endpoint and stage assertion must pass**; a partial pass is a
+fail. Record the run output, the commit SHA, and the environment, per the runbook.
+
+### Pass 2 — real-paper authoring
+
+Take one **existing corpus paper** and drive it the whole way:
+
+> **`doi:10.1016/j.isci.2026.116224`** — *Unraveling the gut microbiota-brain axis…*
+>
+> Chosen because it already has canonical R2 text **and** an existing `gut_comfort_score ↔ mood_score`
+> claim, so it is traceable end to end. **Do not use the D1 paper** inserted earlier: it is searchable
+> but not connected to the demo insight chain, so it cannot evidence this pass.
+
+Then: regenerate a relationship from that DOI → verify it → load it → generate Biotope health data →
+confirm the resulting insight and its provenance.
+
+### Relationship to R4-U5
+
+Pass 2 **is** the acceptance form of candidate unit **R4-U5** (§3b) — the same single-paper traceable
+run, judged as a gate rather than as a build. Do not scope them as separate work. If R4-U5 ships, pass
+2 is its acceptance evidence; if R4-U5 is cut, pass 2 still runs and will fail until the CLI stages are
+driven manually, which is itself the honest result.
+
+Note the stand-in constraint carries through: outputs from LLM stand-ins are marked `INTERIM:` and
+`testMode` remains single-provider, so pass 2 evidences **pipeline completeness**, not decorrelated
+verification.
+
+### Promotion rule
+
+Only after **both** passes are green may the **same** migrations and reviewed artifacts be promoted to
+the cloud demo. Promote the artifacts that were qualified — not a rebuild, not a re-run, not a
+"should be equivalent" variant. Any divergence between what passed locally and what is promoted voids
+the gate.
+
 ## 4. Carried forward from the pending-build register
 
 The former O24-O29 scope would fully cover **14** register rows and partially cover 3 if all six units

@@ -107,6 +107,31 @@ Net: every planned-custom slot is currently absorbed by (i) the two big LLM node
 not existing yet. The absent NLI pre-filter removes a potential token-saving and disagreement signal;
 it is not itself proof for or against correctness, because the LLM verifier still owns the verdict.
 
+### C.1 — the Run-4 stand-in contract (target state for the single-paper run)
+
+The table above records what fills each slot **today**. This one records what candidate unit **R4-U5**
+must fill it with, so the single-paper ingestion run finishes with **no empty checkpoints**:
+
+| Checkpoint | Planned model | Run-4 stand-in |
+|---|---|---|
+| Claim/evidence verdict pre-filter | (a) Zebra NLI | lightweight OpenAI model, prompted — **the slot that is currently nothing at all** |
+| `Citation.evidenceTier` | (b1) Giraffe | deterministic A5 rules first, LLM only on the inconclusive residue |
+| `impactTier` | (b2) | **already deterministic** — OpenAlex + SJR; needs nothing |
+| `directionCheck` / `claimKindCheck` | (c) Salmon / Viceroy | lightweight OpenAI model, prompted, alongside the existing deterministic contract checks |
+| A4 sentence roles | Leafcutter | existing Haiku cold-start path |
+
+Two constraints on that unit:
+
+> **A stand-in is an LLM call, not a custom model.** It reduces no tokens and proves no model works.
+> Its only job is that the pipeline has no empty checkpoints end to end on one real paper, so every
+> artifact it produces carries an `INTERIM:` provenance marker under the existing convention.
+
+> **Single-provider conflict.** `router.config.json` runs `testMode` ON with all six nodes on OpenAI
+> because only `OPENAI_API_KEY` is provisioned, so the synthesis↔verifier decorrelation invariant is
+> deliberately off. R4-U5 therefore **cannot** also satisfy `B-BR1`/`B-BR2`; scope it to pipeline
+> completeness only. GMI **serverless inference** is one cheap route to a second family and is *not*
+> behind the container entitlement that is currently delayed.
+
 ## D · Platform / process
 
 | Item | State | Gates / notes |
@@ -132,6 +157,7 @@ it is not itself proof for or against correctness, because the LLM verifier stil
 | B-PL19 · Hosted Supabase schema + brain-artifact release/promotion isolation | **production blocker — O29 deferred by default** | The 2026-07-26 read-only probe reached Auth/PostgREST on demo `bewwvcksgpxoomyjavjp`, but the Run-2 brain tables were absent; clean production reserve `jscxvnettbvkboijczav` has not been migration/promotion rehearsed. R2 corpus/edge artifacts are canonical: the pinned corpus manifest rebuilds the D1 search index, while pinned edge JSONL rebuilds the Supabase serving projection. Today `edge-loader --from-r2` reads mutable keys and there is no exact migration ledger, explicit release selector, immutable namespace/manifest, checksummed promotion, target-load provenance, rollback, or cross-environment verdict policy. Apply append-only migrations to a clean target, freeze one reviewed corpus/claim/verification/run manifest, promote identical source bytes without another LLM run, rebuild each projection independently, and mechanically exclude auth users, simulated/personal rows, cards/job state and other demo-only data. Hosted writes require Jayden's separate approval of named isolated rehearsal resources; default evidence is local/offline |
 | B-PL20 · Canonical orientation docs lag long-horizon builds | open — **Run 4 preflight prerequisite** | The [2026-07-26 freshness audit](../documentation-freshness-audit-2026-07-26.md) found materially stale current-state claims in `next-steps`, `phase-2-plan`, M1/M2 context, nao design/README, architecture/table inventory and shared/brain prose. Run one bounded docs-only reconciliation against the integration SHA before unattended Run 4 work; add active-link and status-freshness automation. This is preflight, not a product unit |
 | B-PL21 · `PaperRecord` crosses the ingestion/nao boundary without a shared contract | open — **contract integrity outside the priority tranche** | `tools/brain-ingest/src/types.ts` and `apps/nao/src/lib/types.ts` independently define the manifest record that nao consumes. Promote one additive, versioned `PaperRecord` contract through `shared/brain/`; generate or map TS consumers from that source; add ingestion-to-nao fixture/parity tests and migration compatibility; then remove the duplicate definitions. Because this changes `shared/`, B-PL10's two-reviewer rule applies. Do not fold this engineering work into the B-PL20 docs-only reconciliation |
+| B-PL22 · **no single production-shaped command connects ingestion → insights** | open — **the gap the Run 4 exit gate is designed to expose** | The nao ingestion button stops after the GitHub Actions paper-ingestion job. Synthesis, verification and edge loading remain separate CLI stages, so nothing yet proves that an *arbitrary newly ingested paper* automatically becomes a relationship. `scripts/demo-dryrun-run2.ps1` (756 lines) validates every implemented application API — 21/21 at last run, procedure in [`phase2-demo-runbook.md`](../../shared/phase2-demo-runbook.md) — but it does so from **four hand-authored relationship fixtures**, one fixture claim with a real live verifier call, real local edge loading and insight-engine execution, and **simulated provenance-labelled** Biotope health data. API integrity and end-to-end authoring are therefore two distinct claims, and only the first is currently evidenced |
 
 ---
 

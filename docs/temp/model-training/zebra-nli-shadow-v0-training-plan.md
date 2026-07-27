@@ -13,7 +13,7 @@ updated: 2026-07-26
 
 This isolated workstream trains exactly one custom model: **Zebra NLI Shadow v0**
 (`zebra-nli-shadow-v0`), a three-way cross-encoder that reads a scientific claim plus retrieved
-evidence and predicts `supported`, `contradicted`, or `uncertain`. It researches only model **(a)**
+evidence and predicts `supported`, `contradicted`, or `insufficient_evidence`. It researches only model **(a)**
 from [memory 0013](../../memory/0013-brain-pipeline-and-support-models-decision.md).
 
 This is a bounded research pilot, not a serving launch:
@@ -32,7 +32,7 @@ reuse a compatible frozen evaluation artifact, but neither workstream is a prere
 
 | Decision | Zebra v0 choice |
 |---|---|
-| Task | Pair classification: `[claim] [SEP] [retrieved evidence]` → supported / contradicted / uncertain |
+| Task | Pair classification: `[claim] [SEP] [retrieved evidence]` → supported / contradicted / insufficient_evidence |
 | Base encoder | `microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext` (MIT), exact immutable revision pinned at execution |
 | Training data | SciFact only, using a pinned AllenAI entailment transform with explicit `NEI` rows after conservative licence approval; HealthVer, PUBHEALTH, SciNLI, user data, arbitrary negative relabelling, and synthetic LLM labels are excluded |
 | Evaluation | Untouched SciFact dev plus a frozen, independently labelled Ourobion-domain audit set |
@@ -123,7 +123,7 @@ volume attached to a container. Treat the container filesystem as disposable scr
 Use a new release prefix such as:
 
 ```text
-models/zebra-nli-shadow-v0/releases/<UTC-date>-<model-lab-git-sha>/
+models/zebra-nli-shadow-v0/releases/<UTC-date>-<ourobion-git-sha>/
 ```
 
 Treat the prefix as immutable only after verifying an enforceable control such as object retention/
@@ -181,7 +181,7 @@ The three-way pilot also needs explicit `NEI` pairs. Pin the AllenAI
 `allenai/scifact_entailment` conversion revision and record its current `cc-by-nc-2.0` card metadata as
 an additional conservative restriction alongside the upstream component licences. The licence reviewer
 must approve that combined manifest before training. If this written resolution is unavailable, Zebra
-blocks; do not create an `uncertain` class by treating arbitrary unannotated documents as negative.
+blocks; do not create an `insufficient_evidence` class by treating arbitrary unannotated documents as negative.
 Do not assume weights trained under that conservative non-commercial restriction can later be used in
 a commercial/production product; that requires fresh legal review or retraining from an approved data
 construction.
@@ -206,26 +206,50 @@ committed to either repository.
 
 Map SciFact labels exactly:
 
-| SciFact | Zebra NLI Shadow v0 |
+| SciFact | Zebra NLI Shadow v0 (model-native) |
 |---|---|
 | `SUPPORT` | `supported` |
 | `CONTRADICT` | `contradicted` |
-| explicit `NEI` row in the pinned AllenAI SciFact entailment transform | `uncertain` |
+| explicit `NEI` row in the pinned AllenAI SciFact entailment transform | **`insufficient_evidence`** |
 
-Use only the pinned transform's explicit relation label to assign `uncertain`. Do not add or relabel
-arbitrary BM25/non-gold claim-document pairs. Because an `NEI` relation can still reflect incomplete
-annotation rather than demonstrated absence of evidence, measure and state that limitation.
+> **Z3 — the third class is model-native and fills no contract state.** It was previously named
+> `uncertain`, which is wrong: the shared contract distinguishes `unsupported` ("no evidence found either
+> way — absence, not contradiction") from `uncertain` ("could not be grounded"), and SciFact `NEI` is
+> cleanly neither. The artifacts therefore use **`insufficient_evidence`** throughout, defined solely as
+> "the pinned transform recorded an explicit `NEI` relation for this claim/abstract pair". A later
+> verifier roll-up may consume it as one input; it never populates `EdgeVerification.verdict` directly.
 
-Build evidence text to match a frozen standalone evaluation contract compatible with Ourobion's
-`EvidencePassage` claim/evidence shape:
+Use only the pinned transform's explicit relation label. Do not relabel arbitrary non-gold
+claim-document pairs. Because an `NEI` relation can still reflect incomplete annotation rather than
+demonstrated absence of evidence, measure and state that limitation.
+
+### 6.1 Evidence construction — one label-blind pipeline (Z1)
+
+> **Z1 is the correction that decides whether this experiment means anything.** The earlier design gave
+> supported/contradicted rows gold rationale sentences plus context, and `NEI` rows BM25-selected
+> sentences. That makes the *window-construction procedure itself* a function of the label, so the
+> classifier can learn the input-selection policy instead of entailment — and at inference there are no
+> gold rationales at all. Noting that "BM25 never assigns the label" does not help: the procedure carries
+> the label even when the selector does not. Any score produced that way is inflated and uninterpretable.
+
+The primary pipeline is **identical for every class**, and knows nothing about the label:
 
 1. normalize Unicode and whitespace without changing scientific symbols;
-2. for supported/contradicted rows, include annotated rationale sentences plus adjacent context;
-3. only after an explicit `NEI` pair is fixed, select the same number of claim-relevant sentences from
-   that row's paired abstract with deterministic BM25; BM25 never assigns the label;
-4. preserve source sentence order and identifiers;
-5. cap the pair at 384 wordpiece tokens, truncating evidence rather than the claim;
-6. report evidence-token-length distributions by label to detect a length shortcut.
+2. for **every** row regardless of class, select evidence sentences from that row's paired abstract with
+   the **same deterministic retrieval function** over the claim text — same scorer, same sentence count,
+   same context window, same tie-breaking;
+3. preserve source sentence order and identifiers;
+4. cap the pair at 384 wordpiece tokens, truncating evidence rather than the claim;
+5. report evidence-token-length distributions **and retrieval-overlap-with-gold distributions** by class,
+   to detect any residual shortcut.
+
+Gold rationales are **not** used in the primary pipeline. They survive only as a clearly named
+**`oracle-evidence` secondary analysis**, reported separately and never as the headline result. The
+gap between label-blind and oracle performance is itself a finding worth reporting: it estimates how
+much of the task is retrieval rather than entailment.
+
+**Eligibility for any later shadow proposal rests exclusively on the label-blind result.** A preflight
+assertion must fail if the evidence-construction code branches on the label anywhere.
 
 Every processed row carries `example_id`, `claim_id`, `abstract_id`, source split, source sentence IDs,
 label, preprocessing-version hash, and raw-source hashes. No free-text row may exist without lineage.
@@ -244,6 +268,19 @@ frozen. For cross-validation inside SciFact train:
 Use five training folds only to estimate variance and produce out-of-fold calibration logits. Do not
 select a best fold or a best seed.
 
+### 7.1 Train↔dev separation and fold viability (Z2)
+
+The assertions above only police *internal* folds. They must also police the official dev split, and
+must fail loudly rather than silently producing a degenerate fold:
+
+- **assert zero overlap between SciFact train and the official dev split** by `claim_id`, `abstract_id`,
+  connected component, and exact normalized text — the same four keys used across folds;
+- emit a **fold × class** and **fold × component** count table as a preflight artifact;
+- **fail preflight** when any fold holds fewer than the preregistered per-class minimum. With only
+  ~1,259 transformed rows across three classes, viable per-class support in every group fold cannot be
+  assumed and must be checked, not hoped for;
+- record the removed-collision count in the split manifest.
+
 ## 8. Frozen Ourobion-domain audit set
 
 Before any trained-model or LLM-benchmark prediction is viewed, freeze the evidence-input contract and
@@ -260,7 +297,7 @@ evidence, source locator, and this rubric; they do not see the synthesis/verifie
 - `supported`: the evidence directly supports every material predicate, population/context qualifier,
   and direction in the claim;
 - `contradicted`: the evidence directly conflicts with a material predicate or direction;
-- `uncertain`: evidence is missing, indirect, mixed, partial, or insufficient for either decision.
+- `insufficient_evidence`: evidence is missing, indirect, mixed, partial, or insufficient for either decision.
 
 Freeze all eligible adjudicated examples, targeting at least 96 total and at least 20 per domain. Do
 not drop examples after predictions are known to improve balance. Record raw agreement, Cohen's kappa,
@@ -381,7 +418,7 @@ Zebra is complete when all of these are true, even if the outcome is `no-go`:
   and the model card says `non-serving`;
 - the container is terminated, any EIP is released, scratch data is removed, and temporary secrets are
   revoked/rotated;
-- the model-lab and evidence-artifact commits pass their own exact-SHA checks.
+- the Ourobion commit and evidence-artifact commits pass their own exact-SHA checks.
 
 Poor performance produces a completed `no-go` experiment, not endless tuning. Licence failure,
 unavailable GMI entitlement/credits, missing independent audit labels, or inability to reproduce the
@@ -439,7 +476,7 @@ model-card.md
 sha256sums.txt
 ```
 
-`release-manifest.json` binds the model-lab git SHA, main Ourobion git SHA, evaluation-manifest hash,
+`release-manifest.json` binds the Ourobion git SHA plus the `model-training/` package, config and lock hashes (Z5 — the former separate `model-lab` repository identity is obsolete now that the code lives in this repository), evaluation-manifest hash,
 LLM benchmark protocol/output hashes, GMI organization/region/product/template/runtime identifiers,
 image digest or unavailable marker,
 start/end time, GPU-hours, source/split/
