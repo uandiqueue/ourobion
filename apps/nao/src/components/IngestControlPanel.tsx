@@ -6,6 +6,13 @@
 // override OpenAlex's daily budget cap (same settings endpoint), and trigger a
 // real run right now via GitHub Actions (/api/ingest-control/trigger — see
 // lib/githubDispatch.ts for why this can't just run inside nao itself).
+//
+// R4-U2: `updatedBy` is a staff EMAIL ADDRESS server-side, so /api/ingest-control
+// now redacts it out of the response (redactDeep drops the key — see
+// src/lib/authz.ts) and the actor lives in the admin-only nao_control_events log
+// instead. The field is therefore absent at runtime even though
+// IngestControlConfig types it as required, hence the `|| '[redacted]'` fallback
+// at the one render site below.
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { INGEST_SEED_TOPICS, DEFAULT_INGEST_CONTROL } from '@/lib/types';
@@ -134,7 +141,7 @@ export function IngestControlPanel() {
         </div>
         <p className="fmt__cap">
           Paused blocks both &quot;Run now&quot; below and any <code>--remote-control</code> CLI run. Last
-          changed by {control.updatedBy} at {fmtWhen(control.updatedAt)}.
+          changed by {control.updatedBy || '[redacted]'} at {fmtWhen(control.updatedAt)}.
         </p>
       </div>
 

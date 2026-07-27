@@ -11,7 +11,11 @@
 // Both sources are DERIVED projections of the R2 edge artifacts (rebuilt by
 // tools/edge-loader); nao only reads them. The human layer is read from the
 // view (latest edge_human_verdicts row per edge).
+//
+// AUTH (R4-U2): requires nao `viewer` via requireRole()/guardRole()
+// (apps/nao/src/lib/authzServer.ts).
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { guardRole, redactText } from '@/lib/authzServer';
 import {
   citationsContainsValue,
   mergeClaimsWithVerdicts,
@@ -29,12 +33,10 @@ function json(body: unknown, status = 200): Response {
 }
 
 export async function GET(req: Request): Promise<Response> {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return json({ error: 'not authenticated' }, 401);
+  const gate = await guardRole('viewer');
+  if (!gate.ok) return gate.response;
 
+  const supabase = await createServerSupabaseClient();
   const paper = new URL(req.url).searchParams.get('paper');
 
   try {
@@ -66,6 +68,8 @@ export async function GET(req: Request): Promise<Response> {
 
     return json({ paper: paper ?? null, claims: mergeClaimsWithVerdicts(claimRows, edgeRows) });
   } catch (err) {
-    return json({ error: err instanceof Error ? err.message : String(err) }, 500);
+    // A relayed Postgres message can embed a value (`Key (user_id, …)=(<uuid>, …)`),
+    // so every error string leaving a nao route goes through redactText.
+    return json({ error: redactText(err instanceof Error ? err.message : String(err)) }, 500);
   }
 }

@@ -305,6 +305,21 @@ export interface LoaderRequestBody {
   scenario?: LoaderScenario;
 }
 
+/**
+ * `seed` was length-capped but not charset-checked (R4-U2 re-review finding
+ * N1): it flows straight into `recordControlEvent`'s audit `detail` at
+ * api/loader/route.ts, so a NUL (or any other character the database cannot
+ * store) inside it could suppress the audit row for `loader.simulate` while
+ * the loader's own write — plain numeric wearable/gut rows, never the seed
+ * string itself — still succeeded. Every real caller passes a short
+ * word/topic-shaped token (the UI's free-text field, `DEFAULT_SEED` =
+ * 'run2-demo', and every seed used across this module's own tests: 'abc',
+ * 'xyz', 's', 'dip', 'flat', 'corr', 'rng', 'prov') — letters, digits, and
+ * `. _ : -` covers all of them with room for a future namespaced value in the
+ * `simulated:run4-demo` style DATA_ORIGIN already uses.
+ */
+const SEED_RE = /^[A-Za-z0-9._:-]{1,64}$/;
+
 /** Returns an error message, or null when the body is valid. */
 export function validateLoaderBody(body: unknown): string | null {
   if (body === null || typeof body !== 'object' || Array.isArray(body)) {
@@ -317,8 +332,8 @@ export function validateLoaderBody(body: unknown): string | null {
     }
   }
   if (b.seed !== undefined) {
-    if (typeof b.seed !== 'string' || b.seed.length === 0 || b.seed.length > 64) {
-      return 'seed must be a non-empty string of at most 64 characters';
+    if (typeof b.seed !== 'string' || !SEED_RE.test(b.seed)) {
+      return 'seed must be a non-empty string of at most 64 characters, using only letters, digits, and . _ : -';
     }
   }
   if (b.scenario !== undefined) {
