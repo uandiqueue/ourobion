@@ -397,3 +397,165 @@ jobs:
       - name: Type check
         run: mypy src
 
+  # ─── Run 4 O35 / O36 (unit R4-U1) ──────────────────────────────────────────────────────────
+  # Two STANDALONE gates, deliberately NOT in run4-gate.needs. tools/run4_release_gate.mjs
+  # asserts set equality against the frozen RUN4_REQUIRED_JOBS constant (line 35, checked at
+  # line 362) and hard-fails for any required job lacking a REQUIRED_JOB_STEP_SETS entry
+  # (line 175). Both are U0-owned and outside R4-U1's authority to edit, so promoting these
+  # two jobs into the required aggregate is a REPORTED integration requirement, never a
+  # silent edit. Each job still fails closed on its own and produces its own red check-run.
+  #
+  # Invariants, all load-bearing:
+  #   * no continue-on-error, no `|| true`, no `set +e`, no per-step `if:`, no always()
+  #   * every multi-command run: block opens with `set -euo pipefail` — GitHub's default
+  #     shell is `bash -e {0}` (no pipefail, no -u), so an unset path variable would
+  #     otherwise sail past silently
+  #   * third-party actions pinned by immutable commit SHA; the scanner pinned by version
+  #     AND by SHA256 of the exact linux-x64 artifact (tools/secret-scan/pins.json)
+  #   * no `npm ci`: both guards are Node-stdlib-only, so node_modules never exists and the
+  #     `gitleaks dir .` scan sees only tracked files
+  #   * the scanner's execution is PROVED by a canary scan, never inferred from exit 0
+  #   * `--redact=100` uses the equals form on purpose: `--redact` is declared `uint[=100]`,
+  #     so `--redact 100` parses as flag-plus-positional and aborts with
+  #     "accepts at most 1 arg(s)". Measured against gitleaks 8.30.1.
+  arch-boundaries:
+    name: Architecture boundaries — module /impl + model-training isolation
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/dev-phase2-run4') || (github.event_name == 'pull_request' && github.base_ref == 'dev-phase2-run4') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - name: Guard unit tests (positive + negative fixtures per rule)
+        run: node --test tools/check_arch_boundaries.test.mjs
+
+      - name: Enforce architecture boundaries over the tracked tree
+        run: node tools/check_arch_boundaries.mjs
+
+  secret-scan:
+    name: Secret scan & client-surface leak guard
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/dev-phase2-run4') || (github.event_name == 'pull_request' && github.base_ref == 'dev-phase2-run4') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Full history: the history scan must see every commit. A range scan derived from
+          # github.event.before fails open three ways (all-zeros on branch creation, a
+          # dangling before after a force-push, and hiding a leak commit by force-pushing).
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - name: Resolve pinned scanner
+        run: |
+          set -euo pipefail
+          node tools/secret-scan/pin.mjs --github-env "$GITHUB_ENV"
+
+      - name: Install pinned gitleaks (SHA256-verified)
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \
+            --retry 3 --retry-connrefused --max-time 120 \
+            --output "$GITLEAKS_HOME/$GITLEAKS_ASSET" "$GITLEAKS_URL"
+          printf '%s  %s\n' "$GITLEAKS_SHA256" "$GITLEAKS_ASSET" > "$GITLEAKS_HOME/SHA256SUMS"
+          cd "$GITLEAKS_HOME" && sha256sum --check --strict SHA256SUMS
+          tar -xzf "$GITLEAKS_HOME/$GITLEAKS_ASSET" -C "$GITLEAKS_HOME" gitleaks
+          chmod +x "$GITLEAKS_BIN"
+          test -x "$GITLEAKS_BIN"
+
+      - name: Verify scanner identity
+        run: |
+          set -euo pipefail
+          node tools/secret_scan_guard.mjs verify-binary \
+            --binary "$GITLEAKS_BIN" --expect-version "$GITLEAKS_VERSION"
+
+      - name: Validate scanner policy and allowlist narrowness
+        run: |
+          set -euo pipefail
+          node tools/secret_scan_guard.mjs policy \
+            --config tools/secret-scan/gitleaks.toml \
+            --allowlist tools/secret-scan/allowlist.json \
+            --emit-ignore "$GITLEAKS_IGNORE_PATH"
+
+      - name: Guard unit tests (reachable-failure-path proof)
+        run: node --test tools/secret_scan_guard.test.mjs
+
+      - name: Prove the scanner detects (canary)
+        run: |
+          set -euo pipefail
+          node tools/secret_scan_guard.mjs canary \
+            --binary "$GITLEAKS_BIN" \
+            --config tools/secret-scan/gitleaks.toml \
+            --gitleaks-ignore-path "$GITLEAKS_IGNORE_PATH" \
+            --dir "$GITLEAKS_HOME/canary" \
+            --report "$GITLEAKS_REPORT_DIR/canary.json"
+
+      - name: Scan working tree at HEAD
+        run: |
+          set -euo pipefail
+          "$GITLEAKS_BIN" dir . \
+            --config tools/secret-scan/gitleaks.toml \
+            --gitleaks-ignore-path "$GITLEAKS_IGNORE_PATH" \
+            --ignore-gitleaks-allow \
+            --redact=100 \
+            --no-banner \
+            --no-color \
+            --report-format json \
+            --report-path "$GITLEAKS_REPORT_DIR/worktree.json" \
+            --exit-code 1 \
+            --log-level info
+
+      - name: Verify the working-tree scan actually covered the tree
+        run: |
+          set -euo pipefail
+          node tools/secret_scan_guard.mjs verify-report \
+            --report "$GITLEAKS_REPORT_DIR/worktree.json" \
+            --scope worktree \
+            --min-files 500 \
+            --sentinel .github/workflows/ci.yml \
+            --sentinel AGENTS.md
+
+      - name: Scan full git history
+        run: |
+          set -euo pipefail
+          "$GITLEAKS_BIN" git . \
+            --config tools/secret-scan/gitleaks.toml \
+            --gitleaks-ignore-path "$GITLEAKS_IGNORE_PATH" \
+            --ignore-gitleaks-allow \
+            --redact=100 \
+            --no-banner \
+            --no-color \
+            --report-format json \
+            --report-path "$GITLEAKS_REPORT_DIR/history.json" \
+            --exit-code 1 \
+            --log-level info
+
+      - name: Verify the history scan produced a report
+        run: |
+          set -euo pipefail
+          node tools/secret_scan_guard.mjs verify-report \
+            --report "$GITLEAKS_REPORT_DIR/history.json" \
+            --scope history
+
+      - name: Client-surface leak assertions
+        run: |
+          set -euo pipefail
+          node tools/secret_scan_guard.mjs client-surface \
+            --surface-report "$GITLEAKS_REPORT_DIR/surfaces.json"
+
