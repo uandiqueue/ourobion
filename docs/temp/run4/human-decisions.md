@@ -9,17 +9,28 @@ updated: 2026-07-27
 
 # Run 4 Human Decisions
 
-Before implementation, Jayden must:
+## Recorded 2026-07-27 decisions
 
-1. Accept or edit candidate branch `dev-phase2-run4` and base `854aa471970b61afdc59205ded0b1c8a9ab3f270`.
-2. Accept or edit U0–U3 lock; keep U4 deferred pending P2 and later cap approval.
-3. Accept or edit 115-path / 8,500-added-line cap, inclusive of generated/lock/session/tracking/corrections.
-4. Name P1 owner to create/protect branch and apply every exact bootstrap check.
-5. Name P2 reviewer with GitHub handle and availability. Alton is candidate only.
-6. Select exact P3 model-training target; product branch excludes MT1–MT5.
+- BRANCH/base accepted: `dev-phase2-run4` was created at `854aa471970b61afdc59205ded0b1c8a9ab3f270`.
+- U0–U3 are locked. U4 is deferred because no second shared reviewer is available and the two-reviewer rule is not waived.
+- The 115-path / 8,500-added-line cap is accepted for the current lock. A local fixture-backed paper-to-Biotope slice is separately sized and admitted only if it fits.
+- P3 model training is paused/excluded: train nothing; MT1–MT5 do not enter product.
+- P5 is local-only with no hosted writes/deploy/key changes. P6 keeps O29 deferred and provider spend at zero.
+- PR #156 must target `dev-phase2-run4` and may merge there, never `dev-phase2`.
 
-Not authorised: product edits, settings changes, hosted/provider calls, hosted Supabase, Cloudflare/R2 writes, deployment, key mutation/revocation, merges, changes to PR #144, or creating the candidate branch during pre-flight.
+## Remaining required action
+
+P1 has human approval but is operationally blocked: the current GitHub token is WRITE rather than ADMIN and classic protection PUT returned 404. The exact 14 checks are not enforced. Product implementation remains gated; do not infer protection, a merge, checks, or implementation.
+
+Before implementation, an ADMIN-capable owner must:
+
+1. Enforce the exact bootstrap checks on `dev-phase2-run4` and supply proof at the current SHA.
+2. Separately size the local fixture-backed paper-to-Biotope slice before admitting it under the accepted cap.
+
+P2 remains blocked; shared work cannot start without an available second reviewer.
+
+Not authorised: product edits, settings changes, hosted/provider calls, hosted Supabase, Cloudflare/R2 writes, deployment, key mutation/revocation, changes to PR #144, or a merge to `dev-phase2`. PR #156 may merge only to `dev-phase2-run4` after the gate is enforced.
 
 Name-only local credentials: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `OPENALEX_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and Nao/Biotope public Supabase variables. No values belong here. Local Nao uses process-scoped local Supabase URL/anon/service-role values, never hosted file defaults. Android adb timed out; independent connection state is unverified.
 
-O29 remains deferred: zero provider calls and single-provider OpenAI TEST-MODE. No unit is queued, in progress, shipped, or tested.
+O29 remains deferred: zero provider calls and single-provider OpenAI TEST-MODE. No unit is in progress, shipped, or tested.

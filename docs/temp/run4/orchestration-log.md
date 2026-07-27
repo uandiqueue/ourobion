@@ -15,8 +15,14 @@ This is **pre-flight only**. The governing prompt permits no product implementat
 
 - Issue #155; claim `run4-preflight-decision-packet` by `codex@agentjwork`.
 - Worktree `C:\project\ourobion-run4-preflight-155`; branch `docs/run4-preflight-155`.
-- Pre-flight PR #156 targets `dev-phase2`; it remains unmerged and pre-flight-only.
+- PR #156 must target `dev-phase2-run4`; it may merge there, never `dev-phase2`, and remains unmerged/pre-flight-only.
 - No hosted writes, provider calls, product edits, settings changes, merges, or PR #144 changes.
+
+## 2026-07-27 human decision and operational blocker
+
+Jayden accepted BRANCH/base, the U0–U3 lock, and the 115-path / 8,500-addition cap for the currently locked envelope. `dev-phase2-run4` was created at exact SHA `854aa471970b61afdc59205ded0b1c8a9ab3f270`. The six Run 4 planning authority files were copied byte-for-byte and count in the cap. The pre-flight tracking packet and later approval updates also count, but are not byte-for-byte authority material.
+
+P1 has human approval, but remains an operational **BLOCKER**: the current GitHub token is WRITE rather than ADMIN, and classic protection PUT returned 404. The exact required checks are therefore not yet enforced. Product implementation remains gated; no protection, check, merge, or implementation is recorded as complete.
 
 ## Verified live state
 
@@ -28,25 +34,25 @@ On 2026-07-27, PR #144 was **CLOSED**, not merged, at `2026-07-27T08:03:15Z`; ba
 | `dev-phase2-run2` | `854aa471970b61afdc59205ded0b1c8a9ab3f270` |
 | `dev-phase2-run3` | `6869eeadb05c792bf9437bd866f03d06b297ee9d` |
 
-No `dev-phase2-run4` branch exists. `dev-phase2` and `dev-phase2-run3` are protected: false. One ruleset applies only to `main` and has no required status checks.
+`dev-phase2-run4` now exists at `854aa471970b61afdc59205ded0b1c8a9ab3f270`. The previously observed `dev-phase2` and `dev-phase2-run3` protections were false. One ruleset applies only to `main` and has no required status checks. No Run 4 protection enforcement is recorded.
 
-## Candidate envelope
+## Accepted envelope, operationally blocked
 
 | Field | Value | State |
 | --- | --- | --- |
-| Integration branch | `dev-phase2-run4` — do not create in pre-flight | CANDIDATE / PENDING P1 |
-| Immutable base | `854aa471970b61afdc59205ded0b1c8a9ab3f270` (`origin/dev-phase2-run2`) | CANDIDATE / PENDING human acceptance |
-| Locked units | `R4-U0`, `R4-U1`, `R4-U2`, `R4-U3` | CANDIDATE / PENDING human acceptance |
-| U4 | until P2 and later cap approval | DEFERRED |
-| Landing caps | `MAX_CHANGED_PATHS=115`, `MAX_ADDED_LINES=8500` | CANDIDATE / PENDING human acceptance |
+| Integration branch | `dev-phase2-run4` at `854aa471970b61afdc59205ded0b1c8a9ab3f270` | ACCEPTED / enforcement blocked |
+| Immutable base | `854aa471970b61afdc59205ded0b1c8a9ab3f270` (`origin/dev-phase2-run2`) | ACCEPTED |
+| Locked units | `R4-U0`, `R4-U1`, `R4-U2`, `R4-U3` | ACCEPTED |
+| U4 | no available second shared reviewer; two-reviewer rule not waived | DEFERRED |
+| Landing caps | `MAX_CHANGED_PATHS=115`, `MAX_ADDED_LINES=8500` | ACCEPTED for current lock |
 
-The candidate base is a full commit object and the repository is not shallow. `dev-phase2` is its ancestor and omits Run 2's 169 paths / +16,992. Run 3 adds 100 paths / +11,706 / -1,079 after Run 2, including model-training contamination and Run 4 documents. The six Run 4 planning authority files absent from the candidate base must later be promoted byte-for-byte and count in the cap. This pre-flight tracking packet and later approval updates also count, but are not immutable byte-for-byte promotion material. Current `dev-phase2`, `dev-phase2-run3`, and PR #144 head are rejected base alternatives.
+The accepted base is a full commit object and the repository is not shallow. `dev-phase2` is its ancestor and omits Run 2's 169 paths / +16,992. Run 3 adds 100 paths / +11,706 / -1,079 after Run 2, including model-training contamination and Run 4 documents. The six Run 4 planning authority files absent from the candidate base have been copied byte-for-byte and count in the cap. This pre-flight tracking packet and later approval updates also count, but are not immutable byte-for-byte promotion material. Current `dev-phase2`, `dev-phase2-run3`, and PR #144 head remain rejected base alternatives.
 
-Measure caps as unique paths and added lines in `RUN4_BASE_SHA..HEAD`; generated/lock/session/tracking/corrections count. Missing base, shallow history, parse, rename, or binary ambiguity fails. All-five coupling is likely 135–155 paths and 8,250–9,000 added lines, hence U0–U3 lock. The 115/8,500 cap includes promoted Run 4 docs/tracking and returns an exceeding unit to pending.
+Measure caps as unique paths and added lines in `RUN4_BASE_SHA..HEAD`; generated/lock/session/tracking/corrections count. Missing base, shallow history, parse, rename, or binary ambiguity fails. All-five coupling is likely 135–155 paths and 8,250–9,000 added lines, hence U0–U3 lock. The 115/8,500 cap includes promoted Run 4 docs/tracking and returns an exceeding unit to pending. A local fixture-backed paper-to-Biotope slice must be separately sized and admitted only if it fits the accepted cap.
 
 ## Bootstrap gate before implementation
 
-P1 owner must create/protect the candidate branch and require these exact checks; missing/skipped fails:
+P1 human approval is recorded. An ADMIN-capable owner must enforce these exact checks; missing/skipped fails. Current WRITE-token classic protection PUT returned 404, so enforcement is blocked and implementation remains gated:
 
 - `Context — sessions / memory / decisions / index / couplings`
 - `Flutter — Analyze & Test`
@@ -67,9 +73,9 @@ U0 then proposes aggregate `Run 4 Gate` with `if: always()` and explicit `needs`
 
 ## Pending posture
 
-P2: Alton is a documented candidate second reviewer, but handle/availability are unrecorded; no shared change may start. P3: no open model PRs; exact separate model-training target is human-owned and the product candidate must not receive MT1–MT5. P7 is complete only as PR #144 closed/superseded.
+P2: no available second shared reviewer; the two-reviewer rule is not waived. U4 remains deferred and no shared change may start. P3: model training is paused/excluded; train nothing and the product candidate must not receive MT1–MT5. P7 is complete only as PR #144 closed/superseded.
 
-P5 name-only local posture: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `OPENALEX_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and Nao/Biotope public Supabase variables. No values are recorded. `apps/nao/.env.public` is hosted-classified; `apps/biotope/.env.public` local-classified. Local Nao must use process-scoped local Supabase URL/anon/service-role values, never file defaults. Android is operator-authorized/unlocked, but adb timed out and connection state is unattested. Hosted Supabase, Cloudflare/R2 writes, deployment, and key mutation/revocation remain forbidden.
+P5 is accepted as local-only: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `OPENALEX_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and Nao/Biotope public Supabase variables remain name-only. No values are recorded. `apps/nao/.env.public` is hosted-classified; `apps/biotope/.env.public` local-classified. Local Nao must use process-scoped local Supabase URL/anon/service-role values, never file defaults. Android is operator-authorized/unlocked, but adb timed out and connection state is unattested. Hosted Supabase, Cloudflare/R2 writes, deployment, and key mutation/revocation remain forbidden.
 
 P6 defaults to O29 deferred and zero provider calls. Anthropic key presence does not approve a second-family configuration/budget; router remains single-provider OpenAI TEST-MODE.
 
@@ -85,4 +91,4 @@ All material claims are source/Git/GitHub-verified. Graphify was stale/noisy and
 | Packet writer | `gpt-5.6-terra` medium | draft complete |
 | Primary orchestration | `gpt-5.6-sol` max | pending human direction |
 
-Provider spend is 0. RESUME: Jayden accepts/edits branch/base/caps/check set/locked list, names P2 reviewer, and selects P3 target.
+Provider spend is 0. RESUME: an ADMIN-capable owner enforces the exact checks on `dev-phase2-run4`; separately size the local fixture-backed paper-to-Biotope slice before admitting it under cap. P2 remains unavailable and P3 remains paused/excluded.
