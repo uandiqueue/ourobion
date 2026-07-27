@@ -4,7 +4,7 @@ summary: Run 4's active reviewed scope: accepted envelope, O31-O40 enforcement c
 type: plan
 scope: shared
 status: draft
-run4_u5_sentence_provenance: planning-admitted; implementation-split-deferred-pending-u1-u3-remeasurement
+run4_u5_sentence_provenance: planning-admitted; implementation-cap-deferred-pending-later-envelope
 updated: 2026-07-28
 ---
 
@@ -13,23 +13,30 @@ updated: 2026-07-28
 > GROBID-style sections, sentence IDs/offsets, citation/refGraph roots, curated mention and deterministic
 > quote/tier/numeric/schema/negation/hedge gates. Frozen/mock LlmRouter seams must expose complete
 > `INTERIM:` metadata and only suggest; deterministic enforcement fails closed. The 14 / ~1,900 local
-> tranche is split/deferred; persisted/served/UI is P2-blocked (reserve 30 / ~4,500). Before this plan,
-> expected U1-U3 reserve left 4 paths / +1,216; the plan measured 4 new-in-U5 paths / +209 / -70.
-> Path slots are exhausted, but +1,007 lines remain unallocated. Separately, O29 defers provider/model
-> execution under the zero-call posture.
+> tranche is split/deferred; persisted/served/UI is P2-blocked. Verified combined product snapshot
+> `f2f2dac` (base `77c982`; U1 `baab1536` + U5 `cdc16f9`; MT4 paths/session excluded) is the historical
+> pre-overlay 38 / +8,002 / -162 snapshot, leaving 77 / +498. The later final pre-commit overlay (U5
+> docs + harness script + 44-line session) was independently audited at 40 / +8,146 / -185, leaving 75 /
+> +354. U1 fits, but U2/U3 expected additions and the minimal sentence tranche
+> (six touched, two reused, four new, ~+1,900) do not fit the line budget and are cap-deferred pending a
+> later envelope decision. Exact pre-merge remeasurement remains mandatory. Separately, O29 defers provider/model execution under the zero-call posture.
 
 # Run 4 — reviewed candidate scope and priority tranche
 
-**Status: active under the accepted envelope.** U0 merged through PR #161 at
+**Historical preflight status (superseded).** U0 merged through PR #161 at
 `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`; exact merge-SHA CI run `30285010079` passed 19/19. The
 accepted base, cap, locked units, and intentionally unprotected
 `dev-phase2-run4` posture are recorded in the companion decision documents. The audit that produced the
 candidate list is [`run3-audit-findings.md`](./run3-audit-findings.md).
 
-**Relationship to Run 3.** Run 3 is closing without an accepted unit. PR #144 must not merge in its
+**Current admitted sequence:** complete U5 health/insight proof, integrate completed U1, then run the
+Run 4 exit gate. U2, U3, and sentence-provenance implementation are cap-deferred pending an explicit
+later envelope decision and are not prerequisites for this exit gate.
+
+**Historical relationship to Run 3 (superseded sequencing context).** Run 3 closed without an accepted unit. PR #144 must not merge in its
 audited state; O24-O29 are therefore unfinished and have been promoted into
 [`pending-build-register.md`](./pending-build-register.md). Run 4 does not assume that all six fit.
-It rebuilds O24 first, then prioritizes O25-O27; O28 and O29 stay deferred by default.
+The original plan rebuilt O24 first and then prioritized O25-O27; O28 and O29 stayed deferred by default.
 
 ## 1. Preconditions — resolve before Run 4 (and mostly before Run 3 continues)
 
@@ -143,9 +150,9 @@ silently add O28, O29, O37, O39, O40, or any other register row.
 | Priority | Candidate unit | Contents | Start gate |
 |---|---|---|---|
 | 1 | R4-U0 · trustworthy release gate | Rebuild O24 with O31-O34; stable required aggregate, current landing-SHA evidence, fail-closed config/matrix coverage, and deploy-path dependency proof | COMPLETE: PR #161 merged at `66bfde5`; exact merge-SHA CI `30285010079` passed 19/19 |
-| 2 | R4-U1 · mechanical boundaries | O35 + O36; polyglot import/path guard and pinned secret scanning | R4-U0 gate is required and green |
-| 3 | R4-U2 · authorization and key boundary | O25; nao RBAC/RLS, redacted global jobs, named server-key migration | Credential decisions recorded; no hosted mutation without exact approval |
-| 4 | R4-U3 · raw-truth and retry safety | O26; atomic demo loading and idempotent/single-flight pipeline publication | R4-U2 blocks ordinary-account access |
+| 2 | R4-U1 · mechanical boundaries | O35 + O36; polyglot import/path guard and pinned secret scanning | COMPLETE externally at `baab1536`; PR #170 remains draft/open and unmerged, CLEAN, 21/21 green |
+| 3 | R4-U2 · authorization and key boundary | O25; nao RBAC/RLS, redacted global jobs, named server-key migration | DEFERRED BY CAP pending explicit later envelope decision |
+| 4 | R4-U3 · raw-truth and retry safety | O26; atomic demo loading and idempotent/single-flight pipeline publication | DEFERRED BY CAP with U2 pending explicit later envelope decision |
 | 5 | R4-U4 · scientific semantics | O27 + O38; claim-kind preservation, artifact trust, revision-bound dispositions, TS/Dart trust-label parity | P2 second reviewer; R4-U0 green; O27 contract brief accepted |
 
 Default deferrals:
@@ -218,17 +225,19 @@ Adding U5–U7 roughly doubles it, and three of the additions (U2's split extens
 substantially greenfield. On Run-3 calibration the combined scope plausibly lands at **150–250 changed
 paths** against a landing-delta cap.
 
-Recommended: **do not lock all eight.** Sequence by demonstrable value —
+**Historical recommendation (superseded):** do not lock all eight; the earlier proposed sequence was:
 
 **R4-U5 → R4-U2(+auth split) → R4-U0 → R4-U6a → R4-U6b → R4-U4 → R4-U7 → R4-U6c → R4-U1**
 
-R4-U5 first because a complete pipeline on one real paper is the highest-value demonstrable outcome and
-is nearly independent of the rest; the auth split second because dev access is what makes everything
-else testable. Anything not reached rolls to Run 5 rather than inflating the cap.
+That ordering no longer governs active work. The current admitted sequence is **U5 health/insight proof
+→ U1 integration → Run 4 exit gate**. U2, U3, and sentence-provenance implementation are cap-deferred
+pending an explicit later envelope decision. Anything outside the admitted sequence rolls forward rather
+than inflating the cap.
 
 ## 3c. Run 4 exit gate — local qualification before cloud promotion
 
-**This runs after every locked unit is complete, and it gates promotion to the cloud demo database.**
+**This runs after every currently admitted/integration unit is complete, explicitly excluding
+cap-deferred units, and it gates promotion to the cloud demo database.**
 Nothing is promoted until both passes below are green. Jayden's specification, 2026-07-27.
 
 ### Why two passes and not one

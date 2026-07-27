@@ -11,19 +11,35 @@ updated: 2026-07-28
 
 ## 2026-07-28 execution update
 
-R4-U0 merged through PR #161 at `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`. Exact merge-SHA CI workflow run `30285010079` passed 19/19. Jayden instructed continuous local Run 4 completion on 2026-07-28. R4-U1 is separately owned and integrates only after its main workflow; this record does not claim its implementation or merge.
+R4-U0 merged through PR #161 at `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`; exact merge-SHA CI `30285010079` passed 19/19. U1 is complete externally at `baab1536`, but PR #170 remains draft/open and unmerged, CLEAN, with 21/21 checks green.
 
 R4-U5 / pass-2 is admitted and **IN PROGRESS** under issue #167 from its named branch/worktree, based on `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`. It is local-only: no provider calls, hosted writes, shared-contract changes, or `/model-training` work. Its pre-plan measurement was 10 paths / +928 / -29; the U0+U5 pre-plan union was 27 / +2,634 / -126. Human signoff remains pending.
 
-U5 acceptance chain is: DOI `10.1016/j.isci.2026.116224` -> explicit local-agent synthesis artifact -> deterministic checks -> visible `INTERIM` uncertain/hold verification -> canonical-ID local edge load -> later health/insight/provenance evidence. The v2 local DB load ran but canonical-ID review returned NO-GO: its old bare-DOI projection is invalid and must be rebuilt after the uncommitted canonical fix. No corrected DB proof is claimed; health/insight acceptance remains pending.
+U5 canonical DB run `d3c2020a` is complete with one uncertain hold and zero servable edges. Health/insight acceptance remains pending.
+
+## 2026-07-28 U5 local harness evidence — not acceptance
+
+The local-only harness now has the ANSI-safe reset-success check, process-scoped local public
+Supabase URL/anon environment for Nao, and redirect suppression so a protected API redirect cannot
+masquerade as JSON `200`. The latest pass reached S0–S8 and M1: it loaded 5 claims / 4 verified edges;
+the U5 edge remains `uncertain` / `hold`; and demo user `4483fefb-d5e5-49a9-8132-d347ad082b57` received
+14 provenance-stamped simulated gut rows plus 14 wearable rows.
+
+M2 is blocked, not a U5 code failure: its `401 Unauthorized` comes from an active local edge-runtime
+container mounted from a separately owned U2 worktree, where U2 internal auth rejects the request before
+the U5/base route. The compared local service-role keys agree. M2 wrote zero baseline snapshots, signals,
+cards, or composed insights. Health/insight proof therefore awaits stable U2 reconciliation; this unit
+must not restart or rebind the U2-owned stack. Provider and hosted calls remain zero. U2 has no open PR;
+UI PR #175 exists but is deferred until the unit boundary and was neither inspected nor merged.
 
 ## U5 sentence-provenance planning update
 
 The B-PL22 extension is planning-admitted inside U5 only. It is not a new pipeline and is
-**SPLIT/DEFERRED** for implementation: local tools 14 / ~1,900 await final U1-U3 remeasurement, while
-persisted/served/UI reserve 30 / ~4,500 is P2-blocked. The pre-plan remainder was 4 paths / +1,216;
-the plan measured 4 new-in-U5 paths / +209 / -70. Path slots are exhausted, while +1,007 lines remain
-unallocated. Separately, O29 defers provider/model execution.
+**SPLIT/DEFERRED BY CAP**. Snapshot `f2f2dac` from base `77c982` includes U1 `baab1536` + U5 `cdc16f9`,
+excludes MT4 paths/session, and is 38 / +8,002 / -162, leaving 77 / +498. U2/U3 expected additions and
+the minimal sentence slice (six touched, two reused, four new, ~+1,900) do not fit and require an
+explicit later envelope decision. This correction is outside the snapshot; remeasure before merge.
+Persisted/served/UI is P2-blocked. Separately, O29 defers provider/model execution.
 If later admitted, deterministic versioned sentence/section/offset/citation/root artifacts and
 frozen/mock LlmRouter `INTERIM:` seams must fail closed. Existing quote checks, U5 hold and loader
 hash/idempotence remain; A4/A4b/A5/A6/A7/root collapse are not claimed implemented.
@@ -63,8 +79,8 @@ On 2026-07-27, PR #144 was **CLOSED**, not merged, at `2026-07-27T08:03:15Z`; ba
 | Historical envelope/bootstrap base | `854aa471970b61afdc59205ded0b1c8a9ab3f270` (`origin/dev-phase2-run2`) | RETAINED FOR PROVENANCE; not an active whole-run gate |
 | Earlier U0 unit base | `837b7e690f92dc1669428a2476c9d8d0456020e8` | SUPERSEDED; retained for provenance |
 | Active U0 unit base | `77c98213e23ad56ae37c86201b39ef4e7543a543` (consolidated Run 3/MT3 `origin/dev-phase2-run4` tip) | ACCEPTED for U0 only |
-| Locked units | `R4-U0`, `R4-U1`, `R4-U2`, `R4-U3` | ACCEPTED |
-| U4 | no available second shared reviewer; two-reviewer rule not waived | DEFERRED |
+| Historical locked units | `R4-U0`, `R4-U1`, `R4-U2`, `R4-U3` | ACCEPTED THEN; U2/U3 NOW CAP-DEFERRED |
+| U4 | Alton and Jayden approve implementation; both actual reviews remain required before a shared-contract PR merge | IMPLEMENTATION UNBLOCKED; cap admission separate; no U6 authority |
 | U0 landing caps | `MAX_CHANGED_PATHS=115`, `MAX_ADDED_LINES=8500` | ACCEPTED for `RUN4_UNIT_BASE_SHA..HEAD` only |
 
 The accepted base is a full commit object and the repository is not shallow. `dev-phase2` is its ancestor and omits Run 2's 169 paths / +16,992. Run 3 adds 100 paths / +11,706 / -1,079 after Run 2, including model-training contamination and Run 4 documents. The six Run 4 planning authority files absent from the candidate base have been copied byte-for-byte and count in the cap. This pre-flight tracking packet and later approval updates also count, but are not immutable byte-for-byte promotion material. Current `dev-phase2`, `dev-phase2-run3`, and PR #144 head remain rejected base alternatives.
@@ -99,7 +115,7 @@ U0 provides aggregate `Run 4 Gate` evidence with `if: always()` and explicit `ne
 
 ## Pending posture
 
-P2: no available second shared reviewer; the two-reviewer rule is not waived. U4 remains deferred and no shared change may start. P3: model training is paused/excluded; train nothing and the product candidate must not receive MT1–MT5. P7 is complete only as PR #144 closed/superseded.
+P2 reviewer availability is resolved for U4 implementation only: Alton and Jayden approve it, while both actual reviews remain mandatory before any U4 shared-contract PR merge. U4 cap admission is separate and no U6 authority follows. Other P2-blocked shared/persisted/served scopes remain blocked. P3: model training is paused/excluded; train nothing and the product candidate must not receive MT1–MT5. P7 is complete only as PR #144 closed/superseded.
 
 P5 is accepted as local-only: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `OPENALEX_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and Nao/Biotope public Supabase variables remain name-only. No values are recorded. `apps/nao/.env.public` is hosted-classified; `apps/biotope/.env.public` local-classified. Local Nao must use process-scoped local Supabase URL/anon/service-role values, never file defaults. Android is operator-authorized/unlocked, but adb timed out and connection state is unattested. Hosted Supabase, Cloudflare/R2 writes, deployment, and key mutation/revocation remain forbidden.
 
@@ -129,4 +145,4 @@ The historical pre-flight claims were source/Git/GitHub-verified. Historical loc
 | Packet writer | `gpt-5.6-terra` medium | draft complete |
 | Primary orchestration | `gpt-5.6-sol` max | pending human direction |
 
-Provider spend is 0. RESUME: rebuild the invalid bare-DOI local projection after the uncommitted canonical-ID fix, then obtain canonical DB-load and later health/insight evidence; do not claim corrected proof before that run. U0 is complete through PR #161 with exact merge-SHA 19/19 CI. P2 remains unavailable, O29 remains deferred, and P3 remains paused/excluded. All Run 4 issue, branch, PR, and merge operations target `dev-phase2-run4` only.
+Provider spend is 0. RESUME: U1 is complete externally but PR #170 remains draft/unmerged; U2/U3 and sentence implementation are cap-deferred. U5 canonical DB run is complete; obtain health/insight evidence next. U4 implementation is unblocked under the named-reviewer constraint, while its cap admission remains separate; O29 is deferred and P3 paused/excluded. All Run 4 integration targets `dev-phase2-run4` only.

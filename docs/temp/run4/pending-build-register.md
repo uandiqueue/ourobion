@@ -5,21 +5,24 @@ type: plan
 scope: shared
 status: canonical
 updated: 2026-07-28
-run4_u5_sentence_provenance: planning-admitted; implementation-split-deferred-pending-final-cap-remeasurement
+run4_u5_sentence_provenance: planning-admitted; implementation-cap-deferred-pending-later-envelope
 ---
 
 > **B-PL22 / R4-U5 planning update:** no competing pipeline or unit is admitted. The future local
 > tool-only tranche (14 paths / ~1,900 additions) is versioned StructuredPaper + deterministic
 > JATS/frozen-GROBID sentence/offset, citation/root, curated mention and evidence gates with frozen/mock
-> `INTERIM:` LlmRouter seams. Before the plan, U1-U3 reserve left 4 paths / +1,216; the plan measured
-> 4 new-in-U5 paths / +209 / -70. Path slots are exhausted, while +1,007 lines remain unallocated.
-> Persisted/served/UI reserve 30 / ~4,500 is P2-blocked; separately, O29 defers provider/model execution.
+> `INTERIM:` LlmRouter seams. Verified combined snapshot `f2f2dac` from base `77c982` includes completed
+> U1 head `baab1536` and U5 `cdc16f9`, excludes only separately owned MT4 paths/session, and is the
+> historical pre-overlay 38 / +8,002 / -162 snapshot, leaving 77 / +498. The later final pre-commit
+> overlay (U5 docs + harness script + 44-line session) was independently audited at 40 / +8,146 / -185,
+> leaving 75 / +354. The minimal six-path slice reuses two paths but needs four new / ~+1,900, so it is
+> cap-deferred; U2/U3 expected additions also do not fit. Exact pre-merge remeasurement remains mandatory.
+> Persisted/served/UI is P2-blocked; O29 is deferred.
 > Missing
 > provenance, foreign papers, invalid offsets/references, unsupported evidence or adapter failure hold
 > closed. Existing quote/hold/hash controls do not claim A4/A4b/A5/A6/A7/root-collapse implementation.
-> The v2 local DB load ran but received canonical-ID NO-GO: its bare-DOI projection is invalid and must
-> be rebuilt after the uncommitted canonical-ID fix. Health/insight acceptance remains pending; no
-> corrected DB proof is claimed.
+> Corrected canonical DB load `d3c2020a` is complete with one uncertain hold and zero servable edges.
+> Health/insight acceptance remains pending; no scientific-validation claim is made.
 
 # Run 4 Pending-Build Register
 

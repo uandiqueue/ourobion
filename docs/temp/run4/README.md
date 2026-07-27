@@ -110,7 +110,8 @@ Two later additions sit on top of the reviewed tranche, both in
   ingestion with LLM stand-ins), **R4-U6a/b/c** (biotope metrics) and **R4-U7** (UX revamp), and
   records that the **real Android device and live local nao** move `B-UI2`, `B-UI5`, `B-UI6`,
   `B-UI11`, the O28 TalkBack traversal and `B10(access)` from blocked to doable.
-- **§3c** is the **exit gate**: after every locked unit completes, two local passes must both be green
+- **§3c** is the **exit gate**: after every currently admitted/integration unit completes, explicitly
+  excluding cap-deferred units, two local passes must both be green
   before anything is promoted to the cloud demo database. Pass 1 is API integrity via
   `scripts/demo-dryrun-run2.ps1`; pass 2 is a real-paper authoring run from
   `doi:10.1016/j.isci.2026.116224`.
@@ -138,16 +139,17 @@ provenance, invalid offsets/references, foreign paper IDs, failed adapters or un
 closed. Shared, persisted, served or UI-contract work is blocked by P2; provider/model execution is
 deferred by O29/zero-call posture; no training or runtime import is admitted.
 
-Mechanically, U5 before this plan patch was 10 paths / +928 / -29 versus base `66bfde5`; U0+U5 was
-27 / +2,634 / -126 versus U0 base `77c982`. After reserving expected U1/U2/U3 (84 / +4,650), the
-**pre-plan remaining capacity** was 4 paths / +1,216. The measured plan-patch delta is 4 newly changed
-U5 paths / +209 / -70: path slots are exhausted, while +1,007 lines remain unallocated. The local
-tool-only tranche (14 / +1,900) and full persisted/UI tranche (reserve 30 / +4,500; estimate 27 / +4,000)
-are therefore **SPLIT/DEFERRED** pending final U1-U3 landing remeasurement; the unchanged cap is 115 / +8,500.
+Cap accounting uses the **final landing-delta union** from base `77c982`, never summed patch stats.
+Historical pre-overlay snapshot `f2f2dac` is the conflict-free merge tree of completed U1 head `baab1536`
+with U5 `cdc16f9`, including U0 and PR #172 shared-gate updates, and excluding only separately owned MT4
+paths and its MT4 session log. It measures 38 product paths / +8,002 / -162, leaving 77 / +498 under the
+115 / +8,500 cap. Later final pre-commit overlay (U5 docs + harness script + 44-line session) was
+independently audited at 40 paths / +8,146 / -185, leaving 75 / +354. U1 therefore fits. U2/U3 expected additions and the minimal sentence tranche (six
+touched paths, two reused, four new, ~+1,900) do not fit the remaining line budget and are deferred by
+cap pending an explicit later envelope decision. Exact pre-merge remeasurement remains mandatory. No silent cap expansion is authorized.
 
-U5 acceptance is still pending. The v2 local DB load ran, but canonical-ID review returned NO-GO: the
-old bare-DOI projection is invalid and must be rebuilt after the uncommitted canonical fix. This is not
-corrected DB proof; health/insight evidence remains pending.
+U5 canonical DB-load evidence is complete at run `d3c2020a`: one uncertain hold and zero servable edges.
+Health/insight evidence remains pending; this does not claim scientific validation.
 
 Future negative-fixture acceptance must show that a background sentence, fabricated quote, unresolved
 semantic support, foreign/invalid provenance, and echo-only corroboration cannot become servable. It

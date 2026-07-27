@@ -39,18 +39,19 @@ Never build from docs/archive/. The five custom-model training units MT1-MT5 rem
 workstream and must not merge into the Run 4 product integration branch.
 
 R4-U5/B-PL22 has a planning-admitted sentence-provenance tranche only. Do not renumber it or create a
-competing pipeline. Its implementation is split/deferred pending final U1-U3 cap remeasurement. The
-pre-plan remainder was 4 paths / +1,216; the measured plan delta is 4 new-in-U5 paths / +209 / -70.
-Path slots are exhausted, while +1,007 lines remain unallocated. If later admitted, use local,
+competing pipeline. Verified product snapshot `f2f2dac` from base `77c982` combines U1 `baab1536` and
+U5 `cdc16f9`, excludes only MT4 paths/session, and measures 38 / +8,002 / -162, leaving 77 / +498.
+U1 fits; U2/U3 expected additions and the minimal sentence slice (six touched, two reused, four new,
+~+1,900) do not fit and are cap-deferred pending an explicit later envelope decision. This uncommitted
+docs correction is outside the snapshot; remeasure before merge. If later admitted, use local,
 versioned/rebuildable StructuredPaper text/sections/sentence IDs/offsets; native JATS or frozen
 GROBID-style mapping only; deterministic citation/reference/root, curated mention, quote/tier/numeric/
 schema/negation/hedge gates; and complete local edge-to-sentence-to-root traces. LlmRouter seams use
 frozen/mock replies only and visibly record `INTERIM:` task, returned model, prompt version, timestamp,
 confidence/abstention and fallback; they suggest, while deterministic enforcement decides. Fail closed
 on missing/foreign/invalid provenance. Shared/persisted/served/UI work is P2-blocked. Separately,
-zero-call/O29 defers providers/models. No training or runtime import is permitted. The v2 bare-DOI
-local projection failed canonical-ID review and must be rebuilt after the uncommitted fix; do not treat
-that load as DB proof, and keep health/insight acceptance pending.
+zero-call/O29 defers providers/models. No training or runtime import is permitted. Canonical DB run
+`d3c2020a` is complete with one uncertain hold and zero servable edges; health/insight remains pending.
 
 ===============================================================================
 PART 0 — EXECUTION SENTINEL
