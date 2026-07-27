@@ -7,10 +7,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildLoad } from '../lib/artifacts.mjs';
+import { loadIntoDb } from '../load_edges.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CLI = path.join(HERE, '..', 'load_edges.mjs');
@@ -86,4 +88,66 @@ test('the guard does not touch the normal path: --check over the fixture mirror 
   const out = runCli(['--from-dir', FIXTURES, '--check']);
   assert.equal(out.status, 0);
   assert.match(out.stdout, /4 claim\(s\) \+ 4 verification\(s\) valid/);
+});
+
+test('--db-url and --no-prune keep validation local and do not require ambient SUPABASE_DB_URL', () => {
+  const out = runCli(['--from-dir', FIXTURES, '--check', '--db-url', 'postgresql://localhost:54322/postgres', '--no-prune']);
+  assert.equal(out.status, 0);
+  assert.match(out.stdout, /4 claim\(s\) \+ 4 verification\(s\) valid/);
+});
+
+function loadedFixture() {
+  const claims = readFileSync(path.join(FIXTURES, 'claims.jsonl'), 'utf8');
+  const verifications = readFileSync(path.join(FIXTURES, 'verifications.jsonl'), 'utf8');
+  return buildLoad(claims, verifications);
+}
+
+function stubClient(existingClaim: unknown, existingVerifications: unknown[] = []) {
+  const calls: Array<{ sql: string; values?: unknown[] }> = [];
+  return {
+    calls,
+    async connect() {},
+    async end() {},
+    async query(sql: string, values?: unknown[]) {
+      calls.push({ sql, values });
+      if (/select claim from public\.relationship_claims/i.test(sql)) return { rows: existingClaim === null ? [] : [{ claim: existingClaim }] };
+      if (/select verified_at, verification, status/i.test(sql)) return { rows: existingVerifications };
+      if (/select \(select count/i.test(sql)) return { rows: [{ claims: 1, verifications: existingVerifications.length, verified: 0 }] };
+      return { rows: [] };
+    },
+  };
+}
+
+test('--no-prune aborts a differing existing claim before mutation/prune', async () => {
+  const loaded = loadedFixture(), row = loaded.claimRows[0]!;
+  const client = stubClient({ ...row.claim, derivation: 'materially different' });
+  await assert.rejects(
+    () => loadIntoDb([row], [], 'unused', { prune: false, clientFactory: () => client }),
+    /materially different claim/,
+  );
+  const mutations = client.calls.filter(({ sql }) => /^\s*(?:insert|update|delete)/i.test(sql));
+  assert.deepEqual(mutations, []);
+  assert.ok(client.calls.some(({ sql }) => /^\s*rollback/i.test(sql)));
+});
+
+test('--no-prune exact claim and verification are idempotent with no mutation/prune', async () => {
+  const loaded = loadedFixture(), row = loaded.claimRows[0]!;
+  const verification = loaded.verificationRows.find((candidate) => candidate.edge_id === row.edge_id)!;
+  const client = stubClient(row.claim, [{ verified_at: verification.verified_at, verification: verification.verification, status: verification.status }]);
+  await loadIntoDb([row], [verification], 'unused', { prune: false, clientFactory: () => client });
+  const mutations = client.calls.filter(({ sql }) => /^\s*(?:insert|update|delete)/i.test(sql));
+  assert.deepEqual(mutations, []);
+  assert.ok(client.calls.some(({ sql }) => /^\s*commit/i.test(sql)));
+});
+
+test('--no-prune supersedes an older active verification before inserting the newest hold', async () => {
+  const loaded = loadedFixture(), row = loaded.claimRows[0]!;
+  const incoming = loaded.verificationRows.find((candidate) => candidate.edge_id === row.edge_id && candidate.status === 'active')!;
+  const olderAt = new Date(Date.parse(incoming.verified_at) - 1_000).toISOString();
+  const client = stubClient(row.claim, [{ verified_at: olderAt, verification: { ...incoming.verification, verifiedAt: olderAt }, status: 'active' }]);
+  await loadIntoDb([row], [incoming], 'unused', { prune: false, clientFactory: () => client });
+  const updateAt = client.calls.findIndex(({ sql }) => /^\s*update public\.edge_verifications/i.test(sql));
+  const insertAt = client.calls.findIndex(({ sql }) => /^\s*insert into public\.edge_verifications/i.test(sql));
+  assert.ok(updateAt >= 0 && insertAt > updateAt);
+  assert.equal(client.calls.some(({ sql }) => /^\s*delete/i.test(sql)), false);
 });

@@ -20,6 +20,8 @@
 //                                                            # otherwise aborts (exit 1, no prune) —
 //                                                            # this flag lets it legitimately empty
 //                                                            # the projection tables
+//   ... --db-url postgresql://localhost/... --no-prune        # explicit DB URL / incremental upsert;
+//                                                            # default remains full-projection prune
 //   SUPABASE_DB_URL=postgresql://...  (local stack: `npx supabase status` → DB URL)
 //
 // A local directory holds the same basenames the R2 `edges/` prefix does (claims.jsonl +
@@ -31,6 +33,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 import {
   brain,
   buildLoad,
@@ -154,32 +157,119 @@ function rowParams(columns, row) {
   return columns.map((c) => (JSONB_COLUMNS.has(c) ? JSON.stringify(row[c]) : row[c]));
 }
 
-async function loadIntoDb(claimRows, verificationRows, dbUrl) {
-  const { default: pg } = await import('pg');
-  const client = new pg.Client({ connectionString: dbUrl });
+function canonicalJson(value) {
+  if (Array.isArray(value)) return `[${value.map((item) => canonicalJson(item)).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`;
+  }
+  const encoded = JSON.stringify(value);
+  if (encoded === undefined) throw new Error('cannot compare undefined database content');
+  return encoded;
+}
+
+/**
+ * Incremental mode is deliberately collision-intolerant: an edge id already in
+ * the local projection may only be re-presented with byte-equivalent canonical
+ * claim content. All comparisons and verification ordering checks happen before
+ * the first mutation, inside one transaction.
+ */
+async function planIncremental(client, claimRows, verificationRows) {
+  const claimsToWrite = [];
+  for (const row of claimRows) {
+    const existing = await client.query(
+      'select claim from public.relationship_claims where edge_id = $1 for update',
+      [row.edge_id],
+    );
+    if (existing.rows.length === 0) claimsToWrite.push(row);
+    else if (canonicalJson(existing.rows[0].claim) !== canonicalJson(row.claim)) {
+      throw new Error(`${row.edge_id}: --no-prune refuses to replace materially different claim content`);
+    }
+  }
+
+  const verificationsToWrite = [];
+  const supersede = [];
+  for (const row of verificationRows) {
+    const existing = await client.query(
+      `select verified_at, verification, status
+         from public.edge_verifications
+        where edge_id = $1
+        for update`,
+      [row.edge_id],
+    );
+    const sameInstant = existing.rows.find(
+      (current) => new Date(current.verified_at).toISOString() === new Date(row.verified_at).toISOString(),
+    );
+    if (sameInstant) {
+      if (canonicalJson(sameInstant.verification) !== canonicalJson(row.verification)) {
+        throw new Error(`${row.edge_id}: --no-prune verification identity has different content`);
+      }
+      continue;
+    }
+    if (row.status === 'active') {
+      const incomingAt = Date.parse(row.verified_at);
+      const blocking = existing.rows.find(
+        (current) => current.status === 'active' && Date.parse(current.verified_at) >= incomingAt,
+      );
+      if (blocking) throw new Error(`${row.edge_id}: --no-prune active verification is not newest`);
+      supersede.push({ edgeId: row.edge_id, verifiedAt: row.verified_at });
+    }
+    verificationsToWrite.push(row);
+  }
+  return { claimsToWrite, verificationsToWrite, supersede };
+}
+
+/**
+ * @param {any[]} claimRows
+ * @param {any[]} verificationRows
+ * @param {string} dbUrl
+ * @param {{ prune?: boolean, clientFactory?: () => any }} [options]
+ */
+export async function loadIntoDb(claimRows, verificationRows, dbUrl, options = {}) {
+  const { prune = true, clientFactory } = options;
+  let client;
+  if (clientFactory) client = clientFactory();
+  else {
+    const { default: pg } = await import('pg');
+    client = new pg.Client({ connectionString: dbUrl });
+  }
   await client.connect();
   try {
     await client.query('begin');
 
+    const plan = prune
+      ? { claimsToWrite: claimRows, verificationsToWrite: verificationRows, supersede: [] }
+      : await planIncremental(client, claimRows, verificationRows);
+
     const claimSql = upsertClaimSql();
-    for (const row of claimRows) await client.query(claimSql, rowParams(CLAIM_COLUMNS, row));
+    for (const row of plan.claimsToWrite) await client.query(claimSql, rowParams(CLAIM_COLUMNS, row));
+
+    // Make the incoming active uncertain hold the one selected version. This is
+    // skipped for exact idempotent repeats by planIncremental.
+    for (const row of plan.supersede) {
+      await client.query(
+        `update public.edge_verifications
+            set status = 'superseded', loaded_at = now()
+          where edge_id = $1 and status = 'active' and verified_at < $2::timestamptz`,
+        [row.edgeId, row.verifiedAt],
+      );
+    }
 
     const verSql = upsertVerificationSql();
-    for (const row of verificationRows) await client.query(verSql, rowParams(VERIFICATION_COLUMNS, row));
+    for (const row of plan.verificationsToWrite) await client.query(verSql, rowParams(VERIFICATION_COLUMNS, row));
 
-    // Prune: the artifacts are the whole truth — drop projection rows whose line is gone.
-    const prunedVer = await client.query(
+    // Full projection/prune remains the default. Incremental callers opt out explicitly.
+    const prunedVer = prune ? await client.query(
       `delete from public.edge_verifications v
         where not exists (
           select 1 from unnest($1::text[], $2::timestamptz[]) as k(edge_id, verified_at)
            where k.edge_id = v.edge_id and k.verified_at = v.verified_at)
         returning v.edge_id, v.verified_at`,
       [verificationRows.map((r) => r.edge_id), verificationRows.map((r) => r.verified_at)],
-    );
-    const prunedClaims = await client.query(
+    ) : { rows: [] };
+    const prunedClaims = prune ? await client.query(
       'delete from public.relationship_claims where not (edge_id = any($1::text[])) returning edge_id',
       [claimRows.map((r) => r.edge_id)],
-    );
+    ) : { rows: [] };
 
     await client.query('commit');
     const counts = await client.query(
@@ -203,11 +293,16 @@ async function loadIntoDb(claimRows, verificationRows, dbUrl) {
 // ── CLI ──────────────────────────────────────────────────────────────────────────────────────────
 
 function parseArgs(argv) {
-  const args = { dryRun: false, fromDir: null, fromR2: false, allowEmpty: false };
+  const args = { dryRun: false, fromDir: null, fromR2: false, allowEmpty: false, dbUrl: null, noPrune: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--dry-run' || a === '--check') args.dryRun = true;
     else if (a === '--allow-empty') args.allowEmpty = true;
+    else if (a === '--no-prune') args.noPrune = true;
+    else if (a === '--db-url') {
+      args.dbUrl = argv[++i];
+      if (!args.dbUrl) throw new Error('--db-url needs a PostgreSQL URL');
+    }
     else if (a === '--from-r2') args.fromR2 = true;
     else if (a === '--from-dir') {
       args.fromDir = argv[++i];
@@ -289,7 +384,7 @@ async function main() {
     return;
   }
 
-  const dbUrl = process.env.SUPABASE_DB_URL;
+  const dbUrl = args.dbUrl ?? process.env.SUPABASE_DB_URL;
   if (!dbUrl) {
     console.error(
       'SUPABASE_DB_URL is not set (local stack: `npx supabase status` → DB URL). ' +
@@ -301,7 +396,7 @@ async function main() {
   const superseded = verificationRows.filter(
     (r) => r.status === 'superseded' && r.verification.status === 'active',
   ).length;
-  const result = await loadIntoDb(claimRows, verificationRows, dbUrl);
+  const result = await loadIntoDb(claimRows, verificationRows, dbUrl, { prune: !args.noPrune });
   console.log(
     `✓ upserted ${claimRows.length} claim(s) + ${verificationRows.length} verification(s) ` +
       `(${superseded} flipped superseded); pruned ${result.prunedClaims.length} claim(s)` +
@@ -314,4 +409,7 @@ async function main() {
   );
 }
 
-await main();
+const invoked = process.argv[1];
+if (invoked && path.resolve(invoked).toLowerCase() === fileURLToPath(import.meta.url).toLowerCase()) {
+  await main();
+}
