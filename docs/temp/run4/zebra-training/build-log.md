@@ -13,7 +13,8 @@ Issue: [#152](https://github.com/uandiqueue/ourobion/issues/152)
 Branch/worktree: `feat/model-training/mt3-zebra` in `C:\project\ourobion-mt3`
 Task claim: `mt3-zebra-training` / `claude` / `agentjwork`
 
-**▶ RESUME AT: S1 — blocked on a human decision (see "Open decision" below).**
+**▶ RESUME AT: S2 — fold Z1/Z2/Z3/Z5 into the Zebra plan.** S0 and S1 are done; the environment is
+built and the interpreter blocker is resolved.
 
 Operating constraints for this build, set by Jayden:
 
@@ -27,8 +28,8 @@ Operating constraints for this build, set by Jayden:
 | Step | What | Status | Notes |
 |---|---|---|---|
 | S0 | Storage + environment survey | **done** | Blocker found; see below. Nothing downloaded |
-| S1 | Choose interpreter + torch build; create the env | **blocked** | Needs the decision below |
-| S2 | Fold Z1/Z2/Z3/Z5 into the Zebra plan | next | Docs only; independent of S1, can proceed in parallel |
+| S1 | Create the env; install the pinned stack | **done** | Python 3.10.20 + full `ml` extra, CPU torch. See S1 below |
+| S2 | Fold Z1/Z2/Z3/Z5 into the Zebra plan | **next** | Docs only. Z1 decides whether the result means anything |
 | S3 | Record the SciFact licence approval artifact | queued | Substrate fails closed without it |
 | S4 | Install the `ml` extra into the new env | queued | Sizes measured, see below |
 | S5 | Download + hash SciFact; build the data manifest | queued | Small (~5 MB) |
@@ -91,11 +92,75 @@ further models join today.
 Either way the deviation from the plan's preregistered BF16-on-H100 recipe gets recorded rather than
 silently applied.
 
+## S1 findings — environment built (2026-07-27)
+
+**Interpreter blocker resolved, and a licensing trap avoided.** `conda create` against the bundled
+Miniconda failed with `CondaToSNonInteractiveError`: Anaconda's default channels
+(`repo.anaconda.com/pkgs/main`, `/r`, `/msys2`) now require accepting their **Terms of Service**. That
+is a licensing decision, not a technical one, so it was not accepted on Jayden's behalf — particularly
+in a workstream this careful about licences.
+
+**Miniforge** (already installed at `C:\Users\agent-j\miniforge3`) defaults to **conda-forge**, which
+carries no such gate. The env was created from conda-forge only, with `--override-channels`, and placed
+**project-bounded** per AGENTS.md §4 rather than in the user profile:
+
+```
+C:\project\biotope-toolchain\zebra-env     Python 3.10.20
+```
+
+3.10 is the D3 target — it matches the CI pin and the documented GMI runtime, so this env exercises
+exactly the pinned set CI does.
+
+**Installed, all exact pins matching `model-training/constraints.txt`:**
+
+| package | installed |
+|---|---|
+| torch | 2.4.1**+cpu** |
+| numpy · scipy · scikit-learn | 1.26.4 · 1.13.1 · 1.5.1 |
+| transformers · datasets | 4.44.2 · 2.20.0 |
+| onnx · onnxruntime | 1.16.2 · 1.18.1 |
+
+`torch.get_num_threads() = 8`. CUDA unavailable by design (CPU wheel). Total footprint is the ~288 MB
+download measured in S0, well inside headroom.
+
+**CPU training time remains an estimate (~20–45 min for 919 rows × 5 epochs), not a measurement.** A
+throughput probe was prepared but not run, so this figure is unverified and should be treated as such
+until the first real run reports wall-clock.
+
+## GMI inference — viable today, and not blocked by the container ticket
+
+Researched because container entitlement may be delayed. Findings:
+
+- **Serverless inference is not gated by the container entitlement.** GMI's Cluster Engine docs state
+  plainly that "Bare Metal and Container access is gated per organization", while the Inference Engine
+  quick start documents only: sign in → Settings → API Keys → call. The gating language is scoped to
+  Cluster Engine alone. (Inferred from explicit gating on one product and its absence on the other; no
+  page affirmatively states inference is ungated.)
+- **OpenAI-compatible**: `https://api.gmi-serving.com/v1/chat/completions`, `Bearer <key>`, JSON mode
+  via `response_format`, function calling via `tools`.
+- **Rate limit**: fresh accounts are Tier 1 at 1,000,000 TPM — ample here. Note **voucher/sponsor credit
+  redemptions do not count toward tier upgrades**; only purchased credits do. Sponsor credits therefore
+  leave the account at Tier 1.
+- **Candidate models** (open-weight, $/1M in→out, third-party aggregate — console is authoritative):
+  `deepseek-ai/DeepSeek-V3.2` $0.28/$0.40 (163K ctx), `zai-org/GLM-4.7-FP8` $0.40/$2.00 (202K ctx),
+  `moonshotai/Kimi-K2-Thinking` $0.80/$1.20, `meta-llama/Llama-3.3-70B-Instruct`.
+- **Managed fine-tuning still does not exist** on GMI — unchanged since 2026-07-26. "My Models" only
+  *registers* models trained elsewhere. So GMI could not train these for us even with entitlement;
+  local training is the only training path today.
+
+**Implication for the deferred models.** Giraffe, Salmon and Leafcutter can have their *function*
+stood up today via prompted GMI inference, but that is **an LLM call, not a custom model** — it serves
+neither the token-reduction purpose nor the "our own model" framing. Its honest uses are: a comparator
+baseline, a teacher for later distillation, and — most valuably — a **second provider family**, which is
+what O29's decorrelation invariant and blocker B5 actually need.
+
 ## Ledger
 
 | When | Step | What ran | Outcome |
 |---|---|---|---|
 | 2026-07-27 | S0 | PyPI metadata queries; `Get-CimInstance` hardware survey; `conda env list`; disk check | Blocker found. **No packages downloaded, no env created, no compute run** |
+| 2026-07-27 | S0b | Disk drill-down: `AppData\Local` subdirs, `docker system df`, `wsl -l -v` | Docker 18.7 GB + WSL 18.3 GB dominate, not the toolchain. ~8.5 GB reclaimable at zero risk (`docker system prune` 5.2 GB · Temp 2.6 GB · installer archives 2.0 GB). Advised **against** `prune -a`/`volume prune` — local Supabase state lives there |
+| 2026-07-27 | S1 | `miniforge conda create -p ...zebra-env python=3.10 -c conda-forge --override-channels`; `pip install` pinned `ml` set | Env built, all eight pins verified. Anaconda ToS declined and routed around. **No training data fetched, no compute run** |
 
 ## Standing limits for whatever this produces
 
