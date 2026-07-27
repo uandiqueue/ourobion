@@ -210,3 +210,40 @@ test('validateLoaderBody: rejects bad days / seed / scenario / shapes', () => {
   assert.match(validateLoaderBody(null) ?? '', /JSON object/);
   assert.match(validateLoaderBody([1]) ?? '', /JSON object/);
 });
+
+// R4-U2 re-review finding N1: `seed` was length-capped but never
+// charset-checked, so it flowed straight into recordControlEvent's audit
+// `detail` at api/loader/route.ts untouched — a NUL (or any other character
+// the database cannot store) inside it could suppress the `loader.simulate`
+// audit row while the loader's own write (plain numeric rows, never the seed
+// string itself) still succeeded.
+test('validateLoaderBody: rejects a NUL, and any character outside the allowed charset, in seed', () => {
+  const nul = String.fromCharCode(0);
+  assert.match(validateLoaderBody({ seed: `run4-demo${nul}` }) ?? '', /seed/);
+  for (const badSeed of ['has space', 'semi;colon', 'quote"mark', "slash/es", 'emoji\u{1F600}', 'newline\n']) {
+    assert.match(validateLoaderBody({ seed: badSeed }) ?? '', /seed/, `"${badSeed}" must be rejected`);
+  }
+});
+
+test('validateLoaderBody: accepts every seed value real callers pass today', () => {
+  // DEFAULT_SEED (api/loader/route.ts's fallback), every seed literal used by
+  // this file's own fixtures above ('abc', 'xyz', 's', 'dip', 'flat', 'corr',
+  // 'rng', 'prov'), and a colon-namespaced value in the style
+  // SIMULATED_DATA_ORIGIN already uses ('simulated:run2-demo').
+  const realSeeds = [
+    'run2-demo', // DEFAULT_SEED
+    'abc',
+    'xyz',
+    's',
+    'dip',
+    'flat',
+    'corr',
+    'rng',
+    'prov',
+    'simulated:run4-demo',
+    'a.b_c-D9',
+  ];
+  for (const seed of realSeeds) {
+    assert.equal(validateLoaderBody({ seed }), null, `"${seed}" must be accepted`);
+  }
+});

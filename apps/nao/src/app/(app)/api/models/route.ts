@@ -10,7 +10,14 @@
 // publish-status.ts) — nao never reads tools/ files directly (O10 locked). The
 // panel shows published_at honestly (stale hint) because freshness is
 // publish-driven, not live.
+//
+// AUTH (R4-U2): requires nao `viewer` via requireRole()/guardRole()
+// (apps/nao/src/lib/authzServer.ts). `llm_router_cap_overrides.updated_by` (a
+// raw curator uuid) is never selected or returned — explicit column list +
+// redactDeep(), layer-1 redaction over the DB-layer column revoke Agent A is
+// adding on the same table; this route does not assume that landed.
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { guardRole, redactDeep, redactText } from '@/lib/authzServer';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,29 +34,39 @@ function todayUtc(): string {
 }
 
 export async function GET(): Promise<Response> {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return json({ error: 'not authenticated' }, 401);
+  const gate = await guardRole('viewer');
+  if (!gate.ok) return gate.response;
 
+  const supabase = await createServerSupabaseClient();
   const today = todayUtc();
   try {
     const [status, spend, overrides] = await Promise.all([
       supabase.from('llm_router_status').select('*').order('node'),
       supabase.from('llm_router_spend').select('*').eq('day', today).order('node'),
-      supabase.from('llm_router_cap_overrides').select('*').order('node'),
+      // Explicit column list (layer-1 redaction): never select `updated_by` —
+      // the curator's raw uuid — even though the DB layer (Agent A) is also
+      // revoking table-level SELECT on that column. `select('*')` on this
+      // table now fails loudly once that revoke lands, which is the point
+      // (see the R4-U2 design §C.1's "important implementation trap").
+      supabase
+        .from('llm_router_cap_overrides')
+        .select('node, per_day_usd_cap, per_run_token_cap, updated_at')
+        .order('node'),
     ]);
     for (const res of [status, spend, overrides]) {
       if (res.error) throw new Error(res.error.message);
     }
-    return json({
-      today,
-      status: status.data ?? [],
-      spend: spend.data ?? [],
-      overrides: overrides.data ?? [],
-    });
+    return json(
+      redactDeep({
+        today,
+        status: status.data ?? [],
+        spend: spend.data ?? [],
+        overrides: overrides.data ?? [],
+      }),
+    );
   } catch (err) {
-    return json({ error: err instanceof Error ? err.message : String(err) }, 500);
+    // A relayed Postgres message can embed a value (`Key (user_id, …)=(<uuid>, …)`),
+    // so every error string leaving a nao route goes through redactText.
+    return json({ error: redactText(err instanceof Error ? err.message : String(err)) }, 500);
   }
 }
