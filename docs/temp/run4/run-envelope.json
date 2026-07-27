@@ -1,0 +1,26 @@
+{
+  "title": "Run 4 pre-flight candidate envelope",
+  "status": "draft",
+  "approved": null,
+  "date": "2026-07-27",
+  "issue": 155,
+  "claim": { "task": "run4-preflight-decision-packet", "agent": "codex", "device": "agentjwork" },
+  "worktree": "C:\\project\\ourobion-run4-preflight-155",
+  "sessionBranch": "docs/run4-preflight-155",
+  "implementationAuthorised": false,
+  "candidate": {
+    "integrationBranch": "dev-phase2-run4",
+    "baseSha": "854aa471970b61afdc59205ded0b1c8a9ab3f270",
+    "lockedUnits": ["R4-U0", "R4-U1", "R4-U2", "R4-U3"],
+    "deferredUnits": ["R4-U4"],
+    "caps": { "maxChangedPaths": 115, "maxAddedLines": 8500 },
+    "measurement": "unique paths and added lines in RUN4_BASE_SHA..HEAD; generated, lock, session, tracking, and corrections count",
+    "failureModes": ["missing-base", "shallow-history", "parse", "rename", "binary"]
+  },
+  "requiredChecks": ["Context — sessions / memory / decisions / index / couplings", "Flutter — Analyze & Test", "TypeScript — Type Check", "Node tools — tools/brain-ingest", "Node tools — tools/llm-router", "Node tools — tools/rules", "Node tools — tools/edge-loader", "Node tools — tools/engine-stats", "Node tools — tools/metric-view", "nao — typecheck & test", "Deno — compute-baselines", "Deno — evaluate-signals", "Deno — generate-insights", "Migrations — shadow apply (postgres:17)"],
+  "preconditions": { "p1": "bootstrap checks and later aggregate protection", "p2": "reviewer handle and availability", "p3": "human-owned separate model-training target", "p4": "human acceptance of immutable base, caps, and locked list", "p5": "no hosted/deployment/key changes", "p6": "O29 deferred; zero provider calls; OpenAI TEST-MODE", "p7": "complete: PR #144 closed and superseded" },
+  "forbidden": ["hosted writes", "provider calls", "product edits", "settings changes", "merges", "PR #144 changes"],
+  "pr144": { "state": "CLOSED_NOT_MERGED", "closedAt": "2026-07-27T08:03:15Z", "base": "dev-phase2-run3@9b41f4abc0a52e2c3ebfebb6b6fe6b375709dca3", "head": "5eebdddc522d0e5c337573ab8b0224ce35f0313b", "supersededComment": "https://github.com/uandiqueue/ourobion/pull/144#issuecomment-5088805906", "checks": "15 green checks are stale evidence only" },
+  "providerSpendUsd": 0,
+  "testsRun": false
+}
