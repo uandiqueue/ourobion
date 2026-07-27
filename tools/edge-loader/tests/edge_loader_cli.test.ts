@@ -7,6 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -18,12 +19,20 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CLI = path.join(HERE, '..', 'load_edges.mjs');
 const FIXTURES = path.join(HERE, 'fixtures', 'edges');
 
-function runCli(args: string[]) {
+function runCli(args: string[], extraEnv: Record<string, string> = {}) {
   return spawnSync(process.execPath, [CLI, ...args], {
     encoding: 'utf8',
     // Never reach a real DB from these tests, whatever the developer shell exports.
-    env: { ...process.env, SUPABASE_DB_URL: '' },
+    env: { ...process.env, SUPABASE_DB_URL: '', ...extraEnv },
   });
+}
+
+function fixtureHashes() {
+  const digest = (basename: string) => createHash('sha256').update(readFileSync(path.join(FIXTURES, basename))).digest('hex');
+  return {
+    OUROBION_EXPECTED_CLAIMS_SHA256: digest('claims.jsonl'),
+    OUROBION_EXPECTED_VERIFICATIONS_SHA256: digest('verifications.jsonl'),
+  };
 }
 
 /** A mirror dir whose claims.jsonl exists but holds zero lines — the A14 failure scenario. */
@@ -91,9 +100,22 @@ test('the guard does not touch the normal path: --check over the fixture mirror 
 });
 
 test('--db-url and --no-prune keep validation local and do not require ambient SUPABASE_DB_URL', () => {
-  const out = runCli(['--from-dir', FIXTURES, '--check', '--db-url', 'postgresql://localhost:54322/postgres', '--no-prune']);
+  const out = runCli(['--from-dir', FIXTURES, '--check', '--db-url', 'postgresql://localhost:54322/postgres', '--no-prune'], fixtureHashes());
   assert.equal(out.status, 0);
   assert.match(out.stdout, /4 claim\(s\) \+ 4 verification\(s\) valid/);
+});
+
+test('--no-prune refuses missing, malformed, or mismatched expected hashes before DB handling', () => {
+  const cases: Array<Record<string, string>> = [
+    {},
+    { OUROBION_EXPECTED_CLAIMS_SHA256: 'bad' },
+    { OUROBION_EXPECTED_CLAIMS_SHA256: '0'.repeat(64), OUROBION_EXPECTED_VERIFICATIONS_SHA256: '1'.repeat(64) },
+  ];
+  for (const env of cases) {
+    const out = runCli(['--from-dir', FIXTURES, '--no-prune'], env);
+    assert.equal(out.status, 1);
+    assert.doesNotMatch(out.stderr, /SUPABASE_DB_URL is not set/);
+  }
 });
 
 function loadedFixture() {

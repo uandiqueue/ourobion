@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { normaliseDoi, normaliseLocalDbUrl, runSinglePaper } from '../src/singlePaper.js';
+import { normaliseDoi, normaliseLocalDbUrl, runSinglePaper, type LoaderRunner } from '../src/singlePaper.js';
 
 const DOI = '10.1234/local.paper';
 function dir() {
@@ -89,6 +89,99 @@ test('completed receipt refuses response and artifact drift on resume and defaul
     writeFileSync(join(d, 'synthesis-response.json'), response());
     writeFileSync(join(d, 'edges', 'claims.jsonl'), '{malformed\n');
     await assert.rejects(() => runSinglePaper({ doi: DOI, localDir: d, pair: ['stool_form', 'urine_colour'], resume: true }), /invalid JSON/);
+  } finally { rmSync(d, { recursive: true, force: true }); }
+});
+
+test('completed core receipt runs every explicit DB stage, redacts its operational receipt, and fails closed', async () => {
+  const d = dir(), terms = ['stool', 'form', 'urine', 'colour'];
+  const calls: Array<{ args: string[]; env: Parameters<LoaderRunner>[2]['env'] }> = [];
+  const successRunner: LoaderRunner = (_executable, args, options) => {
+    calls.push({ args, env: options.env });
+    return { status: 0, stdout: 'ok', stderr: '' };
+  };
+  try {
+    writeFileSync(join(d, 'synthesis-response.json'), response());
+    await runSinglePaper({ doi: DOI, localDir: d, pair: ['stool_form', 'urine_colour'], terms });
+    const coreBefore = readFileSync(join(d, 'single-paper-receipt.json'), 'utf8');
+    await runSinglePaper({ doi: DOI, localDir: d, pair: ['stool_form', 'urine_colour'], terms, loaderRunner: successRunner });
+    assert.equal(calls.length, 0, 'no explicit DB URL means no child invocation');
+
+    const loadOptions = {
+      doi: DOI,
+      localDir: d,
+      pair: ['stool_form', 'urine_colour'] as [string, string],
+      terms,
+      loadLocalDb: 'postgresql://localuser:s3cret@localhost:54322/postgres',
+      loaderRunner: successRunner,
+    };
+    await runSinglePaper(loadOptions);
+    await runSinglePaper(loadOptions);
+    assert.equal(calls.length, 2, 'every explicit load invokes the idempotent loader again');
+    for (const call of calls) {
+      assert.deepEqual(call.args.slice(-2), [join(d, 'edges'), '--no-prune']);
+      assert.equal(call.args.some((arg) => arg.includes('s3cret') || arg.startsWith('postgres')), false);
+      assert.equal(new URL(call.env.SUPABASE_DB_URL).hostname, '127.0.0.1');
+      assert.deepEqual(Object.keys(call.env).sort(), ['OUROBION_EXPECTED_CLAIMS_SHA256', 'OUROBION_EXPECTED_VERIFICATIONS_SHA256', 'SUPABASE_DB_URL']);
+    }
+    assert.equal(readFileSync(join(d, 'single-paper-receipt.json'), 'utf8'), coreBefore, 'DB stage cannot rewrite immutable core receipt');
+    const dbReceiptText = readFileSync(join(d, 'db-load-receipt.json'), 'utf8');
+    assert.doesNotMatch(dbReceiptText, /s3cret|localuser|postgresql:\/\//);
+    const dbReceipt = JSON.parse(dbReceiptText) as Record<string, any>;
+    const core = JSON.parse(coreBefore) as Record<string, any>;
+    assert.equal(dbReceipt.coreRunId, core.runId);
+    assert.equal(dbReceipt.claimsSha256, core.artifacts.claimsSha256);
+    assert.equal(dbReceipt.verificationsSha256, core.artifacts.verificationsSha256);
+    assert.deepEqual(dbReceipt.target, { host: '127.0.0.1', port: '54322', database: 'postgres' });
+    assert.equal(dbReceipt.mode, 'no-prune');
+    assert.equal(dbReceipt.outcome, 'success');
+    for (const call of calls) {
+      assert.equal(call.env.OUROBION_EXPECTED_CLAIMS_SHA256, core.artifacts.claimsSha256);
+      assert.equal(call.env.OUROBION_EXPECTED_VERIFICATIONS_SHA256, core.artifacts.verificationsSha256);
+    }
+    await runSinglePaper({ ...loadOptions, dryRun: true });
+    assert.equal(calls.length, 2, 'dry-run never invokes the DB child');
+    assert.equal(readFileSync(join(d, 'db-load-receipt.json'), 'utf8'), dbReceiptText, 'dry-run never refreshes operational state');
+
+    await assert.rejects(() => runSinglePaper({ ...loadOptions, terms: ['changed'] }), /receipt drift/);
+    await assert.rejects(() => runSinglePaper({ ...loadOptions, terms: undefined }), /receipt drift/);
+    assert.equal(calls.length, 2, 'term drift fails before child spawn');
+
+    const artifactsBefore = [readFileSync(join(d, 'edges', 'claims.jsonl'), 'utf8'), readFileSync(join(d, 'edges', 'verifications.jsonl'), 'utf8')];
+    const echoed = loadOptions.loadLocalDb;
+    let failure: unknown;
+    try {
+      await runSinglePaper({ ...loadOptions, loaderRunner: () => ({ status: 17, stdout: echoed, stderr: `failure ${echoed}` }) });
+    } catch (error) { failure = error; }
+    assert.ok(failure instanceof Error);
+    assert.match(failure.message, /local incremental stage failed \(exit code 17\)/);
+    assert.doesNotMatch(failure.message, /s3cret|localuser|postgresql:\/\/|failure/);
+    let thrownFailure: unknown;
+    try {
+      await runSinglePaper({ ...loadOptions, loaderRunner: () => { throw new Error(`spawn echoed ${echoed}`); } });
+    } catch (error) { thrownFailure = error; }
+    assert.ok(thrownFailure instanceof Error);
+    assert.equal(thrownFailure.message, 'edge-loader local incremental stage failed during child invocation');
+    assert.doesNotMatch(thrownFailure.message, /s3cret|localuser|postgresql:\/\/|echoed/);
+    assert.equal(existsSync(join(d, 'db-load-receipt.json')), false, 'failed child leaves no success receipt');
+    assert.equal(readFileSync(join(d, 'single-paper-receipt.json'), 'utf8'), coreBefore);
+    assert.deepEqual([readFileSync(join(d, 'edges', 'claims.jsonl'), 'utf8'), readFileSync(join(d, 'edges', 'verifications.jsonl'), 'utf8')], artifactsBefore);
+  } finally { rmSync(d, { recursive: true, force: true }); }
+});
+
+test('artifact mutation during an injected successful child prevents DB success receipt', async () => {
+  const d = dir();
+  try {
+    writeFileSync(join(d, 'synthesis-response.json'), response());
+    await runSinglePaper({ doi: DOI, localDir: d, pair: ['stool_form', 'urine_colour'] });
+    const mutateRunner: LoaderRunner = () => {
+      appendFileSync(join(d, 'edges', 'claims.jsonl'), '\n');
+      return { status: 0, stdout: 'ok', stderr: '' };
+    };
+    await assert.rejects(
+      () => runSinglePaper({ doi: DOI, localDir: d, pair: ['stool_form', 'urine_colour'], loadLocalDb: 'postgresql://localhost/postgres', loaderRunner: mutateRunner }),
+      /artifacts changed during child execution/,
+    );
+    assert.equal(existsSync(join(d, 'db-load-receipt.json')), false);
   } finally { rmSync(d, { recursive: true, force: true }); }
 });
 

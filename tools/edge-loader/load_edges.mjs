@@ -30,6 +30,7 @@
 //
 // Root package.json aliases: `npm run edges:load` / `npm run edges:check` / `npm run edges:test`.
 
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -67,18 +68,44 @@ const JSONB_COLUMNS = new Set(['claim', 'verification']);
 
 // ── artifact sources ─────────────────────────────────────────────────────────────────────────────
 
-function readFromDir(dir) {
+function sha256(bytes) {
+  return createHash('sha256').update(bytes).digest('hex');
+}
+
+function expectedArtifactHashes(required) {
+  const claims = process.env.OUROBION_EXPECTED_CLAIMS_SHA256?.trim();
+  const verifications = process.env.OUROBION_EXPECTED_VERIFICATIONS_SHA256?.trim();
+  if (!claims && !verifications && !required) return null;
+  if (!claims || !verifications) throw new Error('expected artifact hashes must include both claims and verifications');
+  if (!/^[a-f0-9]{64}$/i.test(claims) || !/^[a-f0-9]{64}$/i.test(verifications)) {
+    throw new Error('expected artifact hashes must be 64 hexadecimal SHA-256 values');
+  }
+  return { claims: claims.toLowerCase(), verifications: verifications.toLowerCase() };
+}
+
+function readFromDir(dir, expected) {
   const claimsPath = path.join(dir, CLAIMS_BASENAME);
   const verificationsPath = path.join(dir, VERIFICATIONS_BASENAME);
   if (!existsSync(claimsPath)) {
     throw new Error(`no ${CLAIMS_BASENAME} in '${dir}' — is this a mirror of the R2 edges/ prefix?`);
   }
-  const claimsText = readFileSync(claimsPath, 'utf8');
+  // Hash and parse the exact same in-memory bytes: no check/use second read.
+  const claimsBytes = readFileSync(claimsPath);
+  const claimsText = claimsBytes.toString('utf8');
   let verificationsText = '';
+  let verificationsBytes = null;
   if (existsSync(verificationsPath)) {
-    verificationsText = readFileSync(verificationsPath, 'utf8');
+    verificationsBytes = readFileSync(verificationsPath);
+    verificationsText = verificationsBytes.toString('utf8');
   } else {
+    if (expected) throw new Error(`expected artifact ${VERIFICATIONS_BASENAME} is missing`);
     console.warn(`! no ${VERIFICATIONS_BASENAME} in '${dir}' — loading claims only (nothing servable)`);
+  }
+  if (expected) {
+    if (verificationsBytes === null) throw new Error(`expected artifact ${VERIFICATIONS_BASENAME} is missing`);
+    if (sha256(claimsBytes) !== expected.claims || sha256(verificationsBytes) !== expected.verifications) {
+      throw new Error('local edge artifact SHA-256 mismatch; nothing loaded');
+    }
   }
   return { claimsText, verificationsText, sourceLabel: `dir ${dir}` };
 }
@@ -325,8 +352,9 @@ async function main() {
     process.exit(2);
   }
 
+  const expected = expectedArtifactHashes(Boolean(args.noPrune && args.fromDir));
   const { claimsText, verificationsText, sourceLabel } = args.fromDir
-    ? readFromDir(args.fromDir)
+    ? readFromDir(args.fromDir, expected)
     : await readFromR2();
 
   const { claimRows, verificationRows, errors } = buildLoad(claimsText, verificationsText);

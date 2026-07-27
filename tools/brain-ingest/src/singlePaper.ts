@@ -1,11 +1,13 @@
 /** R4-U5: strictly local, host-mediated single-paper intake. */
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   existsSync,
   lstatSync,
   mkdirSync,
   readFileSync,
   realpathSync,
+  renameSync,
+  rmSync,
   writeFileSync,
 } from 'node:fs';
 import { relative, isAbsolute, join, resolve } from 'node:path';
@@ -39,7 +41,22 @@ export interface SinglePaperOptions {
   dryRun?: boolean;
   resume?: boolean;
   loadLocalDb?: string;
+  /** Injectable child seam for tests; the CLI never supplies it. */
+  loaderRunner?: LoaderRunner;
 }
+
+export type LoaderRunner = (
+  executable: string,
+  args: string[],
+  options: {
+    encoding: 'utf8';
+    env: {
+      SUPABASE_DB_URL: string;
+      OUROBION_EXPECTED_CLAIMS_SHA256: string;
+      OUROBION_EXPECTED_VERIFICATIONS_SHA256: string;
+    };
+  },
+) => { status: number | null; stdout?: string; stderr?: string };
 
 function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map((item) => canonical(item)).join(',')}]`;
@@ -125,10 +142,11 @@ function regularFile(root: string, basename: string, required: boolean): string 
   return real;
 }
 
-interface OutputPaths { receipt: string; edges: string; claims: string; verifications: string; }
+interface OutputPaths { receipt: string; dbReceipt: string; edges: string; claims: string; verifications: string; }
 function outputPaths(root: string, create: boolean): OutputPaths {
-  const receipt = join(root, RECEIPT), edges = join(root, 'edges');
+  const receipt = join(root, RECEIPT), dbReceipt = join(root, 'db-load-receipt.json'), edges = join(root, 'edges');
   if (existsSync(receipt)) regularFile(root, RECEIPT, true);
+  if (existsSync(dbReceipt)) regularFile(root, 'db-load-receipt.json', true);
   if (existsSync(edges)) {
     const direct = lstatSync(edges);
     if (direct.isSymbolicLink() || !direct.isDirectory()) throw new Error('edges must be a regular, non-symlink directory');
@@ -139,7 +157,7 @@ function outputPaths(root: string, create: boolean): OutputPaths {
   const claims = join(edges, 'claims.jsonl'), verifications = join(edges, 'verifications.jsonl');
   if (existsSync(claims)) regularFile(edges, 'claims.jsonl', true);
   if (existsSync(verifications)) regularFile(edges, 'verifications.jsonl', true);
-  return { receipt, edges, claims, verifications };
+  return { receipt, dbReceipt, edges, claims, verifications };
 }
 
 function parseJsonl<T>(path: string, validate: (value: unknown) => T): T[] {
@@ -211,6 +229,71 @@ function verifyCompletedReceipt(prior: Record<string, unknown>, paths: OutputPat
   if (prior.runId !== finalRunId(inputHash, responseHash, claimsHash, verificationsHash)) throw new Error('completed receipt drift: runId does not bind artifact hashes');
 }
 
+function atomicJson(path: string, value: unknown): void {
+  const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    writeFileSync(temporary, JSON.stringify(value, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+    renameSync(temporary, path);
+  } finally {
+    if (existsSync(temporary)) rmSync(temporary, { force: true });
+  }
+}
+
+function runDbStage(
+  paths: OutputPaths,
+  canonicalDbUrl: string,
+  coreReceipt: Record<string, unknown>,
+  runner?: LoaderRunner,
+): Record<string, unknown> {
+  // A prior success describes external mutable state and must never suppress a
+  // fresh explicit load (for example after a local DB reset).
+  if (existsSync(paths.dbReceipt)) rmSync(paths.dbReceipt, { force: true });
+  const artifacts = coreReceipt.artifacts as Record<string, unknown>;
+  const claimsHash = artifacts.claimsSha256, verificationsHash = artifacts.verificationsSha256;
+  if (typeof claimsHash !== 'string' || typeof verificationsHash !== 'string') {
+    throw new Error('edge-loader stage requires both core artifact hashes');
+  }
+  const loader = fileURLToPath(new URL('../../edge-loader/load_edges.mjs', import.meta.url));
+  const invoke: LoaderRunner = runner ?? ((executable, args, childOptions) => {
+    const result = spawnSync(executable, args, childOptions);
+    return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+  });
+  let child: ReturnType<LoaderRunner>;
+  try {
+    child = invoke(process.execPath, [loader, '--from-dir', paths.edges, '--no-prune'], {
+      encoding: 'utf8',
+      env: {
+        SUPABASE_DB_URL: canonicalDbUrl,
+        OUROBION_EXPECTED_CLAIMS_SHA256: claimsHash,
+        OUROBION_EXPECTED_VERIFICATIONS_SHA256: verificationsHash,
+      },
+    });
+  } catch {
+    throw new Error('edge-loader local incremental stage failed during child invocation');
+  }
+  if (child.status !== 0) throw new Error(`edge-loader local incremental stage failed (exit code ${child.status ?? 'unknown'})`);
+  if (hashOrNull(paths.claims) !== claimsHash || hashOrNull(paths.verifications) !== verificationsHash) {
+    throw new Error('edge-loader local incremental stage failed: artifacts changed during child execution');
+  }
+  const parsed = new URL(canonicalDbUrl);
+  const operational = {
+    kind: 'local-db-load',
+    coreRunId: coreReceipt.runId,
+    claimsSha256: artifacts.claimsSha256,
+    verificationsSha256: artifacts.verificationsSha256,
+    target: {
+      host: parsed.hostname.replace(/^\[|\]$/g, ''),
+      port: parsed.port || '5432',
+      database: parsed.pathname.replace(/^\//, ''),
+    },
+    mode: 'no-prune',
+    outcome: 'success',
+    completedAt: new Date().toISOString(),
+  };
+  atomicJson(paths.dbReceipt, operational);
+  return operational;
+}
+
 /** No R2, router, provider, hosted endpoint, or network API is imported or called. */
 export async function runSinglePaper(options: SinglePaperOptions): Promise<Record<string, unknown>> {
   const doi = normaliseDoi(options.doi), root = safeRoot(options.localDir);
@@ -219,7 +302,8 @@ export async function runSinglePaper(options: SinglePaperOptions): Promise<Recor
   if (typeof paper.doi !== 'string' || normaliseDoi(paper.doi) !== doi) throw new Error('paper.json DOI does not match --doi');
   if (!text.trim()) throw new Error('text.txt must not be empty');
   const canonicalDbUrl = options.loadLocalDb ? normaliseLocalDbUrl(options.loadLocalDb) : undefined;
-  const terms = options.terms?.length ? [...options.terms] : defaultTermsForKeys(options.pair);
+  const explicitTerms = Boolean(options.terms?.length);
+  const terms = explicitTerms ? [...options.terms!] : defaultTermsForKeys(options.pair);
   const active = await loadActiveMetricKeys(repoRoot());
   for (const key of options.pair) if (!active.has(key)) throw new Error(`single-paper: pair endpoint '${key}' is not an active shared/metrics registry key`);
   if (options.pair[0] === options.pair[1]) throw new Error('single-paper: pair endpoints must differ');
@@ -232,6 +316,7 @@ export async function runSinglePaper(options: SinglePaperOptions): Promise<Recor
     doi,
     pair: pair.metricKeys,
     terms,
+    termsSource: explicitTerms ? 'explicit' : 'derived-default',
     metadataSha256: sha(canonical(paper)),
     textSha256: sha(text),
     activeMetricRegistry: { keysSha256: sha(canonical(activeKeys)), count: activeKeys.length, requested: options.pair.map((key) => ({ key, active: active.has(key) })) },
@@ -255,7 +340,11 @@ export async function runSinglePaper(options: SinglePaperOptions): Promise<Recor
   if (existsSync(paths.receipt)) {
     const prior = jsonObject(paths.receipt);
     verifyCompletedReceipt(prior, paths, inputSha256, outputSha256);
-    return { ...prior, ...(options.resume ? { resumed: true } : { repeated: true }) };
+    if (canonicalDbUrl && !options.dryRun) {
+      const dbLoad = runDbStage(paths, canonicalDbUrl, prior, options.loaderRunner);
+      return { ...prior, ...(options.resume ? { resumed: true } : { repeated: true }), dbWrites: 'incremental edge-loader invoked', dbLoad };
+    }
+    return { ...prior, ...(options.resume ? { resumed: true } : { repeated: true }), ...(options.dryRun ? { dryRun: true, dbWrites: 0 } : {}) };
   }
   const processed = processSynthesisResponse(response, { pair, allowedPaperIds: [doi], texts: new Map([[doi, text]]), validateClaim, validateCopy, synthesisModel: 'local-host-supplied', promptVersion: PROMPT_VERSION, now: () => Date.parse(deterministicAt(synthesisRunId)) });
   const verifications = processed.accepted.map((claim) => buildQuoteOnlyRecord({
@@ -278,14 +367,13 @@ export async function runSinglePaper(options: SinglePaperOptions): Promise<Recor
   if (options.dryRun) return { ...receipt, runId: synthesisRunId, dryRun: true, claimWrites: 0, verificationWrites: 0, dbWrites: 0 };
   const writable = outputPaths(root, true);
   const claimWrite = appendPlanned(writable.claims, claimPlan), verificationWrite = appendPlanned(writable.verifications, verificationPlan);
-  if (canonicalDbUrl) {
-    const loader = fileURLToPath(new URL('../../edge-loader/load_edges.mjs', import.meta.url));
-    const child = spawnSync(process.execPath, [loader, '--from-dir', writable.edges, '--no-prune'], { encoding: 'utf8', env: { SUPABASE_DB_URL: canonicalDbUrl } });
-    if (child.status !== 0) throw new Error(`edge-loader failed: ${child.stderr || child.stdout}`);
-  }
   const artifacts = { claimsSha256: hashOrNull(writable.claims), verificationsSha256: hashOrNull(writable.verifications) };
   const runId = finalRunId(inputSha256, outputSha256, artifacts.claimsSha256, artifacts.verificationsSha256);
   const finalReceipt = { ...receipt, runId, claimWrite, verificationWrite, artifacts };
   writeFileSync(writable.receipt, JSON.stringify(finalReceipt, null, 2) + '\n');
-  return { ...finalReceipt, dbWrites: canonicalDbUrl ? 'incremental edge-loader invoked' : 0 };
+  if (canonicalDbUrl) {
+    const dbLoad = runDbStage(writable, canonicalDbUrl, finalReceipt, options.loaderRunner);
+    return { ...finalReceipt, dbWrites: 'incremental edge-loader invoked', dbLoad };
+  }
+  return { ...finalReceipt, dbWrites: 0 };
 }
