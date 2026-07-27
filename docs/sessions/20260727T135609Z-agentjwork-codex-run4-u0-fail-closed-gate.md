@@ -51,6 +51,11 @@ provenance. The gate uses `RUN4_UNIT_BASE_SHA` so the already-landed separate-se
 misrepresented as U0 work; it retains the same 115-path / 8,500-added-line cap and all fail-closed
 path, rename, binary, and provenance checks.
 
+The first reconciled PR CI run rejected the stale `baseSha` field in the tracked local-only deployment
+attestation, as intended. The artifact provenance was corrected to the exact `unitBaseSha`; this is
+the attestation schema emitted by the renamed gate and leaves its source, graph, route, and local-only
+evidence unchanged.
+
 ## Left
 
 - Run a clean root install plus exact PR-head Linux Flutter analyze/test and full PR CI.
