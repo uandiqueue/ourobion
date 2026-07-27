@@ -1,85 +1,101 @@
 ---
-title: Run 4 — planning cockpit
-summary: Entry point for Run 4, a product build run with the full local test suite available (real Android device plus live local nao) and no model training in scope. Absorbs Run 3's unbuilt O24-O29, frames eight candidate units against six priorities, and records the preconditions that must be settled before locking.
+title: Run 4 — reviewed planning cockpit
+summary: Entry point for Run 4 after independent audit and Codex confirmation. The corrected prompt is technically signed off but not authorized to execute; the pending-build register is promoted here and a smaller preflight-gated priority tranche replaces the oversized Run 3 plan.
 type: plan
 scope: shared
-status: draft
+status: canonical
 updated: 2026-07-27
 ---
 
-# Run 4 — planning cockpit
+# Run 4 — reviewed planning cockpit
 
-Run 4 has **not** started and its scope is **not locked**.
+Run 4 has **not** started. Its paste-ready prompt is technically signed off for later use, but this
+documentation change is **not execution authorization**. The prompt begins with a preflight and must
+stop unless the human-owned base, branch-protection, cap, credential, and reviewer gates are recorded.
 
 ## Documents
 
 | Document | Role |
 |---|---|
-| [`next-build-optimizations.md`](./next-build-optimizations.md) | **Scope authority** — the eight candidate units, preconditions, sequencing, sizing warning |
-| [`pending-build-register.md`](./pending-build-register.md) | **Gap superset** — every open item, sections A–J, original IDs preserved |
-| [`run3-audit-findings.md`](./run3-audit-findings.md) | The independent audit that produced findings A1–A21 and preconditions P1–P6 |
+| [`run3-audit-findings.md`](./run3-audit-findings.md) | The audit: 2 blockers, 6 high, 10 medium, 3 low. Record-only — nothing was fixed |
+| [`next-build-optimizations.md`](./next-build-optimizations.md) | Reviewed scope: corrected preconditions P1–P7, O31–O40, and the five-unit maximum priority tranche |
+| [`pending-build-register.md`](./pending-build-register.md) | Living gap superset promoted from Run 3; O24–O29 are unfinished candidates, not accepted work |
+| [`orchestrator-prompt.md`](./orchestrator-prompt.md) | Paste-ready Run 4 prompt; technically signed off, explicitly dormant until Jayden says start |
 
-## What makes Run 4 different
+## Independent confirmation and sign-off
 
-**The full local test suite is finally available.** A real Android device exists and local nao runs
-live. That is the defining change: work which was previously unverifiable can now actually be
-exercised — TalkBack accessibility traversal, the nao `/login` click-path, seeded run-now behaviour,
-real-device wearable datatypes. Several register rows move from *blocked* to *doable* on that basis
-alone.
+**Verdict: agree with Claude's Run 3 stop / do-not-merge conclusion, with corrections incorporated
+into the Run 4 prompt.** Codex rechecked the audit on 2026-07-27 at local integration commit
+`fef311f` and live GitHub state:
 
-**No model training.** It lives in [`../model-training/`](../model-training/) with its own units,
-budget and gates. Run 4 may consume a frozen artifact from it but never waits on it.
+- `dev-phase2-run3` and `dev-phase2` were both unprotected with zero required status checks; the only
+  active ruleset targeted `main` and contained no required-status-check rule.
+- PR #144 remained open at head `5eebddd` against stale base `9b41f4a`; its 15 green checks were from
+  2026-07-26, while the current integration base had advanced and locally produced a conflict in
+  `.github/workflows/ci.yml`, the file under test.
+- The MT0 merge changed 59 files and added 5,362 lines after the Run 3 candidate base, confirming that
+  the recorded cap baseline and the actual landing state diverged materially.
+- The proposed config guard's regex omits valid TOML section forms; its matrix check does not prove the
+  job is enabled or that it checks the declared entrypoint.
 
-**Run 4 absorbs Run 3.** O24–O29 were never built; `dev-phase2-run3` carries only planning docs and the
-model-training substrate. Run 3's unbuilt items fold in here rather than competing for the same branch.
-Mark Run 3 superseded when Run 4 locks.
+Corrections applied before sign-off:
 
-## The six priorities
+1. A prompt cannot waive AGENTS.md's two-reviewer rule for `shared/`; R4-U4 remains blocked until a
+   second reviewer exists.
+2. Run 4 uses a fresh immutable base and an explicitly defined **landing-delta** cap. It does not
+   retroactively subtract unrelated merges from an old baseline.
+3. Supabase deploy/lock behavior is treated as unproven until the pinned CLI bundle path is exercised;
+   the prompt does not repeat the unsupported claim that deploy "never reads" the lock.
+4. `TEST_MODE_LABEL` must cross the TS↔Dart seam through generation or a parity guard, not a direct
+   cross-language import.
+5. Run 4 preflights at most five priority units (R4-U0–R4-U4). O28/O29 and maintenance candidates are
+   deferred by default instead of silently rolling sixteen items into one run.
 
-1. **Auth split** — biotope dev vs user; dev reaches nao; nao shows ingestion + biotope data so the UI
-   populates for dev testing → **U0**
-2. **Pending Run-3 optimisations** → **U1, U2, U4, U5**
-3. **Full single-paper ingestion, no empty checkpoints**, custom models stood in for by a cheap
-   lightweight OpenAI model → **U3**, closing register section C
-4. **biotope metrics, EASY + MEDIUM** (~50) → **U6**
-5. **biotope UX revamp** → **U7**
-6. **As much of the register as fits** → **U8**
+Technical sign-off: **Codex / issue #150 / 2026-07-27.** This signs the prompt's safety and sequencing,
+not the implementation, human decisions, hosted changes, provider calls, PR merges, or Run 4 start.
 
-## Four things to decide before locking
+## Entry state — read this first
 
-1. **Turn on required status checks** (P1). Every working branch is `protected: false` with no
-   `required_status_checks`, so CI is advisory and a red PR can merge. Minutes to fix, and it is the
-   cheapest risk reduction available anywhere in this plan.
-2. **Resolve the `shared/` two-reviewer gate** (P2). Run 4 changes `shared/` in at least three units —
-   auth roles, the metrics registry, provenance fields. Unresolved, it blocks over half the run.
-3. **Settle the provider posture** (P6). `testMode` is ON with all six nodes on OpenAI because only one
-   key is provisioned, so U3's stand-in run and O29's decorrelation invariant cannot both be satisfied.
-   Recommended: U3 proves pipeline completeness only.
-4. **Derive real caps** (P4). See the sizing warning below.
+**Run 3 is closing without an accepted unit. None of O24–O29 merged.** The only implementation attempt
+is U0/O24 in PR #144; do not merge it. Its useful intent must be rebuilt and tested on the fresh Run 4
+base.
 
-## Two dependencies that are easy to miss
+**Run 3 is six units, U0–U5 = O24–O29.** There is no O30 and no U6 — that version survives only in the
+frozen Run-2 snapshot, which `AGENTS.md` forbids building from. Docs still saying "O24–O30" are stale.
 
-**Priority 4 is not a metric-authoring unit.** EASY metrics need `register A5` (generalise `daily_log`)
-and MEDIUM metrics need `register A4` (extend `metric_daily_values`). Both are structural schema work
-owned by `B-PL6`/O5. Sizing U6 without them under-scopes it by the entire storage-primitive workstream —
-hence the recommended U6a/U6b/U6c split.
+## The three things that matter most
 
-**Priority 3's stand-ins are LLM calls, not models.** They reduce no tokens and prove no model works.
-Their only job is that the pipeline has no empty checkpoints on one real paper, and every output must
-say so via an `INTERIM:` provenance marker.
+1. **CI is not required on any working branch.** Every branch is `protected: false`; the only ruleset
+   is on `main` and has no `required_status_checks`. A PR into `dev-phase2-run3` can have all 15 jobs
+   red and still merge. Since the owner does not review code, the stated safety model — CI plus review
+   — is currently running on one leg. **Precondition P1**, and it costs minutes.
+2. **Run 3's change budget and landing state diverged**, because MT0 added 59 files / 5,362 insertions
+   after the candidate baseline and broke U0's evidence and mergeability. Run 4 starts from a fresh
+   exact base; model training must not share its integration branch. **Preconditions P3 and P4.**
+3. **O27 and O29 cannot complete as written today.** O27 requires a real second `shared/` reviewer;
+   O29 requires a second provider posture and release inputs that do not exist. O27 stays gated and
+   O29 is deferred by default. **Preconditions P2 and P6.**
 
-## Sizing warning
+## The pattern Run 4 should attack
 
-This is **larger than Run 3, whose scope was already 1.7–2.1× over its file cap**. Eight units, three
-substantially greenfield, plus a UX revamp — plausibly **150–250 changed files** on Run-3 calibration.
+Run 3's *honesty scaffolding* is genuinely good — explicit "not this item" sections, refusals to claim
+production or scientific validation, honest pending markers rather than fake sign-offs. What is weak is
+**mechanical enforcement**:
 
-Either derive caps from unit estimates before locking, or sequence explicitly and accept that later
-units roll into Run 5. Recommended order:
+- caps are a hand-maintained markdown table (audit A3)
+- module and language boundaries are prose with no linter (O35)
+- the "exact SHA gate" is a tautology that cannot fail (A6)
+- the Deno coverage guard fails **open** (A7)
+- CI itself is advisory (A1)
 
-**U0 → U3 → U1 → U6a → U6b → U5 → U4 → U7 → U6c → U8**
+Every one of those is a stated invariant with no machine behind it. O31–O40 are aimed at that theme
+rather than at new features, which is the right emphasis for a codebase whose owner reviews outcomes
+rather than diffs.
 
-U0 first, because dev access is what makes everything else testable. U3 early, because a complete
-pipeline on one real paper is the highest-value demonstrable outcome and is nearly independent of the
-rest.
+## How Run 4 relates to Run 3
 
-Do not treat this folder as authorising work. Lock a subset first.
+O24–O29 are now preserved in the promoted register. Only O24–O27 appear in the recommended Run 4
+priority tranche, and even those remain conditional on preflight. O28/O29 stay visible without being
+silently authorized.
+
+Do not run the prompt until Jayden explicitly starts Run 4.

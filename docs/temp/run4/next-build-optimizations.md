@@ -1,159 +1,304 @@
 ---
-title: Run 4 — scope authority and candidate units
-summary: Run 4 is a product build run with the full local test suite available (real Android device plus live local nao) and no model training in scope. Frames eight candidate units against Jayden's six priorities, absorbs Run 3's unbuilt O24-O29, and records the preconditions and structural dependencies that must be settled before any unit is locked.
+title: Run 4 — reviewed candidate scope and priority tranche
+summary: Run 4's technically reviewed scope: corrected preconditions, O31-O40 enforcement candidates, the promoted pending-build register, and a smaller priority tranche that rebuilds O24 before security, raw-truth, and scientific-semantics work. Prompt signed; execution not authorized.
 type: plan
 scope: shared
 status: draft
 updated: 2026-07-27
 ---
 
-# Run 4 — scope authority and candidate units
+# Run 4 — reviewed candidate scope and priority tranche
 
-**Candidate scope. Nothing is locked.** Run 4 begins when Jayden locks a subset and accepts a cap
-baseline.
+**Status: technically reviewed; execution not authorized.** The priority order below is the subset
+recommended for preflight. Run 4 begins only after Jayden explicitly starts it and accepts the fresh
+base, required-check posture, cap definition, reviewer availability, and exact locked units. The audit
+that produced the candidate list is [`run3-audit-findings.md`](./run3-audit-findings.md).
 
-## What Run 4 is
+**Relationship to Run 3.** Run 3 is closing without an accepted unit. PR #144 must not merge in its
+audited state; O24-O29 are therefore unfinished and have been promoted into
+[`pending-build-register.md`](./pending-build-register.md). Run 4 does not assume that all six fit.
+It rebuilds O24 first, then prioritizes O25-O27; O28 and O29 stay deferred by default.
 
-A **product build run**, distinguished from every previous run by one thing: **the full local test suite
-is finally available.** A real Android device exists for on-device testing, and local nao runs live.
-Work that was previously unverifiable — accessibility traversal, the nao login click-path, seeded
-run-now behaviour, real-device wearable datatypes — can now actually be exercised.
+## 1. Preconditions — resolve before Run 4 (and mostly before Run 3 continues)
 
-**Model training is out of scope entirely.** It lives in [`../model-training/`](../model-training/)
-with its own units, budget and gates. Run 4 may *consume* a frozen artifact from that workstream but
-never waits on it. The Zebra build log moved out of this folder accordingly.
+These are not build units. Most are settings or decisions, and several block Run 3 right now.
 
-**Run 4 absorbs Run 3.** O24–O29 were never built — `dev-phase2-run3` carries only planning docs and
-the model-training substrate. Rather than run two tranches against one branch, Run 3's unbuilt items
-fold in here as U1/U2/U4/U5. **Run 3 should be marked superseded** when Run 4 locks.
+| ID | What | Why it blocks | Who |
+|---|---|---|---|
+| P1 | **Add required status checks** on `dev-phase2` and the human-approved Run 4 integration branch | Audit A1: both inspected working branches were `protected: false` with no required checks. Protect the successor before implementation; a closed Run 3 branch need not remain an integration target | Jayden (repo admin) |
+| P2 | **Resolve B8 by naming a second `shared/` reviewer** | Audit A4: `shared/` work requires two reviewers under AGENTS.md. A run prompt cannot waive that repository rule. O27/O38 and any other shared-contract work stay blocked until the reviewer exists | Jayden |
+| P3 | **Separate model-training from the Run 4 integration base before MT1 is cut** | Audit A3: MT0 alone changed 59 files / added 5,362 lines after the Run 3 candidate baseline and broke U0's mergeability. The exact model-training integration target is a human decision; do not invent a long-lived branch contrary to the normal workflow | Jayden + orchestrator |
+| P4 | **Approve a fresh immutable Run 4 base and one cap metric** | Do not retroactively exclude merged work. Define the run budget as the final landing delta from the accepted Run 4 base (`base..HEAD`), including generated/tracking files, with unique changed paths and added lines counted mechanically. Record the base SHA and cap before implementation | Jayden |
+| P5 | **Record every credential/resource gate in Run 4 `human-decisions.md`** — B2/B3 (Cloudflare Worker + hosted Supabase secret keys), B5 (second provider key), B10 (Android device) | Record names and approval state only, never secret values. Missing external authority blocks only the affected unit; it cannot be inferred from this prompt | orchestrator |
+| P6 | **Decide O29's provider posture** — provision a second family, or rescope the vendor-agnostic clause | Audit A5: only `OPENAI_API_KEY` exists, `config.ts:288` hard-codes an Anthropic-verifier reject, and the caps (Anthropic ≤2 SGD / OpenAI ≤20 SGD) are allocated backwards for the only legal configuration | Jayden |
+| P7 | **Close PR #144 as superseded; do not merge it** | Its 15 green checks belong to an old synthetic merge, the current base conflicts in the workflow under test, and the audit found fail-open/tautological gate logic. Rebuild the useful O24 intent on the fresh Run 4 base | Jayden + orchestrator |
 
-## Jayden's six priorities → units
+## 2. New optimisation items (O31–O40)
 
-| # | Priority | Unit |
+Numbering starts at **O31**. `O30` is deliberately skipped: it is a dead ID in `docs/temp/` and a live
+one in the archive, so reusing it would be ambiguous.
+
+These target the audit's central pattern — **stated invariants with no machine behind them**. That
+pattern matters more than usual here because the owner does not review code, so every unenforced rule
+is an unguarded rule.
+
+### O31 · Mechanical landing-delta cap enforcement in CI
+A fail-closed job reads one machine-recorded immutable base SHA, fetches that object explicitly, and
+counts unique changed paths plus added lines in `base..HEAD`. This is a **landing-delta** budget, not
+"cumulative churn" across intermediate commits. Binary/generated/tracking files still count as
+changed paths. Needs P4; missing base, shallow-history failure, or unparsable output fails the gate.
+*Source: audit, corrected in issue #150.*
+
+### O32 · Required-status-check configuration as recorded state
+P1 sets the checks; this item records *which* checks are required, where, and adds a periodic
+verification that the setting still holds. Prefer one stable aggregate `Run 4 Gate` job with
+`if: always()` and explicit `needs` that fails unless every required dependency succeeded, over
+requiring a variable set of matrix/path-filtered jobs. Until that aggregate exists, protect the branch
+with the current stable checks and record the transition.
+Repo-settings drift must fail visibly. *Source: audit A1, corrected in issue #150.*
+
+### O33 · Fix the fail-open coverage guard
+`tools/check_supabase_deno_matrix.mjs` silently discards `[functions.*]` sections its regex cannot
+parse, so `[functions.x] # comment` and `[functions."x"]` (mandatory quoting for dotted names) drop a
+deployable function out of the required set. Replace regex-as-parser with a TOML-aware, fixture-tested
+reader that fails on unsupported forms. Additionally verify that `deno-check` is enabled, invokes the
+expected command, and checks the exact declared `entrypoint`. This is part of the O24 rebuild.
+*Source: audit A7/A11, corrected in issue #150.*
+
+### O34 · Deploy-path attestation
+Current evidence proves `deno check --frozen`, not what the pinned Supabase CLI bundles. Official
+Supabase guidance says per-function `deno.json` is the recommended deployment configuration, but does
+not by itself prove that this repo's lock-v5 file and `lock` object are honored identically by every
+CLI bundling mode. Run a non-hosted bundle/serve probe on the pinned CLI, capture the resolved module
+graph or bundle hash, and compare it with the gated graph. If parity cannot be demonstrated, pin exact
+imports or vendor dependencies and keep deploy reproducibility blocked. Do not state that the CLI
+"never reads" the lock without evidence. *Source: audit A12, corrected in issue #150.*
+
+### O35 · Import-boundary enforcement
+`AGENTS.md` states that `model-training/` may never be imported by `apps/`, `supabase/`, `shared/`, or
+`tools/brain-ingest`, and forbids cross-module `/impl` imports. Both are prose. A repo-wide search for
+`dependency-cruiser`, `eslint-plugin-boundaries`, `no-restricted-imports` and `import/no-restricted-paths`
+returns zero hits. Use fixture-tested guards covering TS imports/path aliases, Dart imports, forbidden
+`/impl` access, and subprocess/path references into the isolated model-training workspace; an ESLint-
+only rule is insufficient for this polyglot boundary. *Source: audit, corrected in issue #150.*
+
+### O36 · Secret scanning on push and PR
+O25's acceptance proves "no server key in a client bundle, `NEXT_PUBLIC_*`, response, trace or log"
+once, at one commit. There is no gitleaks/trufflehog config. Fourteen files reference
+`SUPABASE_SERVICE_ROLE_KEY` and O25 introduces a second long-lived credential; a point-in-time test
+cannot be the regression guard for that. *Source: audit.*
+
+### O37 · Golden-test determinism as a prerequisite
+`apps/biotope` has zero `matchesGoldenFile` usage and no `flutter_test_config.dart`. Goldens authored
+on the Windows toolchain will not byte-match `ubuntu-latest` without a pinned font loader and a
+tolerance-configured comparator. O28 assumes this infrastructure exists. Either scope it as a small
+pre-U4 task or drop image goldens in favour of widget + semantics assertions — the latter also removes
+~24–30 files from the prior estimate. **Run 4 defaults to widget + semantics assertions and defers
+image goldens** unless a separate determinism proof is accepted. *Source: audit, decision in issue
+#150.*
+
+### O38 · Promote `TEST_MODE_LABEL` through the shared contract seam
+The user-facing trust disclaimer is duplicated across four modules: `tools/llm-router/src/types.ts`
+(canonical), `apps/nao/src/lib/claimsControl.ts` (comment says "mirrors … verbatim"),
+`apps/nao/src/components/ModelsPanel.tsx` (retyped as a raw JSX literal, not the constant), and
+biotope's provenance screen ("Hardcoded mirror of TEST_MODE_LABEL"). This is the anti-pattern
+`B-PL21` flags for `PaperRecord`, but on a **trust label**. Use the repository's TS/Dart generated or
+parity-guarded constants pattern; neither language may directly import the other's source. O27 must
+touch all four anyway. Requires a `shared/` change and two reviewers, so it depends on P2. *Source:
+audit, corrected in issue #150.*
+
+### O39 · Dependency update channel
+No `dependabot.yml`, no renovate config. U0 freezes a fifth pinned toolchain (Deno 2.8.1 + a shared
+`deno.lock`) on top of Flutter, Node, the Supabase CLI and `model-training/constraints.txt`. O24
+deliberately increases pinning without adding any mechanism to un-pin safely. *Source: audit.*
+
+### O40 · Doc-status hygiene
+At audit time, the Run 3 cockpit, scope, prompt, and register carried `status: canonical` despite being
+temporary planning aids. Issue #150 reclassified the closing Run 3 execution docs as draft and
+promoted the living register, so that slice is resolved. The remaining defect is
+`docs/shared/decisions/0003-paper-reliability.md`: it has
+`status: accepted` in frontmatter and **"Status: Proposed"** in its body; `context_sync` freezes
+accepted ADR bodies, so a self-described proposal is immutable — and O27 renders user-facing
+study-design copy off its semantics. Resolving (b) needs a superseding ADR, not an edit.
+*Source: audit A15/A16; partial closeout in issue #150.*
+
+## 3. Recommended priority tranche
+
+This is the largest tranche this review signs off for **preflight**. It is not authorized to execute
+until P1-P7 and the base/cap/reviewer decisions are recorded. The preflight may shrink it; it may not
+silently add O28, O29, O37, O39, O40, or any other register row.
+
+| Priority | Candidate unit | Contents | Start gate |
+|---|---|---|---|
+| 1 | R4-U0 · trustworthy release gate | Rebuild O24 with O31-O34; stable required aggregate, current landing-SHA evidence, fail-closed config/matrix coverage, and deploy-path dependency proof | P1, P4, P7; fresh Run 4 base |
+| 2 | R4-U1 · mechanical boundaries | O35 + O36; polyglot import/path guard and pinned secret scanning | R4-U0 gate is required and green |
+| 3 | R4-U2 · authorization and key boundary | O25; nao RBAC/RLS, redacted global jobs, named server-key migration | Credential decisions recorded; no hosted mutation without exact approval |
+| 4 | R4-U3 · raw-truth and retry safety | O26; atomic demo loading and idempotent/single-flight pipeline publication | R4-U2 blocks ordinary-account access |
+| 5 | R4-U4 · scientific semantics | O27 + O38; claim-kind preservation, artifact trust, revision-bound dispositions, TS/Dart trust-label parity | P2 second reviewer; R4-U0 green; O27 contract brief accepted |
+
+Default deferrals:
+
+- **O28/O37:** defer image goldens and the broader accessibility/UI tranche; use widget + semantics
+  assertions only where R4-U4 touches UI.
+- **O29:** defer until a legal second-provider posture, immutable release inputs, and an approved
+  isolated rehearsal target exist. Zero live provider calls and zero hosted writes in R4-U0-U4.
+- **O39:** dependency-update policy is valuable maintenance, but it must not dilute the blocker
+  tranche.
+- **O40:** perform only the Run 3→Run 4 routing needed for safe launch. Superseding ADR work remains a
+  separately reviewed decision change.
+
+## 3b. Jayden's product brief (2026-07-27) — reconciled against the tranche above
+
+The §3 tranche was signed off **before** Jayden's product brief and is infrastructure-first. The brief
+adds three product goals it does not cover, and adds a capability that changes what is testable. This
+section reconciles the two; it does not replace §3.
+
+**New capability — the full local test suite now exists.** A real **Android device** is available and
+**local nao runs live**. This is the largest change entering Run 4: `B-UI2`, `B-UI5`, `B-UI6`,
+`B-UI11`, the O28 TalkBack traversal, and human blocker `B10(access)` all move from *blocked* to
+*doable*. Several §3 default-deferrals were justified partly by untestability and should be re-examined
+on that basis — O28 in particular.
+
+**No model training in Run 4.** It lives in [`../model-training/`](../model-training/) with its own
+units, budget and gates. Run 4 may consume a frozen artifact but never waits on one. The Zebra build
+log has moved out of this folder.
+
+### Coverage of the six priorities
+
+| # | Priority | Covered by | Status |
+|---|---|---|---|
+| 1 | Auth split: dev vs user; dev reaches nao; nao shows ingestion + biotope data | R4-U2 (O25) | **partial** — R4-U2 is the RBAC/key boundary; the dev/user *split* and dev-facing nao data population are additional |
+| 2 | All pending Run-3 optimisations | R4-U0/U2/U3/U4 | covered, minus deferred O28/O29 |
+| 3 | Single-paper ingestion, no empty checkpoints, LLM stand-ins | — | **not covered** → R4-U5 below |
+| 4 | biotope metrics, EASY + MEDIUM | — | **not covered** → R4-U6 below |
+| 5 | biotope UX revamp | — | **not covered** → R4-U7 below |
+| 6 | As much of the register as fits | R4-U1 partially | partial |
+
+### Additional candidate units
+
+**R4-U5 · Single-paper end-to-end ingestion with LLM stand-ins.** Closes register **section C**. One
+real paper, start to finish, with **no empty checkpoints** — each planned custom-model slot filled by a
+cheap lightweight OpenAI call, or by the deterministic path where one exists (`impactTier` is already
+OpenAlex + SJR and needs nothing). The per-checkpoint stand-in contract is in the register §C.1.
+
+> Two constraints. **A stand-in is an LLM call, not a custom model** — it reduces no tokens and proves
+> no model works, so every output carries an `INTERIM:` provenance marker. And `router.config.json`
+> runs `testMode` ON with all six nodes on OpenAI because only one key is provisioned, so this unit
+> **cannot** also satisfy `B-BR1`/`B-BR2` decorrelation. Scope it to *pipeline completeness only*;
+> decorrelation stays with the deferred O29. If a second family is wanted cheaply, GMI **serverless
+> inference** is OpenAI-compatible and is **not** behind the delayed container entitlement.
+
+**R4-U6 · biotope metrics, EASY + MEDIUM (~50).** Split into **U6a/U6b/U6c**.
+
+> **This is not a metric-authoring unit.** EASY metrics need `register A5` (generalise `daily_log`) and
+> MEDIUM metrics need `register A4` (extend `metric_daily_values`, or events/state_bands stay
+> dashboard-invisible). Both are structural schema work owned by `B-PL6`/O5. Sizing U6 without them
+> under-scopes it by the entire storage-primitive workstream. U6a is those primitives; U6b is EASY;
+> U6c is MEDIUM. Touches `shared/metrics` → **P2**.
+
+**R4-U7 · biotope UX revamp.** `B-UI1`, the porcelain-luxury re-skin, excluded from Runs 2 and 3 as
+needing human supervision — now viable with a device in hand. Sequence **after** any accessibility work
+so it is not redone. `B-UI2` formal user testing also becomes possible, but needs a protocol, not just
+hardware.
+
+### Sizing reality
+
+§3's five units were deliberately capped as "the largest tranche this review signs off for preflight".
+Adding U5–U7 roughly doubles it, and three of the additions (U2's split extension, U6a, U6c) are
+substantially greenfield. On Run-3 calibration the combined scope plausibly lands at **150–250 changed
+paths** against a landing-delta cap.
+
+Recommended: **do not lock all eight.** Sequence by demonstrable value —
+
+**R4-U5 → R4-U2(+auth split) → R4-U0 → R4-U6a → R4-U6b → R4-U4 → R4-U7 → R4-U6c → R4-U1**
+
+R4-U5 first because a complete pipeline on one real paper is the highest-value demonstrable outcome and
+is nearly independent of the rest; the auth split second because dev access is what makes everything
+else testable. Anything not reached rolls to Run 5 rather than inflating the cap.
+
+## 4. Carried forward from the pending-build register
+
+The former O24-O29 scope would fully cover **14** register rows and partially cover 3 if all six units
+were completed. The following **41 rows plus 5 schema gaps** remain outside that scope. Original IDs
+are preserved deliberately — Run 4 must reuse them, not renumber, so the trail survives.
+
+### 4.1 Ownership holes found by the audit — no owner today
+
+| ID | What | Finding |
 |---|---|---|
-| 1 | Auth split: dev vs user; dev reaches nao; nao shows ingestion + biotope data | **U0** |
-| 2 | All pending Run-3 optimisations | **U1, U2, U4, U5** |
-| 3 | Full single-paper ingestion, no empty checkpoints, LLM stand-ins for custom models | **U3** |
-| 4 | biotope metrics inclusion — EASY + MEDIUM | **U6** |
-| 5 | biotope UX revamp | **U7** |
-| 6 | As much of the register as fits | **U8** |
+| `B-BR7` (un-reject slice) | Re-review / **restore** after rejection. Split across O25 and O27; the words "restore"/"un-reject" appear in neither | A9 |
+| `B-PL19` (cross-env slice) | Cross-environment verdict policy. Claimed covered by O29, which **explicitly forbids** migrating `edge_human_verdicts` with no successor | A10 |
+| `B-SEC1` (suppression slice) | Small-cohort suppression — O25 defers the decision rather than implementing it | A10 |
+| `B-PL20` | Docs reconciliation stated as a precondition for unattended Run-3 work, with no unit, no slot and no owner | A21 |
 
-## Preconditions — settle before locking
+### 4.2 Schema and storage primitives
+`A1` env_daily table absent (blocks 18 W3 metrics) · `A2` derived_metrics unwritten/unread (blocks ~16)
+· `A3` no static/T5 storage table · `A4` events/state_bands absent from `metric_daily_values`
+(17 metrics dashboard-invisible) · `A5` daily_log not generalised.
+Depends on `B-PL5`/O4 and `B-PL6`/O5.
 
-| ID | What | Why it blocks |
-|---|---|---|
-| **P1** | **Turn on required status checks** on `dev-phase2-run3` and its successor | Audit A1: every working branch is `protected: false` with no `required_status_checks`. CI is advisory, so "green" gates nothing. Minutes to fix, and the cheapest risk reduction available |
-| **P2** | **Resolve B8** — a second `shared/` reviewer, or a recorded solo-review waiver | Run 4 changes `shared/` in **at least three units**: auth roles (U0), the metrics registry (U6), provenance fields (U4). Unresolved, it blocks over half the run |
-| **P4** | State one cap-baseline rule and derive Run 4's caps | Audit A3: Run 3's baseline was silently consumed by an out-of-scope merge. Do not inherit an ambiguous rule |
-| **P6** | Decide the provider posture | U3 and O29 pull in opposite directions — see the conflict under U3 |
-| **P7** | *(new)* Give model-training its own integration base | Five model PRs still point at the product branch and will repeat the Run-3 collision |
+### 4.3 Backlog O-items never pulled into a run
+`B-PL2` O1 deadband reconciliation + drift guard · `B-PL3` **O2 Method & Parameter Register — a hard
+gate on every statistical sign-off** · `B-PL4` O3 registry catalog · `B-PL5` O4 derived_metrics RLS ·
+`B-PL6` O5 storage-primitive coverage · `B-PL7` O6 CODEOWNERS + branch protection · `B-BR8` O8
+router-config calibration · `B-BR11` O22 venue override table · `B-PL12` O21 location-fetch trigger ·
+`B-PL13` **O23 brain-ingest→llm-router package dep — a blocker for any build/publish, and the cause of
+two budget ledgers**.
 
-## Candidate units
+`B-PL3`/O2 is the most consequential: it blocks `B-R1-3`'s calibration backlog and `B-SCI2`'s
+calibration half, and Run 3 excludes it explicitly.
 
-### U0 · Auth: dev/user split, nao RBAC, key rotation — *priority 1*
-Absorbs `B-SEC1`, `B-SEC2` and Run 3's **O25**, which is the same surface.
+### 4.4 Brain / verifier
+`B-BR4` custom support models (the roster's NLI pre-filter and models (b)/(c) — now the separate
+model-training workstream; the *product* gap stays here) · `B-BR5` presentation agent unwired ·
+`B-BR6` autonomous gap→research loop · `B-BR9` M6 `InsightFiredEvent` never emitted · `B-BR10`
+`contradiction` → `needsReview()` unwired, **no owner** · `B-BR12` non-deterministic verdicts (accepted).
 
-Separate biotope auth into **dev** and **user**; a dev identity reaches nao; nao surfaces ingestion
-state **and** biotope data so the UI populates for dev testing. Revoke the legacy `service_role` Bearer
-path and rotate to named server keys.
+### 4.5 UI / app surface
+`B-UI1` porcelain-luxury reskin · `B-UI2` formal user testing · `B-UI4` Windows-desktop Flutter launch
+· `B-UI5` nao `/login` click-path never driven end-to-end · `B-UI6` Run-now dropdown ignores db seeds ·
+`B-UI7` nao production build / OpenNext / Worker secrets unverified · `B-UI8` O10(c) ingestion-progress
+boundary.
 
-Greenfield warning: `nao_members` and `app_metadata.nao_role` do not exist, `middleware.ts` currently
-reads *"v1: any authenticated user passes"*, and **zero** RLS policies across 23 migrations reference
-viewer/curator/admin. Keep O25's strong acceptance criterion — a negative matrix across roles ×
-surfaces, where *a UI hide/show test alone does not pass*. Touches `shared/` → **P2**.
+### 4.6 Platform and process
+`B-PL1` evaluate-signals nightly cron · `B-PL8` `shared/brain` has no typecheck target · `B-PL9` iOS
+path env-gated · `B-PL10` **B8 two-reviewer rule (see P2)** · `B-PL11` ADR amendment intents recorded
+but unapplied · `B-PL16` run-pipeline summaries scale with users × metrics · `B-PL17` semantic-graph
+freshness unenforced · `B-PL18` semantic-graph query ranking noisy · `B-PL21` `PaperRecord` duplicated
+across the ingestion/nao boundary · `B-COST1` **router budget not atomic and not globally capped —
+six 5-USD node caps imply 30 USD/day against a stated lower ceiling, and a corrupt ledger resets to
+zero**.
 
-### U1 · CI and release gate — *Run-3 O24 carryover*
-Rework rather than merge PR #144. The audit found the gate **fails open**: the SHA assertion has no
-reachable failure path, the Deno coverage guard silently drops TOML-legal `[functions.x] # comment` and
-`[functions."x"]` declarations, and it cannot distinguish a live `deno-check` from an `if: false` one.
-Pair with **P1**, without which none of it is enforced.
+### 4.7 Review and sign-off debt
+`B-R1-1` ~20 of 24 Run-1 unit sign-offs outstanding · `B-R1-2` human blockers B2–B12 · `B-R1-3`
+calibration backlog · `B-R1-4` register hygiene · `B-R2-1` **all 14 Run-2 unit sign-offs pending** ·
+`B-R2-2`, `B-R2-3` recorded, not defects.
 
-### U2 · Raw-truth-safe demo loading and retry-safe pipeline — *O26*
-`B-DATA1`, `B-DATA2`. `pipeline_runs` does not exist; single-flight, watermark and idempotency-key are
-all greenfield. Its nine enumerated test scenarios make it the best-specified carryover.
+Combined with A14, this is 34 outstanding sign-offs. Run 4 should not add a 35th without changing how
+acceptance works.
 
-### U3 · Single-paper end-to-end ingestion with LLM stand-ins — *priority 3*
-Closes register **section C**. One real paper, start to finish, with **no empty checkpoints**: each
-planned custom-model slot filled by a cheap lightweight OpenAI call, or by the deterministic path where
-one already exists (`impactTier` is already OpenAlex + SJR and needs nothing).
+## 5. Explicitly not in the Run 4 priority tranche
 
-Every stand-in output carries an `INTERIM:` provenance marker. **A stand-in is an LLM call, not a
-custom model** — it reduces no tokens and proves no model works. Its single job is to show the pipeline
-completes end to end on real input.
+- **O28 and O29** — retained in the promoted register, but deferred by default for this tranche.
+- **The five model-training units MT1–MT5** — separate workstream, separate budget, and per P3 they
+  should also get a separate integration base.
+- **Anything requiring hardware or accounts that do not exist**: CGM, real wearables, iOS/Mac + paid
+  Apple account, a physical Android device for TalkBack.
+- **Production cutover, hosting, or any claim of scientific validation.** Unchanged from Run 3.
 
-> **Conflict to settle (P6).** `router.config.json` runs `testMode` ON with all six nodes on OpenAI,
-> because only `OPENAI_API_KEY` is provisioned — the synthesis↔verifier decorrelation invariant is
-> deliberately off. U3 therefore **cannot** simultaneously satisfy `B-BR1`/`B-BR2`. Recommended: accept
-> that U3 proves *pipeline completeness only*, and leave decorrelation to O29. If a second family is
-> wanted cheaply, GMI serverless inference is OpenAI-compatible and is **not** behind the container
-> entitlement that is currently delayed.
+## 6. ID hygiene — read before reusing any ID
 
-### U4 · Scientific provenance semantics — *O27*
-`B-UI3`, `B-UI9`, `B-SCI1`, and the safe-vocabulary half of `B-SCI2`; the calibration half is blocked
-on `B-PL3`/O2 and stays out. Removes the global TEST-MODE notice, which must be sequenced against U3
-since `testMode` is still ON. Touches `shared/` → **P2**. Also resolve
-`decisions/0003-paper-reliability.md`, which says `accepted` in front-matter and *"Status: Proposed"* in
-its body while accepted ADR bodies are frozen — supersede it, since U4 renders user-facing copy off its
-semantics.
+The audit found the register's own indexing unreliable; Run 4 must not inherit the errors.
 
-### U5 · Accessible client insight/provenance UI — *O28*
-`B-UI10`, `B-UI11`. **Materially de-risked** — the manual TalkBack traversal that previously had no
-owner is now possible on the real device.
-
-Still true: `apps/biotope` has **zero** golden tests and no `flutter_test_config.dart`, so
-Windows-authored goldens will not byte-match `ubuntu-latest`. Either scope the comparator and font
-loader explicitly, or use widget + semantics assertions instead. Goldens were the largest single driver
-of Run 3's projected file-count overrun — each image is a countable changed file.
-
-### U6 · biotope metrics — EASY + MEDIUM — *priority 4*
-~15 EASY + ~35 MEDIUM ≈ **50 metrics**.
-
-> **This is not a metric-authoring unit.** It is blocked on two structural gaps: **`register A5`**
-> (generalise `daily_log`, or every EASY metric keeps riding the gut table) and **`register A4`**
-> (extend `metric_daily_values`, or events/state_bands stay dashboard-invisible). Both belong to
-> `B-PL6`/O5. Sizing U6 without them under-scopes it by the entire storage-primitive workstream.
-> Touches `shared/metrics` → **P2**.
-
-Recommend splitting: **U6a** storage primitives (`A4`+`A5`), **U6b** EASY, **U6c** MEDIUM.
-
-### U7 · biotope UX revamp — *priority 5*
-`B-UI1`, the porcelain-luxury re-skin, excluded from Runs 2 and 3 as needing human supervision — now
-viable with a device in hand. `B-UI2` formal user testing also becomes possible, though it needs a
-protocol, not just hardware. Sequence **after** U5 so accessibility work is not redone.
-
-### U8 · Register sweep — *priority 6*
-Cheap, high-value rows now that the device and live nao exist: `B-UI5` (login click-path), `B-UI6`
-(run-now seeds), `B-PL8` (`shared/brain` typecheck target), `B-R1-4` (register hygiene), and the
-unowned `B-BR10` (`contradiction` → `needsReview()`). Strong audit candidates too: **O31** mechanical
-cap enforcement in CI, **O35** import-boundary linting, **O36** secret scanning.
-
-## Explicitly out of scope
-
-- **All model training** — separate workstream.
-- `register A1`/`A2`/`A3` and the CHALLENGING metric bucket; `B-PL3`/O2 and everything blocked on it
-  (`B-R1-3`, the `B-SCI2` calibration half); `B-COST1`; `B-UI7` production/OpenNext deployment;
-  `B-PL9` iOS; CGM hardware.
-- Any claim of production readiness or scientific validation.
-
-## Honest sizing warning
-
-**This is a larger run than Run 3, and Run 3's scope was already 1.7–2.1× over its file cap.** Eight
-units, three of them substantially greenfield (U0, U2, U6), plus a UX revamp. On Run-3 calibration this
-plausibly lands at **150–250 changed files**.
-
-Do not set an 85-file cap and hope. Either derive caps from unit estimates before locking, or sequence
-explicitly and accept that later units roll into Run 5. Recommended must-have order:
-
-**U0 → U3 → U1 → U6a → U6b → U5 → U4 → U7 → U6c → U8**
-
-U0 first, because dev access is what makes everything else testable. U3 early, because a complete
-pipeline on one real paper is the highest-value demonstrable outcome and is nearly independent of the
-rest.
-
-## Retained from the earlier draft
-
-The ten audit-derived optimisation items **O31–O40** (mechanical cap enforcement, required-check
-recording, fail-open guard fix, deploy-path attestation, import-boundary linting, secret scanning,
-golden determinism, `TEST_MODE_LABEL` promotion, dependency update channel, doc-status hygiene) remain
-valid and are candidates for U1 and U8. Their full definitions are in
-[`run3-audit-findings.md`](./run3-audit-findings.md) and the register.
+- **§I's self-audit is wrong** (A17): it claims "56 canonical rows, 56 unique IDs"; there are **58**.
+  `B-PL20` and `B-PL21` post-date the reconciliation. Its instruction to "check §I before assuming an
+  item is missing" is therefore not currently safe.
+- **`B1`–`B13` is two colliding namespaces** (A18): human-gated access blockers (B5 = provider keys,
+  B11 = SJR dataset) *and* the research-fixes calibration backlog (B1–B7). "B3" and "B5" are ambiguous
+  without context. `B8` doubles as both a human blocker and the canonical name of `B-PL10`.
+  **Run 4 should qualify every reference** as `B5(access)` or `B3(calibration)`.
+- **`O30` is dead in `docs/temp/` and live in the archive.** Run 4 numbering starts at O31 for this
+  reason. Do not reuse O30.
+- **`A1`–`A5` schema gaps** use a different convention from every `B-*` row and are not counted in §I's
+  tally. They also collide with this audit's own `A1`–`A21` finding IDs — cite them as
+  `register A1` vs `audit A1`.

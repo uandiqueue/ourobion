@@ -3,11 +3,14 @@ title: Run 3 Next-Build Optimizations — locked tranche and execution record
 summary: Run 3's living scope authority. O24-O29 form a six-unit, product-only remediation tranche within the half-Run-2 ceiling; standalone Zebra model training is tracked separately. This document also preserves the O1-O23 decision and execution trail. Dev aid (docs/temp), not ground truth.
 type: plan
 scope: shared
-status: canonical
+status: draft
 updated: 2026-07-26
 ---
 
-# Run 3 Next-Build Optimizations — approved backlog and locked tranche
+# Run 3 Next-Build Optimizations — historical locked tranche
+
+> **Do not execute this tranche.** Run 3 is closing without an accepted implementation unit. O24-O29
+> and all future gap updates now live under [`../run4/`](../run4/README.md).
 
 This doc accumulates optimizations approved during sign-off review. It is both backlog and execution
 record. A build run executes only the items named in its **locked tranche**, not every historical item
@@ -48,7 +51,7 @@ Run 2 used 14 units, changed 170 files, and added approximately 17,273 lines. Ru
 - **at most 85 changed files** across the cumulative run;
 - **at most 8,650 added lines** across the cumulative run;
 - no follow-up or replacement unit: move unfinished/non-acceptance work back to
-  [pending-build-register.md](./pending-build-register.md).
+  [the promoted Run 4 pending-build register](../run4/pending-build-register.md).
 
 Generated lockfiles count as files and lines. A unit may be smaller than its predecessor; the caps are
 ceilings, not targets. If a required safety fix would exceed the envelope, stop and ask Jayden which

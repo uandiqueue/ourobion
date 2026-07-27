@@ -1,13 +1,17 @@
 ---
-title: Phase-2 Run 3.0 — Remediation Orchestrator Prompt
-summary: Resumable launch prompt for the six-unit O24–O29 product-remediation run, with a pure-orchestrator role, optimized subagent routing, exact-SHA evidence, hard size and provider caps, and one isolated PR per unit into dev-phase2-run3.
+title: Phase-2 Run 3.0 — superseded remediation orchestrator prompt
+summary: Historical Run 3 prompt. Do not launch: Run 3 is closing without an accepted unit and future work is governed by the technically signed, dormant Run 4 prompt.
 type: plan
 scope: shared
-status: canonical
+status: draft
 updated: 2026-07-27
 ---
 
-# Phase-2 Run 3.0 — Remediation Orchestrator Prompt
+# Phase-2 Run 3.0 — superseded remediation orchestrator prompt
+
+> **DO NOT LAUNCH.** Run 3 is closing without an accepted implementation unit. Use the dormant,
+> preflight-gated [`../run4/orchestrator-prompt.md`](../run4/orchestrator-prompt.md) only after Jayden
+> explicitly authorizes Run 4.
 
 Paste the block below to launch or resume Run 3. It deliberately keeps custom-model training outside
 the product run and treats the current [`next-build-optimizations.md`](./next-build-optimizations.md)
@@ -25,7 +29,7 @@ Run 2 remains unsigned and archived. Never build from docs/archive/. Run 3's act
 2. docs/INDEX.md
 3. docs/temp/run3/README.md
 4. docs/temp/run3/next-build-optimizations.md
-5. docs/temp/run3/pending-build-register.md
+5. docs/temp/run4/pending-build-register.md
 6. The active architecture, contracts, ADRs, and memory records linked from AGENTS.md
 
 Custom-model training is a separate workstream. It is strictly outside this run.
@@ -142,7 +146,7 @@ Hard cumulative ceilings from the accepted pre-U0 baseline:
 
 Generated files and tracking/session documents count. These are ceilings, not targets. If a required
 safety fix would cross a ceiling, stop and ask Jayden which later unit to defer. Unfinished work
-returns to pending-build-register.md; it does not become an unplanned follow-up unit.
+returns to docs/temp/run4/pending-build-register.md; it does not become an unplanned follow-up unit.
 
 Provider caps for the entire product run:
 
@@ -259,7 +263,7 @@ Minimum PR gate, adapted to touched surfaces:
 - exact-SHA GitHub evidence where O24 or release claims require it.
 
 Do not repair unrelated failures inside the unit. Record newly exposed gaps in
-pending-build-register.md and ask Jayden for a scope trade if they block acceptance.
+docs/temp/run4/pending-build-register.md and ask Jayden for a scope trade if they block acceptance.
 
 ===============================================================================
 PART 6 — SCOPE AND HONESTY BOUNDARIES
