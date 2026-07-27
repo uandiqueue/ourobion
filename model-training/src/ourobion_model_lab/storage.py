@@ -6,11 +6,14 @@ adapter (S3/R2, matching the plans' GMI Cold Storage / Cloudflare R2 prefix
 gates) is a later, execution-run concern; do not wire one to real credentials
 in this code-build.
 """
+
 from __future__ import annotations
 
 import abc
 import shutil
 from pathlib import Path
+
+from .data_guard import unsafe_relative_path_reason
 
 
 class StorageAdapter(abc.ABC):
@@ -23,8 +26,7 @@ class StorageAdapter(abc.ABC):
         """Fetch `key` to `local_path`; return the local path."""
 
     @abc.abstractmethod
-    def exists(self, key: str) -> bool:
-        ...
+    def exists(self, key: str) -> bool: ...
 
 
 class LocalFilesystemStorage(StorageAdapter):
@@ -35,6 +37,19 @@ class LocalFilesystemStorage(StorageAdapter):
         self.root.mkdir(parents=True, exist_ok=True)
 
     def _resolve(self, key: str) -> Path:
+        # First gate: a string-level, platform-independent check. The
+        # `resolve()` comparison below alone is not enough, because what
+        # `self.root / key` even *means* is platform-dependent -- on Linux
+        # "..\\..\\escape.txt" is one ordinary filename and "C:/secrets/x" is a
+        # subdirectory named "C:", so both stay under the root and pass, while
+        # on Windows they escape. Reject them identically on every OS.
+        unsafe = unsafe_relative_path_reason(key)
+        if unsafe is not None:
+            raise ValueError(
+                f"key {key!r} {unsafe}; storage keys must be relative paths inside the root"
+            )
+        # Second gate, kept as defence in depth: symlinks and any residual
+        # normalisation surprise are only visible after resolution.
         root_resolved = self.root.resolve()
         resolved = (self.root / key).resolve()
         if resolved != root_resolved and root_resolved not in resolved.parents:

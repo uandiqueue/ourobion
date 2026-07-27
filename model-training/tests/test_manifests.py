@@ -18,6 +18,11 @@ from ourobion_model_lab.manifests import (
     verify_hash,
 )
 
+try:  # `unittest discover -s tests` (how CI runs) imports test modules top-level
+    from pathcases import SAFE_RELATIVE_PATHS, UNSAFE_RELATIVE_PATHS
+except ImportError:  # `unittest discover -s tests -t .` imports them as a package
+    from tests.pathcases import SAFE_RELATIVE_PATHS, UNSAFE_RELATIVE_PATHS
+
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
@@ -162,7 +167,13 @@ class TestDataManifest(unittest.TestCase):
                 load_data_manifest(path)
 
     def test_absolute_or_escaping_paths_rejected(self):
-        for bad in ("/etc/passwd", "C:/secrets/x.jsonl", "../../outside.jsonl"):
+        """Every unsafe spelling in the shared table, asserted the same on every OS.
+
+        This used to be a three-entry list checked with Path.is_absolute(),
+        which meant "C:/secrets/x.jsonl" was only rejected when the tests ran
+        on Windows. See tests/pathcases.py.
+        """
+        for bad, _reason in UNSAFE_RELATIVE_PATHS:
             with self.subTest(path=bad):
                 with tempfile.TemporaryDirectory() as d:
                     path = self._write(
@@ -171,6 +182,18 @@ class TestDataManifest(unittest.TestCase):
                     )
                     with self.assertRaises(DataManifestError):
                         load_data_manifest(path)
+
+    def test_ordinary_relative_paths_accepted(self):
+        """The mirror of the above: the guard must not have become a blanket refusal."""
+        for good in SAFE_RELATIVE_PATHS:
+            with self.subTest(path=good):
+                with tempfile.TemporaryDirectory() as d:
+                    path = self._write(
+                        Path(d),
+                        {"dataset": "x", "files": [{"path": good, "sha256": "0" * 64}]},
+                    )
+                    manifest = load_data_manifest(path)  # validation only, no digest check
+                    self.assertEqual(manifest.files[0].path, good)
 
     def test_forbidden_source_location_rejected(self):
         with tempfile.TemporaryDirectory() as d:

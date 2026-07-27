@@ -9,6 +9,7 @@ Files are decoded as `utf-8-sig` on purpose: this repo's own PowerShell tooling
 writes UTF-8 *with* a BOM by default, and a BOM must not turn into an opaque
 "not valid JSON" failure (plain utf-8 keeps the BOM as U+FEFF and json chokes).
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -17,7 +18,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .data_guard import assert_allowed_input_path
+from .data_guard import assert_allowed_input_path, unsafe_relative_path_reason
 from .errors import DataManifestError, HashMismatchError, LicenceApprovalError
 
 _APPROVED_STATUSES = frozenset({"approved"})
@@ -217,14 +218,16 @@ def load_data_manifest(path: str | Path) -> DataManifest:
         if not isinstance(rel, str) or not rel:
             raise DataManifestError(f"each 'files' entry needs a non-empty 'path': {p}")
         if not isinstance(digest, str) or not _is_sha256_hex(digest):
+            raise DataManifestError(f"'files' entry {rel!r} needs a 64-character hex 'sha256': {p}")
+        # Platform-independent on purpose. The previous Path(rel).is_absolute()
+        # check passed on Windows but let "C:/secrets/x.jsonl" straight through
+        # on Linux -- the OS the GMI training containers run on. See
+        # data_guard.unsafe_relative_path_reason.
+        unsafe = unsafe_relative_path_reason(rel)
+        if unsafe is not None:
             raise DataManifestError(
-                f"'files' entry {rel!r} needs a 64-character hex 'sha256': {p}"
-            )
-        rel_path = Path(rel)
-        if rel_path.is_absolute() or ".." in rel_path.parts or rel.startswith(("/", "\\")):
-            raise DataManifestError(
-                f"'files' entry {rel!r} must be a relative path inside the manifest's "
-                f"own directory: {p}"
+                f"'files' entry {rel!r} {unsafe}; it must be a relative path inside "
+                f"the manifest's own directory: {p}"
             )
         # A manifest may not smuggle in a product/Supabase location.
         assert_allowed_input_path(rel)

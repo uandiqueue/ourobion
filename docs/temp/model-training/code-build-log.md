@@ -15,11 +15,13 @@ Companion to [`code-build-decisions.md`](./code-build-decisions.md) (why),
 chronological "what actually happened" record for the code-build workstream defined in
 [`../run3/model-training-code-build-orchestrator-prompt.md`](../run3/model-training-code-build-orchestrator-prompt.md).
 
-## RESUME: MT0 has been adversarially evaluated (2026-07-27) and the confirmed defects are fixed in the
-## same worktree; the suite is 152 tests green offline. Still not PR'd. Next step is opening the MT0 PR
-## into `dev-phase2-run3` for human review — do not cut an MT1-MT5 branch before that PR is merged
-## (PART 3 of the orchestrator prompt: "The infrastructure PR must be merged... before the five model
-## PRs are cut"). `ruff`/`mypy` still have not run anywhere: see "Still not done" at the end.
+## RESUME: MT0's first real CI run (2026-07-27) failed two jobs; both are now fixed in the same
+## worktree. The suite is 158 tests green offline, and `ruff format --check` / `ruff check` / `mypy src`
+## have now **actually been executed** — the earlier "never run anywhere" caveat is retired (see the
+## CI-fix pass at the end for how, and for the cross-platform path defect CI caught). Still not PR'd.
+## Next step is opening the MT0 PR into `dev-phase2-run3` for human review — do not cut an MT1-MT5
+## branch before that PR is merged (PART 3 of the orchestrator prompt: "The infrastructure PR must be
+## merged... before the five model PRs are cut").
 
 ## Unit MT0 — Repository policy and shared training substrate
 
@@ -236,3 +238,152 @@ $ Get-ChildItem -Recurse -Include *.py -Path src,tests | ... where line length >
 - **D4 hash-pinned lock** is still an open gate; no hashes were fabricated.
 - **No training, no GMI provisioning, no dataset or weight download, no paid model call, no network I/O
   in `src/`** — unchanged, and the remediation added none.
+
+## Unit MT0 — CI-fix pass after the first real CI run (2026-07-27)
+
+The first CI run of `model-training-core` and `model-training-lint-type` happened, and both failed.
+Neither failure was reproducible with what the previous passes had actually executed — one needed
+Linux, the other needed ruff. Both are now fixed.
+
+### Correction: the network WAS available
+
+Every earlier entry in this log records `ruff`/`mypy` as impossible to install ("no network in this
+sandbox"). **That was wrong.** `python -m pip download ruff` succeeds; the tools install fine. The
+earlier conclusion was never re-tested after it was first drawn, and it hardened into a caveat carried
+forward unchanged through two passes. The line-length scan that stood in for ruff was an honest
+substitute for a constraint that did not actually exist.
+
+A dedicated `model-training/.venv` now exists with the exact `dev`-extra pins from `pyproject.toml`
+(`ruff==0.6.9`, `mypy==1.11.2`), so local and CI run the same versions. It is created from the shared
+toolchain interpreter but is a separate venv — nothing was installed into the shared toolchain.
+`.gitignore:122` (`/model-training/.venv/`) already covered it; no ignore entry was needed.
+
+### Failure 1 — a real cross-platform defect the Windows-only local runs could not see
+
+CI on Linux/Python 3.10:
+
+```text
+FAIL: test_absolute_or_escaping_paths_rejected (test_manifests.TestDataManifest) (path='C:/secrets/x.jsonl')
+  File "model-training/tests/test_manifests.py", line 172
+AssertionError: DataManifestError not raised
+```
+
+`manifests.load_data_manifest` rejected unsafe entries with
+`Path(rel).is_absolute() or ".." in Path(rel).parts or rel.startswith(("/", "\\"))`. That asks an
+**OS** question, not a **string** question:
+
+| manifest entry | old guard on Windows | old guard on Linux |
+| --- | --- | --- |
+| `C:/secrets/x.jsonl` | reject | **ACCEPT** |
+| `c:\secrets\x.jsonl` | reject | **ACCEPT** |
+| `..\..\outside.jsonl` | reject | **ACCEPT** |
+| `C:x.jsonl` (drive-relative) | **ACCEPT** | **ACCEPT** |
+| `data\x.jsonl` | **ACCEPT** | **ACCEPT** |
+| `~/secrets.jsonl` | **ACCEPT** | **ACCEPT** |
+
+On Linux a drive letter is meaningless, so `C:/secrets/x.jsonl` reads as a relative directory named
+`C:` and walks straight past a guard whose only job is keeping manifest entries inside the workspace.
+This matters well beyond the red test: **the GMI training containers are Linux**, so the deployment
+platform was the one running the weaker guard. Two further forms (`C:x.jsonl`, `data\x.jsonl`) were
+never caught on *either* platform.
+
+Why local testing missed it: every local run of this suite has been on Windows, where
+`Path("C:/secrets/x").is_absolute()` is `True` and the assertion passes. A guard whose verdict depends
+on the host OS cannot be validated on a single host.
+
+**Fix.** One shared, purely string-level predicate,
+`data_guard.unsafe_relative_path_reason(path) -> str | None` (plus `is_safe_relative_path`), with no
+`pathlib`/`os.path` involvement in the verdict. It rejects, identically on every OS: POSIX absolute
+paths, Windows drive-letter and drive-relative paths, UNC paths, `~` shorthand, any backslash used as
+a separator, any `..` traversal segment, NUL bytes, empty/whitespace paths, and anything that still
+escapes after `posixpath.normpath` (posixpath, not os.path, so normalisation is platform-independent
+too). Ordinary relative paths such as `fixtures/corpus.jsonl` are unaffected.
+
+**Audit of the same mistake elsewhere.** `is_absolute()` / `os.path.isabs` appeared in exactly one
+place (`manifests.py`), but `storage.py`'s `LocalFilesystemStorage._resolve` had the same class of bug
+by a different route: it checked escapes only via `Path.resolve()`, and on Linux `..\..\escape.txt` is
+one ordinary filename and `C:/secrets/x` is a subdirectory named `C:` — both stay under the root and
+were silently accepted, while on Windows they escaped. It now calls the shared predicate first and
+keeps the `resolve()` comparison as defence in depth (symlinks). `data_guard.assert_allowed_input_path`
+was checked and is already platform-independent (`_path_segments` normalises `\` to `/`); so are
+`release.py`'s host-path redaction regexes. No other separator assumptions were found in `src/`.
+Neither caller duplicates the rules — both raise their own error type off the one predicate.
+
+**Regression tests.** `tests/pathcases.py` holds the single table of unsafe/safe inputs, imported by
+`test_data_guard`, `test_manifests` and `test_storage` so the three cannot drift. Every case is
+asserted identically on every OS, so the Windows run and the Linux run now exercise and agree on all
+of them — the old three-entry list only caught the drive-letter case when the tests happened to run on
+Windows. Verified as a real regression test by monkeypatching the old `is_absolute()` guard back in and
+re-running the new classes: **39 failures**, including 6 rows the old guard accepted on Windows too, so
+this fails against the old implementation on both platforms rather than only on the CI runner.
+
+### Failure 2 — formatting, plus the lint/type findings hidden behind it
+
+`ruff format --check` reported 18 files needing reformatting (19 including the new `pathcases.py`);
+`ruff format` fixed all of them. Because the format check runs first, `ruff check` and `mypy` had never
+actually executed in CI either — `ruff check` then surfaced 21 pre-existing findings:
+
+- **18 mechanical** (`UP035`/`UP006`): `typing.Sequence/Iterable/Mapping/Callable/Hashable` →
+  `collections.abc`, and `Dict`/`Tuple`/`Type` → builtin generics. Applied with `ruff check --fix` and
+  the diff reviewed; import-line and annotation changes only, all valid on Python 3.10.
+- **5 `B905`** (`zip()` without `strict=`) in `metrics.py`. Deliberately not applied via `--fix`, which
+  inserts the weaker `strict=False`. Every one of these zips is already preceded by an explicit
+  length-equality check that raises `MetricInputError`, so `strict=True` is the fail-closed choice: it
+  can only ever fire if that guard is removed, and a loud error beats silently scoring the shorter
+  prefix.
+- **1 `UP038`** (`isinstance(node, (list, tuple, set, frozenset))`) in `data_guard._scan`. Ruff marks
+  its fix unsafe, and the `list | tuple | ...` form it wants would build a fresh `types.UnionType` on
+  every call of a per-key/per-nesting-level recursive scanner. Resolved by hoisting the tuple to a
+  module constant `_COLLECTION_TYPES` — the rule no longer fires, the per-call allocation is gone, and
+  no suppression was needed. No `noqa` was added anywhere and no rule or config was loosened.
+
+`mypy src` passed first time: `Success: no issues found in 21 source files`. No `type: ignore` was
+added.
+
+### Commands run and results (verbatim key output)
+
+```text
+$ python -m venv model-training/.venv && .venv/Scripts/python -m pip install ruff==0.6.9 mypy==1.11.2
+mypy              1.11.2
+mypy_extensions   1.1.0
+ruff              0.6.9
+
+$ cd model-training && PYTHONPATH=src python -m unittest discover -s tests -v
+Ran 158 tests in 1.621s
+OK
+
+$ ruff format --check .
+34 files already formatted
+
+$ ruff check .
+All checks passed!
+
+$ mypy src
+Success: no issues found in 21 source files
+
+$ python -m ourobion_model_lab.cli dry-run --model self-check --config tests/fixtures/example_config.json
+  -> {"problems": [], "resolved": {...}, "would_run": true}    exit=0
+$ python -m ourobion_model_lab.cli smoke   --model self-check --config tests/fixtures/example_config.json
+  -> {"detail": "fixture accuracy=0.75", "ok": true}           exit=0
+
+$ node tools/context_sync.mjs --check
+[check] session-coverage: nothing to push.
+context_sync --check passed: sessions, memory, decisions, index, and couplings are consistent.
+```
+
+Test count moved 152 -> 158 (the new path-predicate, manifest and storage table cases).
+
+### Still not done — carried forward
+
+- **Local runs are still Windows-only.** The three gates above were run on Python 3.13, not the 3.10
+  CI pin; no 3.10 interpreter is available on this machine. All `src/` and `tests/` files were verified
+  to parse under `ast.parse(..., feature_version=(3, 10))`, and nothing newer than 3.10 was introduced
+  (`zip(strict=)` and `X | Y` annotations are both 3.10), but **3.10 runtime behaviour is reasoned, not
+  executed** — CI remains the first real 3.10 run. This is the same shape of gap that produced Failure
+  1; the new path table is deliberately platform-independent so it cannot recur in that spot.
+- **No PR opened**, and the `docs/sessions/` entry required by AGENTS.md §7 before a PR is still
+  outstanding (the PR-opening agent must add it).
+- **D4 hash-pinned lock** is still an open gate; no hashes were fabricated. The `.venv` was installed
+  from the exact `==` pins, not `--require-hashes`.
+- **No training, no GMI provisioning, no dataset or weight download, no paid model call, no network I/O
+  in `src/`** — unchanged. The only network use in this pass was `pip install` of the two dev tools.

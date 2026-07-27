@@ -98,6 +98,44 @@ sign-off state.
   cannot verify the approval actually covers the dataset used — that stays a human review step.
 - MT1–MT5 model packages are placeholders. They cannot start until this unit merges.
 
+## CI-fix pass (after the first PR push)
+
+The first CI run on PR #145 failed both new jobs — the first real signal for the two risks recorded
+above. Both are now fixed and re-verified.
+
+- **A cross-platform path defect that only Linux exposed.** `test_absolute_or_escaping_paths_rejected`
+  failed on `C:/secrets/x.jsonl`: the manifest guard used `Path.is_absolute()`, which is an *OS*
+  question, not a *string* question. On Linux a drive letter is meaningless, so that path reads as a
+  relative directory named `C:` and walked straight past a guard whose only job is keeping manifest
+  entries inside the workspace. **GMI containers are Linux**, so the deployment platform was the one
+  running the weaker guard, and every local run had been on Windows.
+  Investigating it found the bug was **worse than CI showed**: six forms — `C:x.jsonl` (drive-relative),
+  `fixtures/C:/x.jsonl`, `data\x.jsonl`, `~`, empty string, and NUL — were accepted on *both* platforms.
+  `storage.py`'s escape guard had the same class of bug by a different route (`Path.resolve()` only).
+  Fixed with one shared string-level predicate in `data_guard.py`, used by all three call sites, plus a
+  shared 20-reject/7-accept case table so the Windows and Linux runs exercise identical cases. Proven to
+  fail against the old implementation (39 failures when the old guard is monkeypatched back).
+- **`ruff format --check` failed** — 18 files needed reformatting.
+
+**The "no network" assumption was wrong.** Two earlier agents reported no network and therefore could
+not install or run `ruff`/`mypy`; `pip` in fact reaches PyPI. A dedicated `model-training/.venv` (already
+gitignored) now holds the pinned `ruff==0.6.9` and `mypy==1.11.2`, nothing was installed into the shared
+toolchain venv, and all three tools have now genuinely executed:
+
+- `python -m unittest discover -s tests` (CI's exact invocation) → **`Ran 158 tests` / `OK`**
+- `ruff format --check .` → 34 files already formatted
+- `ruff check .` → All checks passed
+- `mypy src` → no issues in 21 source files
+
+`ruff check` also surfaced 21 findings that the format failure had been masking; all resolved without a
+single `noqa`, `type: ignore`, or loosened rule. Notably `B905` (`zip()` without `strict=`) was fixed to
+`strict=True` rather than ruff's default `strict=False`, because each call site already asserts equal
+lengths and failing closed is the correct behaviour there.
+
+**Still reasoned rather than executed:** the gates ran on Python 3.13, not CI's 3.10 (no 3.10
+interpreter on this machine). Every file parses under `ast.parse(feature_version=(3,10))` and nothing
+newer was introduced, but this is the same shape of gap that produced the Linux defect — CI settles it.
+
 ## Blockers
 
 - **MT0 must merge into `dev-phase2-run3` before MT1–MT5 branches are cut**, and merging is

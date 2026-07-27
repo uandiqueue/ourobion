@@ -13,12 +13,13 @@ that is the one way to reintroduce a subcommand that runs with a pending
 licence. Structured JSON-line progress goes to stderr; the command's own
 result document goes to stdout.
 """
+
 from __future__ import annotations
 
 import argparse
 import json
 import sys
-from typing import Sequence
+from collections.abc import Sequence
 
 from . import gmi_preflight
 from .config import load_config
@@ -43,9 +44,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "model-agnostic environment check",
     )
     p_pre.add_argument("--model", required=False, default=None, help="registered model job name")
-    p_pre.add_argument(
-        "--config", required=False, default=None, help="path to a JSON job config"
-    )
+    p_pre.add_argument("--config", required=False, default=None, help="path to a JSON job config")
     p_pre.add_argument(
         "--strict-python",
         action="store_true",

@@ -4,6 +4,7 @@ Stdlib only (json, random, dataclasses, pathlib). Resolving a JobConfig from
 disk must never perform network I/O or dataset access -- that is what makes
 `load_config` safe to call from the `dry-run` and `preflight` CLI commands.
 """
+
 from __future__ import annotations
 
 import random

@@ -13,6 +13,7 @@ The central point these tests defend: a fixture job declares
 itself to enforce them. If the gate ever moves back into subclass bodies, the
 "gate is not reached" assertions below fail.
 """
+
 import hashlib
 import json
 import os
@@ -213,9 +214,7 @@ class TestCliWiring(_CliTestBase):
     def test_smoke_self_check(self):
         with tempfile.TemporaryDirectory() as d:
             cfg = self._write_config(Path(d))
-            self.assertEqual(
-                cli.main(["smoke", "--model", "self-check", "--config", str(cfg)]), 0
-            )
+            self.assertEqual(cli.main(["smoke", "--model", "self-check", "--config", str(cfg)]), 0)
 
     def test_evaluate_self_check(self):
         with tempfile.TemporaryDirectory() as d:
@@ -326,25 +325,19 @@ class TestGatedJobFailsClosed(_CliTestBase):
 
     def test_no_licence_path_fails_closed_on_every_subcommand(self):
         with tempfile.TemporaryDirectory() as d:
-            cfg = self._write_config(
-                Path(d), model_name=GATED_MODEL, licence_approval_path=None
-            )
+            cfg = self._write_config(Path(d), model_name=GATED_MODEL, licence_approval_path=None)
             self._assert_all_commands_fail_closed(cfg, GATED_MODEL, GatedJob)
 
     def test_pending_licence_fails_closed_on_every_subcommand(self):
         with tempfile.TemporaryDirectory() as d:
             pending = str(FIXTURES / "example_licence_approval_pending.json")
-            cfg = self._write_config(
-                Path(d), model_name=GATED_MODEL, licence_approval_path=pending
-            )
+            cfg = self._write_config(Path(d), model_name=GATED_MODEL, licence_approval_path=pending)
             self._assert_all_commands_fail_closed(cfg, GATED_MODEL, GatedJob)
 
     def test_missing_licence_file_fails_closed_on_every_subcommand(self):
         with tempfile.TemporaryDirectory() as d:
             absent = str(Path(d) / "no_such_approval.json")
-            cfg = self._write_config(
-                Path(d), model_name=GATED_MODEL, licence_approval_path=absent
-            )
+            cfg = self._write_config(Path(d), model_name=GATED_MODEL, licence_approval_path=absent)
             self._assert_all_commands_fail_closed(cfg, GATED_MODEL, GatedJob)
 
     def test_malformed_licence_fails_closed_on_every_subcommand(self):
@@ -378,9 +371,7 @@ class TestGatedJobFailsClosed(_CliTestBase):
                 for command in MODEL_COMMANDS:
                     with self.subTest(command=command):
                         GatedJob.reached = []
-                        code, _ = self._run(
-                            [command, "--model", GATED_MODEL, "--config", str(cfg)]
-                        )
+                        code, _ = self._run([command, "--model", GATED_MODEL, "--config", str(cfg)])
                         self.assertEqual(code, 0)
                         self.assertEqual(GatedJob.reached, [command])
 

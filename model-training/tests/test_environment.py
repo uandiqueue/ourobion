@@ -27,9 +27,7 @@ class TestCaptureEnvironment(unittest.TestCase):
 
     def test_git_nonzero_exit_treated_as_unknown(self):
         completed = subprocess.CompletedProcess(args=["git"], returncode=128, stdout="")
-        with mock.patch(
-            "ourobion_model_lab.environment.subprocess.run", return_value=completed
-        ):
+        with mock.patch("ourobion_model_lab.environment.subprocess.run", return_value=completed):
             snapshot = capture_environment(env={})
             self.assertIsNone(snapshot.git_commit)
 

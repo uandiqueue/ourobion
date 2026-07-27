@@ -5,6 +5,7 @@ callers (see cli.py) catch `ModelLabError` and exit non-zero rather than let a
 job proceed on an assumption. Do not add a subclass that gets silently caught
 and ignored anywhere in this package.
 """
+
 from __future__ import annotations
 
 

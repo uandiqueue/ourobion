@@ -4,6 +4,11 @@ from pathlib import Path
 
 from ourobion_model_lab.storage import LocalFilesystemStorage
 
+try:  # `unittest discover -s tests` (how CI runs) imports test modules top-level
+    from pathcases import SAFE_RELATIVE_PATHS, UNSAFE_RELATIVE_PATHS
+except ImportError:  # `unittest discover -s tests -t .` imports them as a package
+    from tests.pathcases import SAFE_RELATIVE_PATHS, UNSAFE_RELATIVE_PATHS
+
 
 class TestLocalFilesystemStorage(unittest.TestCase):
     def test_put_get_roundtrip(self):
@@ -32,6 +37,28 @@ class TestLocalFilesystemStorage(unittest.TestCase):
             storage = LocalFilesystemStorage(Path(d) / "storage-root")
             with self.assertRaises(ValueError):
                 storage.exists("../../escape.txt")
+
+    def test_every_unsafe_key_form_rejected_on_every_os(self):
+        """Same shared table as the manifest guard -- see tests/pathcases.py.
+
+        The `resolve()`-only check this adapter had could not catch these
+        portably: on Linux "..\\..\\escape.txt" is one ordinary filename and
+        "C:/secrets/x" is a subdirectory named "C:", so both stayed under the
+        root and were silently accepted, while on Windows they escaped.
+        """
+        with tempfile.TemporaryDirectory() as d:
+            storage = LocalFilesystemStorage(Path(d) / "storage-root")
+            for bad, _reason in UNSAFE_RELATIVE_PATHS:
+                with self.subTest(key=bad):
+                    with self.assertRaises(ValueError):
+                        storage.exists(bad)
+
+    def test_ordinary_relative_keys_accepted(self):
+        with tempfile.TemporaryDirectory() as d:
+            storage = LocalFilesystemStorage(Path(d) / "storage-root")
+            for good in SAFE_RELATIVE_PATHS:
+                with self.subTest(key=good):
+                    self.assertFalse(storage.exists(good))
 
 
 if __name__ == "__main__":

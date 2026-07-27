@@ -5,6 +5,7 @@ network access. Never captures or logs the *value* of a secret-shaped
 environment variable -- only whether its name is set. See gmi_preflight.py
 for the same discipline applied to GMI credentials specifically.
 """
+
 from __future__ import annotations
 
 import os

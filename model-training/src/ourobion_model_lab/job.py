@@ -13,11 +13,13 @@ forgetting to call something: it declares `requires_licence_approval` /
 that overrides `execute` or the gate itself. A subclass's own
 preflight()/train()/... body is only ever reached through that door.
 """
+
 from __future__ import annotations
 
 import abc
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Tuple, Type
+from typing import Any
 
 from .config import JobConfig
 from .errors import ConfigError
@@ -62,13 +64,13 @@ class GateResult:
 
     licence: LicenceApproval | None
     data_manifest: DataManifest | None
-    checked: Tuple[str, ...]
+    checked: tuple[str, ...]
 
 
 #: Every subcommand that can consume data or produce an artifact. All of them
 #: go through the gate -- including `preflight`, which reads config and may
 #: touch pinned files.
-GATED_COMMANDS: Tuple[str, ...] = (
+GATED_COMMANDS: tuple[str, ...] = (
     "preflight",
     "dry-run",
     "smoke",
@@ -175,7 +177,7 @@ class JobSpec(abc.ABC):
         nothing in this package does that, and subclasses cannot override this
         method (see __init_subclass__).
         """
-        handlers: Dict[str, Callable[[], Any]] = {
+        handlers: dict[str, Callable[[], Any]] = {
             "preflight": self.preflight,
             "dry-run": self.dry_run,
             "smoke": self.smoke,
@@ -215,14 +217,14 @@ class JobSpec(abc.ABC):
         """The release-build command contract. Must be deterministic or report why not."""
 
 
-_REGISTRY: Dict[str, Type[JobSpec]] = {}
+_REGISTRY: dict[str, type[JobSpec]] = {}
 
 
-def register_job(name: str, cls: Type[JobSpec]) -> None:
+def register_job(name: str, cls: type[JobSpec]) -> None:
     _REGISTRY[name] = cls
 
 
-def get_job_class(name: str) -> Type[JobSpec]:
+def get_job_class(name: str) -> type[JobSpec]:
     try:
         return _REGISTRY[name]
     except KeyError as exc:

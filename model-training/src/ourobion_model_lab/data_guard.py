@@ -14,11 +14,14 @@ through: `C:/project/ourobion/supabase` (no trailing slash), `.../Supabase/`
 `{"rows": [{"user_id": ...}]}`, and a forbidden name appearing as a *value*
 (`{"table": "daily_gut_rows"}`). All of those are caught now.
 """
+
 from __future__ import annotations
 
+import posixpath
 import re
+from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 from .errors import ForbiddenDataError
 
@@ -90,15 +93,94 @@ def _normalize_identifier(text: object) -> str:
 def _segment_matches(segment: str, forbidden: str) -> bool:
     if segment == forbidden:
         return True
-    return any(
-        segment.startswith(forbidden + sep) for sep in _SEGMENT_SUFFIX_SEPARATORS
-    )
+    return any(segment.startswith(forbidden + sep) for sep in _SEGMENT_SUFFIX_SEPARATORS)
 
 
 def _path_segments(path: str | Path) -> list[str]:
     """Case-folded path segments, separator-normalized (Windows or POSIX)."""
     text = str(path).replace("\\", "/").casefold()
     return [seg for seg in text.split("/") if seg not in ("", ".")]
+
+
+# --------------------------------------------------------------------------
+# Platform-independent unsafe-path detection.
+#
+# `pathlib.Path(...).is_absolute()` must NOT be used for this. Its answer
+# depends on the OS running the check, not on the string being checked:
+#
+#   Path("C:/secrets/x").is_absolute()   -> True on Windows, False on Linux
+#   Path("..\\..\\x").parts              -> ('..','..','x') on Windows,
+#                                           ('..\\..\\x',) on Linux
+#   Path("C:x").is_absolute()            -> False on BOTH (drive-relative)
+#
+# So a guard built on it passes on a Windows dev machine and silently lets the
+# same manifest entry through on Linux -- which is the OS the GMI training
+# containers actually run. Everything below is pure string work with no
+# platform-dependent behaviour, so Windows, Linux CI and GMI all agree.
+#
+# This is the single shared predicate; manifests.py and storage.py both call it
+# rather than re-deriving the rules (each raises its own error type).
+# --------------------------------------------------------------------------
+
+# Matches a leading drive designator: "C:/x", "c:\x" and the drive-*relative*
+# "C:x" form (which resolves against the drive's own cwd and is not "absolute"
+# by pathlib's reckoning on any platform).
+_DRIVE_LETTER_RE = re.compile(r"^[A-Za-z]:")
+
+
+def unsafe_relative_path_reason(path: str | Path) -> str | None:
+    """Return why `path` is not a safe workspace-relative path, or None if it is.
+
+    Purely string-level and identical on every OS. Rejects POSIX absolute paths,
+    Windows drive-letter and drive-relative paths, UNC paths, any use of a
+    backslash as a separator, `~` shorthand, any `..` traversal segment, and
+    anything that still escapes its base directory after normalisation. Ordinary
+    relative paths such as "fixtures/corpus.jsonl" return None.
+
+    The returned string is a verb phrase meant to be interpolated after the
+    offending path, e.g. f"{rel!r} {reason}".
+    """
+    text = str(path)
+    if not text.strip():
+        return "is empty"
+    if "\x00" in text:
+        return "contains a NUL byte"
+    # UNC first: "\\\\server\\share" and "//server/share" are rooted at a host,
+    # not at the workspace, and would otherwise read as merely "absolute".
+    if text.startswith(("\\\\", "//")):
+        return "is a UNC (\\\\server\\share) path"
+    if _DRIVE_LETTER_RE.match(text):
+        return "is a Windows drive-letter path"
+    if text.startswith("/"):
+        return "is a POSIX absolute path"
+    if text.startswith("\\"):
+        return "is a Windows root-relative path"
+    if "\\" in text:
+        # A backslash is a legal filename character on POSIX, so this is not
+        # merely a style issue: the same entry means two different things on the
+        # two platforms. Refuse it everywhere.
+        return "uses a backslash path separator"
+    if text.startswith("~"):
+        return "uses '~' home-directory shorthand"
+
+    segments = text.split("/")
+    if ".." in segments:
+        return "contains a '..' traversal segment"
+    if any(_DRIVE_LETTER_RE.match(segment) for segment in segments):
+        return "embeds a Windows drive-letter segment"
+
+    # Defence in depth. posixpath (not os.path) so normalisation itself is
+    # platform-independent: os.path.normpath would additionally rewrite
+    # backslashes on Windows only.
+    normalised = posixpath.normpath(text)
+    if posixpath.isabs(normalised) or normalised == ".." or normalised.startswith("../"):
+        return "escapes its base directory once normalised"
+    return None
+
+
+def is_safe_relative_path(path: str | Path) -> bool:
+    """True iff `path` is a safe workspace-relative path on every platform."""
+    return unsafe_relative_path_reason(path) is None
 
 
 def assert_allowed_input_path(path: str | Path) -> None:
@@ -139,6 +221,13 @@ def _forbidden_names_in(text: object) -> list[str]:
     return [name for name, pattern in _FORBIDDEN_NAME_RES if pattern.search(normalized)]
 
 
+# Hoisted, not written inline in the isinstance() below, for two reasons: the
+# inline tuple trips ruff's UP038, and the `list | tuple | ...` form UP038 wants
+# would build a fresh types.UnionType on every call -- and _scan runs once per
+# key/value per nesting level of every record scanned. Do not inline it.
+_COLLECTION_TYPES = (list, tuple, set, frozenset)
+
+
 def _scan(node: Any, hits: set[str], depth: int = 0) -> None:
     if depth > 32:  # defensive: absurdly deep input is itself suspicious, stop here
         return
@@ -146,7 +235,7 @@ def _scan(node: Any, hits: set[str], depth: int = 0) -> None:
         for key, value in node.items():
             hits.update(_forbidden_names_in(key))
             _scan(value, hits, depth + 1)
-    elif isinstance(node, (list, tuple, set, frozenset)):
+    elif isinstance(node, _COLLECTION_TYPES):
         for item in node:
             _scan(item, hits, depth + 1)
     elif isinstance(node, str):

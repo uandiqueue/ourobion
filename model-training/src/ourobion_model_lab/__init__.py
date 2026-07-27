@@ -8,6 +8,7 @@ extras declared in model-training/pyproject.toml and must only be imported
 lazily, inside model-specific code under ourobion_model_lab.models.*, never
 here.
 """
+
 from __future__ import annotations
 
 __version__ = "0.0.1"

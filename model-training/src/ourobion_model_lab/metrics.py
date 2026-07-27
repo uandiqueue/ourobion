@@ -6,10 +6,11 @@ zero installed packages (D2). Model code with the `ml` extra installed may use
 a faster/richer implementation (e.g. sklearn.metrics) instead -- this module
 is the always-available fallback and the contract both must agree with.
 """
+
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Sequence
 
 from .errors import MetricInputError
 
@@ -19,7 +20,10 @@ def accuracy(y_true: Sequence[str], y_pred: Sequence[str]) -> float:
         raise MetricInputError("y_true and y_pred must be the same length")
     if not y_true:
         return 0.0
-    correct = sum(1 for t, p in zip(y_true, y_pred) if t == p)
+    # strict=True, not strict=False: the length check above already guarantees
+    # equal lengths, so this can only fire if that guard is ever removed -- in
+    # which case a loud error beats silently scoring the shorter prefix.
+    correct = sum(1 for t, p in zip(y_true, y_pred, strict=True) if t == p)
     return correct / len(y_true)
 
 
@@ -31,9 +35,9 @@ def macro_f1(y_true: Sequence[str], y_pred: Sequence[str]) -> float:
         return 0.0
     scores = []
     for label in labels:
-        tp = sum(1 for t, p in zip(y_true, y_pred) if t == label and p == label)
-        fp = sum(1 for t, p in zip(y_true, y_pred) if t != label and p == label)
-        fn = sum(1 for t, p in zip(y_true, y_pred) if t == label and p != label)
+        tp = sum(1 for t, p in zip(y_true, y_pred, strict=True) if t == label and p == label)
+        fp = sum(1 for t, p in zip(y_true, y_pred, strict=True) if t != label and p == label)
+        fn = sum(1 for t, p in zip(y_true, y_pred, strict=True) if t == label and p != label)
         precision = tp / (tp + fp) if (tp + fp) else 0.0
         recall = tp / (tp + fn) if (tp + fn) else 0.0
         f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
@@ -66,7 +70,7 @@ def expected_calibration_error(
             "unnormalized scores instead of probabilities?"
         )
     bins: list[list[tuple[float, bool]]] = [[] for _ in range(n_bins)]
-    for conf, is_correct in zip(confidences, correct):
+    for conf, is_correct in zip(confidences, correct, strict=True):  # see accuracy() on strict
         idx = min(int(conf * n_bins), n_bins - 1)
         bins[idx].append((conf, is_correct))
     total = len(confidences)

@@ -9,9 +9,7 @@ from ourobion_model_lab.splits import (
 
 class TestDisjointGroups(unittest.TestCase):
     def test_disjoint_groups_ok(self):
-        assert_disjoint_groups(
-            ("train", ["a", "b"]), ("val", ["c"]), ("test", ["d", "e"])
-        )
+        assert_disjoint_groups(("train", ["a", "b"]), ("val", ["c"]), ("test", ["d", "e"]))
 
     def test_overlap_raises(self):
         with self.assertRaises(SplitLeakageError):

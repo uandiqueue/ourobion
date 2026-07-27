@@ -8,6 +8,7 @@ real to run against before MT1-MT5 land, and so CI's "config validation" and
 importing internals directly. Its train()/evaluate() do no real computation
 and its build-release output must never be mistaken for a trained model's.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

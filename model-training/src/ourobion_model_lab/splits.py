@@ -4,9 +4,10 @@ Every model in this roster splits by a *group key* (source abstract/PMID/etc.)
 rather than by row, because biomedical corpora repeat near-duplicate
 sentences/entities across rows of the same source document. Stdlib only.
 """
+
 from __future__ import annotations
 
-from typing import Hashable, Iterable, Mapping
+from collections.abc import Hashable, Iterable, Mapping
 
 from .errors import SplitLeakageError
 

@@ -8,6 +8,7 @@ repeated builds from identical inputs produce an identical `release_hash`;
 anything that varies between runs (wall-clock time, absolute local paths,
 secrets) must never be embedded in the hashed body.
 """
+
 from __future__ import annotations
 
 import hashlib

@@ -1,11 +1,19 @@
 import unittest
+from pathlib import Path
 
 from ourobion_model_lab.data_guard import (
     assert_allowed_input_path,
     assert_no_forbidden_schema,
     assert_no_forbidden_schema_in_all,
+    is_safe_relative_path,
+    unsafe_relative_path_reason,
 )
 from ourobion_model_lab.errors import ForbiddenDataError
+
+try:  # `unittest discover -s tests` (how CI runs) imports test modules top-level
+    from pathcases import SAFE_RELATIVE_PATHS, UNSAFE_RELATIVE_PATHS
+except ImportError:  # `unittest discover -s tests -t .` imports them as a package
+    from tests.pathcases import SAFE_RELATIVE_PATHS, UNSAFE_RELATIVE_PATHS
 
 
 class TestForbiddenSchema(unittest.TestCase):
@@ -137,6 +145,50 @@ class TestForbiddenPathBypasses(unittest.TestCase):
         # No separator boundary -> a different word, not the forbidden location.
         assert_allowed_input_path("fixtures/supabasement/notes.txt")
         assert_allowed_input_path("model-training/tests/fixtures/environment.json")
+
+
+class TestUnsafeRelativePathPredicate(unittest.TestCase):
+    """Regression: the guard must give the same answer on Windows and on Linux.
+
+    The predecessor of this predicate used `pathlib.Path(rel).is_absolute()`.
+    That is an OS question, not a string question: on Linux
+    `Path("C:/secrets/x").is_absolute()` is False, so a Windows-style absolute
+    path read as a directory named "C:" and walked straight past a guard whose
+    only job is keeping manifest entries inside the workspace -- on exactly the
+    platform (Linux) the GMI training containers use. Two rows below
+    ("C:x.jsonl", "data\\x.jsonl") also slipped past the old guard on Windows,
+    so this table fails against the old implementation on both platforms rather
+    than only on the CI runner.
+    """
+
+    def test_every_unsafe_form_is_rejected(self):
+        for bad, expected_reason in UNSAFE_RELATIVE_PATHS:
+            with self.subTest(path=bad):
+                reason = unsafe_relative_path_reason(bad)
+                self.assertIsNotNone(reason, f"{bad!r} was accepted but must be rejected")
+                self.assertIn(expected_reason, reason or "")
+                self.assertFalse(is_safe_relative_path(bad))
+
+    def test_ordinary_relative_paths_are_accepted(self):
+        for good in SAFE_RELATIVE_PATHS:
+            with self.subTest(path=good):
+                self.assertIsNone(
+                    unsafe_relative_path_reason(good),
+                    f"{good!r} is an ordinary relative path and must be accepted",
+                )
+                self.assertTrue(is_safe_relative_path(good))
+
+    def test_pathlib_spellings_are_also_rejected(self):
+        """Callers may hand over a Path; a host-specific re-spelling must not launder it.
+
+        `str(Path("C:/secrets/x"))` is "C:\\secrets\\x" on Windows and
+        "C:/secrets/x" on Linux -- both must still be rejected.
+        """
+        for bad, _ in UNSAFE_RELATIVE_PATHS:
+            if not bad.strip() or "\x00" in bad:
+                continue  # Path() cannot represent these
+            with self.subTest(path=bad):
+                self.assertIsNotNone(unsafe_relative_path_reason(Path(bad)))
 
 
 if __name__ == "__main__":
