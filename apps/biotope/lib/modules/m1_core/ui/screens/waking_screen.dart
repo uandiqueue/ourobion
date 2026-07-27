@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../core/app_preferences.dart';
 import '../../../../core/generated_assets.dart';
 import '../../../../core/theme.dart';
 import '../widgets/living_backdrop.dart';
@@ -39,7 +40,14 @@ class _WakingScreenState extends State<WakingScreen>
     return Scaffold(
       body: Stack(
         children: [
-          const Positioned.fill(child: LivingBackdrop()),
+          Positioned.fill(
+            child: ValueListenableBuilder<bool>(
+              valueListenable: AppPreferences.backdropEnabled,
+              builder: (context, enabled, child) => enabled
+                  ? const LivingBackdrop()
+                  : const ColoredBox(color: OurobionColors.background),
+            ),
+          ),
           SafeArea(
             child: Center(
               child: Padding(
