@@ -1,0 +1,51 @@
+{
+  "_comment": "This is an EXAMPLE, not an approval. A human must copy this file to licence-approval.json in this bundle's root, actually review the licence terms below (they may have changed since this file was written), answer all four GPL-3.0 questions in writing, fill in the fields truthfully, and set status to \"approved\" only once that review is done. cli.py's preflight/dry-run/splits/train/evaluate gates refuse to run (exit code 2) unless licence-approval.json exists with status == \"approved\" AND a complete gpl3_determination. Never fabricate this file or its approval on the human's behalf.",
+
+  "_why_stricter_than_zebra": "The Zebra bundle's gate only checks status == approved. This corpus repository is licensed GPL-3.0, and whether copyleft attached to a DATA repository propagates to model weights trained on it is legally unsettled. The training plan (§4.2) therefore requires a written determination on four specific questions before any GPU is provisioned, and the plan's stop conditions say an unavailable, contradictory, or negative determination BLOCKS this model rather than letting it proceed under an assumption.",
+
+  "status": "pending",
+  "approved_by": "example-approver@example.invalid",
+  "date": "2026-01-01",
+
+  "sources": [
+    {
+      "name": "junwang4/causal-language-use-in-science",
+      "pinned_commit": "7ca243a00ec07f1c63fd9ac5b0acc9cac3a6a596",
+      "licence": "GPL-3.0 on the repository (LICENSE is fetched alongside the data and hashed into data-manifest.json, so the exact text at the pinned commit is reviewable offline).",
+      "url": "https://github.com/junwang4/causal-language-use-in-science",
+      "paper": "Yu, Li & Wang, EMNLP 2019 — https://aclanthology.org/D19-1473/"
+    },
+    {
+      "name": "microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext",
+      "licence": "MIT",
+      "url": "https://huggingface.co/microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext"
+    }
+  ],
+
+  "gpl3_determination": {
+    "_comment": "All four fields below must be non-empty strings, and permits_intended_use must be true, or every gated subcommand exits 2. Answer them; do not delete them. These are the four questions from the training plan §4.2, verbatim in intent.",
+
+    "determined_by": "example-reviewer@example.invalid",
+    "date": "2026-01-01",
+
+    "covers_annotations_as_data": "REPLACE — is GPL-3.0 on this repository intended to cover the annotations as data, or only the accompanying code? State the reading and the reasoning.",
+    "weights_are_derivative_work": "REPLACE — under that reading, would trained weights be considered a derivative work? State the reasoning, including that this question is legally unsettled.",
+    "accepts_obligations_for_non_distributed_research_artifact": "REPLACE — does Ourobion accept the resulting obligations for a NON-SERVING research artifact that is never distributed? That is materially weaker exposure than shipping it; say so explicitly if that is the basis.",
+    "may_move_to_served_or_commercial_context": "REPLACE — may this artifact ever move to a served or commercial context without re-licensing or retraining from a different corpus? If the answer is no, say no here; that is a valid and expected answer.",
+
+    "permits_intended_use": false
+  },
+
+  "approved_uses": [
+    "non-commercial research pilot (viceroy-causal-language-risk-v0) — non-serving, no production traffic, artifact never distributed",
+    "NOT approved by this template: production/serving use, redistribution of the corpus or of weights trained on it, any commercial use, merging these weights or this data with any other model in the roster"
+  ],
+
+  "risk_containment": [
+    "this model's weights, code, and release prefix stay in a separate namespace from every other model in the roster — no shared checkpoints, no merged artifacts, no joint release manifest",
+    "the release manifest names the GPL-3.0 dependency explicitly and prominently",
+    "Ourobion's non-commercial status does not make an unconfirmed licence acceptable"
+  ],
+
+  "notes": "Replace with the actual reviewer's reasoning once reviewed — e.g. which licence terms were checked, on what date, and any conditions attached. Do not leave placeholder text in the real licence-approval.json."
+}

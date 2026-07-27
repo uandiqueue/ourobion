@@ -26,7 +26,25 @@ cannot consume a product unit or silently become product integration work.
 | `viceroy-claim-kind-v0` | planned; GPL-3.0 review is required | [`viceroy-claim-kind-v0-training-plan.md`](./viceroy-claim-kind-v0-training-plan.md) | research-only; offline causal-language evaluation |
 | `leafcutter-sentence-role-v0` | planned; CPU-first baseline precedes any GPU | [`leafcutter-sentence-role-v0-training-plan.md`](./leafcutter-sentence-role-v0-training-plan.md) | research-only; no serving or pipeline substitution |
 
-The full train/do-not-train decision record is [`model-roster.md`](./model-roster.md).
+The full train/do-not-train decision record is [`model-roster.md`](./model-roster.md). The current
+execution order is set by [`run2/README.md`](./run2/README.md) — Zebra first, then rescoped
+Viceroy — which supersedes the suggested order in `model-roster.md` §7 and the one-day priority
+list in the review §10.2.
+
+### Portable training bundles
+
+Self-contained folders that can be handed to a machine without this repository. Each carries its
+own setup script, pinned requirements, fail-closed licence gate, tests, and the context documents
+needed to interpret a result without repo access.
+
+| Bundle | Model | State |
+|---|---|---|
+| [`zebra-training/`](./zebra-training/) | `zebra-nli-shadow-v0` | code written; no training run |
+| [`viceroy-training/`](./viceroy-training/) | `viceroy-causal-language-risk-v0` (rescoped) | code written and split pipeline verified against the real corpus; blocked on the GPL-3.0 determination; no training run |
+
+The Viceroy bundle's [`LEAKAGE.md`](./viceroy-training/LEAKAGE.md) records a finding that affects
+the plan rather than only the bundle: the released corpus carries **no PMID**, so the plan's
+"group folds by PMID" requirement is not implementable and same-paper leakage stays uncontrolled.
 
 ## Repository boundary
 
