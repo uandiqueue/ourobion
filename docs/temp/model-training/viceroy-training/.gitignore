@@ -1,0 +1,27 @@
+# Viceroy bundle — nothing produced by a run belongs in git.
+#
+# This matters more than usual here: the corpus is GPL-3.0, and the model-training boundary rule
+# is that this repository keeps code, manifests, hashes, licences, and aggregate results — never a
+# raw dataset, a checkpoint, or a model weight. Without this file, `fetch` would drop 414 KB of
+# GPL-3.0 corpus into a tracked directory and a routine `git add -A` would commit it.
+
+# fetched corpus + LICENSE, and the HF model cache
+assets/*
+!assets/.gitkeep
+.cache/
+
+# run outputs: split artifact, checkpoints, train/eval artifacts
+outputs/
+
+# the human-provided approval — deliberately never committed, so a clone can never inherit an
+# opened gate. licence-approval.example.json (the template) IS tracked.
+licence-approval.json
+
+# written by fetch, describes machine-local files
+data-manifest.json
+
+# the bundle-local virtualenv
+.venv/
+
+__pycache__/
+*.pyc
