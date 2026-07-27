@@ -13,8 +13,8 @@ Paste the block below into a **new session**. It deliberately does not restate t
 unit definitions or gates — those live in [`orchestrator-prompt.md`](./orchestrator-prompt.md), which is
 technically signed off, and in the three companion docs. Duplicating them here would let the two drift.
 
-> **Do not paste this until Jayden explicitly starts Run 4.** The preflight will stop on unrecorded
-> gates, which is intended behaviour, not a failure.
+> **Current envelope:** U0 is locally authorized. `dev-phase2-run4` intentionally remains unprotected;
+> `Run 4 Gate` is exact-current-SHA CI evidence only. Full-suite and PR-CI evidence remain pending.
 
 ---
 
@@ -103,9 +103,7 @@ IF SOMETHING NEEDS A HUMAN, SKIP IT AND CONTINUE — never idle waiting:
 
 Known human-gated items you should expect to skip rather than solve:
 
-  - P1 required status checks and P7 closing PR #144  -> repo-settings/owner actions
-  - P2 second `shared/` reviewer -> you may BUILD work that touches shared/ and open its PR, but
-    it cannot merge; mark the PR blocked on P2 and keep going
+  - P2 second `shared/` reviewer -> shared work remains deferred; no waiver
   - anything hosted or cloud: hosted Supabase writes, the cloud demo database, production
     deployment, promotion past the section 3c exit gate
   - provisioning new paid accounts, credentials, or entitlements
@@ -119,8 +117,8 @@ recovery procedure.
 - Do not merge anything. Merging is Jayden's decision. Never target main.
 - Local is authorized; hosted, cloud, and production are not. If an action would write outside
   this machine, skip it and record it.
-- Do not start a unit whose preconditions (P1-P7) are unrecorded. Record the blocker and move to
-  the next unblocked unit instead of improvising around it.
+- Do not start a unit whose applicable preconditions are unrecorded. P1 is already the accepted
+  unprotected-branch override; record any other blocker and move to the next unblocked unit.
 - No model training in Run 4. That workstream is docs/temp/model-training/ with its own gates.
 - Do not weaken a gate, delete a test, or relax an assertion to make something pass. If a test is
   wrong, fix its reasoning and say so.

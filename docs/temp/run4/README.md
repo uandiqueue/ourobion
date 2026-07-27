@@ -1,6 +1,6 @@
 ---
 title: Run 4 — reviewed planning cockpit
-summary: Entry point for Run 4 after independent audit and Codex confirmation. The corrected prompt is technically signed off but not authorized to execute; the pending-build register is promoted here and a smaller preflight-gated priority tranche replaces the oversized Run 3 plan.
+summary: Entry point for the active Run 4 envelope after independent audit and Codex confirmation; U0 is locally authorized while full-suite and PR-CI evidence remain pending.
 type: plan
 scope: shared
 status: canonical
@@ -9,9 +9,10 @@ updated: 2026-07-27
 
 # Run 4 — reviewed planning cockpit
 
-Run 4 has **not** started. Its paste-ready prompt is technically signed off for later use, but this
-documentation change is **not execution authorization**. The prompt begins with a preflight and must
-stop unless the human-owned base, branch-protection, cap, credential, and reviewer gates are recorded.
+Run 4 is active under its accepted envelope. U0 is locally authorized on intentionally unprotected
+`dev-phase2-run4`; `Run 4 Gate` is exact-current-SHA CI evidence only, not branch-setting enforcement.
+Full-suite and PR-CI evidence remain pending. P2 still defers U4; P3 excludes training; P5/P6 keep the
+run local-only with no provider calls and O29 deferred.
 
 ## Documents
 
@@ -20,7 +21,7 @@ stop unless the human-owned base, branch-protection, cap, credential, and review
 | [`run3-audit-findings.md`](./run3-audit-findings.md) | The audit: 2 blockers, 6 high, 10 medium, 3 low. Record-only — nothing was fixed |
 | [`next-build-optimizations.md`](./next-build-optimizations.md) | Reviewed scope: corrected preconditions P1–P7, O31–O40, and the five-unit maximum priority tranche |
 | [`pending-build-register.md`](./pending-build-register.md) | Living gap superset promoted from Run 3; O24–O29 are unfinished candidates, not accepted work |
-| [`orchestrator-prompt.md`](./orchestrator-prompt.md) | Paste-ready Run 4 prompt; technically signed off, explicitly dormant until Jayden says start |
+| [`orchestrator-prompt.md`](./orchestrator-prompt.md) | Governing Run 4 prompt for the active accepted envelope |
 
 ## Independent confirmation and sign-off
 
@@ -121,4 +122,5 @@ nothing about whether a newly ingested paper becomes a relationship. That gap is
 **No model training in Run 4.** It lives in [`../model-training/`](../model-training/) with its own
 units, budget and gates; Run 4 may consume a frozen artifact but never waits on one.
 
-Do not run the prompt until Jayden explicitly starts Run 4.
+All Run 4 issue, branch, PR, and merge operations target `dev-phase2-run4` only, never `dev-phase2` or
+`main`.

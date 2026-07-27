@@ -1,7 +1,9 @@
 name: CI
 
 # The non-bypassable backstop: mirrors the local pre-push gate (skippable with --no-verify) and adds
-# the checks that can only run in CI. Nine jobs:
+# the checks that can only run in CI. dev-phase2-run4 is intentionally unprotected by owner decision,
+# so Run 4 treats completed CI on the exact current landing SHA as evidence rather than GitHub-enforced
+# protection. Core jobs:
 #   - context     : context integrity + single generated human graph-view invariant
 #   - flutter     : flutter analyze + flutter test (with the public env file built from secrets)
 #   - typescript  : tsc --noEmit over the shared/ contracts
@@ -9,7 +11,7 @@ name: CI
 #                   DB-free drift guards (rules --check, metric-view --check). All suites are
 #                   offline-first: no Docker, no DB, no network, no secrets.
 #   - nao         : apps/nao typecheck + node:test suites (no build — needs CF bindings)
-#   - deno-check       : deno check over the three edge-function handler entrypoints (audit A24) —
+#   - deno-check       : frozen Deno check over the four edge-function handler entrypoints (audit A24) —
 #                        the only compile pass the Deno.serve shells get before deploy.
 #   - migrations-apply : applies supabase/migrations/*.sql in filename order against a vanilla
 #                        postgres:17 service (audit A24). A shadow apply: it complements — does
@@ -50,6 +52,41 @@ jobs:
         run: |
           node --test tools/graph-view/tests/*.test.mjs
           node tools/graph-view/generate_graph_view.mjs --check
+
+  # Run 4 O24/O31-O34. These three gates all fail closed: a missing base, a malformed
+  # config/matrix, or absent bundle evidence is a release block, never a warning.
+  run4-release:
+    name: Run 4 release evidence
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/dev-phase2-run4') || (github.event_name == 'pull_request' && github.base_ref == 'dev-phase2-run4') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.8.1
+      - name: Install release-gate dependencies
+        run: npm ci
+      - name: Assert exact landing SHA and U0 unit base
+        env:
+          RUN4_UNIT_BASE_SHA: 77c98213e23ad56ae37c86201b39ef4e7543a543
+          RUN4_MAX_CHANGED_PATHS: 115
+          RUN4_MAX_ADDED_LINES: 8500
+        run: |
+          git fetch --no-tags origin "$RUN4_UNIT_BASE_SHA"
+          node tools/run4_release_gate.mjs provenance --event-path "$GITHUB_EVENT_PATH" --github-sha "$GITHUB_SHA"
+          node tools/run4_release_gate.mjs landing --base "$RUN4_UNIT_BASE_SHA" --head "$GITHUB_SHA" --max-paths "$RUN4_MAX_CHANGED_PATHS" --max-added "$RUN4_MAX_ADDED_LINES"
+      - name: Verify parsed function and workflow invariants
+        run: |
+          node --test tools/run4_release_gate.test.mjs
+          node tools/run4_release_gate.mjs config
+      - name: Recompute frozen graphs and verify local-only runtime attestation
+        run: node tools/run4_release_gate.mjs attest --deno deno --supabase-cli ./node_modules/.bin/supabase --graph-dir "$RUNNER_TEMP/run4-graphs"
 
   flutter:
     name: Flutter — Analyze & Test
@@ -191,12 +228,11 @@ jobs:
         working-directory: apps/nao
         run: npm test
 
-  # ─── Audit A24: the three Deno handler shells (Deno.serve + jsr: imports) are imported by
+  # ─── Audit A24: the four Deno handler shells (Deno.serve + jsr: imports) are imported by
   # nothing the node jobs compile — this is their only type check before deploy. Runs from each
   # function's directory so its deno.json (the same file config.toml points at as import_map) is
-  # the discovered config and the walk never reaches the repo-root package.json. --no-lock:
-  # no deno.lock is committed (deno is not installed on dev machines; the supabase CLI bundler
-  # owns dependency resolution at deploy time), so jsr deps resolve fresh per run.
+  # the discovered config and the walk never reaches the repo-root package.json. Every handler
+  # uses the shared frozen supabase/deno.lock generated with Deno 2.8.1.
   deno-check:
     name: Deno — ${{ matrix.function }}
     runs-on: ubuntu-latest
@@ -207,18 +243,43 @@ jobs:
           - compute-baselines
           - evaluate-signals
           - generate-insights
+          - run-pipeline
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Deno
         uses: denoland/setup-deno@v2
         with:
-          # supabase/config.toml pins edge_runtime deno_version = 2.
-          deno-version: v2.x
+          # The lockfile is generated and checked with this exact runtime.
+          deno-version: v2.8.1
 
       - name: Type check handler
         working-directory: supabase/functions/${{ matrix.function }}
-        run: deno check --no-lock index.ts
+        run: deno check --config deno.json --lock ../../deno.lock --frozen index.ts
+
+  # Stable CI evidence target (the Run 4 branch is intentionally unprotected by owner decision):
+  # explicit needs plus always() makes a missing/skipped dependency visible and red.
+  run4-gate:
+    name: Run 4 Gate
+    if: ${{ always() && ((github.event_name == 'push' && github.ref == 'refs/heads/dev-phase2-run4') || (github.event_name == 'pull_request' && github.base_ref == 'dev-phase2-run4')) }}
+    needs: [context, run4-release, flutter, typescript, node-tools, nao, deno-check, migrations-apply, model-training-core, model-training-lint-type]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install release-gate dependencies
+        run: npm ci
+
+      - name: Fail unless every required dependency succeeded
+        env:
+          NEEDS_JSON: ${{ toJson(needs) }}
+        run: node tools/run4_release_gate.mjs aggregate
 
   # ─── Audit A24: shadow-apply every migration, in filename order, on vanilla postgres:17
   # (major version = supabase/config.toml `major_version`). Complements — does NOT replace —
