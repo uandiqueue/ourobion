@@ -426,6 +426,7 @@ function extractRelayBlock(): string {
 async function runRelay(upstream: { status: number; ok: boolean; text: string } | Error): Promise<{
   status: number;
   body: unknown;
+  request?: { url: string; init?: RequestInit };
 }> {
   const compiled = new AsyncFunction(
     'fetch',
@@ -433,18 +434,22 @@ async function runRelay(upstream: { status: number; ok: boolean; text: string } 
     'redactRelayBody',
     'redactText',
     'url',
-    'anonKey',
+    'publishableKey',
     'internalSecret',
     'INTERNAL_SECRET_HEADER',
     extractRelayBlock(),
   );
-  const captured: { status: number; body: unknown } = { status: 0, body: null };
+  const captured: { status: number; body: unknown; request?: { url: string; init?: RequestInit } } = {
+    status: 0,
+    body: null,
+  };
   const jsonStub = (body: unknown, status = 200) => {
     captured.status = status;
     captured.body = body;
     return { status, body };
   };
-  const fetchStub = async () => {
+  const fetchStub = async (url: string, init?: RequestInit) => {
+    captured.request = { url, init };
     if (upstream instanceof Error) throw upstream;
     return { status: upstream.status, ok: upstream.ok, text: async () => upstream.text };
   };
@@ -454,12 +459,23 @@ async function runRelay(upstream: { status: number; ok: boolean; text: string } 
     redactRelayBody,
     redactText,
     'https://example.invalid',
-    'anon-key-not-a-secret',
+    'sb_publishable_test',
     'x'.repeat(43),
     'X-Ourobion-Internal-Secret',
   );
   return captured;
 }
+
+test('ROUTE relay request sends publishable apikey plus internal secret and no Authorization', async () => {
+  const { request } = await runRelay({ status: 200, ok: true, text: '{"ok":true,"stages":[]}' });
+  assert.equal(request?.url, 'https://example.invalid/functions/v1/run-pipeline');
+  assert.equal(request?.init?.method, 'POST');
+  assert.equal(request?.init?.body, '{}');
+  const headers = new Headers(request?.init?.headers);
+  assert.equal(headers.get('apikey'), 'sb_publishable_test');
+  assert.equal(headers.get('x-ourobion-internal-secret'), 'x'.repeat(43));
+  assert.equal(headers.get('authorization'), null);
+});
 
 test("ROUTE relay path: the JSON branch of run-pipeline/route.ts returns ZERO uuids for the real payload", async () => {
   const upstreamBody = JSON.stringify(runPipelineEnvelope([SAMPLE_UUID]));
