@@ -20,10 +20,28 @@ export function hashTextEvidence(value) {
   return sha(text.replaceAll('\r\n', '\n'));
 }
 
-// This is deliberately the U0 unit boundary, not the original Run 4 envelope/bootstrap SHA.
-// Consolidated Run 3/MT3 history landed before this U0 reconciliation and is excluded only by
-// selecting the exact post-consolidation integration tip as the unit's explicit starting point.
-export const RUN4_UNIT_BASE_SHA = '77c98213e23ad56ae37c86201b39ef4e7543a543';
+// This is deliberately the CURRENT unit boundary, not the original Run 4 envelope/bootstrap SHA.
+// Consolidated Run 3/MT3 history landed before the U0 reconciliation and was excluded by selecting
+// the exact post-consolidation integration tip as that unit's explicit starting point.
+//
+// ADVANCE THIS PER UNIT. run-envelope.json accepts the caps for `RUN4_UNIT_BASE_SHA..HEAD` ONLY,
+// and orchestration-log.md recorded the previous value as "ACCEPTED for U0 only" — the caps are a
+// per-unit landing budget, never a whole-run total. Freezing one SHA across the run charges every
+// later unit for everything that landed on the integration branch after it. That is not theoretical:
+// R4-U1 (PR #170) failed with `landing delta has 12957 added lines; cap is 8500` because the
+// model-training MT4 merge (PR #169) had advanced the base and alone consumed 7,897 of the 8,500
+// lines, leaving 603 for any unit. The same class of failure is recorded for Run 3 in
+// docs/temp/run4/README.md ("MT0 added 59 files / 5,362 insertions after the candidate baseline and
+// broke U0's evidence and mergeability").
+//
+// So: at the start of each unit, set this to that unit's exact base SHA and re-record the deploy
+// attestation (`record-attestation`), which binds these same three constants at :577. The caps
+// themselves (115 / 8,500) are unchanged and still fail closed.
+//
+// Superseded values, retained as provenance:
+//   837b7e690f92dc1669428a2476c9d8d0456020e8  (earliest U0 unit base)
+//   77c98213e23ad56ae37c86201b39ef4e7543a543  (U0 unit base — consolidated Run 3/MT3 tip)
+export const RUN4_UNIT_BASE_SHA = 'c558c04f1b661a59c8987c96770768eeea46e0cc';
 export const RUN4_MAX_CHANGED_PATHS = 115;
 export const RUN4_MAX_ADDED_LINES = 8500;
 export const RUN4_FUNCTIONS = Object.freeze([
