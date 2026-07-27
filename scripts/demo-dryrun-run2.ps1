@@ -6,6 +6,14 @@
 #   main loop: [1] load simulated data (nao /api/loader)  [2] run analysis (run-pipeline) + trend data
 #              [3] load more days (+7 history backfill)   [4] insight cards (incl. edge cards +
 #              orientation inspection)                    [5] provenance (get_insight_provenance RPC)
+#   R4-U3:     TWO identities, not one. $DemoEmail is the acting CURATOR (a nao_members row);
+#              $TargetEmail is the approved demo TARGET (a nao_demo_targets row and NO nao
+#              membership) whose raw truth the loader writes. Every health-data assertion is
+#              therefore made against the TARGET, and every attribution assertion
+#              (updated_by/created_by) against the CURATOR. Added steps: S6b (target +
+#              registration), M1b (idempotency/single-flight), M4c (a hold/uncertain edge
+#              appears in ZERO cards), M6 (an ordinary Biotope user cannot use nao), M7 (real
+#              rows are never touched).
 #   features:  (a) publish-status + /api/models + cap-edit round-trip
 #              (b) /api/claims + human REJECT supersedes serving (re-run pipeline proof)
 #              (c) /api/seeds add + brain-ingest CLI merged-topic consumption
@@ -49,7 +57,10 @@ param(
   [switch]$KeepNao,
   [int]$NaoPort = 3012,
   [string]$DemoEmail = 'u12-demo@ourobion.local',
-  [string]$DemoPassword = 'run2-demo-password!'
+  [string]$DemoPassword = 'run2-demo-password!',
+  # R4-U3 (O26): the loader now writes an APPROVED DEMO TARGET's rows, never the caller's,
+  # so the acceptance run needs a second identity. $DemoEmail stays the acting curator.
+  [string]$TargetEmail = 'u3-target@ourobion.local'
 )
 
 if ($DecorrelatedFullRun) {
@@ -155,17 +166,39 @@ function Invoke-Api {
   }
 }
 
-function Invoke-Nao([string]$Method, [string]$Path, $BodyObj) {
+function Invoke-Nao([string]$Method, [string]$Path, $BodyObj, $Session) {
+  # R4-U3: $Session is OPTIONAL and defaults to the acting curator's session, so every
+  # pre-U3 3-argument call site is unchanged. It exists for step M6, which must call nao
+  # as an ORDINARY Biotope account (the demo target, deliberately not a nao member) to
+  # prove that account is refused.
+  if ($null -eq $Session) { $Session = $script:NaoSession }
   # Local-stack wrinkle (see runbook "Known rough edges"): freshly-minted/refreshed JWTs can be
   # rejected by PostgREST as "JWT issued at future" for a couple of seconds (sub-second clock skew
   # between the auth and rest containers). Retry that specific, self-healing error a few times.
   for ($attempt = 1; $attempt -le 4; $attempt++) {
     $resp = Invoke-Api -Method $Method -Url ("http://127.0.0.1:{0}{1}" -f $NaoPort, $Path) `
-      -BodyObj $BodyObj -WebSession $script:NaoSession
+      -BodyObj $BodyObj -WebSession $Session
     if ($resp.Status -lt 400 -or $resp.Body -notmatch 'issued at future') { return $resp }
     Start-Sleep -Seconds 3
   }
   return $resp
+}
+
+# R4-U3 (O26): a fresh, EXPLICIT idempotency key per logical load. Explicit rather than
+# derived because the acceptance run needs BOTH behaviours provable: the same key must
+# replay (M1b), and a genuinely new load must not (M3's +7). Charset/length match
+# LOADER_REQUEST_KEY_RE in apps/nao/src/lib/simulatedHealth.ts.
+function New-LoaderRequestKey([string]$Label) {
+  return ('u3-dryrun-{0}-{1}' -f $Label, [Guid]::NewGuid().ToString('N').Substring(0, 12))
+}
+
+# Every uuid-shaped substring in a response body. Used to assert the loader's REAL
+# response carries none: R4-U2's one live data leak was raw auth.users uuids reaching the
+# browser, and the U3 loader now writes ANOTHER user's rows, so this is the assertion
+# that the target's identity does not travel with the result.
+function Get-UuidsIn([string]$Text) {
+  return @([regex]::Matches($Text, '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
+    'IgnoreCase') | ForEach-Object { $_.Value })
 }
 
 function ConvertTo-Base64Url([string]$Text) {
@@ -418,7 +451,70 @@ Invoke-Step 'S6 demo user (auth admin API) + biotope onboarding rows' -Critical 
   if (-not $upd) {
     Invoke-Sql "insert into profiles (user_id, display_name) values ('$($script:Uid)','Run2 Demo');" | Out-Null
   }
-  @("uid=$($script:Uid) email=$DemoEmail; consent(gut_tracking)=granted; profile display_name set")
+  # R4-U2: every nao route is gated on an EFFECTIVE public.nao_members row — without one
+  # this account is an ordinary Biotope user and every /api/* call is a 403. `curator` is
+  # the tier POST /api/loader and POST /api/loader/run-pipeline require (ROUTE_POLICY).
+  # Provisioned by service_role only, which is what `psql` is here.
+  Invoke-Sql @"
+insert into public.nao_members (user_id, role, status)
+values ('$($script:Uid)', 'curator', 'active')
+on conflict (user_id) do update set role='curator', status='active', revoked_at=null;
+"@ | Out-Null
+  $role = Invoke-Sql "select role from public.nao_members where user_id='$($script:Uid)' and status='active' and revoked_at is null;"
+  Assert ($role -eq 'curator') "nao_members role for the acting user is '$role', expected 'curator'"
+  @("uid=$($script:Uid) email=$DemoEmail; consent(gut_tracking)=granted; profile display_name set; nao_members role=curator (ACTING CURATOR, never the loader's target)")
+}
+
+# R4-U3 (O26): the demo TARGET is a SEPARATE identity from the acting curator.
+#
+# The pre-U3 loader wrote `user_id: gate.userId` — "load simulated data into whoever is
+# signed in" — which is exactly what O26 forbids. The target is now an explicit body
+# field, must be registered in public.nao_demo_targets, must NOT be a nao member, and
+# must NOT be the caller. So the acceptance run needs two accounts:
+#   * $script:Uid       the acting CURATOR (nao_members curator, never a demo target)
+#   * $script:TargetUid the demo TARGET   (nao_demo_targets 'demo:u3', deliberately NOT a
+#                                          nao member — it is an ordinary Biotope account,
+#                                          which is also what makes step M6 meaningful)
+Invoke-Step 'S6b demo TARGET user (separate identity) + nao_demo_targets registration' -Critical {
+  $resp = Invoke-Api 'Post' "$($script:ApiUrl)/auth/v1/admin/users" `
+    @{ email = $TargetEmail; password = $DemoPassword; email_confirm = $true } `
+    @{ apikey = $script:ServiceKey; Authorization = "Bearer $($script:ServiceKey)" }
+  Assert ($resp.Status -eq 200) "admin create target user -> $($resp.Status): $($resp.Body)"
+  $script:TargetUid = ($resp.Body | ConvertFrom-Json).id
+  Assert ([bool]$script:TargetUid) 'no target user id returned'
+  Assert ($script:TargetUid -ne $script:Uid) 'target and curator must be different identities'
+
+  # Same biotope onboarding rows as the curator: the target is the account whose health
+  # data the demo actually shows.
+  Invoke-Sql "insert into consent_records (user_id, scope, granted) values ('$($script:TargetUid)','gut_tracking',true);" | Out-Null
+  $upd = Invoke-Sql "update profiles set display_name='U3 Demo Target' where user_id='$($script:TargetUid)' returning user_id;"
+  if (-not $upd) {
+    Invoke-Sql "insert into profiles (user_id, display_name) values ('$($script:TargetUid)','U3 Demo Target');" | Out-Null
+  }
+
+  # The registry row is APPROVED DATA, not a convention: an unregistered (or revoked)
+  # target is refused by nao_loader_assert_target with 42501 and one fixed message.
+  Invoke-Sql @"
+insert into public.nao_demo_targets (user_id, label, note)
+values ('$($script:TargetUid)', 'demo:u3', 'R4-U3 acceptance dry-run target')
+on conflict (user_id) do update set label='demo:u3', revoked_at=null;
+"@ | Out-Null
+  $label = Invoke-Sql "select label from public.nao_demo_targets where user_id='$($script:TargetUid)' and revoked_at is null;"
+  Assert ($label -eq 'demo:u3') "nao_demo_targets label is '$label', expected 'demo:u3'"
+  $isMember = Invoke-Sql "select count(*) from public.nao_members where user_id='$($script:TargetUid)';"
+  Assert ($isMember -eq '0') 'the demo target must NOT hold a nao_members row (it is an ordinary Biotope account)'
+
+  # A session for the target too — used by M5 (the provenance RPC is RLS-scoped to the
+  # card's OWNER, which is now the target) and by M6 (ordinary-user denial).
+  $tok = Invoke-Api 'Post' "$($script:ApiUrl)/auth/v1/token?grant_type=password" `
+    @{ email = $TargetEmail; password = $DemoPassword } @{ apikey = $script:AnonKey }
+  Assert ($tok.Status -eq 200) "target password grant -> $($tok.Status): $($tok.Body)"
+  $script:TargetToken = ($tok.Body | ConvertFrom-Json).access_token
+  Assert ([bool]$script:TargetToken) 'no access_token for the target'
+  $cookie = 'base64-' + (ConvertTo-Base64Url $tok.Body)
+  $script:TargetSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+  $script:TargetSession.Cookies.Add((New-Object System.Net.Cookie('sb-127-auth-token', $cookie, '/', '127.0.0.1')))
+  @("target uid=$($script:TargetUid) email=$TargetEmail; nao_demo_targets label=demo:u3; nao_members rows=0 (ordinary Biotope account); session obtained")
 }
 
 Invoke-Step 'S7 sign-in (password grant) + @supabase/ssr cookie' -Critical {
@@ -455,51 +551,172 @@ Invoke-Step 'S8 start nao dev server' -Critical {
 
 # ---------------------------------------------------------------- main loop 1-4
 
-Invoke-Step 'M1 main-loop 1: first load -- POST /api/loader (14 simulated days)' -Critical {
-  $resp = Invoke-Nao 'Post' '/api/loader' @{}
+Invoke-Step 'M1 main-loop 1: first load -- POST /api/loader (14 simulated days, ATOMIC, to the demo TARGET)' -Critical {
+  # R4-U3: `target` is REQUIRED and must differ from the caller; both writes happen in ONE
+  # transaction inside nao_loader_apply_simulated_days, so a half-loaded day is not a
+  # representable state. The explicit requestKey is the durable idempotency key M1b replays.
+  $script:LoadKey1 = New-LoaderRequestKey 'first'
+  $resp = Invoke-Nao 'Post' '/api/loader' @{ target = $script:TargetUid; requestKey = $script:LoadKey1 }
   Assert ($resp.Status -eq 200) "loader -> $($resp.Status): $($resp.Body)"
   $j = $resp.Body | ConvertFrom-Json
   Assert ($j.ok -eq $true -and $j.loadedDays -eq 14) "expected 14 loaded days, got: $($resp.Body)"
-  $gut = Invoke-Sql "select count(*) from daily_gut_rows where user_id='$($script:Uid)' and data_origin='simulated:run2-demo';"
-  $wear = Invoke-Sql "select count(*) from wearable_daily where user_id='$($script:Uid)' and source='simulated:run2-demo';"
+  Assert ($j.targetLabel -eq 'demo:u3') "expected targetLabel demo:u3, got '$($j.targetLabel)'"
+  Assert ($j.replayed -eq $false) 'first load must not report a replay'
+  # The response must carry ZERO uuids: the target is named by its non-identifying registry
+  # label and the run by a hash. A target uuid in the body would regress R4-U2's finding 1.
+  $leaked = Get-UuidsIn $resp.Body
+  Assert ($leaked.Count -eq 0) "the loader response leaked $($leaked.Count) uuid(s): $($resp.Body)"
+
+  # Provenance counted against the TARGET's rows and the R4-U3 origin.
+  $gut = Invoke-Sql "select count(*) from daily_gut_rows where user_id='$($script:TargetUid)' and data_origin='simulated:run4-demo';"
+  $wear = Invoke-Sql "select count(*) from wearable_daily where user_id='$($script:TargetUid)' and source='simulated:run4-demo';"
   Assert ($gut -eq '14' -and $wear -eq '14') "provenance-stamped rows: gut=$gut wearable=$wear (expected 14/14)"
-  @("loadedDays=14 range=$($j.range.minDate)..$($j.range.maxDate); 14/14 rows provenance-stamped in both truth tables")
+  # ATOMICITY, observable: every loaded day exists on BOTH sides. A half-loaded day would
+  # show up here as a non-zero symmetric difference, whatever the response said.
+  $orphans = Invoke-Sql @"
+select (select count(*) from daily_gut_rows g where g.user_id='$($script:TargetUid)'
+          and not exists (select 1 from wearable_daily w
+                           where w.user_id=g.user_id and w.date=g.log_date))
+     + (select count(*) from wearable_daily w where w.user_id='$($script:TargetUid)'
+          and not exists (select 1 from daily_gut_rows g
+                           where g.user_id=w.user_id and g.log_date=w.date));
+"@
+  Assert ($orphans -eq '0') "$orphans half-loaded day(s): a date exists on one truth table but not the other"
+  # The acting curator's OWN rows must be untouched: the loader no longer writes the caller.
+  $ownGut = Invoke-Sql "select count(*) from daily_gut_rows where user_id='$($script:Uid)';"
+  Assert ($ownGut -eq '0') "the loader wrote $ownGut row(s) to the CALLER's own account (the self-write path must be retired)"
+
+  # A body with no target is a 400; a body aiming at the caller is a 403 with the same
+  # fixed message the RPC uses for every other not-permitted target.
+  $noTarget = Invoke-Nao 'Post' '/api/loader' @{ days = 7 }
+  Assert ($noTarget.Status -eq 400) "POST without target -> $($noTarget.Status) (expected 400): $($noTarget.Body)"
+  Assert ($noTarget.Body -match 'target is required') "the 400 must name the missing field: $($noTarget.Body)"
+  $selfTarget = Invoke-Nao 'Post' '/api/loader' @{ target = $script:Uid; requestKey = (New-LoaderRequestKey 'self') }
+  Assert ($selfTarget.Status -eq 403) "POST targeting self -> $($selfTarget.Status) (expected 403): $($selfTarget.Body)"
+  Assert ($selfTarget.Body -match 'not permitted') "the 403 must use the fixed message: $($selfTarget.Body)"
+  $stillGut = Invoke-Sql "select count(*) from daily_gut_rows where user_id='$($script:Uid)';"
+  Assert ($stillGut -eq '0') 'the refused self-targeted request must have written nothing'
+
+  @("loadedDays=14 targetLabel=$($j.targetLabel) range=$($j.range.minDate)..$($j.range.maxDate); 14/14 rows provenance-stamped 'simulated:run4-demo' in both truth tables for the TARGET",
+    '0 half-loaded days (gut/wearable date sets identical); 0 rows written to the acting curator',
+    "0 uuids in the response body; POST without target -> 400; POST targeting self -> 403 (nothing written)")
+}
+
+Invoke-Step 'M1b idempotency + single-flight: same requestKey replays, concurrent duplicates collapse' -Critical {
+  $gutBefore = Invoke-Sql "select count(*) from daily_gut_rows where user_id='$($script:TargetUid)';"
+  $wearBefore = Invoke-Sql "select count(*) from wearable_daily where user_id='$($script:TargetUid)';"
+
+  # SEQUENTIAL replay: the same durable key returns the stored result and writes nothing.
+  $again = Invoke-Nao 'Post' '/api/loader' @{ target = $script:TargetUid; requestKey = $script:LoadKey1 }
+  Assert ($again.Status -eq 200) "replay -> $($again.Status): $($again.Body)"
+  $r = $again.Body | ConvertFrom-Json
+  Assert ($r.replayed -eq $true) "the same requestKey must report replayed=true: $($again.Body)"
+  Assert ($r.loadedDays -eq 14) "a replay must report the ORIGINAL run's day count, got $($r.loadedDays)"
+  $runRows = Invoke-Sql "select count(*) from public.nao_loader_runs where request_key='$($script:LoadKey1)';"
+  Assert ($runRows -eq '1') "$runRows run rows for one request key (expected exactly 1)"
+
+  # CONCURRENT duplicates: two POSTs with the SAME key, fired together — a double-submit.
+  # The transaction-scoped advisory lock serialises them on the target and the unique
+  # request_key makes each a replay of the one committed run, so exactly one run row exists,
+  # both callers get a result, and NOTHING is written twice.
+  #
+  # NOT PROVEN HERE, deliberately: the harder race — two callers arriving with one key
+  # BEFORE either has committed, where the second must block on the advisory lock and then
+  # find the first's committed row — needs two interleaved database sessions holding open
+  # transactions. That is a SQL-level probe (two psql sessions in the U3 harness), not
+  # something two HTTP clients can schedule.
+  $naoUrl = ("http://127.0.0.1:{0}/api/loader" -f $NaoPort)
+  $bodyJson = (@{ target = $script:TargetUid; requestKey = $script:LoadKey1 } | ConvertTo-Json -Compress)
+  $cookieValue = 'base64-' + (ConvertTo-Base64Url $script:SessionJson)
+  $racer = {
+    param($Url, $Body, $Cookie)
+    $s = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+    $s.Cookies.Add((New-Object System.Net.Cookie('sb-127-auth-token', $Cookie, '/', '127.0.0.1')))
+    try {
+      $r = Invoke-WebRequest -UseBasicParsing -Method Post -Uri $Url -Body $Body `
+        -ContentType 'application/json' -WebSession $s -TimeoutSec 300
+      return "$([int]$r.StatusCode)|$($r.Content)"
+    } catch {
+      return "ERR|$($_.Exception.Message)"
+    }
+  }
+  $jobs = @(
+    (Start-Job -ScriptBlock $racer -ArgumentList $naoUrl, $bodyJson, $cookieValue),
+    (Start-Job -ScriptBlock $racer -ArgumentList $naoUrl, $bodyJson, $cookieValue)
+  )
+  $null = Wait-Job -Job $jobs -Timeout 300
+  $out = @($jobs | ForEach-Object { Receive-Job -Job $_ })
+  $jobs | Remove-Job -Force
+  $raceRows = Invoke-Sql "select count(*) from public.nao_loader_runs where request_key='$($script:LoadKey1)';"
+  Assert ($raceRows -eq '1') "$raceRows run rows for two CONCURRENT identical requests (expected exactly 1)"
+  $ok200 = @($out | Where-Object { $_ -like '200|*' }).Count
+  Assert ($ok200 -eq 2) "expected both concurrent requests to answer 200, got $ok200 : $($out -join ' || ')"
+  Assert (@($out | Where-Object { $_ -match '"replayed":true' }).Count -eq 2) `
+    "both concurrent duplicates must report replayed=true: $($out -join ' || ')"
+  # Nothing was written twice, and the two truth tables did not diverge.
+  $gutAfter = Invoke-Sql "select count(*) from daily_gut_rows where user_id='$($script:TargetUid)';"
+  $wearAfter = Invoke-Sql "select count(*) from wearable_daily where user_id='$($script:TargetUid)';"
+  Assert ($gutAfter -eq $gutBefore -and $wearAfter -eq $wearBefore) `
+    "a replay wrote rows: gut $gutBefore -> $gutAfter, wearable $wearBefore -> $wearAfter"
+  $totalRuns = Invoke-Sql "select count(*) from public.nao_loader_runs where target_user_id='$($script:TargetUid)';"
+  @("sequential replay: replayed=true, loadedDays=14, exactly 1 nao_loader_runs row for the key, no new rows",
+    "concurrent duplicates (2 jobs, one key): 2 x HTTP 200, both replayed=true, exactly 1 run row, 0 rows written",
+    "row counts unchanged across 3 duplicate requests: gut=$gutAfter wearable=$wearAfter; nao_loader_runs for this target=$totalRuns")
 }
 
 Invoke-Step 'M2 main-loop 2: run analysis #1 -- POST /api/loader/run-pipeline' -Critical {
-  $resp = Invoke-Nao 'Post' '/api/loader/run-pipeline' @{}
+  $resp = Invoke-Nao 'Post' '/api/loader/run-pipeline' @{ requestKey = $script:LoadKey1 }
   Assert ($resp.Status -eq 200) "run-pipeline -> $($resp.Status): $($resp.Body)"
   $j = $resp.Body | ConvertFrom-Json
   Assert ($j.ok -eq $true) "pipeline not ok: $($resp.Body)"
   $stages = ($j.stages | ForEach-Object { "$($_.stage): ok=$($_.ok)" }) -join '; '
-  $snaps = Invoke-Sql "select count(*) from baseline_snapshots where user_id='$($script:Uid)';"
-  $cards = Invoke-Sql "select count(*) from insight_cards where user_id='$($script:Uid)';"
+  # R4-U3: the DERIVED publication verdict (worst-wins fold, no stored column). All three
+  # stages ok AND every stage's observed watermark digest equal to the run's => published.
+  Assert ($j.publication.status -eq 'published') "publication status='$($j.publication.status)' (expected published): $($resp.Body)"
+  Assert ($j.publication.watermarkChecked -eq $true) 'the watermark comparison did not happen (verdict is unverifiable)'
+  Assert ($j.publication.source -eq 'database') "verdict source='$($j.publication.source)' (expected the database's per-stage fold)"
+  $snaps = Invoke-Sql "select count(*) from baseline_snapshots where user_id='$($script:TargetUid)';"
+  $cards = Invoke-Sql "select count(*) from insight_cards where user_id='$($script:TargetUid)';"
   Assert ([int]$snaps -gt 0) 'no baseline snapshots'
   Assert ([int]$cards -gt 0) 'no insight cards after run #1'
   $script:CardsAfterRun1 = [int]$cards
-  @("$stages", "baseline_snapshots=$snaps insight_cards=$cards (rules-producer trend cards; S4 still suppressed at 13-day baseline -- honest)")
+  @("$stages", "publication=$($j.publication.status) (watermarkChecked=$($j.publication.watermarkChecked), stages $($j.publication.stagesObserved)/$($j.publication.stagesExpected))",
+    "baseline_snapshots=$snaps insight_cards=$cards (rules-producer trend cards; S4 still suppressed at 13-day baseline -- honest)")
 }
 
 Invoke-Step 'M3 main-loop 3: load more days -- POST /api/loader (+7 history backfill => 21 days)' -Critical {
-  $resp = Invoke-Nao 'Post' '/api/loader' @{}
+  # A NEW key: this is a genuinely new load, not a retry. The auto-derived key could not
+  # collapse it either (the first load changed the watermark by definition), which is the
+  # boundary that makes "retry" and "load more" distinguishable at all.
+  $script:LoadKey2 = New-LoaderRequestKey 'more'
+  $resp = Invoke-Nao 'Post' '/api/loader' @{ target = $script:TargetUid; requestKey = $script:LoadKey2; days = 7 }
   Assert ($resp.Status -eq 200) "loader -> $($resp.Status): $($resp.Body)"
   $j = $resp.Body | ConvertFrom-Json
-  Assert ($j.loadedDays -eq 7 -and $j.range.days -eq 21) "expected +7 to 21 days, got: $($resp.Body)"
-  @("loadedDays=7 (backfill=$($j.backfillDays)) -> range $($j.range.minDate)..$($j.range.maxDate) = 21 days")
+  Assert ($j.loadedDays -eq 7) "expected +7 days, got: $($resp.Body)"
+  Assert ($j.replayed -eq $false) 'a NEW key must not replay'
+  # 21 provenance-stamped days in BOTH truth tables -- the acceptance number.
+  $gut = Invoke-Sql "select count(*) from daily_gut_rows where user_id='$($script:TargetUid)' and data_origin='simulated:run4-demo';"
+  $wear = Invoke-Sql "select count(*) from wearable_daily where user_id='$($script:TargetUid)' and source='simulated:run4-demo';"
+  Assert ($gut -eq '21' -and $wear -eq '21') "provenance-stamped rows: gut=$gut wearable=$wear (expected 21/21)"
+  Assert ($j.range.days -eq 21) "range.days=$($j.range.days) (expected 21)"
+  Assert ($j.watermarkAfter.aligned -eq $true) 'the two truth tables are NOT aligned after the backfill'
+  @("loadedDays=7 (backfill=$($j.backfillDays)) -> range $($j.range.minDate)..$($j.range.maxDate) = 21 days",
+    "21/21 provenance-stamped 'simulated:run4-demo' rows in BOTH truth tables; watermark aligned=$($j.watermarkAfter.aligned)")
 }
 
 Invoke-Step 'M4 main-loop 4: run analysis #2 -- signals fire, edge/personal cards, gap ledger' -Critical {
-  $resp = Invoke-Nao 'Post' '/api/loader/run-pipeline' @{}
+  $resp = Invoke-Nao 'Post' '/api/loader/run-pipeline' @{ requestKey = $script:LoadKey2 }
   Assert ($resp.Status -eq 200) "run-pipeline -> $($resp.Status): $($resp.Body)"
   $j = $resp.Body | ConvertFrom-Json
   Assert ($j.ok -eq $true) "pipeline not ok: $($resp.Body)"
+  Assert ($j.publication.status -eq 'published') "publication status='$($j.publication.status)' (expected published): $($resp.Body)"
   $gi = ($j.stages | Where-Object { $_.stage -eq 'generate-insights' }).summary
   Assert ($gi.firedPatterns -gt 0) "no fired patterns on the 21-day series: $($resp.Body)"
   Assert ($gi.gapLedger.pairsTouched -gt 0) 'gap ledger untouched'
-  $sig = Invoke-Sql "select count(*) from personal_signals where user_id='$($script:Uid)';"
+  $sig = Invoke-Sql "select count(*) from personal_signals where user_id='$($script:TargetUid)';"
   Assert ([int]$sig -gt 0) 'no personal signals'
-  $cards = Invoke-Sql "select id || '|' || rule_id || '|' || producer || '|' || title from insight_cards where user_id='$($script:Uid)' order by id;"
-  $edgeCards = Invoke-Sql "select count(*) from insight_cards where user_id='$($script:Uid)' and producer='edge';"
+  $cards = Invoke-Sql "select id || '|' || rule_id || '|' || producer || '|' || title from insight_cards where user_id='$($script:TargetUid)' order by id;"
+  $edgeCards = Invoke-Sql "select count(*) from insight_cards where user_id='$($script:TargetUid)' and producer='edge';"
   $gaps = Invoke-Sql 'select count(*) from gap_ledger;'
   $evidence = @(
     "firedPatterns=$($gi.firedPatterns) cards upserted=$($gi.cards.upserted) byProducer=$($gi.cards.byProducer | ConvertTo-Json -Compress)",
@@ -528,7 +745,7 @@ Invoke-Step 'M4b card-copy ORIENTATION inspection [acceptance iv]: edge cards na
 select coalesce(json_agg(t), '[]'::json) from (
   select ic.id, ci.payload->>'patternKey' as pattern_key, ic.body, ic.edge_refs
   from insight_cards ic join composed_insights ci on ci.insight_id = ic.insight_id
-  where ic.user_id='$($script:Uid)' and ic.producer='edge'
+  where ic.user_id='$($script:TargetUid)' and ic.producer='edge'
 ) t;
 "@
   $rows = $json | ConvertFrom-Json
@@ -561,6 +778,47 @@ select coalesce(json_agg(t), '[]'::json) from (
   $evidence
 }
 
+Invoke-Step 'M4c non-serving edges are STRUCTURALLY unservable: a hold/uncertain edge appears in ZERO cards' {
+  # The mechanism is a QUERY-LEVEL filter, not an application branch: generate-insights
+  # fetches verified_edges with `.in("serving_band", ["high","mid"])`, so a `hold` row never
+  # enters the in-memory edge array and cannot be cited by any card even if the composer
+  # downstream has a bug. Asserted against the DB, with a POSITIVE CONTROL so a zero cannot
+  # pass vacuously.
+  $holdList = Invoke-Sql "select coalesce(string_agg(edge_id, '||'), '') from verified_edges where serving_band='hold';"
+  $holdEdges = @(($holdList -split '\|\|') | Where-Object { $_ -ne '' })
+  $evidence = @()
+
+  # Positive control FIRST: the labelled, hand-authored FIXTURE edge (never a real paper)
+  # must actually decorate a card, otherwise "zero hold citations" proves nothing.
+  $fixtureEdge = 'sleep_duration_min|increases|hrv_sdnn_ms'
+  $fixtureBand = Invoke-Sql "select coalesce(serving_band, '(absent)') from verified_edges where edge_id='$fixtureEdge';"
+  $fixtureCards = Invoke-Sql "select count(*) from insight_cards where user_id='$($script:TargetUid)' and edge_refs::text like '%$fixtureEdge%';"
+  $evidence += "positive control: fixture edge '$fixtureEdge' band=$fixtureBand cited by $fixtureCards card(s)"
+  if ($script:NoEdgeCardThisPass) {
+    $evidence += 'NOTE (decorrelated, non-fatal): 0 edge-producer cards this pass (see M4 note), so the positive control is honestly not exercised; the hold-exclusion assertions below still run.'
+  } else {
+    Assert ([int]$fixtureCards -ge 1) "the labelled fixture edge decorates 0 cards -- the hold-exclusion assertion would be vacuous"
+  }
+
+  if ($holdEdges.Count -eq 0) {
+    $evidence += 'NOTE (honest): no verified_edge landed in the `hold` band this pass, so there is no hold edge to exclude. The structural filter itself is asserted below against the function source.'
+  }
+  foreach ($holdEdge in $holdEdges) {
+    $inCards = Invoke-Sql "select count(*) from insight_cards where edge_refs::text like '%$holdEdge%';"
+    $inComposed = Invoke-Sql "select count(*) from composed_insights where edge_refs::text like '%$holdEdge%';"
+    $verdict = Invoke-Sql "select coalesce(verdict, '(none)') from verified_edges where edge_id='$holdEdge';"
+    Assert ($inCards -eq '0') "hold edge '$holdEdge' ($verdict@hold) is cited by $inCards insight_card(s) -- it must be cited by ZERO"
+    Assert ($inComposed -eq '0') "hold edge '$holdEdge' ($verdict@hold) is cited by $inComposed composed_insight(s) -- it must be cited by ZERO"
+    $evidence += "hold edge '$holdEdge' ($verdict@hold): 0 insight_cards, 0 composed_insights"
+  }
+
+  # And the filter is still a QUERY filter in the function that would otherwise serve it.
+  $gi = Get-Content (Join-Path $script:RepoRoot 'supabase\functions\generate-insights\index.ts') -Raw
+  Assert ($gi -match '\.in\("serving_band", \["high", "mid"\]\)') 'the serving-band exclusion is no longer a query-level filter'
+  $evidence += 'generate-insights still filters .in("serving_band", ["high","mid"]) at the QUERY level -- a hold row never enters the in-memory edge array'
+  $evidence
+}
+
 # ---------------------------------------------------------------- main loop 5: provenance
 
 Invoke-Step 'M5 main-loop 5: provenance -- get_insight_provenance RPC (authenticated user)' {
@@ -575,9 +833,13 @@ Invoke-Step 'M5 main-loop 5: provenance -- get_insight_provenance RPC (authentic
       $rows
     )
   }
+  # R4-U3: the card belongs to the demo TARGET now, and get_insight_provenance is
+  # security INVOKER — it relies on insight_cards' own `auth.uid() = user_id` policy. So the
+  # provenance trace is exercised as the card's OWNER, which is also the honest demo shape
+  # (this is the biotope-side view). The curator has no business reading it.
   $resp = Invoke-Api 'Post' "$($script:ApiUrl)/rest/v1/rpc/get_insight_provenance" `
     @{ p_card_id = $script:EdgeCardId } `
-    @{ apikey = $script:AnonKey; Authorization = "Bearer $($script:AccessToken)" }
+    @{ apikey = $script:AnonKey; Authorization = "Bearer $($script:TargetToken)" }
   Assert ($resp.Status -eq 200) "rpc -> $($resp.Status): $($resp.Body)"
   $p = $resp.Body | ConvertFrom-Json
   Assert (@($p.edges).Count -ge 1) "provenance returned no edges for card #$($script:EdgeCardId): $($resp.Body)"
@@ -600,6 +862,111 @@ Invoke-Step 'M5 main-loop 5: provenance -- get_insight_provenance RPC (authentic
     $evidence += "DECORRELATED TRACE: edge_verifications.verification->>'verifierModel' for the served edge = '$vModel'"
   }
   $evidence
+}
+
+# ---------------------------------------------------------------- R4-U3: authorization + raw-truth safety
+
+Invoke-Step 'M6 an ORDINARY Biotope user cannot use nao (route AND direct PostgREST)' {
+  # The demo target is a real, confirmed auth.users account with health data and NO
+  # nao_members row. That is the whole population Biotope serves, so this is the assertion
+  # that nao membership -- not authentication -- is what grants nao access.
+  $get = Invoke-Nao 'Get' '/api/loader' $null $script:TargetSession
+  Assert ($get.Status -eq 403) "GET /api/loader as an ordinary user -> $($get.Status) (expected 403): $($get.Body)"
+  $post = Invoke-Nao 'Post' '/api/loader' @{ target = $script:Uid } $script:TargetSession
+  Assert ($post.Status -eq 403) "POST /api/loader as an ordinary user -> $($post.Status) (expected 403): $($post.Body)"
+  $pipe = Invoke-Nao 'Post' '/api/loader/run-pipeline' @{} $script:TargetSession
+  Assert ($pipe.Status -eq 403) "POST /api/loader/run-pipeline as an ordinary user -> $($pipe.Status) (expected 403): $($pipe.Body)"
+  # The denial body must not reveal WHY (member vs. wrong tier vs. nonexistent).
+  Assert ($get.Body -notmatch 'curator|viewer|admin|nao_members') "the denial body leaks the authorization model: $($get.Body)"
+
+  # ...and the DATABASE says the same thing to the same account, so the route is not the only
+  # thing standing in the way. nao_authorize('curator') raises 42501 => PostgREST 403.
+  $rpc = Invoke-Api 'Post' "$($script:ApiUrl)/rest/v1/rpc/nao_loader_apply_simulated_days" `
+    @{ p_target_user_id = $script:Uid; p_request_key = (New-LoaderRequestKey 'denied'); p_origin = 'simulated:run4-demo'; p_plan = @{}; p_days = @() } `
+    @{ apikey = $script:AnonKey; Authorization = "Bearer $($script:TargetToken)" }
+  Assert ($rpc.Status -eq 403) "direct rpc/nao_loader_apply_simulated_days as an ordinary user -> $($rpc.Status) (expected 403): $($rpc.Body)"
+  # An ANONYMOUS caller cannot even execute it: EXECUTE is revoked from `anon`.
+  $anonRpc = Invoke-Api 'Post' "$($script:ApiUrl)/rest/v1/rpc/nao_loader_apply_simulated_days" `
+    @{ p_target_user_id = $script:Uid; p_request_key = (New-LoaderRequestKey 'anon'); p_origin = 'simulated:run4-demo'; p_plan = @{}; p_days = @() } `
+    @{ apikey = $script:AnonKey }
+  Assert ($anonRpc.Status -ge 400) "anonymous rpc call -> $($anonRpc.Status) (expected a 4xx denial): $($anonRpc.Body)"
+
+  # Nothing the denied calls attempted was written.
+  $curatorRows = Invoke-Sql "select count(*) from daily_gut_rows where user_id='$($script:Uid)';"
+  Assert ($curatorRows -eq '0') "$curatorRows row(s) written to the curator by a DENIED request"
+  @("ordinary Biotope account (nao_members rows = 0): GET /api/loader=403, POST /api/loader=403, POST /api/loader/run-pipeline=403",
+    "direct PostgREST rpc/nao_loader_apply_simulated_days as that account=403; anonymous=$($anonRpc.Status) (EXECUTE revoked from anon)",
+    'denial bodies name no role and no table; 0 rows written by any denied request')
+}
+
+Invoke-Step 'M7 REAL rows are never touched: unregistered provenance is protected, and the loader plans around it' {
+  # The dry-run starts from `supabase db reset`, so without this step there is never a real
+  # row in the database for the loader to leave alone -- "refuse real-row conflicts" would be
+  # asserted about a case that cannot arise. Plant one on each truth table, OUTSIDE the loaded
+  # range, with NULL provenance (which is what a genuine Biotope self-report looks like).
+  $realDate = (Get-Date).ToUniversalTime().AddDays(-40).ToString('yyyy-MM-dd')
+  Invoke-Sql @"
+insert into daily_gut_rows (user_id, log_date, region, gut_comfort_score, mood_score, energy_score, notes)
+values ('$($script:TargetUid)', '$realDate', 'SG', 4, 4, 4, 'REAL self-report (dry-run fixture, data_origin NULL)')
+on conflict (user_id, log_date) do nothing;
+insert into wearable_daily (user_id, date, resting_hr_bpm, hrv_sdnn_ms, sleep_duration_min)
+values ('$($script:TargetUid)', '$realDate', 61, 55, 430)
+on conflict (user_id, date) do nothing;
+"@ | Out-Null
+  $nullProv = Invoke-Sql @"
+select (select count(*) from daily_gut_rows where user_id='$($script:TargetUid)' and log_date='$realDate' and data_origin is null)
+     + (select count(*) from wearable_daily where user_id='$($script:TargetUid)' and date='$realDate' and source is null);
+"@
+  Assert ($nullProv -eq '2') "expected 2 planted rows with NULL provenance, got $nullProv"
+  $before = Invoke-Sql @"
+select md5(string_agg(x, '|' order by x)) from (
+  select coalesce(g.notes,'') || ':' || g.gut_comfort_score || ':' || coalesce(g.data_origin,'<null>') as x
+    from daily_gut_rows g where g.user_id='$($script:TargetUid)' and g.log_date='$realDate'
+  union all
+  select w.resting_hr_bpm || ':' || w.hrv_sdnn_ms || ':' || coalesce(w.source,'<null>')
+    from wearable_daily w where w.user_id='$($script:TargetUid)' and w.date='$realDate'
+) t;
+"@
+
+  # The loader classifies them as PROTECTED: unregistered/absent provenance means real data.
+  # Called through PostgREST as the CURATOR, not through psql: nao_loader_status opens with
+  # nao_authorize('curator'), and a superuser psql session has auth.uid() = NULL, so
+  # nao_role() is NULL and the gate would (correctly) refuse it.
+  $stResp = Invoke-Api 'Post' "$($script:ApiUrl)/rest/v1/rpc/nao_loader_status" `
+    @{ p_target_user_id = $script:TargetUid } `
+    @{ apikey = $script:AnonKey; Authorization = "Bearer $($script:AccessToken)" }
+  Assert ($stResp.Status -eq 200) "rpc/nao_loader_status -> $($stResp.Status): $($stResp.Body)"
+  $status = $stResp.Body
+  $st = $status | ConvertFrom-Json
+  Assert ([int]$st.protectedDateCount -ge 1) "nao_loader_status reports protectedDateCount=$($st.protectedDateCount) (expected >= 1)"
+  Assert ($st.protectedDates -contains $realDate) "the planted real date $realDate is not reported as protected: $status"
+  Assert ($st.targetLabel -eq 'demo:u3') "status reports targetLabel='$($st.targetLabel)'"
+
+  # One more load. It must succeed and must plan AROUND the real rows, never over them.
+  $key = New-LoaderRequestKey 'after-real'
+  $resp = Invoke-Nao 'Post' '/api/loader' @{ target = $script:TargetUid; requestKey = $key; days = 5 }
+  Assert ($resp.Status -eq 200) "loader after planting real rows -> $($resp.Status): $($resp.Body)"
+  $j = $resp.Body | ConvertFrom-Json
+  Assert ($j.loadedDays -eq 5) "expected 5 more days, got $($j.loadedDays)"
+  $after = Invoke-Sql @"
+select md5(string_agg(x, '|' order by x)) from (
+  select coalesce(g.notes,'') || ':' || g.gut_comfort_score || ':' || coalesce(g.data_origin,'<null>') as x
+    from daily_gut_rows g where g.user_id='$($script:TargetUid)' and g.log_date='$realDate'
+  union all
+  select w.resting_hr_bpm || ':' || w.hrv_sdnn_ms || ':' || coalesce(w.source,'<null>')
+    from wearable_daily w where w.user_id='$($script:TargetUid)' and w.date='$realDate'
+) t;
+"@
+  Assert ($before -eq $after) "the planted REAL rows changed under a loader run (checksum $before -> $after)"
+  $stillNull = Invoke-Sql @"
+select (select count(*) from daily_gut_rows where user_id='$($script:TargetUid)' and log_date='$realDate' and data_origin is null)
+     + (select count(*) from wearable_daily where user_id='$($script:TargetUid)' and date='$realDate' and source is null);
+"@
+  Assert ($stillNull -eq '2') "the loader stamped provenance onto a REAL row (NULL-provenance rows now $stillNull, expected 2)"
+  @("planted 2 REAL rows (data_origin/source NULL) at $realDate, outside the loaded range",
+    "nao_loader_status reports them as PROTECTED (protectedDateCount=$($st.protectedDateCount), residueDateCount=$($st.residueDateCount))",
+    "a further 5-day load succeeded and left both real rows BYTE-IDENTICAL (md5 $before unchanged) with NULL provenance intact",
+    'NOTE (honest scope): the mutation-free 409 REFUSAL of an overlapping payload is proven in the U3 SQL harness, not here -- planLoadRange only ever emits dates outside the existing range, so the nao route cannot construct an overlapping request.')
 }
 
 # ---------------------------------------------------------------- M5r: restore router config
@@ -682,13 +1049,13 @@ Invoke-Step 'FB feature (b): /api/claims read + human REJECT supersedes serving 
   Assert ($overlay -match 'human=reject') "overlay missing reject: $overlay"
 
   # re-run the pipeline: new cards must not cite the rejected edge
-  $rerun = Invoke-Nao 'Post' '/api/loader/run-pipeline' @{}
+  $rerun = Invoke-Nao 'Post' '/api/loader/run-pipeline' @{ requestKey = $script:LoadKey2 }
   Assert ($rerun.Status -eq 200) "re-run pipeline -> $($rerun.Status)"
-  $newCiting = Invoke-Sql "select count(*) from insight_cards where user_id='$($script:Uid)' and generated_at > '$rejectTs'::timestamptz and edge_refs::text like '%$target%';"
+  $newCiting = Invoke-Sql "select count(*) from insight_cards where user_id='$($script:TargetUid)' and generated_at > '$rejectTs'::timestamptz and edge_refs::text like '%$target%';"
   Assert ($newCiting -eq '0') "$newCiting NEW card(s) still cite the rejected edge"
   $postGen = Invoke-Sql "select generated_at from insight_cards where id=$($script:EdgeCardId);"
   Assert ($preGen -eq $postGen) 'pre-reject card was re-upserted (generated_at changed)'
-  $newEdgeCards = Invoke-Sql "select coalesce(string_agg(id || ':' || rule_id, '; '), '(none)') from insight_cards where user_id='$($script:Uid)' and producer='edge' and generated_at > '$rejectTs'::timestamptz;"
+  $newEdgeCards = Invoke-Sql "select coalesce(string_agg(id || ':' || rule_id, '; '), '(none)') from insight_cards where user_id='$($script:TargetUid)' and producer='edge' and generated_at > '$rejectTs'::timestamptz;"
   @(
     "5 claims read (incl. honestly-unverified stool_form claim); rejected edge: $target",
     "verified_edges overlay: $overlay (verifier verdict untouched, human verdict on top)",

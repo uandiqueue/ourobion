@@ -27,6 +27,86 @@
 /** The provenance flag stamped on every simulated row (null/other = real data). */
 export const SIMULATED_DATA_ORIGIN = 'simulated:run2-demo';
 
+/**
+ * R4-U3 (O26): the origin the ATOMIC loader writes. Registered in
+ * `public.nao_simulation_origins`; NOT a CHECK constraint on
+ * `daily_gut_rows.data_origin` / `wearable_daily.source`.
+ *
+ * WHY A REGISTRY AND NOT A CHECK (design §B.2, constraint C3 — this is
+ * mechanical, not a preference): R4-U2's authz harness inserts
+ * `data_origin = 'probe:pa'` / `'probe:pb'` and `source = 'probe:pa'` /
+ * `'probe:pb'` and expects `ok` (supabase/tests/authz/40_pre_u2_probe.sql,
+ * 60_assertions.sql), and seeds `'seed:baseline'` in both columns
+ * (30_pre_u2_seed.sql). U3's migrations apply BEFORE U2's assertions run, so a
+ * closed-vocabulary CHECK — or a BEFORE INSERT/UPDATE trigger rewriting the
+ * marker — would turn four `expect_ok` assertions into `error:23514` and break
+ * the pre-vs-post identity assertion too. The vocabulary is therefore closed at
+ * the WRITER (the `nao_loader_apply_simulated_days` RPC, which consults the
+ * registry table) and at this boundary (validateLoaderBody), never at the
+ * column.
+ *
+ * `SIMULATED_DATA_ORIGIN` ('simulated:run2-demo') stays exported and unchanged:
+ * rows already carrying it are REGISTERED (hence recognised as simulated, hence
+ * overwritable by the loader), so nothing already in a database is orphaned.
+ */
+export const SIMULATED_DATA_ORIGIN_RUN4 = 'simulated:run4-demo';
+
+/** Shape of one row of the `public.nao_simulation_origins` registry. */
+export interface SimulationOrigin {
+  origin: string;
+  label: string;
+  /** false ⇒ the marker names real/provider data and the loader must never write or overwrite it. */
+  isSimulated: boolean;
+  /** Which harness/unit owns the marker. */
+  owner: string;
+}
+
+/**
+ * Mirror of the seed rows in `20260728030000_nao_simulation_provenance.sql`.
+ *
+ * DESCRIPTIVE for rows that already exist, PRESCRIPTIVE for what this loader may
+ * write: an unregistered marker (a typo such as `simulated:run4-demoo`, or a real
+ * provider value such as `provider:oura`) fails closed — refused here at the
+ * boundary and refused again by the RPC's pre-write conflict scan. `'probe:pa'` /
+ * `'probe:pb'` are deliberately ABSENT: unregistered ⇒ treated as non-simulated ⇒
+ * protected, which is the correct posture for another harness's fixtures and needs
+ * no coordination with U2.
+ */
+export const SIMULATION_ORIGIN_REGISTRY: readonly SimulationOrigin[] = Object.freeze([
+  Object.freeze({
+    origin: SIMULATED_DATA_ORIGIN,
+    label: 'O11/run-2 demo loader',
+    isSimulated: true,
+    owner: 'apps/nao/src/lib/simulatedHealth.ts',
+  }),
+  Object.freeze({
+    origin: SIMULATED_DATA_ORIGIN_RUN4,
+    label: 'R4-U3 atomic demo loader',
+    isSimulated: true,
+    owner: 'apps/nao/src/lib/simulatedHealth.ts',
+  }),
+  Object.freeze({
+    origin: 'seed:baseline',
+    label: 'R4-U2 authz probe fixture',
+    isSimulated: true,
+    owner: 'supabase/tests/authz/30_pre_u2_seed.sql',
+  }),
+]) as readonly SimulationOrigin[];
+
+/**
+ * The registry's own CHECK regex, mirrored (`namespace:name`). It constrains the
+ * REGISTRY, where a closed vocabulary is safe — never the truth tables' columns.
+ */
+export const SIMULATION_ORIGIN_RE = /^[a-z][a-z0-9]*:[A-Za-z0-9._-]{1,48}$/;
+
+/** True iff `value` is a registered, simulated origin the loader may WRITE. */
+export function isRegisteredSimulatedOrigin(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    SIMULATION_ORIGIN_REGISTRY.some((entry) => entry.origin === value && entry.isSimulated)
+  );
+}
+
 export const LOADER_SCENARIOS = ['recent-dip', 'steady'] as const;
 export type LoaderScenario = (typeof LOADER_SCENARIOS)[number];
 
@@ -107,7 +187,7 @@ export interface SimulatedGutRow {
   on_antibiotics: boolean;
   gut_watch_active: boolean;
   log_completeness: number;
-  /** Provenance (additive column, migration 20260724120000): always SIMULATED_DATA_ORIGIN. */
+  /** Provenance (additive column, migration 20260724120000): always a REGISTERED simulated origin. */
   data_origin: string;
 }
 
@@ -119,7 +199,7 @@ export interface SimulatedWearableRow {
   spo2_pct: number;
   body_temp_c: number;
   step_count: number;
-  /** Provenance via wearable_daily's EXISTING source column: always SIMULATED_DATA_ORIGIN. */
+  /** Provenance via wearable_daily's EXISTING source column: always a REGISTERED simulated origin. */
   source: string;
 }
 
@@ -142,6 +222,14 @@ export interface GenerateOptions {
    * and every day under 'steady' — carry baseline noise only.
    */
   anchorDate: string;
+  /**
+   * Provenance marker stamped on BOTH row shapes. Defaults to
+   * {@link SIMULATED_DATA_ORIGIN_RUN4} — the R4-U3 atomic loader's origin.
+   * Passing {@link SIMULATED_DATA_ORIGIN} reproduces the run-2 stamp byte for
+   * byte, which is why the older constant stays exported: existing rows keep
+   * their marker and stay recognised (registered) as simulated.
+   */
+  origin?: string;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────────
@@ -165,6 +253,7 @@ function clampRound(value: number, lo: number, hi: number, digits: number): numb
 export function generateSimulatedDays(opts: GenerateOptions): SimulatedDay[] {
   const seed = opts.seed ?? DEFAULT_SEED;
   const scenario = opts.scenario ?? 'recent-dip';
+  const origin = opts.origin ?? SIMULATED_DATA_ORIGIN_RUN4;
   const dipStart = addDaysIso(opts.anchorDate, -(DIP_DAYS - 1));
 
   const out: SimulatedDay[] = [];
@@ -222,7 +311,7 @@ export function generateSimulatedDays(opts: GenerateOptions): SimulatedDay[] {
         on_antibiotics: false,
         gut_watch_active: false,
         log_completeness: completeness,
-        data_origin: SIMULATED_DATA_ORIGIN,
+        data_origin: origin,
       },
       wearable: {
         date,
@@ -232,7 +321,7 @@ export function generateSimulatedDays(opts: GenerateOptions): SimulatedDay[] {
         spo2_pct: spo2,
         body_temp_c: bodyTemp,
         step_count: steps,
-        source: SIMULATED_DATA_ORIGIN,
+        source: origin,
       },
     });
   }
@@ -300,6 +389,31 @@ export function planLoadRange(
 // ─── Request validation (pure — the route handler is IO glue only) ──────────────────
 
 export interface LoaderRequestBody {
+  /**
+   * REQUIRED (R4-U3, O26): the approved demo target's `auth.users` id. The loader
+   * writes THIS user's raw truth, never the caller's, and never falls back to the
+   * session's own id — the pre-U3 self-write path (`user_id: gate.userId`) is
+   * retired, because "load simulated data into whoever is signed in" is
+   * incompatible with mechanically isolating simulation to an approved demo
+   * context. A body without `target` is a 400; `target === caller` is a 403
+   * ({@link validateLoaderTarget}); a target that is not a live row in
+   * `nao_demo_targets` is a 403 raised by the RPC with ONE fixed message, so the
+   * function is not an oracle over the demo roster.
+   */
+  target: string;
+  /**
+   * Optional durable idempotency key. When present it is authoritative forever: the
+   * same key always returns the first completed result. When absent the route
+   * DERIVES one from the stable input watermark (see `deriveRequestKey` in
+   * ./loaderRuns.ts), which collapses the concurrent/immediate replay but — by
+   * construction, and deliberately — not a retry that arrives after the first
+   * attempt already committed, because that attempt changed the watermark. That is
+   * the same mechanism the 14 → +7 → 21 acceptance run depends on, so it must not
+   * be "fixed".
+   */
+  requestKey?: string;
+  /** Optional registered simulated origin to stamp; defaults to SIMULATED_DATA_ORIGIN_RUN4. */
+  origin?: string;
   days?: number;
   seed?: string;
   scenario?: LoaderScenario;
@@ -319,6 +433,20 @@ export interface LoaderRequestBody {
  * `simulated:run4-demo` style DATA_ORIGIN already uses.
  */
 const SEED_RE = /^[A-Za-z0-9._:-]{1,64}$/;
+
+/** Canonical 8-4-4-4-12 uuid, anchored — the `target` shape check. */
+export const LOADER_TARGET_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * An explicit `requestKey`'s charset and length. Same charset as {@link SEED_RE}
+ * for the same reason (it reaches `recordControlEvent`'s audit `detail` and the
+ * `nao_loader_runs.request_key` column, so no byte Postgres cannot store may get
+ * in), with a 16-character floor: a durable idempotency key short enough to
+ * collide by accident is worse than none, because a collision returns ANOTHER
+ * request's stored result.
+ */
+export const LOADER_REQUEST_KEY_RE = /^[A-Za-z0-9._:-]{16,128}$/;
 
 /** Returns an error message, or null when the body is valid. */
 export function validateLoaderBody(body: unknown): string | null {
@@ -340,6 +468,54 @@ export function validateLoaderBody(body: unknown): string | null {
     if (typeof b.scenario !== 'string' || !(LOADER_SCENARIOS as readonly string[]).includes(b.scenario)) {
       return `scenario must be one of: ${LOADER_SCENARIOS.join(', ')}`;
     }
+  }
+  // ── R4-U3 (O26) ────────────────────────────────────────────────────────────
+  // Checked AFTER days/seed/scenario deliberately: those three messages are the
+  // ones every pre-U3 caller and test already depends on, and re-ordering them
+  // would change which error a malformed body reports. All of these run only
+  // AFTER guardRole('curator') has already passed (see the loader route's GATE
+  // ORDER comment), so none of them is an oracle for an unauthorized caller.
+  if (b.target === undefined || b.target === null) {
+    return 'target is required: the approved demo user_id the simulated rows belong to';
+  }
+  if (typeof b.target !== 'string' || !LOADER_TARGET_RE.test(b.target)) {
+    return 'target must be a uuid (the approved demo user_id)';
+  }
+  if (b.requestKey !== undefined) {
+    if (typeof b.requestKey !== 'string' || !LOADER_REQUEST_KEY_RE.test(b.requestKey)) {
+      return 'requestKey must be 16-128 characters, using only letters, digits, and . _ : -';
+    }
+  }
+  if (b.origin !== undefined) {
+    if (typeof b.origin !== 'string' || !SIMULATION_ORIGIN_RE.test(b.origin)) {
+      return 'origin must be a namespaced marker of the form namespace:name';
+    }
+    if (!isRegisteredSimulatedOrigin(b.origin)) {
+      // Fail closed on an unknown marker: a typo is unregistered, therefore
+      // treated as real data, therefore never written and never overwritten.
+      return 'origin must be a registered simulated origin (see nao_simulation_origins)';
+    }
+  }
+  return null;
+}
+
+/**
+ * The one check that needs the caller's identity, so it cannot live in
+ * {@link validateLoaderBody} (which is pure over the body alone).
+ *
+ * The target must be DISTINCT from the caller. Two independent reasons: O26 wants
+ * simulation isolated to an approved demo account, and a curator who can aim the
+ * loader at themselves has re-created the retired self-write path through the new
+ * door. The RPC enforces the same rule again with errcode 42501 and its single
+ * fixed message; this boundary check exists so the common mistake gets a clear
+ * answer without a round-trip, and returns the SAME 403 status the RPC would.
+ */
+export function validateLoaderTarget(target: unknown, callerUserId: string): string | null {
+  if (typeof target !== 'string' || !LOADER_TARGET_RE.test(target)) {
+    return 'target must be a uuid (the approved demo user_id)';
+  }
+  if (target.toLowerCase() === callerUserId.toLowerCase()) {
+    return 'loader target not permitted';
   }
   return null;
 }
