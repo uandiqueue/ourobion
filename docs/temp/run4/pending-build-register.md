@@ -4,8 +4,22 @@ summary: Run 4's living SUPERSET map promoted from Run 3, including all known-un
 type: plan
 scope: shared
 status: canonical
-updated: 2026-07-27
+updated: 2026-07-28
+run4_u5_sentence_provenance: planning-admitted; implementation-split-deferred-pending-final-cap-remeasurement
 ---
+
+> **B-PL22 / R4-U5 planning update:** no competing pipeline or unit is admitted. The future local
+> tool-only tranche (14 paths / ~1,900 additions) is versioned StructuredPaper + deterministic
+> JATS/frozen-GROBID sentence/offset, citation/root, curated mention and evidence gates with frozen/mock
+> `INTERIM:` LlmRouter seams. Before the plan, U1-U3 reserve left 4 paths / +1,216; the plan measured
+> 4 new-in-U5 paths / +209 / -70. Path slots are exhausted, while +1,007 lines remain unallocated.
+> Persisted/served/UI reserve 30 / ~4,500 is P2-blocked; separately, O29 defers provider/model execution.
+> Missing
+> provenance, foreign papers, invalid offsets/references, unsupported evidence or adapter failure hold
+> closed. Existing quote/hold/hash controls do not claim A4/A4b/A5/A6/A7/root-collapse implementation.
+> The v2 local DB load ran but received canonical-ID NO-GO: its bare-DOI projection is invalid and must
+> be rebuilt after the uncommitted canonical-ID fix. Health/insight acceptance remains pending; no
+> corrected DB proof is claimed.
 
 # Run 4 Pending-Build Register
 
@@ -114,23 +128,22 @@ must fill it with, so the single-paper ingestion run finishes with **no empty ch
 
 | Checkpoint | Planned model | Run-4 stand-in |
 |---|---|---|
-| Claim/evidence verdict pre-filter | (a) Zebra NLI | lightweight OpenAI model, prompted — **the slot that is currently nothing at all** |
-| `Citation.evidenceTier` | (b1) Giraffe | deterministic A5 rules first, LLM only on the inconclusive residue |
+| Claim/evidence verdict pre-filter | (a) Zebra NLI | replaceable existing-LlmRouter seam; frozen/mock support/contradiction/insufficient reply only |
+| `Citation.evidenceTier` | (b1) Giraffe | deterministic A5 rules first; replaceable existing-LlmRouter seam with frozen/mock reply only for inconclusive residue |
 | `impactTier` | (b2) | **already deterministic** — OpenAlex + SJR; needs nothing |
-| `directionCheck` / `claimKindCheck` | (c) Salmon / Viceroy | lightweight OpenAI model, prompted, alongside the existing deterministic contract checks |
-| A4 sentence roles | Leafcutter | existing Haiku cold-start path |
+| `directionCheck` / `claimKindCheck` | (c) Salmon / Viceroy | replaceable existing-LlmRouter seams with frozen/mock replies alongside authoritative deterministic checks |
+| A4 sentence roles | Leafcutter | replaceable existing-LlmRouter seam with frozen/mock background/method/finding/other reply; hedge remains on the assertion axis |
 
 Two constraints on that unit:
 
-> **A stand-in is an LLM call, not a custom model.** It reduces no tokens and proves no model works.
-> Its only job is that the pipeline has no empty checkpoints end to end on one real paper, so every
-> artifact it produces carries an `INTERIM:` provenance marker under the existing convention.
+> **The admitted stand-ins are adapter seams, not live calls or custom models.** R4-U5 exercises them
+> only with frozen/mock replies through the existing LlmRouter. Every output visibly records `INTERIM:`
+> task, returned model, prompt version, timestamp, confidence or abstention, and deterministic-fallback
+> use. A suggestion never sets edgeScore/servingBand or bypasses deterministic enforcement.
 
-> **Single-provider conflict.** `router.config.json` runs `testMode` ON with all six nodes on OpenAI
-> because only `OPENAI_API_KEY` is provisioned, so the synthesis↔verifier decorrelation invariant is
-> deliberately off. R4-U5 therefore **cannot** also satisfy `B-BR1`/`B-BR2`; scope it to pipeline
-> completeness only. GMI **serverless inference** is one cheap route to a second family and is *not*
-> behind the container entitlement that is currently delayed.
+> **Historical/deferred targets are not admitted.** Earlier OpenAI, Haiku, GMI and other live-provider
+> targets describe historical or future O29 options only. O29 remains deferred under the zero-call
+> posture; R4-U5 cannot claim provider execution, decorrelation, model performance, or validation.
 
 ## D · Platform / process
 

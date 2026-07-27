@@ -1,18 +1,19 @@
 ---
 title: Run 4 — reviewed planning cockpit
-summary: Entry point for the active Run 4 envelope after independent audit and Codex confirmation; U0 is locally authorized while full-suite and PR-CI evidence remain pending.
+summary: Entry point for the active Run 4 envelope after independent audit and Codex confirmation; U0 is merged with exact merge-SHA CI evidence while U5 remains locally in progress.
 type: plan
 scope: shared
 status: canonical
-updated: 2026-07-27
+updated: 2026-07-28
 ---
 
 # Run 4 — reviewed planning cockpit
 
-Run 4 is active under its accepted envelope. U0 is locally authorized on intentionally unprotected
-`dev-phase2-run4`; `Run 4 Gate` is exact-current-SHA CI evidence only, not branch-setting enforcement.
-Full-suite and PR-CI evidence remain pending. P2 still defers U4; P3 excludes training; P5/P6 keep the
-run local-only with no provider calls and O29 deferred.
+Run 4 is active under its accepted envelope. U0 merged through PR #161 at
+`66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`; exact merge-SHA CI run `30285010079` passed 19/19.
+`dev-phase2-run4` remains intentionally unprotected; `Run 4 Gate` is exact-current-SHA CI evidence,
+not branch-setting enforcement. P2 still defers U4; P3 excludes training; P5/P6 keep the run local-only
+with no provider calls and O29 deferred.
 
 ## Documents
 
@@ -119,8 +120,43 @@ runs from four hand-authored relationship fixtures and simulated Biotope data, s
 nothing about whether a newly ingested paper becomes a relationship. That gap is register row
 **`B-PL22`**.
 
-**No model training in Run 4.** It lives in [`../model-training/`](../model-training/) with its own
-units, budget and gates; Run 4 may consume a frozen artifact but never waits on one.
+### R4-U5 sentence-provenance tranche (planning admission only)
+
+The B-PL22 U5 slice now has a **planning-admitted**, bounded sentence-provenance tranche. It is not a
+new unit or pipeline, and it does not claim implementation or acceptance. Its deterministic local-tool
+scope is versioned `StructuredPaper` text/sections/sentence IDs and offsets; native JATS or frozen
+GROBID-style mapping (never LLM section naming); citation/reference/identifier and independent-root
+indexes; curated metric mention/exclude/co-occurrence rules; and deterministic tier, numeric/schema,
+quote, negation and hedge gates. Local traces must retain edge -> evidence sentence -> role/assertion ->
+section/offset -> paper/tier -> cited reference -> independent root.
+
+The existing U5 exact/normalized quote checks, INTERIM hold and loader hash/idempotence remain in place;
+A4/A4b/A5/A6/A7 and citation-root collapse are not yet implemented. Replaceable LlmRouter slots may use
+frozen/mock replies only, with visible `INTERIM:` task, returned model, prompt version, timestamp,
+confidence/abstention and fallback metadata; deterministic enforcement remains authoritative. Missing
+provenance, invalid offsets/references, foreign paper IDs, failed adapters or unresolved evidence fail
+closed. Shared, persisted, served or UI-contract work is blocked by P2; provider/model execution is
+deferred by O29/zero-call posture; no training or runtime import is admitted.
+
+Mechanically, U5 before this plan patch was 10 paths / +928 / -29 versus base `66bfde5`; U0+U5 was
+27 / +2,634 / -126 versus U0 base `77c982`. After reserving expected U1/U2/U3 (84 / +4,650), the
+**pre-plan remaining capacity** was 4 paths / +1,216. The measured plan-patch delta is 4 newly changed
+U5 paths / +209 / -70: path slots are exhausted, while +1,007 lines remain unallocated. The local
+tool-only tranche (14 / +1,900) and full persisted/UI tranche (reserve 30 / +4,500; estimate 27 / +4,000)
+are therefore **SPLIT/DEFERRED** pending final U1-U3 landing remeasurement; the unchanged cap is 115 / +8,500.
+
+U5 acceptance is still pending. The v2 local DB load ran, but canonical-ID review returned NO-GO: the
+old bare-DOI projection is invalid and must be rebuilt after the uncommitted canonical fix. This is not
+corrected DB proof; health/insight evidence remains pending.
+
+Future negative-fixture acceptance must show that a background sentence, fabricated quote, unresolved
+semantic support, foreign/invalid provenance, and echo-only corroboration cannot become servable. It
+must also cover idempotent rebuild and schema/artifact-version changes; static or mocked proof remains
+separate from actual local execution.
+
+**No model training in Run 4.** Custom-model artifacts are unavailable and non-serving; Run 4 must not
+train, promote, import, or execute them at runtime. Only frozen/mock lightweight stand-ins through the
+existing LlmRouter are in planning scope, under the zero-provider-call posture.
 
 All Run 4 issue, branch, PR, and merge operations target `dev-phase2-run4` only, never `dev-phase2` or
 `main`.

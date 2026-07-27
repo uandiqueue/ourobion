@@ -4,13 +4,25 @@ summary: Run 4's active reviewed scope: accepted envelope, O31-O40 enforcement c
 type: plan
 scope: shared
 status: draft
-updated: 2026-07-27
+run4_u5_sentence_provenance: planning-admitted; implementation-split-deferred-pending-u1-u3-remeasurement
+updated: 2026-07-28
 ---
+
+> **U5/B-PL22 sentence-provenance planning admission.** This remains inside U5, not a new pipeline.
+> A future local tool-only tranche is versioned/rebuildable StructuredPaper text, native JATS or frozen
+> GROBID-style sections, sentence IDs/offsets, citation/refGraph roots, curated mention and deterministic
+> quote/tier/numeric/schema/negation/hedge gates. Frozen/mock LlmRouter seams must expose complete
+> `INTERIM:` metadata and only suggest; deterministic enforcement fails closed. The 14 / ~1,900 local
+> tranche is split/deferred; persisted/served/UI is P2-blocked (reserve 30 / ~4,500). Before this plan,
+> expected U1-U3 reserve left 4 paths / +1,216; the plan measured 4 new-in-U5 paths / +209 / -70.
+> Path slots are exhausted, but +1,007 lines remain unallocated. Separately, O29 defers provider/model
+> execution under the zero-call posture.
 
 # Run 4 — reviewed candidate scope and priority tranche
 
-**Status: active under the accepted envelope.** U0 is locally authorized and in progress; its full
-suite and PR CI remain pending. The accepted base, cap, locked units, and intentionally unprotected
+**Status: active under the accepted envelope.** U0 merged through PR #161 at
+`66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`; exact merge-SHA CI run `30285010079` passed 19/19. The
+accepted base, cap, locked units, and intentionally unprotected
 `dev-phase2-run4` posture are recorded in the companion decision documents. The audit that produced the
 candidate list is [`run3-audit-findings.md`](./run3-audit-findings.md).
 
@@ -123,13 +135,14 @@ study-design copy off its semantics. Resolving (b) needs a superseding ADR, not 
 
 ## 3. Recommended priority tranche
 
-This is the largest tranche accepted for the locked envelope. U0 is authorized; P2 continues to defer
+This is the largest tranche accepted for the locked envelope. U0 is complete through PR #161 with
+exact merge-SHA CI run `30285010079` passing 19/19; P2 continues to defer
 U4, while P3 excludes training and P5/P6 retain local-only, zero-provider constraints. The run may not
 silently add O28, O29, O37, O39, O40, or any other register row.
 
 | Priority | Candidate unit | Contents | Start gate |
 |---|---|---|---|
-| 1 | R4-U0 · trustworthy release gate | Rebuild O24 with O31-O34; stable required aggregate, current landing-SHA evidence, fail-closed config/matrix coverage, and deploy-path dependency proof | In progress; full suite and PR CI pending on the exact current SHA |
+| 1 | R4-U0 · trustworthy release gate | Rebuild O24 with O31-O34; stable required aggregate, current landing-SHA evidence, fail-closed config/matrix coverage, and deploy-path dependency proof | COMPLETE: PR #161 merged at `66bfde5`; exact merge-SHA CI `30285010079` passed 19/19 |
 | 2 | R4-U1 · mechanical boundaries | O35 + O36; polyglot import/path guard and pinned secret scanning | R4-U0 gate is required and green |
 | 3 | R4-U2 · authorization and key boundary | O25; nao RBAC/RLS, redacted global jobs, named server-key migration | Credential decisions recorded; no hosted mutation without exact approval |
 | 4 | R4-U3 · raw-truth and retry safety | O26; atomic demo loading and idempotent/single-flight pipeline publication | R4-U2 blocks ordinary-account access |
@@ -158,9 +171,9 @@ section reconciles the two; it does not replace §3.
 *doable*. Several §3 default-deferrals were justified partly by untestability and should be re-examined
 on that basis — O28 in particular.
 
-**No model training in Run 4.** It lives in [`../model-training/`](../model-training/) with its own
-units, budget and gates. Run 4 may consume a frozen artifact but never waits on one. The Zebra build
-log has moved out of this folder.
+**No model training in Run 4.** Custom-model artifacts are unavailable, non-serving, and forbidden from
+runtime import. Frozen/mock lightweight stand-ins use the existing LlmRouter only; O29 keeps provider
+execution deferred under the zero-call posture.
 
 ### Coverage of the six priorities
 
@@ -175,17 +188,15 @@ log has moved out of this folder.
 
 ### Additional candidate units
 
-**R4-U5 · Single-paper end-to-end ingestion with LLM stand-ins.** Closes register **section C**. One
-real paper, start to finish, with **no empty checkpoints** — each planned custom-model slot filled by a
-cheap lightweight OpenAI call, or by the deterministic path where one exists (`impactTier` is already
-OpenAlex + SJR and needs nothing). The per-checkpoint stand-in contract is in the register §C.1.
+**R4-U5 · Single-paper end-to-end ingestion with stand-in seams.** Closes register **section C**. One
+real paper, start to finish, with **no empty checkpoints**: each planned custom-model slot is a
+replaceable existing-LlmRouter adapter exercised only with frozen/mock replies, or the deterministic
+path where one exists (`impactTier` is already OpenAlex + SJR). The exact contract is register §C.1.
 
-> Two constraints. **A stand-in is an LLM call, not a custom model** — it reduces no tokens and proves
-> no model works, so every output carries an `INTERIM:` provenance marker. And `router.config.json`
-> runs `testMode` ON with all six nodes on OpenAI because only one key is provisioned, so this unit
-> **cannot** also satisfy `B-BR1`/`B-BR2` decorrelation. Scope it to *pipeline completeness only*;
-> decorrelation stays with the deferred O29. If a second family is wanted cheaply, GMI **serverless
-> inference** is OpenAI-compatible and is **not** behind the delayed container entitlement.
+> Every frozen/mock output visibly records `INTERIM:` task, returned model, prompt version, timestamp,
+> confidence or abstention, and deterministic-fallback use. Deterministic enforcement alone advances
+> an artifact. OpenAI, Haiku, GMI and every live-provider target are historical or O29-deferred and
+> non-admitted here; R4-U5 makes no provider, decorrelation, model-performance or validation claim.
 
 **R4-U6 · biotope metrics, EASY + MEDIUM (~50).** Split into **U6a/U6b/U6c**.
 
@@ -264,9 +275,10 @@ run, judged as a gate rather than as a build. Do not scope them as separate work
 2 is its acceptance evidence; if R4-U5 is cut, pass 2 still runs and will fail until the CLI stages are
 driven manually, which is itself the honest result.
 
-Note the stand-in constraint carries through: outputs from LLM stand-ins are marked `INTERIM:` and
-`testMode` remains single-provider, so pass 2 evidences **pipeline completeness**, not decorrelated
-verification.
+The stand-in constraint carries through: Pass 2 uses frozen/mock existing-LlmRouter seam replies with
+complete visible `INTERIM:` provenance under zero live calls. It may evidence local pipeline plumbing,
+not provider execution, decorrelation, model performance, semantic validity or scientific validation;
+all live targets remain historical/O29-deferred.
 
 ### Promotion rule
 

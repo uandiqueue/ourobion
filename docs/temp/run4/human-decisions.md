@@ -23,8 +23,19 @@ updated: 2026-07-28
 
 - R4-U0 merged via PR #161 at `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`; exact merge-SHA CI run `30285010079` passed 19/19. Historical provenance and U0 gate constants remain unchanged.
 - Jayden instructed continuous local Run 4 completion. R4-U1 is separately owned and may integrate only after its main workflow.
-- R4-U5 / pass-2 is admitted in progress under issue #167, its named branch/worktree, and base `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`. It remains local-only: no provider calls, hosted writes, shared changes, or `/model-training` work. Its estimate is 6 paths / about 1,900 additions; U0+U5 projects to 28 paths / about 3,609 additions against 115 / 8,500 and must be remeasured before merge. Human signoff remains pending.
-- U5 may be accepted only through DOI `10.1016/j.isci.2026.116224` -> explicit local-agent synthesis artifact -> deterministic checks -> visible `INTERIM` uncertain/hold verification -> local edge load -> later health/insight/provenance evidence. Canonical paper files are absent locally and must be locally cached without hosted writes before acceptance.
+- R4-U5 / pass-2 is admitted in progress under issue #167, its named branch/worktree, and base `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`. It remains local-only: no provider calls, hosted writes, shared changes, or `/model-training` work. Its pre-plan measurement was 10 paths / +928 / -29; the U0+U5 pre-plan union was 27 / +2,634 / -126. Human signoff remains pending.
+- U5 may be accepted only through DOI `10.1016/j.isci.2026.116224` -> explicit local-agent synthesis artifact -> deterministic checks -> visible `INTERIM` uncertain/hold verification -> local edge load -> later health/insight/provenance evidence. The v2 local DB load ran but canonical-ID review returned NO-GO: its old bare-DOI projection is invalid and must be rebuilt after the uncommitted canonical fix. No corrected DB proof is claimed; health/insight acceptance remains pending.
+
+## U5 sentence-provenance planning record
+
+Inside existing R4-U5/B-PL22 only, planning is **ADMITTED** while implementation is **SPLIT/DEFERRED**.
+Before this plan, expected U1-U3 reserve left 4 paths / +1,216. The measured plan delta is 4
+new-in-U5 paths / +209 / -70: path slots are exhausted, while +1,007 lines remain unallocated. Thus local tool-only
+scope (14 / ~1,900) awaits final remeasurement; persisted/served/UI scope (reserve 30 / ~4,500) is
+P2-blocked. Future local artifacts must be versioned StructuredPaper/JATS-or-frozen-GROBID sentence,
+citation/root and deterministic trace gates; frozen/mock LlmRouter adapters visibly emit `INTERIM:`
+metadata but never decide serving. Separately, provider/model execution remains O29-deferred; no training/runtime
+import is authorized. This is neither implementation nor acceptance.
 
 ## Active operating posture
 
@@ -34,8 +45,8 @@ Before admitting the additional local fixture-backed paper-to-Biotope slice, siz
 
 P2 remains blocked; shared work cannot start without an available second reviewer.
 
-Not authorised: settings changes, hosted/provider calls, hosted Supabase, Cloudflare/R2 writes, deployment, key mutation/revocation, changes to PR #144, or a merge to `dev-phase2` or `main`. Run 4 product work is locally authorized within the locked envelope. All Run 4 issue, branch, PR, and merge operations affect `dev-phase2-run4` only. Full-suite and PR-CI evidence for the current U0 SHA remain pending.
+Not authorised: settings changes, hosted/provider calls, hosted Supabase, Cloudflare/R2 writes, deployment, key mutation/revocation, changes to PR #144, or a merge to `dev-phase2` or `main`. Run 4 product work is locally authorized within the locked envelope. All Run 4 issue, branch, PR, and merge operations affect `dev-phase2-run4` only. U0 is complete through PR #161 at `66bfde5`; exact merge-SHA CI run `30285010079` passed 19/19.
 
 Name-only local credentials: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `OPENALEX_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and Nao/Biotope public Supabase variables. No values belong here. Local Nao uses process-scoped local Supabase URL/anon/service-role values, never hosted file defaults. Android adb timed out; independent connection state is unverified.
 
-O29 remains deferred: zero provider calls and single-provider OpenAI TEST-MODE. U0 is in progress; no full-suite, PR-CI, or merge result is claimed.
+O29 remains deferred: zero provider calls and single-provider OpenAI TEST-MODE. U0 is complete with the recorded PR #161 exact merge-SHA 19/19 CI evidence. U5 remains in progress under canonical-ID NO-GO; no corrected DB, health, or insight result is claimed.

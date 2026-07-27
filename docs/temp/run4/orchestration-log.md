@@ -1,6 +1,6 @@
 ---
 title: Run 4 Pre-Flight Orchestration Log
-summary: Resumable Run 4 record for the accepted envelope and qualified local U0 evidence; U0 remains in progress pending exact PR-head Linux CI.
+summary: Resumable Run 4 record for the accepted envelope; U0 completed through PR #161 with exact merge-SHA CI, while U5 remains in progress.
 type: plan
 scope: run4-preflight
 status: draft
@@ -13,13 +13,24 @@ updated: 2026-07-28
 
 R4-U0 merged through PR #161 at `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`. Exact merge-SHA CI workflow run `30285010079` passed 19/19. Jayden instructed continuous local Run 4 completion on 2026-07-28. R4-U1 is separately owned and integrates only after its main workflow; this record does not claim its implementation or merge.
 
-R4-U5 / pass-2 is admitted and **IN PROGRESS** under issue #167 from its named branch/worktree, based on `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`. It is local-only: no provider calls, hosted writes, shared-contract changes, or `/model-training` work. Estimate: 6 paths / about 1,900 additions; the U0+U5 projection is 28 paths / about 3,609 additions against 115 / 8,500 and must be remeasured before merge. Human signoff remains pending.
+R4-U5 / pass-2 is admitted and **IN PROGRESS** under issue #167 from its named branch/worktree, based on `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`. It is local-only: no provider calls, hosted writes, shared-contract changes, or `/model-training` work. Its pre-plan measurement was 10 paths / +928 / -29; the U0+U5 pre-plan union was 27 / +2,634 / -126. Human signoff remains pending.
 
-U5 acceptance chain is: DOI `10.1016/j.isci.2026.116224` -> explicit local-agent synthesis artifact -> deterministic checks -> visible `INTERIM` uncertain/hold verification -> local edge load -> later health/insight/provenance evidence. Canonical paper files are absent locally and must first be locally cached without hosted writes; no acceptance is claimed before that condition and the chain are evidenced.
+U5 acceptance chain is: DOI `10.1016/j.isci.2026.116224` -> explicit local-agent synthesis artifact -> deterministic checks -> visible `INTERIM` uncertain/hold verification -> canonical-ID local edge load -> later health/insight/provenance evidence. The v2 local DB load ran but canonical-ID review returned NO-GO: its old bare-DOI projection is invalid and must be rebuilt after the uncommitted canonical fix. No corrected DB proof is claimed; health/insight acceptance remains pending.
+
+## U5 sentence-provenance planning update
+
+The B-PL22 extension is planning-admitted inside U5 only. It is not a new pipeline and is
+**SPLIT/DEFERRED** for implementation: local tools 14 / ~1,900 await final U1-U3 remeasurement, while
+persisted/served/UI reserve 30 / ~4,500 is P2-blocked. The pre-plan remainder was 4 paths / +1,216;
+the plan measured 4 new-in-U5 paths / +209 / -70. Path slots are exhausted, while +1,007 lines remain
+unallocated. Separately, O29 defers provider/model execution.
+If later admitted, deterministic versioned sentence/section/offset/citation/root artifacts and
+frozen/mock LlmRouter `INTERIM:` seams must fail closed. Existing quote checks, U5 hold and loader
+hash/idempotence remain; A4/A4b/A5/A6/A7/root collapse are not claimed implemented.
 
 ## Historical pre-flight control state
 
-This section records the original pre-flight state. The later accepted envelope supersedes its product-implementation freeze; U0 is locally authorized and remains in progress. Nothing here is a self-signature.
+This section records the original pre-flight state. At that historical point U0 was locally authorized and in progress; PR #161 and exact merge-SHA CI later completed it. Nothing here is a self-signature.
 
 - Issue #155; claim `run4-preflight-decision-packet` by `codex@agentjwork`.
 - Worktree `C:\project\ourobion-run4-preflight-155`; branch `docs/run4-preflight-155`.
@@ -30,7 +41,7 @@ This section records the original pre-flight state. The later accepted envelope 
 
 Jayden accepted BRANCH/base, the U0–U3 lock, and the 115-path / 8,500-addition cap for the currently locked envelope. `dev-phase2-run4` was created at exact SHA `854aa471970b61afdc59205ded0b1c8a9ab3f270`. The six Run 4 planning authority files were copied byte-for-byte and count in the cap. The pre-flight tracking packet and later approval updates also count, but are not byte-for-byte authority material.
 
-Historical note (superseded as an operating constraint): the WRITE-token protection probe returned 404 and workflow run `30267437774` passed all 14 jobs on CI-enablement commit `f60650838428d871690d6f83358e0fb05387d0bc`. That run does not test later commits. The current user-approved posture is that `dev-phase2-run4` intentionally remains unprotected; no ADMIN or settings action is requested. U0 is locally authorized, and `Run 4 Gate` is exact-current-SHA CI evidence only. Full-suite and PR-CI evidence remain pending.
+Historical note (superseded as an operating constraint): the WRITE-token protection probe returned 404 and workflow run `30267437774` passed all 14 jobs on CI-enablement commit `f60650838428d871690d6f83358e0fb05387d0bc`. That run did not test later commits. At that time U0 was locally authorized with full-suite/PR-CI pending. U0 later completed through PR #161 at `66bfde5`; exact merge-SHA CI `30285010079` passed 19/19. `dev-phase2-run4` remains intentionally unprotected.
 
 ## Verified live state
 
@@ -94,7 +105,7 @@ P5 is accepted as local-only: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `R2_ENDPOIN
 
 P6 defaults to O29 deferred and zero provider calls. Anthropic key presence does not approve a second-family configuration/budget; router remains single-provider OpenAI TEST-MODE.
 
-## U0 local qualification evidence
+## Historical U0 local qualification evidence
 
 - Gate tests 9/9, config/workflow validation, four frozen Deno checks, fresh graph plus local-only attestation verification, `context_sync --check`, shared TypeScript, all named package typechecks, and rules/metric drift checks passed.
 - Supabase CLI 2.81.2 and Deno 2.8.1 were used for the local release path. A disposable Postgres 17 shadow applied 23/23 migrations and was removed.
@@ -104,11 +115,11 @@ P6 defaults to O29 deferred and zero provider calls. Anthropic key presence does
 - Audit notices are recorded without remediation: shared 1 high; brain-ingest 1 moderate, 2 high, 1 critical; nao 6 high.
 - The previously recorded four-route local serve probe reached handler-level 401 responses and was stopped. It used no secrets, hosted resources, or provider calls. Hosted parity is explicitly not claimed.
 
-This local result does not complete U0 and does not claim PR CI green.
+This local result did not complete U0 at that time. Later PR #161 merge evidence and exact merge-SHA CI 19/19 completed U0.
 
 ## Evidence ledger and resume
 
-The historical pre-flight claims were source/Git/GitHub-verified. Current local U0 qualification is recorded above with its environment limits; no hosted or provider operation ran.
+The historical pre-flight claims were source/Git/GitHub-verified. Historical local U0 qualification is recorded above with its then-current environment limits; no hosted or provider operation ran.
 
 | Work | Model | State |
 | --- | --- | --- |
@@ -118,4 +129,4 @@ The historical pre-flight claims were source/Git/GitHub-verified. Current local 
 | Packet writer | `gpt-5.6-terra` medium | draft complete |
 | Primary orchestration | `gpt-5.6-sol` max | pending human direction |
 
-Provider spend is 0. RESUME: obtain clean root install, exact PR-head Linux Flutter analyze/test, and full PR-CI evidence; do not mark U0 complete before those results and review. Separately size the local fixture-backed paper-to-Biotope slice before admitting it under cap. P2 remains unavailable and P3 remains paused/excluded. All Run 4 issue, branch, PR, and merge operations target `dev-phase2-run4` only.
+Provider spend is 0. RESUME: rebuild the invalid bare-DOI local projection after the uncommitted canonical-ID fix, then obtain canonical DB-load and later health/insight evidence; do not claim corrected proof before that run. U0 is complete through PR #161 with exact merge-SHA 19/19 CI. P2 remains unavailable, O29 remains deferred, and P3 remains paused/excluded. All Run 4 issue, branch, PR, and merge operations target `dev-phase2-run4` only.
