@@ -98,4 +98,27 @@ O24–O29 are now preserved in the promoted register. Only O24–O27 appear in t
 priority tranche, and even those remain conditional on preflight. O28/O29 stay visible without being
 silently authorized.
 
+## Jayden's product brief and the exit gate
+
+Two later additions sit on top of the reviewed tranche, both in
+[`next-build-optimizations.md`](./next-build-optimizations.md):
+
+- **§3b** reconciles Jayden's six product priorities with the signed five-unit tranche, which predates
+  them and covers priorities 1, 2 and part of 6 only. It adds candidate units **R4-U5** (single-paper
+  ingestion with LLM stand-ins), **R4-U6a/b/c** (biotope metrics) and **R4-U7** (UX revamp), and
+  records that the **real Android device and live local nao** move `B-UI2`, `B-UI5`, `B-UI6`,
+  `B-UI11`, the O28 TalkBack traversal and `B10(access)` from blocked to doable.
+- **§3c** is the **exit gate**: after every locked unit completes, two local passes must both be green
+  before anything is promoted to the cloud demo database. Pass 1 is API integrity via
+  `scripts/demo-dryrun-run2.ps1`; pass 2 is a real-paper authoring run from
+  `doi:10.1016/j.isci.2026.116224`.
+
+The gate exists because the existing harness proves **API integrity, not end-to-end authoring** — it
+runs from four hand-authored relationship fixtures and simulated Biotope data, so 21/21 green says
+nothing about whether a newly ingested paper becomes a relationship. That gap is register row
+**`B-PL22`**.
+
+**No model training in Run 4.** It lives in [`../model-training/`](../model-training/) with its own
+units, budget and gates; Run 4 may consume a frozen artifact but never waits on one.
+
 Do not run the prompt until Jayden explicitly starts Run 4.
