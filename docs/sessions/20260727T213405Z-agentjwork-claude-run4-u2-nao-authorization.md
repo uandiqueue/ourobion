@@ -38,6 +38,8 @@ append-only control events, and an explicit server-only internal-secret protocol
   (203 tests), `_shared/internal_auth.test.ts` (41 tests).
 - **Docs** — `docs/shared/insight-slice-demo-runbook.md` (its `curl` commands were broken by the
   protocol change and now show the new header).
+- **`.gitattributes`** (new, one scoped line) — forces a textual diff for
+  `supabase/functions/compute-baselines/index.ts`. See the decision below.
 
 ## Decided
 
@@ -77,6 +79,19 @@ append-only control events, and an explicit server-only internal-secret protocol
   alone still leaves a cohort of one with its two health metrics named.
 - **The base was deliberately NOT advanced.** Advancing `RUN4_UNIT_BASE_SHA` requires editing
   `ci.yml`, which is reserved after U1. U2 fits without it, so the reservation was honoured.
+- **A `.gitattributes` line was required to make the landing gate measurable.**
+  `compute-baselines/index.ts` carries a deliberate NUL byte, so git classifies it as binary and
+  `git diff --numstat` reports `-  -  <path>`. `checkLandingDelta` fails closed on exactly that row
+  ("binary/unparsable diff row"), which is right for a real binary but a false positive on a
+  TypeScript source file — and it blocks **any** unit that edits that file. U2 is the first to do so.
+  Fixed with `-text diff` scoped to that single path: `-text` keeps the bytes byte-identical (the
+  attestation pins this file's `entrypointSha256`, so an EOL rewrite would invalidate it) and `diff`
+  restores line counting. Verified: numstat `-  -` → `27  8`; zero binary rows remain in the landing
+  delta; NUL still at line 171; blob hash unchanged at `a8032c14…`. The gate's own `landing`
+  subcommand then passed locally at **49 paths / 7,102 added lines**.
+  Note this masked a measurement error of my own: an `awk`-summed estimate read the binary row as 0
+  and under-reported the total by 176 lines. The gate's own command is the authority, not hand
+  arithmetic.
 
 ## Left
 
