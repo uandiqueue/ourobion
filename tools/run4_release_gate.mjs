@@ -61,7 +61,15 @@ export const RUN4_REQUIRED_JOBS = Object.freeze([
   'migrations-apply',
   'model-training-core',
   'model-training-lint-type',
+  'arch-boundaries',
+  'secret-scan',
 ]);
+const U1_CHECKOUT = 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262';
+const U1_SETUP_NODE = 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020';
+const RUN4_U1_JOB_HASHES = Object.freeze({
+  'arch-boundaries': '00e6f4b5879544b3deea43a964f690a96fbc63b29a0766786e88f779944c18ec',
+  [RUN4_REQUIRED_JOBS[11]]: 'f312ee6dd0ae2ebe4f169681cd7c0c5c78707313d8d088869c6259c30d1f53e0',
+});
 export const RUN4_NODE_TOOL_PACKAGES = Object.freeze([
   'tools/brain-ingest',
   'tools/llm-router',
@@ -141,8 +149,9 @@ function exactStep(job, name, { allowedIf } = {}) {
 
 function validateCheckout(job, jobName) {
   if (!Array.isArray(job.steps)) fail(`${jobName} steps are missing`);
-  const checkouts = job.steps.filter((step) => step?.uses === 'actions/checkout@v4');
-  if (checkouts.length !== 1) fail(`${jobName} must use exactly one actions/checkout@v4 step`);
+  const expected = RUN4_U1_JOB_HASHES[jobName] ? U1_CHECKOUT : 'actions/checkout@v4';
+  const checkouts = job.steps.filter((step) => step?.uses === expected);
+  if (checkouts.length !== 1) fail(`${jobName} must use exactly one approved checkout step`);
   if (checkouts[0].with?.ref !== undefined) fail(`${jobName} checkout must not override the event SHA`);
 }
 
@@ -173,6 +182,8 @@ const REQUIRED_JOB_STEP_SETS = Object.freeze({
   'migrations-apply': ['uses:<unnamed>:actions/checkout@v4', 'run:Install pg_cron/pg_net stubs into the service container', 'run:Bootstrap supabase-shaped primitives', 'run:Apply migrations in filename order'],
   'model-training-core': ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Python:actions/setup-python@v5', 'run:Unit tests (stdlib unittest, zero installs)', 'run:Config validation (dry-run resolves the fixture job without executing it)', 'run:Offline smoke (tiny local fixture only — no network, no real data)'],
   'model-training-lint-type': ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Python:actions/setup-python@v5', 'run:Install the dev extra only (ruff + mypy)', 'run:Format check', 'run:Lint', 'run:Type check'],
+  'arch-boundaries': [`uses:Checkout:${U1_CHECKOUT}`, `uses:Set up Node:${U1_SETUP_NODE}`, 'run:Guard unit tests (positive + negative fixtures per rule)', 'run:Enforce architecture boundaries over the tracked tree'],
+  'secret-scan': [`uses:Checkout:${U1_CHECKOUT}`, `uses:Set up Node:${U1_SETUP_NODE}`, 'run:Resolve pinned scanner', 'run:Install pinned gitleaks (SHA256-verified)', 'run:Verify scanner identity', 'run:Validate scanner policy and allowlist narrowness', 'run:Guard unit tests (reachable-failure-path proof)', 'run:Prove the scanner detects (canary)', 'run:Scan working tree at HEAD', 'run:Verify the working-tree scan actually covered the tree', 'run:Scan full git history', 'run:Verify the history scan produced a report', 'run:Client-surface leak assertions', 'run:Install nao dependencies for local client canary', 'run:Build and inspect local Next client canary'],
   'run4-gate': ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Node:actions/setup-node@v4', 'run:Install release-gate dependencies', 'run:Fail unless every required dependency succeeded'],
 });
 
@@ -206,6 +217,7 @@ function expectedWorkingDirectory(jobName, stepName) {
   if (jobName === 'node-tools') return stepName === 'Install shared contract dependencies' ? 'shared' : '${{ matrix.package }}';
   if (jobName === 'nao') return 'apps/nao';
   if (jobName === 'deno-check') return 'supabase/functions/${{ matrix.function }}';
+  if (jobName === 'secret-scan' && (stepName === 'Install nao dependencies for local client canary' || stepName === 'Build and inspect local Next client canary')) return 'apps/nao';
   return undefined;
 }
 
@@ -226,6 +238,7 @@ const REQUIRED_STEP_ENVS = Object.freeze({
   'run4-gate:Fail unless every required dependency succeeded': Object.freeze({ NEEDS_JSON: '${{ toJson(needs) }}' }),
   'model-training-core:Unit tests (stdlib unittest, zero installs)': Object.freeze({ PYTHONPATH: 'src' }),
   'model-training-core:Config validation (dry-run resolves the fixture job without executing it)': Object.freeze({ PYTHONPATH: 'src' }),
+  'secret-scan:Build and inspect local Next client canary': Object.freeze({ NEXT_PUBLIC_SUPABASE_URL: 'https://example.invalid', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'synthetic-public-anon', NEXT_PUBLIC_APP_ENV: 'ci', SUPABASE_SERVICE_ROLE_KEY: 'run4-u1-synthetic-server-canary-178-not-a-secret' }),
   'model-training-core:Offline smoke (tiny local fixture only — no network, no real data)': Object.freeze({ PYTHONPATH: 'src' }),
 });
 
@@ -321,7 +334,10 @@ export function validateRun4Workflow(workflowText) {
     assertNoFailOpen(job, `${jobName} job`);
     validateHostContract(job, jobName);
     validateExactEnvironment(job.env, `${jobName} job`, REQUIRED_JOB_ENVS[jobName]);
-    if (jobName !== 'run4-release' && own(job, 'if')) fail(`${jobName} job cannot set if`);
+    if (jobName === 'arch-boundaries' || jobName === 'secret-scan') {
+      if (job.if !== RUN4_EVENT_SCOPE) fail(`${jobName} is not scoped exactly to dev-phase2-run4 events`);
+      if (hashTextEvidence(JSON.stringify(job)) !== RUN4_U1_JOB_HASHES[jobName]) fail(`${jobName} frozen job contract drifted`);
+    } else if (jobName !== 'run4-release' && own(job, 'if')) fail(`${jobName} job cannot set if`);
     validateCheckout(job, jobName);
     validateRequiredJobStepGuards(job, jobName);
     validateRequiredJobSteps(job, jobName);

@@ -93,7 +93,10 @@ test('actual Run 4 workflow has exact aggregate structure and executable gates',
   const workflow = readFileSync(resolve('.github/workflows/ci.yml'), 'utf8');
   assert.doesNotThrow(() => validateRun4Workflow(workflow));
   assert.throws(() => validateRun4Workflow(workflow.replace('needs: [context, ', 'needs: [')), /needs.*mismatch/);
-  assert.throws(() => validateRun4Workflow(workflow.replace(', model-training-core, model-training-lint-type]', ']')), /needs.*mismatch/);
+  assert.throws(() => validateRun4Workflow(workflow.replace(', arch-boundaries, secret-scan]', ']')), /needs.*mismatch/);
+  assert.throws(() => validateRun4Workflow(workflow.replace('node tools/check_arch_boundaries.mjs', 'echo bypass')), /arch-boundaries frozen job contract drifted/);
+  assert.throws(() => validateRun4Workflow(workflow.replace('node tools/secret_scan_guard.mjs client-surface', 'echo bypass')), /secret-scan frozen job contract drifted/);
+  assert.throws(() => validateRun4Workflow(workflow.replace('actions/checkout@11d5960a326750d5838078e36cf38b85af677262', 'actions/checkout@v4')), /approved checkout|frozen job contract/);
   assert.throws(() => validateRun4Workflow(workflow.replace('node tools/run4_release_gate.mjs aggregate', 'echo node tools/run4_release_gate.mjs aggregate')), /runtime assertion drifted/);
   assert.throws(() => validateRun4Workflow(workflow.replace('      - name: Fail unless every required dependency succeeded', '      - name: Fail unless every required dependency succeeded\n        if: ${{ 1 == 0 }}')), /cannot set if/);
   assert.throws(() => validateRun4Workflow(workflow.replace('      - name: Recompute frozen graphs and verify local-only runtime attestation', '      - name: Recompute frozen graphs and verify local-only runtime attestation\n        continue-on-error: ${{ true }}')), /cannot set continue-on-error/);
@@ -120,9 +123,9 @@ test('actual Run 4 workflow has exact aggregate structure and executable gates',
   assert.deepEqual([...RUN4_NODE_TOOL_DRIFT_PACKAGES].length, 2);
 });
 
-test('runtime aggregate requires the exact ten successful dependencies', () => {
+test('runtime aggregate requires the exact twelve successful dependencies', () => {
   const good = Object.fromEntries(RUN4_REQUIRED_JOBS.map((name) => [name, { result: 'success' }]));
-  assert.equal(Object.keys(checkAggregateNeeds(JSON.stringify(good))).length, 10);
+  assert.equal(Object.keys(checkAggregateNeeds(JSON.stringify(good))).length, 12);
   const missing = { ...good }; delete missing.context;
   assert.throws(() => checkAggregateNeeds(JSON.stringify(missing)), /runtime needs.*mismatch/);
   const collision = { ...good }; delete collision.context; delete collision['deno-check']; collision['context|deno-check'] = { result: 'success' };
@@ -130,6 +133,8 @@ test('runtime aggregate requires the exact ten successful dependencies', () => {
   assert.throws(() => checkAggregateNeeds(JSON.stringify({ ...good, context: { result: 'skipped' } })), /not successful/);
   assert.throws(() => checkAggregateNeeds(JSON.stringify({ ...good, 'model-training-core': { result: 'failure' } })), /model-training-core=failure/);
   assert.throws(() => checkAggregateNeeds(JSON.stringify({ ...good, 'model-training-lint-type': { result: 'skipped' } })), /model-training-lint-type=skipped/);
+  assert.throws(() => checkAggregateNeeds(JSON.stringify({ ...good, 'arch-boundaries': { result: 'failure' } })), /arch-boundaries=failure/);
+  assert.throws(() => checkAggregateNeeds(JSON.stringify({ ...good, 'secret-scan': { result: 'skipped' } })), /secret-scan=skipped/);
 });
 
 test('landing delta fixes accepted constants and rejects shallow, rename, binary, and overflow input', () => {
