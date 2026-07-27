@@ -44,6 +44,13 @@ The fresh graph and local-only attestation verification support the pinned local
 
 `dev-phase2-run4` intentionally remains unprotected; no ADMIN or settings action is requested. `Run 4 Gate` is exact-current-SHA CI evidence only. P2 remains unwaived and defers U4; P3 excludes training; O29 remains deferred with zero provider calls.
 
+After the separately owned model-training session landed on `dev-phase2-run4`, its exact tip
+`837b7e690f92dc1669428a2476c9d8d0456020e8` became the active U0 unit base. The original
+`854aa471970b61afdc59205ded0b1c8a9ab3f270` remains recorded only as Run 4 envelope/bootstrap
+provenance. The gate uses `RUN4_UNIT_BASE_SHA` so the already-landed separate-session delta is not
+misrepresented as U0 work; it retains the same 115-path / 8,500-added-line cap and all fail-closed
+path, rename, binary, and provenance checks.
+
 ## Left
 
 - Run a clean root install plus exact PR-head Linux Flutter analyze/test and full PR CI.

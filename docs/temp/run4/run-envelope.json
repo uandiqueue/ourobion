@@ -13,11 +13,11 @@
   "candidate": {
     "integrationBranch": "dev-phase2-run4",
     "branchCreatedAtSha": "854aa471970b61afdc59205ded0b1c8a9ab3f270",
-    "baseSha": "854aa471970b61afdc59205ded0b1c8a9ab3f270",
+    "historicalEnvelopeBaseSha": "854aa471970b61afdc59205ded0b1c8a9ab3f270",
     "lockedUnits": ["R4-U0", "R4-U1", "R4-U2", "R4-U3"],
     "deferredUnits": ["R4-U4"],
     "caps": { "maxChangedPaths": 115, "maxAddedLines": 8500 },
-    "measurement": "unique paths and added lines in RUN4_BASE_SHA..HEAD; generated, lock, session, tracking, and corrections count",
+    "measurement": "historical envelope only; it is not an active whole-run cap gate after the concurrent-session reconciliation",
     "failureModes": ["missing-base", "shallow-history", "parse", "rename", "binary"]
   },
   "requiredChecks": ["Run 4 release evidence", "Context — sessions / memory / decisions / index / couplings", "Flutter — Analyze & Test", "TypeScript — Type Check", "Node tools — tools/brain-ingest", "Node tools — tools/llm-router", "Node tools — tools/rules", "Node tools — tools/edge-loader", "Node tools — tools/engine-stats", "Node tools — tools/metric-view", "nao — typecheck & test", "Deno — compute-baselines", "Deno — evaluate-signals", "Deno — generate-insights", "Deno — run-pipeline", "Migrations — shadow apply (postgres:17)", "Run 4 Gate"],
@@ -45,6 +45,12 @@
     "auditNotices": { "shared": { "high": 1 }, "brainIngest": { "moderate": 1, "high": 2, "critical": 1 }, "nao": { "high": 6 }, "fixed": false },
     "localServeProbe": { "routes": 4, "result": "handler-level 401 responses", "serverStopped": true, "secretsUsed": false, "hostedCalls": false, "providerCalls": false, "hostedParityClaimed": false },
     "pending": ["clean root install in Linux CI", "exact PR-head Linux Flutter analyze/test", "full PR CI", "human review", "PR", "merge"]
+  },
+  "u0UnitGate": {
+    "unitBaseSha": "837b7e690f92dc1669428a2476c9d8d0456020e8",
+    "caps": { "maxChangedPaths": 115, "maxAddedLines": 8500 },
+    "measurement": "unique paths and added lines in RUN4_UNIT_BASE_SHA..HEAD; generated, lock, session, tracking, and corrections count",
+    "concurrentSessionHandling": "The owner instructed U0 to ignore the separately owned model-training session. Its already-landed delta is excluded only because this unit base is the exact post-concurrent-session integration tip."
   },
   "providerSpendUsd": 0,
   "testsRun": true

@@ -60,15 +60,15 @@ jobs:
           deno-version: v2.8.1
       - name: Install release-gate dependencies
         run: npm ci
-      - name: Assert exact landing SHA and immutable base
+      - name: Assert exact landing SHA and U0 unit base
         env:
-          RUN4_BASE_SHA: 854aa471970b61afdc59205ded0b1c8a9ab3f270
+          RUN4_UNIT_BASE_SHA: 837b7e690f92dc1669428a2476c9d8d0456020e8
           RUN4_MAX_CHANGED_PATHS: 115
           RUN4_MAX_ADDED_LINES: 8500
         run: |
-          git fetch --no-tags origin "$RUN4_BASE_SHA"
+          git fetch --no-tags origin "$RUN4_UNIT_BASE_SHA"
           node tools/run4_release_gate.mjs provenance --event-path "$GITHUB_EVENT_PATH" --github-sha "$GITHUB_SHA"
-          node tools/run4_release_gate.mjs landing --base "$RUN4_BASE_SHA" --head "$GITHUB_SHA" --max-paths "$RUN4_MAX_CHANGED_PATHS" --max-added "$RUN4_MAX_ADDED_LINES"
+          node tools/run4_release_gate.mjs landing --base "$RUN4_UNIT_BASE_SHA" --head "$GITHUB_SHA" --max-paths "$RUN4_MAX_CHANGED_PATHS" --max-added "$RUN4_MAX_ADDED_LINES"
       - name: Verify parsed function and workflow invariants
         run: |
           node --test tools/run4_release_gate.test.mjs

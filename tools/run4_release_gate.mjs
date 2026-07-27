@@ -14,7 +14,10 @@ const fail = (message) => { throw new Error(message); };
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 const isObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
-export const RUN4_BASE_SHA = '854aa471970b61afdc59205ded0b1c8a9ab3f270';
+// This is deliberately the U0 unit boundary, not the original Run 4 envelope/bootstrap SHA.
+// The concurrent model-training session landed before U0 reconciliation and is excluded only by
+// selecting the post-concurrent integration tip as the unit's explicit starting point.
+export const RUN4_UNIT_BASE_SHA = '837b7e690f92dc1669428a2476c9d8d0456020e8';
 export const RUN4_MAX_CHANGED_PATHS = 115;
 export const RUN4_MAX_ADDED_LINES = 8500;
 export const RUN4_FUNCTIONS = Object.freeze([
@@ -135,7 +138,7 @@ function exactRun(job, jobName, stepName, command, options) {
 
 const REQUIRED_JOB_STEP_SETS = Object.freeze({
   context: ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Node:actions/setup-node@v4', 'run:Context check'],
-  'run4-release': ['uses:<unnamed>:actions/checkout@v4', 'uses:<unnamed>:actions/setup-node@v4', 'uses:<unnamed>:denoland/setup-deno@v2', 'run:Install release-gate dependencies', 'run:Assert exact landing SHA and immutable base', 'run:Verify parsed function and workflow invariants', 'run:Recompute frozen graphs and verify local-only runtime attestation'],
+  'run4-release': ['uses:<unnamed>:actions/checkout@v4', 'uses:<unnamed>:actions/setup-node@v4', 'uses:<unnamed>:denoland/setup-deno@v2', 'run:Install release-gate dependencies', 'run:Assert exact landing SHA and U0 unit base', 'run:Verify parsed function and workflow invariants', 'run:Recompute frozen graphs and verify local-only runtime attestation'],
   flutter: ['uses:<unnamed>:actions/checkout@v4', 'uses:Setup Flutter:subosito/flutter-action@v2', 'run:Create public env file', 'run:Install dependencies', 'run:Analyze', 'run:Test'],
   typescript: ['uses:<unnamed>:actions/checkout@v4', 'uses:Setup Node:actions/setup-node@v4', 'run:Install dependencies', 'run:Type check shared types'],
   'node-tools': ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Node:actions/setup-node@v4', 'run:Install shared contract dependencies', 'run:Install dependencies', 'run:Typecheck', 'run:Test', 'run:Drift check'],
@@ -183,7 +186,7 @@ const REQUIRED_JOB_ENVS = Object.freeze({
   'migrations-apply': Object.freeze({ PGHOST: 'localhost', PGUSER: 'postgres', PGDATABASE: 'postgres', PGPASSWORD: 'postgres' }),
 });
 const REQUIRED_STEP_ENVS = Object.freeze({
-  'run4-release:Assert exact landing SHA and immutable base': Object.freeze({ RUN4_BASE_SHA, RUN4_MAX_CHANGED_PATHS, RUN4_MAX_ADDED_LINES }),
+  'run4-release:Assert exact landing SHA and U0 unit base': Object.freeze({ RUN4_UNIT_BASE_SHA, RUN4_MAX_CHANGED_PATHS, RUN4_MAX_ADDED_LINES }),
   'run4-gate:Fail unless every required dependency succeeded': Object.freeze({ NEEDS_JSON: '${{ toJson(needs) }}' }),
 });
 
@@ -260,13 +263,13 @@ export function validateRun4Workflow(workflowText) {
   if (release.if !== RUN4_EVENT_SCOPE) fail('run4-release is not scoped exactly to dev-phase2-run4 events');
   validateCheckout(release, 'run4-release');
   if (exactStep(release, 'Install release-gate dependencies').run !== 'npm ci') fail('run4-release must install with exact npm ci');
-  const landing = exactStep(release, 'Assert exact landing SHA and immutable base');
-  if (landing.env?.RUN4_BASE_SHA !== RUN4_BASE_SHA || Number(landing.env?.RUN4_MAX_CHANGED_PATHS) !== RUN4_MAX_CHANGED_PATHS || Number(landing.env?.RUN4_MAX_ADDED_LINES) !== RUN4_MAX_ADDED_LINES) fail('run4-release landing constants drifted');
+  const landing = exactStep(release, 'Assert exact landing SHA and U0 unit base');
+  if (landing.env?.RUN4_UNIT_BASE_SHA !== RUN4_UNIT_BASE_SHA || Number(landing.env?.RUN4_MAX_CHANGED_PATHS) !== RUN4_MAX_CHANGED_PATHS || Number(landing.env?.RUN4_MAX_ADDED_LINES) !== RUN4_MAX_ADDED_LINES) fail('run4-release landing constants drifted');
   const landingLines = String(landing.run).trim().split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   const expectedLandingLines = [
-    'git fetch --no-tags origin "$RUN4_BASE_SHA"',
+    'git fetch --no-tags origin "$RUN4_UNIT_BASE_SHA"',
     'node tools/run4_release_gate.mjs provenance --event-path "$GITHUB_EVENT_PATH" --github-sha "$GITHUB_SHA"',
-    'node tools/run4_release_gate.mjs landing --base "$RUN4_BASE_SHA" --head "$GITHUB_SHA" --max-paths "$RUN4_MAX_CHANGED_PATHS" --max-added "$RUN4_MAX_ADDED_LINES"',
+    'node tools/run4_release_gate.mjs landing --base "$RUN4_UNIT_BASE_SHA" --head "$GITHUB_SHA" --max-paths "$RUN4_MAX_CHANGED_PATHS" --max-added "$RUN4_MAX_ADDED_LINES"',
   ];
   if (JSON.stringify(landingLines) !== JSON.stringify(expectedLandingLines)) fail('run4-release landing commands drifted');
   const config = exactStep(release, 'Verify parsed function and workflow invariants');
@@ -337,7 +340,7 @@ function gitText(git, args, options = {}) {
 }
 
 export function checkLandingDelta({ base, head = 'HEAD', maxPaths, maxAdded, git = execFileSync }) {
-  if (base !== RUN4_BASE_SHA) fail(`base must equal accepted immutable SHA ${RUN4_BASE_SHA}`);
+  if (base !== RUN4_UNIT_BASE_SHA) fail(`base must equal accepted U0 unit SHA ${RUN4_UNIT_BASE_SHA}`);
   if (!Number.isSafeInteger(maxPaths) || maxPaths < 0 || maxPaths !== RUN4_MAX_CHANGED_PATHS) fail(`maxPaths must equal accepted cap ${RUN4_MAX_CHANGED_PATHS}`);
   if (!Number.isSafeInteger(maxAdded) || maxAdded < 0 || maxAdded !== RUN4_MAX_ADDED_LINES) fail(`maxAdded must equal accepted cap ${RUN4_MAX_ADDED_LINES}`);
   const clean = (...args) => gitText(git, args).trim();
@@ -514,7 +517,7 @@ export function buildLocalAttestation({ graphDir, supabaseCli, routes, run = exe
     replayBoundary: 'CI recomputes frozen graphs and validates this local evidence, but does not replay local serve or claim hosted deploy parity.',
     generator: RUN4_ATTESTATION_GENERATOR,
     provenance: {
-      baseSha: RUN4_BASE_SHA,
+      unitBaseSha: RUN4_UNIT_BASE_SHA,
       maxChangedPaths: RUN4_MAX_CHANGED_PATHS,
       maxAddedLines: RUN4_MAX_ADDED_LINES,
     },
@@ -534,7 +537,7 @@ export function checkDeployAttestation({ manifestPath = resolve(repo, 'supabase/
   if (!existsSync(lockPath)) fail('local runtime attestation BLOCKED: shared supabase/deno.lock is absent');
   const cliOutput = checkToolVersion(supabaseCli, /^2\.81\.2$/m, 'repository-local Supabase CLI', run);
   if (manifest.schemaVersion !== 1 || manifest.scope !== 'local-only' || manifest.hostedDeployParityClaimed !== false || manifest.replayBoundary !== 'CI recomputes frozen graphs and validates this local evidence, but does not replay local serve or claim hosted deploy parity.' || manifest.generator !== RUN4_ATTESTATION_GENERATOR) fail('local runtime attestation must explicitly deny hosted deploy parity');
-  if (!isObject(manifest.provenance) || manifest.provenance.baseSha !== RUN4_BASE_SHA || manifest.provenance.maxChangedPaths !== RUN4_MAX_CHANGED_PATHS || manifest.provenance.maxAddedLines !== RUN4_MAX_ADDED_LINES) fail('local runtime attestation provenance drifted');
+  if (!isObject(manifest.provenance) || manifest.provenance.unitBaseSha !== RUN4_UNIT_BASE_SHA || manifest.provenance.maxChangedPaths !== RUN4_MAX_CHANGED_PATHS || manifest.provenance.maxAddedLines !== RUN4_MAX_ADDED_LINES) fail('local runtime attestation provenance drifted');
   if (manifest.cliVersion !== cliOutput || manifest.denoVersion !== '2.8.1') fail('local runtime attestation tool versions drifted');
   if (manifest.configSha256 !== sha(readFileSync(configPath)) || manifest.lockSha256 !== sha(readFileSync(lockPath))) fail('local runtime attestation config/lock hash mismatch');
 

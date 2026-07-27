@@ -14,6 +14,7 @@ updated: 2026-07-27
 - BRANCH/base accepted: `dev-phase2-run4` was created at `854aa471970b61afdc59205ded0b1c8a9ab3f270`.
 - U0–U3 are locked. U4 is deferred because no second shared reviewer is available and the two-reviewer rule is not waived.
 - The 115-path / 8,500-added-line cap is accepted for the current lock. A local fixture-backed paper-to-Biotope slice is separately sized and admitted only if it fits.
+- The original Run 4 envelope/bootstrap provenance remains `854aa471970b61afdc59205ded0b1c8a9ab3f270`. For U0 only, the active gate starts at post-concurrent-session tip `837b7e690f92dc1669428a2476c9d8d0456020e8` and measures `RUN4_UNIT_BASE_SHA..HEAD` against the same 115 / 8,500 caps. The owner instructed the separate model-training session be ignored; its already-landed delta is therefore not counted as U0.
 - P3 model training is paused/excluded: train nothing; MT1–MT5 do not enter product.
 - P5 is local-only with no hosted writes/deploy/key changes. P6 keeps O29 deferred and provider spend at zero.
 - PR #156 must target `dev-phase2-run4` and may merge there, never `dev-phase2`.

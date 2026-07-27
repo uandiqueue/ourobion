@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import {
-  RUN4_BASE_SHA,
+  RUN4_UNIT_BASE_SHA,
   RUN4_FUNCTIONS,
   RUN4_MAX_ADDED_LINES,
   RUN4_MAX_CHANGED_PATHS,
@@ -129,14 +129,14 @@ test('landing delta fixes accepted constants and rejects shallow, rename, binary
   const mock = (responses) => (_command, args) => `${responses[args.join(' ')] ?? responses[args[0]] ?? ''}`;
   const common = {
     'rev-parse --is-shallow-repository': 'false\n',
-    [`cat-file -t ${RUN4_BASE_SHA}`]: 'commit\n',
+    [`cat-file -t ${RUN4_UNIT_BASE_SHA}`]: 'commit\n',
     'rev-parse HEAD': `${head}\n`,
-    [`merge-base ${RUN4_BASE_SHA} ${head}`]: `${RUN4_BASE_SHA}\n`,
+    [`merge-base ${RUN4_UNIT_BASE_SHA} ${head}`]: `${RUN4_UNIT_BASE_SHA}\n`,
   };
-  assert.throws(() => checkLandingDelta({ base: 'a'.repeat(40), maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock(common) }), /accepted immutable SHA/);
-  assert.throws(() => checkLandingDelta({ base: RUN4_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock({ ...common, 'rev-parse --is-shallow-repository': 'true\n' }) }), /shallow/);
-  assert.throws(() => checkLandingDelta({ base: RUN4_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock({ ...common, [`diff --name-status -z --find-renames ${RUN4_BASE_SHA}..${head}`]: 'R100\0old\0new\0' }) }), /rename\/copy/);
-  assert.throws(() => checkLandingDelta({ base: RUN4_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock({ ...common, [`diff --name-status -z --find-renames ${RUN4_BASE_SHA}..${head}`]: 'M\0asset.bin\0', [`diff --numstat -z ${RUN4_BASE_SHA}..${head}`]: '-\t-\tasset.bin\0' }) }), /binary\/unparsable/);
+  assert.throws(() => checkLandingDelta({ base: 'a'.repeat(40), maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock(common) }), /accepted U0 unit SHA/);
+  assert.throws(() => checkLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock({ ...common, 'rev-parse --is-shallow-repository': 'true\n' }) }), /shallow/);
+  assert.throws(() => checkLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock({ ...common, [`diff --name-status -z --find-renames ${RUN4_UNIT_BASE_SHA}..${head}`]: 'R100\0old\0new\0' }) }), /rename\/copy/);
+  assert.throws(() => checkLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock({ ...common, [`diff --name-status -z --find-renames ${RUN4_UNIT_BASE_SHA}..${head}`]: 'M\0asset.bin\0', [`diff --numstat -z ${RUN4_UNIT_BASE_SHA}..${head}`]: '-\t-\tasset.bin\0' }) }), /binary\/unparsable/);
 });
 
 test('workflow provenance binds exact Run 4 PR merge parents and rejects shallow checkout', () => {
@@ -214,7 +214,7 @@ test('local-only attestation generator and verifier reject provenance, source, g
     verify((value) => { value.serveProbe.routes.pop(); }, /route set/);
     verify((value) => { value.serveProbe.routes.push(structuredClone(value.serveProbe.routes[0])); }, /duplicates/);
     verify((value) => { value.serveProbe.command = 'supabase functions deploy'; }, /normalized local serve evidence/);
-    verify((value) => { value.provenance.baseSha = 'b'.repeat(40); }, /provenance drifted/);
+    verify((value) => { value.provenance.unitBaseSha = 'b'.repeat(40); }, /provenance drifted/);
     assert.deepEqual(collectCurrentFunctionEvidence(graphDir).functions.map((item) => item.name).sort(), [...RUN4_FUNCTIONS].sort());
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

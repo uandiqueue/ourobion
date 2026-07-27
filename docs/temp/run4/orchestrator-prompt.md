@@ -87,7 +87,8 @@ Preflight must produce a decision packet with:
 
 - `RUN4_INTEGRATION_BRANCH`: an explicit human-approved successor branch; do not infer or create a
   long-lived exception to AGENTS.md without approval.
-- `RUN4_BASE_SHA`: the exact immutable commit from which every Run 4 landing delta is measured.
+- `RUN4_ENVELOPE_BOOTSTRAP_SHA`: the original immutable envelope/bootstrap provenance commit.
+- `RUN4_UNIT_BASE_SHA`: the exact immutable post-concurrent-session commit from which the active U0 landing delta is measured; it is not represented as a whole-run base.
 - `MAX_CHANGED_PATHS` and `MAX_ADDED_LINES`: explicit caps approved after a source-based unit estimate.
 - Required CI-evidence posture: `dev-phase2-run4` intentionally remains unprotected by user override.
   Use one stable aggregate `Run 4 Gate` check with `if: always()` and explicit `needs` that fails unless
@@ -103,7 +104,7 @@ Preflight must produce a decision packet with:
 - A per-unit estimate of touched files, added lines, migrations/contracts, external needs, test time,
   and reviewer needs for R4-U0-R4-U4.
 
-Use final landing-delta semantics: unique paths and added lines in `RUN4_BASE_SHA..HEAD`. This is not
+For the active U0 unit, use final landing-delta semantics: unique paths and added lines in `RUN4_UNIT_BASE_SHA..HEAD`. This is not
 "cumulative churn" across intermediate commits. Generated files, lockfiles, session/tracking records,
 and corrections count. Missing base objects, shallow history, parse failures, or ambiguous rename/
 binary handling fail the cap gate. Do not retroactively subtract "unrelated" merges from an old base.
@@ -118,7 +119,7 @@ PART 3 — RECOMMENDED MAXIMUM PRIORITY TRANCHE
 R4-U0 / O24 + O31-O34 — trustworthy release gate
 
 - Rebuild O24 on the fresh base; do not merge or mechanically cherry-pick PR #144.
-- Add fail-closed landing-delta enforcement from the approved base/caps.
+- Add fail-closed U0 landing-delta enforcement from the approved unit base/caps. Preserve the original envelope/bootstrap SHA as historical provenance; do not count the separately owned, already-landed model-training session as U0 work.
 - Establish and record exact-current-SHA CI evidence through one stable aggregate gate; do not claim or
   attempt branch protection.
 - Every required job must check the same current landing SHA. PR synthetic-merge evidence is valid only
@@ -204,7 +205,7 @@ On first authorized preflight, create and maintain under `docs/temp/run4/`:
 - `human-decisions.md`: approvals, exact external resources, credentials by name only, reviewer and
   cap decisions;
 - `unit-signoff-index.md`: one row per locked unit, with human sign-off pending until Jayden acts;
-- `run-envelope.json`: approved integration branch, immutable base SHA, caps, and required gate name.
+- `run-envelope.json`: approved integration branch, historical envelope/bootstrap SHA, active unit base where applicable, caps, and required gate name.
 
 Use statuses `queued`, `in-progress`, `pr-open`, `merged`, `blocked`, `deferred`. Never claim a test,
 manual traversal, provider call, hosted rehearsal, rotation, or deployment ran without exact command,
@@ -227,7 +228,7 @@ Minimum gate, adapted to touched surfaces:
 - shadow migration apply for migrations;
 - unit-specific security/RLS, concurrency, raw-truth, copy, parity, and failure-path tests;
 - current required aggregate check on the exact landing SHA;
-- machine cap check against `RUN4_BASE_SHA`.
+- U0 machine cap check against `RUN4_UNIT_BASE_SHA`.
 
 No self-signing. "Complete" means implemented, independently reviewed in proportion to risk,
 gate-green on the current landing state, honestly evidenced, and represented by a PR into the approved

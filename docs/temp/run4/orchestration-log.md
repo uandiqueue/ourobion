@@ -41,14 +41,15 @@ On 2026-07-27, PR #144 was **CLOSED**, not merged, at `2026-07-27T08:03:15Z`; ba
 | Field | Value | State |
 | --- | --- | --- |
 | Integration branch | `dev-phase2-run4` at `854aa471970b61afdc59205ded0b1c8a9ab3f270` | ACCEPTED / intentionally unprotected |
-| Immutable base | `854aa471970b61afdc59205ded0b1c8a9ab3f270` (`origin/dev-phase2-run2`) | ACCEPTED |
+| Historical envelope/bootstrap base | `854aa471970b61afdc59205ded0b1c8a9ab3f270` (`origin/dev-phase2-run2`) | RETAINED FOR PROVENANCE; not an active whole-run gate |
+| Active U0 unit base | `837b7e690f92dc1669428a2476c9d8d0456020e8` (post-concurrent-session `origin/dev-phase2-run4` tip) | ACCEPTED for U0 only |
 | Locked units | `R4-U0`, `R4-U1`, `R4-U2`, `R4-U3` | ACCEPTED |
 | U4 | no available second shared reviewer; two-reviewer rule not waived | DEFERRED |
-| Landing caps | `MAX_CHANGED_PATHS=115`, `MAX_ADDED_LINES=8500` | ACCEPTED for current lock |
+| U0 landing caps | `MAX_CHANGED_PATHS=115`, `MAX_ADDED_LINES=8500` | ACCEPTED for `RUN4_UNIT_BASE_SHA..HEAD` only |
 
 The accepted base is a full commit object and the repository is not shallow. `dev-phase2` is its ancestor and omits Run 2's 169 paths / +16,992. Run 3 adds 100 paths / +11,706 / -1,079 after Run 2, including model-training contamination and Run 4 documents. The six Run 4 planning authority files absent from the candidate base have been copied byte-for-byte and count in the cap. This pre-flight tracking packet and later approval updates also count, but are not immutable byte-for-byte promotion material. Current `dev-phase2`, `dev-phase2-run3`, and PR #144 head remain rejected base alternatives.
 
-Measure caps as unique paths and added lines in `RUN4_BASE_SHA..HEAD`; generated/lock/session/tracking/corrections count. Missing base, shallow history, parse, rename, or binary ambiguity fails. All-five coupling is likely 135–155 paths and 8,250–9,000 added lines, hence U0–U3 lock. The 115/8,500 cap includes promoted Run 4 docs/tracking and returns an exceeding unit to pending. A local fixture-backed paper-to-Biotope slice must be separately sized and admitted only if it fits the accepted cap.
+U0 reconciliation: the owner instructed this unit to ignore the separately owned model-training session. Its concurrent delta had already landed at `837b7e690f92dc1669428a2476c9d8d0456020e8`, so U0's active fail-closed gate measures only unique paths and added lines in `RUN4_UNIT_BASE_SHA..HEAD` from that exact unit base. Generated/lock/session/tracking/corrections still count; missing base, shallow history, parse, rename, or binary ambiguity still fails. This is not a retroactive whole-run subtraction and does not redefine the historical envelope. The 115/8,500 cap returns an exceeding U0 landing to pending.
 
 ## CI evidence posture
 
