@@ -1,21 +1,23 @@
 ---
-title: Run 4 — candidate scope and carried-forward register
-summary: Run 4's candidate scope, assembled from the 2026-07-27 independent audit. Holds the preconditions Run 3 cannot satisfy itself, ten new optimisation items (O31-O40) targeting the audit's central pattern of unenforced invariants, and the 41 register rows plus 5 schema gaps that Run 3's O24-O29 does not cover. Candidate scope, not locked.
+title: Run 4 — reviewed candidate scope and priority tranche
+summary: Run 4's technically reviewed scope: corrected preconditions, O31-O40 enforcement candidates, the promoted pending-build register, and a smaller priority tranche that rebuilds O24 before security, raw-truth, and scientific-semantics work. Prompt signed; execution not authorized.
 type: plan
 scope: shared
 status: draft
 updated: 2026-07-27
 ---
 
-# Run 4 — candidate scope and carried-forward register
+# Run 4 — reviewed candidate scope and priority tranche
 
-**Status: candidate, not locked.** Nothing here is approved or sequenced. Run 4 begins only when
-Jayden locks a subset; the audit that produced it is [`run3-audit-findings.md`](./run3-audit-findings.md).
+**Status: technically reviewed; execution not authorized.** The priority order below is the subset
+recommended for preflight. Run 4 begins only after Jayden explicitly starts it and accepts the fresh
+base, required-check posture, cap definition, reviewer availability, and exact locked units. The audit
+that produced the candidate list is [`run3-audit-findings.md`](./run3-audit-findings.md).
 
-**Relationship to Run 3.** Run 3 (six units, U0–U5 = O24–O29) is still live and still owns its items.
-Run 4 deliberately does **not** duplicate O24–O29. If Run 3 is cut short — which finding A8 says is
-likely, since its scope is 1.7–2.1× over its file cap — the unbuilt O-items return to
-`docs/temp/run3/pending-build-register.md` per that run's own rule, and become Run 4 candidates then.
+**Relationship to Run 3.** Run 3 is closing without an accepted unit. PR #144 must not merge in its
+audited state; O24-O29 are therefore unfinished and have been promoted into
+[`pending-build-register.md`](./pending-build-register.md). Run 4 does not assume that all six fit.
+It rebuilds O24 first, then prioritizes O25-O27; O28 and O29 stay deferred by default.
 
 ## 1. Preconditions — resolve before Run 4 (and mostly before Run 3 continues)
 
@@ -23,12 +25,13 @@ These are not build units. Most are settings or decisions, and several block Run
 
 | ID | What | Why it blocks | Who |
 |---|---|---|---|
-| P1 | **Add required status checks** on `dev-phase2`, `dev-phase2-run3`, and any successor working branch | Audit A1: every working branch is `protected: false` with no `required_status_checks` rule. CI is advisory today, so "green CI" is not a gate. This is the single highest-value action in this document and costs minutes | Jayden (repo admin) |
-| P2 | **Resolve B8** — name a second `shared/` reviewer, or record a scoped solo-review waiver | Audit A4: gates U3 explicitly, U4 implicitly (O28 must add fields to `shared/metrics/registry.ts`), and U5's promotion slice — 60% of the remaining tranche. Blocking and accruing since Run 1 | Jayden |
-| P3 | **Give model-training its own integration base** (`dev-phase2-model-training`), before MT1 is cut | Audit A3: MT0 alone consumed ~69% of Run 3's caps and broke U0. Five more model PRs are currently pointed at the product base | Jayden + orchestrator |
-| P4 | **State one cap-baseline rule and re-derive the number** | Audit A3: two live documents disagree by 5,362 lines. Recommendation: exclude non-Run-3 merges explicitly, since the current wording counts them | Jayden |
-| P5 | **Record every credential gate in `human-decisions.md`** — B2/B3 (Cloudflare Worker + hosted Supabase secret keys), B5 (second provider key), B10 (Android device) | Audit A4: five of eight human gates are missing from the file the orchestrator prompt tells builders to consult | orchestrator |
+| P1 | **Add required status checks** on `dev-phase2` and the human-approved Run 4 integration branch | Audit A1: both inspected working branches were `protected: false` with no required checks. Protect the successor before implementation; a closed Run 3 branch need not remain an integration target | Jayden (repo admin) |
+| P2 | **Resolve B8 by naming a second `shared/` reviewer** | Audit A4: `shared/` work requires two reviewers under AGENTS.md. A run prompt cannot waive that repository rule. O27/O38 and any other shared-contract work stay blocked until the reviewer exists | Jayden |
+| P3 | **Separate model-training from the Run 4 integration base before MT1 is cut** | Audit A3: MT0 alone changed 59 files / added 5,362 lines after the Run 3 candidate baseline and broke U0's mergeability. The exact model-training integration target is a human decision; do not invent a long-lived branch contrary to the normal workflow | Jayden + orchestrator |
+| P4 | **Approve a fresh immutable Run 4 base and one cap metric** | Do not retroactively exclude merged work. Define the run budget as the final landing delta from the accepted Run 4 base (`base..HEAD`), including generated/tracking files, with unique changed paths and added lines counted mechanically. Record the base SHA and cap before implementation | Jayden |
+| P5 | **Record every credential/resource gate in Run 4 `human-decisions.md`** — B2/B3 (Cloudflare Worker + hosted Supabase secret keys), B5 (second provider key), B10 (Android device) | Record names and approval state only, never secret values. Missing external authority blocks only the affected unit; it cannot be inferred from this prompt | orchestrator |
 | P6 | **Decide O29's provider posture** — provision a second family, or rescope the vendor-agnostic clause | Audit A5: only `OPENAI_API_KEY` exists, `config.ts:288` hard-codes an Anthropic-verifier reject, and the caps (Anthropic ≤2 SGD / OpenAI ≤20 SGD) are allocated backwards for the only legal configuration | Jayden |
+| P7 | **Close PR #144 as superseded; do not merge it** | Its 15 green checks belong to an old synthetic merge, the current base conflicts in the workflow under test, and the audit found fail-open/tautological gate logic. Rebuild the useful O24 intent on the fresh Run 4 base | Jayden + orchestrator |
 
 ## 2. New optimisation items (O31–O40)
 
@@ -39,37 +42,45 @@ These target the audit's central pattern — **stated invariants with no machine
 pattern matters more than usual here because the owner does not review code, so every unenforced rule
 is an unguarded rule.
 
-### O31 · Mechanical cap enforcement in CI
-A job computing `git diff --shortstat <baseline>..HEAD` and failing past the run's declared file/line
-caps. Converts the caps from an honour system into a gate. Would have caught A3 the moment #145 merged
-rather than an audit finding it afterwards. Needs P4 first (one baseline rule). *Source: audit.*
+### O31 · Mechanical landing-delta cap enforcement in CI
+A fail-closed job reads one machine-recorded immutable base SHA, fetches that object explicitly, and
+counts unique changed paths plus added lines in `base..HEAD`. This is a **landing-delta** budget, not
+"cumulative churn" across intermediate commits. Binary/generated/tracking files still count as
+changed paths. Needs P4; missing base, shallow-history failure, or unparsable output fails the gate.
+*Source: audit, corrected in issue #150.*
 
 ### O32 · Required-status-check configuration as recorded state
 P1 sets the checks; this item records *which* checks are required, where, and adds a periodic
-verification that the setting still holds. Repo settings drift silently and invisibly — an assertion
-that the gate exists is itself a gate. *Source: audit A1.*
+verification that the setting still holds. Prefer one stable aggregate `Run 4 Gate` job with
+`if: always()` and explicit `needs` that fails unless every required dependency succeeded, over
+requiring a variable set of matrix/path-filtered jobs. Until that aggregate exists, protect the branch
+with the current stable checks and record the transition.
+Repo-settings drift must fail visibly. *Source: audit A1, corrected in issue #150.*
 
 ### O33 · Fix the fail-open coverage guard
 `tools/check_supabase_deno_matrix.mjs` silently discards `[functions.*]` sections its regex cannot
 parse, so `[functions.x] # comment` and `[functions."x"]` (mandatory quoting for dotted names) drop a
-deployable function out of the required set. Throw instead of filter. Additionally verify that
-`deno-check` is actually running (not `if: false`, not a no-op) and that the checked file equals the
-declared `entrypoint`. *Source: audit A7/A11. Belongs to Run 3 if O24 is reworked; to Run 4 if O24
-merges as-is.*
+deployable function out of the required set. Replace regex-as-parser with a TOML-aware, fixture-tested
+reader that fails on unsupported forms. Additionally verify that `deno-check` is enabled, invokes the
+expected command, and checks the exact declared `entrypoint`. This is part of the O24 rebuild.
+*Source: audit A7/A11, corrected in issue #150.*
 
 ### O34 · Deploy-path attestation
-The frozen lock constrains CI only. There is no deploy workflow; deploys are manual
-`npx supabase functions deploy`, which never reads `supabase/deno.lock`, and the handlers use a bare
-unversioned `jsr:@supabase/functions-js` reference. Make the deployed dependency set equal the gated
-one, or state honestly that it is not. Includes verifying that the Supabase CLI tolerates the `"lock"`
-key in a file it parses as an import map — currently untested on any path. *Source: audit A12.*
+Current evidence proves `deno check --frozen`, not what the pinned Supabase CLI bundles. Official
+Supabase guidance says per-function `deno.json` is the recommended deployment configuration, but does
+not by itself prove that this repo's lock-v5 file and `lock` object are honored identically by every
+CLI bundling mode. Run a non-hosted bundle/serve probe on the pinned CLI, capture the resolved module
+graph or bundle hash, and compare it with the gated graph. If parity cannot be demonstrated, pin exact
+imports or vendor dependencies and keep deploy reproducibility blocked. Do not state that the CLI
+"never reads" the lock without evidence. *Source: audit A12, corrected in issue #150.*
 
-### O35 · Import-boundary linting
+### O35 · Import-boundary enforcement
 `AGENTS.md` states that `model-training/` may never be imported by `apps/`, `supabase/`, `shared/`, or
 `tools/brain-ingest`, and forbids cross-module `/impl` imports. Both are prose. A repo-wide search for
 `dependency-cruiser`, `eslint-plugin-boundaries`, `no-restricted-imports` and `import/no-restricted-paths`
-returns zero hits. This is now the only architectural boundary with a newly added foreign language on
-the other side of it and no mechanical guard. *Source: audit.*
+returns zero hits. Use fixture-tested guards covering TS imports/path aliases, Dart imports, forbidden
+`/impl` access, and subprocess/path references into the isolated model-training workspace; an ESLint-
+only rule is insufficient for this polyglot boundary. *Source: audit, corrected in issue #150.*
 
 ### O36 · Secret scanning on push and PR
 O25's acceptance proves "no server key in a client bundle, `NEXT_PUBLIC_*`, response, trace or log"
@@ -82,15 +93,19 @@ cannot be the regression guard for that. *Source: audit.*
 on the Windows toolchain will not byte-match `ubuntu-latest` without a pinned font loader and a
 tolerance-configured comparator. O28 assumes this infrastructure exists. Either scope it as a small
 pre-U4 task or drop image goldens in favour of widget + semantics assertions — the latter also removes
-~24–30 files from Run 3's file cap, which A8 says is the binding constraint. *Source: audit.*
+~24–30 files from the prior estimate. **Run 4 defaults to widget + semantics assertions and defers
+image goldens** unless a separate determinism proof is accepted. *Source: audit, decision in issue
+#150.*
 
-### O38 · Promote `TEST_MODE_LABEL` into `shared/`
+### O38 · Promote `TEST_MODE_LABEL` through the shared contract seam
 The user-facing trust disclaimer is duplicated across four modules: `tools/llm-router/src/types.ts`
 (canonical), `apps/nao/src/lib/claimsControl.ts` (comment says "mirrors … verbatim"),
 `apps/nao/src/components/ModelsPanel.tsx` (retyped as a raw JSX literal, not the constant), and
 biotope's provenance screen ("Hardcoded mirror of TEST_MODE_LABEL"). This is the anti-pattern
-`B-PL21` flags for `PaperRecord`, but on a **trust label** — and the register does not list it. O27
-must touch all four anyway. Requires a `shared/` change, so it depends on P2. *Source: audit.*
+`B-PL21` flags for `PaperRecord`, but on a **trust label**. Use the repository's TS/Dart generated or
+parity-guarded constants pattern; neither language may directly import the other's source. O27 must
+touch all four anyway. Requires a `shared/` change and two reviewers, so it depends on P2. *Source:
+audit, corrected in issue #150.*
 
 ### O39 · Dependency update channel
 No `dependabot.yml`, no renovate config. U0 freezes a fifth pinned toolchain (Deno 2.8.1 + a shared
@@ -98,22 +113,47 @@ No `dependabot.yml`, no renovate config. U0 freezes a fifth pinned toolchain (De
 deliberately increases pinning without adding any mechanism to un-pin safely. *Source: audit.*
 
 ### O40 · Doc-status hygiene
-Two concrete defects. (a) All five `docs/temp/run3/*.md` carry `status: canonical` while their own
-summaries say "not ground truth", and `context_sync.mjs` renders no flag for `canonical`, so they are
-indistinguishable from constant-layer truth in the generated index — contradicting the CONSTANT vs
-VARIABLE layering in `AGENTS.md`. (b) `docs/shared/decisions/0003-paper-reliability.md` has
+At audit time, the Run 3 cockpit, scope, prompt, and register carried `status: canonical` despite being
+temporary planning aids. Issue #150 reclassified the closing Run 3 execution docs as draft and
+promoted the living register, so that slice is resolved. The remaining defect is
+`docs/shared/decisions/0003-paper-reliability.md`: it has
 `status: accepted` in frontmatter and **"Status: Proposed"** in its body; `context_sync` freezes
 accepted ADR bodies, so a self-described proposal is immutable — and O27 renders user-facing
 study-design copy off its semantics. Resolving (b) needs a superseding ADR, not an edit.
-*Source: audit A15/A16.*
+*Source: audit A15/A16; partial closeout in issue #150.*
 
-## 3. Carried forward from the pending-build register
+## 3. Recommended priority tranche
 
-Run 3's O24–O29 fully covers **14** register rows and partially covers 3. The following **41 rows plus
-5 schema gaps** are untouched. Original IDs are preserved deliberately — Run 4 must reuse them, not
-renumber, so the trail back to Run 1 and Run 2 survives.
+This is the largest tranche this review signs off for **preflight**. It is not authorized to execute
+until P1-P7 and the base/cap/reviewer decisions are recorded. The preflight may shrink it; it may not
+silently add O28, O29, O37, O39, O40, or any other register row.
 
-### 3.1 Ownership holes found by the audit — no owner today
+| Priority | Candidate unit | Contents | Start gate |
+|---|---|---|---|
+| 1 | R4-U0 · trustworthy release gate | Rebuild O24 with O31-O34; stable required aggregate, current landing-SHA evidence, fail-closed config/matrix coverage, and deploy-path dependency proof | P1, P4, P7; fresh Run 4 base |
+| 2 | R4-U1 · mechanical boundaries | O35 + O36; polyglot import/path guard and pinned secret scanning | R4-U0 gate is required and green |
+| 3 | R4-U2 · authorization and key boundary | O25; nao RBAC/RLS, redacted global jobs, named server-key migration | Credential decisions recorded; no hosted mutation without exact approval |
+| 4 | R4-U3 · raw-truth and retry safety | O26; atomic demo loading and idempotent/single-flight pipeline publication | R4-U2 blocks ordinary-account access |
+| 5 | R4-U4 · scientific semantics | O27 + O38; claim-kind preservation, artifact trust, revision-bound dispositions, TS/Dart trust-label parity | P2 second reviewer; R4-U0 green; O27 contract brief accepted |
+
+Default deferrals:
+
+- **O28/O37:** defer image goldens and the broader accessibility/UI tranche; use widget + semantics
+  assertions only where R4-U4 touches UI.
+- **O29:** defer until a legal second-provider posture, immutable release inputs, and an approved
+  isolated rehearsal target exist. Zero live provider calls and zero hosted writes in R4-U0-U4.
+- **O39:** dependency-update policy is valuable maintenance, but it must not dilute the blocker
+  tranche.
+- **O40:** perform only the Run 3→Run 4 routing needed for safe launch. Superseding ADR work remains a
+  separately reviewed decision change.
+
+## 4. Carried forward from the pending-build register
+
+The former O24-O29 scope would fully cover **14** register rows and partially cover 3 if all six units
+were completed. The following **41 rows plus 5 schema gaps** remain outside that scope. Original IDs
+are preserved deliberately — Run 4 must reuse them, not renumber, so the trail survives.
+
+### 4.1 Ownership holes found by the audit — no owner today
 
 | ID | What | Finding |
 |---|---|---|
@@ -122,13 +162,13 @@ renumber, so the trail back to Run 1 and Run 2 survives.
 | `B-SEC1` (suppression slice) | Small-cohort suppression — O25 defers the decision rather than implementing it | A10 |
 | `B-PL20` | Docs reconciliation stated as a precondition for unattended Run-3 work, with no unit, no slot and no owner | A21 |
 
-### 3.2 Schema and storage primitives
+### 4.2 Schema and storage primitives
 `A1` env_daily table absent (blocks 18 W3 metrics) · `A2` derived_metrics unwritten/unread (blocks ~16)
 · `A3` no static/T5 storage table · `A4` events/state_bands absent from `metric_daily_values`
 (17 metrics dashboard-invisible) · `A5` daily_log not generalised.
 Depends on `B-PL5`/O4 and `B-PL6`/O5.
 
-### 3.3 Backlog O-items never pulled into a run
+### 4.3 Backlog O-items never pulled into a run
 `B-PL2` O1 deadband reconciliation + drift guard · `B-PL3` **O2 Method & Parameter Register — a hard
 gate on every statistical sign-off** · `B-PL4` O3 registry catalog · `B-PL5` O4 derived_metrics RLS ·
 `B-PL6` O5 storage-primitive coverage · `B-PL7` O6 CODEOWNERS + branch protection · `B-BR8` O8
@@ -139,19 +179,19 @@ two budget ledgers**.
 `B-PL3`/O2 is the most consequential: it blocks `B-R1-3`'s calibration backlog and `B-SCI2`'s
 calibration half, and Run 3 excludes it explicitly.
 
-### 3.4 Brain / verifier
+### 4.4 Brain / verifier
 `B-BR4` custom support models (the roster's NLI pre-filter and models (b)/(c) — now the separate
 model-training workstream; the *product* gap stays here) · `B-BR5` presentation agent unwired ·
 `B-BR6` autonomous gap→research loop · `B-BR9` M6 `InsightFiredEvent` never emitted · `B-BR10`
 `contradiction` → `needsReview()` unwired, **no owner** · `B-BR12` non-deterministic verdicts (accepted).
 
-### 3.5 UI / app surface
+### 4.5 UI / app surface
 `B-UI1` porcelain-luxury reskin · `B-UI2` formal user testing · `B-UI4` Windows-desktop Flutter launch
 · `B-UI5` nao `/login` click-path never driven end-to-end · `B-UI6` Run-now dropdown ignores db seeds ·
 `B-UI7` nao production build / OpenNext / Worker secrets unverified · `B-UI8` O10(c) ingestion-progress
 boundary.
 
-### 3.6 Platform and process
+### 4.6 Platform and process
 `B-PL1` evaluate-signals nightly cron · `B-PL8` `shared/brain` has no typecheck target · `B-PL9` iOS
 path env-gated · `B-PL10` **B8 two-reviewer rule (see P2)** · `B-PL11` ADR amendment intents recorded
 but unapplied · `B-PL16` run-pipeline summaries scale with users × metrics · `B-PL17` semantic-graph
@@ -160,7 +200,7 @@ across the ingestion/nao boundary · `B-COST1` **router budget not atomic and no
 six 5-USD node caps imply 30 USD/day against a stated lower ceiling, and a corrupt ledger resets to
 zero**.
 
-### 3.7 Review and sign-off debt
+### 4.7 Review and sign-off debt
 `B-R1-1` ~20 of 24 Run-1 unit sign-offs outstanding · `B-R1-2` human blockers B2–B12 · `B-R1-3`
 calibration backlog · `B-R1-4` register hygiene · `B-R2-1` **all 14 Run-2 unit sign-offs pending** ·
 `B-R2-2`, `B-R2-3` recorded, not defects.
@@ -168,16 +208,16 @@ calibration backlog · `B-R1-4` register hygiene · `B-R2-1` **all 14 Run-2 unit
 Combined with A14, this is 34 outstanding sign-offs. Run 4 should not add a 35th without changing how
 acceptance works.
 
-## 4. Explicitly not in Run 4
+## 5. Explicitly not in the Run 4 priority tranche
 
-- **O24–O29** — Run 3 owns them while it is live.
+- **O28 and O29** — retained in the promoted register, but deferred by default for this tranche.
 - **The five model-training units MT1–MT5** — separate workstream, separate budget, and per P3 they
   should also get a separate integration base.
 - **Anything requiring hardware or accounts that do not exist**: CGM, real wearables, iOS/Mac + paid
   Apple account, a physical Android device for TalkBack.
 - **Production cutover, hosting, or any claim of scientific validation.** Unchanged from Run 3.
 
-## 5. ID hygiene — read before reusing any ID
+## 6. ID hygiene — read before reusing any ID
 
 The audit found the register's own indexing unreliable; Run 4 must not inherit the errors.
 

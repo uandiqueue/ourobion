@@ -1,30 +1,64 @@
 ---
-title: Run 4 — planning cockpit
-summary: Entry point for Run 4, assembled from the 2026-07-27 independent adversarial audit of Run 3. Run 4 is candidate scope only; it holds six preconditions Run 3 cannot satisfy itself, ten new optimisation items O31-O40, and the 41 register rows plus 5 schema gaps Run 3 does not cover.
+title: Run 4 — reviewed planning cockpit
+summary: Entry point for Run 4 after independent audit and Codex confirmation. The corrected prompt is technically signed off but not authorized to execute; the pending-build register is promoted here and a smaller preflight-gated priority tranche replaces the oversized Run 3 plan.
 type: plan
 scope: shared
-status: draft
+status: canonical
 updated: 2026-07-27
 ---
 
-# Run 4 — planning cockpit
+# Run 4 — reviewed planning cockpit
 
-Run 4 has **not** started and its scope is **not locked**. It exists because an independent audit of
-Run 3 on 2026-07-27 (issue #147) found that most of the known backlog sits outside Run 3, and that
-several of Run 3's own preconditions cannot be satisfied from inside Run 3.
+Run 4 has **not** started. Its paste-ready prompt is technically signed off for later use, but this
+documentation change is **not execution authorization**. The prompt begins with a preflight and must
+stop unless the human-owned base, branch-protection, cap, credential, and reviewer gates are recorded.
 
 ## Documents
 
 | Document | Role |
 |---|---|
 | [`run3-audit-findings.md`](./run3-audit-findings.md) | The audit: 2 blockers, 6 high, 10 medium, 3 low. Record-only — nothing was fixed |
-| [`next-build-optimizations.md`](./next-build-optimizations.md) | Candidate scope: preconditions P1–P6, new items O31–O40, and the carried-forward register |
+| [`next-build-optimizations.md`](./next-build-optimizations.md) | Reviewed scope: corrected preconditions P1–P7, O31–O40, and the five-unit maximum priority tranche |
+| [`pending-build-register.md`](./pending-build-register.md) | Living gap superset promoted from Run 3; O24–O29 are unfinished candidates, not accepted work |
+| [`orchestrator-prompt.md`](./orchestrator-prompt.md) | Paste-ready Run 4 prompt; technically signed off, explicitly dormant until Jayden says start |
+
+## Independent confirmation and sign-off
+
+**Verdict: agree with Claude's Run 3 stop / do-not-merge conclusion, with corrections incorporated
+into the Run 4 prompt.** Codex rechecked the audit on 2026-07-27 at local integration commit
+`fef311f` and live GitHub state:
+
+- `dev-phase2-run3` and `dev-phase2` were both unprotected with zero required status checks; the only
+  active ruleset targeted `main` and contained no required-status-check rule.
+- PR #144 remained open at head `5eebddd` against stale base `9b41f4a`; its 15 green checks were from
+  2026-07-26, while the current integration base had advanced and locally produced a conflict in
+  `.github/workflows/ci.yml`, the file under test.
+- The MT0 merge changed 59 files and added 5,362 lines after the Run 3 candidate base, confirming that
+  the recorded cap baseline and the actual landing state diverged materially.
+- The proposed config guard's regex omits valid TOML section forms; its matrix check does not prove the
+  job is enabled or that it checks the declared entrypoint.
+
+Corrections applied before sign-off:
+
+1. A prompt cannot waive AGENTS.md's two-reviewer rule for `shared/`; R4-U4 remains blocked until a
+   second reviewer exists.
+2. Run 4 uses a fresh immutable base and an explicitly defined **landing-delta** cap. It does not
+   retroactively subtract unrelated merges from an old baseline.
+3. Supabase deploy/lock behavior is treated as unproven until the pinned CLI bundle path is exercised;
+   the prompt does not repeat the unsupported claim that deploy "never reads" the lock.
+4. `TEST_MODE_LABEL` must cross the TS↔Dart seam through generation or a parity guard, not a direct
+   cross-language import.
+5. Run 4 preflights at most five priority units (R4-U0–R4-U4). O28/O29 and maintenance candidates are
+   deferred by default instead of silently rolling sixteen items into one run.
+
+Technical sign-off: **Codex / issue #150 / 2026-07-27.** This signs the prompt's safety and sequencing,
+not the implementation, human decisions, hosted changes, provider calls, PR merges, or Run 4 start.
 
 ## Entry state — read this first
 
-**Run 3 is not built.** `dev-phase2-run3` carries 18 commits: planning docs plus the model-training
-workstream. **None of O24–O29 has merged.** The only Run-3 implementation is U0/O24, open as PR #144,
-which this audit recommends **not** merging in its current form (two blockers).
+**Run 3 is closing without an accepted unit. None of O24–O29 merged.** The only implementation attempt
+is U0/O24 in PR #144; do not merge it. Its useful intent must be rebuilt and tested on the fresh Run 4
+base.
 
 **Run 3 is six units, U0–U5 = O24–O29.** There is no O30 and no U6 — that version survives only in the
 frozen Run-2 snapshot, which `AGENTS.md` forbids building from. Docs still saying "O24–O30" are stale.
@@ -35,14 +69,12 @@ frozen Run-2 snapshot, which `AGENTS.md` forbids building from. Docs still sayin
    is on `main` and has no `required_status_checks`. A PR into `dev-phase2-run3` can have all 15 jobs
    red and still merge. Since the owner does not review code, the stated safety model — CI plus review
    — is currently running on one leg. **Precondition P1**, and it costs minutes.
-2. **Run 3's change budget is already mostly spent**, by the MT0 merge (PR #145), which was mine. That
-   merge added 59 files / 5,362 insertions after the recorded cap baseline, ~69% of both caps, on work
-   the plan declares out of scope — and it broke U0's evidence and mergeability. Five more
-   model-training PRs are currently aimed at the same branch. **Preconditions P3 and P4.**
-3. **Two of the five remaining units cannot complete as written.** U3/U4/U5 wait on a `shared/`
-   two-reviewer gate that has been unsatisfiable since Run 1 and is absent from the run's own
-   human-decisions file; O29 requires a second provider family that is not provisioned, against caps
-   allocated backwards for the only legal configuration. **Preconditions P2 and P6.**
+2. **Run 3's change budget and landing state diverged**, because MT0 added 59 files / 5,362 insertions
+   after the candidate baseline and broke U0's evidence and mergeability. Run 4 starts from a fresh
+   exact base; model training must not share its integration branch. **Preconditions P3 and P4.**
+3. **O27 and O29 cannot complete as written today.** O27 requires a real second `shared/` reviewer;
+   O29 requires a second provider posture and release inputs that do not exist. O27 stays gated and
+   O29 is deferred by default. **Preconditions P2 and P6.**
 
 ## The pattern Run 4 should attack
 
@@ -62,8 +94,8 @@ rather than diffs.
 
 ## How Run 4 relates to Run 3
 
-Run 4 does **not** duplicate O24–O29 while Run 3 is live. If Run 3 is cut short — likely, since the
-audit puts its remaining scope 1.7–2.1× over its file cap — its unbuilt items return to the pending
-register per Run 3's own rule and become Run 4 candidates then.
+O24–O29 are now preserved in the promoted register. Only O24–O27 appear in the recommended Run 4
+priority tranche, and even those remain conditional on preflight. O28/O29 stay visible without being
+silently authorized.
 
-Do not treat this folder as authorising work. Lock a subset first.
+Do not run the prompt until Jayden explicitly starts Run 4.

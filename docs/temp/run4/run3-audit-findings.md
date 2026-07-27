@@ -12,6 +12,10 @@ updated: 2026-07-27
 Record-only. **Nothing in this audit was fixed.** Requested by Jayden, who is not reviewing code
 directly, so this is the only independent check between the work and the integration branch.
 
+> Location line numbers below refer to audit commit `c731238` before issue #150 promoted and amended
+> the live Run 4 scope/register. The finding IDs and evidence remain historical; use the current
+> [`README.md`](./README.md) for the corrected sign-off and present execution boundary.
+
 **Entry state, and the first finding.** Run 3 is *not built*. `dev-phase2-run3` carries 18 commits,
 all planning docs plus the model-training workstream; **none of O24–O29 has merged**. The only
 Run-3 implementation is U0/O24 as open PR #144. The audit therefore covers what exists — one unit,

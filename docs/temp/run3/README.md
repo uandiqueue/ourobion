@@ -1,13 +1,16 @@
 ---
-title: Run 3.0 — planning cockpit and locked product scope
-summary: Entry point for Phase-2 Run 3.0: its six-unit, product-only remediation tranche, living pending-build register, dependencies, human setup gates, and eventual sign-off record. Model training is an independent workstream. Planning only; Run 3 has not started.
+title: Run 3.0 — closing planning cockpit
+summary: Historical planning cockpit for the unexecuted six-unit Run 3 tranche. Run 3 is closing without an accepted unit; its living pending-build register and future execution authority have moved to docs/temp/run4. Model training remains independent.
 type: plan
 scope: shared
-status: canonical
+status: draft
 updated: 2026-07-26
 ---
 
-# Run 3.0 — planning cockpit and locked product scope
+# Run 3.0 — closing planning cockpit
+
+> **Do not launch Run 3.** It is closing without an accepted implementation unit. PR #144 must not
+> merge in its audited state. Future work is governed by [`../run4/README.md`](../run4/README.md).
 
 Run 3 is a **six-unit, remediation-first product build** extending Run 2. It has not started. The
 independent Run-2 audit established a maximum seven-unit/half-Run-2 envelope; Jayden subsequently
@@ -23,8 +26,9 @@ in the living register below.
 | Document | Role |
 |---|---|
 | [`next-build-optimizations.md`](./next-build-optimizations.md) | **Scope authority:** order, gates, caps, and locked O24–O29 definitions |
-| [`pending-build-register.md`](./pending-build-register.md) | **Gap superset:** every known open product gap, including work outside Run 3 |
-| [`orchestrator-prompt.md`](./orchestrator-prompt.md) | Paste-ready, resumable launch prompt for the six-unit Run 3 product build |
+| [`../run4/pending-build-register.md`](../run4/pending-build-register.md) | **Promoted gap superset:** living open-work register; the local file is only a historical pointer |
+| [`orchestrator-prompt.md`](./orchestrator-prompt.md) | Historical Run 3 prompt; explicitly superseded and not launchable |
+| [`../run4/orchestrator-prompt.md`](../run4/orchestrator-prompt.md) | Technically signed Run 4 prompt; dormant until Jayden explicitly starts it |
 | [`model-training-code-build-orchestrator-prompt.md`](./model-training-code-build-orchestrator-prompt.md) | Paste-ready prompt for the independent five-model code-build workstream; stored here by human request, not a Run 3 unit |
 | [`../model-training/README.md`](../model-training/README.md) | Separate model-training workstream; not a Run-3 unit or implementation dependency |
 
