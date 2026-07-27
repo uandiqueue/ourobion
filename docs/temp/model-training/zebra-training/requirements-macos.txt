@@ -1,0 +1,21 @@
+# Zebra NLI Shadow v0 — pinned dependencies for Apple Silicon (macOS arm64, Python 3.10).
+#
+# Exact `==` pins, matching model-training/constraints.txt in the Ourobion repo so that a run on
+# this bundle and a run in-repo resolve to the same versions. There is no hash-pinned lock yet;
+# that gap is recorded as a human gate in the repo's human-gates.md and is NOT silently papered
+# over here.
+#
+# torch for arm64 ships Metal/MPS support in the wheel — there is no separate CUDA payload and no
+# extra index URL is needed. The wheel is ~59 MB (vs ~190 MB on Windows).
+
+torch==2.4.1
+transformers==4.44.2
+datasets==2.20.0
+numpy==1.26.4
+scipy==1.13.1
+scikit-learn==1.5.1
+
+# Deliberately NOT included:
+#   onnx / onnxruntime  -> only needed by the Leafcutter ONNX export path, not by Zebra
+#   accelerate          -> not required for single-device training; adds a moving part
+#   wandb / tensorboard -> no experiment tracker; this run writes plain JSON artifacts
