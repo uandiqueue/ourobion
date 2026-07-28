@@ -169,7 +169,8 @@ Streak counts as a streak day if DQS ≥ 60. (Configurable — see M6.)
 3. Build standing water weekly audit prompt logic.
 4. Build antibiotic course setup flow + gut watch derivation.
 5. Implement `antibiotic_service.dart` for `antibiotic_courses`.
-6. Replace temporary HomeScreen `[DEV]` entry points once app shell tabs exist.
+6. ~~Replace temporary HomeScreen `[DEV]` entry points once app shell tabs exist.~~
+   (Done — `AppShell` routes these screens; the placeholder file has been deleted)
 7. Add focused tests for DQS, normalisation, and upsert payloads.
 
 ---

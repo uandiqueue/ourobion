@@ -17,12 +17,19 @@ class InsightDeck extends StatefulWidget {
   final Future<void> Function(InsightCard card) onDismiss;
   final void Function(InsightCard card) onOpenDetail;
 
+  /// Re-read the servable set from the backend. Required, not optional: the
+  /// empty-deck action MUST go back to `insight_cards` rather than rewind a
+  /// local index, or it resurrects cards whose row already reads
+  /// `archived`/`dismissed` and presents them as fresh (see [_resetDeck]).
+  final Future<void> Function() onReplay;
+
   const InsightDeck({
     super.key,
     required this.cards,
     required this.onSave,
     required this.onDismiss,
     required this.onOpenDetail,
+    required this.onReplay,
   });
 
   @override
@@ -65,7 +72,28 @@ class _InsightDeckState extends State<InsightDeck> {
     _advance();
   }
 
-  void _resetDeck() => setState(() => _idx = 0);
+  /// Re-reads the deck from the backend instead of rewinding [_idx].
+  ///
+  /// Rewinding the index was a lie about state: every card the user had just
+  /// swiped already carried `status = archived` or `dismissed` in
+  /// `insight_cards`, and none of them was servable any more — yet they came
+  /// back looking like fresh, swipeable insights, and swiping them again wrote
+  /// the same status a second time. [InsightService.getInsights] is the only
+  /// thing that knows what is still `active` and unexpired, so ask it.
+  ///
+  /// Order matters: await the re-read FIRST, then zero the index against the
+  /// list that came back.
+  Future<void> _resetDeck() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    await widget.onReplay();
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _idx = 0;
+      _dx = 0;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +103,10 @@ class _InsightDeckState extends State<InsightDeck> {
     final next2 = left > 2 ? widget.cards[_idx + 2] : null;
 
     if (current == null) {
-      return _EmptyDeck(hasAnyCards: widget.cards.isNotEmpty, onReplay: _resetDeck);
+      return _EmptyDeck(
+        hasAnyCards: widget.cards.isNotEmpty,
+        onReplay: _busy ? null : _resetDeck,
+      );
     }
 
     return Stack(
@@ -299,7 +330,9 @@ class _FrontCard extends StatelessWidget {
 
 class _EmptyDeck extends StatelessWidget {
   final bool hasAnyCards;
-  final VoidCallback onReplay;
+
+  /// Null while a re-read is in flight — the button must not queue a second one.
+  final VoidCallback? onReplay;
   const _EmptyDeck({required this.hasAnyCards, required this.onReplay});
 
   @override

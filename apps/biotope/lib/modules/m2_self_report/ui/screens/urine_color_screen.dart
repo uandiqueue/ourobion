@@ -97,8 +97,15 @@ class _UrineColorScreenState extends State<UrineColorScreen>
                   const SizedBox(height: 24),
 
                   // ── Nav row ──────────────────────────────────────────
+                  //
+                  // Back only. This screen used to render a hardcoded
+                  // '01 / 08' step counter here, but there is no eight-step
+                  // flow: DailyLogScreen is one scrolling form that pushes
+                  // four optional detail screens. A fixed position/total was
+                  // a design-mock leftover claiming progress through a wizard
+                  // that does not exist — a truthful absence beats a derived
+                  // number nobody asked for.
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       GestureDetector(
                         onTap: () => Navigator.of(context).pop(),
@@ -115,15 +122,6 @@ class _UrineColorScreenState extends State<UrineColorScreen>
                             size: 18,
                             color: OurobionColors.onSurface,
                           ),
-                        ),
-                      ),
-                      Text(
-                        '01 / 08',
-                        style: GoogleFonts.manrope(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.4,
-                          color: OurobionColors.onSurfaceVariant,
                         ),
                       ),
                     ],

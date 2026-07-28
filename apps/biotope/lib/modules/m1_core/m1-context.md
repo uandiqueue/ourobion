@@ -60,7 +60,7 @@ String getCopyRule(String ruleKey)          // returns approved phrasing by key
 | Profile creation + onboarding | ✅ Done |
 | Granular consent screen | ✅ Done |
 | Non-diagnostic copy constants | ❌ Not started |
-| App shell + navigation scaffold | 🔨 AuthGate + temporary HomeScreen; tab shell pending |
+| App shell + navigation scaffold | ✅ AuthGate → consent → profile setup → AppShell tabs |
 | PDPA consent copy (Singapore law) | 🔨 Basic consent UI done; legal copy review pending |
 
 ---
@@ -84,10 +84,19 @@ String getCopyRule(String ruleKey)          // returns approved phrasing by key
 enum ConsentScope {
   gutTracking,        // M2 core self-report — required for app to function
   behaviourTracking,  // M2 extended fields (mosquito, food, antibiotics)
-  wearableData,       // M3 — future, shown greyed out in MVP with "coming soon"
-  communityData,      // M7 — future, not shown in MVP UI
+  wearableData,       // M3 — DEFINED BUT UNUSED: nothing reads it, and the
+                      //   consent screen no longer records it (see below)
+  communityData,      // M7 — future, recorded as granted:false at onboarding
 }
 ```
+
+**`wearableData` is not recorded and not enforced.** M3 wearable reading is live
+(`WearableService.syncToday` → `wearable_daily`), gated only by the phone's own
+health-data permission prompt. The consent screen used to append a
+`granted: false` record for this scope while that sync ran, so the record stated the
+opposite of the app's behaviour; it now records nothing for the scope and states the
+real permission path instead. Giving `wearableData` a control that actually gates
+`syncToday` is an open owner decision.
 
 ---
 
@@ -114,10 +123,12 @@ class UserProfile {
 2. ~~Build auth screens (sign in / sign up)~~ (Done)
 3. ~~Build consent screen UI with granular toggles~~ (Done)
 4. ~~Build profile setup UI (name, country, city, wearable toggle)~~ (Done)
-5. Implement app shell navigation (home / log / insights / profile tabs)
-6. Replace temporary `[DEV]` HomeScreen buttons with real app shell routes
-7. Create `shared/constants/copy_guidelines.dart` with all approved strings
-8. Review and finalize PDPA consent copy before any release build
+5. ~~Implement app shell navigation (home / log / insights / profile tabs)~~ (Done —
+   `AppShell`; the temporary `[DEV]` HomeScreen placeholder has been deleted)
+6. Create `shared/constants/copy_guidelines.dart` with all approved strings
+7. Review and finalize PDPA consent copy before any release build — the consent screen
+   now states plainly that consent choices cannot be changed in-app and that no in-app
+   route exists for a data-access/deletion request. Both gaps need a real affordance.
 
 ---
 

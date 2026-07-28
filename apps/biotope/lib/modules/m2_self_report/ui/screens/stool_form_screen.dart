@@ -93,8 +93,12 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                   const SizedBox(height: 24),
 
                   // ── Nav row ──────────────────────────────────────────
+                  //
+                  // Back only — see urine_color_screen.dart for why the
+                  // hardcoded '02 / 08' step counter that used to sit here was
+                  // deleted rather than made real: there is no eight-step flow
+                  // for it to describe.
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       GestureDetector(
                         onTap: () => Navigator.of(context).pop(),
@@ -111,15 +115,6 @@ class _StoolFormScreenState extends State<StoolFormScreen>
                             size: 18,
                             color: OurobionColors.onSurface,
                           ),
-                        ),
-                      ),
-                      Text(
-                        '02 / 08',
-                        style: GoogleFonts.manrope(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.4,
-                          color: OurobionColors.onSurfaceVariant,
                         ),
                       ),
                     ],

@@ -21,9 +21,13 @@ class BadgeChip extends StatelessWidget {
     this.uppercase = true,
   });
 
-  /// Neutral "coming soon" / disabled variant used by rows with no real
-  /// backing data yet (e.g. the Scan tab's environmental sync row).
-  const BadgeChip.disabled({super.key, this.label = 'Coming soon'})
+  /// Neutral disabled variant used by rows with no real backing data yet (e.g.
+  /// the Scan tab's environmental channel row, which passes 'Not built').
+  ///
+  /// [label] is REQUIRED on purpose. It used to default to 'Coming soon', which
+  /// put a delivery promise nobody has made one omitted argument away from
+  /// rendering. The caller has to state what is actually true of its channel.
+  const BadgeChip.disabled({super.key, required this.label})
       : background = const Color(0x148d8578), // subtle neutral, not gold/green
         foreground = OurobionColors.onSurfaceVariant,
         uppercase = true;
