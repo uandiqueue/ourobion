@@ -1,22 +1,34 @@
 ---
 title: Run 4 Unit Signoff Index
-summary: Locked Run 4 unit scope, estimates, dependencies, and current signoff state.
+summary: Current Run 4 unit delivery, PR, evidence, reviewer, reconciliation, and integration state.
 type: signoff-index
-scope: run4-preflight
+scope: run4
 status: draft
-updated: 2026-07-27
+updated: 2026-07-28
 ---
 
 # Run 4 Unit Signoff Index
 
-Triplets are low / expected / high. Human signoff is pending for every row.
+`Built`, `merged`, and `done` are distinct. Check GitHub again before changing any row.
 
-| Unit | Paths | Added lines | Migration/shared | Tests | Review/dependency | State |
-| --- | --- | --- | --- | --- | --- | --- |
-| R4-U0 | 12–15 / 17–22 / 25–31 | 550–750 / 950–1,350 / 1,700–2,500 | no migration/shared | 719 local package/gate tests passed; Flutter zero run | release/CI reviewer | IN PROGRESS; local release qualification passed with root-install/Flutter environment blocks; exact PR-head Linux CI pending |
-| R4-U1 | 6–8 / 9–13 / 14–19 | 300–450 / 600–950 / 1,150–1,800 | no migration/shared | 60–120 likely min | security; after U0 current-SHA CI evidence | LOCKED |
-| R4-U2 | 28 / 40 / 55 | 1,100 / 1,900 / 3,100 | 2–3 migrations; no shared expected | 25 likely min | security/privacy + RLS; P5/role policy | LOCKED |
-| R4-U3 | 20 / 31 / 46 | 1,000 / 1,800 / 3,200 | 2–3 migrations; no shared unless provenance promoted | 35 likely min | raw-truth/concurrency + M2/M3; depends U2 | LOCKED |
-| R4-U4 | 38 / 54 / 74 | 1,600 / 3,000 / 5,000 | 1–2 migrations; definite 5–8 shared paths | 40 likely min | two reviewers | DEFERRED: no available second shared reviewer; no waiver |
+| Unit | Scope | Delivery / PR | Evidence at refresh | Review / dependency | State |
+|---|---|---|---|---|---|
+| R4-U0 | O24 + O31-O34 release gate | PR #161 merged; PR #172 base convention merged | #161 19/19; #172 19/19 | Current gate base still predates merged U2 | `merged`; gate-base/tracking reconciliation required before next landing |
+| R4-U1 | O35 + O36 boundaries and secret scanning | #170 original; #180 stacked remediation | #170 21/21; #180 18/21, with five history secret findings and 14,131 additions > 8,500 | #180 must replace/absorb #170; independent bypass review | `built`, `open-unmerged`, `reconciliation-required` |
+| R4-U2 | O25 authorization/key boundary | #177 merged; corrections #185 + #186 open | #177 19/19; #185 attestation config/lock mismatch; #186 8,565 additions > 8,500 | Combine siblings; rerun 443 auth assertions + nao/internal-auth | `merged`; corrections `open-unmerged`, `reconciliation-required` |
+| R4-U3 | O26 atomic demo loader/retry safety | #184 open draft | 17/19; 15,001 additions > 8,500; aggregate gate consequentially red; local U3 and U2-regression evidence recorded | Reconcile gate base; LoaderPanel target; full HTTP 14 + 7-day walk | `built`, `open-unmerged`, `reconciliation-required` |
+| R4-U4 | O27 + O38 scientific semantics/trust | no accepted PR | no implementation evidence | Jayden + Alton named reviewers; follows U1/U2/base reconciliation | `startable` |
+| R4-U5 | single-paper authoring | #176 open draft; #190 evidence stacked on it | both 17/19; #176 synthetic-merge provenance failure; #190 8,840 additions > 8,500; provider/fixed-flow evidence local | Follows U3/U4; B-PL22 sentence provenance remains | `built`, `open-unmerged`, `reconciliation-required` |
+| R4-U6a/b/c | metric expansion | no current PR | none | Admit only after core closeout | `deferred` |
+| R4-U7 | full biomechanical-botanical UI | #191 canonical; contains #175 | #191 17/19 with 13,449 additions > 8,500; #175 predecessor 19/19 | Rebase after data/contract seam; Jayden + Alton for shared; Flutter/U2/device tests | `built`, `open-unmerged`, `reconciliation-required` |
 
-All-five union is likely 135–155 paths and 8,250–9,000 lines. Accepted U0–U3 cap is 115/8,500 inclusive of promoted Run 4 docs/tracking. A local fixture-backed paper-to-Biotope slice requires separate sizing and admission only if it fits. A breach returns the unit to pending. `dev-phase2-run4` intentionally remains unprotected; `Run 4 Gate` is exact-current-SHA CI evidence only.
+## Gate and cap note
+
+The original locked-core cap is 115 changed paths / 8,500 added lines, measured per unit from the exact
+`RUN4_UNIT_BASE_SHA`. The checked-in base at refresh was `c558c04f...`, while integration had advanced to
+`ad8ef178...`; that drift contributes to several composite cap measurements but does not explain every
+red check. Use the per-PR failures above, advance and test the base mechanically, and never waive the gate.
+
+The owner directed that the full UI scope is not to be trimmed merely to fit the original product-unit
+cap. That is a unit-envelope exception requiring explicit machine-gate reconciliation and evidence; it
+is not permission to disable the gate globally.
