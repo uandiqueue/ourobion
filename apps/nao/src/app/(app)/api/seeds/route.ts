@@ -30,7 +30,17 @@
 // and of PATCH, before `req.json()` and the body parsers — running the parse
 // first handed a non-member a 400-vs-403 schema oracle over both request shapes.
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { guardRole, recordControlEvent, redactDeep, redactText } from '@/lib/authzServer';
+import {
+  NaoControlAuditError,
+  NaoControlOutcomeUnknownError,
+  applyTransactionalControlMutation,
+  controlAuditErrorResponse,
+  controlOperationId,
+  controlOutcomeUnknownErrorResponse,
+  guardRole,
+  redactDeep,
+  redactText,
+} from '@/lib/authzServer';
 import { buildSeedCatalog, parseAddSeedBody, parseToggleSeedBody } from '@/lib/seedsControl';
 import type { DbSeedRow } from '@/lib/seedsControl';
 import { INGEST_SEED_TOPICS } from '@/lib/types';
@@ -80,32 +90,37 @@ export async function POST(req: Request): Promise<Response> {
 
   const { slug, label, queryHint } = parsed.value;
 
-  await recordControlEvent('seeds.add', slug, { label, queryHint });
-
   // Honest guard: a slug shadowing a built-in would be silently ignored by the
   // pipeline (static wins on collision) — refuse it here instead.
   if ((INGEST_SEED_TOPICS as readonly string[]).includes(slug)) {
     return json({ error: `'${slug}' is a built-in seed topic — pick a different slug` }, 409);
   }
 
-  const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase
-    .from('ingestion_seeds')
-    .insert({
-      slug,
-      label,
-      query_hint: queryHint,
-      created_by: gate.userId,
-    })
-    .select(SEED_COLUMNS)
-    .single();
-  if (error) {
+  const operation = controlOperationId(req);
+  if (!operation.ok) return json({ error: operation.error }, 400);
+  try {
+    const result = await applyTransactionalControlMutation({
+      operationId: operation.operationId,
+      action: 'seeds.add',
+      target: slug,
+      detail: { label, queryHint },
+      payload: { label, queryHint },
+    });
+    if (!result.ok) {
     // 23505 = unique_violation on slug — a duplicate, not a server fault.
-    if (error.code === '23505') return json({ error: `seed '${slug}' already exists` }, 409);
-    return json({ error: redactText(error.message) }, 500);
+      const message = result.errorCode === 'duplicate_seed'
+        ? `seed '${slug}' already exists`
+        : result.errorCode === 'duplicate_operation'
+          ? 'this operationId was already accepted'
+          : 'seed mutation failed';
+      return json({ error: message, code: result.errorCode, operationId: result.operationId }, result.status);
+    }
+    return json(redactDeep({ ok: true, operationId: result.operationId, seed: result.record }));
+  } catch (error) {
+    if (error instanceof NaoControlAuditError) return controlAuditErrorResponse(error);
+    if (error instanceof NaoControlOutcomeUnknownError) return controlOutcomeUnknownErrorResponse(error);
+    throw error;
   }
-
-  return json(redactDeep({ ok: true, seed: data }));
 }
 
 export async function PATCH(req: Request): Promise<Response> {
@@ -121,19 +136,30 @@ export async function PATCH(req: Request): Promise<Response> {
   const parsed = parseToggleSeedBody(body);
   if (!parsed.ok) return json({ error: parsed.error }, 400);
 
-  const supabase = await createServerSupabaseClient();
   const { slug, enabled } = parsed.value;
+  const operation = controlOperationId(req);
+  if (!operation.ok) return json({ error: operation.error }, 400);
+  try {
+    const result = await applyTransactionalControlMutation({
+      operationId: operation.operationId,
+      action: 'seeds.toggle',
+      target: slug,
+      detail: { enabled },
+      payload: { enabled },
+    });
+    if (!result.ok) {
+      const message = result.errorCode === 'unknown_seed'
+        ? `unknown seed: ${slug}`
+        : result.errorCode === 'duplicate_operation'
+          ? 'this operationId was already accepted'
+          : 'seed mutation failed';
+      return json({ error: message, code: result.errorCode, operationId: result.operationId }, result.status);
+    }
+    return json(redactDeep({ ok: true, operationId: result.operationId, seed: result.record }));
+  } catch (error) {
+    if (error instanceof NaoControlAuditError) return controlAuditErrorResponse(error);
+    if (error instanceof NaoControlOutcomeUnknownError) return controlOutcomeUnknownErrorResponse(error);
+    throw error;
+  }
 
-  await recordControlEvent('seeds.toggle', slug, { enabled });
-
-  const { data, error } = await supabase
-    .from('ingestion_seeds')
-    .update({ enabled }) // ONLY enabled — the column grant blocks anything else
-    .eq('slug', slug)
-    .select(SEED_COLUMNS)
-    .maybeSingle();
-  if (error) return json({ error: redactText(error.message) }, 500);
-  if (data === null) return json({ error: `unknown seed: ${slug}` }, 404);
-
-  return json(redactDeep({ ok: true, seed: data }));
 }
