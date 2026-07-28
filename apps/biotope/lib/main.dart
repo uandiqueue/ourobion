@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'core/app_preferences.dart';
 import 'core/theme.dart';
 import 'modules/m1_core/impl/auth_service.dart';
 import 'modules/m1_core/impl/consent_service.dart';
@@ -18,6 +19,10 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = false;
   await dotenv.load(fileName: '.env.public');
+
+  // Device-local display preferences, restored before the first frame so the
+  // waking screen never flashes the default backdrop and then correct itself.
+  await AppPreferences.restore();
 
   final supabaseUrl = dotenv.env['SUPABASE_URL'];
   final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];

@@ -99,7 +99,15 @@ export interface InsightCard {
   // BaselineSnapshot.data_sources vocabulary plus 'brain' (the engine appends it when a card
   // rests on verified research edges — generate-insights/index.ts).
   confidence_sources: ('self_report' | 'wearable' | 'env' | 'signal' | 'brain')[];
-  status: 'active' | 'snoozed' | 'dismissed';
+  // SHARED-CONTEXT (AGENTS.md §3, docs/memory/0002): this union is a `shared/` contract type —
+  // the diff that added 'archived' REQUIRES A PR WITH 2 HUMAN REVIEWERS. 'archived' is the user's
+  // deliberate save (Archive tab, swipe-right); 'snoozed' keeps its pre-existing meaning and its
+  // pre-existing rows. Mirrored by: the insight_cards status CHECK
+  // (supabase/migrations/20260728040000_insight_card_archived_status.sql), the Dart
+  // `InsightStatus` enum (apps/biotope/.../m5b_insight_engine/impl/insight_service.dart), and
+  // USER_HELD_STATUSES in supabase/functions/generate-insights/index.ts — a value missing from
+  // that last one is silently un-held and regenerated back to 'active' by the nightly pass.
+  status: 'active' | 'snoozed' | 'dismissed' | 'archived';
   expires_at: string | null;
   rule_id: string;
   phase_generated: string;

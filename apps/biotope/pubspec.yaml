@@ -41,6 +41,10 @@ dependencies:
   google_fonts: ^6.2.1
   country_picker: ^2.0.26
   health: ^13.3.1
+  # Device-local display preferences only (core/app_preferences.dart) — never
+  # user data, which belongs in Supabase. Already resolved transitively before
+  # this line existed; declared directly because the app now imports it.
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:

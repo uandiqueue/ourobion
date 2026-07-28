@@ -11,6 +11,42 @@ import '../../impl/profile_service.dart';
 import '../../models/user_profile.dart';
 import 'sign_in_screen.dart';
 
+/// Every user-facing string the Profile tab's preference rows own.
+///
+/// Enumerated in one place so the non-diagnostic copy gate can assert over the
+/// whole set (test/m1_core/profile_copy_gate_test.dart) instead of trusting a
+/// reviewer to spot a banned word inline.
+abstract final class ProfileTabCopy {
+  static const backdropLabel = 'Living backdrop';
+  static const backdropSubtitle =
+      'Drifting colour orbs on sign-in and load screens. Saved on this device.';
+
+  static const digestLabel = 'Daily digest';
+
+  /// Honest by construction: the preference genuinely persists now (gap 2) —
+  /// server-side, in `profile_notification_prefs`, so it follows the account
+  /// rather than the device — but nothing in this repo composes or sends a
+  /// digest. The row says both. "Account" rather than "profile" because the
+  /// value is deliberately NOT on the `profiles` table.
+  static const digestSubtitle =
+      'Saved to your account. No digest is sent yet.';
+  static const digestSaveFailed =
+      'Not saved — check your connection and try again.';
+
+  static const wearableLabel = 'Wearable connected';
+  static const wearableSubtitle = 'Enables wearable syncing on the Scan tab';
+
+  static const all = <String>[
+    backdropLabel,
+    backdropSubtitle,
+    digestLabel,
+    digestSubtitle,
+    digestSaveFailed,
+    wearableLabel,
+    wearableSubtitle,
+  ];
+}
+
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
 
@@ -20,8 +56,8 @@ class ProfileTab extends StatefulWidget {
 
 class _ProfileTabState extends State<ProfileTab> {
   UserProfile? _profile;
-  bool _loading = true;
   bool _digestEnabled = false;
+  bool _loading = true;
 
   @override
   void initState() {
@@ -32,30 +68,36 @@ class _ProfileTabState extends State<ProfileTab> {
   Future<void> _load() async {
     final client = Supabase.instance.client;
     final userId = client.auth.currentUser!.id;
-    final profile = await ProfileService(client).getProfile(userId);
+    final service = ProfileService(client);
+    // The digest preference lives in its own table behind an RPC, so it is a
+    // second round trip; issue it alongside the profile read rather than after.
+    final results = await Future.wait([
+      service.getProfile(userId),
+      service.getDailyDigestEnabled(),
+    ]);
     if (!mounted) return;
     setState(() {
-      _profile = profile;
+      _profile = results[0] as UserProfile?;
+      _digestEnabled = results[1] as bool;
       _loading = false;
     });
   }
 
   Future<void> _toggleWearableOwned(bool value) async {
-    setState(() => _profile = _profile == null
-        ? null
-        : UserProfile(
-            userId: _profile!.userId,
-            displayName: _profile!.displayName,
-            region: _profile!.region,
-            city: _profile!.city,
-            email: _profile!.email,
-            wearableOwned: value,
-            createdAt: _profile!.createdAt,
-            updatedAt: DateTime.now(),
-          ));
+    setState(() => _profile = _profile?.copyWith(wearableOwned: value));
     final client = Supabase.instance.client;
     await ProfileService(client)
         .updateProfile(client.auth.currentUser!.id, {'wearable_owned': value});
+  }
+
+  /// Both preference rows write through [ProfileService] — the wearable toggle
+  /// via `updateProfile` (a `profiles` column), the digest via
+  /// `setDailyDigestEnabled` (an RPC over a separate table). Different storage,
+  /// one service; neither row opens a second client of its own.
+  Future<void> _writeDigestEnabled(bool value) async {
+    final client = Supabase.instance.client;
+    await ProfileService(client).setDailyDigestEnabled(value);
+    if (mounted) _digestEnabled = value;
   }
 
   Future<void> _signOut() async {
@@ -200,8 +242,8 @@ class _ProfileTabState extends State<ProfileTab> {
               ),
               const SizedBox(height: 10),
               _ToggleRow(
-                label: 'Wearable connected',
-                subtitle: 'Enables wearable syncing on the Scan tab',
+                label: ProfileTabCopy.wearableLabel,
+                subtitle: ProfileTabCopy.wearableSubtitle,
                 value: profile?.wearableOwned ?? false,
                 onChanged: _toggleWearableOwned,
               ),
@@ -220,18 +262,19 @@ class _ProfileTabState extends State<ProfileTab> {
               ValueListenableBuilder<bool>(
                 valueListenable: AppPreferences.backdropEnabled,
                 builder: (context, enabled, child) => _ToggleRow(
-                  label: 'Living backdrop',
-                  subtitle: 'Drifting color orbs on sign-in and load screens',
+                  label: ProfileTabCopy.backdropLabel,
+                  subtitle: ProfileTabCopy.backdropSubtitle,
                   value: enabled,
-                  onChanged: (v) => AppPreferences.backdropEnabled.value = v,
+                  onChanged: AppPreferences.setBackdropEnabled,
                 ),
               ),
               const SizedBox(height: 9),
-              _ToggleRow(
-                label: 'Daily digest',
-                subtitle: 'Not yet connected — preference only',
-                value: _digestEnabled,
-                onChanged: (v) => setState(() => _digestEnabled = v),
+              DailyDigestToggle(
+                // Keyed on the loaded value so a reload re-seeds the switch
+                // instead of leaving stale local state on screen.
+                key: ValueKey(_digestEnabled),
+                initialValue: _digestEnabled,
+                onWrite: _writeDigestEnabled,
               ),
 
               const SizedBox(height: 32),
@@ -256,16 +299,84 @@ class _ProfileTabState extends State<ProfileTab> {
   }
 }
 
+/// The account-level daily-digest preference, persisted to
+/// `profiles.daily_digest_enabled` via the caller's [onWrite] — which
+/// [ProfileTab] points at the same `ProfileService.updateProfile` the wearable
+/// toggle uses. There is no second write path.
+///
+/// Split out of [ProfileTab] so the FAILURE behaviour is testable without a
+/// live Supabase, because that is the part worth pinning: the switch moves
+/// optimistically, and if the write throws it moves BACK and says so. It must
+/// never sit in the "on" position while the column still reads false.
+class DailyDigestToggle extends StatefulWidget {
+  final bool initialValue;
+  final Future<void> Function(bool value) onWrite;
+
+  const DailyDigestToggle({
+    super.key,
+    required this.initialValue,
+    required this.onWrite,
+  });
+
+  @override
+  State<DailyDigestToggle> createState() => _DailyDigestToggleState();
+}
+
+class _DailyDigestToggleState extends State<DailyDigestToggle> {
+  late bool _value = widget.initialValue;
+  bool _saving = false;
+  bool _failed = false;
+
+  Future<void> _set(bool next) async {
+    if (_saving) return;
+    final previous = _value;
+    setState(() {
+      _value = next;
+      _saving = true;
+      _failed = false;
+    });
+    try {
+      await widget.onWrite(next);
+      if (!mounted) return;
+      setState(() => _saving = false);
+    } catch (_) {
+      // Offline, RLS rejection, anything: the column did not change, so the
+      // switch must not pretend it did.
+      if (!mounted) return;
+      setState(() {
+        _value = previous;
+        _saving = false;
+        _failed = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _ToggleRow(
+      label: ProfileTabCopy.digestLabel,
+      subtitle: _failed
+          ? ProfileTabCopy.digestSaveFailed
+          : ProfileTabCopy.digestSubtitle,
+      subtitleIsError: _failed,
+      value: _value,
+      onChanged: _set,
+    );
+  }
+}
+
 class _ToggleRow extends StatelessWidget {
   final String label;
   final String subtitle;
   final bool value;
   final ValueChanged<bool> onChanged;
+  final bool subtitleIsError;
   const _ToggleRow({
     required this.label,
     required this.subtitle,
     required this.value,
     required this.onChanged,
+    this.subtitleIsError = false,
   });
 
   @override
@@ -293,7 +404,9 @@ class _ToggleRow extends StatelessWidget {
                   subtitle,
                   style: GoogleFonts.manrope(
                     fontSize: 12,
-                    color: OurobionColors.onSurfaceVariant,
+                    color: subtitleIsError
+                        ? Theme.of(context).colorScheme.error
+                        : OurobionColors.onSurfaceVariant,
                   ),
                 ),
               ],

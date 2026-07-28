@@ -9,11 +9,17 @@ import '../../index.dart';
 import '../widgets/insight_card_visual.dart';
 import 'insight_provenance_screen.dart';
 
-/// Archive tab — the deck's "saved" (swipe-right) cards. Reuses the same
-/// `snoozed` status the deck writes (see insight_service.dart's
-/// getSnoozedInsights doc comment — no dedicated `archived` status exists yet).
+/// Archive tab — the deck's "saved" (swipe-right) cards, now backed by the real
+/// [InsightStatus.archived] status (migration 20260728040000) rather than the
+/// old `snoozed` stand-in. The query still includes `snoozed` so cards saved
+/// before that migration stay visible; see [InsightService.archiveStatuses].
 class ArchiveTab extends StatefulWidget {
-  const ArchiveTab({super.key});
+  /// [service] / [userId] are injectable for widget tests only — production
+  /// passes neither and falls back to `Supabase.instance`.
+  const ArchiveTab({super.key, this.service, this.userId});
+
+  final InsightService? service;
+  final String? userId;
 
   @override
   State<ArchiveTab> createState() => _ArchiveTabState();
@@ -27,13 +33,14 @@ class _ArchiveTabState extends State<ArchiveTab> {
   @override
   void initState() {
     super.initState();
-    _service = InsightService(Supabase.instance.client);
+    _service = widget.service ?? InsightService(Supabase.instance.client);
     _load();
   }
 
   Future<void> _load() async {
-    final userId = Supabase.instance.client.auth.currentUser!.id;
-    final cards = await _service.getSnoozedInsights(userId);
+    final userId =
+        widget.userId ?? Supabase.instance.client.auth.currentUser!.id;
+    final cards = await _service.getArchivedInsights(userId);
     if (!mounted) return;
     setState(() {
       _cards = cards;

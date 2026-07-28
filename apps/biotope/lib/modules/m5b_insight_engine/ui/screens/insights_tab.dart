@@ -7,7 +7,14 @@ import '../widgets/insight_deck.dart';
 import 'insight_provenance_screen.dart';
 
 class InsightsTab extends StatefulWidget {
-  const InsightsTab({super.key});
+  /// [service] / [userId] are injectable for widget tests only — production
+  /// passes neither and falls back to `Supabase.instance`, which cannot be
+  /// touched under `flutter test` (no initialize). Same seam as
+  /// InsightProvenanceScreen's.
+  const InsightsTab({super.key, this.service, this.userId});
+
+  final InsightService? service;
+  final String? userId;
 
   @override
   State<InsightsTab> createState() => _InsightsTabState();
@@ -22,16 +29,17 @@ class _InsightsTabState extends State<InsightsTab> {
   @override
   void initState() {
     super.initState();
-    _service = InsightService(Supabase.instance.client);
+    _service = widget.service ?? InsightService(Supabase.instance.client);
     _load();
   }
 
   Future<void> _load() async {
     try {
-      final userId = Supabase.instance.client.auth.currentUser!.id;
+      final userId =
+          widget.userId ?? Supabase.instance.client.auth.currentUser!.id;
       final results = await Future.wait([
         _service.getInsights(userId),
-        _service.getSnoozedInsights(userId),
+        _service.getArchivedInsights(userId),
       ]);
       if (!mounted) return;
       setState(() {
@@ -45,8 +53,11 @@ class _InsightsTabState extends State<InsightsTab> {
     }
   }
 
+  /// Swipe-right = "keep this". Writes the real [InsightStatus.archived] — it
+  /// used to write `snoozed` as a stand-in (no `archived` value existed before
+  /// migration 20260728040000).
   Future<void> _save(InsightCard card) async {
-    await _service.updateStatus(card.id, InsightStatus.snoozed);
+    await _service.updateStatus(card.id, InsightStatus.archived);
     if (!mounted) return;
     setState(() => _savedCount += 1);
   }

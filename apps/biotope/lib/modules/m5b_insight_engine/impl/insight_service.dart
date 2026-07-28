@@ -16,7 +16,22 @@ enum InsightCategory { hydration, gut, vector, behaviour, descriptive, relations
 
 enum InsightSeverity { info, notice, watch }
 
-enum InsightStatus { active, snoozed, dismissed }
+/// Card lifecycle status. Mirrors the `insight_cards.status` CHECK
+/// (20260515110000 + 20260728040000) and `shared/types/index.ts`'s union —
+/// held in lockstep by insight_status_contract_test.dart, which parses all
+/// three sources rather than restating the list.
+///
+/// * [active] — servable in the deck.
+/// * [snoozed] — held by the user. Pre-dates [archived] and was the Archive
+///   tab's stand-in for "saved"; existing rows keep this value (see the
+///   20260728040000 migration comment). Nothing in the app writes it today.
+/// * [dismissed] — held by the user; never regenerated.
+/// * [archived] — the user saved the card to the Archive tab (swipe-right).
+///
+/// Every value except [active] must also be listed in `USER_HELD_STATUSES` in
+/// supabase/functions/generate-insights/index.ts, or the nightly regeneration
+/// pass silently flips the card back to [active].
+enum InsightStatus { active, snoozed, dismissed, archived }
 
 /// Who produced the card (§S8 producer column): plain rules engine, a verified
 /// research edge, or the user's own personal-signal evaluator.
@@ -138,6 +153,7 @@ class InsightCard {
   static InsightStatus _parseStatus(String v) => switch (v) {
         'snoozed' => InsightStatus.snoozed,
         'dismissed' => InsightStatus.dismissed,
+        'archived' => InsightStatus.archived,
         _ => InsightStatus.active,
       };
 
@@ -211,16 +227,25 @@ class InsightService {
         .toList();
   }
 
-  /// Fetches `snoozed` insight cards for the user — the Archive tab's "saved"
-  /// list. `snoozed` is reused as "saved" (no dedicated `archived` status
-  /// exists yet; see docs/sessions/ reskin session log Decided #4) via the
-  /// same [updateStatus] call the deck's swipe-right already makes.
-  Future<List<InsightCard>> getSnoozedInsights(String userId) async {
+  /// Statuses the Archive tab shows. [InsightStatus.archived] is the real
+  /// status the deck's swipe-right writes today; [InsightStatus.snoozed] is
+  /// included ONLY to keep rows saved before migration 20260728040000 visible
+  /// — that migration deliberately does not relabel them (see its comment).
+  /// Order is fixed so the PostgREST filter is deterministic in tests.
+  static const archiveStatuses = <InsightStatus>[
+    InsightStatus.archived,
+    InsightStatus.snoozed,
+  ];
+
+  /// Fetches the user's archived ("saved") insight cards — the Archive tab's
+  /// list, and the source of the Insights header's SAVED count.
+  Future<List<InsightCard>> getArchivedInsights(String userId) async {
     final data = await _client
         .from('insight_cards')
         .select()
         .eq('user_id', userId)
-        .eq('status', 'snoozed') as List<dynamic>;
+        .inFilter('status', archiveStatuses.map(statusValue).toList())
+            as List<dynamic>;
     return data
         .map((row) => InsightCard.fromJson(row as Map<String, dynamic>))
         .toList();
@@ -237,16 +262,21 @@ class InsightService {
         .map((rows) => filterEmission(rows, _nowUtc()));
   }
 
-  /// Updates a card's status to snoozed or dismissed.
+  /// The DB literal for an [InsightStatus]. Exhaustive by construction: adding
+  /// an enum value without a case here is an analyzer error, which is the
+  /// cheapest of the four mirrors to get wrong-proof.
+  static String statusValue(InsightStatus status) => switch (status) {
+        InsightStatus.active => 'active',
+        InsightStatus.snoozed => 'snoozed',
+        InsightStatus.dismissed => 'dismissed',
+        InsightStatus.archived => 'archived',
+      };
+
+  /// Writes a card's status (archive / dismiss / reactivate).
   Future<void> updateStatus(int cardId, InsightStatus status) async {
-    final value = switch (status) {
-      InsightStatus.snoozed => 'snoozed',
-      InsightStatus.dismissed => 'dismissed',
-      InsightStatus.active => 'active',
-    };
     await _client
         .from('insight_cards')
-        .update({'status': value})
+        .update({'status': statusValue(status)})
         .eq('id', cardId);
   }
 }

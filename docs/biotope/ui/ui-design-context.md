@@ -200,6 +200,13 @@ Four blurred orbs drift slowly — calming, never distracting.
 Properties: `opacity: 0.55`, `blur: 60px`, `borderRadius: 50%`
 Flutter: use `AnimationController` + `AnimatedBuilder` with `Transform.translate` + `BackdropFilter` or `ImageFiltered`.
 
+**User-dismissable, and the choice sticks.** The Profile tab's "Living backdrop" switch reads and
+writes `AppPreferences.backdropEnabled` (`apps/biotope/lib/core/app_preferences.dart`), persisted to
+the device via `shared_preferences` and restored in `main()` before the first frame. It is a *display*
+preference: device-local, never written to Supabase, never synced between installs. Screens that render
+the backdrop must go through `AppPreferences.backdropEnabled` (a `ValueNotifier`) rather than assuming
+it is on.
+
 ---
 
 ## Motion & Animation
@@ -249,7 +256,7 @@ The 5 nav tabs are a cross-module shell (`m1_core/ui/screens/app_shell.dart`) �
 | Home tab | `apps/biotope/lib/modules/m1_core/ui/screens/home_tab.dart` |
 | Scan tab (coverage sweep) / Daily Log / Gut / Behaviour | `apps/biotope/lib/modules/m2_self_report/ui/` |
 | Passive Health / Wearables (read-only sync row) | `apps/biotope/lib/modules/m3_passive_health/ui/` |
-| Environment / Outbreak (deferred — disabled row only) | `apps/biotope/lib/modules/m4_environmental/ui/` |
+| Environment / Outbreak (deferred — inert row only) | `EnvironmentRow` in `apps/biotope/lib/modules/m2_self_report/ui/screens/scan_tab.dart`. `m4_environmental/` is a comment-only `index.dart` with **no `ui/` subfolder** — the previously-listed path never existed |
 | Insights tab (deck) / Archive tab / Discovery Cards | `apps/biotope/lib/modules/m5b_insight_engine/ui/` |
 | Streaks / Rewards | `apps/biotope/lib/modules/m6_engagement/ui/` |
 
