@@ -98,6 +98,18 @@ function Assert([bool]$Condition, [string]$Message) {
   if (-not $Condition) { throw "ASSERT FAILED: $Message" }
 }
 
+function Assert-LocalSupabaseApiUrl([string]$Url) {
+  try { $uri = [Uri]$Url } catch { throw "ASSERT FAILED: invalid local Supabase API URL" }
+  $isLocal = $uri.Scheme -eq 'http' -and
+    ($uri.Host -eq '127.0.0.1' -or $uri.Host -eq 'localhost') -and
+    $uri.Port -eq 54321 -and
+    -not $uri.UserInfo -and
+    ($uri.AbsolutePath -eq '/' -or $uri.AbsolutePath -eq '') -and
+    -not $uri.Query -and
+    -not $uri.Fragment
+  Assert $isLocal 'this dry-run accepts only the exact local Supabase CLI API origin (http://127.0.0.1:54321 or localhost)'
+}
+
 # Run a native command, merging stderr (stderr lines are informational for most CLIs here).
 function Invoke-Native([string]$Exe, [string[]]$Arguments, [string]$WorkDir) {
   Push-Location $WorkDir
@@ -199,6 +211,7 @@ Invoke-Step 'S0 environment: toolchain + supabase keys' -Critical {
     if ($line -match '^\s*API_URL="?([^"]+)"?\s*$') { $script:ApiUrl = $Matches[1] }
   }
   Assert ($script:AnonKey -and $script:ServiceKey -and $script:ApiUrl) 'could not parse ANON_KEY / SERVICE_ROLE_KEY / API_URL from supabase status'
+  Assert-LocalSupabaseApiUrl $script:ApiUrl
 
   # LLM + boundary env for child processes (keys come from the gitignored .env; never printed).
   $envFile = Join-Path $script:RepoRoot 'tools\brain-ingest\.env'
@@ -390,6 +403,9 @@ Invoke-Step 'S5 edge-loader: load artifacts into Postgres (A11 projection)' -Cri
 # ---------------------------------------------------------------- demo user + nao
 
 Invoke-Step 'S6 demo user (auth admin API) + biotope onboarding rows' -Critical {
+  # LOCAL AUTH API BOOTSTRAP ONLY. GoTrue's local admin endpoint requires the legacy
+  # service_role bearer. This credential is never sent to an Edge Function request.
+  Assert-LocalSupabaseApiUrl $script:ApiUrl
   $resp = Invoke-Api 'Post' "$($script:ApiUrl)/auth/v1/admin/users" `
     @{ email = $DemoEmail; password = $DemoPassword; email_confirm = $true } `
     @{ apikey = $script:ServiceKey; Authorization = "Bearer $($script:ServiceKey)" }

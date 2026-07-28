@@ -23,8 +23,16 @@
 // `req.json()` and parseCapsBody — running the parse first handed a non-member a
 // 400-vs-403 schema oracle over this endpoint's request shape.
 import { parseCapsBody } from '@/lib/modelsControl';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { guardRole, recordControlEvent, redactDeep, redactText } from '@/lib/authzServer';
+import {
+  NaoControlAuditError,
+  NaoControlOutcomeUnknownError,
+  applyTransactionalControlMutation,
+  controlAuditErrorResponse,
+  controlOperationId,
+  controlOutcomeUnknownErrorResponse,
+  guardRole,
+  redactDeep,
+} from '@/lib/authzServer';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,26 +58,27 @@ export async function POST(req: Request): Promise<Response> {
 
   const { node, perDayUsdCap, perRunTokenCap } = parsed.value;
 
-  await recordControlEvent('models.cap_override', node, { perDayUsdCap, perRunTokenCap });
+  const operation = controlOperationId(req);
+  if (!operation.ok) return json({ error: operation.error }, 400);
+  try {
+    const result = await applyTransactionalControlMutation({
+      operationId: operation.operationId,
+      action: 'models.cap_override',
+      target: node,
+      detail: { perDayUsdCap, perRunTokenCap },
+      payload: { perDayUsdCap, perRunTokenCap },
+    });
+    if (!result.ok) {
+      const message = result.errorCode === 'duplicate_operation'
+        ? 'this operationId was already accepted'
+        : 'cap mutation failed';
+      return json({ error: message, code: result.errorCode, operationId: result.operationId }, result.status);
+    }
+    return json(redactDeep({ ok: true, operationId: result.operationId, override: result.record }));
+  } catch (error) {
+    if (error instanceof NaoControlAuditError) return controlAuditErrorResponse(error);
+    if (error instanceof NaoControlOutcomeUnknownError) return controlOutcomeUnknownErrorResponse(error);
+    throw error;
+  }
 
-  const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase
-    .from('llm_router_cap_overrides')
-    .upsert(
-      {
-        node,
-        per_day_usd_cap: perDayUsdCap,
-        per_run_token_cap: perRunTokenCap,
-        updated_by: gate.userId,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'node' },
-    )
-    // Explicit column list (layer-1 redaction) — never select/return
-    // `updated_by`. See models/route.ts's comment for why.
-    .select('node, per_day_usd_cap, per_run_token_cap, updated_at')
-    .single();
-  if (error) return json({ error: redactText(error.message) }, 500);
-
-  return json(redactDeep({ ok: true, override: data }));
 }
