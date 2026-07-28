@@ -42,13 +42,17 @@ export function hashTextEvidence(value) {
 //   837b7e690f92dc1669428a2476c9d8d0456020e8  (earliest U0 unit base)
 //   77c98213e23ad56ae37c86201b39ef4e7543a543  (U0 unit base — consolidated Run 3/MT3 tip)
 //   c558c04f1b661a59c8987c96770768eeea46e0cc  (U0 post-reconciliation base; ACCEPTED for U0 only)
+//   ff0546434f081cadc3e5683217d484f250c19139  (R4-U7 canonical-UI base; ACCEPTED for U7/U8 only)
 //
-// Current value is the R4-U7 (canonical full UI) unit base: the `dev-phase2-run4` tip after the
-// U2 merge (PR #177) and the cockpit refresh (PR #194). Holding c558c04 charged every later unit
-// for U2 + docs work that had already landed — PR #191 measured `landing delta has 13449 added
-// lines; cap is 8500` while its own diff is 6,334 added lines across 45 paths. The caps are
-// unchanged and still fail closed; only the per-unit starting point moves.
-export const RUN4_UNIT_BASE_SHA = 'ff0546434f081cadc3e5683217d484f250c19139';
+// The U7 base worked exactly as intended and is now spent. Against it the integration branch
+// measures 60 paths / 7,981 added lines — the UI unit (#191) and the design alignment (#202) both
+// landed there — leaving roughly 55 paths and 519 lines. That is not a budget any real unit fits
+// in, and the shortfall is entirely already-merged work, not the next unit's.
+//
+// Current value is the tip after #191 and #202 merged: the base for the Archive-trends (#200) and
+// Scan-motion (#201) units. Caps unchanged at 115 / 8,500 and still failing closed; only the
+// per-unit starting point moves.
+export const RUN4_UNIT_BASE_SHA = '547280f69fe37fe1c7271ea126002f9ffaadafb9';
 export const RUN4_MAX_CHANGED_PATHS = 115;
 export const RUN4_MAX_ADDED_LINES = 8500;
 export const RUN4_FUNCTIONS = Object.freeze([
