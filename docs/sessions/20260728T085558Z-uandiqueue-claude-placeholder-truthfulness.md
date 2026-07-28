@@ -9,6 +9,8 @@ updated: 2026-07-28
 
 # Placeholder truthfulness sweep — fabricated numbers, dead controls, untrue copy
 
+PR: #211 (into `dev-phase2-run4`, left unmerged for human review)
+
 Branch: `fix/m1-ui/placeholder-truthfulness`
 
 Fixes a verified audit list of UI surfaces that presented something the app cannot
@@ -230,8 +232,10 @@ binary change needing its own PR plus a recorded human decision.
 
 ### Tooling
 
-- `gh issue create` / `gh pr create` and direct `psql` reads were blocked by the local
-  permission classifier, so no session issue was opened and no insight rows could be seeded.
+- `gh issue create` and direct `psql` reads against the local stack were blocked by the
+  local permission classifier, so **no session issue was opened** (the PR body carries the
+  summary instead) and no `insight_cards` rows could be seeded for the deck traversal.
+  `gh pr create` did go through, from an activated PowerShell.
 - The machine ran out of disk mid-session (10 MB free on C:). Reclaimed ~3.9 GB by deleting
   two regenerable `apps/biotope/build/` directories (this worktree's and the main repo's).
   No source was touched. `flutter pub get` also cannot complete in a fresh worktree
