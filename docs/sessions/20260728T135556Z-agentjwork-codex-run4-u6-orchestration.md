@@ -60,5 +60,8 @@ Branch: `chore/run4-u6/orchestration`
 - A4 production activation is blocked on recorded semantics plus real metric collectors.
 - A5 implementation and U6b are blocked on Jayden's recorded storage choice.
 - PR #229 is additionally blocked on the two named `shared/` reviews.
+- PR #229's shared registry change also invalidates the frozen `compute-baselines` deployment graph;
+  the separate release owner must re-record `supabase/deploy-attestation.json` before release evidence
+  can pass. This unit did not edit that release-owned file.
 
 memory: none
