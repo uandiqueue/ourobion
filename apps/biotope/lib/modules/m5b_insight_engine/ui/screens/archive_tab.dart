@@ -5,20 +5,50 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/generated_assets.dart';
 import '../../../../core/theme.dart';
 import '../../../../core/widgets/gold_card.dart';
+import '../../../m5a_baselines/index.dart';
+import '../../../m5a_baselines/ui/widgets/metric_trend_section.dart';
 import '../../index.dart';
 import '../widgets/insight_card_visual.dart';
 import 'insight_provenance_screen.dart';
+
+/// User-facing copy this tab owns directly (the reused [MetricTrendSection]
+/// carries its own gated copy in [TrendCopy] — not duplicated here). Every
+/// string must pass the shared non-diagnostic validator; see
+/// test/m5b_insight_engine/archive_tab_copy_gate_test.dart.
+abstract final class ArchiveTabCopy {
+  static const savedEyebrow = 'SAVED INSIGHTS';
+
+  /// The archived-cards read failing used to leave this tab spinning
+  /// forever — same class of bug fixed in profile_tab.dart's _load(). Now
+  /// caught, surfaced, and recoverable.
+  static const loadFailed =
+      'Your saved insights could not load right now — check your connection and try again.';
+  static const retry = 'Try again';
+
+  static const all = [savedEyebrow, loadFailed, retry];
+}
 
 /// Archive tab — the deck's "saved" (swipe-right) cards, now backed by the real
 /// [InsightStatus.archived] status (migration 20260728040000) rather than the
 /// old `snoozed` stand-in. The query still includes `snoozed` so cards saved
 /// before that migration stay visible; see [InsightService.archiveStatuses].
+///
+/// Also the tab's real look-back surface for metric history (issue #200):
+/// alongside the saved-insight cards, it renders [MetricTrendSection] — the
+/// same reused trend widget/service/chart-math as Home's "TRENDS" section —
+/// under its own eyebrow, so PRESERVED covers both halves of "look back".
 class ArchiveTab extends StatefulWidget {
-  /// [service] / [userId] are injectable for widget tests only — production
-  /// passes neither and falls back to `Supabase.instance`.
-  const ArchiveTab({super.key, this.service, this.userId});
+  /// [service] / [seriesService] / [userId] are injectable for widget tests
+  /// only — production passes none and falls back to `Supabase.instance`.
+  const ArchiveTab({
+    super.key,
+    this.service,
+    this.seriesService,
+    this.userId,
+  });
 
   final InsightService? service;
+  final MetricSeriesService? seriesService;
   final String? userId;
 
   @override
@@ -27,25 +57,49 @@ class ArchiveTab extends StatefulWidget {
 
 class _ArchiveTabState extends State<ArchiveTab> {
   late final InsightService _service;
+  late final MetricSeriesService _seriesService;
+  late final String _userId;
   List<InsightCard> _cards = [];
   bool _loading = true;
+  bool _loadFailed = false;
 
   @override
   void initState() {
     super.initState();
     _service = widget.service ?? InsightService(Supabase.instance.client);
+    _seriesService =
+        widget.seriesService ?? MetricSeriesService(Supabase.instance.client);
+    _userId = widget.userId ?? Supabase.instance.client.auth.currentUser!.id;
     _load();
   }
 
+  /// Never let a failed read leave this tab on a spinner forever — the exact
+  /// bug just fixed in profile_tab.dart's _load(). Clears `_loading` on every
+  /// path and offers an explicit retry via [_retryLoad].
   Future<void> _load() async {
-    final userId =
-        widget.userId ?? Supabase.instance.client.auth.currentUser!.id;
-    final cards = await _service.getArchivedInsights(userId);
-    if (!mounted) return;
+    try {
+      final cards = await _service.getArchivedInsights(_userId);
+      if (!mounted) return;
+      setState(() {
+        _cards = cards;
+        _loading = false;
+        _loadFailed = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _loadFailed = true;
+      });
+    }
+  }
+
+  Future<void> _retryLoad() async {
     setState(() {
-      _cards = cards;
-      _loading = false;
+      _loading = true;
+      _loadFailed = false;
     });
+    await _load();
   }
 
   void _openDetail(InsightCard card) {
@@ -92,21 +146,122 @@ class _ArchiveTabState extends State<ArchiveTab> {
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
-                  : _cards.isEmpty
-                      ? const _EmptyArchive()
+                  : _loadFailed
+                      ? _ArchiveLoadError(onRetry: _retryLoad)
                       : RefreshIndicator(
                           onRefresh: _load,
                           color: OurobionColors.primary,
-                          child: ListView.separated(
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
                             padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-                            itemCount: _cards.length,
-                            separatorBuilder: (_, _) => const SizedBox(height: 11),
-                            itemBuilder: (_, i) => _ArchiveTile(
-                              card: _cards[i],
-                              onTap: () => _openDetail(_cards[i]),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _Eyebrow(ArchiveTabCopy.savedEyebrow, rule: true),
+                                const SizedBox(height: 12),
+                                if (_cards.isEmpty)
+                                  const _EmptyArchive()
+                                else
+                                  for (var i = 0; i < _cards.length; i++) ...[
+                                    if (i > 0) const SizedBox(height: 11),
+                                    _ArchiveTile(
+                                      card: _cards[i],
+                                      onTap: () => _openDetail(_cards[i]),
+                                    ),
+                                  ],
+
+                                // ── Historical metric trends (issue #200) ──
+                                // Real per-metric daily series over the same
+                                // service/chart-math Home uses. No synthetic
+                                // fallback: an empty/failed read renders its
+                                // own explicit state (MetricTrendSection),
+                                // never a fabricated chart.
+                                const SizedBox(height: 28),
+                                _Eyebrow(TrendCopy.eyebrow, rule: true),
+                                const SizedBox(height: 12),
+                                MetricTrendSection(
+                                  service: _seriesService,
+                                  userId: _userId,
+                                ),
+                              ],
                             ),
                           ),
                         ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Eyebrow extends StatelessWidget {
+  final String label;
+
+  /// Pairs the eyebrow with a gold hairline fading across the remaining
+  /// width — same treatment as home_tab.dart's `_Eyebrow` (private there, so
+  /// reproduced rather than imported).
+  final bool rule;
+  const _Eyebrow(this.label, {this.rule = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Text(
+      label,
+      style: GoogleFonts.manrope(
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.6,
+        color: OurobionColors.primary,
+      ),
+    );
+    if (!rule) return text;
+    return Row(
+      children: [
+        text,
+        const SizedBox(width: 10),
+        Expanded(
+          child: Container(
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  OurobionColors.brandGold.withValues(alpha: 0.7),
+                  OurobionColors.brandGold.withValues(alpha: 0),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ArchiveLoadError extends StatelessWidget {
+  final VoidCallback onRetry;
+  const _ArchiveLoadError({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              ArchiveTabCopy.loadFailed,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.manrope(
+                fontSize: 14,
+                color: OurobionColors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton(
+              onPressed: onRetry,
+              child: Text(ArchiveTabCopy.retry),
             ),
           ],
         ),

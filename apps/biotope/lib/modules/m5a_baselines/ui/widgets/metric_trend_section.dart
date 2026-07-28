@@ -19,6 +19,7 @@ abstract final class TrendCopy {
   static const noValuesForMetric =
       'No values for this metric in the last 30 days.';
   static const loadError = 'Trend data could not be loaded right now.';
+  static const retry = 'Try again';
 
   static const all = [
     eyebrow,
@@ -27,6 +28,7 @@ abstract final class TrendCopy {
     emptyBody,
     noValuesForMetric,
     loadError,
+    retry,
   ];
 }
 
@@ -199,7 +201,36 @@ class MetricTrendSectionState extends State<MetricTrendSection> {
         ),
       );
     }
-    if (_error) return _note(TrendCopy.loadError);
+    // Never a bare note-and-stall: a failed load must offer a way back in,
+    // not just an inert sentence (the profile_tab.dart fix this mirrors).
+    if (_error) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              TrendCopy.loadError,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.manrope(
+                fontSize: 12,
+                color: OurobionColors.outline,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton(
+              onPressed: _load,
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, 32),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                visualDensity: VisualDensity.compact,
+              ),
+              child: Text(TrendCopy.retry),
+            ),
+          ],
+        ),
+      );
+    }
     if (_keys.isEmpty) {
       return Center(
         child: Column(
