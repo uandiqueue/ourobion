@@ -447,9 +447,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          # Full history: the history scan must see every commit. A range scan derived from
-          # github.event.before fails open three ways (all-zeros on branch creation, a
-          # dangling before after a force-push, and hiding a leak commit by force-pushing).
+          # Full history: the history scan must see every commit in the landing ref's ancestry.
+          # A range scan derived from github.event.before fails open three ways (all-zeros on
+          # branch creation, a dangling before after a force-push, and hiding a leak commit by
+          # force-pushing), so the whole ancestry is fetched and walked instead.
+          #
+          # fetch-depth: 0 also brings down every OTHER ref the remote has. gitleaks' git mode
+          # defaults to walking all of them, which makes this job fail on findings that belong to
+          # unrelated sibling branches and are absent from this ref's ancestry. That is not this
+          # branch's leak to fail on — it is the sibling branch's own CI run — so the history step
+          # below pins traversal to HEAD. The traversal floor and the history canary in the two
+          # steps that follow are what keep that scoping honest.
           fetch-depth: 0
           persist-credentials: false
 
@@ -527,10 +535,22 @@ jobs:
             --sentinel .github/workflows/ci.yml \
             --sentinel AGENTS.md
 
-      - name: Scan full git history
+      - name: Prove history scanning detects an ancestry-only secret (canary)
+        run: |
+          set -euo pipefail
+          node tools/secret_scan_guard.mjs history-canary \
+            --binary "$GITLEAKS_BIN" \
+            --config tools/secret-scan/gitleaks.toml \
+            --gitleaks-ignore-path "$GITLEAKS_IGNORE_PATH" \
+            --dir "$GITLEAKS_HOME/history-canary" \
+            --report "$GITLEAKS_REPORT_DIR/history-canary.json" \
+            --log-opts HEAD
+
+      - name: Scan the full history of the landing ref
         run: |
           set -euo pipefail
           "$GITLEAKS_BIN" git . \
+            --log-opts=HEAD \
             --config tools/secret-scan/gitleaks.toml \
             --gitleaks-ignore-path "$GITLEAKS_IGNORE_PATH" \
             --ignore-gitleaks-allow \
@@ -542,12 +562,14 @@ jobs:
             --exit-code 1 \
             --log-level info
 
-      - name: Verify the history scan produced a report
+      - name: Verify the history scan actually walked the ref's ancestry
         run: |
           set -euo pipefail
           node tools/secret_scan_guard.mjs verify-report \
             --report "$GITLEAKS_REPORT_DIR/history.json" \
-            --scope history
+            --scope history \
+            --min-commits 250 \
+            --sentinel-commit 77c98213e23ad56ae37c86201b39ef4e7543a543
 
       - name: Client-surface leak assertions
         run: |

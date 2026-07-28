@@ -5,7 +5,8 @@
 //
 // Node stdlib ONLY. ESM. Must run on Node 20. Zero third-party imports.
 //
-// Subcommands: verify-binary, policy, canary, verify-report, client-surface, local-artifacts.
+// Subcommands: verify-binary, policy, canary, history-canary, verify-report, client-surface,
+// local-artifacts.
 // See docs/... design (O36) for the full rationale; this file implements it. Every fail-closed
 // path throws (or calls fail(), which throws) rather than returning a falsy value silently —
 // an uncaught throw is what turns into the non-zero `node` exit code CI depends on.
@@ -661,10 +662,130 @@ export function canary({ binary, configPath, gitleaksIgnorePath, dir, reportPath
 }
 
 // ---------------------------------------------------------------------------------------------
+// history-canary
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Reachable-failure-path proof for the *history* scan specifically.
+ *
+ * The `canary` subcommand above proves `gitleaks dir` detects. It says nothing about `gitleaks
+ * git`, and nothing about whether the `--log-opts` scoping the history step uses still reaches
+ * commits whose content is absent from the working tree. Those are exactly the properties a
+ * scoped history scan must keep, so they get their own proof rather than an assumption.
+ *
+ * Builds an ephemeral repo where the canary token exists ONLY in an ancestor commit (added, then
+ * deleted in a later commit), then asserts both halves:
+ *   1. `gitleaks dir` over the clean worktree finds nothing — the secret really is history-only.
+ *   2. `gitleaks git --log-opts=<opts>` finds it anyway — scoped history traversal still detects.
+ * If (2) ever stops holding, the history step is scanning nothing useful and this fails closed.
+ */
+export function historyCanary({ binary, configPath, gitleaksIgnorePath, dir, reportPath, logOpts = 'HEAD' }) {
+  if (!binary) fail('--binary is required');
+  if (!configPath) fail('--config is required');
+  if (!dir) fail('--dir is required');
+  if (!reportPath) fail('--report is required');
+
+  mkdirSync(dir, { recursive: true });
+  const run = (args) => git(args, dir);
+  run(['init', '--quiet', '--initial-branch=main']);
+  run(['config', 'user.email', 'history-canary@invalid']);
+  run(['config', 'user.name', 'history canary']);
+  run(['config', 'commit.gpgsign', 'false']);
+
+  // An innocuous tracked file so the exported clean tree below is non-empty — a 0-finding scan
+  // over an empty directory would be vacuously true and prove nothing.
+  writeFileSync(path.join(dir, 'history-canary-readme.txt'), 'ephemeral history-canary fixture repo\n', 'utf8');
+  run(['add', '--', 'history-canary-readme.txt']);
+  run(['commit', '--quiet', '-m', 'history canary: baseline']);
+
+  const token = randomCanaryToken();
+  const fixture = path.join(dir, 'history-canary-fixture.txt');
+  writeFileSync(fixture, `${token}\n${CANARY_DEFAULT_RULE_FIXTURE}\n`, 'utf8');
+  run(['add', '--', 'history-canary-fixture.txt']);
+  run(['commit', '--quiet', '-m', 'history canary: plant']);
+  run(['rm', '--quiet', '--', 'history-canary-fixture.txt']);
+  run(['commit', '--quiet', '-m', 'history canary: remove from worktree']);
+  if (existsSync(fixture)) fail('history canary fixture is still present in the worktree');
+
+  // Materialise the tracked tree at HEAD somewhere with no .git alongside it. Scanning `dir` on
+  // the repo itself would walk .git and find the blob in the object store, which would say
+  // nothing about whether the secret is still in the checked-out tree.
+  const exportDir = `${dir}-clean`;
+  mkdirSync(exportDir, { recursive: true });
+  git(['checkout-index', '-a', '-f', `--prefix=${exportDir}${path.sep}`], dir);
+  if (existsSync(path.join(exportDir, 'history-canary-fixture.txt'))) {
+    fail('history canary fixture survived into the exported clean tree');
+  }
+
+  // Both scans below run with cwd set to an ephemeral directory, so every caller-supplied path
+  // must be absolute first — a relative --config silently resolves against the wrong root and
+  // gitleaks then exits 1 as an ERROR, which would otherwise read as "canary detected".
+  mkdirSync(path.dirname(reportPath), { recursive: true });
+  const absConfig = path.resolve(configPath);
+  const absReport = path.resolve(reportPath);
+  if (!existsSync(absConfig)) fail(`history-canary config is not readable at ${absConfig}`);
+  const baseArgs = [
+    '--config', absConfig,
+    '--ignore-gitleaks-allow',
+    '--redact=100',
+    '--no-banner',
+    '--no-color',
+    '--report-format', 'json',
+    '--exit-code', '1',
+    '--log-level', 'info',
+  ];
+  if (gitleaksIgnorePath) baseArgs.push('--gitleaks-ignore-path', path.resolve(gitleaksIgnorePath));
+
+  const worktreeReport = `${absReport}.worktree.json`;
+  const dirScan = spawnSync(binary, ['dir', '.', ...baseArgs, '--report-path', worktreeReport], { cwd: exportDir, encoding: 'utf8' });
+  if (dirScan.error) fail(`failed to spawn history-canary clean-tree scan: ${dirScan.error.message}`);
+  if (dirScan.status !== 0) {
+    fail(`history-canary clean-tree scan exited ${dirScan.status} (expected 0) — the fixture is still reachable in the checked-out tree, so the history half proves nothing`);
+  }
+
+  const gitScan = spawnSync(binary, ['git', '.', `--log-opts=${logOpts}`, ...baseArgs, '--report-path', absReport], { cwd: dir, encoding: 'utf8' });
+  if (gitScan.error) fail(`failed to spawn history-canary git scan: ${gitScan.error.message}`);
+  if (gitScan.status === 0) {
+    fail(`history-canary git scan (--log-opts=${logOpts}) reported "no leaks found" — scoped history scanning does NOT reach secrets that exist only in ancestry; the history step is fail-open`);
+  }
+  if (gitScan.status !== 1) {
+    fail(`history-canary git scan exited ${gitScan.status} (expected 1): ${(gitScan.stderr || '').trim()}`);
+  }
+
+  let findings;
+  try {
+    findings = JSON.parse(readFileSync(absReport, 'utf8'));
+  } catch (err) {
+    fail(`history-canary report is not valid JSON: ${err.message}`);
+  }
+  if (!Array.isArray(findings) || findings.length === 0) fail('history-canary report did not parse to a non-empty array');
+  const ruleIds = new Set(findings.map((f) => f.RuleID));
+  if (!ruleIds.has('ourobion-canary')) {
+    fail(`history-canary git scan did not report the "ourobion-canary" rule — custom config was not applied to git-mode scanning (rule ids seen: ${[...ruleIds].join(', ') || 'none'})`);
+  }
+  if (findings.some((f) => !f.Commit || !/^[0-9a-f]{40}$/i.test(f.Commit))) {
+    fail('history-canary findings carry no commit provenance — the scan did not run in git mode');
+  }
+
+  process.stdout.write(
+    `[secret-scan-guard] history-canary OK: exported clean tree scanned 0 findings, --log-opts=${logOpts} still detected ${findings.length} history-only finding(s)\n`
+  );
+  return { findings, ruleIds };
+}
+
+// ---------------------------------------------------------------------------------------------
 // verify-report
 // ---------------------------------------------------------------------------------------------
 
-export function verifyReport({ reportPath, scope, minFiles, sentinels = [], repoRoot = REPO_ROOT_DEFAULT }) {
+export function verifyReport({
+  reportPath,
+  scope,
+  minFiles,
+  minCommits,
+  sentinelCommits = [],
+  sentinels = [],
+  repoRoot = REPO_ROOT_DEFAULT,
+}) {
   if (!reportPath) fail('--report is required');
   if (scope !== 'worktree' && scope !== 'history') fail('--scope must be "worktree" or "history"');
 
@@ -702,6 +823,49 @@ export function verifyReport({ reportPath, scope, minFiles, sentinels = [], repo
         fail(`sentinel path "${sentinel}" is not readable: ${err.message}`);
       }
     }
+  }
+
+  // History scope: an empty report is only meaningful if the scan actually had history to walk.
+  // The history step scans `--log-opts=HEAD`, i.e. the full ancestry of the landing ref rather
+  // than every ref the runner happens to have fetched. That is deliberately narrower than
+  // gitleaks' all-refs default (a finding on an unrelated sibling branch is that branch's CI to
+  // fail, not this one's), and narrowing a scan is only safe if the remaining coverage is
+  // *proven* rather than assumed. Without the assertions below, a shallow checkout, a detached
+  // HEAD at the root commit, or a mistyped --log-opts would all produce `[]` and read as OK —
+  // three fail-open paths. So history scope requires an explicit traversal floor and refuses to
+  // accept a report whose ancestry cannot be shown to be deep and complete.
+  if (scope === 'history') {
+    if (!Number.isSafeInteger(minCommits) || minCommits < 1) {
+      fail('--min-commits is required for --scope history and must be a positive integer');
+    }
+    const shallow = git(['rev-parse', '--is-shallow-repository'], repoRoot).stdout.trim();
+    if (shallow !== 'false') {
+      fail(`history scan ran against a shallow or indeterminate repository (--is-shallow-repository=${shallow || '<empty>'})`);
+    }
+    const count = Number(git(['rev-list', '--count', 'HEAD'], repoRoot).stdout.trim());
+    if (!Number.isSafeInteger(count) || count < minCommits) {
+      fail(`HEAD ancestry is ${count} commit(s), below --min-commits ${minCommits} — the history scan covered too little to be meaningful`);
+    }
+    const roots = git(['rev-list', '--max-parents=0', 'HEAD'], repoRoot).stdout.split(/\r?\n/).filter(Boolean);
+    if (roots.length === 0) {
+      fail('HEAD ancestry contains no root commit — history is truncated');
+    }
+    for (const sentinelCommit of sentinelCommits) {
+      if (!/^[0-9a-f]{40}$/i.test(sentinelCommit)) {
+        fail(`sentinel commit "${sentinelCommit}" is not a full 40-character SHA`);
+      }
+      if (git(['cat-file', '-t', sentinelCommit], repoRoot, { allowFailure: true }).stdout.trim() !== 'commit') {
+        fail(`sentinel commit ${sentinelCommit} is unavailable or not a commit`);
+      }
+      if (git(['merge-base', '--is-ancestor', sentinelCommit, 'HEAD'], repoRoot, { allowFailure: true }).status !== 0) {
+        fail(`sentinel commit ${sentinelCommit} is not an ancestor of HEAD — the scanned ref is not the expected history`);
+      }
+    }
+    process.stdout.write(
+      `[secret-scan-guard] verify-report OK (scope=history): 0 findings over ${count} commit(s) of HEAD ancestry ` +
+        `(min ${minCommits}, ${roots.length} root commit(s), ${sentinelCommits.length} sentinel commit(s) confirmed as ancestors)\n`
+    );
+    return { findings, commits: count, roots: roots.length };
   }
 
   process.stdout.write(`[secret-scan-guard] verify-report OK (scope=${scope}): 0 findings\n`);
@@ -1425,14 +1589,14 @@ export function localArtifacts({ repoRoot = REPO_ROOT_DEFAULT }) {
 // ---------------------------------------------------------------------------------------------
 
 function parseArgs(argv) {
-  const args = { _: [], sentinel: [] };
+  const args = { _: [], sentinel: [], 'sentinel-commit': [] };
   for (let i = 0; i < argv.length; i += 1) {
     const tok = argv[i];
     if (tok.startsWith('--')) {
       const key = tok.slice(2);
       const next = argv[i + 1];
-      if (key === 'sentinel') {
-        args.sentinel.push(next);
+      if (key === 'sentinel' || key === 'sentinel-commit') {
+        args[key].push(next);
         i += 1;
       } else if (next === undefined || next.startsWith('--')) {
         args[key] = true;
@@ -1469,11 +1633,22 @@ export function runCli(argv) {
         dir: args.dir,
         reportPath: args.report,
       });
+    case 'history-canary':
+      return historyCanary({
+        binary: args.binary,
+        configPath: args.config,
+        gitleaksIgnorePath: args['gitleaks-ignore-path'],
+        dir: args.dir,
+        reportPath: args.report,
+        logOpts: args['log-opts'] || 'HEAD',
+      });
     case 'verify-report':
       return verifyReport({
         reportPath: args.report,
         scope: args.scope,
         minFiles: args['min-files'] ? Number(args['min-files']) : undefined,
+        minCommits: args['min-commits'] ? Number(args['min-commits']) : undefined,
+        sentinelCommits: args['sentinel-commit'],
         sentinels: args.sentinel,
         repoRoot: args['repo-root'] || REPO_ROOT_DEFAULT,
       });
@@ -1484,7 +1659,7 @@ export function runCli(argv) {
     case 'inspect-client-bundle':
       return inspectClientBundle({ bundleDir: args.dir, canary: args.canary });
     default:
-      fail(`unknown subcommand "${command}". Expected one of: verify-binary, policy, canary, verify-report, client-surface, inspect-client-bundle, local-artifacts`);
+      fail(`unknown subcommand "${command}". Expected one of: verify-binary, policy, canary, history-canary, verify-report, client-surface, inspect-client-bundle, local-artifacts`);
   }
   return undefined;
 }

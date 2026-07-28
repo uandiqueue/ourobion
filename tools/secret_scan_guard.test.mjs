@@ -814,10 +814,47 @@ test('verifyReport: fails closed when a sentinel path is not tracked', () => {
   });
 });
 
-test('verifyReport: history scope does not require min-files/sentinels', () => {
+// History scope used to accept any empty report without asking whether the scan had anything to
+// walk. Now that the history step is pinned to the landing ref's ancestry rather than every ref
+// the runner fetched, "0 findings" is only evidence if the traversal is proven — so history scope
+// requires an explicit floor and refuses a shallow or truncated ancestry.
+test('verifyReport: history scope requires an explicit --min-commits floor (no silent default)', () => {
   withTmpDir((dir) => {
+    write(dir, 'tracked.txt', 'x');
+    initGitRepo(dir, ['tracked.txt']);
     const reportPath = write(dir, 'report.json', '[]');
-    assert.doesNotThrow(() => guard.verifyReport({ reportPath, scope: 'history' }));
+    assert.throws(() => guard.verifyReport({ reportPath, scope: 'history', repoRoot: dir }), /--min-commits is required/);
+    assert.throws(() => guard.verifyReport({ reportPath, scope: 'history', minCommits: 0, repoRoot: dir }), /--min-commits is required/);
+  });
+});
+
+test('verifyReport: history scope fails closed when the ancestry is shorter than the floor', () => {
+  withTmpDir((dir) => {
+    write(dir, 'tracked.txt', 'x');
+    initGitRepo(dir, ['tracked.txt'], { commit: true });
+    const reportPath = write(dir, 'report.json', '[]');
+    assert.throws(
+      () => guard.verifyReport({ reportPath, scope: 'history', minCommits: 250, repoRoot: dir }),
+      /below --min-commits 250/
+    );
+    // The same one-commit repo passes once the floor honestly matches it.
+    assert.doesNotThrow(() => guard.verifyReport({ reportPath, scope: 'history', minCommits: 1, repoRoot: dir }));
+  });
+});
+
+test('verifyReport: history scope rejects a sentinel commit that is not an ancestor of HEAD', () => {
+  withTmpDir((dir) => {
+    write(dir, 'tracked.txt', 'x');
+    initGitRepo(dir, ['tracked.txt'], { commit: true });
+    const reportPath = write(dir, 'report.json', '[]');
+    assert.throws(
+      () => guard.verifyReport({ reportPath, scope: 'history', minCommits: 1, sentinelCommits: ['b'.repeat(40)], repoRoot: dir }),
+      /unavailable or not a commit/
+    );
+    assert.throws(
+      () => guard.verifyReport({ reportPath, scope: 'history', minCommits: 1, sentinelCommits: ['not-a-sha'], repoRoot: dir }),
+      /not a full 40-character SHA/
+    );
   });
 });
 

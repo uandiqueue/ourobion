@@ -6,6 +6,14 @@ import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import {
   RUN4_UNIT_BASE_SHA,
+  RUN4_PRODUCT_BASE_SHA,
+  RUN4_MT4_EXCLUSION_COUNT,
+  RUN4_MT4_EXCLUSION_SHA256,
+  RUN4_MT4_MERGE_SHA,
+  RUN4_NON_ACCEPTANCE_UNIT_BASE_SHA,
+  checkProductLandingDelta,
+  mt4ExclusionManifest,
+  productLandingDelta,
   RUN4_FUNCTIONS,
   RUN4_MAX_ADDED_LINES,
   RUN4_MAX_CHANGED_PATHS,
@@ -150,6 +158,66 @@ test('landing delta fixes accepted constants and rejects shallow, rename, binary
   assert.throws(() => checkLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock({ ...common, 'rev-parse --is-shallow-repository': 'true\n' }) }), /shallow/);
   assert.throws(() => checkLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock({ ...common, [`diff --name-status -z --find-renames ${RUN4_UNIT_BASE_SHA}..${head}`]: 'R100\0old\0new\0' }) }), /rename\/copy/);
   assert.throws(() => checkLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock({ ...common, [`diff --name-status -z --find-renames ${RUN4_UNIT_BASE_SHA}..${head}`]: 'M\0asset.bin\0', [`diff --numstat -z ${RUN4_UNIT_BASE_SHA}..${head}`]: '-\t-\tasset.bin\0' }) }), /binary\/unparsable/);
+});
+
+test('MT4 exclusion set is bound to its provenance and cannot be widened', () => {
+  const exclusions = mt4ExclusionManifest();
+  assert.equal(exclusions.length, RUN4_MT4_EXCLUSION_COUNT);
+  assert.equal(hashTextEvidence(JSON.stringify(exclusions)), RUN4_MT4_EXCLUSION_SHA256);
+  // Every excluded record carries a resolved blob, so an edit to an excluded path is detectable
+  // rather than forgiven by path name alone.
+  assert.ok(exclusions.every((record) => /^[0-9a-f]{40}$/i.test(record.blob) && record.path && record.status));
+  // A caller cannot smuggle an extra path into the authorized exclusion set.
+  assert.throws(
+    () => productLandingDelta({ excludedPaths: [...exclusions.map(({ path }) => path), 'unexpected'] }),
+    /requested MT4 exclusions/
+  );
+});
+
+test('product cap measures the immutable union, reports breach without throwing, and stays non-acceptance', () => {
+  // The per-unit base is preserved under an explicitly non-acceptance name (#183 scope line 3),
+  // and it is the CURRENT unit base, not the stale MT4 merge.
+  assert.equal(RUN4_NON_ACCEPTANCE_UNIT_BASE_SHA, RUN4_UNIT_BASE_SHA);
+  assert.notEqual(RUN4_NON_ACCEPTANCE_UNIT_BASE_SHA, RUN4_MT4_MERGE_SHA);
+
+  const delta = productLandingDelta();
+  assert.equal(delta.base, RUN4_PRODUCT_BASE_SHA);
+  assert.equal(delta.excludedPaths, RUN4_MT4_EXCLUSION_COUNT);
+  assert.ok(Number.isSafeInteger(delta.changedPaths) && Number.isSafeInteger(delta.addedLines));
+  // Measurement reports breach as data; only the enforcement wrapper throws. This is the whole
+  // "record, don't gate" split — if these two ever agree, the measurement has become a gate.
+  assert.equal(delta.withinCap, delta.changedPaths <= RUN4_MAX_CHANGED_PATHS && delta.addedLines <= RUN4_MAX_ADDED_LINES);
+  if (!delta.withinCap) {
+    assert.throws(
+      () => checkProductLandingDelta({ base: RUN4_PRODUCT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES }),
+      /product landing delta has \d+ (paths|added lines); cap is/
+    );
+  }
+});
+
+test('product cap enforcement rejects a moving base, a drifted cap, and shallow history', () => {
+  // The per-unit boundary can never satisfy the product gate — that is the #183 invariant.
+  assert.throws(
+    () => checkProductLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES }),
+    /base must equal immutable product SHA/
+  );
+  assert.throws(
+    () => checkProductLandingDelta({ base: 'a'.repeat(40), maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES }),
+    /base must equal immutable product SHA/
+  );
+  // No caller may raise the cap by passing a bigger number.
+  assert.throws(
+    () => checkProductLandingDelta({ base: RUN4_PRODUCT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS + 1, maxAdded: RUN4_MAX_ADDED_LINES }),
+    /maxPaths must equal accepted cap/
+  );
+  assert.throws(
+    () => checkProductLandingDelta({ base: RUN4_PRODUCT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES + 1 }),
+    /maxAdded must equal accepted cap/
+  );
+  assert.throws(
+    () => productLandingDelta({ git: (_command, args) => (args.join(' ') === 'rev-parse --is-shallow-repository' ? 'true\n' : '') }),
+    /shallow/
+  );
 });
 
 test('workflow provenance binds exact Run 4 PR merge parents and rejects shallow checkout', () => {
