@@ -373,17 +373,47 @@ class _SystemStatusHero extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
       child: Stack(
         children: [
-          Positioned(
-            right: -30,
-            bottom: -18,
-            child: Opacity(
-              opacity: 0.9,
-              child: Image.asset(
-                BiotopeGeneratedAssets.homeHeroRobotHandMain,
-                width: 190,
-                height: 220,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stack) => const SizedBox(width: 190, height: 220),
+          // home_hero_robot_hand_main.png is RGB with NO alpha channel — an
+          // opaque near-white rectangle, not a cutout. Dropped in raw it showed
+          // a hard rectangular seam against the porcelain card and escaped the
+          // card's rounded corner. (Nobody saw this until the asset actually
+          // shipped: the whole generated set was missing from the bundle, and
+          // this Image.asset's errorBuilder is an INVISIBLE SizedBox.)
+          //
+          // So: clip to the card's radius, and feather the two inner edges with
+          // a ShaderMask so the rectangle dissolves into the surface instead of
+          // ending in a line. Replace this with a transparent-background asset
+          // and the mask becomes a no-op rather than a problem.
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(kCardRadius),
+              child: Stack(
+                children: [
+                  Positioned(
+                    right: -30,
+                    bottom: -18,
+                    child: ShaderMask(
+                      shaderCallback: (rect) => const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.centerRight,
+                        colors: [Colors.transparent, Colors.white],
+                        stops: [0.05, 0.55],
+                      ).createShader(rect),
+                      blendMode: BlendMode.dstIn,
+                      child: Opacity(
+                        opacity: 0.9,
+                        child: Image.asset(
+                          BiotopeGeneratedAssets.homeHeroRobotHandMain,
+                          width: 190,
+                          height: 220,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stack) =>
+                              const SizedBox(width: 190, height: 220),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
