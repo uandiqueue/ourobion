@@ -128,8 +128,18 @@ TS and Dart without a cross-language import, and wire contradiction into `needsR
   `ff05464`:** `tools/rules` 6 failures and `tools/edge-loader` 5 failures, all
   `ERR_REQUIRE_CYCLE_MODULE` from Node 20.20's `require(esm)` cycle when a CLI spawns a subprocess.
   Base and branch counts are identical. Not fixed — out of scope and environment-dependent.
-- The **Run 4 release-evidence / Run 4 Gate** checks are expected red on this PR: the checked-in
-  `RUN4_UNIT_BASE_SHA` is stale and charges this unit for already-merged work. Not touched.
+- **The predicted stale-base gate failure did NOT occur, and the brief's prediction is now stale.**
+  CI runs with `RUN4_UNIT_BASE_SHA: ff05464` — exactly this unit's base — so the base advance has
+  landed and the **landing-delta check passed**. There is no added-lines cap failure.
+- **The real blocker is deploy-attestation drift**, and it is **correct gate behaviour**:
+  `local runtime attestation source/config drift for generate-insights`
+  (`tools/run4_release_gate.mjs:617`). This unit legitimately changed three `generate-insights`
+  sources (`index.ts`, `render.ts`, `composer.ts`), so the frozen hashes in
+  `supabase/deploy-attestation.json` no longer match. **Not fixed here by design** — that file,
+  the gate, and `ci.yml` are owned by the concurrent session this run, and the brief says to stop
+  and report rather than touch them. Regeneration needs `deno` + the Supabase CLI via the pinned
+  `node tools/run4_release_gate.mjs attest …` command. `Run 4 Gate` is red only as a consequence
+  of the release-evidence job; both clear together once the attestation is regenerated.
 
 ## Verification actually run
 
