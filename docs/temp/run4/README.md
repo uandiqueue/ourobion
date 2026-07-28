@@ -24,6 +24,16 @@ with no provider calls and O29 deferred.
 | [`pending-build-register.md`](./pending-build-register.md) | Living gap superset promoted from Run 3; O24–O29 are unfinished candidates, not accepted work |
 | [`orchestrator-prompt.md`](./orchestrator-prompt.md) | Governing Run 4 prompt for the active accepted envelope |
 | [`continuation-status.md`](./continuation-status.md) | Exact 2026-07-28 stop-state, branch heads, pending gates, and resume order |
+| [`provider-e2e-status.md`](./provider-e2e-status.md) | Issue-189 provider spend, full canonical extraction plus passage synthesis, matched health data, generated cards, Android render evidence, and blockers |
+
+### Bounded provider-test exception (2026-07-28)
+
+The user authorised one local-only provider test under ceilings of SGD 20 for OpenAI and SGD 2 for
+Anthropic, with OpenAI as the main paper-synthesis driver and Anthropic verifier-only. The complete
+paper was extracted locally, while the existing runtime sent OpenAI its 12 selected passages. This narrowly
+supersedes the zero-provider-call posture for issue #189 evidence; it does not authorise hosted writes,
+deployment, training, model promotion or general provider execution. See
+[`provider-e2e-status.md`](./provider-e2e-status.md) for actual calls, spend and fail-closed results.
 
 ## Independent confirmation and sign-off
 

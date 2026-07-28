@@ -55,3 +55,18 @@ Not authorised: settings changes, hosted/provider calls, hosted Supabase, Cloudf
 Name-only local credentials: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `OPENALEX_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and Nao/Biotope public Supabase variables. No values belong here. Local Nao uses process-scoped local Supabase URL/anon/service-role values, never hosted file defaults. Android adb timed out; independent connection state is unverified.
 
 O29 remains deferred: zero provider calls. U0 is complete with PR #161 exact merge-SHA CI 19/19. U1 is complete externally but PR #170 is draft/open and unmerged. U5 canonical DB load is complete; health/insight remains pending.
+
+## 2026-07-28 bounded provider-test exception
+
+For issue #189 only, the user explicitly authorised local provider calls with ceilings of **SGD 20
+OpenAI** and **SGD 2 Anthropic**, and clarified provider ownership: **OpenAI is the main paper driver;
+Anthropic is verifier-only and must not accumulate other roles**. The complete paper was extracted
+locally, but the current synthesis runtime sent OpenAI 12 selected passages rather than the complete
+text. This supersedes the zero-call
+posture only for the recorded test. It does not unblock O29 generally and does not authorise hosted DB
+writes, deployment, training, model promotion, credential mutation or UI reconciliation.
+
+The completed evidence and actual spend are recorded in
+[`provider-e2e-status.md`](./provider-e2e-status.md). The checked-in router still conflicts with this
+ownership and was not silently changed; the test used an isolated in-memory config and records that
+durable reconciliation as pending.
