@@ -56,6 +56,10 @@ updated: 2026-07-28
   SGD 0.1340. Provider billing is authoritative.
 - This does not generally unblock O29 or authorize further provider spend. A new live call needs a new
   explicit role/budget decision.
+- Full evidence, actual spend, and fail-closed results are recorded in
+  [`provider-e2e-status.md`](./provider-e2e-status.md). The checked-in router config was not silently
+  changed for this test; it used an isolated in-memory config, and durable reconciliation remains
+  pending.
 
 ## Model training
 

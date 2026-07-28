@@ -128,7 +128,8 @@ function Invoke-Sql([string]$Sql) {
 
 function Invoke-Api {
   param([string]$Method, [string]$Url, $BodyObj, [hashtable]$Headers, $WebSession)
-  $params = @{ UseBasicParsing = $true; Method = $Method; Uri = $Url; TimeoutSec = 300 }
+  # Keep redirects inspectable: a protected API must not follow a 302 to /login and look like a JSON 200.
+  $params = @{ UseBasicParsing = $true; Method = $Method; Uri = $Url; TimeoutSec = 300; MaximumRedirection = 0 }
   if ($Headers) { $params.Headers = $Headers }
   # NOTE: Windows PowerShell 5.1 silently DROPS a raw 'Cookie' header on Invoke-WebRequest —
   # authenticated nao calls must go through a WebRequestSession cookie container instead.
@@ -224,6 +225,8 @@ Invoke-Step 'S0 environment: toolchain + supabase keys' -Critical {
   $env:SUPABASE_URL = $script:ApiUrl
   $env:SUPABASE_SERVICE_ROLE_KEY = $script:ServiceKey
   $env:SUPABASE_DB_URL = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+  $env:NEXT_PUBLIC_SUPABASE_URL = $script:ApiUrl
+  $env:NEXT_PUBLIC_SUPABASE_ANON_KEY = $script:AnonKey
   @("node $node", "api $($script:ApiUrl)", 'keys parsed; OPENAI_API_KEY loaded (not printed)')
 }
 
@@ -235,7 +238,8 @@ Invoke-Step 'S1 clean stack: supabase db reset' -Critical {
   do {
     $attempts++
     $r = Invoke-Native 'npx' @('supabase', 'db', 'reset') $script:RepoRoot
-    $ok = ($r.ExitCode -eq 0 -and $r.Output -match 'Finished supabase db reset')
+    $resetOutput = $r.Output -replace '\x1B\[[0-?]*[ -/]*[@-~]', ''
+    $ok = ($r.ExitCode -eq 0 -and $resetOutput -match 'Finished supabase db reset')
   } until ($ok -or $attempts -ge 2)
   Assert $ok "db reset failed after $attempts attempt(s):`n$($r.Output)"
   @("database reset -- all migrations applied, auth.users wiped (attempt $attempts)")
