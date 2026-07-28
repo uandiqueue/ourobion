@@ -30,7 +30,7 @@ or work across the release-blocker session's ownership boundary.
 |---|---|---|---|---|---|---|---|
 | A4 inventory | `u6_a4_inventory` | `gpt-5.6-terra` low | — | — | complete, read-only | — | Found zero currently registered `events`/`state_bands` metrics and missing daily aggregation semantics. |
 | A4 semantics review | `u6_a4_semantics_review` | `gpt-5.6-sol` medium | — | — | complete, read-only | — | GO for a policy scaffold; production event/state semantics remain decision-gated. |
-| A4-S0 · projection-policy scaffold | `u6_a4_scaffold_writer` | `gpt-5.6-sol` medium | `feat/m5/u6a-projection-scaffold` | #229 | draft; reviewed; refreshed to `da6b11`; CI running | feature: 10 paths / +745/-12; landing: 51 paths / 3,623 additions | Static + local transactional fixtures pass; no production metric policy selected. Jayden + Alton are requested; both actual reviews remain required. |
+| A4-S0 · projection-policy scaffold | `u6_a4_scaffold_writer` | `gpt-5.6-sol` medium | `feat/m5/u6a-projection-scaffold` | #229 | draft; all non-release CI green; release evidence blocked | feature: 10 paths / +745/-12; landing: 51 paths / 3,623 additions | `shared/metrics/registry.ts` changes the `compute-baselines` module graph, so the frozen deploy attestation must be re-recorded by the separate release owner. Jayden + Alton reviews also remain required. |
 | A4-1 · events day-series branch | unassigned | at most `gpt-5.6-sol` medium | pending | pending | policy-gated | pending | JSON payload/count aggregation and calendar policy must be recorded. |
 | A4-2 · state-bands day-series branch | unassigned | at most `gpt-5.6-sol` medium | pending | pending | blocked on semantics review | pending | Day boundaries, open bands, overlaps, and stacking order must be explicit. |
 | A4-3 · registry/parity activation | unassigned | at most `gpt-5.6-sol` medium | pending | pending | blocked on A4-1/A4-2 and collectors | pending | `shared/` change requires Jayden + Alton on the actual PR. |
@@ -55,5 +55,7 @@ or work across the release-blocker session's ownership boundary.
 
 - Jayden must record the A5 storage-primitive choice before any A5 implementation or U6b batch.
 - Jayden and Alton must both review every actual PR that changes `shared/metrics/**`.
+- The separate release owner must re-record #229's `compute-baselines` deployment graph attestation;
+  this unit does not edit `supabase/deploy-attestation.json`.
 - Agents do not merge. Each implementation slice targets `dev-phase2-run4` and remains for human
   review after its own tests and landing measurement.
