@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../brand_assets.dart';
 import '../generated_assets.dart';
 import '../theme.dart';
 
@@ -188,11 +190,11 @@ class _BiotopeBrandLockupState extends State<_BiotopeBrandLockup>
           const BoxShadow(color: Colors.white, blurRadius: 1, offset: Offset(0, 1)),
         ],
       ),
-      // The production package currently contains botanical art but not the
-      // logo kit's SVG/PNG as a Flutter asset. This is the closest bundled
-      // botanical mark, kept inside a dedicated lockup frame until that asset
-      // is formally bundled in an asset-only change.
-      child: Image.asset(BiotopeGeneratedAssets.decoSmallBiomechBloom, fit: BoxFit.contain),
+      child: SvgPicture.asset(
+        BiotopeBrandAssets.markLight,
+        fit: BoxFit.contain,
+        semanticsLabel: 'Biotope',
+      ),
     );
 
     return Column(

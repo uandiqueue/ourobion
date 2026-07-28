@@ -1,11 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:src/core/brand_assets.dart';
 import 'package:src/core/theme.dart';
+import 'package:src/core/widgets/biotope_auth_scaffold.dart';
 import 'package:src/core/widgets/biotope_bottom_navigation.dart';
 import 'package:src/core/widgets/biotope_screen_entrance.dart';
 import 'package:src/modules/m1_core/ui/widgets/living_backdrop.dart';
 
 void main() {
+  testWidgets('auth lockup renders the canonical Biotope vector mark', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(390, 844),
+            disableAnimations: true,
+          ),
+          child: BiotopeAuthScaffold(
+            signingIn: true,
+            onSwitchMode: () {},
+            background: const ColoredBox(color: Colors.white),
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ),
+    );
+    // The auth lockup intentionally runs a continuous breathing controller.
+    // Advance a frame to resolve the SVG without waiting for an animation that
+    // is not expected to settle.
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final picture = tester.widget<SvgPicture>(find.byType(SvgPicture));
+    expect(picture.bytesLoader, isA<SvgAssetLoader>());
+    expect(
+      (picture.bytesLoader as SvgAssetLoader).assetName,
+      BiotopeBrandAssets.markLight,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('floating navigation exposes all five real destinations', (
     tester,
   ) async {
