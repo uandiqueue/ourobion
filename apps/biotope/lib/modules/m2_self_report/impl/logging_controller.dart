@@ -1,4 +1,23 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'normaliser.dart';
+
+/// Daily-core keys an inline chip row can answer *in full*, with the exact
+/// option set those chips offer.
+///
+/// A key belongs here only if a short row of chips can express every value the
+/// column accepts. Anything lossy stays off this list and keeps routing to
+/// `DailyLogScreen`, so the inline path can never silently narrow an answer:
+///  - `urine_colour` — an 8-swatch colour comparison, not a number choice
+///  - `stool_form`   — 7 Bristol types, each needing its description
+///  - `mosquito_bites` — 0..20, a stepper range no chip row can cover
+const Map<String, List<int>> kInlineAnswerableOptions = {
+  'outside_meals': [0, 1, 2, 3],
+  'energy_score': [1, 2, 3, 4, 5],
+  'mood_score': [1, 2, 3, 4, 5],
+  'gut_comfort_score': [1, 2, 3, 4, 5],
+};
 
 class DailyLogInput {
   final int? urineColour;
@@ -30,15 +49,112 @@ class DailyLogInput {
   });
 }
 
+/// Values M2 stamps onto a daily row at write time: `region` copied from the
+/// profile, and the two antibiotic-derived flags. Derived once
+/// ([DailyLogService.rowContext]) and shared by both write paths so the two
+/// cannot drift.
+class DailyLogRowContext {
+  final String region;
+  final bool onAntibiotics;
+  final bool gutWatchActive;
+
+  const DailyLogRowContext({
+    required this.region,
+    required this.onAntibiotics,
+    required this.gutWatchActive,
+  });
+}
+
 class DailyLogService {
   final SupabaseClient _client;
   DailyLogService(this._client);
 
-  Future<void> saveDailyLog(
-    String userId,
-    String logDate,
-    DailyLogInput input,
-  ) async {
+  // ── Pure payload builders ────────────────────────────────────────────────
+  // Split out of the write methods so the difference between a WHOLE-ROW
+  // upsert and a SINGLE-COLUMN update is provable without a database.
+  // See test/m2_self_report/daily_log_partial_write_test.dart.
+
+  /// Payload for the whole-row upsert behind [saveDailyLog].
+  ///
+  /// Every column is named EXPLICITLY, including the ones the caller left null.
+  /// That is exactly what makes it correct for `DailyLogScreen` — which loads
+  /// today's row, pre-populates every field, and re-sends all of them — and
+  /// dangerous for anyone else: a caller that supplies one field gets a row
+  /// where all the others have been overwritten with null.
+  ///
+  /// If you are writing a single field, you want [buildFieldPatch].
+  @visibleForTesting
+  static Map<String, dynamic> buildFullRowPayload({
+    required String userId,
+    required String logDate,
+    required DailyLogRowContext context,
+    required DailyLogInput input,
+    required DateTime now,
+  }) {
+    final notes = input.notes?.trim();
+    return {
+      'user_id': userId,
+      'log_date': logDate,
+      'region': context.region,
+      'urine_colour': input.urineColour,
+      'stool_form': input.stoolForm,
+      'stool_count': input.stoolCount,
+      'outside_meals': input.outsideMeals,
+      'mosquito_bites': input.mosquitoBites,
+      'energy_score': input.energy,
+      'mood_score': input.mood,
+      'gut_comfort_score': input.gutComfort,
+      'symptom_flags': input.symptomFlags,
+      'notes': (notes == null || notes.isEmpty) ? null : notes,
+      'standing_water_present': input.standingWaterPresent,
+      'on_antibiotics': context.onAntibiotics,
+      'gut_watch_active': context.gutWatchActive,
+      'log_completeness': input.logCompleteness,
+      'updated_at': now.toIso8601String(),
+    };
+  }
+
+  /// Patch for a single answered daily-core field.
+  ///
+  /// Contains ONLY the answered column plus the two columns that are a function
+  /// of it (`log_completeness`, recomputed from the existing row merged with the
+  /// new answer, and `updated_at`). Every other column is ABSENT from the map,
+  /// so the `UPDATE` this feeds leaves each of them exactly as it was — that
+  /// absence is the whole safety property, not an oversight.
+  ///
+  /// [existingRow] may be null (nothing logged today yet); completeness is then
+  /// computed from the single answer alone.
+  @visibleForTesting
+  static Map<String, dynamic> buildFieldPatch({
+    required Map<String, dynamic>? existingRow,
+    required String metricKey,
+    required Object? value,
+    required DateTime now,
+  }) {
+    if (!kDailyCoreDqsWeights.containsKey(metricKey)) {
+      throw ArgumentError.value(
+        metricKey,
+        'metricKey',
+        'not a daily-core DQS key — inline answers may only write columns that '
+            'count toward log_completeness',
+      );
+    }
+    final dqsInputs = <String, Object?>{
+      for (final key in kDailyCoreDqsWeights.keys) key: existingRow?[key],
+      metricKey: value,
+    };
+    return {
+      metricKey: value,
+      'log_completeness': computeDqs(dqsInputs).toDouble(),
+      'updated_at': now.toIso8601String(),
+    };
+  }
+
+  // ── Writes ───────────────────────────────────────────────────────────────
+
+  /// Derives `region` and the antibiotic flags for a given log date.
+  @visibleForTesting
+  Future<DailyLogRowContext> rowContext(String userId, String logDate) async {
     final profileRow = await _client
         .from('profiles')
         .select('region')
@@ -62,30 +178,75 @@ class DailyLogService {
       if (today.isAfter(end) && !today.isAfter(watchEnd)) gutWatchActive = true;
     }
 
-    final notes = input.notes?.trim();
+    return DailyLogRowContext(
+      region: region,
+      onAntibiotics: onAntibiotics,
+      gutWatchActive: gutWatchActive,
+    );
+  }
+
+  /// Whole-row save from `DailyLogScreen`. Safe only because that screen loads
+  /// today's row first and re-sends every field.
+  Future<void> saveDailyLog(
+    String userId,
+    String logDate,
+    DailyLogInput input,
+  ) async {
+    final context = await rowContext(userId, logDate);
     await _client.from('daily_gut_rows').upsert(
-      {
+          buildFullRowPayload(
+            userId: userId,
+            logDate: logDate,
+            context: context,
+            input: input,
+            now: DateTime.now(),
+          ),
+          onConflict: 'user_id,log_date',
+        );
+  }
+
+  /// Writes ONE daily-core field and touches nothing else. Backs the Scan tab's
+  /// inline chip answers.
+  ///
+  /// Deliberately not routed through [saveDailyLog]: that upserts the whole row,
+  /// so answering one chip through it would null out everything already logged
+  /// today. When today has no row yet there is nothing to preserve, so the patch
+  /// is INSERTed alongside the stamped context columns.
+  ///
+  /// Returns the row's new `log_completeness`.
+  Future<double> saveFieldAnswer(
+    String userId,
+    String logDate,
+    String metricKey,
+    Object? value,
+  ) async {
+    final existing = await getTodayLog(userId, logDate);
+    final patch = buildFieldPatch(
+      existingRow: existing,
+      metricKey: metricKey,
+      value: value,
+      now: DateTime.now(),
+    );
+
+    if (existing == null) {
+      final context = await rowContext(userId, logDate);
+      await _client.from('daily_gut_rows').insert({
         'user_id': userId,
         'log_date': logDate,
-        'region': region,
-        'urine_colour': input.urineColour,
-        'stool_form': input.stoolForm,
-        'stool_count': input.stoolCount,
-        'outside_meals': input.outsideMeals,
-        'mosquito_bites': input.mosquitoBites,
-        'energy_score': input.energy,
-        'mood_score': input.mood,
-        'gut_comfort_score': input.gutComfort,
-        'symptom_flags': input.symptomFlags,
-        'notes': (notes == null || notes.isEmpty) ? null : notes,
-        'standing_water_present': input.standingWaterPresent,
-        'on_antibiotics': onAntibiotics,
-        'gut_watch_active': gutWatchActive,
-        'log_completeness': input.logCompleteness,
-        'updated_at': DateTime.now().toIso8601String(),
-      },
-      onConflict: 'user_id,log_date',
-    );
+        'region': context.region,
+        'on_antibiotics': context.onAntibiotics,
+        'gut_watch_active': context.gutWatchActive,
+        ...patch,
+      });
+    } else {
+      await _client
+          .from('daily_gut_rows')
+          .update(patch)
+          .eq('user_id', userId)
+          .eq('log_date', logDate);
+    }
+
+    return patch['log_completeness'] as double;
   }
 
   Future<Map<String, dynamic>?> getTodayLog(

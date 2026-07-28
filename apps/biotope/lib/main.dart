@@ -3,6 +3,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'core/app_preferences.dart';
+import 'core/session_refresh_retry.dart';
 import 'core/theme.dart';
 import 'modules/m1_core/impl/auth_service.dart';
 import 'modules/m1_core/impl/consent_service.dart';
@@ -12,11 +14,16 @@ import 'modules/m1_core/ui/screens/sign_in_screen.dart';
 import 'modules/m1_core/ui/screens/consent_screen.dart';
 import 'modules/m1_core/ui/screens/profile_setup_screen.dart';
 import 'modules/m1_core/ui/screens/app_shell.dart';
+import 'modules/m1_core/ui/screens/waking_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = false;
   await dotenv.load(fileName: '.env.public');
+
+  // Device-local display preferences, restored before the first frame so the
+  // waking screen never flashes the default backdrop and then correct itself.
+  await AppPreferences.restore();
 
   final supabaseUrl = dotenv.env['SUPABASE_URL'];
   final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
@@ -64,6 +71,16 @@ Future<_OnboardStep> _checkOnboarding(String userId) async {
   return _OnboardStep.done;
 }
 
+/// Races the real onboarding check against a minimum display time so the
+/// [WakingScreen] never just flashes on a fast connection.
+Future<_OnboardStep> _checkOnboardingWithMinDisplay(String userId) async {
+  final results = await Future.wait([
+    retryAfterSessionRefresh(() => _checkOnboarding(userId)),
+    Future.delayed(const Duration(milliseconds: 1800)),
+  ]);
+  return results[0] as _OnboardStep;
+}
+
 // ─── Auth gate ────────────────────────────────────────────────────────────────
 
 class AuthGate extends StatelessWidget {
@@ -83,12 +100,10 @@ class AuthGate extends StatelessWidget {
         }
 
         return FutureBuilder<_OnboardStep>(
-          future: _checkOnboarding(session.user.id),
+          future: _checkOnboardingWithMinDisplay(session.user.id),
           builder: (context, snap) {
             if (!snap.hasData) {
-              return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
+              return const WakingScreen();
             }
             switch (snap.data!) {
               case _OnboardStep.consent:

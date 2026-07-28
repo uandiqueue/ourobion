@@ -1,239 +1,240 @@
 ---
-title: Phase-2 Run 4 — preflight-gated remediation orchestrator prompt
-summary: Paste-ready Run 4 prompt for the accepted envelope. It rebuilds the release gate on a fresh base, limits the priority tranche to R4-U0-R4-U4, and defers O28/O29 by default.
+title: Phase-2 Run 4 continuation orchestrator prompt
+summary: Paste-ready continuation authority for resuming Run 4 after the UI integration and Home design alignment, covering current PR state, the two non-defect CI failure modes, macOS device setup, and the remaining unit queue.
 type: plan
 scope: shared
 status: canonical
-updated: 2026-07-27
+updated: 2026-07-28
 ---
 
-# Phase-2 Run 4 — preflight-gated remediation orchestrator prompt
+# Phase-2 Run 4 continuation orchestrator prompt
 
-Technical sign-off: **Codex, issue #150, 2026-07-27.** The sign-off covers prompt safety,
-sequencing, and scope containment. It is not acceptance of any implementation and does not authorize
-execution, hosted changes, provider calls, PR merges, or a waiver of repository policy.
-
-**Current state: ACTIVE under the accepted envelope.** U0 is locally authorized; full-suite and PR-CI
-evidence remain pending for its exact current SHA.
+When the human says `run docs/temp/run4/orchestrator-prompt.md`, execute the block below. That
+command is explicit authorization to resume local Run 4 within the recorded boundaries. It is not
+authorization for hosted writes, deployment, production promotion, model training, or merges outside
+`dev-phase2-run4`.
 
 ```text
-You are the lead orchestrator for OUROBION PHASE-2 RUN 4 in:
+You are the lead orchestrator for OUROBION PHASE-2 RUN 4.
 
-C:\project\ourobion
-
-Run 4 is a preflight-gated PRODUCT remediation run. It follows a Run 3 closure in which no O24-O29
-implementation unit was accepted. PR #144 is superseded input, not mergeable work: preserve its useful
-intent, but rebuild and re-evaluate O24 on the fresh Run 4 base.
-
-The active authorities, in order, are:
-
-1. AGENTS.md
-2. docs/INDEX.md
-3. docs/temp/run4/README.md
-4. docs/temp/run4/next-build-optimizations.md
-5. docs/temp/run4/pending-build-register.md
-6. Active architecture, contracts, ADRs, and memory records linked from AGENTS.md
-
-docs/temp/run4/run3-audit-findings.md is evidence for the handoff, not implementation authority.
-Never build from docs/archive/. The five custom-model training units MT1-MT5 remain a separate
-workstream and must not merge into the Run 4 product integration branch.
+This is a CONTINUATION. Do not rebuild merged units. Work continuously until the queue below is
+done, or until a genuine external prerequisite blocks every remaining path.
 
 ===============================================================================
-PART 0 — EXECUTION SENTINEL
+1. AUTHORITIES AND STARTUP
 ===============================================================================
 
-This prompt is not self-authorizing.
+Read and obey, in order:
 
-- If Jayden has not explicitly said "start Run 4", stop without opening issues, branches, worktrees,
-  PRs, hosted sessions, or provider calls.
-- A request to review, edit, sign, copy, or store this prompt is not a request to run it.
-- After explicit start, PRE-FLIGHT is the only authorized phase. Preflight ends at a human checkpoint.
-- Implementation begins only after Jayden accepts the exact integration branch, immutable base SHA,
-  landing-delta caps, required-check configuration, and locked-unit list.
+1. AGENTS.md — the single source of truth for this repo.
+2. docs/INDEX.md — the doc map.
+3. docs/temp/run4/continuation-status.md — the live cockpit.
+4. docs/sessions/20260728T063000Z-agentjwork-claude-run4-ui-device-defects-and-home-design.md
+   — the most recent session; it explains everything below in detail.
+5. Run `node tools/context_sync.mjs --session-start` and read the newest session logs.
 
-===============================================================================
-PART 1 — ORCHESTRATOR AND DELEGATION POLICY
-===============================================================================
+Then refresh live state yourself — never trust this file over reality:
+  gh pr list --state open --json number,title,headRefName,isDraft
+  git fetch origin --prune && git log --oneline -3 origin/dev-phase2-run4
 
-Use the primary frontier model for orchestration, architecture/adversarial synthesis, evaluation, and
-final quality control. Delegate bounded repository inventory, search, routine tests, mechanical docs,
-and straightforward implementation to the cheapest capable agent. Use stronger implementation agents
-for RLS/security, migrations, shared contracts, concurrency, scientific semantics, and release gates.
-Each risky implementation receives an independent evaluator who inspects the actual diff and evidence.
-
-Every dispatch brief must specify scope, expected artifact, validation rules, authority limits, and a
-stop condition. Record model and reasoning effort. A subagent report is evidence to verify, not an
-automatic conclusion.
-
-Graphify may route repository exploration. Its tracked view is a navigation aid, not ground truth;
-verify material findings against source files and current GitHub state. Do not turn graph maintenance
-into a Run 4 product unit.
+A repo hook will insist you run `graphify` before reading code. It is NOT installed on macOS
+(`command not found`). Ignore the hook; use git/grep/read directly.
 
 ===============================================================================
-PART 2 — PRE-FLIGHT (NO PRODUCT IMPLEMENTATION)
+2. WHERE THINGS STAND (2026-07-28)
 ===============================================================================
 
-At a fresh launch:
+Integration tip: 9164458 (merge of PR #197).
+Gate base: RUN4_UNIT_BASE_SHA = ff0546434f081cadc3e5683217d484f250c19139, caps 115 paths /
+8,500 added lines, set in BOTH tools/run4_release_gate.mjs and .github/workflows/ci.yml.
 
-1. Run the repository session-start procedure and read the newest session records.
-2. Verify the primary checkout is clean enough to inspect; never clean, reset, switch, or reuse another
-   agent's branch/worktree.
-3. Open one preflight issue, claim it, and use one isolated session branch/worktree under AGENTS.md.
-4. Recheck live GitHub state. Do not rely on the 2026-07-27 snapshot.
-5. Confirm PR #144 is closed/superseded and none of its stale evidence is represented as current.
-6. Confirm model-training work has no PR targeting the Run 4 product integration branch.
+MERGED
+  #197  gate-base advance. This unblocked the whole queue: the old base c558c04 was charging every
+        unit for already-merged work. #191 fell from a reported 13,449 added lines to a real 6,436
+        with no code removed.
 
-Preflight must produce a decision packet with:
+GREEN, UNMERGED, NEEDS A HUMAN
+  #191  canonical full UI. 19/19 green, MERGEABLE, CLEAN. Contains #175 — NEVER land both.
+  #202  knowledge-base counts + Home design alignment. Stacked on #191; merge #191 first.
 
-- `RUN4_INTEGRATION_BRANCH`: an explicit human-approved successor branch; do not infer or create a
-  long-lived exception to AGENTS.md without approval.
-- `RUN4_ENVELOPE_BOOTSTRAP_SHA`: the original immutable envelope/bootstrap provenance commit.
-- `RUN4_UNIT_BASE_SHA`: the exact immutable post-concurrent-session commit from which the active U0 landing delta is measured; it is not represented as a whole-run base.
-- `MAX_CHANGED_PATHS` and `MAX_ADDED_LINES`: explicit caps approved after a source-based unit estimate.
-- Required CI-evidence posture: `dev-phase2-run4` intentionally remains unprotected by user override.
-  Use one stable aggregate `Run 4 Gate` check with `if: always()` and explicit `needs` that fails unless
-  every required dependency succeeds. Missing/skipped required checks must not pass silently, but the
-  gate is exact-current-SHA evidence only, not GitHub branch-setting enforcement.
-- P2: the named second reviewer for any `shared/` change. A prompt, orchestrator, or owner convenience
-  cannot waive this repository rule.
-- P3: the human-approved integration target for the separate model-training workstream, if MT1-MT5 are
-  still active. It must not be the Run 4 product branch.
-- P5: credential/hardware/hosted-resource decisions recorded by name, without secret values.
-- P6: provider posture. O29 is deferred unless a second-family configuration and budget are explicitly
-  approved later.
-- A per-unit estimate of touched files, added lines, migrations/contracts, external needs, test time,
-  and reviewer needs for R4-U0-R4-U4.
+  Both are blocked ONLY because `gh pr merge` is refused by the local permission classifier. Ask
+  the human to run it. Do not try to work around the refusal.
+  #191 also still needs the TWO-REVIEWER signoff recorded on its shared/types/index.ts change
+  (InsightCard.status gains 'archived'). Jayden + Alton are the named reviewers. Test evidence does
+  not substitute for review.
 
-For the active U0 unit, use final landing-delta semantics: unique paths and added lines in `RUN4_UNIT_BASE_SHA..HEAD`. This is not
-"cumulative churn" across intermediate commits. Generated files, lockfiles, session/tracking records,
-and corrections count. Missing base objects, shallow history, parse failures, or ambiguous rename/
-binary handling fail the cap gate. Do not retroactively subtract "unrelated" merges from an old base.
+NOT STARTED — your queue
+  #200  Archive tab: trend data alongside past insights.
+  #201  Scan tab: scanning-motion restyle.
 
-Present the packet and STOP only when the accepted values are absent. For the current accepted envelope,
-start or continue R4-U0 locally; the preflight may shrink the recommended tranche but may not add a unit.
+STILL OPEN FROM THE ORIGINAL QUEUE (untouched by the last session)
+  #180/#170 U1 security; #185/#186 U2 corrections; #184 U3 loader; #176 U5 + #190 evidence; U4.
+  #180 is STALE-BASED: its merge-base predates the merged U2, so its diff currently DELETES
+  authz.ts, authzServer.ts, internal_auth.ts, the nao_* migrations and supabase/tests/authz/**.
+  Rebase it before doing anything else with it.
 
 ===============================================================================
-PART 3 — RECOMMENDED MAXIMUM PRIORITY TRANCHE
+3. TWO CI FAILURES THAT ARE NOT CODE DEFECTS — read before debugging any red
 ===============================================================================
 
-R4-U0 / O24 + O31-O34 — trustworthy release gate
+(a) "synthetic merge parents do not match current event base/head"
+    The base branch moved between the PR event firing and GitHub recomputing the merge ref, so the
+    event's recorded base.sha is stale.
+    RE-RUNNING DOES NOT FIX IT — a re-run replays the same immutable event payload. This was
+    confirmed by trying it and getting byte-identical SHAs back.
+    FIX: merge origin/dev-phase2-run4 into the branch and push. That fires a fresh event.
+    #176 is recorded as "unstable — release job rejects mismatched synthetic-merge parents". That
+    is very likely this, not a defect in #176. Check before assuming the code is broken.
 
-- Rebuild O24 on the fresh base; do not merge or mechanically cherry-pick PR #144.
-- Add fail-closed U0 landing-delta enforcement from the approved unit base/caps. Preserve the original envelope/bootstrap SHA as historical provenance; do not count the separately owned, already-landed model-training session as U0 work.
-- Establish and record exact-current-SHA CI evidence through one stable aggregate gate; do not claim or
-  attempt branch protection.
-- Every required job must check the same current landing SHA. PR synthetic-merge evidence is valid only
-  while it contains the current base and head; any base advance, conflict, or workflow edit invalidates
-  old evidence. A default checkout followed by `HEAD == GITHUB_SHA` is not, by itself, useful proof.
-- Replace regex-as-TOML parsing. Test quoted function names, trailing comments, dotted names, missing/
-  duplicate/extra functions, disabled/no-op jobs, and exact configured entrypoints.
-- Prove the pinned Supabase CLI's non-hosted bundle path consumes the intended per-function config and
-  dependency graph. Official support for `deno.json` is not proof that this lock-v5 shape is honored in
-  every bundling mode. Capture a reproducible bundle/module-graph hash, or pin exact imports/vendor and
-  keep deploy reproducibility blocked.
-- No deployment or hosted write.
-
-R4-U1 / O35 + O36 — mechanical architecture and secret boundaries
-
-- Enforce forbidden cross-module `/impl` imports and the model-training isolation boundary across TS,
-  Dart, and Python-workspace path/subprocess references. An ESLint-only rule is insufficient.
-- Use positive and negative fixtures so every guard has a reachable failure path.
-- Add pinned secret scanning for pushes/PRs with a reviewed baseline and fail-closed configuration.
-  Preserve targeted tests proving server keys do not reach client bundles, `NEXT_PUBLIC_*`, headers,
-  responses, traces, or logs; a scanner does not replace those tests.
-- Starts only after R4-U0 is merged and its required gate is active.
-
-R4-U2 / O25 — authorization, privacy, and named server-key boundary
-
-- Enforce viewer/curator/admin in middleware, routes, Postgres/RLS/RPCs, and negative tests.
-- Unprovisioned ordinary accounts receive no nao access.
-- Redact global-job responses and attribute append-only control events.
-- Replace legacy service-role Bearer/direct-equality behavior with the approved named server-secret
-  protocol and staged rotation tests.
-- No hosted key mutation, Cloudflare/Supabase setting change, deployment, or revocation without
-  separate approval naming the exact resource and rollback.
-
-R4-U3 / O26 — raw-truth and retry safety
-
-- Mechanically isolate simulation to approved demo context.
-- Plan from both raw tables and write gut plus wearable rows transactionally.
-- Refuse real-row conflicts; preserve or replace simulation provenance correctly.
-- Add durable idempotency keys, input watermarks, single-flight behavior, stable demand identity, and
-  retry-safe publication.
-- Test sparse/mismatched history, repeated/concurrent calls, and forced failure/repair at every stage.
-- Never hand-edit derived projections; fix raw inputs or job logic and rebuild.
-
-R4-U4 / O27 + O38 — scientific semantics and artifact trust
-
-- HARD GATE: a named second reviewer must be available before any `shared/` change starts.
-- Carry source claim kind, verifier-supported kind, artifact revision/hash, fixture/live posture,
-  returned model/version, decorrelation, and attestation through storage, serving, provenance, and UI.
-- Causal wording is allowed only when source and verifier semantics support it.
-- Bind expert disposition to the reviewed artifact revision/hash and specify re-review/restore behavior.
-- Promote `TEST_MODE_LABEL` through the shared seam using generated or parity-guarded TS/Dart constants;
-  neither language imports the other's source directly.
-- Use widget and semantics assertions for touched UI. Image goldens are deferred unless a separate
-  cross-platform determinism proof is accepted.
-
-Default exclusions from this tranche:
-
-- O28 as a broad UI/accessibility unit and O37 image-golden infrastructure.
-- O29 live verifier/release promotion, all live provider calls, and all hosted release rehearsal.
-- O39 dependency-update policy and the remaining O40 ADR work.
-- Every pending-register row not explicitly listed in R4-U0-R4-U4.
-- Custom-model training or product integration of custom models.
-- Production cutover, traffic, hosting, database cloning, or claims of scientific validation.
+(b) "binary/unparsable diff row"
+    checkLandingDelta fails closed on any binary row. Anything under apps/biotope/assets/ that is
+    REWRITTEN (not merely added) triggers it. That guard stops unreviewed binary payloads landing.
+    DO NOT weaken it. Changing it needs a recorded human decision.
 
 ===============================================================================
-PART 4 — UNIT LIFECYCLE AND INTEGRATION
+4. LANDING BUDGET — CHECK THIS BEFORE YOU PLAN
 ===============================================================================
 
-Each implementation unit gets exactly one issue, task claim, isolated short-lived branch/worktree,
-append-only session log with `memory:` line, coherent conventional commit set, and PR directly into
-the approved Run 4 integration branch. Never target main. Never use stacked PR bases.
+PR #202 already measures 57 paths / 7,670 added lines against 115 / 8,500. Roughly 830 lines of
+headroom remain on the current base.
 
-Start a dependent unit only after its prerequisite is merged and present on the integration branch.
-Do not merge a PR without Jayden's explicit authorization. If a unit blocks or exceeds the approved
-landing-delta envelope, return it to `docs/temp/run4/pending-build-register.md`; do not create a
-replacement or follow-up unit.
+So: once #191 and #202 merge, ADVANCE THE GATE BASE AGAIN before starting #200 or #201, exactly as
+PR #197 did — set RUN4_UNIT_BASE_SHA to the new tip, update ci.yml in lockstep, re-record the
+attestation THROUGH THE TOOL (never hand-edit it), and re-prove the gate fails closed with injected
+negatives. tools/run4_release_gate.mjs:27-39 documents this per-unit convention.
 
-On first authorized preflight, create and maintain under `docs/temp/run4/`:
-
-- `orchestration-log.md`: resume pointer, issue/PR/worktree, exact SHA evidence, model/effort, cap and
-  spend accounting;
-- `decisions-signoff.md`: decisions and rejected alternatives;
-- `human-decisions.md`: approvals, exact external resources, credentials by name only, reviewer and
-  cap decisions;
-- `unit-signoff-index.md`: one row per locked unit, with human sign-off pending until Jayden acts;
-- `run-envelope.json`: approved integration branch, historical envelope/bootstrap SHA, active unit base where applicable, caps, and required gate name.
-
-Use statuses `queued`, `in-progress`, `pr-open`, `merged`, `blocked`, `deferred`. Never claim a test,
-manual traversal, provider call, hosted rehearsal, rotation, or deployment ran without exact command,
-environment, SHA, and actual result.
+Re-recording the attestation needs a local `supabase functions serve` probe; see §6.
 
 ===============================================================================
-PART 5 — VERIFICATION AND ACCEPTANCE
+5. YOUR QUEUE
 ===============================================================================
 
-Every builder returns changed files, decisions, commands/results, untested paths, external activity,
-spend, and risks. Every evaluator reviews the actual diff and reruns or independently inspects the
-material negative paths.
+Do #200 then #201. One issue, one branch, one worktree, one PR each (AGENTS.md §7):
+  node tools/setup_agent_worktree.mjs --branch <name> --path <abs path OUTSIDE the repo> --base dev-phase2-run4
 
-Minimum gate, adapted to touched surfaces:
+#200 — ARCHIVE: TRENDS + PAST INSIGHTS
+  archive_tab.dart only calls getArchivedInsights(userId) and renders saved cards. Add historical
+  metric trends so the tab is a real look-back surface.
+  Keep the archived-card round trip and the `archived` status contract intact —
+  insight_status_contract_test.dart and archive_status_widget_test.dart must stay green.
+  REAL DATA ONLY. If a metric has no history, say so plainly; never draw an empty chart that
+  implies data. Reuse m5a_baselines/impl/chart_math.dart rather than re-deriving axis math.
 
-- `node tools/context_sync.mjs --check`;
-- `flutter analyze` and `flutter test` for Flutter/shared-Dart changes;
-- shared TypeScript, nao, and touched Node package typechecks/tests;
-- Deno checks for every configured affected Edge Function;
-- shadow migration apply for migrations;
-- unit-specific security/RLS, concurrency, raw-truth, copy, parity, and failure-path tests;
-- current required aggregate check on the exact landing SHA;
-- U0 machine cap check against `RUN4_UNIT_BASE_SHA`.
+#201 — SCAN: SCANNING-MOTION RESTYLE
+  Scan is ALREADY the log tab: inline chip answers (_InlineChipRow.onAnswer), a full-log route
+  (onOpenFullLog), gap cards, channel rows, and an existing orb animation. This is a RESTYLE, NOT A
+  REBUILD. Do not replace the logging behaviour.
+  Build the sweep from the design's `scanSweep` keyframe.
+  EnvironmentRow renders NOT BUILT with an honest explanation and DELIBERATELY has no onTap, no
+  GestureDetector and no focusable descendant. KEEP THAT. Never make an unbuilt channel look
+  operable.
+  Gate continuous animation on MediaQuery.disableAnimations.
 
-No self-signing. "Complete" means implemented, independently reviewed in proportion to risk,
-gate-green on the current landing state, honestly evidenced, and represented by a PR into the approved
-Run 4 integration branch. Human acceptance and merge remain Jayden's decisions.
+THE DESIGN FILE
+  The Claude Design export ("Biotope Biomech Botanical.dc.html" + support.js + assets/) is supplied
+  BY THE HUMAN out of band — ask for the zip. It is deliberately NOT committed: its text alone is
+  ~2,763 lines, which would blow the landing cap, and its PNGs would trigger the binary-diff guard.
+  10 of its 11 referenced images ALREADY EXIST in the repo under
+  apps/biotope/assets/images/generated/biomech_botanical/<category>/ — map design asset names onto
+  BiotopeGeneratedAssets rather than re-adding files. Only biotope-mark-light.svg has no local
+  counterpart (the repo has logo.png).
 
-Run 4 completion does not mean production readiness, scientific validation, ordinary-user deployment,
-or closure of the full pending-build register.
+===============================================================================
+6. DEVICE SETUP (macOS) — machine-local, does not travel between devices
+===============================================================================
+
+- deno is required by the release gate and is NOT installed by default. Install the pinned version:
+    curl -fsSL https://deno.land/install.sh | DENO_INSTALL="$HOME/.deno" sh -s v2.8.1
+  It must be 2.8.1: CI pins it, and the attestation's module-graph hashes must match.
+- Docker Desktop's credential helper is not on PATH, so `docker run` fails with
+  "docker-credential-desktop not found". Prefix with:
+    export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"
+  The authz and profile_prefs harnesses need this — they spin disposable postgres:17 containers.
+- adb lives at ~/Library/Android/sdk/platform-tools/adb and is not on PATH; `flutter devices` will
+  not see the phone until it is. Note zsh does NOT word-split unquoted variables, so
+  `A="adb -s X"; $A shell ...` fails — write adb commands out in full.
+- The repo-local Supabase CLI is node_modules/.bin/supabase (2.81.2).
+- Local seeding:
+    docker exec -i supabase_db_ourobion psql -U postgres -d postgres -v email=<user> -v days=21 \
+      < scripts/seed-test-data.sql
+  then invoke compute-baselines and generate-insights. Those functions require the header
+  `X-Ourobion-Internal-Secret` (43-char base64url) with OUROBION_INTERNAL_SECRET_CURRENT set in the
+  serve env — a plain service-role key returns 401 by design.
+- After applying new migrations to the local stack run `NOTIFY pgrst, 'reload schema';`, or
+  PostgREST will 404 new RPCs even though they exist in SQL.
+- KNOWN GAP: tools/rules cannot run on a clean clone — shared/rules/rule.schema.ts imports `zod`,
+  declared neither in tools/rules/package.json nor at the repo root. Work around with
+  `npm install --no-save zod` at the repo root. Blocks local insight-engine seeding until fixed.
+
+===============================================================================
+7. NON-NEGOTIABLE BOUNDARIES
+===============================================================================
+
+- All issues, branches, PRs and merges target dev-phase2-run4 ONLY. Never dev-phase2, never main.
+- Never weaken a cap, test, guard, scanner or assertion to make CI green. If an envelope genuinely
+  must change, record the exact human decision and add negative tests.
+- No hosted Supabase write, deployment, production traffic, key mutation, model promotion, or
+  scientific-validation claim. No model training; do not touch model-training/.
+- No live LLM/provider calls. Issue #189's bounded test is closed and did not unblock O29.
+- shared/ contract changes require TWO reviewers recorded on the actual PR.
+- Raw user rows are truth. Never hand-edit derived baseline/insight/engagement/brain projections —
+  fix the input or the logic and re-run.
+- Every user-facing string must pass CopyRules.validateCopyString (non-diagnostic).
+- NO FAKE CONTROLS. A surface that cannot report must say so, not simulate activity. The last
+  session removed a hardcoded three-line "knowledge base" ticker that implied live indexing with
+  nothing behind it. Do not reintroduce that pattern anywhere.
+
+===============================================================================
+8. VERIFICATION
+===============================================================================
+
+For every changed surface, run and PASTE ACTUAL OUTPUT:
+  cd apps/biotope && flutter analyze && flutter test
+  node tools/context_sync.mjs --check
+  node --test tools/run4_release_gate.test.mjs && node tools/run4_release_gate.mjs config
+  supabase/tests/authz/run.mjs           (when migrations/auth/preference RPCs change; 443/443)
+  supabase/tests/profile_prefs/run.mjs   (34/34)
+  node tools/run4_release_gate.mjs landing --base <base> --head HEAD --max-paths 115 --max-added 8500
+
+CI GREEN IS NOT ENOUGH FOR UI WORK. The last session found THREE defects that shipped with a clean
+`flutter analyze` and 176 passing widget tests:
+  1. the Home grid overflowed 9.5px on a real 1080x2340 device — childAspectRatio derived cell
+     HEIGHT from tile WIDTH, but tile content height is fixed, so it was worse on narrower phones;
+  2. the Profile tab hung on a spinner permanently — no try/catch in _load(), and the tab is kept
+     alive in an IndexedStack, so it could not recover for the whole session even after the backend
+     came back;
+  3. NONE of the 25 generated PNGs shipped — a Flutter asset directory entry is NOT recursive, and
+     every Image.asset fell through to an errorBuilder whose hero fallback is an invisible SizedBox,
+     so the app looked deliberate while shipping none of its artwork.
+ALWAYS build to the physical Android device and LOOK AT IT.
+
+Before pushing: write exactly one docs/sessions/<UTC>-<device>-<agent>-<slug>.md with
+Attempted / Changed / Decided / Left / Blockers AND a `memory:` line, then run
+`node tools/context_sync.mjs --fix-index`. The pre-push hook and CI fail without the session file.
+
+===============================================================================
+9. KNOWN DEBTS ALREADY RECORDED (do not rediscover these as new)
+===============================================================================
+
+- Asset weight: the 25 generated PNGs total ~31MB at up to 1535x1024 for views a few hundred
+  logical px wide. Downscaling was measured at 31MB -> 7.9MB with no visible difference, but it
+  rewrites blobs already on the integration branch and therefore trips the binary-diff guard. It
+  needs its own change plus a human decision. Left as a SKIPPED test group in
+  apps/biotope/test/core/asset_bundling_test.dart naming that reason.
+- MetricTile still overflows at a 1.6x accessibility text scale (17px horizontal, 15px vertical)
+  because of its fixed type scale. Pre-existing, independent of the grid fix, deferred O28. Left as
+  a skipped test with the reason in its name.
+- home_hero_robot_hand_main.png is RGB with NO alpha — an opaque rectangle, not a cutout. It is
+  currently clipped and feathered with a ShaderMask. A transparent-background asset would make the
+  mask a no-op and is the real fix.
+- Raw edgeId still renders verbatim in provenance (insight_card_visual.dart) — deferred O28.
+- O28 is NOT complete merely because the reskin added accessibility work.
+
+===============================================================================
+10. CLOSEOUT
+===============================================================================
+
+Report shipped work, the actual commands and results, what is held or deferred, and any external
+action still required. Stop before cloud promotion. Never claim production readiness or scientific
+validation. Never describe an unrun test as passing.
 ```

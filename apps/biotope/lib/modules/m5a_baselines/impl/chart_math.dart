@@ -79,3 +79,23 @@ String compactValueLabel(double v) {
   if (v == v.roundToDouble()) return v.round().toString();
   return v.toStringAsFixed(1);
 }
+
+const _shortMonths = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+/// Date-axis endpoint label: '24 Jul'. Lives here rather than privately inside
+/// one painter so every surface that plots a daily series (the trend section,
+/// the metric detail view) labels its axis identically.
+String shortDateLabel(DateTime d) => '${d.day} ${_shortMonths[d.month - 1]}';

@@ -130,19 +130,15 @@ class _SignInScreenState extends State<SignInScreen> {
                       validator: (v) => (v == null || v.isEmpty) ? 'Enter your password' : null,
                     ),
 
-                    // ── Forgot password ────────────────────────
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {},
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          foregroundColor: OurobionColors.outline,
-                          textStyle: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                        child: const Text('Forgot password?'),
-                      ),
-                    ),
+                    // NO "Forgot password?" LINK HERE — on purpose.
+                    //
+                    // There used to be a fully styled, enabled TextButton with
+                    // `onPressed: () {}`: the first screen of the app offered a
+                    // control that could not act. Password reset needs mail
+                    // delivery this project cannot verify, so the honest move is
+                    // to remove the affordance rather than render an operable-
+                    // looking one. Re-add it only together with a working
+                    // recovery flow (AuthService has no resetPassword today).
 
                     // ── Error ──────────────────────────────────
                     if (_error != null) ...[
