@@ -10,7 +10,8 @@ updated: 2026-07-28
 # Run 4 U2 corrections — one reconciled correction path
 
 Issue: #187 (reconciliation). Absorbs #181 / PR #185 and #182 / PR #186.
-Branch: `fix/auth/run4-u2-corrections-combined`, cut from `dev-phase2-run4` @ `87a6364`.
+Branch: `fix/auth/run4-u2-corrections-combined`, cut from `dev-phase2-run4` @ `87a6364`, then merged
+up to `9004599` after #176 and #190 landed mid-session. PR: #214.
 
 Cockpit step 4 of the required reconciliation order: *combine #185 and #186 from the current
 integration tip, resolve the overlap, rerun the evidence, integrate ONE reconciled path.*
@@ -51,6 +52,25 @@ the attestation record, all of which belong to the concurrent base-advance agent
   longer stale: the audit-error, outcome-unknown and mutation-error arms return fixed strings plus
   the operation id, never upstream payload, so the redaction contract still covers every relaying
   path.
+
+## Evidence actually obtained
+
+Local, on this branch:
+
+| Check | Result |
+|---|---|
+| `apps/nao` `npx tsc --noEmit --incremental false` | exit 0, clean |
+| `apps/nao` `npm test` | **tests 231 · pass 231 · fail 0** |
+| `node --test supabase/functions/_shared/{internal_auth,server_keys}.test.ts` | **tests 52 · pass 52 · fail 0** |
+| `node tools/context_sync.mjs --check` | passed |
+| `node tools/context_sync.mjs --fix-index` | ran; regenerated indexes were EOL-only churn and discarded |
+
+CI on PR #214 — **17 of 19 green**. Passing includes `nao — typecheck & test` (proving the CRLF fix
+is correct on an LF checkout too), all four `Deno —` handler checks, `TypeScript — Type Check`,
+`Flutter — Analyze & Test`, `Context`, all six `Node tools`, and — materially — **`Migrations —
+shadow apply (postgres:17)`**, which validates the renumbered migrations against a vanilla
+postgres:17 in filename order. The two red jobs are `Run 4 release evidence` and the consequential
+`Run 4 Gate`; the release job fails at its landing-delta step, before reaching the attestation step.
 
 ## Decided
 
@@ -96,12 +116,43 @@ the attestation record, all of which belong to the concurrent base-advance agent
   coordination constraint, `.github/workflows/ci.yml`, `tools/run4_release_gate*.mjs` and
   `supabase/deploy-attestation.json` were left untouched. The gate correctly fails closed until a
   real local serve proof exists.
-- The Docker engine on this box wedged mid-session: both named pipes exist but every
-  `docker ps` / `docker info` / `docker version` call times out, and `docker desktop restart` did
-  not return. `supabase/tests/authz/run.mjs` and `supabase/tests/profile_prefs/run.mjs` both spin
-  disposable `postgres:17` containers and therefore could not be executed. Their assertions —
-  including #186's 144 new lines in `60_assertions.sql` and 24 in `70_non_regression.sql` — are
-  **unverified at runtime in this session**; they are not claimed as passing. CI's
-  `migrations-apply` job plus a permitted local harness run must confirm them.
+- **The landing cap is exceeded by 31 lines, and the cause is other units' merged work, not this
+  one.** PRs #176 and #190 merged mid-session, advancing the integration tip from `87a6364` to
+  `9004599`. Measured against the accepted gate base `547280f6`:
+
+  | Span | Paths | Added |
+  |---|---:|---:|
+  | gate base → integration tip `9004599` (other units) | 59 | 5,861 |
+  | integration tip → this branch (**this unit alone**) | 37 | 2,670 |
+  | gate base → CI's synthetic merge (**what the cap measures**) | — | **8,531** vs 8,500 |
+
+  The gate correctly refuses a base other than the accepted SHA, so this cannot be re-measured
+  around. `RUN4_UNIT_BASE_SHA` was **not** advanced here — a separate agent has that change ready.
+  Per the run's constraint, this is reported and stopped at rather than worked around; no content was
+  trimmed to buy 31 lines.
+- **Docker is unavailable on this box, so the two container-backed harnesses could not run.** The
+  machine is RAM-exhausted (1.7 GB free of 15.7 GB) with a concurrent physical-device Flutter build
+  holding dart/gradle memory; `docker ps` / `docker info` / `docker version` all hang with no output
+  on 60-second timeouts. Jayden's standing instruction is to leave Docker down until the running
+  builds finish. `supabase/tests/authz/run.mjs` (the 443-assertion authorization harness) and
+  `supabase/tests/profile_prefs/run.mjs` both spin disposable `postgres:17` containers, so their
+  assertions — including #186's 144 new lines in `60_assertions.sql` and 24 in
+  `70_non_regression.sql` — are **unverified at runtime in this session and are NOT claimed as
+  passing**. Nothing was skipped, stubbed or weakened to manufacture a green result. Exact commands
+  to run once Docker returns:
+
+  ```
+  node supabase/tests/authz/run.mjs
+  node supabase/tests/profile_prefs/run.mjs
+  ```
+
+  Partial independent corroboration exists: CI's `Migrations — shadow apply (postgres:17)` job
+  **passed** on this branch, which proves the two renumbered migrations apply cleanly in filename
+  order against a vanilla postgres:17. That is not a substitute for the RLS/privilege assertions.
+- **Housekeeping note for the next session:** a `docker desktop restart` attempted early in this
+  session shut Docker Desktop down without bringing it back; it was relaunched and is running but
+  still wedged, holding roughly 1.4 GB (Desktop + backend + `vmmemWSL`). Stopping it was not
+  permitted from this session. Consider quitting Docker Desktop to return that RAM to the Flutter
+  build, then starting it clean when the builds finish.
 
 memory: none
