@@ -123,8 +123,17 @@ const SNAPSHOT_FRESHNESS_DAYS = 7
  * the USER changes the status. N-day auto-reactivation (a snooze-until column) is deliberately
  * deferred to Jayden (D17). Skipping happens at pushCard — the only writer into the
  * (user_id, rule_id) upsert batch — so a held card can never be re-upserted `status: 'active'`.
+ *
+ * ⚠ EVERY non-`active` value of insight_cards.status MUST appear here. A value that is missing
+ * is not "not held" — it is silently UN-held: the nightly pass re-upserts the card
+ * `status: 'active'` and the user's choice disappears with no error anywhere. `archived` (the
+ * biotope Archive tab's save, added 20260728040000) is held for exactly this reason.
+ * The value set is mirrored by shared/types/index.ts InsightCard.status, the migration's status
+ * CHECK, and the Dart `InsightStatus` enum; drift between them is caught by
+ * apps/biotope/test/m5b_insight_engine/insight_status_contract_test.dart, which parses THIS
+ * literal out of THIS file rather than trusting a copy.
  */
-const USER_HELD_STATUSES: ReadonlySet<string> = new Set(["dismissed", "snoozed"])
+const USER_HELD_STATUSES: ReadonlySet<string> = new Set(["dismissed", "snoozed", "archived"])
 
 /** Confidence-level → 0–1 score for RULE cards (preserved from the MVP for M6 / future use). */
 const CONFIDENCE_SCORE: Record<string, number> = {
@@ -489,6 +498,7 @@ Deno.serve(async (req) => {
   let firedPatternCount = 0
   let dismissedSkips = 0
   let snoozedSkips = 0
+  let archivedSkips = 0
   const branchCounts: Record<Branch, number> = {
     agree: 0,
     "research-context": 0,
@@ -522,11 +532,14 @@ Deno.serve(async (req) => {
 
     const pushCard = (card: CardRow): void => {
       const key = `${card.user_id}:${card.rule_id}`
-      // D17 / A18: a user-held card (dismissed OR snoozed) is never re-upserted — the upsert
-      // would rewrite `status: 'active'` over the user's choice. Held = held until the user acts.
+      // D17 / A18: a user-held card (dismissed, snoozed OR archived) is never re-upserted — the
+      // upsert would rewrite `status: 'active'` over the user's choice. Held = held until the user
+      // acts. Each held status is counted separately: folding `archived` into `snoozedSkipped`
+      // would silently misreport saves as snoozes once the Archive tab started writing `archived`.
       const held = heldStatusByKey.get(key)
       if (held !== undefined) {
         if (held === "dismissed") dismissedSkips++
+        else if (held === "archived") archivedSkips++
         else snoozedSkips++
         return
       }
@@ -1028,6 +1041,7 @@ Deno.serve(async (req) => {
         droppedAtRender: renderDrops,
         dismissedSkipped: dismissedSkips,
         snoozedSkipped: snoozedSkips,
+        archivedSkipped: archivedSkips,
       },
       gapLedger: { pairsTouched: gapEvents.length, demandByStatus: gapStatusCounts },
       brainScopeSkips,
