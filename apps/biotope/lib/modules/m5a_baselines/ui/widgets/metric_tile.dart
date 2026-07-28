@@ -7,6 +7,15 @@ import '../../impl/metric_series_models.dart';
 
 enum MetricSparklineStyle { line, bars, progress }
 
+/// Fixed main-axis height of one [MetricTile] cell in the Home signals grid.
+///
+/// The tile's content height does not depend on its width, so the grid must not
+/// derive the cell height from the tile width (a `childAspectRatio`) — doing so
+/// overflowed the column by 9.5px on a 1080x2340 device and by more on narrower
+/// screens. This is the measured content height plus headroom. Keep it in step
+/// with the paddings and `SizedBox` heights in [MetricTile.build].
+const double kMetricTileExtent = 158;
+
 /// Compact Home-grid metric card: value, delta, and a small sparkline/bar/
 /// progress visual built from a real [MetricDailyPoint] series (reuses
 /// chart_math.dart's scaling helpers — the same math `TrendChartPainter`
@@ -107,9 +116,16 @@ class MetricTile extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 11),
-            SizedBox(
-              height: 22,
-              child: _buildVisual(),
+            // Flexible, not a bare SizedBox: at a large accessibility text scale
+            // the text rows above grow and would otherwise push this past the
+            // cell. Letting the visual compress keeps the numbers readable and
+            // the tile inside its bounds instead of throwing a RenderFlex
+            // overflow.
+            Flexible(
+              child: SizedBox(
+                height: 22,
+                child: _buildVisual(),
+              ),
             ),
           ],
         ),

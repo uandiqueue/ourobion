@@ -26,8 +26,19 @@ reskin sessions on this branch; this session integrates it onto the reconciled b
 
 ## Changed
 
-- One merge commit bringing `ci/run4-unit-base-advance` into the UI branch. No UI source was
-  modified in this session.
+- One merge commit bringing `ci/run4-unit-base-advance` into the UI branch.
+- **Two defects found by physical-device traversal and fixed**, with regression tests:
+  - `home_tab.dart` / `metric_tile.dart` — the Home signals grid sized its cells with
+    `childAspectRatio: 1.3`, deriving the cell **height** from the tile **width**. A `MetricTile`'s
+    content height is fixed, so the cell was too short: the device showed
+    `BOTTOM OVERFLOWED BY 9.5 PIXELS` on all four tiles, and the shortfall grows as the screen
+    narrows. Replaced with a fixed `mainAxisExtent` (`kMetricTileExtent`) and made the tile's visual
+    `Flexible` so it compresses rather than overflows.
+  - `profile_tab.dart` — `_load()` had no error handling. Any read failure escaped, `_loading` was
+    never cleared, and because the tab is kept alive in the shell's `IndexedStack` the spinner was
+    permanent **for the whole session** even after the backend recovered; only force-stopping the
+    app cleared it. Added a catch that clears `_loading`, a distinct `_loadFailed` state with
+    user-visible copy, and an explicit retry.
 
 ## Decided
 
@@ -54,7 +65,9 @@ macOS, `deno 2.8.1`, repository-local Supabase CLI `2.81.2`, disposable `postgre
 | Gate | Result |
 |---|---|
 | `flutter analyze` | `No issues found!` |
-| `flutter test` | **176/176 pass** |
+| `flutter test` (before the two fixes) | 176/176 pass — **and both device defects still shipped** |
+| `flutter test` (after) | **190 pass, 1 skipped** (the recorded O28 gap) |
+| Physical Android traversal (Samsung SM-A165F, 1080x2340) | sign-in → consent → profile setup → all five tabs; overflow reproduced, fixed, and re-verified on device |
 | `supabase/tests/authz/run.mjs` (U2 regression) | **443/443 assertions pass**, 0 fail (min required 350) |
 | `supabase/tests/profile_prefs/run.mjs` | **34/34 assertions pass**, 0 fail (min required 30) |
 | `node tools/run4_release_gate.mjs attest` (fresh graphs) | `run4 local runtime attestation: PASS` |
@@ -83,7 +96,16 @@ agree:
 - PR #175 must be closed as superseded; its head `5d1e177` is confirmed an ancestor of #191's head,
   so landing both would duplicate the work.
 - The raw `edgeId` provenance string, as recorded above.
-- Physical Android traversal recorded on the PR.
+- **`MetricTile` still overflows at a 1.6x accessibility text scale** — 17px horizontally (the value
+  row) and 15px vertically. This is a pre-existing limitation of the tile's fixed type scale, not
+  the grid-sizing bug fixed here, and it reproduces independently of how cells are sized. Fixing it
+  means reworking the tile's typography, which is deferred O28 work. Left as an explicitly **skipped
+  test with the reason in its name**, so the suite records the gap rather than hiding it.
+- **`tools/rules` cannot run on a clean clone**: `shared/rules/rule.schema.ts` imports `zod`, but
+  `zod` is declared in neither `tools/rules/package.json` (only `pg` + `tsx`) nor the repo root.
+  `node tools/rules/load_rules.mjs` fails with `Cannot find module 'zod'`. Pre-existing and unrelated
+  to this PR — worked around locally with an uncommitted `npm install --no-save zod`. Needs its own
+  fix; it blocks local insight-engine seeding.
 
 ## Blockers
 

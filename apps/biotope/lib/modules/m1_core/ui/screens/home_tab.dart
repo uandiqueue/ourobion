@@ -575,13 +575,23 @@ class _SignalsGrid extends StatelessWidget {
     final hrv = series[_kHrvMetric] ?? const [];
     final steps = series[_kStepsMetric] ?? const [];
 
-    return GridView.count(
-      crossAxisCount: 2,
+    return GridView(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 11,
-      crossAxisSpacing: 11,
-      childAspectRatio: 1.3,
+      // A MetricTile's content is FIXED height (label + value + delta + a 22px
+      // visual). `childAspectRatio` derived the cell height from the tile WIDTH,
+      // so the row height shrank with the screen and the column overflowed —
+      // 9.5px on a 1080x2340 device, and worse the narrower the phone. Pin the
+      // main-axis extent instead so the cell matches the content it holds and is
+      // independent of device width. `_kMetricTileExtent` is the measured
+      // content height plus headroom; the tile's visual is Flexible, so a large
+      // text scale compresses that rather than overflowing.
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 11,
+        crossAxisSpacing: 11,
+        mainAxisExtent: kMetricTileExtent,
+      ),
       children: [
         MetricTile(
           label: 'Sleep',

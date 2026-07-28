@@ -36,6 +36,15 @@ abstract final class ProfileTabCopy {
   static const wearableLabel = 'Wearable connected';
   static const wearableSubtitle = 'Enables wearable syncing on the Scan tab';
 
+  /// The read counterpart of [digestSaveFailed]. Without it a failed load left
+  /// the tab on a spinner forever: the exception escaped `_load`, `_loading`
+  /// was never cleared, and because the tab is kept alive in the shell's
+  /// IndexedStack it could not recover even once the backend came back — only
+  /// a full app restart cleared it.
+  static const loadFailed =
+      'Could not load your profile — check your connection and try again.';
+  static const retry = 'Try again';
+
   static const all = <String>[
     backdropLabel,
     backdropSubtitle,
@@ -44,6 +53,8 @@ abstract final class ProfileTabCopy {
     digestSaveFailed,
     wearableLabel,
     wearableSubtitle,
+    loadFailed,
+    retry,
   ];
 }
 
@@ -58,6 +69,7 @@ class _ProfileTabState extends State<ProfileTab> {
   UserProfile? _profile;
   bool _digestEnabled = false;
   bool _loading = true;
+  bool _loadFailed = false;
 
   @override
   void initState() {
@@ -65,22 +77,43 @@ class _ProfileTabState extends State<ProfileTab> {
     _load();
   }
 
+  /// Never let a failed read leave the tab on a spinner. Either read can throw
+  /// — the digest RPC is a second round trip, and the app shell keeps this tab
+  /// alive, so an uncaught failure here is permanent for the session. Clear
+  /// `_loading` on every path and offer an explicit retry.
   Future<void> _load() async {
     final client = Supabase.instance.client;
     final userId = client.auth.currentUser!.id;
     final service = ProfileService(client);
     // The digest preference lives in its own table behind an RPC, so it is a
     // second round trip; issue it alongside the profile read rather than after.
-    final results = await Future.wait([
-      service.getProfile(userId),
-      service.getDailyDigestEnabled(),
-    ]);
-    if (!mounted) return;
+    try {
+      final results = await Future.wait([
+        service.getProfile(userId),
+        service.getDailyDigestEnabled(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _profile = results[0] as UserProfile?;
+        _digestEnabled = results[1] as bool;
+        _loading = false;
+        _loadFailed = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _loadFailed = true;
+      });
+    }
+  }
+
+  Future<void> _retryLoad() async {
     setState(() {
-      _profile = results[0] as UserProfile?;
-      _digestEnabled = results[1] as bool;
-      _loading = false;
+      _loading = true;
+      _loadFailed = false;
     });
+    await _load();
   }
 
   Future<void> _toggleWearableOwned(bool value) async {
@@ -143,6 +176,34 @@ class _ProfileTabState extends State<ProfileTab> {
       return const Scaffold(
         backgroundColor: OurobionColors.background,
         body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_loadFailed) {
+      return Scaffold(
+        backgroundColor: OurobionColors.background,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  ProfileTabCopy.loadFailed,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    color: OurobionColors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton(
+                  onPressed: _retryLoad,
+                  child: Text(ProfileTabCopy.retry),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
     final profile = _profile;
