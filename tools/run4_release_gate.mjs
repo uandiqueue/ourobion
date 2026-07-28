@@ -55,6 +55,51 @@ export function hashTextEvidence(value) {
 export const RUN4_UNIT_BASE_SHA = '547280f69fe37fe1c7271ea126002f9ffaadafb9';
 export const RUN4_MAX_CHANGED_PATHS = 115;
 export const RUN4_MAX_ADDED_LINES = 8500;
+
+// Binary rows fail closed by default: `git diff --numstat` cannot report an added/deleted line count
+// for a binary blob, so any binary row is unmeasurable, and for ordinary code changes that
+// unmeasurability is itself the signal — a compiled artifact, a stray binary, content nobody reviewed
+// line-by-line. The gate refuses to trust "I can't count it" by default, and checkLandingDelta below
+// still fails any binary row whose path is not named here.
+//
+// Brand/image assets are the one legitimate exception: a PNG mark or favicon is never going to have a
+// meaningful line diff, and refusing every binary row makes it structurally impossible to land an
+// identity kit at all — not risky, just permanently blocked regardless of PR size or review care. That
+// is a real gap, not a reason to relax the guard generally. So the exception is narrow and explicit
+// rather than a blanket allowance for "small" or "recognized" binaries:
+//   - an ALLOWLIST of exact paths (single known artifacts) or directory prefixes ending in '/' (whole
+//     asset kits) — not a file-extension or size heuristic. Anything not named here still fails exactly
+//     as before, with the same error shape.
+//   - RUN4_MAX_ALLOWLISTED_BINARY_PATHS bounds how many allowlisted binary rows one landing may contain,
+//     so the allowlist cannot be used to smuggle in an unbounded number of files under a few prefixes.
+//   - RUN4_MAX_ALLOWLISTED_BINARY_BYTES bounds the total size, at head, of allowlisted binary content in
+//     one landing, so the allowlist cannot be used to smuggle in one enormous file under an approved
+//     path. Both caps fail closed.
+// An allowlisted binary row still counts toward RUN4_MAX_CHANGED_PATHS (it is a changed path) but
+// contributes exactly 0 to RUN4_MAX_ADDED_LINES — it is genuinely unmeasurable, not free; the two caps
+// below are what bound it instead. A deleted allowlisted path has no blob at head, so it is measured as
+// 0 bytes rather than treated as an error — a missing blob is the deterministic, expected shape of a
+// deletion, not malformed input.
+//
+// This exception exists because of the ourobion/nao identity-kit PR: it lands assets/ourobion-nao-logo/
+// and apps/nao/public/brand/ wholesale, and deletes the nao app's stale src/app/icon.png (the generic
+// Ourobion mark) now that the favicon set is served from public/brand/ — ~837 KB across 15 binary paths
+// (14 added, 1 deleted). The caps give that payload real headroom
+// without being loose enough to stop meaning anything:
+//   RUN4_MAX_ALLOWLISTED_BINARY_PATHS = 24         (this landing uses 15; ~1.6x headroom)
+//   RUN4_MAX_ALLOWLISTED_BINARY_BYTES = 2,000,000  (~2 MB; this landing uses ~837 KB, ~42% of cap)
+//
+// Widening this allowlist — adding a path or prefix, raising either cap — is a deliberate per-asset-PR
+// human decision, the same way advancing RUN4_UNIT_BASE_SHA is: it must be reviewed as "should this
+// binary content land unmeasured," never edited routinely alongside unrelated code changes.
+export const RUN4_ALLOWLISTED_BINARY_PATHS = Object.freeze([
+  'assets/ourobion-nao-logo/',
+  'apps/nao/public/brand/',
+  'apps/nao/src/app/icon.png',
+]);
+export const RUN4_MAX_ALLOWLISTED_BINARY_PATHS = 24;
+export const RUN4_MAX_ALLOWLISTED_BINARY_BYTES = 2_000_000;
+
 export const RUN4_FUNCTIONS = Object.freeze([
   'compute-baselines',
   'evaluate-signals',
@@ -405,6 +450,24 @@ function gitText(git, args, options = {}) {
   return git('git', args, { cwd: repo, encoding: 'utf8', ...options });
 }
 
+/** A directory-prefix entry ends in '/'; anything else is matched as an exact path. */
+function isAllowlistedBinaryPath(path) {
+  return RUN4_ALLOWLISTED_BINARY_PATHS.some((entry) => (entry.endsWith('/') ? path.startsWith(entry) : path === entry));
+}
+
+/**
+ * Size of an allowlisted binary blob at head. A path this landing DELETES has no blob at head, so it
+ * measures 0 — but that conclusion comes from the name-status letter, never from `cat-file` merely
+ * failing. Swallowing an arbitrary git failure as "0 bytes" would let a real, large blob past the byte
+ * cap on any transient error, which is precisely the unmeasured-content case this gate exists to refuse.
+ */
+function allowlistedBinaryBytesAtHead(git, headSha, path, deleted) {
+  if (deleted) return 0;
+  const size = Number(gitText(git, ['cat-file', '-s', `${headSha}:${path}`]).trim());
+  if (!Number.isSafeInteger(size) || size < 0) fail(`unparsable blob size for ${path}`);
+  return size;
+}
+
 export function checkLandingDelta({ base, head = 'HEAD', maxPaths, maxAdded, git = execFileSync }) {
   if (base !== RUN4_UNIT_BASE_SHA) fail(`base must equal accepted current unit SHA ${RUN4_UNIT_BASE_SHA}`);
   if (!Number.isSafeInteger(maxPaths) || maxPaths < 0 || maxPaths !== RUN4_MAX_CHANGED_PATHS) fail(`maxPaths must equal accepted cap ${RUN4_MAX_CHANGED_PATHS}`);
@@ -419,12 +482,14 @@ export function checkLandingDelta({ base, head = 'HEAD', maxPaths, maxAdded, git
   const nameTokens = gitText(git, ['diff', '--name-status', '-z', '--find-renames', `${base}..${resolvedHead}`]).split('\0');
   if (nameTokens.at(-1) === '') nameTokens.pop();
   const names = [];
+  const deletedPaths = new Set();
   for (let index = 0; index < nameTokens.length;) {
     const status = nameTokens[index++];
     if (!/^[ACDMRTUXB][0-9]*$/.test(status ?? '')) fail(`unparsable name-status token: ${status ?? '<missing>'}`);
     if (/^[RC]/.test(status)) fail('rename/copy diff is ambiguous for the landing path budget');
     const path = nameTokens[index++];
     if (!path) fail('landing diff contains an empty path');
+    if (status.startsWith('D')) deletedPaths.add(path);
     names.push(path);
   }
   if (new Set(names).size !== names.length) fail('landing diff contains duplicate paths');
@@ -432,7 +497,19 @@ export function checkLandingDelta({ base, head = 'HEAD', maxPaths, maxAdded, git
   const statRows = gitText(git, ['diff', '--numstat', '-z', `${base}..${resolvedHead}`]).split('\0');
   if (statRows.at(-1) === '') statRows.pop();
   let added = 0;
+  let allowlistedBinaryPaths = 0;
+  let allowlistedBinaryBytes = 0;
   for (const row of statRows) {
+    const binaryMatch = /^-\t-\t([^\0]+)$/.exec(row);
+    if (binaryMatch) {
+      const path = binaryMatch[1];
+      if (!isAllowlistedBinaryPath(path)) fail(`binary/unparsable diff row: ${row}`);
+      allowlistedBinaryPaths += 1;
+      const bytes = allowlistedBinaryBytesAtHead(git, resolvedHead, path, deletedPaths.has(path));
+      if (!Number.isSafeInteger(allowlistedBinaryBytes + bytes)) fail('landing allowlisted binary byte count overflowed');
+      allowlistedBinaryBytes += bytes;
+      continue;
+    }
     const match = /^(\d+)\t(\d+)\t([^\0]+)$/.exec(row);
     if (!match) fail(`binary/unparsable diff row: ${row}`);
     const plus = Number(match[1]);
@@ -442,7 +519,9 @@ export function checkLandingDelta({ base, head = 'HEAD', maxPaths, maxAdded, git
   if (statRows.length !== names.length) fail('name-status and numstat path counts differ');
   if (names.length > maxPaths) fail(`landing delta has ${names.length} paths; cap is ${maxPaths}`);
   if (added > maxAdded) fail(`landing delta has ${added} added lines; cap is ${maxAdded}`);
-  return { base, head: resolvedHead, changedPaths: names.length, addedLines: added };
+  if (allowlistedBinaryPaths > RUN4_MAX_ALLOWLISTED_BINARY_PATHS) fail(`landing delta has ${allowlistedBinaryPaths} allowlisted binary paths; cap is ${RUN4_MAX_ALLOWLISTED_BINARY_PATHS}`);
+  if (allowlistedBinaryBytes > RUN4_MAX_ALLOWLISTED_BINARY_BYTES) fail(`landing delta has ${allowlistedBinaryBytes} allowlisted binary bytes; cap is ${RUN4_MAX_ALLOWLISTED_BINARY_BYTES}`);
+  return { base, head: resolvedHead, changedPaths: names.length, addedLines: added, allowlistedBinaryPaths, allowlistedBinaryBytes };
 }
 
 export function checkWorkflowProvenance({ eventPath, githubSha, git = execFileSync }) {

@@ -8,6 +8,8 @@ import {
   RUN4_UNIT_BASE_SHA,
   RUN4_FUNCTIONS,
   RUN4_MAX_ADDED_LINES,
+  RUN4_MAX_ALLOWLISTED_BINARY_BYTES,
+  RUN4_MAX_ALLOWLISTED_BINARY_PATHS,
   RUN4_MAX_CHANGED_PATHS,
   RUN4_NODE_TOOL_DRIFT_PACKAGES,
   RUN4_NODE_TOOL_PACKAGES,
@@ -145,6 +147,86 @@ test('landing delta fixes accepted constants and rejects shallow, rename, binary
   assert.throws(() => checkLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock({ ...common, 'rev-parse --is-shallow-repository': 'true\n' }) }), /shallow/);
   assert.throws(() => checkLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock({ ...common, [`diff --name-status -z --find-renames ${RUN4_UNIT_BASE_SHA}..${head}`]: 'R100\0old\0new\0' }) }), /rename\/copy/);
   assert.throws(() => checkLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git: mock({ ...common, [`diff --name-status -z --find-renames ${RUN4_UNIT_BASE_SHA}..${head}`]: 'M\0asset.bin\0', [`diff --numstat -z ${RUN4_UNIT_BASE_SHA}..${head}`]: '-\t-\tasset.bin\0' }) }), /binary\/unparsable/);
+});
+
+test('landing delta allowlisted-binary exception passes allowlisted paths at zero added lines, treats a deleted blob as zero bytes, enforces its own path/byte caps, and leaves text-diff behavior unchanged', () => {
+  const head = 'b'.repeat(40);
+  const common = {
+    'rev-parse --is-shallow-repository': 'false\n',
+    [`cat-file -t ${RUN4_UNIT_BASE_SHA}`]: 'commit\n',
+    'rev-parse HEAD': `${head}\n`,
+    [`merge-base ${RUN4_UNIT_BASE_SHA} ${head}`]: `${RUN4_UNIT_BASE_SHA}\n`,
+  };
+  // Unlike the plain `mock` above, this one can also throw — needed to simulate `git cat-file -s`
+  // failing for a path with no blob at head (e.g. a deletion), the same way real git would.
+  const mockGit = (responses) => (_command, args) => {
+    const key = args.join(' ');
+    const value = key in responses ? responses[key] : responses[args[0]];
+    if (value instanceof Error) throw value;
+    return `${value ?? ''}`;
+  };
+  const run = (nameStatusRows, numstatRows, extra = {}) => checkLandingDelta({
+    base: RUN4_UNIT_BASE_SHA,
+    maxPaths: RUN4_MAX_CHANGED_PATHS,
+    maxAdded: RUN4_MAX_ADDED_LINES,
+    git: mockGit({
+      ...common,
+      [`diff --name-status -z --find-renames ${RUN4_UNIT_BASE_SHA}..${head}`]: nameStatusRows,
+      [`diff --numstat -z ${RUN4_UNIT_BASE_SHA}..${head}`]: numstatRows,
+      ...extra,
+    }),
+  });
+
+  // Existing text-diff behavior is unchanged: no binary rows involved, allowlisted counters stay zero.
+  assert.deepEqual(run('M\0src/file.ts\0', '5\t2\tsrc/file.ts\0'), { base: RUN4_UNIT_BASE_SHA, head, changedPaths: 1, addedLines: 5, allowlistedBinaryPaths: 0, allowlistedBinaryBytes: 0 });
+
+  // An allowlisted binary row (directory-prefix match) passes, contributes 0 added lines, and its blob
+  // size at head is measured and reported.
+  const assetPath = 'assets/ourobion-nao-logo/logo/png/nao-mark-dark-256.png';
+  assert.deepEqual(
+    run(`A\0${assetPath}\0`, `-\t-\t${assetPath}\0`, { [`cat-file -s ${head}:${assetPath}`]: '1234\n' }),
+    { base: RUN4_UNIT_BASE_SHA, head, changedPaths: 1, addedLines: 0, allowlistedBinaryPaths: 1, allowlistedBinaryBytes: 1234 },
+  );
+
+  // A deleted allowlisted binary path (exact-path match) has no blob at head, so it measures 0 bytes.
+  // That conclusion is drawn from the 'D' name-status letter, NOT from `cat-file -s` failing: the mock
+  // below throws for the missing object exactly as real git would, and the gate must never need to ask.
+  const deletedPath = 'apps/nao/src/app/icon.png';
+  assert.deepEqual(
+    run(`D\0${deletedPath}\0`, `-\t-\t${deletedPath}\0`, { [`cat-file -s ${head}:${deletedPath}`]: new Error(`fatal: path '${deletedPath}' does not exist in '${head}'`) }),
+    { base: RUN4_UNIT_BASE_SHA, head, changedPaths: 1, addedLines: 0, allowlistedBinaryPaths: 1, allowlistedBinaryBytes: 0 },
+  );
+
+  // The inverse, and the reason the deletion case keys off name-status: a path that is ADDED (not
+  // deleted) but whose `cat-file -s` fails is a genuinely unmeasured blob. It must fail closed rather
+  // than be silently counted as 0 bytes, which would let arbitrarily large binary content past the
+  // byte cap on any transient git error.
+  const unmeasurablePath = 'apps/nao/public/brand/unmeasurable.png';
+  assert.throws(
+    () => run(`A\0${unmeasurablePath}\0`, `-\t-\t${unmeasurablePath}\0`, { [`cat-file -s ${head}:${unmeasurablePath}`]: new Error('fatal: git failed') }),
+    /git failed/,
+  );
+
+  // Exceeding the allowlisted-binary PATH count fails even though every path is individually
+  // allowlisted and the total byte size stays far under the byte cap.
+  const manyPaths = Array.from({ length: RUN4_MAX_ALLOWLISTED_BINARY_PATHS + 1 }, (_, index) => `apps/nao/public/brand/asset-${index}.png`);
+  const manyExtra = Object.fromEntries(manyPaths.map((path) => [`cat-file -s ${head}:${path}`, '10\n']));
+  assert.throws(
+    () => run(manyPaths.map((path) => `A\0${path}\0`).join(''), manyPaths.map((path) => `-\t-\t${path}\0`).join(''), manyExtra),
+    /allowlisted binary paths/,
+  );
+
+  // Exceeding the allowlisted-binary BYTE cap fails even with only two allowlisted paths.
+  const bigPathA = 'apps/nao/public/brand/big-a.png';
+  const bigPathB = 'apps/nao/public/brand/big-b.png';
+  assert.throws(
+    () => run(
+      `A\0${bigPathA}\0A\0${bigPathB}\0`,
+      `-\t-\t${bigPathA}\0-\t-\t${bigPathB}\0`,
+      { [`cat-file -s ${head}:${bigPathA}`]: `${RUN4_MAX_ALLOWLISTED_BINARY_BYTES}\n`, [`cat-file -s ${head}:${bigPathB}`]: '2\n' },
+    ),
+    /allowlisted binary bytes/,
+  );
 });
 
 test('workflow provenance binds exact Run 4 PR merge parents and rejects shallow checkout', () => {
