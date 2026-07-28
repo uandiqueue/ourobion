@@ -116,6 +116,46 @@ export interface Citation {
   evidence?: readonly EvidencePassage[];
 }
 
+/**
+ * R4-U4 / O27 · Whether a record was loaded from a frozen FIXTURE artifact (no provider was
+ * called) or from a LIVE provider run. There is deliberately no 'unknown' member: a record that
+ * cannot state its posture has none, and no posture fails closed at the serving gate.
+ */
+export type ArtifactPosture = 'fixture' | 'live';
+
+/**
+ * R4-U4 / O27 · Content-addressed identity of the artifact line a record was loaded from — the
+ * anchor of the provenance chain. `revision` names the artifact BUNDLE; `contentHash` pins this
+ * record's exact bytes within it, so a rebuild that changes a claim yields a different hash and
+ * any revision-bound expert disposition (B-BR7) stops applying instead of silently carrying over.
+ */
+export interface ArtifactRef {
+  /** Revision id of the artifact bundle (corpus / edge manifest revision). */
+  revision: string;
+  /** Hash of this record's canonical artifact bytes, formatted `sha256:<64 lowercase hex>`. */
+  contentHash: string;
+  /** Fixture vs live — disclosed on every card derived from this record (B-UI9). */
+  posture: ArtifactPosture;
+}
+
+/**
+ * R4-U4 / O27 · What a provider actually RETURNED, as distinct from what was configured.
+ * `attested` is true ONLY when `returnedModel` came back on a real provider response — a model id
+ * copied from router config is a configuration echo, not attestation (B-BR1).
+ */
+export interface ModelAttestation {
+  /** Model identity the provider returned on the response. */
+  returnedModel: string;
+  /** Provider-returned version / snapshot id, or null when the provider exposes none. */
+  returnedVersion: string | null;
+  /** Provider family — the unit the decorrelation invariant compares (O7 / B-BR2). */
+  family: string;
+  /** True iff this verification's family differs from the synthesising family for the same edge. */
+  decorrelated: boolean;
+  /** True ONLY for a provider-returned identity. A configured id is not attestation. */
+  attested: boolean;
+}
+
 /** A verbatim span grounding a claim in a specific source — enables a near-free deterministic check. */
 export interface QuoteSpan {
   /** Must match a `Citation.paperId` on the same claim. */
@@ -168,6 +208,15 @@ export interface RelationshipClaim {
   synthesisModel: string;
   promptVersion: string;
   synthesisedAt: string; // ISO datetime, supplied by the job
+  /**
+   * R4-U4 / O27 · The artifact revision + content hash this claim was loaded from, and whether
+   * that artifact is a fixture or a live run. ADDITIVE + OPTIONAL (accepted-contract discipline:
+   * add optional, never remove/rename) so pre-U4 records still validate — but absence is not
+   * benign: `provenance.trustFailures` treats a missing ref as an untrusted record and BLOCKS it
+   * on any path that requires trust. Legacy records are therefore honestly untrusted, not
+   * grandfathered in.
+   */
+  artifact?: ArtifactRef;
 }
 
 /**
@@ -221,6 +270,18 @@ export interface EdgeVerification {
   promptVersion: string;
   verifiedAt: string; // ISO datetime, supplied by the job
   status: VerificationStatus;
+  /**
+   * R4-U4 / O27 · The artifact revision + content hash this verification was loaded from.
+   * ADDITIVE + OPTIONAL; absence fails closed at the serving gate (see `RelationshipClaim.artifact`).
+   */
+  artifact?: ArtifactRef;
+  /**
+   * R4-U4 / O27 · What the verifier PROVIDER returned — model identity/version, family,
+   * decorrelation, and whether the identity is genuinely attested. Distinct from `verifierModel`,
+   * which is the CONFIGURED id and can be a mere echo of router config (B-BR1). ADDITIVE +
+   * OPTIONAL; absence blocks serving on any path that requires attestation.
+   */
+  attestation?: ModelAttestation;
 }
 
 /** A claim joined with its current verification — the servable unit of the graph. */
