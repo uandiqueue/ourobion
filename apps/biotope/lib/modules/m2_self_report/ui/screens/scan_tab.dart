@@ -141,8 +141,14 @@ class _ScanTabState extends State<ScanTab> with SingleTickerProviderStateMixin {
   }
 
   Future<void> _runSweep() async {
+    // Read before the first await: reduce-motion is an OS setting, not
+    // something that can flip mid-sweep, and MediaQuery.of needs a still-live
+    // context. A perpetual `.repeat()` is exactly what that setting exists to
+    // suppress — see ChannelScanSweep and _Breathe (home_tab.dart) for the
+    // same gate applied elsewhere in this app.
+    final reduced = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     setState(() => _state = _SweepState.scanning);
-    _sweepAnim.repeat();
+    if (!reduced) _sweepAnim.repeat();
 
     final client = Supabase.instance.client;
     final userId = client.auth.currentUser!.id;
@@ -154,7 +160,7 @@ class _ScanTabState extends State<ScanTab> with SingleTickerProviderStateMixin {
     ]);
 
     if (!mounted) return;
-    _sweepAnim.stop();
+    if (_sweepAnim.isAnimating) _sweepAnim.stop();
     setState(() {
       _todayRow = results[0] as Map<String, dynamic>?;
       _wearableReading = results[1] as WearableReading?;
@@ -211,6 +217,8 @@ class _ScanTabState extends State<ScanTab> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     final missing = _missingKeys;
     final dialSize = _state == _SweepState.done ? 190.0 : 262.0;
+    final reduced = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final orbSweeping = _state == _SweepState.scanning && !reduced;
 
     return Scaffold(
       backgroundColor: OurobionColors.background,
@@ -273,7 +281,7 @@ class _ScanTabState extends State<ScanTab> with SingleTickerProviderStateMixin {
                           errorBuilder: (context, error, stack) => const SizedBox.shrink(),
                         ),
                       ),
-                      if (_state == _SweepState.scanning)
+                      if (orbSweeping)
                         AnimatedBuilder(
                           animation: _sweepAnim,
                           builder: (context, child) {
@@ -384,11 +392,24 @@ class _ScanTabState extends State<ScanTab> with SingleTickerProviderStateMixin {
                 ),
               ),
 
-              if (_state == _SweepState.idle) ...[
+              if (_state == _SweepState.idle || _state == _SweepState.scanning) ...[
                 const SizedBox(height: 20),
-                WearableSyncRow(reading: _wearableReading, hasSyncedThisSession: _hasSweptThisSession),
-                const SizedBox(height: 9),
-                _SelfReportRow(logged: _todayRow != null),
+                // Only the channels that can actually report travel through
+                // the sweep. EnvironmentRow sits outside it, on purpose — see
+                // ChannelScanSweep's doc comment.
+                ChannelScanSweep(
+                  active: _state == _SweepState.scanning,
+                  child: Column(
+                    children: [
+                      WearableSyncRow(
+                        reading: _wearableReading,
+                        hasSyncedThisSession: _hasSweptThisSession,
+                      ),
+                      const SizedBox(height: 9),
+                      _SelfReportRow(logged: _todayRow != null),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 9),
                 const EnvironmentRow(),
               ],
@@ -459,6 +480,109 @@ class _ScanTabState extends State<ScanTab> with SingleTickerProviderStateMixin {
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Animated highlight band that sweeps down through the channel rows while a
+/// scan is in progress — the Claude Design `scanSweep` keyframe
+/// (`translateY(-120%)` → `translateY(220%)`) reimplemented as a Flutter
+/// [AnimationController] driving a translucent gradient band.
+///
+/// [child] must be limited to channels that can actually report in — today
+/// that's [WearableSyncRow] and [_SelfReportRow]. [EnvironmentRow] is
+/// deliberately kept OUTSIDE this widget by its caller: that channel has no
+/// data source behind it (see its own doc comment), so a highlight band
+/// passing over it would visually claim it is being polled when it cannot
+/// respond. Excluding it structurally — rather than trying to mask around it
+/// — is what makes that guarantee checkable in a widget test.
+///
+/// Reduce-motion gating follows the exact pattern `_Breathe` uses in
+/// `modules/m1_core/ui/screens/home_tab.dart`: read
+/// `MediaQuery.maybeDisableAnimationsOf(context)` on every build and drive
+/// `repeat()`/`stop()` from that read, rather than starting the loop once in
+/// `initState` and forgetting about it. [active] additionally gates the sweep
+/// on scan state — it must not run while idle or done, motion setting aside.
+class ChannelScanSweep extends StatefulWidget {
+  /// Key on the animated band `Container`, exposed so tests can assert its
+  /// presence (motion enabled) or absence (reduce-motion / inactive) without
+  /// reaching into private state.
+  static const bandKey = ValueKey('channel-scan-sweep-band');
+
+  final bool active;
+  final Widget child;
+
+  const ChannelScanSweep({super.key, required this.active, required this.child});
+
+  @override
+  State<ChannelScanSweep> createState() => _ChannelScanSweepState();
+}
+
+class _ChannelScanSweepState extends State<ChannelScanSweep>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduced = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final animating = widget.active && !reduced;
+
+    if (!animating) {
+      if (_c.isAnimating) _c.stop();
+      return ClipRect(child: widget.child);
+    }
+
+    if (!_c.isAnimating) _c.repeat();
+
+    return ClipRect(
+      child: LayoutBuilder(
+        // The band has no intrinsic width of its own (unlike the bloom orb's
+        // sweep, which sweeps a fixed-size circle) — it must span whatever
+        // width the channel rows below it are given.
+        builder: (context, constraints) => Stack(
+          children: [
+            widget.child,
+            Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: _c,
+                  builder: (context, _) => Align(
+                    // scanSweep keyframe: translateY(-120%) → translateY(220%),
+                    // i.e. alignment.y sweeping from -1.2 to 2.2.
+                    alignment: Alignment(0, -1.2 + _c.value * 3.4),
+                    child: Container(
+                      key: ChannelScanSweep.bandKey,
+                      width: constraints.maxWidth,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            OurobionColors.primary.withValues(alpha: 0),
+                            OurobionColors.primary.withValues(alpha: 0.22),
+                            OurobionColors.brandGoldLight.withValues(alpha: 0.22),
+                            OurobionColors.primary.withValues(alpha: 0),
+                          ],
+                          stops: const [0, 0.4, 0.6, 1],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
