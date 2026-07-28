@@ -74,7 +74,7 @@ jobs:
         run: npm ci
       - name: Assert exact landing SHA and current unit base
         env:
-          RUN4_UNIT_BASE_SHA: 547280f69fe37fe1c7271ea126002f9ffaadafb9
+          RUN4_UNIT_BASE_SHA: 2749381a405de882c6d96cdf21a57034e28204ea
           RUN4_MAX_CHANGED_PATHS: 115
           RUN4_MAX_ADDED_LINES: 8500
         run: |
