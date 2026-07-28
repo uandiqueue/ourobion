@@ -63,9 +63,37 @@ updated: 2026-07-28
 - Historical model-training bundles are already present on `dev-phase2-run4`; they remain separate,
   non-serving, and must not become a runtime dependency.
 
+## Hackathon MVP demo rehearsal — hosted demo project (2026-07-28)
+
+Jayden directed a hosted demo migration for the one-hour hackathon MVP run, via
+[`hack-mvp-prompt-cloud.md`](./hack-mvp-prompt-cloud.md). This is the "separate approval of named
+isolated rehearsal resources" that [`pending-build-register.md`](./pending-build-register.md) B-PL19
+requires, and it narrowly overrides the standing hosted-writes prohibition below, for this scope only.
+
+- **Named resource, and only this one:** demo project `bewwvcksgpxoomyjavjp`. The clean production
+  reserve `jscxvnettbvkboijczav` stays untouched.
+- **Approved scope:** apply the repo's append-only migrations; deploy edge functions; set function
+  secrets; load the brain serving projection from pinned R2 edge JSONL; seed one demo auth user with
+  simulated backdated history; invoke `compute-baselines` then `generate-insights`.
+- **Limits that still hold:** no real personal health rows (simulated only, kept flagged as
+  simulated); never weaken a cap, gate, test, scanner, RLS policy or assertion to make something work;
+  no live LLM/provider calls; `model-training/` untouched; no production-readiness or
+  scientific-validation claim.
+- **Demo rehearsal, not a release promotion.** It does not close B-PL19 and makes no O29 claim.
+  B-PL19's missing pieces — exact migration ledger, explicit release selector, immutable
+  namespace/manifest, checksummed promotion, target-load provenance, rollback, cross-environment
+  verdict policy — still do not exist.
+
+**Not executed.** The 2026-07-28 attempt from host `UaNdIQueue` was blocked by a network-level block on
+the Postgres wire protocol, so no hosted write of any kind occurred. The hosted `public` schema is
+still entirely empty. Full measured state, ordered steps, and the failure signature are in
+[`hosted-demo-migration-runbook.md`](./hosted-demo-migration-runbook.md); resume on an unblocked
+network. This approval stays open and unspent until then.
+
 ## External actions not authorized
 
-- Hosted Supabase writes or demo-database promotion.
+- Hosted Supabase writes or demo-database promotion — **except** the narrowly scoped, named hackathon
+  demo rehearsal on `bewwvcksgpxoomyjavjp` recorded in the section above.
 - Cloudflare/R2 writes, deployment, production traffic, hosting changes, or key rotation/mutation.
 - Model promotion or serving.
 - Scientific-validation, diagnostic, or production-readiness claims.
