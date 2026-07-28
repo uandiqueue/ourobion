@@ -52,10 +52,21 @@ create table if not exists public.nao_simulation_origins (
   -- false ⇒ the marker is RECOGNISED but does not denote simulated data, so a row bearing it is
   -- PROTECTED (never overwritten) and the marker can never be written as row provenance.
   is_simulated boolean not null default true,
+  -- false ⇒ the marker belongs to ANOTHER writer (another harness, another unit), so the demo
+  -- loader may not STAMP it — even when is_simulated is true. `is_simulated` answers "may a row
+  -- bearing this be overwritten"; `loader_writable` answers "may THIS loader author it". They are
+  -- different questions and conflating them let a curator stamp R4-U2's fixture marker
+  -- ('seed:baseline') onto a demo target's truth rows. Default false: a newly registered origin is
+  -- not loader-writable until someone says so.
+  loader_writable boolean not null default false,
   owner        text not null,            -- which harness/unit writes this marker
   created_at   timestamptz not null default now(),
   revoked_at   timestamptz               -- non-null ⇒ treated exactly like an unregistered marker
 );
+
+-- For a database where this migration already created the table without the column.
+alter table public.nao_simulation_origins
+  add column if not exists loader_writable boolean not null default false;
 
 comment on table public.nao_simulation_origins is
   'R4-U3 · the closed provenance vocabulary for daily_gut_rows.data_origin and '
@@ -69,6 +80,12 @@ comment on column public.nao_simulation_origins.is_simulated is
   'true ⇒ a row bearing this marker is simulated and may be overwritten by the loader. false ⇒ the '
   'marker is recognised but the row is real/protected, and the marker may never be written as row '
   'provenance.';
+comment on column public.nao_simulation_origins.loader_writable is
+  'true ⇒ nao_loader_apply_simulated_days may STAMP this marker onto a demo target''s rows. false ⇒ '
+  'the marker belongs to another writer and the loader must refuse it as p_origin, even when '
+  'is_simulated is true (''seed:baseline'' is R4-U2''s fixture marker: overwritable, never '
+  'loader-authored). Defaults to false so registering an origin does not grant the loader authority '
+  'over it.';
 comment on column public.nao_simulation_origins.revoked_at is
   'Non-null ⇒ the marker behaves exactly as if it were never registered: it cannot be written, and '
   'a row bearing it is protected. Retiring an origin therefore FAILS CLOSED.';
@@ -79,21 +96,33 @@ grant select, insert, update on public.nao_simulation_origins to service_role;
 
 -- Seed rows. Registering 'seed:baseline' is a documentation act: R4-U2's fixture marker becomes a
 -- named, owned entry instead of an undeclared second value sharing the column with no collision
--- detection. 'probe:pa' / 'probe:pb' are deliberately NOT registered — they are therefore treated
--- as real data and are protected, which is the correct posture and needs no coordination with
--- R4-U2's harness.
-insert into public.nao_simulation_origins (origin, label, is_simulated, owner) values
-  ('simulated:run2-demo', 'O11 / run-2 demo loader',     true,
+-- detection. It is is_simulated (a row bearing it may be overwritten) but NOT loader_writable —
+-- it belongs to 30_pre_u2_seed.sql, and a curator stamping another harness's marker onto a demo
+-- target's truth rows would make U2's fixture provenance ambiguous. 'probe:pa' / 'probe:pb' are
+-- deliberately NOT registered at all — they are therefore treated as real data and are protected,
+-- which is the correct posture and needs no coordination with R4-U2's harness.
+--
+-- `do update` rather than `do nothing`: these four rows are repo-owned and their two boolean
+-- columns are load-bearing, so re-applying this migration must re-establish them rather than leave
+-- a pre-existing row at the column default (`loader_writable = false` would disable the loader).
+-- `revoked_at` is deliberately NOT re-set, so an operator's revocation survives re-application.
+insert into public.nao_simulation_origins (origin, label, is_simulated, loader_writable, owner)
+values
+  ('simulated:run2-demo', 'O11 / run-2 demo loader',     true,  true,
    'apps/nao/src/lib/simulatedHealth.ts'),
-  ('simulated:run4-demo', 'R4-U3 atomic demo loader',    true,
+  ('simulated:run4-demo', 'R4-U3 atomic demo loader',    true,  true,
    'apps/nao/src/lib/simulatedHealth.ts'),
-  ('seed:baseline',       'R4-U2 authz probe fixture',   true,
+  ('seed:baseline',       'R4-U2 authz probe fixture',   true,  false,
    'supabase/tests/authz/30_pre_u2_seed.sql'),
   -- The release marker: recognised so nao_loader_runs.origin can reference it for a
   -- release/repair ledger row, is_simulated = false so it can never be stamped onto a truth row.
-  ('release:run4-demo',   'R4-U3 simulated-day release', false,
+  ('release:run4-demo',   'R4-U3 simulated-day release', false, false,
    'public.nao_loader_release_simulated_days')
-on conflict (origin) do nothing;
+on conflict (origin) do update set
+  label           = excluded.label,
+  is_simulated    = excluded.is_simulated,
+  loader_writable = excluded.loader_writable,
+  owner           = excluded.owner;
 
 -- ═══════════════════════════════════════════════════════════════
 -- 2. NAO_DEMO_TARGETS — the approved demo context (O26), as data

@@ -48,6 +48,45 @@
 -- RPC and is a separate, best-effort transaction, so an audit row can exist for a run that rolled
 -- back. That is correct and intended — nao_control_events records ATTEMPTS BY AN ACTOR,
 -- nao_loader_runs records WHAT COMMITTED.
+--
+-- ═══════════════════════════════════════════════════════════════════════════════════════════════
+-- WHAT THE ADVISORY LOCK CANNOT COVER, AND WHERE THE GUARANTEE ACTUALLY LIVES
+-- (independent review finding F1 — this was a real, reproduced raw-truth integrity failure)
+-- ═══════════════════════════════════════════════════════════════════════════════════════════════
+-- pg_advisory_xact_lock serialises LOADER CALLERS AGAINST EACH OTHER. It does not — and cannot —
+-- exclude the TARGET's own ordinary RLS-governed writes through PostgREST, which take no such lock.
+-- So the pre-write provenance scan at step 8 is a snapshot read that a concurrent Biotope write can
+-- slip past: the target commits a real row (data_origin IS NULL) after the scan's statement
+-- snapshot, the loader's INSERT blocks on the (user_id, log_date) unique index, the other
+-- transaction commits, and the loader's insert then takes its ON CONFLICT branch on a row the scan
+-- never saw. With an unconditional DO UPDATE that silently destroyed a user's self-report and
+-- re-stamped it as simulated, returning ok:true.
+--
+-- "PRECEDES" IS NOT "CONDITIONS". The fix is therefore AT WRITE TIME, in the ON CONFLICT DO UPDATE
+-- clause itself: both upserts carry a WHERE predicate that restricts the update to rows whose
+-- EXISTING provenance is a registered, non-revoked, is_simulated origin. A row with NULL or
+-- non-simulated provenance is not updated by the upsert AT ALL, whatever any earlier snapshot
+-- showed. The skipped rows are then detected by counting what the statement actually wrote
+-- (RETURNING, not `get diagnostics` — see step 9) and the whole transaction is failed with the same
+-- OU409 the scan would have raised, so the caller sees the identical mutation-free refusal. The
+-- pre-scan REMAINS, as a fast path that gives a better error earlier and covers both tables before
+-- either is touched — but the WHERE predicate is the authority.
+--
+-- ═══════════════════════════════════════════════════════════════════════════════════════════════
+-- ISOLATION LEVEL: THIS FUNCTION ASSUMES READ COMMITTED (the PostgreSQL default)
+-- ═══════════════════════════════════════════════════════════════════════════════════════════════
+-- Two behaviours depend on each statement inside plpgsql taking a FRESH snapshot:
+--
+--   * step 4b's authoritative read. Under READ COMMITTED the loser of a single-flight race acquires
+--     the advisory lock only after the winner committed, and then SEES the winner's run row, so it
+--     replays. Under REPEATABLE READ the snapshot is pinned before the lock is taken, the loser
+--     never sees that row, and its insert raises 40001 (could not serialize access) instead.
+--   * step 9/10's post-conflict re-scan, which must see the row the loader just blocked on.
+--
+-- Nothing in supabase/ or ci/ sets a non-default isolation level, so this is a stated assumption
+-- rather than a live bug. It is not silent: apps/nao/src/lib/loaderRuns.ts maps 40001 and 40P01
+-- (deadlock) to a RETRYABLE 503 rather than a 500, so a stricter isolation level degrades to "retry
+-- this request" instead of to an opaque server fault.
 
 -- ═══════════════════════════════════════════════════════════════
 -- 1. NAO_LOADER_APPLY_SIMULATED_DAYS — the atomic write
@@ -91,6 +130,7 @@ declare
   v_watermark_after  jsonb;
   v_result           jsonb;
   v_n                integer;
+  v_skipped          integer;
   v_lease            timestamptz;
 begin
   -- ── 1 · R4-U2's OWN GATE, verbatim. Not a parallel authorization concept. ──────────────────
@@ -107,11 +147,19 @@ begin
   end if;
 
   -- Fail closed on an unknown or retired marker: only a registered, non-revoked, is_simulated
-  -- origin may be WRITTEN. A typo ('simulated:run4-demoo') is unregistered and therefore refused —
-  -- the property an open text column never had.
+  -- origin THAT IS LOADER-WRITABLE may be WRITTEN. A typo ('simulated:run4-demoo') is unregistered
+  -- and therefore refused — the property an open text column never had.
+  --
+  -- loader_writable is a SEPARATE predicate from is_simulated on purpose (review finding F9).
+  -- p_origin is caller-supplied, and 'seed:baseline' is a registered is_simulated marker owned by
+  -- R4-U2's authz fixture — is_simulated alone let a curator stamp another harness's provenance
+  -- onto a demo target's raw truth, making U2's fixture rows indistinguishable from loader output.
+  -- "may a row bearing this be overwritten" and "may THIS loader author it" are different
+  -- questions; the registry answers them with different columns.
   if p_origin is null or not exists (
        select 1 from public.nao_simulation_origins o
-        where o.origin = p_origin and o.revoked_at is null and o.is_simulated) then
+        where o.origin = p_origin and o.revoked_at is null
+          and o.is_simulated and o.loader_writable) then
     raise exception 'nao: loader origin is not a registered simulation origin'
       using errcode = '23514';
   end if;
@@ -219,15 +267,16 @@ begin
     return coalesce(v_existing.result, '{}'::jsonb) || jsonb_build_object('replayed', true);
   end if;
 
-  -- ── 8 · PROVENANCE CONFLICT SCAN — reject without mutation. ────────────────────────────────
+  -- ── 8 · PROVENANCE CONFLICT SCAN — the FAST PATH, not the guarantee. ──────────────────────
   -- A row is PROTECTED iff its provenance is absent (NULL = real user-entered data, the semantics
   -- 20260724120000 declared) or is not a registered, non-revoked, is_simulated origin. A protected
   -- row is NEVER overwritten and NEVER merged: the whole request is refused.
   --
-  -- "Reject without mutation" is STRUCTURAL, not conditional: this is a SELECT that precedes both
-  -- INSERTs in the same transaction, so a raise here aborts having written nothing. There is no
-  -- compensating delete to get wrong and no window in which a protected row was overwritten and
-  -- then restored.
+  -- This scan runs BEFORE either write so that the common case refuses earlier, with both tables
+  -- considered together and a single count in the error detail. It is NOT what makes the refusal
+  -- safe: "precedes" is not "conditions", and a concurrent RLS-governed write by the target itself
+  -- takes no advisory lock and can commit after this statement's snapshot (see this file's F1
+  -- header). The authority is the WHERE predicate on each DO UPDATE branch at steps 9 and 10.
   --
   -- Both tables are scanned INDEPENDENTLY, so a date protected on only one side still refuses the
   -- whole request — which is what makes gut-only and wearable-only history safe.
@@ -261,13 +310,23 @@ begin
             detail   = format('%s protected date(s)', v_protected);   -- counts, never a date list
   end if;
 
-  -- ── 9 · Gut rows. ─────────────────────────────────────────────────────────────────────────
+  -- ── 9 · Gut rows. THE WRITE-TIME GUARANTEE LIVES HERE. ────────────────────────────────────
+  -- The DO UPDATE branch is CONDITIONAL on the EXISTING row's provenance being a registered,
+  -- non-revoked, is_simulated origin. A real row (data_origin IS NULL), or one bearing an
+  -- unregistered / revoked / non-simulated marker, is NOT UPDATED AT ALL — whenever it committed,
+  -- including after step 8's scan and including a row this statement had to wait on at the unique
+  -- index. That is the atomic form of "never overwrite real rows"; step 8 is only an early exit.
+  --
+  -- The written count comes from RETURNING rather than `get diagnostics row_count`, because the
+  -- diagnostic cannot distinguish "inserted", "updated" and "conflicted but skipped by the
+  -- predicate" — it is the measure that made the original defect invisible. Counting the rows the
+  -- statement actually emitted does distinguish them: a skipped row emits nothing.
   with src as (
     select (d.value->>'date')::date                                            as the_date,
            jsonb_populate_record(null::public.daily_gut_rows, d.value->'gut')   as r
       from jsonb_array_elements(p_days) d
      where d.value ? 'gut'
-  )
+  ), written as (
   insert into public.daily_gut_rows (
     user_id, log_date, region, urine_colour, stool_form, stool_count, stool_variability,
     outside_meals, mosquito_bites, energy_score, mood_score, gut_comfort_score, symptom_flags,
@@ -312,27 +371,56 @@ begin
     gut_watch_active       = excluded.gut_watch_active,
     log_completeness       = excluded.log_completeness,
     data_origin            = excluded.data_origin,
-    updated_at             = now();
+    updated_at             = now()
+  -- ↓↓ THE GUARD. Update only a row that is provably registered simulation. ↓↓
+  where daily_gut_rows.data_origin is not null
+    and exists (select 1 from public.nao_simulation_origins o
+                 where o.origin = daily_gut_rows.data_origin
+                   and o.revoked_at is null and o.is_simulated)
+  returning 1 as one
+  )
+  select count(*) into v_n from written;
 
-  -- A second, independent guard against the SILENT-ZERO shape R4-U2's Invariant P warns about: a
-  -- restrictive policy makes an upsert's conflict target invisible and its update branch affect zero
-  -- rows WITHOUT raising. This unit adds no restrictive policy, so that cause is absent — but this
-  -- assertion turns any FUTURE cause of the same shape into a loud failure inside the transaction,
-  -- which then rolls back, rather than an ok:true over an empty database.
-  get diagnostics v_n = row_count;
+  -- A shortfall has exactly two possible causes and they get different SQLSTATEs:
+  --
+  --   * the write-time guard refused a protected row (the F1 race, or anything else that put a real
+  --     row on a requested date) ⇒ the SAME OU409 refusal step 8 raises, so the caller cannot tell
+  --     whether the scan or the predicate caught it, and no row and no run row survives; or
+  --   * the SILENT-ZERO shape R4-U2's Invariant P warns about — a restrictive policy makes an
+  --     upsert's conflict target invisible and its update branch affect zero rows WITHOUT raising.
+  --     This unit adds no restrictive policy, so that cause is absent today; 22023 keeps any FUTURE
+  --     cause of that shape a loud failure rather than an ok:true over an empty database.
+  --
+  -- The re-scan is what tells them apart, and it is correct to read it here: the conflicting row is
+  -- committed by now (this statement waited on it), so it is visible to a fresh statement snapshot.
   if v_n <> v_gut_expected then
+    select count(*) into v_skipped
+      from public.daily_gut_rows g
+     where g.user_id = p_target_user_id
+       and g.log_date = any (v_dates)
+       and (g.data_origin is null
+            or not exists (select 1 from public.nao_simulation_origins o
+                            where o.origin = g.data_origin
+                              and o.revoked_at is null and o.is_simulated));
+    if v_skipped > 0 then
+      raise exception 'nao: loader refuses to overwrite rows that are not registered simulation'
+        using errcode = 'OU409',
+              detail   = format('%s protected date(s)', v_skipped);  -- counts, never a date list
+    end if;
     raise exception 'nao: loader gut upsert affected % row(s), expected %', v_n, v_gut_expected
       using errcode = '22023';
   end if;
 
   -- ── 10 · Wearable rows. Second statement, SAME transaction — a failure here cannot leave step 9
-  --         committed, and step 11 never runs, so no run row survives either. ──────────────────
+  --         committed, and step 11 never runs, so no run row survives either. Same write-time guard
+  --         as step 9, over `source` instead of `data_origin`: the two tables are guarded
+  --         INDEPENDENTLY, so a real row on only one side still refuses the whole request. ──────
   with src as (
     select (d.value->>'date')::date                                                as the_date,
            jsonb_populate_record(null::public.wearable_daily, d.value->'wearable')  as r
       from jsonb_array_elements(p_days) d
      where d.value ? 'wearable'
-  )
+  ), written as (
   insert into public.wearable_daily (
     user_id, date, resting_hr_bpm, hrv_sdnn_ms, sleep_duration_min, spo2_pct, body_temp_c,
     step_count, source, synced_at)
@@ -355,10 +443,29 @@ begin
     body_temp_c        = excluded.body_temp_c,
     step_count         = excluded.step_count,
     source             = excluded.source,
-    synced_at          = now();
+    synced_at          = now()
+  where wearable_daily.source is not null
+    and exists (select 1 from public.nao_simulation_origins o
+                 where o.origin = wearable_daily.source
+                   and o.revoked_at is null and o.is_simulated)
+  returning 1 as one
+  )
+  select count(*) into v_n from written;
 
-  get diagnostics v_n = row_count;
   if v_n <> v_wear_expected then
+    select count(*) into v_skipped
+      from public.wearable_daily w
+     where w.user_id = p_target_user_id
+       and w.date = any (v_dates)
+       and (w.source is null
+            or not exists (select 1 from public.nao_simulation_origins o
+                            where o.origin = w.source
+                              and o.revoked_at is null and o.is_simulated));
+    if v_skipped > 0 then
+      raise exception 'nao: loader refuses to overwrite rows that are not registered simulation'
+        using errcode = 'OU409',
+              detail   = format('%s protected date(s)', v_skipped);
+    end if;
     raise exception 'nao: loader wearable upsert affected % row(s), expected %', v_n, v_wear_expected
       using errcode = '22023';
   end if;
@@ -401,7 +508,10 @@ comment on function public.nao_loader_apply_simulated_days(uuid, text, text, jso
   'R4-U3 · the atomic demo loader (O26). Gated by public.nao_authorize(''curator'') as its first '
   'statement, then by the demo-target registry (one fixed 42501 message for all five denial '
   'reasons, so it is not an oracle). Refuses any date whose existing gut or wearable provenance is '
-  'absent or unregistered (OU409, no mutation). Writes BOTH truth tables in ONE transaction with no '
+  'absent or unregistered (OU409, no mutation) — enforced AT WRITE TIME by a WHERE predicate on '
+  'each ON CONFLICT DO UPDATE branch, not merely by the scan that precedes them, so a row committed '
+  'concurrently by the target''s own RLS-governed write (which takes no advisory lock) is refused '
+  'too. Writes BOTH truth tables in ONE transaction with no '
   'exception handler, so a failure leaves no rows and no run row — "partially applied" is '
   'unrepresentable. Single-flight = unique request_key + pg_advisory_xact_lock: the second '
   'concurrent caller sees a COMMITTED row and returns the identical result, never a ''running'' '
@@ -445,6 +555,7 @@ declare
   v_watermark_after  jsonb;
   v_result           jsonb;
   v_key              text;
+  v_lease            timestamptz;
 begin
   perform public.nao_authorize('curator');
 
@@ -458,6 +569,23 @@ begin
   v_label := public.nao_loader_assert_target(p_target_user_id);
 
   perform pg_advisory_xact_lock(hashtextextended('nao.loader:' || p_target_user_id::text, 0));
+
+  -- PUBLICATION LEASE — the SAME step-5 preamble the apply path runs (design §B.5: "same preamble
+  -- as §A.2 steps 1-5"). It was missing here, and the omission was strictly worse than the one the
+  -- lease exists to stop: the apply path OVERWRITES under an in-flight pipeline, this path DELETES.
+  -- A repair must not remove raw truth from under a pipeline that is still reading it. There is no
+  -- replay short-circuit above this, so unlike the apply path every release is subject to it.
+  select r.lease_until into v_lease
+    from public.nao_loader_runs r
+   where r.target_user_id = p_target_user_id
+     and r.lease_until is not null
+     and r.lease_until > now()
+     and not exists (select 1 from public.nao_loader_run_stages s where s.run_id = r.id)
+   order by r.started_at desc, r.id desc
+   limit 1;
+  if v_lease is not null then
+    raise exception 'nao: loader target not permitted' using errcode = '42501';
+  end if;
 
   select count(*) into v_protected from (
     select g.log_date as d
@@ -538,8 +666,9 @@ comment on function public.nao_loader_release_simulated_days(uuid, date[]) is
   'R4-U3 · the repair path: removes simulated rows for a target on the given dates, in ONE '
   'transaction across both truth tables, refusing outright if ANY row on those dates is not provably '
   'registered simulation — so it can never delete a real row. Simulated data is never relabelled as '
-  'real; it is removed, and only then may real input occupy the date. Same gate and same target '
-  'registry as the loader.';
+  'real; it is removed, and only then may real input occupy the date. Same gate, same target '
+  'registry, same advisory lock and same publication-lease refusal as the loader, so a repair '
+  'cannot delete raw truth from under an in-flight pipeline.';
 
 revoke execute on function public.nao_loader_release_simulated_days(uuid, date[]) from public, anon;
 grant execute on function public.nao_loader_release_simulated_days(uuid, date[])
@@ -608,24 +737,45 @@ begin
          v_digest,
          coalesce(s.value->'summary', '{}'::jsonb)
     from jsonb_array_elements(p_stages) s
+  -- WORST-WINS PER STAGE, ACROSS CALLS (review finding F5). The update branch applies only while
+  -- the ALREADY RECORDED observation is ok, so a later ok can never improve a recorded failure for
+  -- the SAME stage — which is what 20260728030001's "no code path can overwrite a status" and
+  -- apps/nao/src/lib/loaderRuns.ts's "a not-ok observation is never replaced by a later ok one"
+  -- both claim, and what a plain last-write-wins upsert made false the moment a stage was
+  -- re-recorded. Worsening is still allowed (ok ⇒ not ok, and a moved digest over an ok row), so
+  -- the recorded history can only ever get more pessimistic. A skipped update is not an error: the
+  -- derived fold already reports the worse, recorded outcome.
   on conflict (run_id, stage) do update set
     http_status      = excluded.http_status,
     ok               = excluded.ok,
     watermark_digest = excluded.watermark_digest,
     summary          = excluded.summary,
-    observed_at      = now();
+    observed_at      = now()
+  where nao_loader_run_stages.ok;
 
   -- The lease exists to keep a second load out while THIS run's pipeline is in flight. It is done.
   update public.nao_loader_runs set lease_until = null where id = v_run.id;
 
-  return public.nao_loader_status(v_run.target_user_id);
+  -- RUN-SCOPED (review finding F3). The verdict answers about THE RUN THIS CALLER NAMED, not about
+  -- whatever run happens to be the target's most recent — those differ in exactly the case the
+  -- lease exists for: an over-running pipeline whose lease expired and under which a second run
+  -- already committed. A target-scoped answer reported that raced run as `pending` (severity 1,
+  -- lower than `incomplete`) and handed back somebody else's `requestKey`.
+  --
+  -- `observedDigest` is the digest stamped on the stage rows just now. It is returned so the relay
+  -- route's own fold has a real observation to compare against `watermarkAfter`, instead of passing
+  -- null and leaving its watermark term permanently unreachable (review finding F10).
+  return public.nao_loader_status(v_run.target_user_id, p_request_key)
+         || jsonb_build_object('observedDigest', v_digest);
 end
 $$;
 
 comment on function public.nao_loader_record_pipeline(text, jsonb) is
   'R4-U3 · records the three pipeline stage outcomes for a loader run (stamping each with the '
-  'target''s watermark digest observed at that moment), clears the publication lease, and returns '
-  'the DERIVED status from nao_loader_status(). The caller never assigns a status.';
+  'target''s watermark digest observed at that moment, worst-wins so a later ok cannot improve a '
+  'recorded failure for the same stage), clears the publication lease, and returns the DERIVED '
+  'status of THAT RUN from nao_loader_status(target, request_key) plus the digest it observed. The '
+  'caller never assigns a status.';
 
 revoke execute on function public.nao_loader_record_pipeline(text, jsonb) from public, anon;
 grant execute on function public.nao_loader_record_pipeline(text, jsonb)

@@ -32,6 +32,7 @@ import {
   PIPELINE_STAGES,
   PLAN_INPUTS_RPC,
   REQUEST_KEY_PREFIX,
+  RETRYABLE_LOADER_SQLSTATES,
   RUN_STATUS_SEVERITY,
   buildApplyArgs,
   buildLoaderResponse,
@@ -42,8 +43,10 @@ import {
   httpStatusForLoaderError,
   isPublished,
   isRetryable,
+  isRetryableLoaderError,
   parseApplyResult,
   parsePlanInputs,
+  parseRecordedDigests,
   parseWatermark,
   retryPlanFor,
   stagesFromRelayBody,
@@ -423,14 +426,98 @@ test('buildPublicationSummary: the database’s verdict can only make the answer
   assert.equal(buildPublicationSummary({ stages: clean, expectedDigest: null }).source, 'relay');
 });
 
-test('the TypeScript fold and the SQL fold declare the SAME total order (they must never drift)', () => {
-  // nao_loader_status() derives the verdict in SQL with greatest() over case terms.
-  // Two derivations of one rule is only safe if the rule is identical, so the SQL
-  // migration's own severity table is read and compared to this module's.
+/**
+ * The EXECUTABLE fold in `nao_loader_status`, with `--` prose removed first.
+ *
+ * Comment-stripping is the whole point (independent review finding F4). The previous
+ * version of this test matched `/severity (\d)\s+(published|…)/`, a pattern that occurs
+ * ONLY in the migration's `--` documentation table and never in the `greatest()`
+ * expression that actually runs — so changing `then 4` to `then 2` inside `greatest()`,
+ * the exact defect the test is named for, left it green. What follows parses the running
+ * SQL instead, and there is a mechanical proof it can fail: flip any `then N` in the
+ * migration's greatest() and this test goes red.
+ */
+function executableFold(migration: string): { severityExpr: string; statusExpr: string } {
+  const sql = migration.replace(/--.*$/gm, '');
+  const severityAt = sql.indexOf('v_severity := greatest(');
+  assert.ok(severityAt > -1, 'nao_loader_status must fold with greatest() over severity terms');
+  const severityEnd = sql.indexOf(');', severityAt);
+  assert.ok(severityEnd > severityAt, 'the greatest() expression must terminate');
+  const statusAt = sql.indexOf('v_status := case v_severity', severityEnd);
+  assert.ok(statusAt > -1, 'the severity must be mapped back to a status name in SQL');
+  const statusEnd = sql.indexOf('end;', statusAt);
+  assert.ok(statusEnd > statusAt, 'the status case expression must terminate');
+  return {
+    severityExpr: sql.slice(severityAt, severityEnd + 2),
+    statusExpr: sql.slice(statusAt, statusEnd + 4),
+  };
+}
+
+/**
+ * Which status each executable `case` term IS, identified by the CONDITION it tests
+ * rather than by the number it yields — so the number is free to be wrong and be caught.
+ */
+const SQL_FOLD_TERMS: readonly { status: LoaderRunStatus; condition: RegExp }[] = [
+  { status: 'failed', condition: /not\s+s\.ok/ },
+  { status: 'mixed', condition: /watermark_digest/ },
+  { status: 'incomplete', condition: /v_stages\s+between\s+1\s+and\s+2/ },
+  { status: 'pending', condition: /v_stages\s*=\s*0/ },
+];
+
+test('the TypeScript fold and the EXECUTABLE SQL fold declare the SAME total order (they must never drift)', () => {
   const migration = readFileSync(
     path.join(REPO_ROOT, 'supabase', 'migrations', '20260728030001_nao_loader_runs.sql'),
     'utf8',
   );
+  const { severityExpr, statusExpr } = executableFold(migration);
+
+  // ── 1. Every severity TERM inside greatest() yields this module's severity ──────────
+  const terms = [...severityExpr.matchAll(/case\s+when\s+([\s\S]*?)\s+then\s+(\d+)\s+else\s+0\s+end/g)].map(
+    (m) => ({ condition: m[1], severity: Number(m[2]) }),
+  );
+  assert.equal(terms.length, SQL_FOLD_TERMS.length, 'the executable fold must have one term per non-zero severity');
+  const seen = new Set<LoaderRunStatus>();
+  for (const term of terms) {
+    const matched = SQL_FOLD_TERMS.filter((known) => known.condition.test(term.condition));
+    assert.equal(matched.length, 1, `term is not identifiable by its condition: ${term.condition}`);
+    const { status } = matched[0];
+    assert.equal(seen.has(status), false, `${status} is folded twice`);
+    seen.add(status);
+    // THE ASSERTION THE OLD TEST COULD NOT MAKE: the number the running SQL yields.
+    assert.equal(
+      term.severity,
+      RUN_STATUS_SEVERITY[status],
+      `the SQL term testing ${status} yields ${term.severity}, but ${status} is severity ${RUN_STATUS_SEVERITY[status]} in TypeScript`,
+    );
+  }
+  assert.deepEqual([...seen].sort(), ['failed', 'incomplete', 'mixed', 'pending'], 'every non-zero severity folded');
+  // `published` is the floor, expressed as greatest()'s trailing 0 argument.
+  assert.equal(RUN_STATUS_SEVERITY.published, 0);
+  assert.match(severityExpr, /,\s*0\s*\)/, 'greatest() must carry the published floor as its 0 term');
+
+  // ── 2. The severity → status NAMES the running SQL maps back to ─────────────────────
+  const named = [...statusExpr.matchAll(/when\s+(\d+)\s+then\s+'([a-z]+)'/g)].map((m) => ({
+    severity: Number(m[1]),
+    status: m[2] as LoaderRunStatus,
+  }));
+  const fallback = /else\s+'([a-z]+)'/.exec(statusExpr);
+  assert.ok(fallback !== null, 'the SQL status case must have an else branch');
+  const fallbackStatus = fallback[1] as LoaderRunStatus;
+  for (const { severity, status } of named) {
+    assert.equal(
+      RUN_STATUS_SEVERITY[status],
+      severity,
+      `SQL maps severity ${severity} to '${status}', TypeScript says ${RUN_STATUS_SEVERITY[status]}`,
+    );
+  }
+  assert.equal(RUN_STATUS_SEVERITY[fallbackStatus], 0, 'the else branch must be the severity-0 status');
+  assert.deepEqual(
+    [...named.map((n) => n.status), fallbackStatus].sort(),
+    [...LOADER_RUN_STATUSES].sort(),
+    'the SQL must name every status this module declares, and no others',
+  );
+
+  // ── 3. The `--` documentation table must agree with the code it documents ───────────
   const declared = [...migration.matchAll(/severity (\d)\s+(published|pending|incomplete|mixed|failed)\b/g)].map(
     (m) => ({ severity: Number(m[1]), status: m[2] as LoaderRunStatus }),
   );
@@ -438,14 +525,95 @@ test('the TypeScript fold and the SQL fold declare the SAME total order (they mu
   for (const { severity, status } of declared) {
     assert.equal(RUN_STATUS_SEVERITY[status], severity, `${status} must be severity ${severity} on both sides`);
   }
-  // And the SQL side must still be a derivation, not a stored column. Comments are
-  // stripped first: the migration legitimately DISCUSSES the absent column by name
-  // ("THERE IS NO overall_status COLUMN, AND THAT IS THE DESIGN"), and that prose is
-  // the opposite of the defect — only a real column declaration counts.
+
+  // ── 4. Still a derivation, not a stored column ──────────────────────────────────────
+  // Comments are stripped first: the migration legitimately DISCUSSES the absent column
+  // by name ("THERE IS NO overall_status COLUMN, AND THAT IS THE DESIGN"), and that prose
+  // is the opposite of the defect — only a real column declaration counts.
   const sql = migration.replace(/--.*$/gm, '');
   assert.match(sql, /greatest\(/, 'the SQL fold must be a maximum over severity terms');
   assert.doesNotMatch(sql, /overall_status/, 'there must be no stored aggregate column');
   assert.doesNotMatch(sql, /^\s*(?:overall_status|publication_status)\s+text/m);
+});
+
+test('the SQL status verdict is RUN-SCOPED, so an over-running pipeline cannot be answered about the wrong run', () => {
+  // Review finding F3: nao_loader_record_pipeline looked the run up BY KEY and then
+  // returned a verdict derived from whatever run was most recent for the TARGET, so a
+  // raced run reported `pending` (severity 1) instead of `mixed` (severity 3) and the
+  // returned requestKey was somebody else's.
+  const runs = readFileSync(
+    path.join(REPO_ROOT, 'supabase', 'migrations', '20260728030001_nao_loader_runs.sql'),
+    'utf8',
+  ).replace(/--.*$/gm, '');
+  const apply = readFileSync(
+    path.join(REPO_ROOT, 'supabase', 'migrations', '20260728030002_nao_loader_apply_simulated_days.sql'),
+    'utf8',
+  ).replace(/--.*$/gm, '');
+
+  assert.match(
+    runs,
+    /create or replace function public\.nao_loader_status\(\s*p_target_user_id uuid,\s*p_request_key text\s*\)/,
+    'a run-scoped nao_loader_status(uuid, text) must exist',
+  );
+  assert.match(
+    apply,
+    /return public\.nao_loader_status\(v_run\.target_user_id,\s*p_request_key\)/,
+    'record_pipeline must pass the CALLER’s request key through, not just the target',
+  );
+  assert.doesNotMatch(
+    apply,
+    /return public\.nao_loader_status\(v_run\.target_user_id\)\s*;/,
+    'the target-scoped form must not be the answer record_pipeline gives',
+  );
+  // ...and it hands back the digest it observed, so the relay's own fold has something
+  // real to compare against (finding F10).
+  assert.match(apply, /jsonb_build_object\('observedDigest', v_digest\)/);
+});
+
+test('SQL source-conformance: BOTH truth-table upserts guard their DO UPDATE branch on existing provenance', () => {
+  // Review finding F1, as a source assertion over the running SQL. The behavioural proof
+  // is the two-process TOCTOU race in supabase/tests/u3 (u3.toctou.*), which cannot run
+  // in CI (docker); this one can, and it catches the guard being deleted.
+  const apply = readFileSync(
+    path.join(REPO_ROOT, 'supabase', 'migrations', '20260728030002_nao_loader_apply_simulated_days.sql'),
+    'utf8',
+  ).replace(/--.*$/gm, '');
+
+  for (const [table, column] of [
+    ['daily_gut_rows', 'data_origin'],
+    ['wearable_daily', 'source'],
+  ] as const) {
+    const at = apply.indexOf(`insert into public.${table} (`);
+    assert.ok(at > -1, `the apply function must upsert ${table}`);
+    // From the insert to the end of the statement that closes the CTE and counts it.
+    const end = apply.indexOf('select count(*) into v_n from written;', at);
+    assert.ok(end > at, `${table}'s upsert must count what it actually wrote`);
+    const statement = apply.slice(at, end);
+    assert.match(statement, /on conflict[\s\S]*?do update set/, `${table} upserts`);
+    assert.match(
+      statement,
+      new RegExp(`where ${table}\\.${column} is not null`),
+      `${table}'s DO UPDATE must refuse a row whose provenance is absent`,
+    );
+    assert.match(
+      statement,
+      new RegExp(`exists \\(select 1 from public\\.nao_simulation_origins o[\\s\\S]*?o\\.origin = ${table}\\.${column}[\\s\\S]*?o\\.revoked_at is null and o\\.is_simulated\\)`),
+      `${table}'s DO UPDATE must require the EXISTING row's provenance to be registered simulation`,
+    );
+    // RETURNING, not `get diagnostics` — the diagnostic cannot distinguish the branches,
+    // which is exactly why the original row-count guard could not see the overwrite.
+    assert.match(statement, /returning 1 as one/, `${table}'s upsert must count via RETURNING`);
+    assert.doesNotMatch(statement, /get diagnostics/, `${table} must not rely on get diagnostics`);
+  }
+  // A skipped row fails the WHOLE transaction with the same refusal the scan gives.
+  assert.match(apply, /using errcode = 'OU409'[\s\S]{0,200}?protected date\(s\)/);
+  // And the repair path carries the same lease refusal as the write path (finding F2).
+  const release = apply.slice(apply.indexOf('function public.nao_loader_release_simulated_days'));
+  assert.match(
+    release,
+    /lease_until[\s\S]*?raise exception 'nao: loader target not permitted' using errcode = '42501'/,
+    'the release RPC must refuse to delete under an open publication lease',
+  );
 });
 
 test('buildPublicationSummary carries no identity, and survives redactDeep unchanged', () => {
@@ -575,13 +743,85 @@ test('httpStatusForLoaderError: every SQLSTATE the loader RPCs raise maps to its
   assert.equal(httpStatusForLoaderError('22023'), 400, 'invalid parameter / row-count assertion');
   assert.equal(httpStatusForLoaderError('22P02'), 400, 'malformed input syntax');
   assert.equal(httpStatusForLoaderError('42883'), 400, 'no function matches — a missing required argument');
-  for (const unknown of ['XX000', '40001', '57014', '', 'nonsense', null, undefined]) {
+  for (const unknown of ['XX000', '57014', '', 'nonsense', null, undefined]) {
     assert.equal(httpStatusForLoaderError(unknown), 500, `${String(unknown)} is a genuine server fault`);
   }
   // A denial must never be reported as a server error: that is the difference between
   // "you may not" and "we broke", and R4-U2's release gate cares about exactly that
   // distinction on the edge-function side.
   assert.notEqual(httpStatusForLoaderError('42501'), 500);
+});
+
+test('a TRANSIENT serialization failure is retryable, not a 500 (the single-flight isolation assumption, made visible)', () => {
+  // Review finding F7: the RPC's replay depends on READ COMMITTED — each statement in
+  // plpgsql takes a fresh snapshot, which is what lets the loser of a race see the
+  // winner's committed run row. Under REPEATABLE READ the loser raises 40001 instead,
+  // and 40001 was absent from the map, so a retryable race surfaced as an opaque 500.
+  for (const transient of RETRYABLE_LOADER_SQLSTATES) {
+    assert.equal(httpStatusForLoaderError(transient), 503, `${transient} must be retryable, not a server fault`);
+    assert.equal(isRetryableLoaderError(transient), true);
+    assert.notEqual(httpStatusForLoaderError(transient), 500);
+  }
+  assert.deepEqual([...RETRYABLE_LOADER_SQLSTATES].sort(), ['40001', '40P01'], 'serialization failure and deadlock');
+  // 409 already means "the provenance refusal", which is NOT retryable unchanged, so a
+  // transient failure must not borrow it.
+  for (const transient of RETRYABLE_LOADER_SQLSTATES) {
+    assert.notEqual(httpStatusForLoaderError(transient), httpStatusForLoaderError(LOADER_CONFLICT_SQLSTATE));
+  }
+  for (const permanent of ['42501', LOADER_CONFLICT_SQLSTATE, '23514', '22023', '22P02', '42883', 'XX000', null]) {
+    assert.equal(isRetryableLoaderError(permanent), false, `${String(permanent)} is not a transient failure`);
+  }
+  // The assumption is not merely handled, it is WRITTEN DOWN where the dependency lives.
+  const apply = readFileSync(
+    path.join(REPO_ROOT, 'supabase', 'migrations', '20260728030002_nao_loader_apply_simulated_days.sql'),
+    'utf8',
+  );
+  assert.match(apply, /READ COMMITTED/, 'the migration header must state the isolation-level dependency');
+  assert.match(apply, /40001/, 'and name the SQLSTATE a stricter level would raise');
+});
+
+test('parseRecordedDigests: the relay’s watermark check is WIRED, not a permanently-null branch', () => {
+  // Review finding F10: the only call site passed `observedDigest: null` and
+  // `expectedDigest: null`, so foldRunStatus's watermark term and
+  // PublicationSummary.watermarkStable were unreachable in production — dead code
+  // asserting a capability. nao_loader_record_pipeline now returns both digests.
+  assert.deepEqual(parseRecordedDigests({ watermarkAfter: DIGEST_A, observedDigest: DIGEST_B }), {
+    expected: DIGEST_A,
+    observed: DIGEST_B,
+  });
+  // Only a real sha-256 hex digest is accepted; anything else degrades to "not observed",
+  // which caps the verdict below published rather than pretending the check passed.
+  for (const junk of [null, undefined, '', 'nope', 42, {}, [], 'A'.repeat(64), 'a'.repeat(63)]) {
+    assert.deepEqual(parseRecordedDigests({ watermarkAfter: junk, observedDigest: junk }), {
+      expected: null,
+      observed: null,
+    });
+  }
+  for (const junk of [null, undefined, 'string', 7, []]) {
+    assert.deepEqual(parseRecordedDigests(junk), { expected: null, observed: null });
+  }
+  // And the wiring is real: with the pair fed in, a moved watermark reaches `mixed`
+  // through the LOCAL fold, without the database having to say so.
+  const digests = parseRecordedDigests({ watermarkAfter: DIGEST_A, observedDigest: DIGEST_B });
+  const racedStages = PIPELINE_STAGES.map((s) => stage(s, true, digests.observed));
+  const summary = buildPublicationSummary({ stages: racedStages, expectedDigest: digests.expected });
+  assert.equal(summary.status, 'mixed');
+  assert.equal(summary.watermarkChecked, true);
+  assert.equal(summary.watermarkStable, false);
+  assert.equal(summary.published, false);
+});
+
+test('source-conformance: the relay feeds the RECORDED digests into its own fold', () => {
+  const source = code(RELAY_ROUTE);
+  assert.match(source, /parseRecordedDigests\(/, 'the relay must read the digests record_pipeline returns');
+  assert.match(source, /expectedDigest:\s*digests\.expected/, 'the run’s committed watermark is the expectation');
+  assert.match(source, /digests\.observed/, 'the observed digest must be attributed to the stages');
+  // The dead shape: a hard-coded null expectation at the call site.
+  assert.doesNotMatch(
+    source,
+    /expectedDigest:\s*null/,
+    'a hard-coded null expectation is the dead-code shape this replaced',
+  );
 });
 
 // ───────────────────────────────────────────────────────────────────────────────

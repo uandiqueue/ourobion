@@ -105,7 +105,9 @@ create table if not exists public.nao_loader_run_stages (
 comment on table public.nao_loader_run_stages is
   'R4-U3 · per-stage pipeline outcome for a loader run, plus the raw-truth watermark digest observed '
   'when that stage finished. Consumed ONLY by nao_loader_status(), which derives the publication '
-  'verdict as a worst-wins fold; nothing stores an aggregate.';
+  'verdict as a worst-wins fold; nothing stores an aggregate. Re-recording a stage is worst-wins '
+  'too: nao_loader_record_pipeline''s upsert updates only while the recorded row is still ok, so a '
+  'later ok observation can never improve a recorded failure for the same stage.';
 
 alter table public.nao_loader_run_stages enable row level security;
 revoke all on public.nao_loader_run_stages from anon, authenticated;
@@ -308,8 +310,23 @@ grant   execute on function public.nao_loader_plan_inputs(uuid) to authenticated
 -- unregistered — the rows the loader will refuse to touch) and `residue` (dates whose provenance IS
 -- registered simulation but whose row was modified after the run that wrote it, i.e. the Biotope
 -- write-over-a-simulated-date case U3 can detect and repair but not prevent — design §B.5/§I.3).
+--
+-- ── RUN-SCOPED, NOT MERELY TARGET-SCOPED (independent review finding F3) ─────────────────────────
+-- There are TWO questions here and they need different answers:
+--
+--   "how did MY run go?"           → nao_loader_status(target, request_key)
+--   "what is this target's state?"  → nao_loader_status(target)   ⇒ the target's LATEST run
+--
+-- Resolving the first question with the second is a real defect, not a nicety. An over-running
+-- pipeline (design §E.1) is exactly the case where the two diverge: run A's lease expires, run B
+-- commits new raw truth for the same target, and only THEN does A's pipeline report its stages. A
+-- target-scoped lookup answers about B — so A's raced run reports `pending` (severity 1, LOWER than
+-- `incomplete`) instead of `mixed` (severity 3), and the returned `requestKey` is not the caller's.
+-- `nao_loader_record_pipeline` therefore passes ITS key through, and the two-argument form below is
+-- the authority; the one-argument form is a thin delegation so every existing target-scoped caller
+-- and grant keeps working unchanged.
 
-create or replace function public.nao_loader_status(p_target_user_id uuid)
+create or replace function public.nao_loader_status(p_target_user_id uuid, p_request_key text)
 returns jsonb
 language plpgsql
 volatile
@@ -328,11 +345,25 @@ begin
   perform public.nao_authorize('curator');
   v_label := public.nao_loader_assert_target(p_target_user_id);
 
-  select r.* into v_run
-    from public.nao_loader_runs r
-   where r.target_user_id = p_target_user_id
-   order by r.started_at desc, r.id desc
-   limit 1;
+  if p_request_key is null then
+    -- Target-scoped: the most recent run, which is the right answer to "what is this target's
+    -- state?" and the wrong answer to "how did my run go?".
+    select r.* into v_run
+      from public.nao_loader_runs r
+     where r.target_user_id = p_target_user_id
+     order by r.started_at desc, r.id desc
+     limit 1;
+  else
+    -- RUN-scoped. The target is re-asserted above and matched here too, so a key belonging to
+    -- another target cannot be used to read across the registry.
+    select r.* into v_run
+      from public.nao_loader_runs r
+     where r.request_key = p_request_key
+       and r.target_user_id = p_target_user_id;
+    if v_run.id is null then
+      raise exception 'nao: loader run not found for that request key' using errcode = '22023';
+    end if;
+  end if;
 
   select coalesce(array_agg(d order by d), '{}'::date[]) into v_protected from (
     select g.log_date as d
@@ -424,6 +455,29 @@ begin
     'residueDateCount', coalesce(array_length(v_residue, 1), 0),
     'residueDates', to_jsonb(v_residue));
 end
+$$;
+
+comment on function public.nao_loader_status(uuid, text) is
+  'R4-U3 · the DERIVED publication verdict for ONE loader run, identified by its request key (the '
+  'run-scoped authority — see this migration''s §6 header for why a target-scoped answer is wrong '
+  'for an over-running pipeline). Passing NULL for the key falls back to the target''s most recent '
+  'run. Folded worst-wins over the run''s own stage rows; nothing is stored.';
+
+revoke execute on function public.nao_loader_status(uuid, text) from public, anon;
+grant   execute on function public.nao_loader_status(uuid, text) to authenticated, service_role;
+
+-- The one-argument form: unchanged behaviour (the target's latest run), expressed as a delegation so
+-- there is exactly ONE fold implementation. It is its own SECURITY DEFINER with its own pinned
+-- search_path, so the object-shape assertions that enumerate it by signature stay true; the gate and
+-- the target check run inside the delegate, as its first two statements.
+create or replace function public.nao_loader_status(p_target_user_id uuid)
+returns jsonb
+language sql
+volatile
+security definer
+set search_path = public, pg_temp
+as $$
+  select public.nao_loader_status(p_target_user_id, null::text)
 $$;
 
 comment on function public.nao_loader_status(uuid) is

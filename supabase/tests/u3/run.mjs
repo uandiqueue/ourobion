@@ -16,7 +16,11 @@
 //      error, an ordering break, or a missing dependency surfaces here.
 //   4. Seeds (10_seed.sql) and runs the assertion suite (20_assertions.sql).
 //   5. Runs the CONCURRENCY probe: two parallel psql children racing the same request key against a
-//      real transaction-scoped advisory lock (30_concurrency_a.sql / 31_concurrency_b.sql).
+//      real transaction-scoped advisory lock (30_concurrency_a.sql / 31_concurrency_b.sql), then
+//      the TOCTOU probe: the TARGET's own RLS-governed write racing the loader
+//      (32_toctou_b.sql / 33_toctou_a.sql) — the one interleaving the advisory lock cannot cover,
+//      where the guarantee has to come from the ON CONFLICT DO UPDATE predicate rather than from
+//      the scan that precedes it.
 //   6. Runs the TOP-LEVEL ABORT probe: a forced failure on the second truth table where nothing
 //      catches the error, so the whole top-level transaction really aborts — the path PostgREST
 //      takes. The forcing constraint is added and dropped here and exists ONLY in this disposable
@@ -73,7 +77,7 @@ const REQUIRED_GROUPS = [
   'u3.objects', 'u3.anon', 'u3.gate', 'u3.gate_msg', 'u3.target', 'u3.deny_msg', 'u3.payload',
   'u3.happy', 'u3.plan', 'u3.conflict', 'u3.rollback', 'u3.replay', 'u3.sparse', 'u3.lease',
   'u3.fold', 'u3.release', 'u3.residue', 'u3.demand', 'u3.nonreg', 'u3.privacy', 'u3.concurrent',
-  'u3.toplevel',
+  'u3.toplevel', 'u3.runscope', 'u3.toctou',
 ];
 
 const ARGS = new Set(process.argv.slice(2));
@@ -233,6 +237,23 @@ try {
     const noise = r.stderr.split('\n').filter((l) => l.trim() && !/NOTICE:/.test(l)).join('\n');
     process.stdout.write(`   caller ${label}: exit ${r.status}${noise ? `\n${noise}` : ''}\n`);
     if (r.status !== 0) throw new Error(`concurrency caller ${label} failed (exit ${r.status})`);
+  }
+
+  step('TOCTOU probe — the TARGET\'s own RLS write racing the loader (the F1 interleaving)');
+  // B writes a REAL row and holds it uncommitted; A (1.5 s later) calls the loader over a range
+  // containing that date, passes the pre-write scan because B is invisible, and BLOCKS on the
+  // unique index; B commits only once it can SEE that block, so the loader is provably past its
+  // scan when the real row appears. The write-time guard on the ON CONFLICT DO UPDATE branch is
+  // then the only thing that can refuse it. Both children are expected to exit 0: the loader's
+  // OU409 is captured inside a plpgsql subtransaction so the assertions can read it.
+  const [tb, ta] = await Promise.all([
+    psqlFileAsync('/harness/u3/32_toctou_b.sql'),
+    psqlFileAsync('/harness/u3/33_toctou_a.sql'),
+  ]);
+  for (const [label, r] of [['B (the target)', tb], ['A (the loader)', ta]]) {
+    const noise = r.stderr.split('\n').filter((l) => l.trim() && !/NOTICE:/.test(l)).join('\n');
+    process.stdout.write(`   caller ${label}: exit ${r.status}${noise ? `\n${noise}` : ''}\n`);
+    if (r.status !== 0) throw new Error(`toctou caller ${label} failed (exit ${r.status})`);
   }
 
   step('top-level abort probe — a forced second-table failure with nothing catching it');

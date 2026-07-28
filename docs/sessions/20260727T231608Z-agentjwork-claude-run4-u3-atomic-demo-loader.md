@@ -116,10 +116,57 @@ acceptance script 392 · attestation 2 · session record.
   un-importable under `node --test` (the U2-documented `next/headers` resolution failure), so route
   wiring is proven by source-conformance plus `tsc`, not execution.
 
+## Corrected after independent review — a real defect, not just a cap
+
+An earlier revision of this record claimed the unit "never overwrites real rows" and that the only
+blocker was "integration only … by measurement rather than defect". **Both were false when written.**
+The independent database/concurrency review returned **NO-GO** and falsified the central raw-truth
+guarantee empirically:
+
+- **F1 (HIGH).** The provenance scan was a plain `SELECT` at READ COMMITTED and **neither
+  `ON CONFLICT … DO UPDATE` carried a `WHERE`**. The advisory lock serialises loader callers but cannot
+  exclude the target's own RLS-governed PostgREST writes, which take no lock. A concurrent real insert
+  (`data_origin IS NULL`) was invisible to the scan; the loader's insert blocked on the unique index and
+  then took the **update** branch, returning `ok: true` with no `OU409` — silently replacing real
+  self-reported health data and re-stamping it simulated. Neither the row-count guard nor `residueDates`
+  could observe the loss.
+  **Why 184 assertions missed it:** every conflict test created its real row *before* the apply call, so
+  the scan always saw it. The defect only appears when a writer commits *between* scan and write.
+  **Fixed at write time, not scan time:** both upserts now carry a `WHERE` requiring the *existing* row's
+  provenance to be a registered, non-revoked, `is_simulated` origin; the written count comes from a
+  data-modifying CTE (`returning 1`), not `get diagnostics`, which cannot distinguish the update branch;
+  a shortfall re-scans and raises `OU409`. Proven by a two-process probe that is **not** a sleep race —
+  the racing transaction commits only after observing an ungranted lock held by another backend, so the
+  loader is provably past the pre-scan. Non-vacuity proven by injecting the pre-fix migration and
+  reproducing the original failure.
+- **F2** the release RPC had no lease check and deleted raw truth under an in-flight pipeline — fixed.
+- **F3** `nao_loader_status()` was target-scoped, so `mixed` was unreachable in the very case it was
+  built for and the returned `requestKey` was another run's — now run-scoped.
+- **F4** the only CI-visible fold-drift test compared TypeScript against a SQL `--` **comment**; changing
+  `then 4` to `then 2` left it green. It now parses the executable `greatest()`, verified by making that
+  exact change fail.
+- **F5** stage rows were last-write-wins despite the worst-wins claim, and the test meant to catch it
+  re-recorded a *different* stage — both fixed.
+- Also: `origin` accepted `seed:baseline` (now `loader_writable`-gated), `40001`/`40P01` returned 500
+  instead of a retryable 503, the registry drift test hardcoded 3 markers against 4 seeded, and the
+  relay's watermark path was dead code — now wired.
+
+**F6, F8, F12–F15 remain unfixed** and are recorded in the review. F6 (residue anchored to the latest
+run rather than the writing run) is less consequential now that the F1 overwrite cannot happen.
+
+After remediation: **223/223** U3 assertions (was 184; none removed or weakened), **443/443** U2
+regression with `post/pc` 48/48, **261** nao tests, **41** verifier tests, `attest` PASS, `config` PASS,
+NUL byte intact. `supabase/functions/**` and `deploy-attestation.json` were not touched by the fix.
+
 ## Blockers
 
-Integration only, and by measurement rather than defect: the landing cap. The unit itself is complete
-and its evidence is recorded. `attest` PASS, `config` PASS, and the deliberate NUL byte in
-`compute-baselines/index.ts` remains intact (exactly one, line 171).
+Two, and they are different in kind:
+
+1. **`CAP-BLOCKED` (measurement).** The landing delta already exceeded the cap before remediation and the
+   fix adds roughly 1,178 more lines (~480 of them proofs), so the overshoot grows. Nothing was trimmed.
+2. **The unit shipped a real data-integrity defect that its own test suite could not see** (F1). It is
+   fixed and independently re-reviewed, but the lesson belongs in the record: a suite can be large,
+   fault-injected and still blind, when every one of its fixtures establishes state in the order the
+   code expects rather than the order an adversary would choose.
 
 memory: none

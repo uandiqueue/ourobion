@@ -57,6 +57,14 @@ export interface SimulationOrigin {
   label: string;
   /** false ⇒ the marker names real/provider data and the loader must never write or overwrite it. */
   isSimulated: boolean;
+  /**
+   * false ⇒ the marker belongs to ANOTHER writer, so this loader may not STAMP it even
+   * when `isSimulated` is true. Two different questions: `isSimulated` answers "may a
+   * row bearing this be overwritten", `loaderWritable` answers "may THIS loader author
+   * it". Conflating them let a caller-supplied `origin` put R4-U2's fixture marker
+   * (`seed:baseline`) onto a demo target's raw truth.
+   */
+  loaderWritable: boolean;
   /** Which harness/unit owns the marker. */
   owner: string;
 }
@@ -75,21 +83,37 @@ export interface SimulationOrigin {
 export const SIMULATION_ORIGIN_REGISTRY: readonly SimulationOrigin[] = Object.freeze([
   Object.freeze({
     origin: SIMULATED_DATA_ORIGIN,
-    label: 'O11/run-2 demo loader',
+    label: 'O11 / run-2 demo loader',
     isSimulated: true,
+    loaderWritable: true,
     owner: 'apps/nao/src/lib/simulatedHealth.ts',
   }),
   Object.freeze({
     origin: SIMULATED_DATA_ORIGIN_RUN4,
     label: 'R4-U3 atomic demo loader',
     isSimulated: true,
+    loaderWritable: true,
     owner: 'apps/nao/src/lib/simulatedHealth.ts',
   }),
   Object.freeze({
     origin: 'seed:baseline',
     label: 'R4-U2 authz probe fixture',
     isSimulated: true,
+    // NOT loader-writable: it is 30_pre_u2_seed.sql's marker. A row bearing it is
+    // recognised as simulated (hence overwritable), but a curator must not be able to
+    // stamp another harness's provenance onto a demo target's truth rows — that would
+    // make U2's fixture rows and loader output indistinguishable after the fact.
+    loaderWritable: false,
     owner: 'supabase/tests/authz/30_pre_u2_seed.sql',
+  }),
+  Object.freeze({
+    // Recognised so nao_loader_runs.origin can reference it for a release/repair ledger
+    // row; isSimulated false so it can never be stamped onto a truth row at all.
+    origin: 'release:run4-demo',
+    label: 'R4-U3 simulated-day release',
+    isSimulated: false,
+    loaderWritable: false,
+    owner: 'public.nao_loader_release_simulated_days',
   }),
 ]) as readonly SimulationOrigin[];
 
@@ -99,11 +123,39 @@ export const SIMULATION_ORIGIN_REGISTRY: readonly SimulationOrigin[] = Object.fr
  */
 export const SIMULATION_ORIGIN_RE = /^[a-z][a-z0-9]*:[A-Za-z0-9._-]{1,48}$/;
 
-/** True iff `value` is a registered, simulated origin the loader may WRITE. */
+/**
+ * True iff `value` is a registered, simulated origin — i.e. a row bearing it is
+ * SIMULATED, and therefore overwritable by the loader.
+ *
+ * This is the OVERWRITE question, not the AUTHOR question. Use
+ * {@link isLoaderWritableOrigin} to decide whether the loader may stamp a marker.
+ */
 export function isRegisteredSimulatedOrigin(value: unknown): value is string {
   return (
     typeof value === 'string' &&
     SIMULATION_ORIGIN_REGISTRY.some((entry) => entry.origin === value && entry.isSimulated)
+  );
+}
+
+/**
+ * True iff the loader may STAMP `value` as provenance: registered, simulated, AND owned
+ * by this loader.
+ *
+ * `origin` is caller-supplied (`POST /api/loader`'s optional `origin` field), so this is
+ * a real authority boundary rather than a formality: `seed:baseline` is a registered
+ * simulated origin belonging to R4-U2's authz fixture, and accepting it here let a
+ * curator write another harness's provenance onto a demo target's `data_origin` /
+ * `source`. The database enforces the same predicate independently
+ * (`nao_simulation_origins.loader_writable`, checked inside
+ * `nao_loader_apply_simulated_days`), so a caller bypassing this boundary is refused
+ * with 23514 rather than being trusted.
+ */
+export function isLoaderWritableOrigin(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    SIMULATION_ORIGIN_REGISTRY.some(
+      (entry) => entry.origin === value && entry.isSimulated && entry.loaderWritable,
+    )
   );
 }
 
@@ -490,10 +542,13 @@ export function validateLoaderBody(body: unknown): string | null {
     if (typeof b.origin !== 'string' || !SIMULATION_ORIGIN_RE.test(b.origin)) {
       return 'origin must be a namespaced marker of the form namespace:name';
     }
-    if (!isRegisteredSimulatedOrigin(b.origin)) {
+    if (!isLoaderWritableOrigin(b.origin)) {
       // Fail closed on an unknown marker: a typo is unregistered, therefore
       // treated as real data, therefore never written and never overwritten.
-      return 'origin must be a registered simulated origin (see nao_simulation_origins)';
+      // Fail closed on ANOTHER writer's marker too — `seed:baseline` is registered
+      // and simulated but belongs to R4-U2's authz fixture, and stamping it onto a
+      // demo target's rows would make that harness's provenance ambiguous.
+      return 'origin must be a loader-writable registered simulated origin (see nao_simulation_origins)';
     }
   }
   return null;

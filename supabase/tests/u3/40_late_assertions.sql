@@ -9,6 +9,8 @@
 --      wrapped in a plpgsql sub-block, so the whole top-level transaction really aborts. Section 7 of
 --      20_assertions.sql proves the same thing through expect_error's subtransaction; this proves it
 --      through the path PostgREST actually takes, where nothing catches the error at all.
+--   3. THE TOCTOU PROBE — the target's OWN RLS-governed write racing the loader, which is the one
+--      interleaving the advisory lock cannot cover (32_toctou_b.sql / 33_toctou_a.sql).
 
 set authz_probe.phase = 'u3';
 
@@ -90,3 +92,87 @@ select authz_probe.expect_value('u3.toplevel.the_retry_wrote_both_tables',
 select authz_probe.expect_value('u3.toplevel.the_harness_only_constraint_was_removed',
   'select count(*)::text from pg_constraint
     where conname = ''u3_tmp_force_failure''', '0');
+
+-- ═════════════════════════════════════════════════════════════════════════════════════════════
+-- 3 · TOCTOU — A REAL, USER-AUTHORED ROW COMMITTED UNDER THE LOADER IS STILL REFUSED
+--
+--     This is the interleaving an independent database review reproduced against this unit, in
+--     which a real self-report was silently overwritten and re-stamped `simulated:run4-demo` with
+--     `ok: true`, no conflict raised, and no artefact recording that it happened.
+--
+--     The advisory lock serialises loader callers; it takes no part in the TARGET's own
+--     RLS-governed PostgREST write. So the pre-write provenance scan is a snapshot read that a
+--     concurrent write can slip past, and "the scan precedes both inserts" — which is true — does
+--     not make the inserts conditional. The guarantee therefore lives in the ON CONFLICT DO UPDATE
+--     branch of each upsert, which refuses any existing row whose provenance is not registered
+--     simulation, whenever that row arrived.
+-- ═════════════════════════════════════════════════════════════════════════════════════════════
+
+-- ── The probe is not vacuous ────────────────────────────────────────────────────────────────────
+-- Both halves matter. If B had committed before A scanned, the ordinary pre-scan would have refused
+-- and none of the assertions below would say anything about the write-time guard.
+
+select authz_probe.expect_value('u3.toctou.both_racers_recorded_something',
+  'select count(*)::text from authz_probe.u3_capture
+    where key in (''toctou.a'', ''toctou.a_sees_before_applying'', ''toctou.b_observed_the_block'')',
+  '3');
+
+-- A, immediately before calling the loader, could see NO row for the target at all — B's real row
+-- was uncommitted and therefore invisible to A's snapshot and to the loader's own scan.
+select authz_probe.expect_value('u3.toctou.the_scan_could_not_see_the_racing_row',
+  'select (value->>''gutCount'') || ''/'' || (value->>''wearCount'')
+     from authz_probe.u3_capture where key = ''toctou.a_sees_before_applying''', '0/0');
+
+-- ...and B committed only once the loader was demonstrably BLOCKED on a lock, which it can only be
+-- at its insert — i.e. after it had already run and passed the scan.
+select authz_probe.expect_value('u3.toctou.the_loader_was_blocked_before_the_row_committed',
+  'select value->>''blocked'' from authz_probe.u3_capture
+    where key = ''toctou.b_observed_the_block''', 'true');
+
+-- ── The refusal ─────────────────────────────────────────────────────────────────────────────────
+
+select authz_probe.expect_value('u3.toctou.the_loader_refused_with_OU409',
+  'select value->>''sqlstate'' from authz_probe.u3_capture where key = ''toctou.a''', 'OU409');
+
+-- The SAME message the scan raises, so a caller cannot tell which of the two caught it — the
+-- refusal is one behaviour with two enforcement points, not two behaviours.
+select authz_probe.expect_value('u3.toctou.the_refusal_is_the_conflict_refusal_verbatim',
+  'select value->>''message'' from authz_probe.u3_capture where key = ''toctou.a''',
+  'nao: loader refuses to overwrite rows that are not registered simulation');
+
+-- ── No mutation whatsoever ──────────────────────────────────────────────────────────────────────
+
+select authz_probe.expect_value('u3.toctou.the_real_row_is_byte_identical',
+  'select (md5(g::text) = (select digest from authz_probe.u3_baseline
+                            where tag = ''toctou_real_gut''))::text
+     from public.daily_gut_rows g
+    where g.user_id = ''dddddddd-0000-4000-8000-000000000018''
+      and g.log_date = date ''2026-07-03''', 'true');
+
+-- Stated separately from the digest, because THIS is the harm: the row must still be REAL, not
+-- relabelled as simulated.
+select authz_probe.expect_value('u3.toctou.the_real_row_is_still_provenance_free',
+  'select (data_origin is null)::text from public.daily_gut_rows
+    where user_id = ''dddddddd-0000-4000-8000-000000000018''
+      and log_date = date ''2026-07-03''', 'true');
+select authz_probe.expect_value('u3.toctou.the_users_own_content_survived',
+  'select region || ''|'' || notes || ''|'' || energy_score::text from public.daily_gut_rows
+    where user_id = ''dddddddd-0000-4000-8000-000000000018''
+      and log_date = date ''2026-07-03''',
+  'REAL-REGION|user-authored real self-report|5');
+
+-- The three dates the loader COULD have written rolled back with the refusal: a partial write is
+-- unrepresentable here too, and the target is left holding exactly its own one row.
+select authz_probe.expect_value('u3.toctou.the_loader_wrote_no_gut_row_at_all',
+  'select count(*)::text from public.daily_gut_rows
+    where user_id = ''dddddddd-0000-4000-8000-000000000018''', '1');
+select authz_probe.expect_value('u3.toctou.the_loader_wrote_no_wearable_row_at_all',
+  'select count(*)::text from public.wearable_daily
+    where user_id = ''dddddddd-0000-4000-8000-000000000018''', '0');
+select authz_probe.expect_value('u3.toctou.no_run_row_survives_the_race',
+  'select count(*)::text from public.nao_loader_runs
+    where request_key = ''toctou-key-0000000001''', '0');
+select authz_probe.expect_value('u3.toctou.nothing_was_stamped_simulated_for_this_target',
+  'select count(*)::text from public.daily_gut_rows
+    where user_id = ''dddddddd-0000-4000-8000-000000000018''
+      and data_origin is not null', '0');

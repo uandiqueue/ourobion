@@ -92,13 +92,17 @@ import {
 // THE WATERMARK. With an optional `{ requestKey }` in the request body — the key the
 // loader run returned — this route calls `nao_loader_record_pipeline(...)` after the
 // sequencer returns. That definer function stamps each stage row with the TARGET's
-// raw-truth digest as observed at that moment and returns `nao_loader_status`'s
-// derived verdict, so the watermark comparison happens where the target's rows are
-// actually readable (the caller's own client cannot see another user's rows, and
-// `nao_loader_watermark` is service_role-only precisely so it cannot become an oracle).
-// The two verdicts — the local fold over relayed stage outcomes, and the database's
-// fold over recorded per-stage digests — are combined WORST-WINS, so a disagreement
-// can only resolve pessimistically.
+// raw-truth digest as observed at that moment and returns the RUN-SCOPED verdict from
+// `nao_loader_status(target, requestKey)` — the caller's own run, not merely the
+// target's most recent one — together with the digest it just observed and the run's
+// committed `watermark_after`. The comparison has to happen there because that is where
+// the target's rows are readable at all (the caller's own client cannot see another
+// user's rows, and `nao_loader_watermark` is service_role-only precisely so it cannot
+// become an oracle). Those two digests are then fed to the LOCAL fold as well, so its
+// watermark term is a real check rather than a permanently-null one, and the two
+// verdicts — the local fold over relayed stage outcomes, and the database's fold over
+// recorded per-stage digests — are combined WORST-WINS, so a disagreement can only
+// resolve pessimistically.
 // Without a requestKey no watermark comparison is possible, and the verdict is capped
 // at `incomplete` with `watermarkChecked: false`: an unverifiable run is never claimed
 // as a publication. Per-user pipeline SCOPING is deliberately not added — the three
@@ -115,6 +119,7 @@ import { PublishableKeyConfigurationError, resolvePublishableKey } from '@/lib/s
 import { LOADER_REQUEST_KEY_RE } from '@/lib/simulatedHealth';
 import {
   buildPublicationSummary,
+  parseRecordedDigests,
   stagesFromRelayBody,
   statusFromDatabase,
   type ObservedStage,
@@ -279,11 +284,24 @@ export async function POST(req: Request): Promise<Response> {
    * the BODY, it does not rewrite `run-pipeline`'s own semantics.
    */
   const json = async (payload: unknown, status = 200): Promise<Response> => {
-    const observed = stagesFromRelayBody(payload, null);
+    // Recorded first, because recording is what OBSERVES the target's watermark: the
+    // definer stamps each stage row with the digest it reads at that moment and hands
+    // both that digest and the run's committed `watermark_after` back. Without a
+    // requestKey there is no run to record against and both stay null, which caps the
+    // verdict at `incomplete` with `watermarkChecked: false` — never `published`.
+    const relayed = stagesFromRelayBody(payload, null);
+    const recorded = await recordStages(supabase, requestKey, relayed);
+    const digests = parseRecordedDigests(recorded);
+    // Re-attribute the observed digest to the stages, so the LOCAL fold has a real
+    // watermark term instead of a permanently-null one. The database's own fold (over
+    // per-stage digests, which is strictly finer) is combined worst-wins below, so the
+    // two derivations can only ever resolve pessimistically.
+    const observed =
+      digests.observed === null ? relayed : stagesFromRelayBody(payload, digests.observed);
     const publication = buildPublicationSummary({
       stages: observed,
-      expectedDigest: null,
-      databaseStatus: statusFromDatabase(await recordStages(supabase, requestKey, observed)),
+      expectedDigest: digests.expected,
+      databaseStatus: statusFromDatabase(recorded),
     });
     return respond(withPublication(payload, publication), status);
   };

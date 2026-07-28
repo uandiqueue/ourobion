@@ -79,6 +79,50 @@ select authz_probe.expect_value('u3.objects.the_provenance_scan_precedes_both_wr
     where oid = ''public.nao_loader_apply_simulated_days(uuid,text,text,jsonb,jsonb)''::regprocedure',
   'true');
 
+-- THE WRITE-TIME GUARANTEE, ASSERTED STRUCTURALLY (independent review finding F1).
+--
+-- The provenance scan PRECEDING both writes is not the same thing as the writes being CONDITIONAL,
+-- and the difference was a reproduced defect: the advisory lock serialises loader callers but takes
+-- no part in the target's own RLS-governed PostgREST writes, so a real row committed between the
+-- scan's snapshot and the insert was invisible to the scan and then unconditionally overwritten by
+-- the DO UPDATE branch. Both branches must therefore carry a WHERE predicate over the EXISTING
+-- row's provenance. The behavioural proof is the two-process race in 32/33_toctou_*.sql; this
+-- catches the predicate being deleted even if that probe is ever skipped.
+select authz_probe.expect_value('u3.objects.both_upserts_condition_their_do_update_branch',
+  'select (prosrc ~ ''where daily_gut_rows\.data_origin is not null''
+       and prosrc ~ ''where wearable_daily\.source is not null''
+       and prosrc ~ ''o\.origin = daily_gut_rows\.data_origin''
+       and prosrc ~ ''o\.origin = wearable_daily\.source'')::text
+     from pg_proc
+    where oid = ''public.nao_loader_apply_simulated_days(uuid,text,text,jsonb,jsonb)''::regprocedure',
+  'true');
+
+-- ...and the written count comes from RETURNING, never from `get diagnostics`. The diagnostic
+-- cannot distinguish "inserted", "updated" and "conflicted but skipped by the predicate", which is
+-- precisely the measurement that let the overwrite report ok:true.
+-- `--` prose is stripped first, the same convention apps/nao/tests uses: this file's own body
+-- legitimately DISCUSSES `get diagnostics row_count` and why it was the wrong measure, and that
+-- explanation is the opposite of the defect. Only executable text counts.
+select authz_probe.expect_value('u3.objects.the_written_count_comes_from_returning',
+  'select ((select count(*)
+              from regexp_matches(regexp_replace(prosrc, ''--.*'', '''', ''gn''),
+                                  ''returning 1 as one'', ''g'')) = 2
+       and regexp_replace(prosrc, ''--.*'', '''', ''gn'') !~ ''get diagnostics'')::text
+     from pg_proc
+    where oid = ''public.nao_loader_apply_simulated_days(uuid,text,text,jsonb,jsonb)''::regprocedure',
+  'true');
+
+-- The repair path runs the SAME step-5 preamble as the write path (finding F2): it deletes, which
+-- is strictly worse than overwriting, so it must not be able to run under an open lease.
+select authz_probe.expect_value('u3.objects.the_release_path_checks_the_publication_lease',
+  'select (position(''lease_until'' in prosrc) > 0
+       and position(''pg_advisory_xact_lock'' in prosrc)
+           < position(''lease_until'' in prosrc)
+       and position(''lease_until'' in prosrc)
+           < position(''delete from public.daily_gut_rows'' in prosrc))::text
+     from pg_proc
+    where oid = ''public.nao_loader_release_simulated_days(uuid,date[])''::regprocedure', 'true');
+
 -- NO exception HANDLER anywhere in the apply body: a failure MUST propagate so the transaction
 -- aborts. An `exception when …` block would make "partially applied" representable again. (`raise
 -- exception` is of course everywhere — it is the handler shape that is forbidden.)
@@ -93,6 +137,7 @@ select authz_probe.expect_value('u3.objects.every_new_definer_is_security_define
        ''public.nao_loader_watermark(uuid)'',
        ''public.nao_loader_plan_inputs(uuid)'',
        ''public.nao_loader_status(uuid)'',
+       ''public.nao_loader_status(uuid,text)'',
        ''public.nao_loader_apply_simulated_days(uuid,text,text,jsonb,jsonb)'',
        ''public.nao_loader_release_simulated_days(uuid,date[])'',
        ''public.nao_loader_record_pipeline(text,jsonb)'']) f
@@ -104,6 +149,7 @@ select authz_probe.expect_value('u3.objects.every_new_function_pins_search_path'
        ''public.nao_loader_watermark(uuid)'',
        ''public.nao_loader_plan_inputs(uuid)'',
        ''public.nao_loader_status(uuid)'',
+       ''public.nao_loader_status(uuid,text)'',
        ''public.nao_loader_apply_simulated_days(uuid,text,text,jsonb,jsonb)'',
        ''public.nao_loader_release_simulated_days(uuid,date[])'',
        ''public.nao_loader_record_pipeline(text,jsonb)'',
@@ -119,6 +165,7 @@ select authz_probe.expect_value('u3.objects.no_new_function_mentions_service_rol
        ''public.nao_loader_watermark(uuid)'',
        ''public.nao_loader_plan_inputs(uuid)'',
        ''public.nao_loader_status(uuid)'',
+       ''public.nao_loader_status(uuid,text)'',
        ''public.nao_loader_apply_simulated_days(uuid,text,text,jsonb,jsonb)'',
        ''public.nao_loader_release_simulated_days(uuid,date[])'',
        ''public.nao_loader_record_pipeline(text,jsonb)'',
@@ -134,6 +181,7 @@ select authz_probe.expect_value('u3.objects.anon_can_execute_no_new_function',
        ''public.nao_loader_watermark(uuid)'',
        ''public.nao_loader_plan_inputs(uuid)'',
        ''public.nao_loader_status(uuid)'',
+       ''public.nao_loader_status(uuid,text)'',
        ''public.nao_loader_apply_simulated_days(uuid,text,text,jsonb,jsonb)'',
        ''public.nao_loader_release_simulated_days(uuid,date[])'',
        ''public.nao_loader_record_pipeline(text,jsonb)'',
@@ -153,7 +201,8 @@ select authz_probe.expect_value('u3.objects.authenticated_can_execute_the_gated_
        ''public.nao_loader_release_simulated_days(uuid,date[])'',
        ''public.nao_loader_record_pipeline(text,jsonb)'',
        ''public.nao_loader_plan_inputs(uuid)'',
-       ''public.nao_loader_status(uuid)'']) f
+       ''public.nao_loader_status(uuid)'',
+       ''public.nao_loader_status(uuid,text)'']) f
     where not has_function_privilege(''authenticated'', f, ''EXECUTE'')', '0');
 
 -- Every new U3 table: RLS on, ZERO policies, and no privilege for either API role. Deny-all at both
@@ -337,6 +386,20 @@ begin;
     authz_probe.u3_apply_sql('dddddddd-0000-4000-8000-000000000001', 'origin-revk-key-000001',
                              authz_probe.u3_days(date '2026-07-01', 3),
                              'retired:marker'), '23514');
+  -- p_origin is CALLER-SUPPLIED. 'seed:baseline' is registered AND is_simulated — a row bearing it
+  -- may be overwritten — but it belongs to R4-U2's authz fixture (30_pre_u2_seed.sql) and the
+  -- loader must never AUTHOR it: stamping another harness's provenance onto a demo target's raw
+  -- truth would make that harness's rows and loader output indistinguishable afterwards. The
+  -- registry answers the two questions with two columns; this is the loader_writable one.
+  select authz_probe.expect_error('u3.payload.another_harnesses_marker_is_refused_as_origin',
+    authz_probe.u3_apply_sql('dddddddd-0000-4000-8000-000000000001', 'origin-seed-key-000001',
+                             authz_probe.u3_days(date '2026-07-01', 3),
+                             'seed:baseline'), '23514');
+  -- ...and a registered NON-simulated marker (the release ledger's own) is refused too.
+  select authz_probe.expect_error('u3.payload.a_non_simulated_marker_is_refused_as_origin',
+    authz_probe.u3_apply_sql('dddddddd-0000-4000-8000-000000000001', 'origin-rel-key-0000001',
+                             authz_probe.u3_days(date '2026-07-01', 3),
+                             'release:run4-demo'), '23514');
   select authz_probe.expect_error('u3.payload.short_request_key_raises_23514',
     authz_probe.u3_apply_sql('dddddddd-0000-4000-8000-000000000001', 'tooshort',
                              authz_probe.u3_days(date '2026-07-01', 3)), '23514');
@@ -842,16 +905,43 @@ begin;
     'select public.nao_loader_record_pipeline(''fold-key-000000000001'', jsonb_build_array(
         jsonb_build_object(''stage'', ''generate-insights'', ''httpStatus'', 502, ''ok'', false)
       ))->>''status''', 'failed');
-  -- ...and a later all-ok recording cannot improve it back to published, because ok=false persists.
+  -- ...and a later all-ok recording of THE SAME STAGE cannot improve it back to published.
+  --
+  -- The stage name matters and this assertion used to get it wrong: it re-recorded
+  -- `compute-baselines` while `generate-insights` was the failed one, so the failure survived for a
+  -- reason that had nothing to do with the claim in the assertion's name — and the underlying
+  -- last-write-wins upsert (which really did replace ok=false with ok=true for the SAME stage) went
+  -- unmeasured. Re-recording the failed stage itself is the only form of this test that can fail.
   select authz_probe.expect_value('u3.fold.failed_cannot_be_improved_by_a_later_ok_stage',
     'select public.nao_loader_record_pipeline(''fold-key-000000000001'', jsonb_build_array(
-        jsonb_build_object(''stage'', ''compute-baselines'', ''httpStatus'', 200, ''ok'', true)
+        jsonb_build_object(''stage'', ''generate-insights'', ''httpStatus'', 200, ''ok'', true)
+      ))->>''status''', 'failed');
+  -- Worst-wins is a one-way ratchet, not a freeze: WORSENING an already-ok stage still applies.
+  select authz_probe.expect_value('u3.fold.an_ok_stage_can_still_be_worsened',
+    'select public.nao_loader_record_pipeline(''fold-key-000000000001'', jsonb_build_array(
+        jsonb_build_object(''stage'', ''compute-baselines'', ''httpStatus'', 503, ''ok'', false)
       ))->>''status''', 'failed');
   select authz_probe.expect_error('u3.fold.an_unknown_stage_name_is_refused',
     'select public.nao_loader_record_pipeline(''fold-key-000000000001'', jsonb_build_array(
         jsonb_build_object(''stage'', ''not-a-stage'', ''httpStatus'', 200, ''ok'', true)
       ))', '23514');
 commit;
+
+-- The derived verdict is one thing; the RECORDED ROW is another, and the row is what a later read
+-- folds. Asserted as the superuser, because `authenticated` holds no privilege on the stage table
+-- at all (RLS on, zero policies, revoke all) and that is itself part of the contract.
+select authz_probe.expect_value('u3.fold.the_failed_stage_row_itself_was_not_overwritten',
+  'select s.ok::text || ''/'' || s.http_status::text
+     from public.nao_loader_run_stages s
+     join public.nao_loader_runs r on r.id = s.run_id
+    where r.request_key = ''fold-key-000000000001'' and s.stage = ''generate-insights''',
+  'false/502');
+select authz_probe.expect_value('u3.fold.the_worsened_stage_row_was_updated',
+  'select s.ok::text || ''/'' || s.http_status::text
+     from public.nao_loader_run_stages s
+     join public.nao_loader_runs r on r.id = s.run_id
+    where r.request_key = ''fold-key-000000000001'' and s.stage = ''compute-baselines''',
+  'false/503');
 
 -- mixed: raw truth moved between the run's commit and the stage recording.
 begin;
@@ -947,6 +1037,142 @@ begin;
   select authz_probe.u3_expect_message('u3.residue.status_on_an_unregistered_target_is_denied',
     'select public.nao_loader_status(''eeeeeeee-0000-4000-8000-000000000001''::uuid)',
     'nao: loader target not permitted');
+commit;
+
+-- ═════════════════════════════════════════════════════════════════════════════════════════════
+-- 12b · THE REPAIR PATH IS SUBJECT TO THE PUBLICATION LEASE TOO (independent review finding F2)
+--
+--      Design §B.5 says the release runs "the same preamble as §A.2 steps 1-5", and step 5 IS the
+--      lease check. It was absent, so a repair could DELETE raw truth from under an in-flight
+--      pipeline while a second LOAD against the same target was correctly refused — the repair path
+--      bypassing the very mechanism §E.1 exists for, and deleting is strictly worse than
+--      overwriting. Unlike the apply path there is no replay short-circuit above it, so every
+--      release is subject to the check.
+-- ═════════════════════════════════════════════════════════════════════════════════════════════
+
+begin;
+  set local request.jwt.claims = '{"sub": "cccccccc-0000-4000-8000-000000000002", "role": "authenticated"}';
+  set local role authenticated;
+  select authz_probe.expect_ok('u3.release.setup_a_load_that_opens_a_lease',
+    authz_probe.u3_apply_sql('dddddddd-0000-4000-8000-000000000016', 'rellease-key-000000001',
+                             authz_probe.u3_days(date '2026-08-01', 5)));
+  -- Lease open, zero stages recorded ⇒ a new LOAD is refused (§E.1). A REPAIR must be too.
+  select authz_probe.expect_error('u3.release.a_new_load_is_refused_while_the_lease_is_open',
+    authz_probe.u3_apply_sql('dddddddd-0000-4000-8000-000000000016', 'rellease-key-000000002',
+                             authz_probe.u3_days(date '2026-08-10', 5)), '42501');
+  select authz_probe.expect_error('u3.release.is_refused_while_the_lease_is_open',
+    'select public.nao_loader_release_simulated_days(
+              ''dddddddd-0000-4000-8000-000000000016''::uuid,
+              array[date ''2026-08-01'', date ''2026-08-02''])', '42501');
+  select authz_probe.u3_expect_message('u3.release.the_lease_refusal_reuses_the_one_fixed_message',
+    'select public.nao_loader_release_simulated_days(
+              ''dddddddd-0000-4000-8000-000000000016''::uuid, array[date ''2026-08-01''])',
+    'nao: loader target not permitted');
+commit;
+
+select authz_probe.expect_value('u3.release.the_refused_release_deleted_nothing',
+  'select ((select count(*) from public.daily_gut_rows
+             where user_id = ''dddddddd-0000-4000-8000-000000000016'')
+        || ''/'' ||
+           (select count(*) from public.wearable_daily
+             where user_id = ''dddddddd-0000-4000-8000-000000000016''))', '5/5');
+select authz_probe.expect_value('u3.release.the_refused_release_left_no_ledger_row',
+  'select count(*)::text from public.nao_loader_runs
+    where target_user_id = ''dddddddd-0000-4000-8000-000000000016''
+      and origin = ''release:run4-demo''', '0');
+
+-- ...and once the pipeline has reported, the lease clears and the repair proceeds normally, so the
+-- check gates the repair rather than forbidding it.
+begin;
+  set local request.jwt.claims = '{"sub": "cccccccc-0000-4000-8000-000000000002", "role": "authenticated"}';
+  set local role authenticated;
+  select authz_probe.expect_ok('u3.release.recording_the_pipeline_clears_the_lease_for_repair',
+    'select public.nao_loader_record_pipeline(''rellease-key-000000001'',
+              authz_probe.u3_stages_ok())');
+  select authz_probe.expect_ok('u3.release.proceeds_once_the_lease_is_cleared',
+    'select public.nao_loader_release_simulated_days(
+              ''dddddddd-0000-4000-8000-000000000016''::uuid,
+              array[date ''2026-08-01'', date ''2026-08-02''])');
+commit;
+
+select authz_probe.expect_value('u3.release.the_permitted_release_removed_exactly_those_days',
+  'select ((select count(*) from public.daily_gut_rows
+             where user_id = ''dddddddd-0000-4000-8000-000000000016'')
+        || ''/'' ||
+           (select count(*) from public.wearable_daily
+             where user_id = ''dddddddd-0000-4000-8000-000000000016''))', '3/3');
+
+-- ═════════════════════════════════════════════════════════════════════════════════════════════
+-- 12c · THE VERDICT IS RUN-SCOPED, NOT TARGET-SCOPED (independent review finding F3)
+--
+--      nao_loader_record_pipeline looked its run up BY KEY, inserted that run's stage rows, and
+--      then returned a verdict derived from whatever run happened to be the target's most recent.
+--      Those diverge in exactly the case the lease exists for: an OVER-RUNNING pipeline whose lease
+--      expired, under which a second run has already committed. The raced run then reported
+--      `pending` — severity 1, LOWER than `incomplete` — instead of `mixed` (3), and handed back a
+--      requestKey that was not the caller's.
+-- ═════════════════════════════════════════════════════════════════════════════════════════════
+
+begin;
+  set local request.jwt.claims = '{"sub": "cccccccc-0000-4000-8000-000000000002", "role": "authenticated"}';
+  set local role authenticated;
+  select authz_probe.expect_ok('u3.runscope.run_a_succeeds_and_opens_its_lease',
+    authz_probe.u3_apply_sql('dddddddd-0000-4000-8000-000000000017', 'runscope-a-key-00000001',
+                             authz_probe.u3_days(date '2026-07-01', 4)));
+commit;
+
+-- A's pipeline OVER-RUNS: the lease self-expires before the stages are reported. That is the whole
+-- point of a self-expiring lease (a crashed run must not wedge the target permanently) and it is
+-- what lets a second run land underneath.
+update public.nao_loader_runs set lease_until = now() - interval '1 minute'
+ where request_key = 'runscope-a-key-00000001';
+
+begin;
+  set local request.jwt.claims = '{"sub": "cccccccc-0000-4000-8000-000000000002", "role": "authenticated"}';
+  set local role authenticated;
+  select authz_probe.expect_ok('u3.runscope.run_b_lands_under_the_expired_lease',
+    authz_probe.u3_apply_sql('dddddddd-0000-4000-8000-000000000017', 'runscope-b-key-00000001',
+                             authz_probe.u3_days(date '2026-07-10', 4)));
+  -- ...and only NOW does A's pipeline report. Raw truth moved under it, so A's own verdict is
+  -- `mixed`; B's is `pending`. The caller asked about A.
+  select authz_probe.u3_capture_jsonb('runscope.a_verdict',
+    'select public.nao_loader_record_pipeline(''runscope-a-key-00000001'',
+              authz_probe.u3_stages_ok())');
+commit;
+
+select authz_probe.expect_value('u3.runscope.the_verdict_names_the_callers_own_run',
+  'select value->>''requestKey'' from authz_probe.u3_capture where key = ''runscope.a_verdict''',
+  'runscope-a-key-00000001');
+select authz_probe.expect_value('u3.runscope.an_over_running_pipeline_derives_mixed',
+  'select value->>''status'' from authz_probe.u3_capture where key = ''runscope.a_verdict''',
+  'mixed');
+select authz_probe.expect_value('u3.runscope.mixed_outranks_incomplete_rather_than_ranking_below_it',
+  'select value->>''severity'' from authz_probe.u3_capture where key = ''runscope.a_verdict''', '3');
+select authz_probe.expect_value('u3.runscope.the_three_stages_were_recorded_against_run_a',
+  'select value->>''stagesRecorded'' from authz_probe.u3_capture where key = ''runscope.a_verdict''',
+  '3');
+-- The relay's own fold needs a real observation to compare against `watermarkAfter`, so the
+-- document carries the digest the definer observed while stamping (review finding F10).
+select authz_probe.expect_value('u3.runscope.the_verdict_carries_the_observed_digest',
+  'select ((value->>''observedDigest'') is not null
+       and (value->>''observedDigest'') <> (value->>''watermarkAfter''))::text
+     from authz_probe.u3_capture where key = ''runscope.a_verdict''', 'true');
+
+begin;
+  set local request.jwt.claims = '{"sub": "cccccccc-0000-4000-8000-000000000002", "role": "authenticated"}';
+  set local role authenticated;
+  -- "What is this target's state?" is a DIFFERENT question and still has its own answer.
+  select authz_probe.expect_value('u3.runscope.the_target_scoped_form_still_reports_the_latest_run',
+    'select public.nao_loader_status(''dddddddd-0000-4000-8000-000000000017''::uuid)
+              ->>''requestKey''', 'runscope-b-key-00000001');
+  -- An unknown key is refused rather than silently answered about somebody else's run.
+  select authz_probe.expect_error('u3.runscope.an_unknown_key_is_refused_not_substituted',
+    'select public.nao_loader_status(''dddddddd-0000-4000-8000-000000000017''::uuid,
+                                     ''runscope-z-key-00000001'')', '22023');
+  -- ...and a key belonging to ANOTHER target cannot be read across the registry.
+  select authz_probe.expect_error('u3.runscope.a_key_from_another_target_is_refused',
+    'select public.nao_loader_status(''dddddddd-0000-4000-8000-000000000017''::uuid,
+                                     ''release-key-0000000001'')', '22023');
 commit;
 
 -- ═════════════════════════════════════════════════════════════════════════════════════════════

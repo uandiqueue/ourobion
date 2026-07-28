@@ -240,6 +240,36 @@ export function statusFromDatabase(value: unknown): LoaderRunStatus | null {
     : null;
 }
 
+/**
+ * The two digests `nao_loader_record_pipeline` reports back.
+ *
+ * `expected` is the run's own committed `watermark_after`; `observed` is the target's
+ * raw-truth digest as the definer read it at the moment it stamped the stage rows.
+ * They come from the database because that is the only place the target's rows are
+ * readable at all — `daily_gut_rows`/`wearable_daily` RLS is `auth.uid() = user_id`
+ * and `nao_loader_watermark` is service_role-only, deliberately.
+ *
+ * WHY THIS EXISTS. Before it, the relay route passed `null` for both, so
+ * {@link foldRunStatus}'s watermark term and {@link PublicationSummary.watermarkStable}
+ * were unreachable from the only call site — code that read as if two independent
+ * watermark checks existed when only the database's did. Feeding the real pair in
+ * makes the local fold's `mixed` term live, and the two derivations are still combined
+ * worst-wins, so they can only ever resolve pessimistically.
+ */
+export interface RecordedDigests {
+  expected: string | null;
+  observed: string | null;
+}
+
+/** Read {@link RecordedDigests} out of `nao_loader_record_pipeline`'s document. */
+export function parseRecordedDigests(value: unknown): RecordedDigests {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return { expected: null, observed: null };
+  }
+  const doc = value as Record<string, unknown>;
+  return { expected: asDigest(doc.watermarkAfter), observed: asDigest(doc.observedDigest) };
+}
+
 /** The publication verdict a route returns. Derived on every read; never stored. */
 export interface PublicationSummary {
   status: LoaderRunStatus;
@@ -366,7 +396,24 @@ export const LOADER_CONFLICT_SQLSTATE = 'OU409';
  *   42883 → 400  no function matches — what omitting a required argument produces,
  *                because the RPC's target parameter has NO DEFAULT and therefore
  *                cannot silently fall back to auth.uid().
+ *   40001 → 503  serialization failure, and
+ *   40P01 → 503  deadlock detected. Both are TRANSIENT and both mean the transaction
+ *                aborted having written nothing, so the honest answer is "retry this
+ *                request unchanged", not "the server is broken". 503 rather than 409
+ *                because 409 already means the provenance refusal, which is NOT
+ *                retryable without changing the request.
  *   default 500  a genuine server fault.
+ *
+ * WHY 40001 IS IN THIS MAP AT ALL. The RPC's single-flight replay depends on READ
+ * COMMITTED: each statement inside plpgsql takes a fresh snapshot, which is what lets
+ * the loser of a race see the winner's committed run row and replay it. Under
+ * REPEATABLE READ the snapshot is pinned before the advisory lock is acquired, the
+ * loser never sees that row, and its insert raises 40001 instead of replaying.
+ * Nothing in supabase/ or ci/ sets a non-default isolation level, so this is a latent
+ * assumption rather than a live bug (it is stated in
+ * 20260728030002_nao_loader_apply_simulated_days.sql's header) — but leaving 40001 out
+ * of the map turned that assumption into an opaque HTTP 500, which is exactly how a
+ * latent assumption becomes an outage nobody can read.
  *
  * HONEST LIMITATION: `OU409` is not a SQLSTATE PostgREST knows, so a caller hitting
  * the RPC directly through PostgREST sees 500 for a conflict rather than 409. No
@@ -384,9 +431,20 @@ export function httpStatusForLoaderError(code: string | null | undefined): numbe
     case '22P02':
     case '42883':
       return 400;
+    case '40001':
+    case '40P01':
+      return 503;
     default:
       return 500;
   }
+}
+
+/** SQLSTATEs that mean "nothing was written; the same request may be sent again". */
+export const RETRYABLE_LOADER_SQLSTATES: readonly string[] = Object.freeze(['40001', '40P01']);
+
+/** True iff the failure is transient and the identical request may simply be retried. */
+export function isRetryableLoaderError(code: string | null | undefined): boolean {
+  return typeof code === 'string' && RETRYABLE_LOADER_SQLSTATES.includes(code);
 }
 
 // ---------------------------------------------------------------------------

@@ -34,6 +34,13 @@
 --   dddddddd-…-0013  demo:u3-release      registered (release / repair / residue)
 --   dddddddd-…-0014  demo:u3-fold         registered (derived-status fold: incomplete → failed)
 --   dddddddd-…-0015  demo:u3-mixed        registered (derived-status fold: mixed)
+--   dddddddd-…-0016  demo:u3-relock       registered (the RELEASE path under an open lease — F2)
+--   dddddddd-…-0017  demo:u3-runscope     registered (run-scoped vs target-scoped status — F3)
+--   dddddddd-…-0018  demo:u3-toctou       registered, clean (the TOCTOU race — F1; the real row is
+--                                          written by 32_toctou_b.sql DURING the race, not here,
+--                                          because a row seeded up front would be caught by the
+--                                          pre-write scan and would prove nothing about the
+--                                          write-time guard)
 --
 --   eeeeeeee-…-0001  never registered as a demo target        → target denied
 --   eeeeeeee-…-0002  registered as demo:u3-member AND holding an effective nao_members row
@@ -67,6 +74,9 @@ insert into auth.users (id, email) values
   ('dddddddd-0000-4000-8000-000000000013', 'u3-release@harness.invalid'),
   ('dddddddd-0000-4000-8000-000000000014', 'u3-fold@harness.invalid'),
   ('dddddddd-0000-4000-8000-000000000015', 'u3-mixed@harness.invalid'),
+  ('dddddddd-0000-4000-8000-000000000016', 'u3-relock@harness.invalid'),
+  ('dddddddd-0000-4000-8000-000000000017', 'u3-runscope@harness.invalid'),
+  ('dddddddd-0000-4000-8000-000000000018', 'u3-toctou@harness.invalid'),
   ('eeeeeeee-0000-4000-8000-000000000001', 'u3-unregistered@harness.invalid'),
   ('eeeeeeee-0000-4000-8000-000000000002', 'u3-member-target@harness.invalid'),
   ('eeeeeeee-0000-4000-8000-000000000003', 'u3-biotope@harness.invalid');
@@ -114,6 +124,9 @@ insert into public.nao_demo_targets (user_id, label, note) values
   ('dddddddd-0000-4000-8000-000000000013', 'demo:u3-release',       'harness'),
   ('dddddddd-0000-4000-8000-000000000014', 'demo:u3-fold',          'harness'),
   ('dddddddd-0000-4000-8000-000000000015', 'demo:u3-mixed',         'harness'),
+  ('dddddddd-0000-4000-8000-000000000016', 'demo:u3-relock',        'harness'),
+  ('dddddddd-0000-4000-8000-000000000017', 'demo:u3-runscope',      'harness'),
+  ('dddddddd-0000-4000-8000-000000000018', 'demo:u3-toctou',        'harness'),
   ('eeeeeeee-0000-4000-8000-000000000002', 'demo:u3-member',        'harness');
 
 -- Registered and then revoked: still a row (audit), but not a permitted target.
@@ -174,6 +187,11 @@ create table if not exists authz_probe.u3_baseline (
   tag    text primary key,
   digest text not null
 );
+-- The TOCTOU probe's baseline is taken by the TARGET's own session (32_toctou_b.sql), running as
+-- `authenticated`, from INSIDE the transaction that writes the real row — that is the only moment
+-- at which the row is provably untouched by the loader. So the harness table needs the same grant
+-- u3_capture has. It is a probe table in authz_probe, not in `public`: no R4-U2 count is affected.
+grant select, insert, update on authz_probe.u3_baseline to anon, authenticated, service_role;
 
 insert into authz_probe.u3_baseline (tag, digest)
 select 'real_gut_conflict', md5(g::text) from public.daily_gut_rows g
@@ -243,6 +261,41 @@ begin
   end;
   insert into authz_probe.u3_capture (key, value) values (p_key, v)
     on conflict (key) do update set value = excluded.value;
+end
+$$;
+
+-- ── The TOCTOU probe's SYNCHRONISATION PRIMITIVE, and the reason it is not a sleep.
+--
+-- 32_toctou_b.sql must commit its real row only AFTER the loader (33_toctou_a.sql) has passed the
+-- pre-write provenance scan and reached its INSERT. Sleeping would make that merely probable and
+-- the whole assertion could pass vacuously — if B committed first, the ordinary pre-scan would
+-- refuse and nothing about the WRITE-TIME guard would have been tested.
+--
+-- Blocking is observable, so B waits for it. The loader's insert waits on a ShareLock over B's
+-- transaction id, which appears in pg_locks with granted = false, and NOTHING ELSE in this probe
+-- can contend: the advisory lock is uncontended, the run-row insert has a unique key nobody else
+-- uses, and the reads before it are plain SELECTs that never block on an uncommitted row. So "some
+-- other backend holds an ungranted lock" ⟺ "the loader is parked at its gut insert" ⟹ "the loader
+-- already ran, and passed, the pre-write scan".
+--
+-- Returns whether it actually observed that state, so a timeout is recorded as evidence and
+-- asserted on, rather than silently degrading the probe into a sleep.
+create or replace function authz_probe.u3_wait_for_a_blocked_backend(p_seconds numeric default 20)
+returns boolean
+language plpgsql
+as $$
+declare
+  v_deadline timestamptz := clock_timestamp() + (p_seconds::text || ' seconds')::interval;
+begin
+  loop
+    if exists (select 1 from pg_locks l where not l.granted and l.pid <> pg_backend_pid()) then
+      return true;
+    end if;
+    if clock_timestamp() > v_deadline then
+      return false;
+    end if;
+    perform pg_sleep(0.05);
+  end loop;
 end
 $$;
 
