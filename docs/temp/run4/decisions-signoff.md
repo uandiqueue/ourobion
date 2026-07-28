@@ -1,35 +1,48 @@
 ---
-title: Run 4 Pre-Flight Decisions and Signoff
-summary: Human-owned acceptance register for the accepted Run 4 envelope and its active constraints.
+title: Run 4 Decisions and Signoff
+summary: Current acceptance register for Run 4 integration, unit reconciliation, reviewers, provider posture, local exit gates, and cloud stop boundary.
 type: decision-register
-scope: run4-preflight
+scope: run4
 status: draft
-updated: 2026-07-27
+updated: 2026-07-28
 ---
 
-# Run 4 Pre-Flight Decisions and Signoff
+# Run 4 Decisions and Signoff
 
-The accepted envelope is recorded below. U0 implementation is locally authorized; `dev-phase2-run4` intentionally remains unprotected and CI evidence is not branch-setting enforcement.
+| ID | Decision | State / evidence still required |
+|---|---|---|
+| BRANCH | `dev-phase2-run4` is the only integration target; never `dev-phase2` or `main` | accepted |
+| AUTONOMY | Local work and green, independently reviewed merges into `dev-phase2-run4` may proceed without repeated approval | accepted; red/duplicate/stale PRs remain prohibited |
+| P1 | Branch may remain unprotected; `Run 4 Gate` is required exact-head evidence, not branch protection | accepted override |
+| CAP | Locked core units use 115 paths / 8,500 additions from exact per-unit base | accepted; checked-in base drift must be reconciled before next landing |
+| UI CAP | Do not trim canonical full UI merely to fit the original product-unit cap | accepted unit exception; machine envelope/gate still needs explicit reconciliation, never silent bypass |
+| P2 | Jayden + Alton are named reviewers for Run 4 shared changes | satisfied; actual PR reviews required |
+| P3 | No model training or serving in Run 4 | accepted; historical bundles remain separate/non-serving |
+| P5 | Local-only; physical Android and disposable local Supabase reset authorized | accepted |
+| P6 | General O29 remains deferred | accepted; bounded issue-189 provider test is complete, not a general unblock |
+| U0 | PR #161 merged; base convention #172 merged | delivery merged; status/gate-base reconciliation current session |
+| U1 | #180 remediates #170 | one canonical green reconciled PR required; do not land #170 alone |
+| U2 | #177 merged; #185/#186 corrections open | combine, rerun 443 auth assertions and current gate |
+| U3 | #184 built/open | reconcile unit base, LoaderPanel target, full HTTP 14 + 7-day walk, then current green gate |
+| U4 | Scientific semantics/trust | startable after reconciliation; two reviewers; no accepted implementation yet |
+| U5 | #176 built/open; #190 evidence stacked | rebase after U3/U4; preserve B-PL22 and one-paper hold honesty |
+| U7/UI | #191 is canonical and contains #175 | land only reconciled #191 after shared/U2/Flutter/device evidence |
+| EXIT | Both local passes plus final full suite before cloud consideration | pending |
+| CLOUD | Hosted writes/deploy/promotion remain outside authorization | stopped by design |
 
-| ID | Proposed decision | Required action | State |
-| --- | --- | --- | --- |
-| BRANCH | `dev-phase2-run4` at `854aa471970b61afdc59205ded0b1c8a9ab3f270` | Accepted and created | ACCEPTED |
-| LOCK | Lock `R4-U0`–`R4-U3`; defer `R4-U4` | Accepted; U4 deferred for no available second shared reviewer and no waiver | ACCEPTED / DEFERRED |
-| P4 | Immutable base `854aa471970b61afdc59205ded0b1c8a9ab3f270`; caps 115 paths / 8,500 added lines | Accepted for current lock; extra local fixture-backed paper-to-Biotope slice requires separate sizing/admission | ACCEPTED |
-| U0 gate reconciliation | Historical Run 4 envelope/bootstrap SHA remains `854aa471970b61afdc59205ded0b1c8a9ab3f270`; earlier U0 unit base `837b7e690f92dc1669428a2476c9d8d0456020e8` is retained as superseded provenance; active U0 unit base is consolidated tip `77c98213e23ad56ae37c86201b39ef4e7543a543` | The active cap measures only `RUN4_UNIT_BASE_SHA..HEAD`; inherited Run 3/MT3 history is not recast as U0 work, while its two real CI jobs are mandatory Run 4 Gate dependencies | ACCEPTED |
-| P1 | `dev-phase2-run4` protection posture | User override: intentionally unprotected; no administrator action is requested | ACCEPTED OVERRIDE |
-| P1 | `Run 4 Gate` uses `if: always()` and explicit needs including `run-pipeline` | U0 implements stable CI evidence only; it is not GitHub branch protection | IN PROGRESS |
-| U0 local qualification | 719 package/gate tests plus local release evidence | Passed locally with qualified environment blocks; exact PR-head Linux root install, Flutter, and PR CI remain pending | IN PROGRESS |
-| P2 | Second shared reviewer | No available reviewer; two-reviewer rule is not waived | BLOCKED; U4 DEFERRED |
-| P3 | Model training | Paused/excluded; train nothing; product excludes MT1–MT5 | ACCEPTED |
-| P5 | Name-only credential posture, local-only; no hosted/deployment/key changes | Accepted constraint | ACCEPTED |
-| P6 | O29 deferred; zero provider calls; OpenAI TEST-MODE | Accepted constraint | ACCEPTED |
-| P7 | PR #144 closed/superseded; checks stale | Recorded only | COMPLETE (record only) |
+## Historical provenance
 
-Historical-envelope rationale: the full non-shallow Run 2 SHA is live `origin/dev-phase2-run2`; `dev-phase2` omits 169 paths / +16,992, while run3 adds 100 paths / +11,706 / -1,079 including contamination and Run 4 docs. The original bootstrap/envelope record and earlier `837b7e690f92dc1669428a2476c9d8d0456020e8` U0 unit base are retained for provenance. Neither is the active U0 cap base after consolidation; the unit begins at exact consolidated tip `77c98213e23ad56ae37c86201b39ef4e7543a543`.
+The original envelope/bootstrap SHA remains
+`854aa471970b61afdc59205ded0b1c8a9ab3f270`. Earlier U0 bases
+`837b7e690f92dc1669428a2476c9d8d0456020e8` and
+`77c98213e23ad56ae37c86201b39ef4e7543a543` remain historical evidence. PR #172 advanced the
+machine base to `c558c04f1b661a59c8987c96770768eeea46e0cc`; integration later advanced through U2 merge
+`ad8ef178053c7e6514283f19ee7a4f3f0829dc0c`. Do not call any historical base the active next-unit
+base without checking the current machine files and integration tip.
 
-BRANCH, LOCK, P1, and P4 are accepted/recorded. U0 implementation is authorized on the intentionally unprotected `dev-phase2-run4`; `Run 4 Gate` is exact-current-SHA CI evidence, not branch-setting enforcement. P2 alone gates shared work, so U4 remains deferred. Cap breach returns the unit to pending.
+## Signoff rule
 
-Historical bootstrap evidence: workflow run `30267437774` self-triggered on PR #156 CI-enablement commit `f60650838428d871690d6f83358e0fb05387d0bc` targeting `dev-phase2-run4`, and all 14 jobs passed. That evidence does not test later commits. Any Run 4 issue, branch, PR, or merge operation targets `dev-phase2-run4` only, never `dev-phase2` or `main`; full-suite and PR-CI evidence remain pending for the current U0 work.
-
-Current local qualification is not completion: gate 9/9, four frozen Deno checks, fresh local-only attestation verification, 23/23 shadow migrations, context/shared/package checks, and 710 package tests passed. Root clean-install and Flutter are locally environment-blocked; exact PR-head Linux CI remains pending. Hosted parity is not claimed.
+`merged` is delivery state, not final signoff. `done` requires current integration ancestry, required
+checks on the actual head, independent review, applicable human reviews, executed acceptance evidence,
+and reconciled tracking. The authoritative working disposition is
+[`continuation-status.md`](./continuation-status.md).

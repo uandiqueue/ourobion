@@ -1,23 +1,25 @@
 ---
 title: Run 4 — reviewed candidate scope and priority tranche
-summary: Run 4's active reviewed scope: accepted envelope, O31-O40 enforcement candidates, promoted pending-build register, and a priority tranche that rebuilds O24 before security, raw-truth, and scientific-semantics work.
+summary: Run 4 scope authority plus a current delivery overlay for merged, open, startable, and deferred units.
 type: plan
 scope: shared
-status: draft
-updated: 2026-07-27
+status: canonical
+updated: 2026-07-28
 ---
 
 # Run 4 — reviewed candidate scope and priority tranche
 
-**Status: active under the accepted envelope.** U0 is locally authorized and in progress; its full
-suite and PR CI remain pending. The accepted base, cap, locked units, and intentionally unprotected
-`dev-phase2-run4` posture are recorded in the companion decision documents. The audit that produced the
-candidate list is [`run3-audit-findings.md`](./run3-audit-findings.md).
+**Current delivery overlay (2026-07-28):** U0 and U2 are merged. U1, U3, U5 and the canonical full UI
+are built but open/unmerged; U2 has two open corrections. U4 is startable because Jayden and Alton are
+the named reviewers. U6 remains deferred. The exact live state and reconciliation order are in
+[`continuation-status.md`](./continuation-status.md); that file supersedes older operational wording in
+this design document. The audit that produced the candidate list is
+[`run3-audit-findings.md`](./run3-audit-findings.md).
 
-**Relationship to Run 3.** Run 3 is closing without an accepted unit. PR #144 must not merge in its
-audited state; O24-O29 are therefore unfinished and have been promoted into
+**Historical relationship to Run 3.** Run 3 closed without an accepted unit. PR #144 did not merge in
+its audited state; O24-O29 were therefore promoted into
 [`pending-build-register.md`](./pending-build-register.md). Run 4 does not assume that all six fit.
-It rebuilds O24 first, then prioritizes O25-O27; O28 and O29 stay deferred by default.
+Run 4 subsequently rebuilt and merged O24/U0 and O25/U2. O28 and general O29 remain deferred/partial.
 
 ## 1. Preconditions — resolve before Run 4 (and mostly before Run 3 continues)
 
@@ -26,11 +28,11 @@ These are not build units. Most are settings or decisions, and several block Run
 | ID | What | Why it blocks | Who |
 |---|---|---|---|
 | P1 | **Exact-current-SHA CI evidence** on `dev-phase2-run4` | User override: the branch intentionally remains unprotected; `Run 4 Gate` is evidence only, not GitHub branch-setting enforcement. No ADMIN or settings action is requested | U0 / CI |
-| P2 | **Resolve B8 by naming a second `shared/` reviewer** | Audit A4: `shared/` work requires two reviewers under AGENTS.md. A run prompt cannot waive that repository rule. O27/O38 and any other shared-contract work stay blocked until the reviewer exists | Jayden |
-| P3 | **Separate model-training from the Run 4 integration base before MT1 is cut** | Audit A3: MT0 alone changed 59 files / added 5,362 lines after the Run 3 candidate baseline and broke U0's mergeability. The exact model-training integration target is a human decision; do not invent a long-lived branch contrary to the normal workflow | Jayden + orchestrator |
-| P4 | **Approve a fresh immutable Run 4 base and one cap metric** | Do not retroactively exclude merged work. Define the run budget as the final landing delta from the accepted Run 4 base (`base..HEAD`), including generated/tracking files, with unique changed paths and added lines counted mechanically. Record the base SHA and cap before implementation | Jayden |
+| P2 | **Name two `shared/` reviewers** | **Satisfied for Run 4:** Jayden and Alton are named. Their review is still required on each actual shared PR | Jayden + Alton |
+| P3 | **Keep model training non-serving and outside product execution** | Historical bundles are present through merged history, but Run 4 trains nothing, touches neither training directory, and has no runtime dependency on them | orchestrator |
+| P4 | **Maintain an exact per-unit base and cap** | 115 paths / 8,500 additions remain the core-unit machine envelope. The checked-in base lags merged U2 and must be advanced with CI + regenerated attestation before the next landing | orchestrator |
 | P5 | **Record every credential/resource gate in Run 4 `human-decisions.md`** — B2/B3 (Cloudflare Worker + hosted Supabase secret keys), B5 (second provider key), B10 (Android device) | Record names and approval state only, never secret values. Missing external authority blocks only the affected unit; it cannot be inferred from this prompt | orchestrator |
-| P6 | **Decide O29's provider posture** — provision a second family, or rescope the vendor-agnostic clause | Audit A5: only `OPENAI_API_KEY` exists, `config.ts:288` hard-codes an Anthropic-verifier reject, and the caps (Anthropic ≤2 SGD / OpenAI ≤20 SGD) are allocated backwards for the only legal configuration | Jayden |
+| P6 | **Keep general O29 deferred** | A bounded issue-189 exception used OpenAI for main synthesis and Anthropic verifier-only within budget. It is complete and does not authorize another call or release promotion | Jayden + orchestrator |
 | P7 | **Close PR #144 as superseded; do not merge it** | Its 15 green checks belong to an old synthetic merge, the current base conflicts in the workflow under test, and the audit found fail-open/tautological gate logic. Rebuild the useful O24 intent on the fresh Run 4 base | Jayden + orchestrator |
 
 ## 2. New optimisation items (O31–O40)
@@ -123,24 +125,24 @@ study-design copy off its semantics. Resolving (b) needs a superseding ADR, not 
 
 ## 3. Recommended priority tranche
 
-This is the largest tranche accepted for the locked envelope. U0 is authorized; P2 continues to defer
-U4, while P3 excludes training and P5/P6 retain local-only, zero-provider constraints. The run may not
+This is the original locked-core tranche. Current delivery is an overlay: U0/U2 merged, U1/U3 built
+but unmerged, and U4 startable. P3 excludes training and P5/P6 retain local-only constraints. The run may not
 silently add O28, O29, O37, O39, O40, or any other register row.
 
 | Priority | Candidate unit | Contents | Start gate |
 |---|---|---|---|
-| 1 | R4-U0 · trustworthy release gate | Rebuild O24 with O31-O34; stable required aggregate, current landing-SHA evidence, fail-closed config/matrix coverage, and deploy-path dependency proof | In progress; full suite and PR CI pending on the exact current SHA |
-| 2 | R4-U1 · mechanical boundaries | O35 + O36; polyglot import/path guard and pinned secret scanning | R4-U0 gate is required and green |
-| 3 | R4-U2 · authorization and key boundary | O25; nao RBAC/RLS, redacted global jobs, named server-key migration | Credential decisions recorded; no hosted mutation without exact approval |
-| 4 | R4-U3 · raw-truth and retry safety | O26; atomic demo loading and idempotent/single-flight pipeline publication | R4-U2 blocks ordinary-account access |
-| 5 | R4-U4 · scientific semantics | O27 + O38; claim-kind preservation, artifact trust, revision-bound dispositions, TS/Dart trust-label parity | P2 second reviewer; R4-U0 green; O27 contract brief accepted |
+| 1 | R4-U0 · trustworthy release gate | Rebuild O24 with O31-O34; stable required aggregate, current landing-SHA evidence, fail-closed config/matrix coverage, and deploy-path dependency proof | **merged #161**; per-unit convention #172; next base reconciliation pending |
+| 2 | R4-U1 · mechanical boundaries | O35 + O36; polyglot import/path guard and pinned secret scanning | **built/open #170+#180**; reconcile remediation and secret-scan failure |
+| 3 | R4-U2 · authorization and key boundary | O25; nao RBAC/RLS, redacted global jobs, named server-key migration | **merged #177**; combine corrections #185+#186 |
+| 4 | R4-U3 · raw-truth and retry safety | O26; atomic demo loading and idempotent/single-flight pipeline publication | **built/open #184**; base + LoaderPanel + full HTTP walk pending |
+| 5 | R4-U4 · scientific semantics | O27 + O38; claim-kind preservation, artifact trust, revision-bound dispositions, TS/Dart trust-label parity | **startable**; Jayden + Alton review; follows reconciliation |
 
 Default deferrals:
 
 - **O28/O37:** defer image goldens and the broader accessibility/UI tranche; use widget + semantics
   assertions only where R4-U4 touches UI.
-- **O29:** defer until a legal second-provider posture, immutable release inputs, and an approved
-  isolated rehearsal target exist. Zero live provider calls and zero hosted writes in R4-U0-U4.
+- **O29:** general promotion remains deferred. The bounded issue-189 local provider call is completed
+  evidence, not release authorization. No additional live provider call or hosted write is authorized.
 - **O39:** dependency-update policy is valuable maintenance, but it must not dilute the blocker
   tranche.
 - **O40:** perform only the Run 3→Run 4 routing needed for safe launch. Superseding ADR work remains a
