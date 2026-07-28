@@ -15,8 +15,8 @@
 // OUROBION_INTERNAL_SECRET_CURRENT / _PREVIOUS rotation pair by
 // ../_shared/internal_auth.ts. The service-role key is NO LONGER an authorization input and
 // no longer travels in any request — this function does not read it at all any more.
-// `Authorization` carries the publishable anon JWT purely to satisfy the gateway's
-// `verify_jwt = true`; it grants nothing. The same three headers are forwarded to each stage.
+// The opaque publishable API key travels only on `apikey`; the same two credentials are
+// forwarded to each stage. `Authorization` is intentionally absent.
 //
 // REQUEST:  POST, body ignored (send `{}`). No per-user scoping: the sibling functions parse
 // no request body (verified U5) — the pipeline always runs over all users, exactly like the
@@ -34,11 +34,12 @@
 // output — and reports the partial results honestly.
 
 import {
-  INTERNAL_SECRET_HEADER_WIRE,
   isWellFormedInternalSecret,
   unauthorizedResponse,
   verifyInternalSecretRequest,
 } from "../_shared/internal_auth.ts"
+import { fetchEngineStage } from "../_shared/engine_request.ts"
+import { resolveServerKey, ServerKeyConfigurationError } from "../_shared/server_keys.ts"
 
 /** The serve pipeline, in dependency order (§S3 → §S4/S5 → §S7/S8). */
 const PIPELINE_STAGES = ["compute-baselines", "evaluate-signals", "generate-insights"] as const
@@ -85,18 +86,29 @@ Deno.serve(async (req) => {
     )
   }
 
-  // Fan-out credentials. NOTE: no service-role key — this function no longer reads it.
-  // `apikey` + `Authorization` are the PUBLISHABLE anon key (gateway routing and
-  // `verify_jwt = true` only; `anon` has no privileges any stage relies on). The internal
-  // secret is the sole authorization input. Prefer CURRENT; fall back to PREVIOUS so a
-  // rotation window in which only PREVIOUS is set still fans out successfully.
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")
+  // Fan-out credentials. The opaque publishable key is transport-only and MUST appear only
+  // on `apikey`; internal-secret verification remains the first and authoritative gate.
+  let publishableKey: string
+  try {
+    const env = Deno.env.toObject()
+    publishableKey = resolveServerKey(env, "publishable", {
+      allowLegacyLocalCli: true,
+      supabaseUrl: env.SUPABASE_URL,
+    }).value
+  } catch (error) {
+    console.error("Supabase publishable-key configuration unavailable", error instanceof ServerKeyConfigurationError ? error.message : error)
+    return new Response(
+      JSON.stringify({ error: "server misconfiguration: stage credentials unavailable" }),
+      { status: 500 },
+    )
+  }
   const configuredCurrent = Deno.env.get("OUROBION_INTERNAL_SECRET_CURRENT")
+  const configuredPrevious = Deno.env.get("OUROBION_INTERNAL_SECRET_PREVIOUS")
   const outboundSecret = isWellFormedInternalSecret(configuredCurrent)
     ? configuredCurrent
-    : Deno.env.get("OUROBION_INTERNAL_SECRET_PREVIOUS")
-  if (!anonKey || !isWellFormedInternalSecret(outboundSecret)) {
-    console.error("run-pipeline: anon key or internal secret unavailable for fan-out")
+    : configuredPrevious
+  if (!isWellFormedInternalSecret(outboundSecret)) {
+    console.error("run-pipeline: internal secret unavailable for fan-out")
     return new Response(
       JSON.stringify({ error: "server misconfiguration: stage credentials unavailable" }),
       { status: 500 },
@@ -107,16 +119,7 @@ Deno.serve(async (req) => {
   for (const stage of PIPELINE_STAGES) {
     let result: StageResult
     try {
-      const res = await fetch(`${supabaseUrl}/functions/v1/${stage}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: anonKey,
-          Authorization: `Bearer ${anonKey}`,
-          [INTERNAL_SECRET_HEADER_WIRE]: outboundSecret,
-        },
-        body: "{}",
-      })
+      const res = await fetchEngineStage(fetch, supabaseUrl, stage, publishableKey, outboundSecret)
       // A stage's failure body may be JSON ({error}) or plain text — report whatever it said.
       const text = await res.text()
       let summary: unknown
