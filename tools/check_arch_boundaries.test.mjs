@@ -257,6 +257,32 @@ test(`negative R2b: Windows ${MT} paths and unresolved training identifiers fail
   assert.throws(() => analyze({ files: [{ path: 'tools/x.mjs', content: call(SPAWN, `'python', [${identifier}]`) }] }), /unresolved model-training identifier/);
 });
 
+// One hop of ordinary indirection used to defeat both checks entirely: the raw call-site text
+// never contains the protected name, so the literal scan found nothing and the unresolved-import
+// guard had nothing to match. These reproduce the exact bypasses.
+test(`negative: a ${MT} path assembled through a file-local constant still fails closed`, () => {
+  const viaConst = `const target = ${JSON.stringify(MT)};\n${IMPORT_KW}(\`../../\${target}/entry.js\`);`;
+  assert.throws(
+    () => analyze({ files: [{ path: 'apps/x/src/load.ts', content: viaConst }] }),
+    /unresolved dynamic import.*protected boundary/
+  );
+
+  // Same trick against a subprocess call, with the name split across a .concat() and reassembled
+  // by [...].join() — the shape a reviewer found still slipping through.
+  const split = `const dir = ['..', '..', 'model'.concat('-training'), 'run.py'].join('/');\n${call(SPAWN, `'python', [dir]`)}`;
+  const folded = analyze({ files: [{ path: 'tools/x.mjs', content: split }] });
+  expectOne(folded, 'R2b', 'tools/x.mjs');
+});
+
+test('static string folding does not invent violations in innocuous code', () => {
+  // Folding must not make unrelated dynamic imports fail — 19 legitimate non-static dynamic
+  // imports exist in tools/, and a guard that rejects all of them is unusable.
+  const innocuous = `const name = 'registry';\n${IMPORT_KW}(\`../shared/\${name}.ts\`);`;
+  assert.deepEqual(analyze({ files: [{ path: 'tools/x.mjs', content: innocuous }] }).violations, []);
+  const joined = `const p = ['shared', 'metrics', 'index.ts'].join('/');\n${call(SPAWN, `'node', [p]`)}`;
+  assert.deepEqual(analyze({ files: [{ path: 'tools/y.mjs', content: joined }] }).violations, []);
+});
+
 test(`negative R2c: shared/ string literal referencing a ${MT} path is flagged`, () => {
   const files = [
     {

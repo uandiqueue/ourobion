@@ -928,6 +928,12 @@ function findDartReferences(text, name) {
 /** One-hop-local taint (design §D.3): identifiers initialised directly from a server-only
  * reference context are tainted, in addition to the reference expression itself. TS/JS only —
  * (i)/F-checks use findDartReferences/findTsJsReferences directly and don't need taint. */
+// `const { SUPABASE_SERVICE_ROLE_KEY } = process.env` / `Deno.env.toObject()`, with or without an
+// `: alias` rename. Destructuring is the idiomatic way to read env in TS and it binds the value to
+// a local WITHOUT ever producing a `process.env.NAME` reference expression, so a taint pass that
+// only understands `const X = process.env.NAME` misses it completely.
+const ENV_DESTRUCTURE_RE = /(?:const|let|var)\s*\{([^}]*)\}\s*=\s*(?:process\.env|Deno\.env\.toObject\s*\(\s*\))/g;
+
 function findTaintedIdentifiers(text) {
   const tainted = new Set();
   for (const name of SERVER_ONLY_NAMES) {
@@ -943,12 +949,33 @@ function findTaintedIdentifiers(text) {
       tainted.add(m[1]);
     }
   }
+
+  // Destructured server-only keys taint whatever local name they land in — the key itself, or the
+  // alias when renamed (`{ SUPABASE_SERVICE_ROLE_KEY: k }` binds `k`, not the key).
+  ENV_DESTRUCTURE_RE.lastIndex = 0;
+  let d;
+  while ((d = ENV_DESTRUCTURE_RE.exec(text)) !== null) {
+    for (const part of d[1].split(',')) {
+      const [rawKey, rawAlias] = part.split(':');
+      const key = (rawKey ?? '').trim().replace(/^\.\.\./, '');
+      if (!SERVER_ONLY_NAMES.includes(key)) continue;
+      const alias = (rawAlias ?? '').trim().replace(/=.*$/, '').trim();
+      tainted.add(alias || key);
+    }
+  }
   return tainted;
 }
 
 function textIsTainted(argText, tainted) {
   if (/(?:^|[([{,=:]\s*)process\.env\b(?!\s*[.[])/.test(argText) || /\bDeno\.env\.toObject\s*\(/.test(argText)) {
     return { tainted: true, reason: 'bare/bulk environment object' };
+  }
+  // Computed access with a non-literal key — `process.env[name]`, `Deno.env.get(name)`. The key
+  // cannot be resolved statically, so it cannot be shown NOT to be a server-only name. A guard
+  // that only matches quoted literals is trivially defeated by hoisting the name into a variable,
+  // so unresolvable keys fail closed rather than being assumed safe.
+  if (/\bprocess\.env\s*\[\s*(?!['"])/.test(argText) || /\bDeno\.env\.get\s*\(\s*(?!['"])/.test(argText)) {
+    return { tainted: true, reason: 'computed environment access with a non-literal key' };
   }
   for (const name of SERVER_ONLY_NAMES) {
     if (buildTsJsReferenceRegex(name).test(argText)) return { tainted: true, reason: `direct reference to ${name}` };

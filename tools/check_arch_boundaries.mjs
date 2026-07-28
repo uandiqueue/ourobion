@@ -105,6 +105,84 @@ const OUROBION_MODEL_LAB_MARKER = 'ourobion_model_lab';
 const RELEVANT_UNRESOLVED_IMPORT_RE = /(?:model-training|ourobion_model_lab|modules[\\/].*[\\/]impl[\\/])/;
 
 // ---------------------------------------------------------------------------
+// One-hop static string folding.
+//
+// The unresolved-import and subprocess checks used to test only the RAW call-site text for a
+// protected name. That is defeated by one hop of ordinary indirection, with no obfuscation intent
+// required:
+//
+//   const target = 'model-training';
+//   await import(`../../${target}/entry.js`);          // raw text never says "model-training"
+//   execFileSync('python', [['..', 'model'.concat('-training'), 'run.py'].join('/')]);
+//
+// Full data-flow analysis is out of scope for a regex guard, and blanket-rejecting every
+// non-literal dynamic import would break 19 legitimate call sites in tools/. So the guard folds
+// what it CAN resolve statically — file-local string constants, `+`/`.concat()` concatenation,
+// `[...].join()`, and template substitutions whose holes are now literals — and re-tests the
+// folded text. Anything still unresolved after folding is unchanged in behaviour from before.
+const STRING_CONST_RE = /\b(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*(?::[^=\n]*)?=\s*(['"])((?:[^'"\\]|\\.)*)\2/g;
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Fold the whole file, then re-collect — so an identifier bound to an EXPRESSION that folds to a
+ * string (`const dir = ['..', 'model'.concat('-training')].join('/')`) is resolved too, not just
+ * one bound to a bare literal. Iterated to a fixed point so a chain of constants resolves.
+ */
+export function resolveStaticConstants(text) {
+  // Accumulate, never replace: folding substitutes an identifier everywhere INCLUDING inside its
+  // own declaration (`const target = 'x'` becomes `const 'x' = 'x'`), so a pass that re-collects
+  // from scratch would drop the very binding it just used. Stop as soon as a pass adds nothing.
+  const constants = collectStringConstants(text);
+  for (let pass = 0; pass < 3; pass += 1) {
+    let added = 0;
+    for (const [name, value] of collectStringConstants(foldStaticStrings(text, constants))) {
+      if (!constants.has(name)) {
+        constants.set(name, value);
+        added += 1;
+      }
+    }
+    if (added === 0) break;
+  }
+  return constants;
+}
+
+/** Map of file-local identifiers bound directly to a plain string literal. First binding wins. */
+export function collectStringConstants(text) {
+  const constants = new Map();
+  STRING_CONST_RE.lastIndex = 0;
+  let m;
+  while ((m = STRING_CONST_RE.exec(text)) !== null) {
+    if (!constants.has(m[1])) constants.set(m[1], m[3]);
+  }
+  return constants;
+}
+
+/** Substitute known constants, then collapse static concatenation to a fixed point. */
+export function foldStaticStrings(windowText, constants) {
+  let out = windowText;
+  for (const [name, value] of constants) {
+    if (value.includes("'")) continue;
+    out = out.replace(new RegExp(`\\b${escapeRegExp(name)}\\b`, 'g'), `'${value}'`);
+  }
+  for (let pass = 0; pass < 6; pass += 1) {
+    const before = out;
+    out = out
+      .replace(/'([^']*)'\s*\+\s*'([^']*)'/g, (_, a, b) => `'${a}${b}'`)
+      .replace(/'([^']*)'\s*\.concat\(\s*'([^']*)'\s*\)/g, (_, a, b) => `'${a}${b}'`)
+      .replace(
+        /\[\s*((?:'[^']*'\s*,\s*)*'[^']*')\s*,?\s*\]\s*\.join\(\s*'([^']*)'\s*\)/g,
+        (_, list, sep) => `'${list.split(',').map((part) => part.trim().slice(1, -1)).join(sep)}'`
+      )
+      .replace(/\$\{\s*'([^']*)'\s*\}/g, (_, value) => value);
+    if (out === before) break;
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // GuardError — thrown for every fail-closed condition the analyzer detects.
 // ---------------------------------------------------------------------------
 
@@ -598,12 +676,14 @@ export function extractImports(strippedContent, isDart) {
     }
   }
   if (!isDart) {
+    const constants = resolveStaticConstants(strippedContent);
     const calls = findSubprocessCalls(strippedContent, [/\bimport\s*\(/g]);
     for (const call of calls) {
       const closeIndex = findMatchingParen(strippedContent, call.openIndex);
       const args = closeIndex === -1 ? strippedContent.slice(call.openIndex + 1) : strippedContent.slice(call.openIndex + 1, closeIndex);
       const staticLiteral = /^\s*(['"`])[\s\S]*\1\s*$/.test(args) && !args.includes('${');
-      if (!staticLiteral && RELEVANT_UNRESOLVED_IMPORT_RE.test(args)) {
+      const folded = foldStaticStrings(args, constants);
+      if (!staticLiteral && (RELEVANT_UNRESOLVED_IMPORT_RE.test(args) || RELEVANT_UNRESOLVED_IMPORT_RE.test(folded))) {
         throw new GuardError(`unresolved dynamic import at line ${lineOf(strippedContent, call.matchStart)} reaches a protected boundary: ${args.trim()}`);
       }
     }
@@ -724,17 +804,21 @@ function checkR2aImport(filePath, specifier, index, strippedContent, classified,
 
 function checkR2b(filePath, strippedContent, violations) {
   const calls = findSubprocessCalls(strippedContent);
+  const constants = resolveStaticConstants(strippedContent);
   for (const call of calls) {
     const closeIndex = findMatchingParen(strippedContent, call.openIndex);
     if (closeIndex === -1) {
       const tail = strippedContent.slice(call.openIndex + 1);
-      if (RELEVANT_UNRESOLVED_IMPORT_RE.test(tail)) {
+      if (RELEVANT_UNRESOLVED_IMPORT_RE.test(tail) || RELEVANT_UNRESOLVED_IMPORT_RE.test(foldStaticStrings(tail, constants))) {
         throw new GuardError(`${filePath}:${lineOf(strippedContent, call.matchStart)}: unresolved subprocess call reaches model-training`);
       }
       continue;
     }
     const window = strippedContent.slice(call.openIndex + 1, closeIndex);
-    const literals = scanStringLiterals(window);
+    // Fold first: a protected path assembled from constants or concatenation is still a protected
+    // path, and must be caught as a violation rather than sailing past the literal scan.
+    const foldedWindow = foldStaticStrings(window, constants);
+    const literals = scanStringLiterals(foldedWindow).concat(scanStringLiterals(window));
     const hit = literals.find((lit) => stringHasModelTrainingReference(lit.content));
     if (hit) {
       violations.push({
