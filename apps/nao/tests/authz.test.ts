@@ -597,13 +597,22 @@ test("source-conformance: the recorded actions are exactly nao_control_events' C
 });
 
 test('source-conformance: recordControlEvent redacts detail and target, and never takes an actor argument', () => {
-  const server = readFileSync(path.join(NAO_ROOT, 'src', 'lib', 'authzServer.ts'), 'utf8');
+  // Line endings are NORMALISED to LF before slicing. On a Windows checkout
+  // (core.autocrlf=true) the file is CRLF, so an indexOf() of a pattern written
+  // with a literal '\n' finds nothing and returns -1 — and `slice(0, -1)` then
+  // silently widens `signature` to the WHOLE remainder of the module, which
+  // matches `userId` inside guardRole() and fails for the wrong reason. The
+  // assertion below must test the overload signatures only.
+  const server = readFileSync(path.join(NAO_ROOT, 'src', 'lib', 'authzServer.ts'), 'utf8')
+    .replace(/\r\n/g, '\n');
   const fn = server.slice(server.indexOf('export async function recordControlEvent'));
   assert.match(fn, /redactDeep\(event\.detail\)/, 'detail must be redacted before insert');
   assert.match(fn, /redactText\(event\.target\)/, 'target must be redacted before insert');
   // Attribution comes from the DB trigger (auth.uid()), never from a parameter —
   // there must be no actor/userId/role argument to get wrong or to lie in.
-  const signature = fn.slice(0, fn.indexOf('export async function recordControlEvent(\n  eventOrAction'));
+  const implementationStart = fn.indexOf('export async function recordControlEvent(\n  eventOrAction');
+  assert.notEqual(implementationStart, -1, 'recordControlEvent lost its overload implementation signature');
+  const signature = fn.slice(0, implementationStart);
   for (const forbidden of ['actor', 'userId', 'user_id', 'role']) {
     assert.doesNotMatch(
       signature,

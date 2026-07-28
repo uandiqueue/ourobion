@@ -24,7 +24,7 @@ const LIFECYCLE_MIGRATION = readFileSync(
     '..',
     'supabase',
     'migrations',
-    '20260728031000_nao_control_audit_lifecycle.sql',
+    '20260728060001_nao_control_audit_lifecycle.sql',
   ),
   'utf8',
 ).replace(/\r\n/g, '\n');

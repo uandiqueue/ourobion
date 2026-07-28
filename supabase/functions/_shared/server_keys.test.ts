@@ -120,7 +120,7 @@ test("absent replacement and legacy forms fail closed", () => {
 
 test("superseding cron migration uses only apikey with app.supabase_publishable_key", () => {
   const sql = readFileSync(
-    resolve(repoRoot, "supabase", "migrations", "20260728030000_supersede_cron_publishable_apikey.sql"),
+    resolve(repoRoot, "supabase", "migrations", "20260728060000_supersede_cron_publishable_apikey.sql"),
     "utf8",
   )
   assert.equal((sql.match(/current_setting\('app\.supabase_publishable_key'\)/g) ?? []).length, 2)
