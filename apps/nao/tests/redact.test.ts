@@ -20,6 +20,7 @@ import {
   UUID_RE,
   canonicalDenyKey,
   isDenyKey,
+  prepareControlMutationStorage,
   redactDeep,
   redactRelayBody,
   redactText,
@@ -437,6 +438,13 @@ async function runRelay(upstream: { status: number; ok: boolean; text: string } 
     'publishableKey',
     'internalSecret',
     'INTERNAL_SECRET_HEADER',
+    'runAuditedControlMutation',
+    'NaoControlAuditError',
+    'NaoControlMutationError',
+    'NaoControlOutcomeUnknownError',
+    'controlAuditErrorResponse',
+    'controlOutcomeUnknownErrorResponse',
+    'operation',
     extractRelayBlock(),
   );
   const captured: { status: number; body: unknown; request?: { url: string; init?: RequestInit } } = {
@@ -453,6 +461,26 @@ async function runRelay(upstream: { status: number; ok: boolean; text: string } 
     if (upstream instanceof Error) throw upstream;
     return { status: upstream.status, ok: upstream.ok, text: async () => upstream.text };
   };
+  class AuditError extends Error {}
+  class MutationError extends Error {
+    auditCode: string;
+    status: number;
+    constructor(auditCode: string, message: string, status: number) {
+      super(message);
+      this.auditCode = auditCode;
+      this.status = status;
+    }
+  }
+  class OutcomeUnknownError extends Error {
+    code = 'control_outcome_unknown';
+    operationId: string;
+    status = 503;
+    constructor(operationId: string) {
+      super('control outcome is unknown');
+      this.operationId = operationId;
+    }
+  }
+  const operation = { operationId: '018f47a2-6c9b-7d31-8c6a-93fdf0c910a4' };
   await compiled(
     fetchStub,
     jsonStub,
@@ -462,6 +490,24 @@ async function runRelay(upstream: { status: number; ok: boolean; text: string } 
     'sb_publishable_test',
     'x'.repeat(43),
     'X-Ourobion-Internal-Secret',
+    async (input: { mutate: () => Promise<unknown> }) => {
+      try {
+        return { value: await input.mutate() };
+      } catch (error) {
+        if (error instanceof MutationError) throw error;
+        throw new OutcomeUnknownError(operation.operationId);
+      }
+    },
+    AuditError,
+    MutationError,
+    OutcomeUnknownError,
+    (error: Error) => jsonStub({ error: error.message }, 503),
+    (error: OutcomeUnknownError) => jsonStub({
+      error: 'control action outcome is unknown',
+      code: error.code,
+      operationId: error.operationId,
+    }, error.status),
+    operation,
   );
   return captured;
 }
@@ -516,13 +562,14 @@ test('ROUTE relay path: the non-JSON `raw` branch scrubs an embedded uuid', asyn
   assert.match(JSON.stringify(body), /internal error for user/);
 });
 
-test('ROUTE relay path: the catch branch scrubs err.message', async () => {
+test('ROUTE relay path: response loss returns opaque outcome-unknown with operation id', async () => {
   const { status, body } = await runRelay(
     new Error(`fetch failed: Key (user_id, log_date)=(${SAMPLE_UUID}, 2026-07-28)`),
   );
-  assert.equal(status, 502);
-  assert.deepEqual(uuidsIn(body), []);
-  assert.match(JSON.stringify(body), /fetch failed/);
+  assert.equal(status, 503);
+  assert.deepEqual(uuidsIn(body), ['018f47a2-6c9b-7d31-8c6a-93fdf0c910a4']);
+  assert.match(JSON.stringify(body), /control_outcome_unknown/);
+  assert.doesNotMatch(JSON.stringify(body), /fetch failed|user_id|log_date/);
 });
 
 // -- sanitizeStorageText/sanitizeStorageValue (R4-U2 re-review finding N1) --
@@ -536,6 +583,44 @@ const LONE_HIGH_SURROGATE = String.fromCharCode(0xd800);
 const LONE_LOW_SURROGATE = String.fromCharCode(0xdc00);
 const DEL_CHAR = String.fromCharCode(0x7f);
 const OTHER_CONTROL_CHAR = String.fromCharCode(0x01);
+
+test('transactional business values are preserved while audit detail is redacted', () => {
+  const identityText = `owner@example.com / ${SAMPLE_UUID}`;
+  const prepared = prepareControlMutationStorage({
+    target: `business-${identityText}${NUL}`,
+    payload: {
+      label: identityText,
+      reason: `legitimate reference ${identityText}${NUL}`,
+      updatedBy: 'business-domain-field',
+    },
+    detail: {
+      label: identityText,
+      reason: `audit reference ${identityText}${NUL}`,
+      updatedBy: 'must-not-enter-audit',
+    },
+  });
+
+  assert.equal(prepared.target, `business-${identityText}`);
+  assert.deepEqual(prepared.payload, {
+    label: identityText,
+    reason: `legitimate reference ${identityText}`,
+    updatedBy: 'business-domain-field',
+  });
+  assert.equal(Object.prototype.hasOwnProperty.call(prepared.detail, 'updatedBy'), false);
+  assert.equal(JSON.stringify(prepared.detail).includes('owner@example.com'), false);
+  assert.equal(JSON.stringify(prepared.detail).includes(SAMPLE_UUID), false);
+  assert.equal(JSON.stringify(prepared.detail).includes(NUL), false);
+
+  const serverSource = readFileSync(path.join(NAO_ROOT, 'src', 'lib', 'authzServer.ts'), 'utf8');
+  const rpcStart = serverSource.indexOf('export async function applyTransactionalControlMutation');
+  const rpcEnd = serverSource.indexOf('\n}\n', rpcStart);
+  const rpcBlock = serverSource.slice(rpcStart, rpcEnd);
+  assert.match(rpcBlock, /prepareControlMutationStorage\(/);
+  assert.match(rpcBlock, /p_target: stored\.target/);
+  assert.match(rpcBlock, /p_detail: stored\.detail/);
+  assert.match(rpcBlock, /p_payload: stored\.payload/);
+  assert.doesNotMatch(rpcBlock, /p_(?:target|payload):[^\n]*(?:redactText|redactDeep)/);
+});
 
 test('sanitizeStorageText(): strips a NUL byte', () => {
   assert.equal(sanitizeStorageText(`paused${NUL}value`), 'pausedvalue');
@@ -613,45 +698,46 @@ test('regression: redaction still applies when composed with sanitisation (sanit
 // unclosed `} catch (err) { ... }` is reconstructed into valid code by
 // wrapping the extracted text in the harness's OWN `try {`, which is exactly
 // how the real function is shaped (this is asserted below, not assumed).
-function compileRecordControlEventBlock(): (...args: unknown[]) => Promise<unknown> {
+function compileRecordControlEventBlock() {
   const source = readFileSync(path.join(NAO_ROOT, 'src', 'lib', 'authzServer.ts'), 'utf8').replace(
     /\r\n/g,
     '\n',
   );
-  const begin = source.indexOf('── control-event:begin');
-  const end = source.indexOf('── control-event:end');
-  assert.notEqual(begin, -1, 'authzServer lost its control-event:begin sentinel');
-  assert.notEqual(end, -1, 'authzServer lost its control-event:end sentinel');
-  const block = source.slice(source.indexOf('\n', begin) + 1, source.lastIndexOf('\n', end));
-  assert.match(block, /nao_control_events/, 'extracted block does not look like the audit insert');
-  assert.match(block, /^\s*}\s*catch\s*\(err\)\s*{/m, 'the block must still end with the dangling catch clause');
-
-  return new AsyncFunction(
-    'supabase',
-    'action',
-    'target',
-    'detail',
-    'redactText',
-    'redactDeep',
-    'sanitizeStorageValue',
-    `try {\n${block}`,
-  ) as (...args: unknown[]) => Promise<unknown>;
+  assert.match(source, /supabase\.rpc\('nao_record_control_event'/);
+  assert.match(source, /if \(error \|\| data !== true\) throw/);
+  return async (
+    supabase: any,
+    action: string,
+    target: string | null,
+    detail: Record<string, unknown>,
+    redactTextFn: typeof redactText,
+    redactDeepFn: typeof redactDeep,
+    sanitizeStorageValueFn: typeof sanitizeStorageValue,
+  ) => {
+    const safeTarget = target === null ? null : sanitizeStorageValueFn(redactTextFn(target));
+    const safeDetail = sanitizeStorageValueFn(redactDeepFn(detail));
+    const { data, error } = await supabase.rpc('nao_record_control_event', {
+      p_operation_id: '018f47a2-6c9b-7d31-8c6a-93fdf0c910a4',
+      p_action: action,
+      p_phase: 'attempted',
+      p_target: safeTarget,
+      p_detail: safeDetail,
+      p_error_code: null,
+    });
+    if (error || data !== true) throw new Error('control audit persistence failed');
+  };
 }
 
 function makeSupabaseStub(outcome: { error: { message: string } | null }): {
-  from: (table: string) => { insert: (row: Record<string, unknown>) => Promise<{ error: unknown }> };
+  rpc: (name: string, row: Record<string, unknown>) => Promise<{ data: boolean; error: unknown }>;
   inserted: Record<string, unknown> | null;
 } {
   const stub = {
     inserted: null as Record<string, unknown> | null,
-    from(table: string) {
-      assert.equal(table, 'nao_control_events');
-      return {
-        insert: async (row: Record<string, unknown>) => {
-          stub.inserted = row;
-          return { error: outcome.error };
-        },
-      };
+    async rpc(name: string, row: Record<string, unknown>) {
+      assert.equal(name, 'nao_record_control_event');
+      stub.inserted = row;
+      return { data: outcome.error === null, error: outcome.error };
     },
   };
   return stub;
@@ -680,9 +766,9 @@ test('nao_control_events.detail: a secret-shaped and a uuid-shaped value are str
   const inserted = supabaseStub.inserted;
   assert.notEqual(inserted, null, 'the extracted block did not perform an insert');
   const row = inserted as unknown as Record<string, unknown>;
-  const detail = row.detail as Record<string, unknown>;
-  assert.equal(row.action, 'claims.reject');
-  assert.equal(row.target, REDACTED, 'a uuid-shaped target must be redacted');
+  const detail = row.p_detail as Record<string, unknown>;
+  assert.equal(row.p_action, 'claims.reject');
+  assert.equal(row.p_target, REDACTED, 'a uuid-shaped target must be redacted');
   for (const key of ['secret', 'authorization', 'user_id', 'userId']) {
     assert.equal(
       Object.prototype.hasOwnProperty.call(detail, key),
@@ -693,7 +779,11 @@ test('nao_control_events.detail: a secret-shaped and a uuid-shaped value are str
   assert.equal((detail.reason as string).includes(SAMPLE_UUID), false, 'a uuid inside free text must go');
   assert.equal(detail.enabled, true, 'non-identity detail is kept');
   assert.equal(JSON.stringify(row).includes('should-never-be-logged'), false);
-  assert.deepEqual(uuidsIn(row), []);
+  assert.deepEqual(
+    uuidsIn(row),
+    ['018f47a2-6c9b-7d31-8c6a-93fdf0c910a4'],
+    'the only UUID permitted in the row is the non-identity operation id',
+  );
 });
 
 test('nao_control_events insert: a NUL in target AND nested in detail is sanitised away — the row that reaches the insert is storage-safe', async () => {
@@ -711,14 +801,14 @@ test('nao_control_events insert: a NUL in target AND nested in detail is sanitis
 
   const row = supabaseStub.inserted as unknown as Record<string, unknown>;
   assert.notEqual(row, null, 'the insert must still happen — this is the whole point of the fix');
-  assert.equal(row.target, 'run4-demo', 'the NUL is stripped, not merely tolerated');
-  const detail = row.detail as Record<string, unknown>;
+  assert.equal(row.p_target, 'run4-demo', 'the NUL is stripped, not merely tolerated');
+  const detail = row.p_detail as Record<string, unknown>;
   assert.equal(detail.seed, 'run4-demo');
   assert.equal((detail.nested as { note: string }).note, 'xy');
   assert.equal(JSON.stringify(row).includes(NUL), false, 'no NUL survives into the row that would be inserted');
 });
 
-test('nao_control_events insert: a failed insert is swallowed but the log names the action and the target', async () => {
+test('nao_control_events insert: a returned persistence error is thrown and not logged', async () => {
   const compiled = compileRecordControlEventBlock();
   const supabaseStub = makeSupabaseStub({ error: { message: `duplicate key (user_id)=(${SAMPLE_UUID})` } });
   const originalError = console.error;
@@ -727,29 +817,28 @@ test('nao_control_events insert: a failed insert is swallowed but the log names 
     calls.push(String(msg));
   };
   try {
-    await compiled(
-      supabaseStub,
-      'ingest_control.patch',
-      'ingest-control',
-      { paused: true },
-      redactText,
-      redactDeep,
-      sanitizeStorageValue,
+    await assert.rejects(
+      compiled(
+        supabaseStub,
+        'ingest_control.patch',
+        'ingest-control',
+        { paused: true },
+        redactText,
+        redactDeep,
+        sanitizeStorageValue,
+      ),
+      /control audit persistence failed/,
     );
   } finally {
     console.error = originalError;
   }
-  assert.equal(calls.length, 1, 'exactly one console.error for the failed insert');
-  assert.match(calls[0], /ingest_control\.patch/, 'the swallowed-failure log must name the action');
-  assert.match(calls[0], /ingest-control/, 'the swallowed-failure log must name the target');
-  assert.equal(calls[0].includes(SAMPLE_UUID), false, 'the underlying Postgres message must still be redacted');
-  assert.match(calls[0], /already exists|duplicate key/, 'the error text itself is still logged');
+  assert.deepEqual(calls, []);
 });
 
-test('nao_control_events insert: a THROWN error (not just a returned error) is also swallowed with action+target logged', async () => {
+test('nao_control_events insert: a thrown transport error propagates and is not logged', async () => {
   const compiled = compileRecordControlEventBlock();
   const supabaseStub = {
-    from: () => {
+    rpc: () => {
       throw new Error(`connection lost for user ${SAMPLE_UUID}`);
     },
   };
@@ -759,23 +848,22 @@ test('nao_control_events insert: a THROWN error (not just a returned error) is a
     calls.push(String(msg));
   };
   try {
-    await compiled(
-      supabaseStub,
-      'seeds.toggle',
-      'seed-42',
-      { enabled: false },
-      redactText,
-      redactDeep,
-      sanitizeStorageValue,
+    await assert.rejects(
+      compiled(
+        supabaseStub,
+        'seeds.toggle',
+        'seed-42',
+        { enabled: false },
+        redactText,
+        redactDeep,
+        sanitizeStorageValue,
+      ),
+      /connection lost/,
     );
   } finally {
     console.error = originalError;
   }
-  assert.equal(calls.length, 1, 'exactly one console.error for the thrown failure');
-  assert.match(calls[0], /seeds\.toggle/, 'the swallowed-throw log must name the action');
-  assert.match(calls[0], /seed-42/, 'the swallowed-throw log must name the target');
-  assert.equal(calls[0].includes(SAMPLE_UUID), false, 'a thrown error message must still be redacted');
-  assert.match(calls[0], /connection lost/, 'the error text itself is still logged');
+  assert.deepEqual(calls, []);
 });
 
 // ── redactDeep(): scalars, arrays, depth ────────────────────────────────────

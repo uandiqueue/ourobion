@@ -5,8 +5,8 @@
  * Asserts:
  *  - missing GH_ACTIONS_TOKEN/GH_REPO fails fast with no fetch call at all;
  *  - a successful dispatch (204) posts the right URL/headers/body and reports ok;
- *  - a non-204 GitHub response surfaces its status + body as the error;
- *  - a thrown network error is caught and reported, never thrown to the caller.
+ *  - a 4xx is an authoritative rejection, while 5xx/unexpected statuses are unknown;
+ *  - a thrown network error is tagged outcome-unknown.
  */
 
 import { test } from 'node:test';
@@ -40,7 +40,9 @@ test('dispatchIngestWorkflow: missing GH_ACTIONS_TOKEN/GH_REPO fails fast, no fe
     try {
       const result = await dispatchIngestWorkflow({ seed: 'hydration' });
       assert.equal(result.ok, false);
-      assert.match(result.error ?? '', /not configured/);
+      if (result.ok) assert.fail('expected a rejected dispatch');
+      assert.equal(result.outcome, 'rejected');
+      assert.match(result.error, /not configured/);
       assert.equal(called, false);
     } finally {
       globalThis.fetch = realFetch;
@@ -95,7 +97,7 @@ test('dispatchIngestWorkflow: omitted seed/limit send an empty inputs object', a
   });
 });
 
-test('dispatchIngestWorkflow: a non-204 GitHub response surfaces status + body as the error', async () => {
+test('dispatchIngestWorkflow: a 4xx response is an authoritative rejection', async () => {
   await withEnv({ GH_ACTIONS_TOKEN: 'tok_123', GH_REPO: 'uandiqueue/ourobion' }, async () => {
     const realFetch = globalThis.fetch;
     globalThis.fetch = (async () => {
@@ -104,15 +106,59 @@ test('dispatchIngestWorkflow: a non-204 GitHub response surfaces status + body a
     try {
       const result = await dispatchIngestWorkflow({ seed: 'hydration' });
       assert.equal(result.ok, false);
-      assert.match(result.error ?? '', /404/);
-      assert.match(result.error ?? '', /Not Found/);
+      if (result.ok) assert.fail('expected a rejected dispatch');
+      assert.equal(result.outcome, 'rejected');
+      assert.match(result.error, /404/);
+      assert.match(result.error, /Not Found/);
     } finally {
       globalThis.fetch = realFetch;
     }
   });
 });
 
-test('dispatchIngestWorkflow: a thrown network error is caught, never rejects', async () => {
+test('dispatchIngestWorkflow: a 5xx response is outcome unknown, never definitive rejection', async () => {
+  await withEnv({ GH_ACTIONS_TOKEN: 'tok_123', GH_REPO: 'uandiqueue/ourobion' }, async () => {
+    const realFetch = globalThis.fetch;
+    let bodyReads = 0;
+    globalThis.fetch = (async () => {
+      return {
+        status: 503,
+        text: async () => {
+          bodyReads += 1;
+          throw new Error('response body lost');
+        },
+      } as unknown as Response;
+    }) as typeof fetch;
+    try {
+      const result = await dispatchIngestWorkflow({ seed: 'hydration' });
+      assert.equal(result.ok, false);
+      if (result.ok) assert.fail('expected an unknown dispatch outcome');
+      assert.equal(result.outcome, 'unknown');
+      assert.match(result.error, /503/);
+      assert.equal(bodyReads, 0, 'a 5xx body cannot make the remote outcome authoritative');
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+});
+
+test('dispatchIngestWorkflow: unexpected non-204 2xx is also outcome unknown', async () => {
+  await withEnv({ GH_ACTIONS_TOKEN: 'tok_123', GH_REPO: 'uandiqueue/ourobion' }, async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async () => ({ status: 202, text: async () => '' }) as Response) as typeof fetch;
+    try {
+      const result = await dispatchIngestWorkflow({});
+      assert.equal(result.ok, false);
+      if (result.ok) assert.fail('expected an unknown dispatch outcome');
+      assert.equal(result.outcome, 'unknown');
+      assert.match(result.error, /202/);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+});
+
+test('dispatchIngestWorkflow: a thrown network error is reported as outcome unknown', async () => {
   await withEnv({ GH_ACTIONS_TOKEN: 'tok_123', GH_REPO: 'uandiqueue/ourobion' }, async () => {
     const realFetch = globalThis.fetch;
     globalThis.fetch = (async () => {
@@ -121,7 +167,9 @@ test('dispatchIngestWorkflow: a thrown network error is caught, never rejects', 
     try {
       const result = await dispatchIngestWorkflow({ seed: 'hydration' });
       assert.equal(result.ok, false);
-      assert.match(result.error ?? '', /ECONNRESET/);
+      if (result.ok) assert.fail('expected an unknown dispatch outcome');
+      assert.equal(result.outcome, 'unknown');
+      assert.match(result.error, /ECONNRESET/);
     } finally {
       globalThis.fetch = realFetch;
     }

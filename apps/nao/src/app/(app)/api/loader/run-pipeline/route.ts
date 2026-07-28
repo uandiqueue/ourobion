@@ -44,7 +44,18 @@
 // Without this gate, `supabase.auth.getUser()` alone only proves "some authenticated session
 // exists" — including a Biotope-only account with no nao membership at all — which is exactly
 // the hole this gate closes.
-import { guardRole, recordControlEvent, redactRelayBody, redactText } from '@/lib/authzServer';
+import {
+  NaoControlAuditError,
+  NaoControlMutationError,
+  NaoControlOutcomeUnknownError,
+  controlAuditErrorResponse,
+  controlOperationId,
+  controlOutcomeUnknownErrorResponse,
+  guardRole,
+  redactRelayBody,
+  redactText,
+  runAuditedControlMutation,
+} from '@/lib/authzServer';
 import { PublishableKeyConfigurationError, resolvePublishableKey } from '@/lib/serverKey';
 
 export const dynamic = 'force-dynamic';
@@ -73,7 +84,7 @@ function supabaseUrl(): string | null {
   return url ? url.replace(/\/+$/, '') : null;
 }
 
-export async function POST(): Promise<Response> {
+export async function POST(req: Request): Promise<Response> {
   const gate = await guardRole('curator');
   if (!gate.ok) return gate.response;
 
@@ -111,22 +122,38 @@ export async function POST(): Promise<Response> {
     );
   }
 
-  await recordControlEvent('pipeline.run', 'run-pipeline');
+  const operation = controlOperationId(req);
+  if (!operation.ok) return json({ error: operation.error }, 400);
 
   // ── relay:begin — extracted verbatim and EXECUTED by apps/nao/tests/redact.test.ts ──
   try {
-    const res = await fetch(`${url}/functions/v1/run-pipeline`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Opaque replacement publishable keys are not JWTs: they travel ONLY on `apikey`.
-        apikey: publishableKey,
-        // The only authorization input. Compared constant-time inside run-pipeline.
-        [INTERNAL_SECRET_HEADER]: internalSecret,
+    const audited = await runAuditedControlMutation({
+      operationId: operation.operationId,
+      action: 'pipeline.run',
+      target: 'run-pipeline',
+      mutate: async () => {
+        const res = await fetch(`${url}/functions/v1/run-pipeline`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Opaque replacement publishable keys are not JWTs: they travel ONLY on `apikey`.
+            // No `Authorization` header is sent: `verify_jwt` is disabled for the four
+            // internal-secret-gated engine functions (supabase/config.toml), so a bearer would
+            // add nothing and an opaque `sb_publishable_*` key is not a valid JWT anyway.
+            apikey: publishableKey,
+            // The only authorization input. Compared constant-time inside run-pipeline.
+            [INTERNAL_SECRET_HEADER]: internalSecret,
+          },
+          body: '{}',
+        });
+        const text = await res.text();
+        if (!res.ok) {
+          throw new NaoControlMutationError('pipeline_failed', 'analysis pipeline failed', res.status);
+        }
+        return { res, text };
       },
-      body: '{}',
     });
-    const text = await res.text();
+    const { res, text } = audited.value;
     // Relay run-pipeline's 200/502 semantics unchanged, its PAYLOAD redacted (see header).
     try {
       return json(redactRelayBody(JSON.parse(text)), res.status);
@@ -137,6 +164,11 @@ export async function POST(): Promise<Response> {
       );
     }
   } catch (err) {
+    if (err instanceof NaoControlAuditError) return controlAuditErrorResponse(err);
+    if (err instanceof NaoControlOutcomeUnknownError) return controlOutcomeUnknownErrorResponse(err);
+    if (err instanceof NaoControlMutationError) {
+      return json({ error: redactText(err.message), code: err.auditCode, operationId: operation.operationId }, err.status);
+    }
     return json({ error: redactText(err instanceof Error ? err.message : String(err)) }, 502);
   }
   // ── relay:end ──
