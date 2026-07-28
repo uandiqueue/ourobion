@@ -3,7 +3,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2.110.7"
 import { METRICS } from "../../../shared/metrics/registry.ts"
 import { validateCopyString } from "../../../shared/constants/copy_guidelines.ts"
 import { unauthorizedResponse, verifyInternalSecretRequest } from "../_shared/internal_auth.ts"
-import { resolveServerKey, ServerKeyConfigurationError } from "../_shared/server_keys.ts"
+import { readServerKeyEnv, resolveServerKey, ServerKeyConfigurationError } from "../_shared/server_keys.ts"
 import { classifyDaily } from "../evaluate-signals/stats.ts"
 import { PAIR_GATES, SIGNAL_CONFIG } from "../evaluate-signals/config.ts"
 import {
@@ -332,7 +332,7 @@ Deno.serve(async (req) => {
   // internal-secret gate so malformed configuration cannot become an unauthenticated oracle.
   let databaseSecret: string
   try {
-    const env = Deno.env.toObject()
+    const env = readServerKeyEnv("secret")
     databaseSecret = resolveServerKey(env, "secret", {
       allowLegacyLocalCli: true,
       supabaseUrl: env.SUPABASE_URL,

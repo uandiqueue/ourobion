@@ -39,7 +39,7 @@ import {
   verifyInternalSecretRequest,
 } from "../_shared/internal_auth.ts"
 import { fetchEngineStage } from "../_shared/engine_request.ts"
-import { resolveServerKey, ServerKeyConfigurationError } from "../_shared/server_keys.ts"
+import { readServerKeyEnv, resolveServerKey, ServerKeyConfigurationError } from "../_shared/server_keys.ts"
 
 /** The serve pipeline, in dependency order (§S3 → §S4/S5 → §S7/S8). */
 const PIPELINE_STAGES = ["compute-baselines", "evaluate-signals", "generate-insights"] as const
@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
   // on `apikey`; internal-secret verification remains the first and authoritative gate.
   let publishableKey: string
   try {
-    const env = Deno.env.toObject()
+    const env = readServerKeyEnv("publishable")
     publishableKey = resolveServerKey(env, "publishable", {
       allowLegacyLocalCli: true,
       supabaseUrl: env.SUPABASE_URL,
