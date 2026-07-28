@@ -15,16 +15,29 @@ as historical design and evidence. Always refresh GitHub and local refs before a
 
 ## Snapshot authority
 
-- GitHub refreshed: 2026-07-28.
+- GitHub refreshed: 2026-07-28 (UI / physical-device session).
 - Integration branch: `dev-phase2-run4`.
-- Verified integration tip before this documentation session: `ad8ef178053c7e6514283f19ee7a4f3f0829dc0c`
-  (merge of PR #177 / R4-U2).
-- Checked-in gate base: `c558c04f1b661a59c8987c96770768eeea46e0cc` in both
-  `tools/run4_release_gate.mjs` and `.github/workflows/ci.yml`.
-- Gate-base drift: the integration branch has advanced beyond that base, so some composite landing
-  deltas include already-integrated work. It contributes to the cap failures on #180, #184, #186,
-  #190, and #191, but it is not the only red-check cause. Use each Actions log below as the immediate
-  failure authority. Reconcile the unit base deliberately; never weaken or bypass the gate.
+- Verified integration tip: **`9164458`** (merge of PR #197, the gate-base advance).
+- Checked-in gate base: **`ff0546434f081cadc3e5683217d484f250c19139`** in both
+  `tools/run4_release_gate.mjs` and `.github/workflows/ci.yml`. Caps unchanged at 115 paths /
+  8,500 added lines.
+- **Gate-base drift is RESOLVED for the current tranche.** The cap failures recorded below for
+  #180, #184, #186, #190 and #191 were dominated by the stale base `c558c04` charging each unit for
+  already-merged work. #191 fell from a reported 13,449 added lines to a real 6,436 with no code
+  removed. Re-read each Actions log before treating any remaining red as a code defect.
+- **Landing headroom is now thin.** PR #202 measures 57 paths / 7,670 added lines against
+  115 / 8,500. Advance the base again once #191/#202 land, before starting the next unit.
+
+### Two CI failure modes that are NOT code defects
+
+1. **`synthetic merge parents do not match current event base/head`** — the base branch moved
+   between the PR event firing and GitHub recomputing the merge ref, so the event's recorded
+   `base.sha` is stale. **Re-running does NOT fix it**: a re-run replays the same immutable event
+   payload. Merge `origin/dev-phase2-run4` into the branch and push, which fires a fresh event.
+   This is very likely what made #176 look unstable — check it before assuming that PR is broken.
+2. **`binary/unparsable diff row`** — any file under `apps/biotope/assets/` that is *rewritten*
+   (rather than added) puts binary rows in the landing delta, and `checkLandingDelta` fails closed
+   there by design. Do not weaken that guard; changing it needs a recorded human decision.
 
 ## Status vocabulary
 
@@ -53,7 +66,8 @@ as historical design and evidence. Always refresh GitHub and local refs before a
 | R4-U5 / single-paper authoring | **built**; **open-unmerged**; **reconciliation-required** | PR #176 is draft with 17/19 green. Its release-evidence job rejects synthetic merge parents that do not match the event base/head; the aggregate gate is consequentially red. Rebase after loader/auth reconciliation. Full paper extraction works, but normal synthesis sends at most 12 selected passages and sentence-provenance B-PL22 remains unimplemented. |
 | Provider-backed evidence | **built**; docs **open-unmerged**; **reconciliation-required** | PR #190 is stacked on #176 and has 17/19 green; release evidence reports 8,840 additions against the 8,500 cap, and the aggregate gate is consequentially red. OpenAI was the main synthesis provider over 12 selected passages; Anthropic had one official verifier-only role. The one-paper edge correctly remained held for zero independent corroboration. This was a bounded issue-189 exception, not a general O29 unblock. |
 | R4-U6 metrics | **deferred** | U6a/U6b/U6c remain candidate work; no implementation has been built. |
-| R4-U7 full UI | **built**; **open-unmerged**; **reconciliation-required** | PR #191 is the canonical full UI candidate and contains PR #175's head. Do not merge #175 separately. #191 has 17/19 green; release evidence reports 13,449 additions against the 8,500 cap, and the aggregate gate is consequentially red. Rebase after data/contract reconciliation, preserve the two-reviewer rule for its shared status change, rerun U2 regression, Flutter tests/analyze, and physical-Android traversal. |
+| R4-U7 full UI | **built**; **open-unmerged**; **GREEN and ready** | PR #191 is canonical and contains PR #175's head — never land both. **19/19 green, MERGEABLE, CLEAN.** Reconciled onto the advanced base; real landing delta 53 paths / 7,083 lines. U2 regression 443/443, profile-prefs 34/34, Flutter 268 pass, attestation PASS, physical-Android traversal done. **Blocked only on a human `gh pr merge` and on recording the two-reviewer signoff for `shared/types/index.ts`.** |
+| R4-U8 UI design alignment | **built**; **open-unmerged** | PR #202, stacked on #191. Replaces the fake knowledge-base ticker with `get_knowledge_base_stats()` and aligns Home with the Claude Design export. Merge #191 first. |
 | O28 accessibility/plain-language provenance | **built** in part; remainder **deferred** | UI work adds substantial semantics, but raw edge IDs and complete ordinary-user provenance language still require review. Do not mark O28 complete from the reskin alone. |
 | O29 release promotion | **deferred** | No hosted writes, deployment, immutable release promotion, or general provider authorization. |
 | Model training | **separate and non-serving** | Historical model-training bundles are present on the branch through merged PRs #158/#160/#165/#169. Do not train, serve, modify, or make Run 4 depend on them. |

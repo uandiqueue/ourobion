@@ -70,6 +70,7 @@ void main() {
         _row(expiresAt: '2026-07-18T02:59:00.000Z'), // -1min → drop
         _row(expiresAt: null), // never expires → keep
         _row(expiresAt: null, status: 'snoozed'), // not active → drop
+        _row(expiresAt: null, status: 'archived'), // saved by the user → drop
       ];
 
       final cards = InsightService.filterEmission(rows, nowUtc);
@@ -77,6 +78,14 @@ void main() {
       expect(cards, hasLength(2));
       expect(cards[0].expiresAt, DateTime.parse('2026-07-18T03:01:00.000Z'));
       expect(cards[1].expiresAt, isNull);
+    });
+
+    test('an archived (saved) card never re-enters the servable deck', () {
+      // The realtime stream also carries the user's own status writes back. An archived card
+      // must drop out of the deck immediately, not reappear because the filter only knew about
+      // `snoozed`/`dismissed`.
+      final rows = [_row(expiresAt: null, status: 'archived')];
+      expect(InsightService.filterEmission(rows, nowUtc), isEmpty);
     });
 
     test('a zone-less expires_at is read as UTC, not local time', () {

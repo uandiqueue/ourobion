@@ -181,9 +181,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
 
                     // ── Consent note ───────────────────────────
+                    //
+                    // Dropped: "By continuing you agree to our Terms and
+                    // Privacy Policy." No such document, route or tap target
+                    // exists anywhere in this repo, so the sentence bound the
+                    // user to nothing and pointed nowhere. What remains is true
+                    // — the next screen after sign-in IS ConsentScreen
+                    // (main.dart's AuthGate). Re-add a terms line only with a
+                    // real document behind a real tap target.
                     const SizedBox(height: 16),
                     Text(
-                      "By continuing you agree to our Terms and Privacy Policy.\nYou'll set your data permissions in the next step.",
+                      "You'll set your data permissions in the next step.",
                       textAlign: TextAlign.center,
                       style: GoogleFonts.manrope(
                         fontSize: 11, fontWeight: FontWeight.w400,

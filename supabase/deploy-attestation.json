@@ -5,7 +5,7 @@
   "replayBoundary": "CI recomputes frozen graphs and validates this local evidence, but does not replay local serve or claim hosted deploy parity.",
   "generator": "node tools/run4_release_gate.mjs record-attestation",
   "provenance": {
-    "unitBaseSha": "c558c04f1b661a59c8987c96770768eeea46e0cc",
+    "unitBaseSha": "2749381a405de882c6d96cdf21a57034e28204ea",
     "maxChangedPaths": 115,
     "maxAddedLines": 8500
   },
@@ -26,9 +26,9 @@
       "name": "generate-insights",
       "entrypoint": "./functions/generate-insights/index.ts",
       "importMap": "./functions/generate-insights/deno.json",
-      "entrypointSha256": "2940dc0b9d61b8c97f1c9ba7f5a06972d982ab04419ac8241e4dfda290f0c5b7",
+      "entrypointSha256": "2a547d311b8e6ad5be67a0fa417248dc65215f3607cef508b36ee630a725ed5a",
       "importMapSha256": "559f0671914e7e20a5396b944a780be2bdb0208c6a23da9d3ed1e62aedd63bae",
-      "moduleGraphSha256": "bbb871c5159930ade6fc2b79830059f06709cbe9a88aa5f57381fd921d7f9382"
+      "moduleGraphSha256": "958c1d8435bed724bb1c1e3b69ed7d458610846dcd2d621ccfd0575b103ae2a6"
     },
     {
       "name": "evaluate-signals",
