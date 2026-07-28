@@ -97,7 +97,12 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
 
     final baselineService = BaselineService(client);
     final seriesService = MetricSeriesService(client);
-    const metricKeys = [kSleepMetricKey, kGutMetricKey, kHrvMetricKey, kStepsMetricKey];
+    const metricKeys = [
+      kSleepMetricKey,
+      kGutMetricKey,
+      kHrvMetricKey,
+      kStepsMetricKey,
+    ];
 
     final results = await Future.wait<dynamic>([
       ProfileService(client).getProfile(userId),
@@ -113,7 +118,8 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
       // outage hides one row instead of breaking the whole Home load.
       KnowledgeBaseService(client).getStats(),
       for (final key in metricKeys) baselineService.getBaseline(userId, key),
-      for (final key in metricKeys) seriesService.getSeries(userId, key, windowDays: 14),
+      for (final key in metricKeys)
+        seriesService.getSeries(userId, key, windowDays: 14),
     ]);
 
     var i = 0;
@@ -173,10 +179,28 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
   /// "TUESDAY · 28 JULY" — the design's eyebrow. Real date, no formatting
   /// package needed for two fixed lists.
   String get _dateEyebrow {
-    const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+    const days = [
+      'MONDAY',
+      'TUESDAY',
+      'WEDNESDAY',
+      'THURSDAY',
+      'FRIDAY',
+      'SATURDAY',
+      'SUNDAY',
+    ];
     const months = [
-      'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
-      'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER',
+      'JANUARY',
+      'FEBRUARY',
+      'MARCH',
+      'APRIL',
+      'MAY',
+      'JUNE',
+      'JULY',
+      'AUGUST',
+      'SEPTEMBER',
+      'OCTOBER',
+      'NOVEMBER',
+      'DECEMBER',
     ];
     final now = DateTime.now();
     return '${days[now.weekday - 1]} · ${now.day} ${months[now.month - 1]}';
@@ -226,11 +250,16 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
               color: OurobionColors.primary,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                // The reference canvas is 390 logical pixels wide and holds
+                // its content 22px from each edge. Keeping that geometry here
+                // makes the status card and two-column signals grid land at
+                // the same proportions while still scaling naturally on wider
+                // phones.
+                padding: const EdgeInsets.symmetric(horizontal: 22),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 12),
 
                     // ── Header ────────────────────────────────────────
                     Row(
@@ -274,7 +303,9 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                             decoration: BoxDecoration(
                               color: OurobionColors.surfaceLowest,
                               border: Border.all(
-                                color: OurobionColors.primary.withValues(alpha: 0.5),
+                                color: OurobionColors.primary.withValues(
+                                  alpha: 0.5,
+                                ),
                               ),
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -283,11 +314,12 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                               child: Image.asset(
                                 BiotopeGeneratedAssets.profileBotanicalCrest,
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stack) => const Icon(
-                                  Icons.person_outline_rounded,
-                                  size: 20,
-                                  color: OurobionColors.onSurfaceVariant,
-                                ),
+                                errorBuilder: (context, error, stack) =>
+                                    const Icon(
+                                      Icons.person_outline_rounded,
+                                      size: 20,
+                                      color: OurobionColors.onSurfaceVariant,
+                                    ),
                               ),
                             ),
                           ),
@@ -295,7 +327,7 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                       ],
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
 
                     // ── System status hero ─────────────────────────────
                     _SystemStatusHero(
@@ -312,7 +344,10 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                     // happening.
                     if (_kbStats?.hasContent ?? false) ...[
                       const SizedBox(height: 13),
-                      _KnowledgeBaseRow(stats: _kbStats!, refreshing: _refreshing),
+                      _KnowledgeBaseRow(
+                        stats: _kbStats!,
+                        refreshing: _refreshing,
+                      ),
                     ],
 
                     const SizedBox(height: 22),
@@ -354,9 +389,7 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                       const SizedBox(height: 20),
                       _Eyebrow('TITLES'),
                       const SizedBox(height: 10),
-                      _TitlesRow(
-                        unlockedTitles: _engagement.unlockedTitles,
-                      ),
+                      _TitlesRow(unlockedTitles: _engagement.unlockedTitles),
                     ],
 
                     // ── Insights teaser ───────────────────────────────
@@ -438,7 +471,8 @@ class _Breathe extends StatefulWidget {
   State<_Breathe> createState() => _BreatheState();
 }
 
-class _BreatheState extends State<_Breathe> with SingleTickerProviderStateMixin {
+class _BreatheState extends State<_Breathe>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 7),
@@ -459,8 +493,10 @@ class _BreatheState extends State<_Breathe> with SingleTickerProviderStateMixin 
     }
     if (!_c.isAnimating) _c.repeat(reverse: true);
     return ScaleTransition(
-      scale: Tween<double>(begin: 1.0, end: 1.035)
-          .animate(CurvedAnimation(parent: _c, curve: Curves.easeInOut)),
+      scale: Tween<double>(
+        begin: 1.0,
+        end: 1.035,
+      ).animate(CurvedAnimation(parent: _c, curve: Curves.easeInOut)),
       alignment: Alignment.bottomCenter,
       child: widget.child,
     );
@@ -476,10 +512,13 @@ class _DeltaPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rising = points > 0;
-    final tint = rising ? OurobionColors.deltaPositive : OurobionColors.deltaNegative;
+    final tint = rising
+        ? OurobionColors.deltaPositive
+        : OurobionColors.deltaNegative;
     final magnitude = points.abs();
     return Semantics(
-      label: '${rising ? 'Up' : 'Down'} $magnitude '
+      label:
+          '${rising ? 'Up' : 'Down'} $magnitude '
           '${magnitude == 1 ? 'point' : 'points'} against the 7 day average',
       child: ExcludeSemantics(
         child: Container(
@@ -534,156 +573,175 @@ class _SystemStatusHero extends StatelessWidget {
   Widget build(BuildContext context) {
     return GoldCard(
       emphasized: true,
+      radius: 24,
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
-      child: Stack(
-        children: [
-          // home_hero_robot_hand_main.png is RGB with NO alpha channel — an
-          // opaque near-white rectangle, not a cutout. Dropped in raw it showed
-          // a hard rectangular seam against the porcelain card and escaped the
-          // card's rounded corner. (Nobody saw this until the asset actually
-          // shipped: the whole generated set was missing from the bundle, and
-          // this Image.asset's errorBuilder is an INVISIBLE SizedBox.)
-          //
-          // So: clip to the card's radius, and feather the two inner edges with
-          // a ShaderMask so the rectangle dissolves into the surface instead of
-          // ending in a line. Replace this with a transparent-background asset
-          // and the mask becomes a no-op rather than a problem.
-          Positioned.fill(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(kCardRadius),
-              child: Stack(
-                children: [
-                  Positioned(
-                    right: -34,
-                    bottom: -18,
-                    child: _Breathe(
-                      child: ShaderMask(
-                      // Fades late and hard: the artwork is an opaque white
-                      // rectangle, so the whole left half must be masked out or
-                      // it sits as a visible block over the status text.
-                      shaderCallback: (rect) => const LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                        colors: [Colors.transparent, Colors.white],
-                        stops: [0.30, 0.78],
-                      ).createShader(rect),
-                      blendMode: BlendMode.dstIn,
-                        child: Opacity(
-                          opacity: 0.9,
-                          child: Image.asset(
-                            BiotopeGeneratedAssets.homeHeroRobotHandMain,
-                            width: 172,
-                            height: 210,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stack) =>
-                                const SizedBox(width: 172, height: 210),
+      // The design card is 244px tall at its 390px reference width. Its
+      // porcelain padding accounts for 42px of that height, leaving a stable
+      // 202px layout area for the truthful status values below. A fixed inner
+      // height preserves the artwork/text relationship without constraining
+      // the card's width on other devices.
+      child: SizedBox(
+        height: 202,
+        child: Stack(
+          children: [
+            // home_hero_robot_hand_main.png is RGB with NO alpha channel — an
+            // opaque near-white rectangle, not a cutout. Dropped in raw it showed
+            // a hard rectangular seam against the porcelain card and escaped the
+            // card's rounded corner. (Nobody saw this until the asset actually
+            // shipped: the whole generated set was missing from the bundle, and
+            // this Image.asset's errorBuilder is an INVISIBLE SizedBox.)
+            //
+            // So: clip to the card's radius, and feather the two inner edges with
+            // a ShaderMask so the rectangle dissolves into the surface instead of
+            // ending in a line. Replace this with a transparent-background asset
+            // and the mask becomes a no-op rather than a problem.
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(kCardRadius),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      right: -30,
+                      bottom: -18,
+                      child: _Breathe(
+                        child: ShaderMask(
+                          // The generated source has an opaque porcelain field,
+                          // so feather only its left edge. This retains the large
+                          // botanical hand visible in the HTML composition rather
+                          // than making it read as a small, faded watermark.
+                          shaderCallback: (rect) => const LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [Colors.transparent, Colors.white],
+                            stops: [0.14, 0.60],
+                          ).createShader(rect),
+                          blendMode: BlendMode.dstIn,
+                          child: Opacity(
+                            opacity: 0.96,
+                            child: Image.asset(
+                              BiotopeGeneratedAssets.homeHeroRobotHandMain,
+                              width: 214,
+                              height: 262,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stack) =>
+                                  const SizedBox(width: 214, height: 262),
+                            ),
                           ),
                         ),
                       ),
                     ),
+                  ],
+                ),
+              ),
+            ),
+            // Design keeps status text to ~58% so it never runs under the
+            // artwork; the card holds a min height so the two never collide.
+            FractionallySizedBox(
+              widthFactor: 0.58,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'SYSTEM STATUS',
+                    style: GoogleFonts.manrope(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.6,
+                      color: OurobionColors.primary,
+                    ),
                   ),
+                  const SizedBox(height: 11),
+                  Text(
+                    statusWord,
+                    style: GoogleFonts.manrope(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -1,
+                      color: OurobionColors.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  // Design's gold hairline fading to nothing, rather than a hard
+                  // 60px rule.
+                  Container(
+                    height: 1,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          OurobionColors.brandGold,
+                          OurobionColors.brandGold.withValues(alpha: 0),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (index != null)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          '$index',
+                          style: GoogleFonts.manrope(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.6,
+                            color: OurobionColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '/100 coverage',
+                          style: GoogleFonts.manrope(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: OurobionColors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  // Real movement against the 7-day average. Rendered only when
+                  // both numbers exist, so an absent baseline shows no pill
+                  // rather than a fabricated "▲ 0".
+                  if (indexDelta != null) ...[
+                    const SizedBox(height: 10),
+                    _DeltaPill(points: indexDelta!),
+                  ],
+                  if (streak > 0) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: OurobionColors.deltaPositive.withValues(
+                          alpha: 0.08,
+                        ),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: OurobionColors.deltaPositive.withValues(
+                            alpha: 0.18,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        '$streak DAY STREAK',
+                        style: GoogleFonts.manrope(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1,
+                          color: OurobionColors.deltaPositive,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
-          ),
-          // Design keeps status text to ~58% so it never runs under the
-          // artwork; the card holds a min height so the two never collide.
-          FractionallySizedBox(
-            widthFactor: 0.58,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'SYSTEM STATUS',
-                  style: GoogleFonts.manrope(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.6,
-                    color: OurobionColors.primary,
-                  ),
-                ),
-                const SizedBox(height: 11),
-                Text(
-                  statusWord,
-                  style: GoogleFonts.manrope(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -1,
-                    color: OurobionColors.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                // Design's gold hairline fading to nothing, rather than a hard
-                // 60px rule.
-                Container(
-                  height: 1,
-                  margin: const EdgeInsets.only(right: 8),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        OurobionColors.brandGold,
-                        OurobionColors.brandGold.withValues(alpha: 0),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (index != null)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        '$index',
-                        style: GoogleFonts.manrope(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.6,
-                          color: OurobionColors.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '/100 coverage',
-                        style: GoogleFonts.manrope(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: OurobionColors.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                // Real movement against the 7-day average. Rendered only when
-                // both numbers exist, so an absent baseline shows no pill
-                // rather than a fabricated "▲ 0".
-                if (indexDelta != null) ...[
-                  const SizedBox(height: 10),
-                  _DeltaPill(points: indexDelta!),
-                ],
-                if (streak > 0) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: OurobionColors.deltaPositive.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: OurobionColors.deltaPositive.withValues(alpha: 0.18)),
-                    ),
-                    child: Text(
-                      '$streak DAY STREAK',
-                      style: GoogleFonts.manrope(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1,
-                        color: OurobionColors.deltaPositive,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -696,7 +754,8 @@ abstract final class KnowledgeBaseCopy {
 
   /// Singular matters: the Run 4 corpus really is one paper, and rounding that
   /// up to a vaguer plural would overstate the evidence base.
-  static String studies(int n) => n == 1 ? '1 study indexed' : '$n studies indexed';
+  static String studies(int n) =>
+      n == 1 ? '1 study indexed' : '$n studies indexed';
 
   static String relationships(int n) =>
       n == 1 ? '1 verified relationship' : '$n verified relationships';
@@ -727,12 +786,13 @@ class _KnowledgeBaseRow extends StatelessWidget {
     final detail = refreshing
         ? KnowledgeBaseCopy.ingesting
         : stats.lastIndexedAt != null
-            ? KnowledgeBaseCopy.lastIndexed(_dateOnly(stats.lastIndexedAt!))
-            : KnowledgeBaseCopy.relationships(stats.edgesVerified);
+        ? KnowledgeBaseCopy.lastIndexed(_dateOnly(stats.lastIndexedAt!))
+        : KnowledgeBaseCopy.relationships(stats.edgesVerified);
 
     return Semantics(
       container: true,
-      label: '${KnowledgeBaseCopy.eyebrow}. '
+      label:
+          '${KnowledgeBaseCopy.eyebrow}. '
           '${KnowledgeBaseCopy.studies(stats.studiesIndexed)}. $detail',
       child: ExcludeSemantics(
         child: GoldCard(
@@ -869,7 +929,11 @@ class _SignalsGrid extends StatelessWidget {
     return OurobionColors.onSurfaceVariant;
   }
 
-  String _deltaLabel(String metricKey, List<MetricDailyPoint> pts, BaselineSnapshot? b) {
+  String _deltaLabel(
+    String metricKey,
+    List<MetricDailyPoint> pts,
+    BaselineSnapshot? b,
+  ) {
     if (pts.isEmpty) return SignalsCopy.noData;
     if (b?.mean == null) return SignalsCopy.buildingBaseline;
     final delta = pts.last.value - b!.mean!;
@@ -977,8 +1041,12 @@ class _CoverageCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    streakWorthy ? Icons.check_circle_rounded : Icons.radar_rounded,
-                    color: streakWorthy ? OurobionColors.primary : OurobionColors.outline,
+                    streakWorthy
+                        ? Icons.check_circle_rounded
+                        : Icons.radar_rounded,
+                    color: streakWorthy
+                        ? OurobionColors.primary
+                        : OurobionColors.outline,
                     size: 22,
                   ),
                 ),
@@ -988,7 +1056,9 @@ class _CoverageCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        streakWorthy ? 'Every channel captured today' : 'Coverage in progress',
+                        streakWorthy
+                            ? 'Every channel captured today'
+                            : 'Coverage in progress',
                         style: GoogleFonts.manrope(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -1104,7 +1174,9 @@ class _StreakCard extends StatelessWidget {
                 ),
                 child: Icon(
                   Icons.local_fire_department_rounded,
-                  color: streak > 0 ? OurobionColors.primary : OurobionColors.outline,
+                  color: streak > 0
+                      ? OurobionColors.primary
+                      : OurobionColors.outline,
                   size: 22,
                 ),
               ),
@@ -1113,7 +1185,9 @@ class _StreakCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    streak > 0 ? '$streak day${streak == 1 ? '' : 's'}' : 'No streak yet',
+                    streak > 0
+                        ? '$streak day${streak == 1 ? '' : 's'}'
+                        : 'No streak yet',
                     style: GoogleFonts.manrope(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
@@ -1139,7 +1213,10 @@ class _StreakCard extends StatelessWidget {
           ),
           if (showStats) ...[
             const SizedBox(height: 16),
-            Divider(height: 1, color: OurobionColors.primary.withValues(alpha: 0.2)),
+            Divider(
+              height: 1,
+              color: OurobionColors.primary.withValues(alpha: 0.2),
+            ),
             const SizedBox(height: 14),
             Row(
               children: [
@@ -1147,7 +1224,8 @@ class _StreakCard extends StatelessWidget {
                   Expanded(
                     child: _StatChip(
                       label: 'Personal best',
-                      value: '$longestStreak day${longestStreak == 1 ? '' : 's'}',
+                      value:
+                          '$longestStreak day${longestStreak == 1 ? '' : 's'}',
                     ),
                   ),
                 if (longestStreak > 0 && dqs7DayAvg != null)
@@ -1175,12 +1253,14 @@ class _TitlesRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final chips = kTitleRegistry
-        .map((t) => _TitleChip(
-              label: t.label,
-              subtitle: t.subtitle,
-              icon: t.icon,
-              earned: unlockedTitles.contains(t.id),
-            ))
+        .map(
+          (t) => _TitleChip(
+            label: t.label,
+            subtitle: t.subtitle,
+            icon: t.icon,
+            earned: unlockedTitles.contains(t.id),
+          ),
+        )
         .toList();
 
     return Column(
@@ -1236,7 +1316,9 @@ class _TitleChip extends StatelessWidget {
           Icon(
             icon,
             size: 18,
-            color: earned ? OurobionColors.primary : OurobionColors.outlineVariant,
+            color: earned
+                ? OurobionColors.primary
+                : OurobionColors.outlineVariant,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -1330,7 +1412,9 @@ class _InsightsTeaser extends StatelessWidget {
             decoration: BoxDecoration(
               color: OurobionColors.surfaceContainer,
               borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: OurobionColors.primary.withValues(alpha: 0.4)),
+              border: Border.all(
+                color: OurobionColors.primary.withValues(alpha: 0.4),
+              ),
             ),
             clipBehavior: Clip.antiAlias,
             child: hasInsights
