@@ -7,11 +7,7 @@
     "noEmit": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    // shared/brain modules that a Deno edge function loads must spell their value imports with an
-    // explicit `.ts` extension (Deno resolves specifiers literally). Safe here because this
-    // project is `noEmit` — nothing is rewritten, tsc only has to accept the spelling.
-    "allowImportingTsExtensions": true
+    "forceConsistentCasingInFileNames": true
   },
   "include": [
     "types/**/*.ts",

@@ -29,6 +29,8 @@ import {
   rendersCard,
   type Branch,
   type CandidatePattern,
+  type ComposedClaimKind,
+  type ComposedTrustPosture,
   type GapStatus,
   type PersonalSignalRow,
   type ServableEdge,
@@ -44,12 +46,15 @@ import {
   relationPhrase,
   renderCard,
 } from "./render.ts"
-// R4-U4/O27 · the shared, tested artifact-trust rule. Imported straight from shared/brain so the
-// serving gate and the contract can never drift (same discipline as validateCopyString).
+// R4-U4/O27 · the shared, tested artifact-trust rule. Imported from trust_labels.ts — the
+// import-free shared module — for the same reason validateCopyString is imported straight from
+// copy_guidelines.ts: one definition, no vendored copy that could drift. It must be this module
+// and not provenance.ts, because Deno resolves specifiers literally and cannot follow the
+// extensionless imports the rest of shared/brain uses.
 import {
   trustFailures,
   type ServingEnvironment,
-} from "../../../shared/brain/provenance.ts"
+} from "../../../shared/brain/trust_labels.ts"
 
 /**
  * R4-U4/O27 · Which trust posture this serving path runs under.
@@ -216,7 +221,20 @@ interface CardRow {
   phase_generated: string
   producer: "rules" | "edge" | "personal"
   insight_id: string | null
-  edge_refs: { edgeId: string; verifiedAt: string }[]
+  /**
+   * R4-U4/O27: a cited card's edge ref carries the scientific meaning and trust posture forward
+   * alongside the edge identity, so the provenance surface reads them from the CARD rather than
+   * re-deriving them (and so it cannot disagree with what was actually rendered). The extra keys
+   * are additive and optional — the `rules` and `personal` producers still write `[]`, and the
+   * U7 biotope consumer ignores keys it does not know.
+   */
+  edge_refs: {
+    edgeId: string
+    verifiedAt: string
+    claimKind?: ComposedClaimKind
+    trust?: ComposedTrustPosture
+    studyDesignTier?: number | null
+  }[]
 }
 
 interface InsightRow {

@@ -41,31 +41,22 @@ import type {
 
 export type { ArtifactPosture, ArtifactRef, ModelAttestation };
 
-/**
- * The trust posture of the path a record is being served INTO. `production` is the strict path;
- * `demo` and `development` permit fixtures because showing fixture-derived cards is the entire
- * point of a demo — with the fixture disclosed on the card (B-UI9), never silently.
- */
-export type ServingEnvironment = 'development' | 'demo' | 'production';
-
 // ─── Axis 2 · claim strength ────────────────────────────────────────────────────────────────
 
 // The ladder itself lives in trust_labels.ts — the import-free module the Deno edge functions can
 // load — so the serving path and the render path share ONE definition rather than two that could
 // drift. Re-exported here so consumers of the serving logic have a single import site.
-// NOTE the explicit `.ts` extensions on the two VALUE imports below. They are what lets a Deno
-// edge function load this module: Deno resolves specifiers literally and cannot follow an
-// extensionless one. The type-only imports above need no extension because `import type` is
-// erased before the module graph is built. `allowImportingTsExtensions` in shared/tsconfig.json
-// (safe under `noEmit`) is what keeps `tsc` happy with the same spelling.
+// This module is NEVER loaded by Deno — the edge functions import trust_labels.ts directly, which
+// has no imports at all. That is why extensionless specifiers are correct here: they are what the
+// Node/tsc consumers (tools/brain-ingest, tools/edge-loader) require under NodeNext resolution.
 export {
   CLAIM_KIND_LADDER,
   claimKindRank,
   effectiveClaimKind,
   parseClaimKind,
-} from './trust_labels.ts';
+} from './trust_labels';
 
-import { effectiveClaimKind as effectiveClaimKindImpl } from './trust_labels.ts';
+import { effectiveClaimKind as effectiveClaimKindImpl } from './trust_labels';
 
 /**
  * The pair of kinds carried through serving, plus the effective kind rendering must use. Both
@@ -94,130 +85,25 @@ export function claimKindPosture(
   return { claimed, supported, effective, downgraded: effective !== claimed };
 }
 
-// ─── Fail-closed trust evaluation ───────────────────────────────────────────────────────────
+// ─── Fail-closed trust evaluation (re-exported) ─────────────────────────────────────────────
+//
+// The IMPLEMENTATION lives in trust_labels.ts — the import-free module a Deno edge function can
+// load — so the serving gate and the render path share ONE definition rather than two that could
+// drift. It is re-exported here so Node consumers have a single import site for the serving rules.
+// trust_labels.ts types its inputs structurally and widened (`posture: string`) because it runs at
+// a trust boundary over jsonb; `ArtifactRef` / `ModelAttestation` are assignable to those shapes.
 
-/** A machine-readable reason a record may not be served. Every value BLOCKS; none is a warning. */
-export type TrustFailureCode =
-  | 'missing-artifact-ref'
-  | 'missing-posture'
-  | 'malformed-content-hash'
-  | 'fixture-in-production'
-  | 'missing-attestation'
-  | 'unattested-model'
-  | 'correlated-verifier-in-production';
-
-export interface TrustFailure {
-  code: TrustFailureCode;
-  /** Operator-facing detail. NOT user-facing copy — see trust_labels.ts for that. */
-  detail: string;
-}
-
-/** `sha256:` + 64 lowercase hex characters. Anything else is not a usable content hash. */
-const CONTENT_HASH_RE = /^sha256:[0-9a-f]{64}$/;
-
-/** The provenance inputs the trust evaluation reads. Both are optional so LEGACY records —
- *  which predate these fields — are evaluated as what they are: untrusted, and blocked on any
- *  path that requires trust. */
-export interface TrustInputs {
-  artifact?: ArtifactRef;
-  attestation?: ModelAttestation;
-}
-
-/**
- * Every reason this record may not be served into `environment`, or an empty array when it is
- * clean. FAIL CLOSED by construction: absence of a field is a failure, never a pass.
- *
- * `production` additionally rejects fixture-derived records and non-decorrelated verifiers. Those
- * two rules are inert in Run 4 (no production serving is authorized) but are written now so the
- * gate exists before the path does, rather than being added under pressure later.
- */
-export function trustFailures(
-  inputs: TrustInputs,
-  environment: ServingEnvironment,
-): TrustFailure[] {
-  const failures: TrustFailure[] = [];
-  const production = environment === 'production';
-
-  const artifact = inputs.artifact;
-  if (artifact === undefined) {
-    failures.push({
-      code: 'missing-artifact-ref',
-      detail: 'record carries no artifact revision/content hash — provenance chain is broken',
-    });
-  } else {
-    // An empty-string posture cannot occur in typed code, but this function also guards records
-    // parsed from JSON at a trust boundary, where anything can arrive.
-    if (artifact.posture !== 'fixture' && artifact.posture !== 'live') {
-      failures.push({
-        code: 'missing-posture',
-        detail: `artifact posture must be 'fixture' or 'live', got ${JSON.stringify(artifact.posture)}`,
-      });
-    }
-    if (!CONTENT_HASH_RE.test(artifact.contentHash)) {
-      failures.push({
-        code: 'malformed-content-hash',
-        detail: `contentHash must match sha256:<64 hex>, got ${JSON.stringify(artifact.contentHash)}`,
-      });
-    }
-    if (production && artifact.posture === 'fixture') {
-      failures.push({
-        code: 'fixture-in-production',
-        detail: `fixture-derived artifact ${artifact.revision} may never be served on a production path`,
-      });
-    }
-  }
-
-  const attestation = inputs.attestation;
-  if (attestation === undefined) {
-    failures.push({
-      code: 'missing-attestation',
-      detail: 'record carries no model attestation — returned model identity is unknown',
-    });
-  } else {
-    if (!attestation.attested) {
-      failures.push({
-        code: 'unattested-model',
-        detail: `model "${attestation.returnedModel}" is recorded but not provider-attested (a configured id is not attestation)`,
-      });
-    }
-    if (production && !attestation.decorrelated) {
-      failures.push({
-        code: 'correlated-verifier-in-production',
-        detail: `verifier family "${attestation.family}" is not decorrelated from synthesis`,
-      });
-    }
-  }
-
-  return failures;
-}
-
-/**
- * True only when a record has a complete, verifiable provenance chain for `environment`.
- * The negation of "has any failure" — there is no partial-trust state on purpose.
- */
-export function isTrustedForServing(
-  inputs: TrustInputs,
-  environment: ServingEnvironment,
-): boolean {
-  return trustFailures(inputs, environment).length === 0;
-}
-
-/**
- * Assert servability, throwing with every reason at once. Call sites that must not proceed on an
- * untrusted record use this so the failure is loud and complete rather than a silent filter.
- */
-export function assertTrustedForServing(
-  inputs: TrustInputs,
-  environment: ServingEnvironment,
-): void {
-  const failures = trustFailures(inputs, environment);
-  if (failures.length > 0) {
-    throw new Error(
-      `artifact trust check failed for ${environment}: ` +
-        failures.map((f) => `${f.code} (${f.detail})`).join('; '),
-    );
-  }
-}
+export {
+  assertTrustedForServing,
+  isTrustedForServing,
+  trustFailures,
+} from './trust_labels';
+export type {
+  ServingEnvironment,
+  TrustFailure,
+  TrustFailureCode,
+  TrustInputs,
+} from './trust_labels';
 
 // ─── Provenance-chain completeness ──────────────────────────────────────────────────────────
 

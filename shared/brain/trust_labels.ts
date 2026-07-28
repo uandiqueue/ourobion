@@ -391,3 +391,153 @@ export function studyDesignTierLabel(tier: TrustLabelStudyDesignTier): string {
   if (label === undefined) throw new Error(`studyDesignTierLabel: unknown tier "${tier}"`);
   return label;
 }
+
+// ─── Fail-closed artifact trust gate ────────────────────────────────────────────────────────
+//
+// This lives HERE, in the import-free module, rather than in provenance.ts with the rest of the
+// serving logic, for one concrete reason: the Supabase edge function needs it at serve time, and
+// a Deno edge function can only load a module with no further specifiers to resolve. provenance.ts
+// re-exports every symbol below, so Node consumers still have one import site and there is exactly
+// ONE implementation.
+//
+// The input types are deliberately STRUCTURAL and widened (`posture: string`, not the union):
+// this function runs at a trust boundary over values parsed from jsonb, where anything can
+// arrive, and validating the posture string is part of its job. The contract types
+// (`ArtifactRef` / `ModelAttestation`) are assignable to these, so provenance.ts's typed
+// re-export is exact.
+
+/**
+ * The trust posture of the path a record is being served INTO. `production` is the strict path;
+ * `demo` and `development` permit fixtures because showing fixture-derived cards is the entire
+ * point of a demo — with the fixture disclosed on the card (B-UI9), never silently.
+ */
+export type ServingEnvironment = 'development' | 'demo' | 'production';
+
+/** A machine-readable reason a record may not be served. Every value BLOCKS; none is a warning. */
+export type TrustFailureCode =
+  | 'missing-artifact-ref'
+  | 'missing-posture'
+  | 'malformed-content-hash'
+  | 'fixture-in-production'
+  | 'missing-attestation'
+  | 'unattested-model'
+  | 'correlated-verifier-in-production';
+
+export interface TrustFailure {
+  code: TrustFailureCode;
+  /** Operator-facing detail. NOT user-facing copy — the labels above are that. */
+  detail: string;
+}
+
+/**
+ * The provenance inputs the trust evaluation reads. Both are optional so LEGACY records — which
+ * predate these fields — are evaluated as what they are: untrusted, and blocked on any path that
+ * requires trust.
+ */
+export interface TrustInputs {
+  artifact?: { revision: string; contentHash: string; posture: string };
+  attestation?: {
+    returnedModel: string;
+    returnedVersion: string | null;
+    family: string;
+    decorrelated: boolean;
+    attested: boolean;
+  };
+}
+
+/** `sha256:` + 64 lowercase hex characters. Anything else is not a usable content hash. */
+const CONTENT_HASH_RE = /^sha256:[0-9a-f]{64}$/;
+
+/**
+ * Every reason this record may not be served into `environment`, or an empty array when it is
+ * clean. FAIL CLOSED by construction: absence of a field is a failure, never a pass.
+ *
+ * `production` additionally rejects fixture-derived records and non-decorrelated verifiers. Those
+ * two rules are inert in Run 4 (no production serving is authorized) but are written now so the
+ * gate exists before the path does, rather than being added under pressure later.
+ */
+export function trustFailures(
+  inputs: TrustInputs,
+  environment: ServingEnvironment,
+): TrustFailure[] {
+  const failures: TrustFailure[] = [];
+  const production = environment === 'production';
+
+  const artifact = inputs.artifact;
+  if (artifact === undefined) {
+    failures.push({
+      code: 'missing-artifact-ref',
+      detail: 'record carries no artifact revision/content hash — provenance chain is broken',
+    });
+  } else {
+    if (artifact.posture !== 'fixture' && artifact.posture !== 'live') {
+      failures.push({
+        code: 'missing-posture',
+        detail: `artifact posture must be 'fixture' or 'live', got ${JSON.stringify(artifact.posture)}`,
+      });
+    }
+    if (!CONTENT_HASH_RE.test(artifact.contentHash)) {
+      failures.push({
+        code: 'malformed-content-hash',
+        detail: `contentHash must match sha256:<64 hex>, got ${JSON.stringify(artifact.contentHash)}`,
+      });
+    }
+    if (production && artifact.posture === 'fixture') {
+      failures.push({
+        code: 'fixture-in-production',
+        detail: `fixture-derived artifact ${artifact.revision} may never be served on a production path`,
+      });
+    }
+  }
+
+  const attestation = inputs.attestation;
+  if (attestation === undefined) {
+    failures.push({
+      code: 'missing-attestation',
+      detail: 'record carries no model attestation — returned model identity is unknown',
+    });
+  } else {
+    if (!attestation.attested) {
+      failures.push({
+        code: 'unattested-model',
+        detail: `model "${attestation.returnedModel}" is recorded but not provider-attested (a configured id is not attestation)`,
+      });
+    }
+    if (production && !attestation.decorrelated) {
+      failures.push({
+        code: 'correlated-verifier-in-production',
+        detail: `verifier family "${attestation.family}" is not decorrelated from synthesis`,
+      });
+    }
+  }
+
+  return failures;
+}
+
+/**
+ * True only when a record has a complete, verifiable provenance chain for `environment`.
+ * The negation of "has any failure" — there is no partial-trust state on purpose.
+ */
+export function isTrustedForServing(
+  inputs: TrustInputs,
+  environment: ServingEnvironment,
+): boolean {
+  return trustFailures(inputs, environment).length === 0;
+}
+
+/**
+ * Assert servability, throwing with every reason at once. Call sites that must not proceed on an
+ * untrusted record use this so the failure is loud and complete rather than a silent filter.
+ */
+export function assertTrustedForServing(
+  inputs: TrustInputs,
+  environment: ServingEnvironment,
+): void {
+  const failures = trustFailures(inputs, environment);
+  if (failures.length > 0) {
+    throw new Error(
+      `artifact trust check failed for ${environment}: ` +
+        failures.map((f) => `${f.code} (${f.detail})`).join('; '),
+    );
+  }
+}

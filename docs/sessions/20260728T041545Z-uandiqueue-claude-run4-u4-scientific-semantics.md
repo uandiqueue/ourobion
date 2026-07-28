@@ -119,11 +119,11 @@ TS and Dart without a cross-language import, and wire contradiction into `needsR
 
 - **`apps/nao` test suite could NOT be run on this machine.** Its `package.json` declares
   `engines: {"node": ">=26"}` and relies on Node's native TS type-stripping; only Node v20.20.0 is
-  installed here (no other version under nvm). The suite is **unrun, not passing**. No `apps/nao`
-  source was modified by this unit.
-- **The migration was NOT executed against a live database.** Docker is unavailable in this WSL
-  distro and `npx supabase status` fails, so the DDL is statically reviewed only.
-- **Deno is not installed**, so the frozen edge-function checks did not run locally.
+  installed here (no other version under nvm). It is **unrun locally** — but it **passed in CI**,
+  which runs Node 26. No `apps/nao` source was modified by this unit.
+- **The migration could not be executed locally.** Docker is unavailable in this WSL distro and
+  `npx supabase status` fails. It **shadow-applied green on postgres:17 in CI**, so the DDL is
+  verified — just not by this machine.
 - **Pre-existing failures, unrelated to this unit, confirmed against a clean base worktree at
   `ff05464`:** `tools/rules` 6 failures and `tools/edge-loader` 5 failures, all
   `ERR_REQUIRE_CYCLE_MODULE` from Node 20.20's `require(esm)` cycle when a CLI spawns a subprocess.
@@ -133,19 +133,57 @@ TS and Dart without a cross-language import, and wire contradiction into `needsR
 
 ## Verification actually run
 
+Final local state, after the first CI run exposed three real failures (see "First CI run" below):
+
 | Command | Result |
 |---|---|
 | `node tools/context_sync.mjs --check` | passed |
 | `npx tsc -p shared/tsconfig.json` (now incl. `brain/**`) | exit 0 |
-| `tools/brain-ingest` `node --import tsx --test tests/**/*.test.ts` | **391 tests, 391 pass, 0 fail** |
-| `tools/rules` `node --import tsx --test tests/*.test.ts` | 102 tests, 96 pass, **6 pre-existing fail** |
+| `tools/brain-ingest` `tsc --noEmit` | exit 0 |
+| `tools/brain-ingest` `node --import tsx --test tests/**/*.test.ts` | **353 / 353 pass** |
+| `tools/rules` `tsc --noEmit` | exit 0 |
+| `tools/rules` `node --import tsx --test tests/*.test.ts` | 140 tests, 134 pass, **6 pre-existing fail** |
 | `tools/edge-loader` `node --import tsx --test tests/*.test.ts` | 56 tests, 51 pass, **5 pre-existing fail** |
+| `deno check --config deno.json --lock ../../deno.lock --frozen index.ts` (generate-insights) | exit 0 |
 | `apps/biotope` `flutter analyze` | No issues found |
-| `apps/biotope` `flutter test` | **134 tests, all passed** |
-| `apps/biotope` `flutter test test/guards/` | **62 passed** (incl. the new O38 parity guard) |
-| `apps/nao` test suite | **NOT RUN** — requires Node ≥26, machine has 20.20.0 |
-| migration against live Postgres | **NOT RUN** — no Docker/Supabase available |
-| Deno frozen edge-function checks | **NOT RUN** — Deno not installed |
+| `apps/biotope` `flutter test` | **134 / 134 pass** |
+| `apps/biotope` `flutter test test/guards/` | **62 / 62 pass** (incl. the new O38 parity guard) |
+| `apps/nao` test suite | **NOT RUN locally** — requires Node ≥26, machine has 20.20.0. **Passed in CI.** |
+| migration against live Postgres | **NOT RUN locally** — no Docker/Supabase. **Shadow-applied green on postgres:17 in CI.** |
+
+Deno was not installed at the start of the session; it was installed mid-session
+(`deno 2.9.4`, to `/tmp`, not into the repo) precisely so the edge-function check could be run
+locally instead of guessed at.
+
+## First CI run — three real failures, all mine, all fixed
+
+The first push produced three failures beyond the two expected gate checks. None was pre-existing;
+each is recorded here because the diagnosis is the useful part.
+
+1. **`Deno — generate-insights` failed.** `deno check` *does* follow `import type` specifiers, so
+   `provenance.ts`'s extensionless `import type … from './relationships'` was unresolvable. My
+   original assumption — that type-only imports are erased before Deno builds the module graph —
+   was simply wrong.
+2. **`Node tools — tools/brain-ingest` failed** with `TS1287`/`TS1295` across `shared/brain`.
+   Root cause: `tools/brain-ingest` had only ever referenced `shared/brain` **in comments**
+   (its `src/*/types.ts` keep structural mirrors), so those modules had never once entered its
+   `tsc` program. The new test imported them for real and exposed a **latent** incompatibility —
+   `shared/package.json` has no `"type": "module"`, so under `NodeNext` those files are CommonJS,
+   and `verbatimModuleSyntax` rejects top-level value `export`s in a CommonJS file.
+3. **`Node tools — tools/edge-loader` failed** — same root cause, at runtime.
+
+**Resolution, without weakening anything.** The whole fail-closed trust gate moved into
+`trust_labels.ts`, the only shared/brain module with **zero imports**, which is therefore the only
+one Deno can load; `provenance.ts` re-exports it, so there is still exactly one implementation.
+All `.ts` extensions were reverted and `allowImportingTsExtensions` was removed from
+`shared/tsconfig.json`. The provenance test moved from `tools/brain-ingest/tests/` to
+`tools/rules/tests/`, whose tsconfig does not set `verbatimModuleSyntax`. `verbatimModuleSyntax`
+was **not** disabled anywhere, and no assertion was relaxed.
+
+**Latent issue now documented:** any future Node package that sets `verbatimModuleSyntax` and
+imports a value-exporting `shared/brain` module will hit the same wall. The real fix is deciding
+whether `shared/` should declare `"type": "module"` — deliberately out of scope here, since it
+would change module resolution for every consumer at once.
 
 The O38 parity guard was proven to fail on drift (a deliberately tampered label failed it, then
 was reverted), and the causal-copy gate ships negative fixtures that genuinely fail — a test that
