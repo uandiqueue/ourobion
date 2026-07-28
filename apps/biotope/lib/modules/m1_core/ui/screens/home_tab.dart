@@ -9,19 +9,21 @@ import '../../../../core/widgets/gold_card.dart';
 import '../../impl/profile_service.dart';
 import '../../models/user_profile.dart';
 import '../../../m5a_baselines/index.dart';
+import '../../../m5a_baselines/ui/screens/metric_detail_screen.dart';
 import '../../../m5a_baselines/ui/widgets/metric_tile.dart';
 import '../../../m5a_baselines/ui/widgets/metric_trend_section.dart';
 import '../../../m5b_insight_engine/index.dart';
 import '../../../m6_engagement/index.dart';
 
-/// Home-grid metric keys → real registry keys (shared/metrics/registry.dart).
-/// "Gut comfort" is the closest real signal to a composite "gut score" — it's
-/// a 1-5 self-report ordinal, not a composite index, so it's labelled and
-/// scaled accordingly rather than overclaiming a /10 score the mock implied.
-const _kSleepMetric = 'sleep_duration_min';
-const _kGutMetric = 'gut_comfort_score';
-const _kHrvMetric = 'hrv_sdnn_ms';
-const _kStepsMetric = 'step_count';
+// The four registry keys the signals grid renders now live with the module that
+// owns metric formatting (m5a_baselines/impl/metric_value_format.dart) so this
+// screen and the metric detail view cannot disagree about a key or a unit:
+// kSleepMetricKey, kGutMetricKey, kHrvMetricKey, kStepsMetricKey.
+//
+// The decision recorded when those keys were first chosen still stands:
+// "Gut comfort" is the closest real signal to the design's composite "gut
+// score" — a 1-5 self-report ordinal, not a composite index, so it is labelled
+// and scaled accordingly rather than overclaiming the "/10" the mock implied.
 
 class HomeTab extends StatefulWidget {
   final VoidCallback onScanTap;
@@ -42,7 +44,6 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
   late final AnimationController _anim;
   late final Animation<double> _opacity;
   late final Animation<Offset> _slide;
-  late final AnimationController _ticker;
 
   String _displayName = '';
   double? _todayDqs;
@@ -71,15 +72,16 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
       begin: const Offset(0, 0.05),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _anim, curve: Curves.easeOut));
-    _ticker = AnimationController(vsync: this, duration: const Duration(seconds: 1))
-      ..repeat(reverse: true);
+    // No ambient repeating controller here. The one that used to live on this
+    // line drove the rotating knowledge-base ticker removed in PR #202; it
+    // outlived its only reader and kept repeating forever — burning frames, and
+    // (unlike _Breathe) with no reduce-motion gate. Deleted with the ticker.
     _load();
   }
 
   @override
   void dispose() {
     _anim.dispose();
-    _ticker.dispose();
     super.dispose();
   }
 
@@ -95,7 +97,7 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
 
     final baselineService = BaselineService(client);
     final seriesService = MetricSeriesService(client);
-    const metricKeys = [_kSleepMetric, _kGutMetric, _kHrvMetric, _kStepsMetric];
+    const metricKeys = [kSleepMetricKey, kGutMetricKey, kHrvMetricKey, kStepsMetricKey];
 
     final results = await Future.wait<dynamic>([
       ProfileService(client).getProfile(userId),
@@ -320,7 +322,9 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                     const SizedBox(height: 12),
                     _SignalsGrid(baselines: _baselines, series: _series),
 
-                    const SizedBox(height: 20),
+                    // Design line 244: the Coverage card sits 13px under the
+                    // grid, not 20 — the grid and the card read as one block.
+                    const SizedBox(height: 13),
 
                     // ── Coverage / Scan CTA ─────────────────────────────
                     _CoverageCard(dqs: _todayDqs, onTap: widget.onScanTap),
@@ -786,55 +790,140 @@ class _KnowledgeBaseRow extends StatelessWidget {
   }
 }
 
+/// Copy the signals grid owns. Public so the copy gate test can run every string
+/// through the shared non-diagnostic validator — see
+/// test/m5a_baselines/signals_detail_copy_gate_test.dart.
+abstract final class SignalsCopy {
+  static const sleepLabel = 'Sleep';
+  static const gutLabel = 'Gut comfort';
+  static const hrvLabel = 'HRV';
+  static const movementLabel = 'Movement';
+
+  /// The em dash the value falls back to when the metric has no readings. The
+  /// tile's delta line then says so in words ([noData]) — the dash alone would
+  /// be ambiguous.
+  static const noValue = '—';
+
+  static const noData = 'No data yet';
+  static const buildingBaseline = 'Building baseline';
+  static const vsAvgSuffix = ' vs avg';
+  static const rising = 'Rising';
+  static const falling = 'Falling';
+  static const steady = 'Steady';
+
+  static const all = <String>[
+    sleepLabel,
+    gutLabel,
+    hrvLabel,
+    movementLabel,
+    noValue,
+    noData,
+    buildingBaseline,
+    vsAvgSuffix,
+    rising,
+    falling,
+    steady,
+  ];
+
+  /// The tile label for a metric key, so the detail view can be titled with the
+  /// same word the user pressed.
+  static String labelFor(String metricKey) => switch (metricKey) {
+    kSleepMetricKey => sleepLabel,
+    kGutMetricKey => gutLabel,
+    kHrvMetricKey => hrvLabel,
+    kStepsMetricKey => movementLabel,
+    _ => metricDisplayLabel(metricKey),
+  };
+}
+
 class _SignalsGrid extends StatelessWidget {
   final Map<String, BaselineSnapshot?> baselines;
   final Map<String, List<MetricDailyPoint>> series;
   const _SignalsGrid({required this.baselines, required this.series});
 
-  Color _trendColor(BaselineTrend? t) => switch (t) {
+  /// Colour of the delta line, taken from the delta the tile actually SHOWS.
+  ///
+  /// This used to be the baseline's own `trend` field, which meant a tile could
+  /// render "+18m vs avg" in the falling colour — the number and its colour
+  /// disagreeing. Gut comfort keeps the trend colouring because its delta line
+  /// IS the trend word (Rising/Falling/Steady), so the two agree by construction.
+  Color _deltaColor(
+    String metricKey,
+    List<MetricDailyPoint> pts,
+    BaselineSnapshot? b,
+  ) {
+    if (pts.isEmpty || b?.mean == null) return OurobionColors.onSurfaceVariant;
+    if (metricKey == kGutMetricKey) {
+      return switch (b!.trend) {
         BaselineTrend.rising => OurobionColors.deltaPositive,
         BaselineTrend.falling => OurobionColors.deltaNegative,
+        // A steady signal gets the neutral colour: the design tints "Steady"
+        // green (design line 219), but green would read as movement in a good
+        // direction where there was none.
         _ => OurobionColors.onSurfaceVariant,
       };
-
-  String _deltaLabel(String metricKey, List<MetricDailyPoint> pts, BaselineSnapshot? b) {
-    if (pts.isEmpty) return 'No data yet';
-    if (b?.mean == null) return 'Building baseline';
-    final delta = pts.last.value - b!.mean!;
-    switch (metricKey) {
-      case _kSleepMetric:
-        final m = delta.round();
-        return '${m >= 0 ? '+' : ''}${m}m vs avg';
-      case _kHrvMetric:
-        final m = delta.round();
-        return '${m >= 0 ? '+' : ''}$m ms vs avg';
-      case _kStepsMetric:
-        final m = delta.round();
-        return '${m >= 0 ? '+' : ''}$m vs avg';
-      case _kGutMetric:
-        return switch (b.trend) {
-          BaselineTrend.rising => 'Rising',
-          BaselineTrend.falling => 'Falling',
-          _ => 'Steady',
-        };
-      default:
-        return '';
     }
+    final delta = pts.last.value - b!.mean!;
+    if (delta > 0) return OurobionColors.deltaPositive;
+    if (delta < 0) return OurobionColors.deltaNegative;
+    return OurobionColors.onSurfaceVariant;
   }
 
-  String _formatSleep(double minutes) {
-    final h = minutes ~/ 60;
-    final m = (minutes % 60).round();
-    return '${h}h ${m}m';
+  String _deltaLabel(String metricKey, List<MetricDailyPoint> pts, BaselineSnapshot? b) {
+    if (pts.isEmpty) return SignalsCopy.noData;
+    if (b?.mean == null) return SignalsCopy.buildingBaseline;
+    final delta = pts.last.value - b!.mean!;
+    if (metricKey == kGutMetricKey) {
+      return switch (b.trend) {
+        BaselineTrend.rising => SignalsCopy.rising,
+        BaselineTrend.falling => SignalsCopy.falling,
+        _ => SignalsCopy.steady,
+      };
+    }
+    final formatted = formatMetricDelta(metricKey, delta);
+    return formatted == null ? '' : '$formatted${SignalsCopy.vsAvgSuffix}';
+  }
+
+  /// The tile press destination (design line 210 makes every tile pressable;
+  /// nothing was wired to it). Pushes on the root navigator so the detail view
+  /// covers the bottom bar and pops back to Home.
+  void _open(BuildContext context, String metricKey) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MetricDetailScreen(
+          metricKey: metricKey,
+          title: SignalsCopy.labelFor(metricKey),
+        ),
+      ),
+    );
+  }
+
+  /// One tile, wired to its own detail view. Every tile gets an [onTap] — a tile
+  /// that looks pressable and is not was the defect this replaces.
+  Widget _tile(
+    BuildContext context,
+    String metricKey, {
+    MetricSparklineStyle style = MetricSparklineStyle.line,
+  }) {
+    final pts = series[metricKey] ?? const <MetricDailyPoint>[];
+    final baseline = baselines[metricKey];
+    final hasValue = pts.isNotEmpty;
+    return MetricTile(
+      label: SignalsCopy.labelFor(metricKey),
+      value: hasValue
+          ? formatMetricValue(metricKey, pts.last.value)
+          : SignalsCopy.noValue,
+      valueSuffix: hasValue ? metricValueSuffix(metricKey) : null,
+      deltaLabel: _deltaLabel(metricKey, pts, baseline),
+      deltaColor: _deltaColor(metricKey, pts, baseline),
+      series: pts,
+      style: style,
+      onTap: () => _open(context, metricKey),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final sleep = series[_kSleepMetric] ?? const [];
-    final gut = series[_kGutMetric] ?? const [];
-    final hrv = series[_kHrvMetric] ?? const [];
-    final steps = series[_kStepsMetric] ?? const [];
-
     return GridView(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -843,7 +932,7 @@ class _SignalsGrid extends StatelessWidget {
       // so the row height shrank with the screen and the column overflowed —
       // 9.5px on a 1080x2340 device, and worse the narrower the phone. Pin the
       // main-axis extent instead so the cell matches the content it holds and is
-      // independent of device width. `_kMetricTileExtent` is the measured
+      // independent of device width. `kMetricTileExtent` is the measured
       // content height plus headroom; the tile's visual is Flexible, so a large
       // text scale compresses that rather than overflowing.
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -853,37 +942,10 @@ class _SignalsGrid extends StatelessWidget {
         mainAxisExtent: kMetricTileExtent,
       ),
       children: [
-        MetricTile(
-          label: 'Sleep',
-          value: sleep.isNotEmpty ? _formatSleep(sleep.last.value) : '—',
-          deltaLabel: _deltaLabel(_kSleepMetric, sleep, baselines[_kSleepMetric]),
-          deltaColor: _trendColor(baselines[_kSleepMetric]?.trend),
-          series: sleep,
-        ),
-        MetricTile(
-          label: 'Gut comfort',
-          value: gut.isNotEmpty ? gut.last.value.toStringAsFixed(1) : '—',
-          valueSuffix: gut.isNotEmpty ? '/5' : null,
-          deltaLabel: _deltaLabel(_kGutMetric, gut, baselines[_kGutMetric]),
-          deltaColor: _trendColor(baselines[_kGutMetric]?.trend),
-          series: gut,
-          style: MetricSparklineStyle.bars,
-        ),
-        MetricTile(
-          label: 'HRV',
-          value: hrv.isNotEmpty ? hrv.last.value.round().toString() : '—',
-          valueSuffix: hrv.isNotEmpty ? 'ms' : null,
-          deltaLabel: _deltaLabel(_kHrvMetric, hrv, baselines[_kHrvMetric]),
-          deltaColor: _trendColor(baselines[_kHrvMetric]?.trend),
-          series: hrv,
-        ),
-        MetricTile(
-          label: 'Movement',
-          value: steps.isNotEmpty ? steps.last.value.round().toString() : '—',
-          deltaLabel: _deltaLabel(_kStepsMetric, steps, baselines[_kStepsMetric]),
-          deltaColor: _trendColor(baselines[_kStepsMetric]?.trend),
-          series: steps,
-        ),
+        _tile(context, kSleepMetricKey),
+        _tile(context, kGutMetricKey, style: MetricSparklineStyle.bars),
+        _tile(context, kHrvMetricKey),
+        _tile(context, kStepsMetricKey),
       ],
     );
   }
