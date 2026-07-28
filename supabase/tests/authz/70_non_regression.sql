@@ -213,6 +213,30 @@ select authz_probe.expect_value('objects.authenticated_can_execute_nao_role',
 select authz_probe.expect_value('objects.authenticated_can_execute_nao_authorize',
   'select has_function_privilege(''authenticated'', ''public.nao_authorize(text)'',
                                  ''EXECUTE'')::text', 'true');
+select authz_probe.expect_value('objects.anon_cannot_execute_nao_record_control_event',
+  'select has_function_privilege(
+     ''anon'', ''public.nao_record_control_event(uuid,text,text,text,jsonb,text)'', ''EXECUTE''
+   )::text', 'false');
+select authz_probe.expect_value('objects.anon_cannot_execute_nao_apply_control_mutation',
+  'select has_function_privilege(
+     ''anon'', ''public.nao_apply_control_mutation(uuid,text,text,jsonb,jsonb)'', ''EXECUTE''
+   )::text', 'false');
+select authz_probe.expect_value('objects.service_role_cannot_execute_nao_record_control_event',
+  'select has_function_privilege(
+     ''service_role'', ''public.nao_record_control_event(uuid,text,text,text,jsonb,text)'', ''EXECUTE''
+   )::text', 'false');
+select authz_probe.expect_value('objects.service_role_cannot_execute_nao_apply_control_mutation',
+  'select has_function_privilege(
+     ''service_role'', ''public.nao_apply_control_mutation(uuid,text,text,jsonb,jsonb)'', ''EXECUTE''
+   )::text', 'false');
+select authz_probe.expect_value('objects.authenticated_can_execute_nao_record_control_event',
+  'select has_function_privilege(
+     ''authenticated'', ''public.nao_record_control_event(uuid,text,text,text,jsonb,text)'', ''EXECUTE''
+   )::text', 'true');
+select authz_probe.expect_value('objects.authenticated_can_execute_nao_apply_control_mutation',
+  'select has_function_privilege(
+     ''authenticated'', ''public.nao_apply_control_mutation(uuid,text,text,jsonb,jsonb)'', ''EXECUTE''
+   )::text', 'true');
 
 -- nao_members: SELECT-only for authenticated, at BOTH layers (no write policy AND no write grant).
 select authz_probe.expect_value('objects.nao_members_has_no_write_policy',
