@@ -280,15 +280,50 @@ $$;
 --
 -- Returns whether it actually observed that state, so a timeout is recorded as evidence and
 -- asserted on, rather than silently degrading the probe into a sleep.
+--
+-- NARROWED (independent re-review finding N2): the original predicate — `exists (select 1 from
+-- pg_locks where not granted and pid <> pg_backend_pid())` — is "some ungranted lock, held by ANY
+-- backend, ANYWHERE in the cluster". That returns true from unrelated write-write contention between
+-- two OTHER sessions, with NO loader running at all — reproduced by the reviewer against
+-- `authz_probe.u3_capture` itself. It is therefore not specific to "the loader is blocked on B".
+--
+-- Narrowed to: a lock that is provably waiting on B's OWN in-flight write. When the loader's insert
+-- blocks on B's uncommitted row (the unique index conflict), internally it does so by waiting for B's
+-- transaction to finish — a ShareLock keyed on B's transaction id, which conflicts with the
+-- ExclusiveLock every backend implicitly holds on its own (assigned) transaction id the moment it
+-- first modifies a row. So "some OTHER backend holds an ungranted `transactionid` lock keyed to MY
+-- OWN xid" can only be produced by something waiting on ME specifically — nothing else in this probe
+-- takes or waits on B's xid, and no third party's unrelated contention can ever be keyed to it.
 create or replace function authz_probe.u3_wait_for_a_blocked_backend(p_seconds numeric default 20)
 returns boolean
 language plpgsql
 as $$
 declare
   v_deadline timestamptz := clock_timestamp() + (p_seconds::text || ' seconds')::interval;
+  v_my_xid   xid;
 begin
+  -- Our own transaction id, as the ExclusiveLock this backend holds on it (granted = true). Absent
+  -- until this backend has actually modified a row — which, by the time 32_toctou_b.sql calls this
+  -- function, it already has (the real gut row insert immediately above).
+  select l.transactionid into v_my_xid
+    from pg_locks l
+   where l.locktype = 'transactionid'
+     and l.pid = pg_backend_pid()
+     and l.granted;
+
+  if v_my_xid is null then
+    -- Nothing for another backend to wait on yet, so there is nothing to observe.
+    return false;
+  end if;
+
   loop
-    if exists (select 1 from pg_locks l where not l.granted and l.pid <> pg_backend_pid()) then
+    if exists (
+      select 1 from pg_locks l
+       where l.locktype = 'transactionid'
+         and l.transactionid = v_my_xid
+         and not l.granted
+         and l.pid <> pg_backend_pid()
+    ) then
       return true;
     end if;
     if clock_timestamp() > v_deadline then

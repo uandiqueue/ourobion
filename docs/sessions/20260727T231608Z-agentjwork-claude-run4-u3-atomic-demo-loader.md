@@ -151,8 +151,44 @@ guarantee empirically:
   instead of a retryable 503, the registry drift test hardcoded 3 markers against 4 seeded, and the
   relay's watermark path was dead code — now wired.
 
-**F6, F8, F12–F15 remain unfixed** and are recorded in the review. F6 (residue anchored to the latest
-run rather than the writing run) is less consequential now that the F1 overwrite cannot happen.
+**F6, F8, F12–F15 remain unfixed** and are recorded in the review.
+
+### The re-review returned GO, and found two regressions the fixes themselves introduced
+
+Both were closed rather than documented, because this branch is meant to be picked up by someone else.
+
+- **N1 — residue became a false positive that a documented repair procedure would act on.** Making the
+  verdict run-scoped (the F3 fix) left residue detection *date*-unscoped, so a **later** legitimate run's
+  rows were reported as residue of an earlier one. Harmless to read, dangerous to act on: the repair
+  table instructs feeding residue dates to the release RPC, which would have deleted a newer run's good
+  data. Fixed by recording each run's own date footprint and restricting residue to it. The restriction
+  is applied **only** to the run-scoped question — date-scoping the target-scoped form regressed the
+  existing residue group by going blind to residue an earlier run left behind after an intervening
+  release. That regression surfaced during testing, which is why the fix is conditional rather than
+  universal.
+- **N2 — the probe commissioned to prove the F1 fix proved less than its assertion names claimed.**
+  `u3_wait_for_a_blocked_backend()` matched *any* ungranted lock from *any* backend; the reviewer made it
+  fire with **no loader running at all**. And because the pre-scan and write-time refusals are
+  deliberately indistinguishable to a caller, the twelve `toctou` assertions could not tell which
+  mechanism fired — so a reverted `WHERE` predicate could have passed under lucky scheduling. Narrowed
+  the detector to an ungranted `transactionid` lock keyed to the prober's own transaction, and added
+  harness-only `RAISE DEBUG` markers (below default `client_min_messages`, invisible to any API caller)
+  naming the refusal path. **The decisive regression now exists: reverting the write-time `WHERE` under
+  fault injection fails 11 assertions, including the real row being overwritten.** Caller-visible
+  behaviour is byte-identical — same SQLSTATE, message and detail.
+
+### The pattern this unit kept reproducing
+
+Seven times in this run a test reported green because its *name* asserted more than its *body*
+verified: U1's guards passing while their own files were untracked; a conformance test excluding the one
+unguarded route; a redaction test asserting an invented response shape; a fold-drift test matching a SQL
+`--` comment instead of the executable expression; a worst-wins test re-recording a *different* stage;
+184 conflict assertions whose fixtures all established state in the order the code expects; and a race
+probe that could pass without the race. The failure mode is not missing tests — it is tests whose
+fixtures arrange the world the way the implementation prefers.
+
+Final counts after both remediation rounds: **228/228** U3 assertions (24 groups), **443/443** U2
+regression with `post/pc` 48/48, **261** nao, **41** verifier, `tsc` clean.
 
 After remediation: **223/223** U3 assertions (was 184; none removed or weakened), **443/443** U2
 regression with `post/pc` 48/48, **261** nao tests, **41** verifier tests, `attest` PASS, `config` PASS,

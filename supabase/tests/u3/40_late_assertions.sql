@@ -140,6 +140,19 @@ select authz_probe.expect_value('u3.toctou.the_refusal_is_the_conflict_refusal_v
   'select value->>''message'' from authz_probe.u3_capture where key = ''toctou.a''',
   'nao: loader refuses to overwrite rows that are not registered simulation');
 
+-- ── WHICH enforcement point actually fired (re-review finding N2b) ─────────────────────────────
+-- The refusal above is byte-identical whether the pre-scan or the write-time guard caught it, by
+-- design, so the assertions above cannot tell them apart. run.mjs recorded a harness-only signal
+-- (RAISE DEBUG, invisible to any real caller) read off A's own stderr. This is what proves the
+-- interleaving actually exercised the WRITE-TIME guard — the thing the F1 fix is supposed to be —
+-- rather than merely getting lucky with a pre-scan that happened to also refuse.
+select authz_probe.expect_value('u3.toctou.the_write_time_guard_fired_on_the_gut_table',
+  'select value->>''writeTimeGut'' from authz_probe.u3_capture where key = ''toctou.refusal_path''',
+  'true');
+select authz_probe.expect_value('u3.toctou.the_prescan_did_not_also_fire',
+  'select value->>''prescan'' from authz_probe.u3_capture where key = ''toctou.refusal_path''',
+  'false');
+
 -- ── No mutation whatsoever ──────────────────────────────────────────────────────────────────────
 
 select authz_probe.expect_value('u3.toctou.the_real_row_is_byte_identical',

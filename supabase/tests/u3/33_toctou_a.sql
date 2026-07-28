@@ -22,6 +22,12 @@
 
 set authz_probe.phase = 'u3';
 
+-- Harness-only (re-review finding N2): opts THIS session in to the RAISE DEBUG markers the apply
+-- function emits at each refusal site, so run.mjs can tell from this session's stderr whether the
+-- pre-scan or the write-time guard is what actually refused. Below the ordinary client default
+-- ('notice'), so no real API caller is affected by the migration carrying these markers.
+set client_min_messages = debug1;
+
 select pg_sleep(1.5);
 
 begin;

@@ -251,10 +251,31 @@ try {
     psqlFileAsync('/harness/u3/33_toctou_a.sql'),
   ]);
   for (const [label, r] of [['B (the target)', tb], ['A (the loader)', ta]]) {
-    const noise = r.stderr.split('\n').filter((l) => l.trim() && !/NOTICE:/.test(l)).join('\n');
+    // A opts its session into `client_min_messages = debug1` (N2b), which surfaces Postgres's own
+    // internal DEBUG chatter (catalog cache, query text echoes) alongside our one deliberate marker.
+    // None of it is an error; strip it all from the printed noise. The marker itself is still parsed
+    // from the RAW r.stderr below, unaffected by this print-only filter.
+    const noise = r.stderr.split('\n')
+      .filter((l) => l.trim()
+        && !/\b(NOTICE|DEBUG|LINE \d+|QUERY|CONTEXT|HINT|DETAIL):/i.test(l))
+      .join('\n');
     process.stdout.write(`   caller ${label}: exit ${r.status}${noise ? `\n${noise}` : ''}\n`);
     if (r.status !== 0) throw new Error(`toctou caller ${label} failed (exit ${r.status})`);
   }
+
+  // Which refusal site actually fired (re-review finding N2b). The pre-scan and the write-time guard
+  // raise the byte-identical SQLSTATE/message/detail to any caller on purpose (§B.3), so this harness
+  // cannot tell them apart from A's returned document — only from the RAISE DEBUG marker on A's own
+  // stderr, opted into by 33_toctou_a.sql's `set client_min_messages = debug1`. Recorded into
+  // authz_probe.u3_capture so 40_late_assertions.sql can assert on it like every other probe result.
+  const sawWriteTimeGut = /nao_loader_refusal_path=writetime table=gut/.test(ta.stderr);
+  const sawPrescan = /nao_loader_refusal_path=prescan/.test(ta.stderr);
+  psqlCommand(`insert into authz_probe.u3_capture (key, value)
+    values ('toctou.refusal_path', jsonb_build_object(
+      'writeTimeGut', ${sawWriteTimeGut}, 'prescan', ${sawPrescan}))
+    on conflict (key) do update set value = excluded.value;`);
+  process.stdout.write(`   refusal path observed on A's stderr: `
+    + `writeTimeGut=${sawWriteTimeGut} prescan=${sawPrescan}\n`);
 
   step('top-level abort probe — a forced second-table failure with nothing catching it');
   // HARNESS-ONLY, and dropped again below. NOT VALID so the rows already written by earlier sections

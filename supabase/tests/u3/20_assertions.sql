@@ -1173,6 +1173,36 @@ begin;
   select authz_probe.expect_error('u3.runscope.a_key_from_another_target_is_refused',
     'select public.nao_loader_status(''dddddddd-0000-4000-8000-000000000017''::uuid,
                                      ''release-key-0000000001'')', '22023');
+
+  -- ═══════════════════════════════════════════════════════════════════════════════════════════
+  -- N1 (independent re-review finding): run-scoping the VERDICT above (F3) did not, by itself,
+  -- run-scope RESIDUE. Residue was compared against v_run.completed_at with NO date restriction, so
+  -- run B's brand-new, freshly-written days (2026-07-10..13 — never touched by run A, whose own
+  -- footprint is 2026-07-01..04) were reported as run A's residue, purely because they postdate A's
+  -- completed_at. §F's repair table tells an operator to hand residue dates to
+  -- nao_loader_release_simulated_days — which would then delete run B's good data. Residue must be
+  -- scoped to the NAMED run's own written_dates, so it can only ever report a date that run itself
+  -- wrote.
+  -- ═══════════════════════════════════════════════════════════════════════════════════════════
+  select authz_probe.expect_value(
+    'u3.runscope.a_later_legitimate_runs_own_dates_are_never_an_earlier_runs_residue',
+    'select public.nao_loader_status(''dddddddd-0000-4000-8000-000000000017''::uuid,
+                                     ''runscope-a-key-00000001'')->>''residueDateCount''', '0');
+  select authz_probe.expect_value(
+    'u3.runscope.the_residue_array_is_empty_not_merely_the_count',
+    'select public.nao_loader_status(''dddddddd-0000-4000-8000-000000000017''::uuid,
+                                     ''runscope-a-key-00000001'')->>''residueDates''', '[]');
+  -- Directly against the offending dates, so a future re-widening of the predicate cannot pass this
+  -- assertion by coincidence: run B's own dates specifically must not appear in run A's residue list.
+  select authz_probe.expect_value(
+    'u3.runscope.run_bs_own_dates_specifically_do_not_appear_in_run_as_residue',
+    'select (
+       (public.nao_loader_status(''dddddddd-0000-4000-8000-000000000017''::uuid,
+                                  ''runscope-a-key-00000001'')->''residueDates'') ? ''2026-07-10''
+       or
+       (public.nao_loader_status(''dddddddd-0000-4000-8000-000000000017''::uuid,
+                                  ''runscope-a-key-00000001'')->''residueDates'') ? ''2026-07-11''
+     )::text', 'false');
 commit;
 
 -- ═════════════════════════════════════════════════════════════════════════════════════════════

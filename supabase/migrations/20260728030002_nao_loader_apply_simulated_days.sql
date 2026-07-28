@@ -72,6 +72,14 @@
 -- pre-scan REMAINS, as a fast path that gives a better error earlier and covers both tables before
 -- either is touched — but the WHERE predicate is the authority.
 --
+-- The pre-scan and the write-time guard deliberately raise the byte-identical SQLSTATE/message/
+-- detail, so no CALLER can tell which one fired — that is intentional (a caller has no business
+-- knowing which snapshot lost a race). A TEST HARNESS asserting this fix therefore couldn't tell
+-- either, until re-review finding N2: each refusal site now also `raise debug`s a harness-only,
+-- unparseable-by-clients marker (`nao_loader_refusal_path=...`) naming which branch refused. RAISE
+-- DEBUG is below the default client_min_messages ('notice'), so it changes nothing an ordinary API
+-- caller ever sees; only a harness that opts in with `set client_min_messages = debug1` reads it.
+--
 -- ═══════════════════════════════════════════════════════════════════════════════════════════════
 -- ISOLATION LEVEL: THIS FUNCTION ASSUMES READ COMMITTED (the PostgreSQL default)
 -- ═══════════════════════════════════════════════════════════════════════════════════════════════
@@ -250,10 +258,14 @@ begin
 
   -- ── 7 · The run row. `on conflict do nothing` is a race backstop only (the lock already made the
   --        read at 4b authoritative); it matters when two DIFFERENT targets share a request key. ─
+  -- written_dates = v_dates: exactly the dates THIS run's payload names, computed at step 2 above.
+  -- It is what lets nao_loader_status scope residue to this run's own footprint (N1), rather than
+  -- to every registered-simulated row the target holds.
   insert into public.nao_loader_runs
-    (request_key, target_user_id, actor_user_id, origin, plan, watermark_before, status)
-  values (p_request_key, p_target_user_id, auth.uid(), p_origin, p_plan, v_watermark_before,
-          'running')
+    (request_key, target_user_id, actor_user_id, origin, plan, written_dates, watermark_before,
+     status)
+  values (p_request_key, p_target_user_id, auth.uid(), p_origin, p_plan, v_dates,
+          v_watermark_before, 'running')
   on conflict (request_key) do nothing
   returning id into v_run_id;
 
@@ -305,6 +317,16 @@ begin
     -- denial (42501) and a payload error (23514). The nao route maps OU409 → 409. Honest limit
     -- (design §I.5): PostgREST does not know OU409, so a DIRECT PostgREST caller sees 500. No
     -- mutation occurred either way.
+    --
+    -- HARNESS-ONLY DIAGNOSTIC (re-review finding N2): the pre-scan and the write-time guard below
+    -- raise the byte-identical SQLSTATE/message/detail on purpose, so a caller can never tell which
+    -- one fired — that indistinguishability is deliberate (design §B.3). A test harness cannot tell
+    -- either, which matters in a unit with no CI venue: the TOCTOU probe needs to prove it exercised
+    -- the WRITE-TIME guard specifically, not merely a lucky pre-scan. RAISE DEBUG is below the
+    -- default client_min_messages ('notice'), so it never reaches an ordinary API caller and changes
+    -- nothing about the response; a harness that opts in with `set client_min_messages = debug1`
+    -- reads it from the wire, never from a stored/queryable column.
+    raise debug 'nao_loader_refusal_path=prescan target=% key=%', p_target_user_id, p_request_key;
     raise exception 'nao: loader refuses to overwrite rows that are not registered simulation'
       using errcode = 'OU409',
             detail   = format('%s protected date(s)', v_protected);   -- counts, never a date list
@@ -403,6 +425,12 @@ begin
                             where o.origin = g.data_origin
                               and o.revoked_at is null and o.is_simulated));
     if v_skipped > 0 then
+      -- Harness-only diagnostic (N2) — see step 8's comment for why this is safe to add and what it
+      -- proves: THIS branch only runs once the gut upsert already executed and came up short, so
+      -- reaching it means the WRITE-TIME guard (the ON CONFLICT DO UPDATE predicate), not the
+      -- pre-scan, is what is refusing the row.
+      raise debug 'nao_loader_refusal_path=writetime table=gut target=% key=%',
+        p_target_user_id, p_request_key;
       raise exception 'nao: loader refuses to overwrite rows that are not registered simulation'
         using errcode = 'OU409',
               detail   = format('%s protected date(s)', v_skipped);  -- counts, never a date list
@@ -462,6 +490,9 @@ begin
                             where o.origin = w.source
                               and o.revoked_at is null and o.is_simulated));
     if v_skipped > 0 then
+      -- Harness-only diagnostic (N2), same reasoning as the gut branch above.
+      raise debug 'nao_loader_refusal_path=writetime table=wearable target=% key=%',
+        p_target_user_id, p_request_key;
       raise exception 'nao: loader refuses to overwrite rows that are not registered simulation'
         using errcode = 'OU409',
               detail   = format('%s protected date(s)', v_skipped);
@@ -651,11 +682,12 @@ begin
              p_target_user_id::text || chr(31) || clock_timestamp()::text || chr(31)
              || array_to_string(p_dates, ','), 'UTF8')), 'hex'), 1, 40);
 
+  -- written_dates = p_dates: this release's own footprint (N1), same reasoning as the apply path.
   insert into public.nao_loader_runs
-    (request_key, target_user_id, actor_user_id, origin, plan, watermark_before, watermark_after,
-     result, status, completed_at)
+    (request_key, target_user_id, actor_user_id, origin, plan, written_dates, watermark_before,
+     watermark_after, result, status, completed_at)
   values (v_key, p_target_user_id, auth.uid(), 'release:run4-demo',
-          jsonb_build_object('kind', 'release', 'dates', to_jsonb(p_dates)),
+          jsonb_build_object('kind', 'release', 'dates', to_jsonb(p_dates)), p_dates,
           v_watermark_before, v_watermark_after, v_result, 'succeeded', now());
 
   return v_result;

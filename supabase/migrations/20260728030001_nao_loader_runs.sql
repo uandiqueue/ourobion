@@ -42,6 +42,13 @@ create table if not exists public.nao_loader_runs (
   actor_user_id    uuid not null,
   origin           text not null references public.nao_simulation_origins(origin),
   plan             jsonb not null,
+  -- The run's OWN footprint: exactly the dates it wrote (apply) or removed (release). Nothing but
+  -- this migration's two writer RPCs ever populate it, and it is what lets residue detection
+  -- (§6 below) be scoped to "dates THIS run touched" rather than every registered-simulated row for
+  -- the target (independent re-review finding N1: run-scoping the verdict by request_key, without
+  -- also scoping residue by date, let a LATER legitimate run's own freshly-written dates be reported
+  -- as residue of an EARLIER, unrelated run).
+  written_dates    date[] not null default '{}'::date[],
   watermark_before jsonb not null,
   watermark_after  jsonb,
   result           jsonb,
@@ -311,6 +318,24 @@ grant   execute on function public.nao_loader_plan_inputs(uuid) to authenticated
 -- registered simulation but whose row was modified after the run that wrote it, i.e. the Biotope
 -- write-over-a-simulated-date case U3 can detect and repair but not prevent — design §B.5/§I.3).
 --
+-- ── RESIDUE IS SCOPED TO THE RUN'S OWN DATES, FOR THE RUN-SCOPED QUESTION ONLY (re-review finding
+--    N1) ────────────────────────────────────────────────────────────────────────────────────────
+-- Run-scoping the VERDICT by request_key (F3, above) did not, by itself, scope RESIDUE by date: the
+-- original fix compared every registered-simulated row for the TARGET against v_run.completed_at,
+-- so a LATER, entirely legitimate run's own freshly-written days (never touched by the NAMED run)
+-- were reported as that run's residue. §F's repair table tells an operator to hand residue dates to
+-- nao_loader_release_simulated_days — which would then delete the newer run's good data.
+--
+-- The fix (below) restricts residue to `v_run.written_dates` ONLY when p_request_key is given —
+-- i.e. only for "how did MY (possibly non-latest) run go?". The target-scoped question ("what is
+-- this target's state?", p_request_key null) always resolves v_run to the target's LATEST run by
+-- construction, so nothing chronologically after it can leak in from another run — there is no N1
+-- exposure there. Date-scoping THAT branch too would be a regression in the other direction:
+-- consecutive runs for one target legitimately touch different, non-overlapping dates (an apply,
+-- then a release of a subset of it), so reducing "the target's current state" to only the very
+-- latest run's own dates would make the target-scoped view blind to residue an intervening direct
+-- Biotope write left on a date an EARLIER run (still registered-simulated) touched.
+--
 -- ── RUN-SCOPED, NOT MERELY TARGET-SCOPED (independent review finding F3) ─────────────────────────
 -- There are TWO questions here and they need different answers:
 --
@@ -418,10 +443,25 @@ begin
               end;
 
   -- Residue: registered-simulated provenance, but the row moved after the run that wrote it.
+  --
+  -- Date-scoping (N1) applies ONLY to the RUN-SCOPED question (p_request_key given), because that
+  -- is the only case a NAMED run can be a NON-latest run for its target — exactly the interleaving
+  -- N1 reproduced: run A (named by key) queried while run B, chronologically later, has since
+  -- written fresh, unrelated dates. Restricting to v_run.written_dates confines A's own answer to
+  -- A's own footprint.
+  --
+  -- The TARGET-SCOPED question (p_request_key null) already resolves v_run to the target's LATEST
+  -- run by construction, so nothing chronologically after v_run can exist to leak in — there is no
+  -- N1 exposure here. Date-scoping this branch too would be actively wrong: consecutive runs for
+  -- the same target legitimately touch DIFFERENT, non-overlapping dates (an apply, then a release of
+  -- a subset of it), so "the target's current state" cannot be reduced to only the very latest run's
+  -- own dates without going blind to residue that an intervening direct Biotope write left on a date
+  -- an EARLIER run (still registered-simulated) touched.
   select coalesce(array_agg(d order by d), '{}'::date[]) into v_residue from (
     select g.log_date as d
       from public.daily_gut_rows g
      where g.user_id = p_target_user_id
+       and (p_request_key is null or g.log_date = any (v_run.written_dates))
        and g.data_origin is not null
        and exists (select 1 from public.nao_simulation_origins o
                     where o.origin = g.data_origin
@@ -432,6 +472,7 @@ begin
     select w.date
       from public.wearable_daily w
      where w.user_id = p_target_user_id
+       and (p_request_key is null or w.date = any (v_run.written_dates))
        and w.source is not null
        and exists (select 1 from public.nao_simulation_origins o
                     where o.origin = w.source
