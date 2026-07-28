@@ -11,3 +11,5 @@
 export 'impl/insight_service.dart';
 export 'impl/provenance_models.dart';
 export 'impl/provenance_service.dart';
+
+export 'impl/knowledge_base_service.dart';
