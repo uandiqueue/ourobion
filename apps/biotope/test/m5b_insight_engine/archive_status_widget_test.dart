@@ -12,6 +12,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:src/modules/m5a_baselines/impl/metric_series_models.dart';
+import 'package:src/modules/m5a_baselines/impl/metric_series_service.dart';
 import 'package:src/modules/m5b_insight_engine/impl/insight_service.dart';
 import 'package:src/modules/m5b_insight_engine/ui/screens/archive_tab.dart';
 import 'package:src/modules/m5b_insight_engine/ui/screens/insights_tab.dart';
@@ -51,6 +53,30 @@ class _FakeInsightService extends InsightService {
   Future<void> updateStatus(int cardId, InsightStatus status) async {
     statusWrites.add((cardId: cardId, status: status));
   }
+}
+
+/// Companion fake for ArchiveTab's new trends section (issue #200). Always
+/// inert (no metric keys) — these archive-card-focused tests only need the
+/// trend section to render its real "no history yet" state without crashing
+/// on an uninitialised Supabase.instance; series fixtures live in
+/// archive_trends_widget_test.dart instead.
+class _FakeSeriesService extends MetricSeriesService {
+  _FakeSeriesService()
+      : super(SupabaseClient(
+          'http://localhost',
+          'test-key',
+          authOptions: const AuthClientOptions(autoRefreshToken: false),
+        ));
+
+  @override
+  Future<List<String>> getMetricKeys(String userId, {int windowDays = 30}) async => const [];
+
+  @override
+  Future<List<MetricDailyPoint>> getSeries(
+    String userId,
+    String metricKey, {
+    int windowDays = 30,
+  }) async => const [];
 }
 
 InsightCard _card({
@@ -169,7 +195,13 @@ void main() {
         archived: [_card(id: 2, title: 'Saved card', status: InsightStatus.archived)],
       );
       await tester.pumpWidget(
-        MaterialApp(home: ArchiveTab(service: fake, userId: 'u-1')),
+        MaterialApp(
+          home: ArchiveTab(
+            service: fake,
+            seriesService: _FakeSeriesService(),
+            userId: 'u-1',
+          ),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -189,7 +221,13 @@ void main() {
         _card(id: 3, title: 'Legacy save', status: InsightStatus.snoozed),
       ]);
       await tester.pumpWidget(
-        MaterialApp(home: ArchiveTab(service: fake, userId: 'u-1')),
+        MaterialApp(
+          home: ArchiveTab(
+            service: fake,
+            seriesService: _FakeSeriesService(),
+            userId: 'u-1',
+          ),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -200,7 +238,13 @@ void main() {
     testWidgets('empty archive shows the saved-nothing-yet state', (tester) async {
       final fake = _FakeInsightService();
       await tester.pumpWidget(
-        MaterialApp(home: ArchiveTab(service: fake, userId: 'u-1')),
+        MaterialApp(
+          home: ArchiveTab(
+            service: fake,
+            seriesService: _FakeSeriesService(),
+            userId: 'u-1',
+          ),
+        ),
       );
       await tester.pumpAndSettle();
 
