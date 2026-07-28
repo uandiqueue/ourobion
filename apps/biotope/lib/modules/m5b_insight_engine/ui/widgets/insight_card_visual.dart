@@ -75,7 +75,12 @@ abstract final class InsightCardCopy {
   static const allCaughtUpTitle = 'All caught up';
   static const allCaughtUpBody =
       'New cards grow as the knowledge base ingests studies. Check back soon.';
-  static const replayDeck = 'Replay deck';
+  /// The empty-deck action. Named for what it now does: re-read `insight_cards`
+  /// and show whatever is genuinely still `active`. It was 'Replay deck' while
+  /// the action rewound a local index and re-served already-archived/dismissed
+  /// cards as if they were fresh — a label that described a replay because the
+  /// implementation was one.
+  static const replayDeck = 'Check for new cards';
 
   static const all = [
     relationshipCategoryLabel,

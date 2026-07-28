@@ -42,6 +42,13 @@ abstract final class ScanTabCopy {
   static const gapOpenFullLog = 'Open full log';
   static const gapSaveFailed = 'Could not save that answer. Please try again.';
 
+  /// Shown on a card that CANNOT be answered in place (urine colour, stool
+  /// form, mosquito bites). Tapping it pushes the whole [DailyLogScreen], not a
+  /// view of the one metric the card names, so the card says where it goes.
+  /// Deliberately a different string from [gapOpenFullLog]: that one labels the
+  /// inline card's explicit button, this one is a destination note.
+  static const gapOpensFullLog = 'Tap to open the full log';
+
   /// One-line hint above an inline chip row, per answerable metric.
   static const Map<String, String> inlineHints = {
     'outside_meals': 'Meals eaten out today',
@@ -61,6 +68,7 @@ abstract final class ScanTabCopy {
     gapEyebrow,
     gapAnswerHere,
     gapOpenFullLog,
+    gapOpensFullLog,
     gapSaveFailed,
     ...inlineHints.values,
     // The weight sentence is templated, so gate a representative rendering
@@ -172,7 +180,13 @@ class _ScanTabState extends State<ScanTab> with SingleTickerProviderStateMixin {
   /// Full-form route. Still the only path for anything a chip cannot express
   /// (urine colour, stool form, mosquito bites) and always available as an
   /// escape hatch from a chip-answerable card.
-  Future<void> _openGap(String key) async {
+  ///
+  /// It takes no metric key: [DailyLogScreen] has no deep-link or focus seam, so
+  /// a key passed here would be silently discarded — as it was. Rather than
+  /// accept an argument it cannot honour, the destination is stated on the card
+  /// instead ([ScanTabCopy.gapOpensFullLog]). Add the parameter back only
+  /// alongside a real focus target on the form.
+  Future<void> _openGap() async {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const DailyLogScreen()),
     );
@@ -472,7 +486,7 @@ class _ScanTabState extends State<ScanTab> with SingleTickerProviderStateMixin {
                       inlineOptions: kInlineAnswerableOptions[key],
                       saving: _savingKeys.contains(key),
                       onAnswer: (value) => _answerInline(key, value),
-                      onOpenFullLog: () => _openGap(key),
+                      onOpenFullLog: _openGap,
                     ),
                     const SizedBox(height: 11),
                   ],
@@ -803,6 +817,22 @@ class GapCard extends StatelessWidget {
                     color: OurobionColors.onSurfaceVariant,
                   ),
                 ),
+                if (options == null) ...[
+                  // The card names ONE metric but the tap opens the whole form
+                  // — [DailyLogScreen] cannot be focused on a single field. Say
+                  // where the tap goes rather than implying a metric-specific
+                  // destination.
+                  const SizedBox(height: 6),
+                  Text(
+                    ScanTabCopy.gapOpensFullLog,
+                    style: GoogleFonts.manrope(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      height: 1.5,
+                      color: OurobionColors.primary,
+                    ),
+                  ),
+                ],
                 if (options != null) ...[
                   const SizedBox(height: 4),
                   Text(
