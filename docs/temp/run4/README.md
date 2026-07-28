@@ -23,6 +23,7 @@ with no provider calls and O29 deferred.
 | [`next-build-optimizations.md`](./next-build-optimizations.md) | Reviewed scope: corrected preconditions P1–P7, O31–O40, and the five-unit maximum priority tranche |
 | [`pending-build-register.md`](./pending-build-register.md) | Living gap superset promoted from Run 3; O24–O29 are unfinished candidates, not accepted work |
 | [`orchestrator-prompt.md`](./orchestrator-prompt.md) | Governing Run 4 prompt for the active accepted envelope |
+| [`continuation-status.md`](./continuation-status.md) | Exact 2026-07-28 stop-state, branch heads, pending gates, and resume order |
 
 ## Independent confirmation and sign-off
 
