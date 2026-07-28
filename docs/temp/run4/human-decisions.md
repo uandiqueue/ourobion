@@ -1,72 +1,80 @@
 ---
 title: Run 4 Human Decisions
-summary: Decision sheet for the accepted Run 4 envelope and active operating constraints.
+summary: Current human authority for Run 4 branch scope, autonomy, reviewers, local resources, provider exception, UI integration, and prohibited external actions.
 type: decision-sheet
-scope: run4-preflight
-status: draft
+scope: run4
+status: canonical
 updated: 2026-07-28
 ---
 
 # Run 4 Human Decisions
 
-## Recorded 2026-07-27 decisions
+## Branch and autonomy
 
-- BRANCH/base accepted: `dev-phase2-run4` was created at `854aa471970b61afdc59205ded0b1c8a9ab3f270`.
-- U0–U3 are locked. U4 was deferred because no second shared reviewer was available; that historical blocker is resolved for U4 implementation by the named reviewers below.
-- The 115-path / 8,500-added-line cap is accepted for the current lock. A local fixture-backed paper-to-Biotope slice is separately sized and admitted only if it fits.
-- The original Run 4 envelope/bootstrap provenance remains `854aa471970b61afdc59205ded0b1c8a9ab3f270`, and earlier U0 unit base `837b7e690f92dc1669428a2476c9d8d0456020e8` is retained as superseded provenance. For U0 only, the active gate starts at consolidated Run 3/MT3 tip `77c98213e23ad56ae37c86201b39ef4e7543a543` and measures `RUN4_UNIT_BASE_SHA..HEAD` against the same 115 / 8,500 caps. The separately owned model-training files remain untouched; their two existing CI jobs are required gate evidence.
-- P3 model training is paused/excluded: train nothing; MT1–MT5 do not enter product.
-- P5 is local-only with no hosted writes/deploy/key changes. P6 keeps O29 deferred and provider spend at zero.
-- PR #156 must target `dev-phase2-run4` and may merge there, never `dev-phase2`.
+- `dev-phase2-run4` is the sole Run 4 integration branch. It descends from Run 3 through the recorded
+  lineage repair. Never merge Run 4 into `dev-phase2` or `main` from this workflow.
+- The branch intentionally has no protection requirement. The machine `Run 4 Gate` is still required
+  evidence and must fail closed; unprotected does not mean unchecked.
+- Local work may continue without per-step human approval. A reconciled PR may merge into
+  `dev-phase2-run4` when the actual current-head checks are all green and independent review is complete.
+  Never merge red, duplicate, stale-base, or ambiguous work.
+- Keep the primary VS Code checkout fast-forwarded to the latest `dev-phase2-run4` after integration.
 
-## Recorded 2026-07-28 direction
+## Review and unit decisions
 
-- R4-U0 merged via PR #161 at `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`; exact merge-SHA CI run `30285010079` passed 19/19. Historical provenance and U0 gate constants remain unchanged.
-- Jayden reports U1 complete; PR #170 is still draft/open and unmerged at `baab1536`, CLEAN, with 21/21 checks green and GitHub reporting 10 files / +5,060 / -0.
-- R4-U5 / pass-2 is admitted in progress under issue #167, its named branch/worktree, and base `66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`. It remains local-only: no provider calls, hosted writes, shared changes, or `/model-training` work. Its pre-plan measurement was 10 paths / +928 / -29; the U0+U5 pre-plan union was 27 / +2,634 / -126. Human signoff remains pending.
-- U5 canonical DB run `d3c2020a` is complete with one uncertain hold and zero servable edges. Health/insight acceptance remains pending.
+- Jayden and Alton are the named two reviewers for R4-U4 and other Run 4 `shared/` contract changes.
+  P2 is therefore satisfied; U4 is startable. Their approval must be recorded on the actual shared PR.
+- U0 and U2 are merged. Do not rebuild them; reconcile their tracking and pending corrections.
+- U1 must reconcile #170 with its stacked security remediation #180. Do not merge #170 alone.
+- U2 corrections #185 and #186 must be combined and conflict-reviewed rather than landed independently.
+- U3 #184 is built but not integrated. Preserve its raw-truth and U2 authorization invariants.
+- U5 #176 and provider evidence #190 are built but unmerged; sentence-level B-PL22 remains unfinished.
+- The canonical full UI candidate is PR #191. It includes PR #175; do not merge both. The full UI should
+  replace the current UI except where final system/data shapes require an explicit reconciled adaptation.
+- The owner directed that the full UI must not be trimmed merely to fit the original product-unit cap.
+  Reconcile that exception transparently in the envelope and machine gate; do not disable the gate.
+- U6 metrics are not implicitly admitted by this decision sheet.
 
-## U5 sentence-provenance planning record
+## Local environment
 
-Inside existing R4-U5/B-PL22 only, planning is **ADMITTED** while implementation is **SPLIT/DEFERRED**.
-Historical pre-overlay combined product snapshot `f2f2dac` from base `77c982` includes U1 `baab1536` and
-U5 `cdc16f9`, excludes MT4 paths/session, and measures 38 / +8,002 / -162, leaving 77 / +498. The later
-final pre-commit overlay (U5 docs + harness script + 44-line session) was independently audited at 40 /
-+8,156 / -195, leaving 75 / +344. U1 fits. U2/U3
-expected additions and the minimal sentence slice (six touched, two reused, four new, ~+1,900) do not
-fit and are cap-deferred pending an explicit later envelope decision. Exact pre-merge remeasurement is
-outside the snapshot; remeasure before merge. No cap expansion is authorized.
-Persisted/served/UI scope (reserve 30 / ~4,500) is
-P2-blocked. Future local artifacts must be versioned StructuredPaper/JATS-or-frozen-GROBID sentence,
-citation/root and deterministic trace gates; frozen/mock LlmRouter adapters visibly emit `INTERIM:`
-metadata but never decide serving. Separately, provider/model execution remains O29-deferred; no training/runtime
-import is authorized. This is neither implementation nor acceptance.
+- Local Supabase reset is approved for disposable test data.
+- The connected physical Android phone may be installed to, launched, and driven for UI/accessibility
+  verification. Keep it unlocked/available when a build is running; never touch personal or hosted data.
+- Local nao, local Supabase, local Edge Functions, migrations, seeders, and full local harnesses are
+  authorized.
+- UI work is owned by the canonical UI branch; other units avoid independent redesign and reconcile only
+  data-shape/provenance compatibility.
 
-## Active operating posture
+## Provider decision
 
-P1 is an accepted override: `dev-phase2-run4` intentionally has no branch protection, and no ADMIN or settings action is requested. `Run 4 Gate` provides CI evidence only. It must be evaluated on the exact current SHA; it does not imply GitHub branch-setting enforcement.
+- Issue #189 was a bounded local exception to the earlier zero-provider-call posture:
+  - OpenAI: main paper-synthesis provider, SGD 20 ceiling.
+  - Anthropic: verifier only, SGD 2 ceiling; no extra roles.
+- The test is complete. It used OpenAI over 12 selected evidence passages after full local extraction,
+  and one official Anthropic verifier call. The real edge remained held for zero independent sources.
+- Locally reconstructed total including superseded calls: OpenAI about SGD 0.0648; Anthropic about
+  SGD 0.1340. Provider billing is authoritative.
+- This does not generally unblock O29 or authorize further provider spend. A new live call needs a new
+  explicit role/budget decision.
+- Full evidence, actual spend, and fail-closed results are recorded in
+  [`provider-e2e-status.md`](./provider-e2e-status.md). The checked-in router config was not silently
+  changed for this test; it used an isolated in-memory config, and durable reconciliation remains
+  pending.
 
-Before admitting the additional local fixture-backed paper-to-Biotope slice, size it separately against the accepted cap.
+## Model training
 
-Alton and Jayden are the named reviewers and both approve unblocking **R4-U4 implementation**. This does not waive the two-reviewer rule: any U4 shared-contract PR still requires both actual reviews before merge. Current cap admission fails (+344 remains versus U4 low +1,600), so U4 is NO-GO/pending under this envelope; no U6 authority follows.
+- Do not train anything in Run 4. Do not touch `model-training/` or `docs/temp/model-training/`.
+- Historical model-training bundles are already present on `dev-phase2-run4`; they remain separate,
+  non-serving, and must not become a runtime dependency.
 
-Not authorised: settings changes, hosted/provider calls, hosted Supabase, Cloudflare/R2 writes, deployment, key mutation/revocation, changes to PR #144, or a merge to `dev-phase2` or `main`. Run 4 product work is locally authorized within the locked envelope. All Run 4 issue, branch, PR, and merge operations affect `dev-phase2-run4` only. U0 is complete through PR #161 at `66bfde5`; exact merge-SHA CI run `30285010079` passed 19/19.
+## External actions not authorized
 
-Name-only local credentials: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `OPENALEX_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and Nao/Biotope public Supabase variables. No values belong here. Local Nao uses process-scoped local Supabase URL/anon/service-role values, never hosted file defaults. Android adb timed out; independent connection state is unverified.
+- Hosted Supabase writes or demo-database promotion.
+- Cloudflare/R2 writes, deployment, production traffic, hosting changes, or key rotation/mutation.
+- Model promotion or serving.
+- Scientific-validation, diagnostic, or production-readiness claims.
+- Merge into `dev-phase2` or `main`.
 
-O29 remains deferred: zero provider calls. U0 is complete with PR #161 exact merge-SHA CI 19/19. U1 is complete externally but PR #170 is draft/open and unmerged. U5 canonical DB load is complete; health/insight remains pending.
-
-## 2026-07-28 bounded provider-test exception
-
-For issue #189 only, the user explicitly authorised local provider calls with ceilings of **SGD 20
-OpenAI** and **SGD 2 Anthropic**, and clarified provider ownership: **OpenAI is the main paper driver;
-Anthropic is verifier-only and must not accumulate other roles**. The complete paper was extracted
-locally, but the current synthesis runtime sent OpenAI 12 selected passages rather than the complete
-text. This supersedes the zero-call
-posture only for the recorded test. It does not unblock O29 generally and does not authorise hosted DB
-writes, deployment, training, model promotion, credential mutation or UI reconciliation.
-
-The completed evidence and actual spend are recorded in
-[`provider-e2e-status.md`](./provider-e2e-status.md). The checked-in router still conflicts with this
-ownership and was not silently changed; the test used an isolated in-memory config and records that
-durable reconciliation as pending.
+Name-only credentials may be reused only for their approved local task and never recorded:
+`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
+`R2_BUCKET`, `OPENALEX_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and Nao/Biotope public Supabase variables.

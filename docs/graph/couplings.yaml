@@ -287,3 +287,23 @@ couplings:
     guard: apps/biotope/test/guards/metrics_registry_dqs_test.dart
     status: active
     phase: P2
+
+  # ─── Insight-card status (four representations, nothing imports across them) ───────────────────
+
+  - id: insight-card-status-four-way-parity
+    from: supabase/migrations (insight_cards status CHECK) + shared/types/index.ts (status union)
+    to: >
+      apps/biotope/lib/modules/m5b_insight_engine/impl/insight_service.dart (InsightStatus enum) +
+      supabase/functions/generate-insights/index.ts (USER_HELD_STATUSES)
+    why: >
+      An insight card's status exists in FOUR places with no import linking any of them. Two of the
+      four fail SILENTLY and destructively on drift, which is why a guard is the only protection.
+      A status missing from USER_HELD_STATUSES means the nightly regeneration re-upserts
+      status:'active' over the user's own choice, so every saved or snoozed card quietly reverts —
+      exactly how adding 'archived' could have shipped broken. A missing Dart _parseStatus arm is
+      silent too: it falls through to 'active'. The guard parses all four from real source and
+      asserts set equality, so no representation can be extended on its own. Adding a status is a
+      shared/ contract change and therefore needs two reviewers (docs/memory/0002).
+    guard: apps/biotope/test/m5b_insight_engine/insight_status_contract_test.dart
+    status: active
+    phase: P2

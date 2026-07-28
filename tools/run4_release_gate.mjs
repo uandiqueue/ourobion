@@ -20,10 +20,39 @@ export function hashTextEvidence(value) {
   return sha(text.replaceAll('\r\n', '\n'));
 }
 
-// This is deliberately the U0 unit boundary, not the original Run 4 envelope/bootstrap SHA.
-// Consolidated Run 3/MT3 history landed before this U0 reconciliation and is excluded only by
-// selecting the exact post-consolidation integration tip as the unit's explicit starting point.
-export const RUN4_UNIT_BASE_SHA = '77c98213e23ad56ae37c86201b39ef4e7543a543';
+// This is deliberately the CURRENT unit boundary, not the original Run 4 envelope/bootstrap SHA.
+// Consolidated Run 3/MT3 history landed before the U0 reconciliation and was excluded by selecting
+// the exact post-consolidation integration tip as that unit's explicit starting point.
+//
+// ADVANCE THIS PER UNIT. run-envelope.json accepts the caps for `RUN4_UNIT_BASE_SHA..HEAD` ONLY,
+// and orchestration-log.md recorded the previous value as "ACCEPTED for U0 only" — the caps are a
+// per-unit landing budget, never a whole-run total. Freezing one SHA across the run charges every
+// later unit for everything that landed on the integration branch after it. That is not theoretical:
+// R4-U1 (PR #170) failed with `landing delta has 12957 added lines; cap is 8500` because the
+// model-training MT4 merge (PR #169) had advanced the base and alone consumed 7,897 of the 8,500
+// lines, leaving 603 for any unit. The same class of failure is recorded for Run 3 in
+// docs/temp/run4/README.md ("MT0 added 59 files / 5,362 insertions after the candidate baseline and
+// broke U0's evidence and mergeability").
+//
+// So: at the start of each unit, set this to that unit's exact base SHA and re-record the deploy
+// attestation (`record-attestation`), which binds these same three constants at :577. The caps
+// themselves (115 / 8,500) are unchanged and still fail closed.
+//
+// Superseded values, retained as provenance:
+//   837b7e690f92dc1669428a2476c9d8d0456020e8  (earliest U0 unit base)
+//   77c98213e23ad56ae37c86201b39ef4e7543a543  (U0 unit base — consolidated Run 3/MT3 tip)
+//   c558c04f1b661a59c8987c96770768eeea46e0cc  (U0 post-reconciliation base; ACCEPTED for U0 only)
+//   ff0546434f081cadc3e5683217d484f250c19139  (R4-U7 canonical-UI base; ACCEPTED for U7/U8 only)
+//
+// The U7 base worked exactly as intended and is now spent. Against it the integration branch
+// measures 60 paths / 7,981 added lines — the UI unit (#191) and the design alignment (#202) both
+// landed there — leaving roughly 55 paths and 519 lines. That is not a budget any real unit fits
+// in, and the shortfall is entirely already-merged work, not the next unit's.
+//
+// Current value is the tip after #191 and #202 merged: the base for the Archive-trends (#200) and
+// Scan-motion (#201) units. Caps unchanged at 115 / 8,500 and still failing closed; only the
+// per-unit starting point moves.
+export const RUN4_UNIT_BASE_SHA = '547280f69fe37fe1c7271ea126002f9ffaadafb9';
 export const RUN4_MAX_CHANGED_PATHS = 115;
 export const RUN4_MAX_ADDED_LINES = 8500;
 export const RUN4_FUNCTIONS = Object.freeze([
@@ -146,7 +175,7 @@ function exactRun(job, jobName, stepName, command, options) {
 
 const REQUIRED_JOB_STEP_SETS = Object.freeze({
   context: ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Node:actions/setup-node@v4', 'run:Context check', 'run:Human graph view — renderer tests and single-view invariant'],
-  'run4-release': ['uses:<unnamed>:actions/checkout@v4', 'uses:<unnamed>:actions/setup-node@v4', 'uses:<unnamed>:denoland/setup-deno@v2', 'run:Install release-gate dependencies', 'run:Assert exact landing SHA and U0 unit base', 'run:Verify parsed function and workflow invariants', 'run:Recompute frozen graphs and verify local-only runtime attestation'],
+  'run4-release': ['uses:<unnamed>:actions/checkout@v4', 'uses:<unnamed>:actions/setup-node@v4', 'uses:<unnamed>:denoland/setup-deno@v2', 'run:Install release-gate dependencies', 'run:Assert exact landing SHA and current unit base', 'run:Verify parsed function and workflow invariants', 'run:Recompute frozen graphs and verify local-only runtime attestation'],
   flutter: ['uses:<unnamed>:actions/checkout@v4', 'uses:Setup Flutter:subosito/flutter-action@v2', 'run:Create public env file', 'run:Install dependencies', 'run:Analyze', 'run:Test'],
   typescript: ['uses:<unnamed>:actions/checkout@v4', 'uses:Setup Node:actions/setup-node@v4', 'run:Install dependencies', 'run:Type check shared types'],
   'node-tools': ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Node:actions/setup-node@v4', 'run:Install shared contract dependencies', 'run:Install dependencies', 'run:Typecheck', 'run:Test', 'run:Drift check'],
@@ -204,7 +233,7 @@ const REQUIRED_JOB_ENVS = Object.freeze({
   'migrations-apply': Object.freeze({ PGHOST: 'localhost', PGUSER: 'postgres', PGDATABASE: 'postgres', PGPASSWORD: 'postgres' }),
 });
 const REQUIRED_STEP_ENVS = Object.freeze({
-  'run4-release:Assert exact landing SHA and U0 unit base': Object.freeze({ RUN4_UNIT_BASE_SHA, RUN4_MAX_CHANGED_PATHS, RUN4_MAX_ADDED_LINES }),
+  'run4-release:Assert exact landing SHA and current unit base': Object.freeze({ RUN4_UNIT_BASE_SHA, RUN4_MAX_CHANGED_PATHS, RUN4_MAX_ADDED_LINES }),
   'run4-gate:Fail unless every required dependency succeeded': Object.freeze({ NEEDS_JSON: '${{ toJson(needs) }}' }),
   'model-training-core:Unit tests (stdlib unittest, zero installs)': Object.freeze({ PYTHONPATH: 'src' }),
   'model-training-core:Config validation (dry-run resolves the fixture job without executing it)': Object.freeze({ PYTHONPATH: 'src' }),
@@ -284,7 +313,7 @@ export function validateRun4Workflow(workflowText) {
   if (release.if !== RUN4_EVENT_SCOPE) fail('run4-release is not scoped exactly to dev-phase2-run4 events');
   validateCheckout(release, 'run4-release');
   if (exactStep(release, 'Install release-gate dependencies').run !== 'npm ci') fail('run4-release must install with exact npm ci');
-  const landing = exactStep(release, 'Assert exact landing SHA and U0 unit base');
+  const landing = exactStep(release, 'Assert exact landing SHA and current unit base');
   if (landing.env?.RUN4_UNIT_BASE_SHA !== RUN4_UNIT_BASE_SHA || Number(landing.env?.RUN4_MAX_CHANGED_PATHS) !== RUN4_MAX_CHANGED_PATHS || Number(landing.env?.RUN4_MAX_ADDED_LINES) !== RUN4_MAX_ADDED_LINES) fail('run4-release landing constants drifted');
   const landingLines = String(landing.run).trim().split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   const expectedLandingLines = [
@@ -377,7 +406,7 @@ function gitText(git, args, options = {}) {
 }
 
 export function checkLandingDelta({ base, head = 'HEAD', maxPaths, maxAdded, git = execFileSync }) {
-  if (base !== RUN4_UNIT_BASE_SHA) fail(`base must equal accepted U0 unit SHA ${RUN4_UNIT_BASE_SHA}`);
+  if (base !== RUN4_UNIT_BASE_SHA) fail(`base must equal accepted current unit SHA ${RUN4_UNIT_BASE_SHA}`);
   if (!Number.isSafeInteger(maxPaths) || maxPaths < 0 || maxPaths !== RUN4_MAX_CHANGED_PATHS) fail(`maxPaths must equal accepted cap ${RUN4_MAX_CHANGED_PATHS}`);
   if (!Number.isSafeInteger(maxAdded) || maxAdded < 0 || maxAdded !== RUN4_MAX_ADDED_LINES) fail(`maxAdded must equal accepted cap ${RUN4_MAX_ADDED_LINES}`);
   const clean = (...args) => gitText(git, args).trim();

@@ -6,7 +6,7 @@
 // same seam test/shared_types/insight_card_roundtrip_test.dart uses.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:src/modules/m5b_insight_engine/ui/screens/insights_tab.dart';
+import 'package:src/modules/m5b_insight_engine/ui/widgets/insight_card_visual.dart';
 
 import '../../../../shared/constants/copy_guidelines.dart';
 

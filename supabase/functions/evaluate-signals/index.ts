@@ -1,6 +1,7 @@
 /// <reference types="jsr:@supabase/functions-js/edge-runtime.d.ts" />
 import { createClient } from "jsr:@supabase/supabase-js@2.110.7"
 import { METRICS } from "../../../shared/metrics/registry.ts"
+import { unauthorizedResponse, verifyInternalSecretRequest } from "../_shared/internal_auth.ts"
 import {
   benjaminiHochberg,
   classifyDaily,
@@ -176,8 +177,25 @@ const PRUNE_DELETE_CHUNK = 50
 // ─── Handler ──────────────────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
-  // A22: without this guard an unset env var degenerates the expected header to the literal
-  // string "Bearer undefined" — fail loudly (500, secret never echoed) before any compare.
+  // ── AUTHORIZATION FIRST (R4-U2) ─────────────────────────────────────────────────────────
+  // Only run-pipeline / pg_cron / an admin curl may invoke this function, proven by the
+  // dedicated `X-Ourobion-Internal-Secret` header and a CONSTANT-TIME compare against the
+  // CURRENT/PREVIOUS rotation pair. Replaces a plain `!==` against SUPABASE_SERVICE_ROLE_KEY
+  // that also sat AFTER a 500 config guard. Every denial (missing / blank / malformed header,
+  // wrong secret, or no secret configured) returns the same 401 with the same body bytes and
+  // never 500 — no "misconfigured vs wrong secret" oracle, and the recorded serve probe in
+  // tools/run4_release_gate.mjs (which configures no secret) still observes 401.
+  const verdict = await verifyInternalSecretRequest(req, {
+    current: Deno.env.get("OUROBION_INTERNAL_SECRET_CURRENT"),
+    previous: Deno.env.get("OUROBION_INTERNAL_SECRET_PREVIOUS"),
+  })
+  if (!verdict.ok) {
+    console.error(`internal auth denied: ${verdict.reason}`) // reason only — never a value
+    return unauthorizedResponse()
+  }
+
+  // ── Configuration guard — reachable only by an AUTHORIZED caller, so 500 leaks nothing.
+  // SUPABASE_SERVICE_ROLE_KEY is a DATABASE credential here, never a request credential.
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
   if (!serviceRoleKey) {
     console.error("SUPABASE_SERVICE_ROLE_KEY is not set — refusing to serve")
@@ -185,12 +203,6 @@ Deno.serve(async (req) => {
       JSON.stringify({ error: "server misconfiguration: service-role key unavailable" }),
       { status: 500 },
     )
-  }
-
-  // Only pg_cron (or an admin curl) may invoke this function.
-  const auth = req.headers.get("Authorization")
-  if (!auth || auth !== `Bearer ${serviceRoleKey}`) {
-    return new Response("Unauthorized", { status: 401 })
   }
 
   const supabase = makeClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey)

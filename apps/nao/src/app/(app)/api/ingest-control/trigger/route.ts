@@ -6,8 +6,18 @@
 // a paused control document blocks this too, not just a hypothetical
 // scheduler, so pause is a real safety switch for the button itself.
 //
-// Auth: gated by src/middleware.ts like every route under (app); no extra
-// auth code needed here.
+// AUTH (R4-U2 fix): before this unit, this file had NO auth code at all —
+// "gated by src/middleware.ts like every route under (app); no extra auth
+// code needed here" was the previous (incorrect) posture, and this triggers a
+// REAL ingestion run on GitHub's runners, which is exactly the kind of action
+// that must not depend solely on the middleware layer. Requires `curator`
+// (operating the corpus/pipeline is the curator tier's job per the R4-U2
+// design §A.1) via requireRole()/guardRole() (apps/nao/src/lib/authzServer.ts).
+//
+// GATE ORDER (R4-U2 review finding 6): `guardRole` is the FIRST statement, before
+// `req.json()` and validateTriggerBody — running validation first handed a
+// non-member a 400-vs-403 schema oracle over this endpoint's request shape.
+import { guardRole, recordControlEvent, redactText } from '@/lib/authzServer';
 import { getIngestControl, validateTriggerBody } from '@/lib/ingestControl';
 import { dispatchIngestWorkflow } from '@/lib/githubDispatch';
 import type { IngestTriggerBody } from '@/lib/types';
@@ -22,6 +32,9 @@ function json(body: unknown, status = 200): Response {
 }
 
 export async function POST(req: Request): Promise<Response> {
+  const gate = await guardRole('curator');
+  if (!gate.ok) return gate.response;
+
   let body: IngestTriggerBody;
   try {
     body = (await req.json()) as IngestTriggerBody;
@@ -34,6 +47,8 @@ export async function POST(req: Request): Promise<Response> {
     return json({ error: validationError }, 400);
   }
 
+  await recordControlEvent('ingest.trigger', body.seed ?? null, { limit: body.limit });
+
   const control = await getIngestControl();
   if (control.paused) {
     return json({ error: 'Ingestion is paused — resume it first (Pipeline state panel) before triggering a run.' }, 409);
@@ -41,7 +56,7 @@ export async function POST(req: Request): Promise<Response> {
 
   const result = await dispatchIngestWorkflow(body);
   if (!result.ok) {
-    return json({ error: result.error ?? 'dispatch failed' }, 502);
+    return json({ error: redactText(result.error ?? 'dispatch failed') }, 502);
   }
   return json({ ok: true });
 }
