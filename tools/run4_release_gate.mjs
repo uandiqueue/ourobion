@@ -48,17 +48,20 @@ export function hashTextEvidence(value) {
 //                                              #211; superseded before push by #176/#190/#217
 //                                              landing while this unit was blocked on Docker)
 //   2749381a405de882c6d96cdf21a57034e28204ea  (U10 base — tip after #217; ACCEPTED for U10 only)
+//   da6b11b5df057fe6b5f5f6dcb14f13343805a94b  (R4-U1 correction base — tip after #214; ACCEPTED
+//                                              for that #232 push only)
 //
-// Advanced for the R4-U1 correction (#178). U1's own content is ~5,700 added lines, but measured
-// from 2749381 it read 8,611 against the 8,500 cap because PR #214 (the U2 auth-corrections
-// reconciliation) merged into the integration branch after that base was set and charged U1 for
-// its ~2,878 lines. That is the exact failure mode this constant exists to prevent, so it moves to
-// the tip that already contains #214 rather than the cap being raised or U1's content trimmed.
-// Authorised by Alton on 2026-07-28 in the session that produced this commit.
+// Re-advanced for the same R4-U1 correction (#232), same branch. #232's green status went stale
+// again: PR #199 (the U4 scientific-semantics/trust-labels unit) merged into the integration
+// branch after da6b11b was set, advancing the tip to 789e6a0 and, per the same mechanism recorded
+// above for #214, charging U1 for #199's lines — cumulative delta from 2749381 was measured at
+// roughly 12,500 added lines against the 8,500 cap. #232 already touches this file, ci.yml, and
+// the attestation manifest, so the base advance is folded into this PR rather than opening a
+// separate base-advance PR that would collide with it.
 //
-// Current value is the dev-phase2-run4 tip at push time (the #214 merge). Caps unchanged at
+// Current value is the dev-phase2-run4 tip at push time (the #199 merge). Caps unchanged at
 // 115 / 8,500 and still failing closed; only the per-unit starting point moves.
-export const RUN4_UNIT_BASE_SHA = 'da6b11b5df057fe6b5f5f6dcb14f13343805a94b';
+export const RUN4_UNIT_BASE_SHA = '789e6a0ff8232057402e1d34583647349c85bb89';
 
 // ---------------------------------------------------------------------------------------------
 // Immutable product cap (issue #183) — MEASURED AND RECORDED, NOT YET GATING.
