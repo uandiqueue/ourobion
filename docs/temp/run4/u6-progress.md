@@ -41,8 +41,26 @@ or work across the release-blocker session's ownership boundary.
 
 ## Current findings
 
+### U6b status update (2026-07-28)
+
+The planning rows above are superseded by these locally complete slices; none has a hosted PR.
+
+| Slice | Branch / commit | State | Evidence / next gate |
+|---|---|---|---|
+| U6b-1 wellbeing schema | `feat/m2/u6b-wellbeing-schema` / `cf33a5d` | local complete; auth-blocked | 3 paths / +283; full Flutter 346 pass, 26 skip; Docker schema PASS. |
+| U6b-2 wellbeing collector | `feat/m2/u6b-wellbeing-collector` / `5f2fb30` | local complete; auth-blocked | 7 paths / +595/-106; full Flutter 354 pass, 26 skip; accessible five-field optional UI; no `shared/` changes. |
+| U6b-3 wellbeing promotion | `feat/m5a/u6b-wellbeing-promotion` / `e0019ae` | local complete; auth-blocked | 14 paths / +923/-24 (201 generated); metric-view 18; focused guards 27; full Flutter 358 pass, 26 skip; Docker schema + projection PASS; landing from `2749381`: 69 paths / 5,541 additions. Actual Jayden + Alton PR reviews required. |
+
+- **A5/U6b decision:** deliberately defer a new generalized table. `daily_gut_rows` remains the
+  authoritative storage surface for the wellbeing slice.
+- No PRs, pushes, or issue comments were made: the GitHub token is invalid and escalation was
+  rejected. Legitimate reauthentication is required before hosted actions can resume.
+- U6c is stopped and remains out of scope.
+
 - The register's “17 collectible” statement is planning/catalog scope, not current registry state:
-  all 19 active registry metrics still use `daily_gut_rows` or `wearable_daily`.
+  the current integration baseline and #229 each have 19 active registry metrics using
+  `daily_gut_rows` or `wearable_daily`; the local U6b promotion tip has 24, with five new
+  `daily_gut_rows` keys. That local branch evidence is not a hosted or integrated state.
 - `events.value` and `state_bands.value` are deliberately heterogeneous JSON. The repository has not
   yet recorded how those rows become numeric daily points, so a generic cast would be fail-open.
 - The current view generator targets an already-landed migration and hard-fails unhandled active
@@ -53,9 +71,12 @@ or work across the release-blocker session's ownership boundary.
 
 ## Human gates
 
-- Jayden must record the A5 storage-primitive choice before any A5 implementation or U6b batch.
+- Jayden's A5 choice is now recorded for U6b: retain `daily_gut_rows` as authoritative and defer a
+  generalized table.
+- Jayden and Alton must each provide actual PR reviews for U6b-3; chat approval is not a substitute.
+
 - Jayden and Alton must both review every actual PR that changes `shared/metrics/**`.
 - The separate release owner must re-record #229's `compute-baselines` deployment graph attestation;
-  this unit does not edit `supabase/deploy-attestation.json`.
+  #229 remains that separate owner's blocker, and its release files are untouched here.
 - Agents do not merge. Each implementation slice targets `dev-phase2-run4` and remains for human
   review after its own tests and landing measurement.
