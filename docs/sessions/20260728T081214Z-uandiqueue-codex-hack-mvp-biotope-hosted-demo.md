@@ -37,6 +37,9 @@ Branch: `fix/hack-mvp-biotope-demo`
 
 - Used the local fallback because the CLOUD lane never issued the explicit hosted-ready signal. No
   hosted write, dotenv flip, live-nao claim, promotion, deploy, or release was attempted.
+- Kept `.env.public` local after the CLOUD lane confirmed hosted has no application tables. Hosted
+  must receive and reload schema, then one app signup must create the auth user the seeder resolves,
+  before seeding/rebuild and an explicit readiness handoff.
 - Restored the ignored Android plugin registrant from the canonical UI worktree because Windows
   Developer Mode is unavailable; did not commit generated plugin output or change product code for
   that machine-only artifact.
@@ -64,12 +67,14 @@ Branch: `fix/hack-mvp-biotope-demo`
   accessibility work, and O28 1.6× typography.
 - Archive tab live refresh after a save; persisted data is visible after cold launch.
 - Flutter/Kotlin built-in migration, large-asset frame cost, and the Windows Developer Mode setup gap.
-- Landing is expected to remain gated until the CLOUD/release lane advances `RUN4_UNIT_BASE_SHA` past
-  the merged UI; this session did not touch its owned gate, CI, or attestation files.
+- PR #204 advanced the CLOUD/release-owned `RUN4_UNIT_BASE_SHA` to the merged UI tip. This branch
+  merged that integration tip without editing its gate, CI, or attestation files; local landing
+  verification passed at 9 paths / 449 added lines.
 
 ## Blockers
 
 - No explicit CLOUD-lane hosted-ready signal, so the stop rule required the local fallback.
-- The release-gate base still predates the merged full UI and is owned by the CLOUD/release lane.
+- Hosted has no application tables yet; flipping now would turn a backend prerequisite into an
+  apparent app failure. App signup must also precede hosted seeding so the user can be resolved.
 
 memory: none

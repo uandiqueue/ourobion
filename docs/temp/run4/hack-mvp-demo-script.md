@@ -16,6 +16,12 @@ This run is the **local fallback**, not the hosted demo. The CLOUD lane did not 
 `http://127.0.0.1:54321`. The connected Huawei YAL-L21 reached that stack through `adb reverse`.
 Nothing was written to the hosted project, promoted, deployed, or released.
 
+The CLOUD lane subsequently confirmed that hosted has no application tables yet. Do **not** flip
+`.env.public` in that state: the resulting failures would be backend absence presented as an app bug.
+Hosted bootstrap must be ordered and explicitly handed off: apply/reload the hosted schema, sign up
+once through the app against hosted so an auth user exists for the seeder to resolve, seed and rebuild
+the projections, verify the reported counts, and only then issue `HOSTED READY` for a full app restart.
+
 Observed local state on 2026-07-28:
 
 - 21 simulated `daily_gut_rows` and 21 simulated `wearable_daily` rows;
@@ -152,6 +158,10 @@ artifacts, not git inputs, and are intentionally uncommitted to avoid the binary
 
 The requested hosted/shared-database claim and sleep/HRV card were **not** observed on this phone
 because no CLOUD handoff arrived. Do not substitute the local evidence for either claim.
+
+Hosted currently has no application tables. Before any later config flip, the CLOUD lane must land
+and reload schema and the app operator must sign up once against hosted so the seeder can resolve that
+auth user.
 
 ## What is not built or validated
 
