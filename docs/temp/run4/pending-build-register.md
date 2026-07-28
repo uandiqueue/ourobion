@@ -76,6 +76,17 @@ gated by the four structural gaps below, which collapse most of the challenging 
 | A4 · `events`/`state_bands` exist but are NOT in metric_daily_values | 17 metrics collectible but dashboard-invisible | view extension (per-primitive unpivot branches) |
 | A5 · `daily_log` not generalized (daily_gut_rows is the grandfathered instance, D9) | the ~15 EASY metrics ride the gut table meanwhile | O5's deliberate build-vs-defer call; trigger per session log: "when a non-gut daily metric ships" |
 
+### R4-U6 execution rows (2026-07-28)
+
+| Slice | State | Closing PR / remaining gate |
+|---|---|---|
+| A4-S0 · fail-closed daily-projection policy scaffold | built, draft PR open; **does not close A4** | #229 adds per-metric event/state reducer contracts and synthetic negative/runtime proof without activating a production metric or rewriting a landed migration; requires actual Jayden + Alton reviews |
+| A4-1/A4-2 · production event/state projection | decision-gated | Current registry contains zero `events`/`state_bands` metrics, not 17. Jayden must record calendar, reducer, interval, overlap, and open-band semantics on #220 before a metric-specific forward migration activates these paths |
+| A4-3 · registry/parity activation | collector-gated | Lands only with real metric collectors and their explicit policies; U6c issue #222 owns the future family slices |
+| A5-0 · daily-log storage options | options brief open; **does not close A5** | #224 compares four compatibility/migration designs; Jayden's recorded selection on #220 is required before implementation |
+| U6b · EASY self-report batches | blocked on A5 | Issue #221; no schema or form work started |
+| U6c · MEDIUM collector families | blocked on A4 + real collector/device evidence | Issue #222; no placeholder or fake collector work started |
+
 Also: CGM (glucose_cgm) needs hardware; several wearable datatypes need a real device + platform
 testing; iOS remains Mac + paid-Apple-account gated (memory 0010).
 
