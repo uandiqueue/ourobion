@@ -6,12 +6,12 @@
 //
 // Usage:
 //   node tools/metric-view/gen_metric_view.mjs            # print the SQL to stdout
-//   node tools/metric-view/gen_metric_view.mjs --write    # (re)write the committed migration
+//   node tools/metric-view/gen_metric_view.mjs --write    # write a NEW migration target only
 //   node tools/metric-view/gen_metric_view.mjs --check    # diff vs the committed migration (drift guard)
 //
 // Root package.json aliases: `npm run view:gen` / `npm run view:check`.
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { generateViewSql, REPO_ROOT, VIEW_MIGRATION_RELPATH } from './lib/view.mjs';
@@ -21,6 +21,13 @@ const sql = generateViewSql();
 const migrationPath = path.join(REPO_ROOT, ...VIEW_MIGRATION_RELPATH.split('/'));
 
 if (args.has('--write')) {
+  if (existsSync(migrationPath)) {
+    console.error(
+      `✗ refusing to overwrite landed migration ${VIEW_MIGRATION_RELPATH} — ` +
+        `first set VIEW_MIGRATION_RELPATH to a new timestamped, nonexistent migration`,
+    );
+    process.exit(1);
+  }
   writeFileSync(migrationPath, sql);
   console.log(`✓ wrote ${VIEW_MIGRATION_RELPATH}`);
 } else if (args.has('--check')) {
@@ -37,7 +44,7 @@ if (args.has('--write')) {
   } else {
     console.error(
       `✗ ${VIEW_MIGRATION_RELPATH} has drifted from shared/metrics/registry.ts — ` +
-        `regenerate it with: node tools/metric-view/gen_metric_view.mjs --write`,
+        `do not overwrite it; point VIEW_MIGRATION_RELPATH at a new timestamped migration`,
     );
     process.exit(1);
   }

@@ -47,6 +47,25 @@ export type MetricReliability = 1 | 2 | 3 | 4;
 export type MetricAvailability = 'both' | 'ios_only' | 'android_only' | 'hardware_gated';
 export type MetricStatus = 'active' | 'deprecated';
 
+/** Explicit UTC daily reducer for an episodic primitive. Payload reducers accept JSON numbers only. */
+export type EventDailyProjection = {
+  storage: 'events';
+  calendar: 'utc';
+  source: 'self_report' | 'wearable' | 'env' | 'signal';
+  reducer: 'count' | 'sum' | 'mean' | 'latest';
+};
+
+/** Presence means 1 for each touched UTC day; bands use the half-open [start, end) interval. */
+export type StateBandDailyProjection = {
+  storage: 'state_bands';
+  calendar: 'utc';
+  source: 'self_report' | 'wearable' | 'env' | 'signal';
+  reducer: 'presence';
+  interval: 'half_open';
+};
+
+export type DailyProjection = EventDailyProjection | StateBandDailyProjection;
+
 export interface MetricDefinition {
   /** Canonical snake_case id — == DB column == BaselineSnapshot.metric_key == rule metricKey. */
   key: string;
@@ -83,6 +102,8 @@ export interface MetricDefinition {
   signal: { deadbandK: number } | null;
   /** Optional hint for the M2 self-report screens. */
   ui: { label: string; inputType: string } | null;
+  /** Explicit primitive-to-day policy. Omitted/null until a primitive-homed metric is selected. */
+  dailyProjection?: DailyProjection | null;
   status: MetricStatus;
   introducedIn: string;
   deprecatedAt: string | null;
