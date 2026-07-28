@@ -180,8 +180,18 @@ All `.ts` extensions were reverted and `allowImportingTsExtensions` was removed 
 `tools/rules/tests/`, whose tsconfig does not set `verbatimModuleSyntax`. `verbatimModuleSyntax`
 was **not** disabled anywhere, and no assertion was relaxed.
 
+**A fourth failure appeared on the second run** — `tools/edge-loader` only. Its CLI test spawns
+`load_edges.mjs`, which imports `shared/brain/index.ts`; the barrel's new
+`export * from './provenance'` dragged a **value** re-export chain into a graph Node loads through
+CommonJS, producing `does not provide an export named 'CLAIM_KIND_LADDER'`. Fixed by **not
+re-exporting** the two value-carrying modules from the barrel: `relationships.ts` is type-only so
+re-exporting it is free, but consumers import `provenance` / `trust_labels` directly (which the
+edge functions and tests already did). Confirmed locally that the CLI error reverted to the
+pre-existing Node-20 `ERR_REQUIRE_CYCLE_MODULE`, i.e. this unit's contribution is gone.
+
 **Latent issue now documented:** any future Node package that sets `verbatimModuleSyntax` and
-imports a value-exporting `shared/brain` module will hit the same wall. The real fix is deciding
+imports a value-exporting `shared/brain` module will hit the same wall, and the barrel cannot
+re-export values while `load_edges.mjs` is loaded through CommonJS. The real fix is deciding
 whether `shared/` should declare `"type": "module"` — deliberately out of scope here, since it
 would change module resolution for every consumer at once.
 

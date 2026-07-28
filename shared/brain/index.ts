@@ -12,12 +12,20 @@ import {
 } from './relationships';
 
 export * from './relationships';
-// R4-U4 / O27: artifact trust posture, claim-strength semantics, provenance-chain and exact-quote
-// checks, and revision-bound expert disposition. O38: the TS side of the parity-guarded
-// trust-label vocabulary (its Dart mirror is shared/brain/trust_labels.dart — no cross-language
-// import links them; apps/biotope/test/guards/brain_trust_labels_parity_test.dart enforces parity).
-export * from './provenance';
-export * from './trust_labels';
+
+// R4-U4 / O27 · `provenance.ts` (artifact trust posture, claim-strength semantics,
+// provenance-chain and exact-quote checks, revision-bound expert disposition) and
+// `trust_labels.ts` (the O38 parity-guarded vocabulary) are deliberately NOT re-exported here.
+//
+// `relationships.ts` is type-only, so re-exporting it costs nothing at runtime. Those two modules
+// export VALUES, and this barrel is on `tools/edge-loader/load_edges.mjs`'s import path — pulling
+// a value re-export chain in breaks that CLI under Node's CommonJS-loading-ESM interop
+// ("does not provide an export named ..."). Consumers import them directly instead:
+//
+//   import { trustFailures } from 'shared/brain/trust_labels';   // also the Deno-safe entrypoint
+//   import { resolveDisposition } from 'shared/brain/provenance';
+//
+// which is what the edge functions and the tests already do.
 
 /**
  * Deterministic edge identity. Synthesis and verification both address an edge by this key, so a
