@@ -302,13 +302,20 @@ test('O16 render: the directional card names the FIRED metric as the mover', () 
   // The handler passes metric_a_label = label(fired metric) (asserted equal to
   // cardEdge.subject) — the rendered body must state the fired metric shifted, and the
   // non-fired endpoint may appear only inside the citation framing.
-  const rendered = renderCard(EDGE_CARD_TEMPLATE, {
-    metric_a_label: 'sleep duration min',
-    metric_b_label: 'hrv sdnn ms',
-    pattern_metric_label: 'sleep duration min',
-    direction_phrase: 'upward',
-    relation_phrase: 'tends to raise',
-  });
+  // R4-U4: a live artifact contributes an empty posture disclosure, so the body still opens on
+  // the fired metric; 'causal' is what licenses the "tends to raise" phrasing used here.
+  const rendered = renderCard(
+    EDGE_CARD_TEMPLATE,
+    {
+      metric_a_label: 'sleep duration min',
+      metric_b_label: 'hrv sdnn ms',
+      pattern_metric_label: 'sleep duration min',
+      direction_phrase: 'upward',
+      relation_phrase: 'tends to raise',
+      posture_disclosure: '',
+    },
+    { effectiveKind: 'causal' },
+  );
   assert.ok(rendered.ok);
   assert.ok(rendered.ok && rendered.copy.body.startsWith('Your sleep duration min data shifted upward'));
   assert.ok(rendered.ok && !rendered.copy.body.includes('Your hrv sdnn ms data shifted'));
