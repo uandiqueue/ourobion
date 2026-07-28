@@ -44,6 +44,19 @@
 // Without this gate, `supabase.auth.getUser()` alone only proves "some authenticated session
 // exists" — including a Biotope-only account with no nao membership at all — which is exactly
 // the hole this gate closes.
+//
+// TRUTHFUL CONTROL AUDIT (R4-U2 correction, issue #182). The relay is an EXTERNAL effect, so it
+// cannot share a Postgres transaction with its audit row. Its protocol is therefore durable
+// attempt → external effect → terminal outcome, orchestrated by runAuditedControlMutation():
+//   * a `pipeline.run`/`attempted` row commits BEFORE the fetch, keyed by the caller's
+//     `X-Ourobion-Operation-Id` (or a server-generated one), so a retry cannot double-count
+//   * an upstream non-2xx is an AUTHORITATIVE rejection → NaoControlMutationError → `failed`
+//   * a lost response (thrown fetch) is NOT `failed`: run-pipeline may have committed before the
+//     response vanished, so it stays unresolved and returns the opaque `control_outcome_unknown`
+//     503 with the operation id, for reconciliation via nao_unresolved_control_operations
+// Three of the catch arms below therefore return FIXED strings plus that operation id — they never
+// carry upstream payload or provider text, so the redaction contract above still covers every path
+// that relays anything at all.
 import {
   NaoControlAuditError,
   NaoControlMutationError,
