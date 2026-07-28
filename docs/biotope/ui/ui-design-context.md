@@ -4,11 +4,14 @@ summary: The source-of-truth visual system for biotope's Flutter app (M3 color t
 type: context
 scope: biotope
 status: canonical
-updated: 2026-07-13
+updated: 2026-07-28
 ---
 # ui-design-context.md — Ourobion
 > **REFERENCE LAYER** — Read before implementing any UI screen.
-> Last updated: Phase 1 Stage 1 (MVP) — sourced from Claude Design bundle (Onboarding Flow)
+> Last updated: biomech-botanical reskin — sourced from Claude Design bundle
+> ("Biotope Biomech Botanical", project df5bfd3e-58d9-420c-852f-2aaf9125892b).
+> Supersedes the earlier forest-green M3 palette as brand/chrome color — that palette is kept,
+> but repurposed as semantic-only (trend deltas), see below.
 
 ---
 
@@ -25,16 +28,15 @@ Key metaphors: petri dish, biome, growing organism.
 These are the source-of-truth values. Use these in `ThemeData` and all custom widgets.
 
 ```dart
-// Primary — Forest green (ecosystem, health, growth)
-primary:                #3c6752
+// Primary — Brand gold/porcelain (biomech-botanical: ecosystem, precision, calm)
+primary:                #A87840
 onPrimary:              #ffffff
-primaryContainer:       #7daa92
-onPrimaryContainer:     #123f2c
-primaryFixed:           #beedd3
-primaryFixedDim:        #a2d1b7
-onPrimaryFixed:         #002114
+primaryContainer:       #f4ecdc
+onPrimaryContainer:     #6E4C1E
+primaryFixed:           #e8d3a8
+primaryFixedDim:        #C8A878
 
-// Secondary — Deep cyan (science, data, precision)
+// Secondary — Deep cyan (science, data, precision) — unchanged
 secondary:              #2f647d
 onSecondary:            #ffffff
 secondaryContainer:     #ade1fd
@@ -43,15 +45,16 @@ onSecondaryFixed:       #001e2b
 onSecondaryFixedVariant:#0f4c64
 onSecondaryContainer:   #30657d
 
-// Tertiary — Teal (game, energy, playfulness)
+// Tertiary — Teal (game, energy, playfulness) — unchanged
 tertiary:               #00696b
 tertiaryContainer:      #5aadaf
 tertiaryFixedDim:       #81d4d6
 onTertiaryFixed:        #002021
 
 // Surface
-background:             #f9f9f8
-surface:                #f9f9f8
+background:             #efece5
+surface:                #efece5
+surfaceCard:             #fdfcf9
 surfaceContainerLowest: #ffffff
 surfaceContainerLow:    #f3f4f3
 surfaceContainer:       #edeeed
@@ -67,15 +70,23 @@ outline:                #717973
 outlineVariant:         #c1c8c2
 ```
 
+**Semantic-only colors (trend deltas)** — never used as brand/chrome color, only to color a
+positive/negative delta (e.g. "▲ 4 pts", an HRV delta line):
+
+```dart
+deltaPositive: #3c6752   // old primary forest-green — reused for "improving" deltas
+deltaNegative: #2f647d   // old secondary cyan — reused for "declining"/neutral-caution deltas
+```
+
 **Flutter ThemeData setup:**
 ```dart
 ThemeData(
   colorScheme: const ColorScheme(
     brightness: Brightness.light,
-    primary: Color(0xFF3c6752),
+    primary: Color(0xFFA87840),
     onPrimary: Color(0xFFffffff),
-    primaryContainer: Color(0xFF7daa92),
-    onPrimaryContainer: Color(0xFF123f2c),
+    primaryContainer: Color(0xFFf4ecdc),
+    onPrimaryContainer: Color(0xFF6E4C1E),
     secondary: Color(0xFF2f647d),
     onSecondary: Color(0xFFffffff),
     secondaryContainer: Color(0xFFade1fd),
@@ -84,7 +95,7 @@ ThemeData(
     onTertiary: Color(0xFFffffff),
     tertiaryContainer: Color(0xFF5aadaf),
     onTertiaryContainer: Color(0xFF002021),
-    surface: Color(0xFFf9f9f8),
+    surface: Color(0xFFefece5),
     onSurface: Color(0xFF191c1c),
     onSurfaceVariant: Color(0xFF414943),
     outline: Color(0xFF717973),
@@ -110,7 +121,7 @@ ThemeData(
 | Button | 14px | 600 | +0.3 | CTA and secondary buttons |
 | Chip | 11–13px | 600 | 0 | Tags, filter chips, answer chips |
 
-**Eyebrow pattern:** always uppercase, primary color `#3c6752`, 10px/700, letterSpacing 1.6.
+**Eyebrow pattern:** always uppercase, primary color `#A87840`, 10px/700, letterSpacing 1.6.
 Used as a label above every main question or section heading.
 
 ---
@@ -134,16 +145,16 @@ Used as a label above every main question or section heading.
 
 ### Primary CTA Button
 - Height: 56px, full width, radius 16px
-- Background: `primary` (#3c6752), text: `onPrimary` (#fff)
+- Background: `primary` (#A87840), text: `onPrimary` (#fff)
 - Font: 14px / 600 / letterSpacing 0.3
-- Shadow: `0 4px 12px rgba(60,103,82,0.25)`
+- Shadow: `0 4px 12px rgba(168,120,64,0.25)`
 - Disabled: background `surfaceContainer`, text `outline`
 - Press state: scale(0.98) transform
 
 ### Input Field (TextField)
 - Padding: 18px 20px, radius 16px
 - Border: 1.5px `outlineVariant` at rest → `primary` when filled
-- Focus glow ring: `0 0 0 4px #beedd355` (primaryFixed at 33% opacity)
+- Focus glow ring: `0 0 0 4px #e8d3a855` (primaryFixed at 33% opacity)
 - Font: 18px / 500, color `onSurface`
 - Background: `surfaceLowest` (#fff)
 - Auto-focus on screen enter
@@ -167,9 +178,9 @@ Used as a label above every main question or section heading.
 - Segment radius: 10px
 
 ### Cards
-- Background: `surfaceLowest` (#fff)
-- Border: `1px solid outlineVariant`
-- Shadow: `0 1px 3px rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,103,82,0.18)`
+- Background: `surfaceLowest` (#fff) or `surfaceCard` (#fdfcf9)
+- Border: `1px solid outlineVariant` (gold-tinted, ~rgba(200,168,120,.4))
+- Shadow: `0 1px 3px rgba(0,0,0,0.04), 0 8px 24px -12px rgba(168,120,64,0.18)`
 - Radius: 20–24px
 
 ---
@@ -181,13 +192,20 @@ Four blurred orbs drift slowly — calming, never distracting.
 
 | Orb | Size | Position | Color | Duration |
 |---|---|---|---|---|
-| 1 | 480px | top-left | `primaryFixedDim` (#a2d1b7) | 28s |
+| 1 | 480px | top-left | `primaryFixedDim` (#C8A878) | 28s |
 | 2 | 360px | mid-right | `secondaryFixedDim` (#9acee9) | 34s |
 | 3 | 300px | bottom-left | `tertiaryFixedDim` (#81d4d6) | 30s |
-| 4 | 220px | upper-right | `primaryFixed` (#beedd3) | 26s |
+| 4 | 220px | upper-right | `primaryFixed` (#e8d3a8) | 26s |
 
 Properties: `opacity: 0.55`, `blur: 60px`, `borderRadius: 50%`
 Flutter: use `AnimationController` + `AnimatedBuilder` with `Transform.translate` + `BackdropFilter` or `ImageFiltered`.
+
+**User-dismissable, and the choice sticks.** The Profile tab's "Living backdrop" switch reads and
+writes `AppPreferences.backdropEnabled` (`apps/biotope/lib/core/app_preferences.dart`), persisted to
+the device via `shared_preferences` and restored in `main()` before the first frame. It is a *display*
+preference: device-local, never written to Supabase, never synced between installs. Screens that render
+the backdrop must go through `AppPreferences.backdropEnabled` (a `ValueNotifier`) rather than assuming
+it is on.
 
 ---
 
@@ -206,10 +224,13 @@ Flutter: use `AnimationController` + `AnimatedBuilder` with `Transform.translate
 
 ## Navigation & Layout
 
-**Tab bar (5 tabs):** Home · Log · Insights · Squad · World
+**Tab bar (5 tabs):** Home · Scan · Insights · Archive · Profile
 - Position: fixed bottom, `surfaceEE` bg + `blur(20px)`, `outlineVariant` top border
-- Active tab: primary colored icon + bold label
+- Active tab: primary (gold) colored icon + bold label, sliding pill indicator behind the active item
 - Safe area padding: 28px bottom (iOS home indicator)
+- `Log` is folded into `Scan` (a coverage-sweep entry point that routes into the same daily-log
+  flow); `Squad` and `World` were non-functional placeholder stubs and are dropped from the shell —
+  see `docs/sessions/` for the reskin session log if either needs to resurface later.
 
 **Screen padding:** 24px horizontal, 12–16px vertical between sections
 
@@ -225,13 +246,18 @@ Flutter: use `AnimationController` + `AnimatedBuilder` with `Transform.translate
 
 ## Where Files Live
 
+The 5 nav tabs are a cross-module shell (`m1_core/ui/screens/app_shell.dart`) — tabs no longer map
+1:1 to modules the way they did pre-reskin:
+
 | Screen | Flutter module path |
 |---|---|
-| Auth / Sign-in / Onboarding | `apps/biotope/lib/modules/m1_core/ui/` |
-| Daily Log / Gut / Behaviour | `apps/biotope/lib/modules/m2_self_report/ui/` |
-| Passive Health / Wearables | `apps/biotope/lib/modules/m3_passive_health/ui/` |
-| Environment / Outbreak | `apps/biotope/lib/modules/m4_environmental/ui/` |
-| Insights / Discovery Cards | `apps/biotope/lib/modules/m5b_insight_engine/ui/` |
+| App shell / bottom nav | `apps/biotope/lib/modules/m1_core/ui/screens/app_shell.dart` |
+| Auth / Sign-in / Onboarding / Profile tab | `apps/biotope/lib/modules/m1_core/ui/` |
+| Home tab | `apps/biotope/lib/modules/m1_core/ui/screens/home_tab.dart` |
+| Scan tab (coverage sweep) / Daily Log / Gut / Behaviour | `apps/biotope/lib/modules/m2_self_report/ui/` |
+| Passive Health / Wearables (read-only sync row) | `apps/biotope/lib/modules/m3_passive_health/ui/` |
+| Environment / Outbreak (deferred — inert row only) | `EnvironmentRow` in `apps/biotope/lib/modules/m2_self_report/ui/screens/scan_tab.dart`. `m4_environmental/` is a comment-only `index.dart` with **no `ui/` subfolder** — the previously-listed path never existed |
+| Insights tab (deck) / Archive tab / Discovery Cards | `apps/biotope/lib/modules/m5b_insight_engine/ui/` |
 | Streaks / Rewards | `apps/biotope/lib/modules/m6_engagement/ui/` |
 
 ---
@@ -275,3 +301,11 @@ UI; refine and extend the set as UI screens are built out.
 | File | Screen | Module |
 |---|---|---|
 | `auth-screen.html` | Sign In / Sign Up | M1 Core |
+
+## Reskin Reference Bundle
+
+The biomech-botanical reskin's full interactive hi-fi reference (Auth/Success/Home/Scan/Insights
+deck/Archive/Profile, plus the exact interaction state model) lives in the Claude Design project
+`Project Ourobion Biotope Redesign` (id `df5bfd3e-58d9-420c-852f-2aaf9125892b`), file
+`Biotope Biomech Botanical.dc.html` — fetch via the design-sync tooling rather than re-describing it
+here; this doc records the resulting tokens/rules, not the mockup itself.

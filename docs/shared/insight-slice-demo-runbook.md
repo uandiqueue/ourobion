@@ -4,7 +4,7 @@ summary: Exact, reproducible command sequence for the L6 one-card slice — one 
 type: runbook
 scope: repo
 status: canonical
-updated: 2026-07-16
+updated: 2026-07-28
 ---
 
 # Insight Slice Demo Runbook — L6 one-card end-to-end
@@ -42,7 +42,13 @@ not `agree`. What flips when B5 lands is spelled out at the end.
 - `. .\scripts\biotope-env.ps1` in each PowerShell shell (node/npx are not on the base PATH).
 - Local Supabase running; DB URL `postgresql://postgres:postgres@127.0.0.1:54322/postgres`.
 - `tools/brain-ingest/.env` has working R2 credentials (used for A9 text + the demo).
-- Service-role key from `npx supabase status -o env` (`SERVICE_ROLE_KEY`).
+- Service-role key from `npx supabase status -o env` (`SERVICE_ROLE_KEY`) — used below only where
+  noted; it is **no longer accepted as request authorization** on the three engine functions
+  (R4-U2: the service-role bearer now gets a 401, same as any other wrong credential).
+- `OUROBION_INTERNAL_SECRET_CURRENT` set locally for the functions (matches
+  `app.ourobion_internal_secret` / the value your `.env` for `supabase functions serve` supplies)
+  — the new, and only, authorization input for compute-baselines / evaluate-signals /
+  generate-insights / run-pipeline. See `supabase/functions/_shared/internal_auth.ts`.
 
 ## Command sequence (db reset → card + source panel)
 
@@ -52,7 +58,12 @@ not `agree`. What flips when B5 lands is spelled out at the end.
 npx supabase db reset                       # applies all migrations
 
 $env:SUPABASE_DB_URL='postgresql://postgres:postgres@127.0.0.1:54322/postgres'
-$SVC = (npx supabase status -o env | Select-String 'SERVICE_ROLE_KEY').ToString().Split('"')[1]
+# ANON is the JWT-gate credential (verify_jwt=true / Kong routing) — it grants nothing on its
+# own. $SECRET is the ONE authorization input, compared constant-time against
+# OUROBION_INTERNAL_SECRET_CURRENT/_PREVIOUS inside each function (R4-U2). Neither replaces the
+# other; both headers are required below.
+$ANON = (npx supabase status -o env | Select-String 'ANON_KEY').ToString().Split('"')[1]
+$SECRET = $env:OUROBION_INTERNAL_SECRET_CURRENT
 ```
 
 ### 1. Seeder (A2-adjacent) — real local-agent run
@@ -135,9 +146,13 @@ MAD degenerate; the last-28-day window has median 3 / MAD 1 so today's joint ris
 signal (modified z = 1.349 > deadband 1.0).
 
 ```powershell
-curl -s -X POST "http://127.0.0.1:54321/functions/v1/compute-baselines" -H "Authorization: Bearer $SVC" -d '{}'
-curl -s -X POST "http://127.0.0.1:54321/functions/v1/evaluate-signals"  -H "Authorization: Bearer $SVC" -d '{}'
-curl -s -X POST "http://127.0.0.1:54321/functions/v1/generate-insights" -H "Authorization: Bearer $SVC" -d '{}'
+# NOTE (R4-U2): the service-role bearer no longer authorizes these calls — it now gets a plain
+# 401, same as any other wrong credential. Auth is now two headers: an anon bearer to satisfy
+# the JWT gate (grants nothing by itself) plus the internal secret, the only real authorization
+# input (see supabase/functions/_shared/internal_auth.ts).
+curl -s -X POST "http://127.0.0.1:54321/functions/v1/compute-baselines" -H "apikey: $ANON" -H "Authorization: Bearer $ANON" -H "X-Ourobion-Internal-Secret: $SECRET" -d '{}'
+curl -s -X POST "http://127.0.0.1:54321/functions/v1/evaluate-signals"  -H "apikey: $ANON" -H "Authorization: Bearer $ANON" -H "X-Ourobion-Internal-Secret: $SECRET" -d '{}'
+curl -s -X POST "http://127.0.0.1:54321/functions/v1/generate-insights" -H "apikey: $ANON" -H "Authorization: Bearer $ANON" -H "X-Ourobion-Internal-Secret: $SECRET" -d '{}'
 ```
 
 Expected (honest end-state): `personal_signals` pair ρ 1.0 / N_eff ≈ 37 / q 0 / stable t;

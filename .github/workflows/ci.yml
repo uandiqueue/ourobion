@@ -72,9 +72,9 @@ jobs:
           deno-version: v2.8.1
       - name: Install release-gate dependencies
         run: npm ci
-      - name: Assert exact landing SHA and U0 unit base
+      - name: Assert exact landing SHA and current unit base
         env:
-          RUN4_UNIT_BASE_SHA: 77c98213e23ad56ae37c86201b39ef4e7543a543
+          RUN4_UNIT_BASE_SHA: 547280f69fe37fe1c7271ea126002f9ffaadafb9
           RUN4_MAX_CHANGED_PATHS: 115
           RUN4_MAX_ADDED_LINES: 8500
         run: |

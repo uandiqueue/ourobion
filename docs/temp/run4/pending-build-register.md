@@ -1,28 +1,11 @@
 ---
 title: Run 4 Pending-Build Register — where the project's gaps are
-summary: Run 4's living SUPERSET map promoted from Run 3, including all known-unbuilt or known-gapped work and the unmerged O24-O29 items returned to candidate status. A gap record, not authorization to build. Dev aid (docs/temp), not ground truth.
+summary: Run 4's living gap superset with a current overlay distinguishing merged, built-unmerged, partial, startable, and deferred work.
 type: plan
 scope: shared
 status: canonical
 updated: 2026-07-28
-run4_u5_sentence_provenance: planning-admitted; implementation-cap-deferred-pending-later-envelope
 ---
-
-> **B-PL22 / R4-U5 planning update:** no competing pipeline or unit is admitted. The future local
-> tool-only tranche (14 paths / ~1,900 additions) is versioned StructuredPaper + deterministic
-> JATS/frozen-GROBID sentence/offset, citation/root, curated mention and evidence gates with frozen/mock
-> `INTERIM:` LlmRouter seams. Verified combined snapshot `f2f2dac` from base `77c982` includes completed
-> U1 head `baab1536` and U5 `cdc16f9`, excludes only separately owned MT4 paths/session, and is the
-> historical pre-overlay 38 / +8,002 / -162 snapshot, leaving 77 / +498. The later final pre-commit
-> overlay (U5 docs + harness script + 44-line session) was independently audited at 40 / +8,156 / -195,
-> leaving 75 / +344. The minimal six-path slice reuses two paths but needs four new / ~+1,900, so it is
-> cap-deferred; U2/U3 expected additions also do not fit. Exact pre-merge remeasurement remains mandatory.
-> Persisted/served/UI is P2-blocked; O29 is deferred.
-> Missing
-> provenance, foreign papers, invalid offsets/references, unsupported evidence or adapter failure hold
-> closed. Existing quote/hold/hash controls do not claim A4/A4b/A5/A6/A7/root-collapse implementation.
-> Corrected canonical DB load `d3c2020a` is complete with one uncertain hold and zero servable edges.
-> Health/insight acceptance remains pending; no scientific-validation claim is made.
 
 # Run 4 Pending-Build Register
 
@@ -35,6 +18,25 @@ orchestrator preflight decide what enters the run.
 PR #144 is not an accepted implementation of O24. At Run 4 entry, O24-O29 are all unfinished. Their
 original IDs are preserved for traceability; the former Run 3 register remains available in Git
 history.
+
+## Current Run 4 overlay — 2026-07-28
+
+The sentence above is historical entry state. Current delivery is:
+
+| Item | Current state |
+|---|---|
+| O24 / U0 | merged in #161; per-unit base convention #172; next base reconciliation pending |
+| O35/O36 / U1 | built but unmerged; #180 remediates #170 and still fails secret scanning + Run 4 gates |
+| O25 / U2 | merged in #177; corrections #185/#186 need one reconciled landing |
+| O26 / U3 | built on #184; unmerged; gate base, LoaderPanel target and full HTTP walk pending |
+| O27/O38 / U4 | startable; Jayden + Alton are named reviewers; not built |
+| U5 / B-PL22 | partial: paper authoring branch #176 exists, but sentence provenance and fully connected arbitrary-paper command remain open |
+| U7 / B-UI1 | canonical full UI #191 exists and contains #175; unmerged/reconciliation required |
+| O28 | partial UI/accessibility work exists; ordinary-user provenance remainder open |
+| O29 | general promotion deferred; bounded issue-189 provider test complete, not a general unblock |
+
+Operational details and PR checks live in [`continuation-status.md`](./continuation-status.md). This
+register remains the gap superset, not merge authority.
 
 Sources folded in: the 100-metric integration analysis (2026-07-25), Run-2 carry-forwards and
 OUT-scope list, open O-items, anchor decisions (docs/memory/0013 et al.), **everything Run 1 left
@@ -81,8 +83,8 @@ testing; iOS remains Mac + paid-Apple-account gated (memory 0010).
 
 | Item | State | Gates / notes |
 |---|---|---|
-| B-UI1 · Porcelain-luxury theme re-skin (ai-assets) | not started — deliberately | HUMAN-SUPERVISED phase (Jayden on-site with the running app); explicitly OUT of Run 2.0 (PART 4) |
-| B-UI2 · Formal user testing | not started | demo runbook (docs/shared/phase2-demo-runbook.md) is the entry point |
+| B-UI1 · Porcelain-luxury theme re-skin (ai-assets) | built, open-unmerged on canonical #191 | #191 contains predecessor #175; reconcile final data shapes, shared review, Flutter/U2/device evidence; do not merge both |
+| B-UI2 · Formal user testing | partial | physical Android rendered the fixed-flow cards; full canonical-UI traversal after #191 reconciliation remains |
 | B-UI3 · Expert `humanVerdict` is not parsed/rendered in biotope provenance | data shipped (U9), client truth gap | show current expert disposition + timestamp prominently; retain the machine result only as labelled, superseded history; test accepted/rejected/pending/unavailable |
 | B-UI4 · Windows-desktop Flutter launch | blocked | OS Developer Mode needed (non-admin); Android emulator is the working path; manual step in runbook |
 | B-UI5 · nao /login browser click-path | documented-only | never driven end-to-end in a browser (routes proven via cookie sessions) |
@@ -131,22 +133,23 @@ must fill it with, so the single-paper ingestion run finishes with **no empty ch
 
 | Checkpoint | Planned model | Run-4 stand-in |
 |---|---|---|
-| Claim/evidence verdict pre-filter | (a) Zebra NLI | replaceable existing-LlmRouter seam; frozen/mock support/contradiction/insufficient reply only |
-| `Citation.evidenceTier` | (b1) Giraffe | deterministic A5 rules first; replaceable existing-LlmRouter seam with frozen/mock reply only for inconclusive residue |
+| Claim/evidence verdict pre-filter | (a) Zebra NLI | lightweight OpenAI model, prompted — **the slot that is currently nothing at all** |
+| `Citation.evidenceTier` | (b1) Giraffe | deterministic A5 rules first, LLM only on the inconclusive residue |
 | `impactTier` | (b2) | **already deterministic** — OpenAlex + SJR; needs nothing |
-| `directionCheck` / `claimKindCheck` | (c) Salmon / Viceroy | replaceable existing-LlmRouter seams with frozen/mock replies alongside authoritative deterministic checks |
-| A4 sentence roles | Leafcutter | replaceable existing-LlmRouter seam with frozen/mock background/method/finding/other reply; hedge remains on the assertion axis |
+| `directionCheck` / `claimKindCheck` | (c) Salmon / Viceroy | lightweight OpenAI model, prompted, alongside the existing deterministic contract checks |
+| A4 sentence roles | Leafcutter | existing Haiku cold-start path |
 
 Two constraints on that unit:
 
-> **The admitted stand-ins are adapter seams, not live calls or custom models.** R4-U5 exercises them
-> only with frozen/mock replies through the existing LlmRouter. Every output visibly records `INTERIM:`
-> task, returned model, prompt version, timestamp, confidence or abstention, and deterministic-fallback
-> use. A suggestion never sets edgeScore/servingBand or bypasses deterministic enforcement.
+> **A stand-in is an LLM call, not a custom model.** It reduces no tokens and proves no model works.
+> Its only job is that the pipeline has no empty checkpoints end to end on one real paper, so every
+> artifact it produces carries an `INTERIM:` provenance marker under the existing convention.
 
-> **Historical/deferred targets are not admitted.** Earlier OpenAI, Haiku, GMI and other live-provider
-> targets describe historical or future O29 options only. O29 remains deferred under the zero-call
-> posture; R4-U5 cannot claim provider execution, decorrelation, model performance, or validation.
+> **Single-provider conflict.** `router.config.json` runs `testMode` ON with all six nodes on OpenAI
+> because only `OPENAI_API_KEY` is provisioned, so the synthesis↔verifier decorrelation invariant is
+> deliberately off. R4-U5 therefore **cannot** also satisfy `B-BR1`/`B-BR2`; scope it to pipeline
+> completeness only. GMI **serverless inference** is one cheap route to a second family and is *not*
+> behind the container entitlement that is currently delayed.
 
 ## D · Platform / process
 
@@ -161,11 +164,11 @@ Two constraints on that unit:
 | B-PL7 · O6 CODEOWNERS + branch protection | open | needs Alton's GitHub handle |
 | B-PL8 · shared/brain has no own typecheck (verified via edge-loader consumer) | U2 finding | consider a tsc target in retro-review |
 | B-PL9 · iOS build/test path | env-gated | Mac + paid Apple account + real device (memory 0010) |
-| B-PL10 · **B8 · two-reviewer rule for `shared/`** | **historical U4 availability blocker resolved; review rule active** | On 2026-07-28 Alton and Jayden were named and approved U4 implementation; both actual U4 shared-contract PR reviews remain required. Current U4 cap admission is NO-GO/pending (+344 remains versus +1,600 low); no U6 approval. Run-2.0 U2/U3 retro-review flags remain. Detail: carry-forward-from-run1.md §2 |
+| B-PL10 · **B8 · satisfy the two-reviewer rule for `shared/` on actual PRs** | **precondition satisfied; review remains per-PR** | Jayden and Alton are the named reviewers, so this no longer blocks starting U4 or reconciling the UI shared-status change. Their review must still be recorded on every actual `shared/` PR; the naming decision does not waive review or retroactively clear older `[B8] retro-review` flags. Detail: carry-forward-from-run1.md §2 |
 | B-PL11 · ADR amendment intents recorded but NOT applied | open | ADR-0002 is `status: accepted` and immutable to `context_sync --check`, so intents were recorded instead: **D3/F4** (deadbandK) and **D5/F6** (RU4d verify-first) from research-fixes, plus Run-2.0 **D2** (TEST-MODE decorrelation override). Each needs a human to apply it via the ADR 2-reviewer / supersede channel. Ties into B-PL10 |
 | B-PL12 · O21 location-fetch trigger config (per-source distance/refresh thresholds) | open — **pending Jayden review** | locked-entry: next-build-optimizations.md O21. Ops/engineering config, explicitly NOT a statistical parameter; gates nothing until env-API collectors exist (see A1 above) |
 | B-PL13 · O23 `brain-ingest` → `llm-router` is not a declared package dependency | open — **pending Jayden review** | locked-entry: next-build-optimizations.md O23. 7 files import across the package boundary by relative path; no `workspaces`, no declared dep. Nothing broken today; becomes a **blocker** for any build/publish step, and risks duplicate router module instances (two budget ledgers) |
-| B-PL14 · Exact-tip CI / Deno release evidence is missing | **release-blocking — Run 4 priority O24** | PR #144 added all four handlers and had 15 green checks on an old synthetic merge, but its base is stale, it conflicts with the current workflow, its exact-SHA assertion is partly tautological, and its config guard fails open on valid TOML forms. Rebuild O24 on the fresh Run 4 base and require one current landing-SHA gate |
+| B-PL14 · Exact-tip CI / Deno release evidence needs current per-unit reconciliation | **delivery merged as U0 #161; reconciliation-required** | O24's release-gate implementation is present and PR #172 added the per-unit base convention. The checked-in `RUN4_UNIT_BASE_SHA` still predates merged U2, so the next orchestrator must advance CI and attestation in lockstep to the exact accepted integration tip, rerun positive and injected-negative evidence, and evaluate each PR's distinct immediate failure. Do not rebuild or silently bypass U0. |
 | B-PL15 · run-pipeline mid-sequence failure path never forced live | open — **Run 4 priority O26** | this row owns forced stage-failure/partial-result verification only; B-DATA2 owns idempotency, demand semantics and transactional publication so the two rows do not duplicate |
 | B-PL16 · run-pipeline stage summaries scale with users × metrics | known, fine at demo scale | flagged in its own header for U6/U8 consumers; revisit before any non-demo load |
 | B-PL17 · Semantic graph freshness is not mechanically enforced at session end | partially mitigated — backlog | The latest refresh validated every manifest entry with a semantic hash, zero pending/deleted files, and zero dangling pair-edge or hyperedge endpoints. The remaining gap is enforcement: Graphify 0.8.40 `graphify update .` / `scripts/graphify-build.ps1` performs structural extraction, while the host-model semantic pass cannot run in CI. Keep the fast/low-effort semantic session convention, then add a local session-end checker for zero pending/deleted files, a current revision stamp, valid schema, and complete endpoints; do not treat silent `graphify check-update .` as proof of semantic freshness. |
@@ -173,7 +176,7 @@ Two constraints on that unit:
 | B-PL19 · Hosted Supabase schema + brain-artifact release/promotion isolation | **production blocker — O29 deferred by default** | The 2026-07-26 read-only probe reached Auth/PostgREST on demo `bewwvcksgpxoomyjavjp`, but the Run-2 brain tables were absent; clean production reserve `jscxvnettbvkboijczav` has not been migration/promotion rehearsed. R2 corpus/edge artifacts are canonical: the pinned corpus manifest rebuilds the D1 search index, while pinned edge JSONL rebuilds the Supabase serving projection. Today `edge-loader --from-r2` reads mutable keys and there is no exact migration ledger, explicit release selector, immutable namespace/manifest, checksummed promotion, target-load provenance, rollback, or cross-environment verdict policy. Apply append-only migrations to a clean target, freeze one reviewed corpus/claim/verification/run manifest, promote identical source bytes without another LLM run, rebuild each projection independently, and mechanically exclude auth users, simulated/personal rows, cards/job state and other demo-only data. Hosted writes require Jayden's separate approval of named isolated rehearsal resources; default evidence is local/offline |
 | B-PL20 · Canonical orientation docs lag long-horizon builds | open — **Run 4 preflight prerequisite** | The [2026-07-26 freshness audit](../documentation-freshness-audit-2026-07-26.md) found materially stale current-state claims in `next-steps`, `phase-2-plan`, M1/M2 context, nao design/README, architecture/table inventory and shared/brain prose. Run one bounded docs-only reconciliation against the integration SHA before unattended Run 4 work; add active-link and status-freshness automation. This is preflight, not a product unit |
 | B-PL21 · `PaperRecord` crosses the ingestion/nao boundary without a shared contract | open — **contract integrity outside the priority tranche** | `tools/brain-ingest/src/types.ts` and `apps/nao/src/lib/types.ts` independently define the manifest record that nao consumes. Promote one additive, versioned `PaperRecord` contract through `shared/brain/`; generate or map TS consumers from that source; add ingestion-to-nao fixture/parity tests and migration compatibility; then remove the duplicate definitions. Because this changes `shared/`, B-PL10's two-reviewer rule applies. Do not fold this engineering work into the B-PL20 docs-only reconciliation |
-| B-PL22 · **no single production-shaped command connects ingestion → insights** | open — **the gap the Run 4 exit gate is designed to expose** | The nao ingestion button stops after the GitHub Actions paper-ingestion job. Synthesis, verification and edge loading remain separate CLI stages, so nothing yet proves that an *arbitrary newly ingested paper* automatically becomes a relationship. `scripts/demo-dryrun-run2.ps1` (756 lines) validates every implemented application API — 21/21 at last run, procedure in [`phase2-demo-runbook.md`](../../shared/phase2-demo-runbook.md) — but it does so from **four hand-authored relationship fixtures**, one fixture claim with a real live verifier call, real local edge loading and insight-engine execution, and **simulated provenance-labelled** Biotope health data. API integrity and end-to-end authoring are therefore two distinct claims, and only the first is currently evidenced |
+| B-PL22 · **no single production-shaped command connects ingestion → insights** | partial/open — U5 #176 and provider evidence #190 exist but are unmerged | Full canonical extraction and selected-passage synthesis were exercised; a one-paper edge correctly remained held. Sentence-level StructuredPaper/JATS/citation-root/assertion/NLI stages and a single arbitrary-paper command remain absent. The fixed-edge local harness passed 20/20 with 21 simulated days and Android rendering, which proves API/serving integrity separately from servable real-paper authoring |
 
 ---
 
@@ -203,8 +206,8 @@ Run 2.0 executed the O9–O20 backlog but closed none of the following. Historic
 
 | Item | State | Gates / notes |
 |---|---|---|
-| B-SEC1 · nao RBAC/RLS and global-job privacy boundary | **production blocker — Run 4 priority O25** | canonical docs require viewer/curator/admin, but code/RLS admit every authenticated biotope user to global reads/writes; any account can trigger an all-user service-role run whose verbatim summary can expose other users' UUIDs + processing context. Enforce explicit membership/role in routes and DB, revoke broad writes, redact async job responses, add direct-REST and role-matrix negative tests; keep exact small-cohort gap counts staff-only/suppressed |
-| B-SEC2 · Legacy `service_role` Bearer dependency and server-key rotation | **production blocker — Run 4 priority O25** | nao's run relay sends the legacy JWT as both Bearer and `apikey`, while `run-pipeline` compares Bearer directly to `SUPABASE_SERVICE_ROLE_KEY`; Supabase's replacement `sb_secret_…` keys are not JWTs and must travel on `apikey`, so this cannot be fixed by renaming an env value. Following the [Supabase key-migration contract](https://supabase.com/docs/guides/getting-started/migrating-to-new-api-keys), move every Worker/Edge Function/cron/`pg_net` caller to a supported named-secret flow (`SUPABASE_SECRET_KEYS` or supported server auth) with explicit internal/admin authorization, backend-only storage, staged rotation/revocation and negative leak/header tests before legacy-key retirement; never expose either key to Flutter or `NEXT_PUBLIC_*` |
+| B-SEC1 · nao RBAC/RLS and global-job privacy boundary | **delivery merged as U2 #177; correction reconciliation-required** | U2 added the explicit membership/role boundary, restricted writes, redacted global-job responses, and the role-matrix/direct-REST harness. PR #186 carries a truthful control-audit correction that overlaps U2 sanitization/logging and must be reconciled with #185 from the current integration tip; rerun all 443 authorization assertions and nao/internal-auth tests before calling this done. |
+| B-SEC2 · Legacy `service_role` Bearer dependency and server-key rotation | **delivery merged as U2 #177; correction reconciliation-required** | U2 added the named server-secret boundary and negative header/client-surface coverage. PR #185 carries replacement-key support but currently fails the runtime-attestation config/lock hash check; combine it with #186, preserve backend-only storage and explicit internal/admin authorization, then rerun rotation, leak, header, and 443-assertion evidence before legacy-key retirement. Never expose either key to Flutter or `NEXT_PUBLIC_*`. |
 | B-DATA1 · Simulated loader can corrupt the raw truth layer | **production blocker — Run 4 priority O26** | date plan reads gut only, then gut/wearable commit separately; can overwrite wearable-only real dates, strand partial loads, mishandle holes, and retain simulated provenance/stale fields after a real edit. Hard demo-environment/tenant gate, atomic two-table RPC, non-sim conflict refusal, cleanup/repair, explicit real-writer provenance replacement, forced-failure tests |
 | B-DATA2 · Pipeline idempotency, gap-demand semantics, and atomic publication | open — **Run 4 priority O26** | repeated/retried unchanged runs inflate demand; JS keys by pair+status while DB keys by pair and last status wins; gap write can commit before card failure. Add durable run/idempotent pipeline runs, input watermark, single-flight, stable per-user/pair/evaluation event, per-status aggregation, retryable stage state and concurrency/failure tests |
 | B-COST1 · Router budget enforcement is not atomic or globally capped | open — outside the Run 4 priority tranche | concurrent callers can all pass stale prechecks; file merge/temp path is not locked; corrupt ledger resets to zero; six raiseable 5-USD node caps imply 30 USD/day, not the stated run ceiling. Add central atomic reservation/reconciliation, true global cap, unique call IDs, fail-closed corruption, timeouts/schema validation/ambiguous-call accounting and concurrent stress tests. B-BR8 owns values, not enforcement |
@@ -272,10 +275,10 @@ If you add an O-item, add its row above and a line here.
 | O21 · Location-fetch trigger config | open — **pending Jayden review** | B-PL12 |
 | O22 · Known-venue override table | open — **pending Jayden review** | B-BR11 (+ B11 SJR dataset via B-R1-2) |
 | O23 · brain-ingest → llm-router real dependency | open — **pending Jayden review** | B-PL13 |
-| O24 · Exact-tip release gate + complete/reproducible Deno CI | **Run 4 priority U0 candidate; rebuild, do not merge #144** | B-PL14; O31-O34 |
-| O25 · nao RBAC/RLS + redacted global-job boundary + named server-key rotation | **Run 4 priority U2 candidate** | B-SEC1; B-SEC2; B-BR7 direct-write slice |
-| O26 · Raw-truth-safe demo loader + retry-safe pipeline | **Run 4 priority U3 candidate** | B-DATA1; B-DATA2; B-PL15 |
-| O27 · Scientific provenance semantics + artifact trust posture | **Run 4 U4: reviewer-unblocked, current-cap NO-GO/pending** | Alton + Jayden named; both actual PR reviews required; +344 remains versus +1,600 low; no U6 authority. B-SCI1; B-SCI2; B-UI3; B-UI9; B-BR7; O38 |
+| O24 · Exact-tip release gate + complete/reproducible Deno CI | **merged as U0 #161** | B-PL14/O31-O34 delivery present; per-unit gate base needs current-tip reconciliation |
+| O25 · nao RBAC/RLS + redacted global-job boundary + named server-key rotation | **merged as U2 #177; corrections open** | Combine #185/#186; rerun B-SEC1/B-SEC2/B-BR7 and 443 auth assertions |
+| O26 · Raw-truth-safe demo loader + retry-safe pipeline | **built/open as U3 #184** | B-DATA1/B-DATA2/B-PL15; current gate + LoaderPanel target + full HTTP walk pending |
+| O27 · Scientific provenance semantics + artifact trust posture | **startable as U4; not built** | Jayden + Alton named reviewers; B-SCI1/B-SCI2/B-UI3/B-UI9/B-BR7/O38 remain |
 | O28 · Plain-language + accessible client insights | **candidate; deferred by default from priority tranche** | B-UI10; B-UI11; O37 |
 | O29 · Live verifier/model attestation + migrated immutable release promotion | **candidate; deferred by default pending provider and release gates** | B-BR1; B-BR2; B-BR3; B-PL19 |
 
@@ -286,14 +289,14 @@ lives in [`next-build-optimizations.md`](./next-build-optimizations.md).
 
 | Item | State | Gates / notes |
 |---|---|---|
-| O31 · Mechanical landing-delta cap enforcement | Run 4 priority U0 candidate | Needs an immutable base SHA and an approved cap definition; fail closed in CI |
-| O32 · Required-status configuration as recorded state | Run 4 priority U0 candidate | P1; require one stable aggregate gate and verify settings drift |
-| O33 · Fail-closed Supabase function/matrix coverage | Run 4 priority U0 candidate | Parse valid TOML; verify enabled job, exact entrypoint and matrix coverage |
-| O34 · Deploy-path dependency attestation | Run 4 priority U0 candidate | Evidence question: prove the pinned CLI/bundler consumes the intended config and dependency graph before claiming parity |
-| O35 · Import/boundary enforcement | Run 4 priority U1 candidate | Cover TS, Dart, Python-workspace references and forbidden `/impl` imports with fixture-tested guards |
-| O36 · Secret scanning on push and PR | Run 4 priority U1 candidate | Pin scanner/action; retain targeted bundle/header/log negative tests |
+| O31 · Mechanical landing-delta cap enforcement | merged in U0; base reconciliation pending | Machine gate exists; advance exact per-unit base rather than charging cumulative history |
+| O32 · Required-status configuration as recorded state | merged in U0 | Stable aggregate evidence exists; branch intentionally remains unprotected |
+| O33 · Fail-closed Supabase function/matrix coverage | merged in U0 | Retain negative fixtures during gate-base changes |
+| O34 · Deploy-path dependency attestation | merged in U0 | Regenerate attestation whenever unit base/function graph changes |
+| O35 · Import/boundary enforcement | built/unmerged in U1 #170/#180 | Reconcile stacked remediation and rerun bypass fixtures |
+| O36 · Secret scanning on push and PR | built/unmerged; current #180 check fails | Fix the real scanner/client-surface failure; do not suppress it |
 | O37 · Golden-test determinism prerequisite | candidate; deferred by default | Run 4 defaults to widget + semantics assertions; introduce goldens only with proven cross-platform determinism |
-| O38 · Shared trust-label parity | Run 4 U4 reviewer-unblocked; current-cap NO-GO/pending | Alton + Jayden named and both actual PR reviews required; use TS/Dart generated or parity-guarded constants, not a cross-language direct import; no U6 authority |
+| O38 · Shared trust-label parity | startable in U4; not built | Jayden + Alton named reviewers; use TS/Dart generated or parity-guarded constants, not a cross-language direct import |
 | O39 · Dependency update channel | candidate; deferred by default | Separate maintenance policy; do not mix with release-blocker remediation |
 | O40 · Documentation status hygiene | Run 4 preflight / closeout candidate | Run 3 closure routing plus a superseding ADR for the accepted/proposed mismatch |
 

@@ -9,10 +9,14 @@
 // evaluate-signals gets a nightly schedule is Jayden's call) and changes nothing about the
 // engine: it is a sequencer only.
 //
-// AUTH — service-role gated by exact header compare, identical to the three siblings: the
-// caller (nao's server route U6/U8, the demo runbook, or an admin curl) sends
-// `Authorization: Bearer <service-role-key>`. That same header is forwarded to each stage,
-// which applies the same compare.
+// AUTH (R4-U2) — the internal-secret protocol, identical to the three siblings: the caller
+// (nao's server route, the demo runbook, or an admin curl) sends the dedicated header
+// `X-Ourobion-Internal-Secret: <secret>`, compared CONSTANT-TIME against the
+// OUROBION_INTERNAL_SECRET_CURRENT / _PREVIOUS rotation pair by
+// ../_shared/internal_auth.ts. The service-role key is NO LONGER an authorization input and
+// no longer travels in any request — this function does not read it at all any more.
+// `Authorization` carries the publishable anon JWT purely to satisfy the gateway's
+// `verify_jwt = true`; it grants nothing. The same three headers are forwarded to each stage.
 //
 // REQUEST:  POST, body ignored (send `{}`). No per-user scoping: the sibling functions parse
 // no request body (verified U5) — the pipeline always runs over all users, exactly like the
@@ -29,6 +33,13 @@
 // unreachable) STOPS the sequence — downstream stages would read the failed stage's stale
 // output — and reports the partial results honestly.
 
+import {
+  INTERNAL_SECRET_HEADER_WIRE,
+  isWellFormedInternalSecret,
+  unauthorizedResponse,
+  verifyInternalSecretRequest,
+} from "../_shared/internal_auth.ts"
+
 /** The serve pipeline, in dependency order (§S3 → §S4/S5 → §S7/S8). */
 const PIPELINE_STAGES = ["compute-baselines", "evaluate-signals", "generate-insights"] as const
 
@@ -40,28 +51,54 @@ interface StageResult {
 }
 
 Deno.serve(async (req) => {
-  // A22: without this guard an unset env var degenerates the expected header to the literal
-  // string "Bearer undefined" — fail loudly (500, secret never echoed) before any compare.
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
-  if (!serviceRoleKey) {
-    console.error("SUPABASE_SERVICE_ROLE_KEY is not set — refusing to serve")
-    return new Response(
-      JSON.stringify({ error: "server misconfiguration: service-role key unavailable" }),
-      { status: 500 },
-    )
+  // ── AUTHORIZATION FIRST (R4-U2) ─────────────────────────────────────────────────────────
+  // Before ANY configuration guard, deliberately. Every denial — missing header, blank or
+  // whitespace-only header, malformed header, wrong secret, and "no secret configured at
+  // all" — answers with the SAME 401 and the SAME body bytes, and never 500. Two reasons:
+  //   1. It removes an oracle that would otherwise tell an unauthenticated caller whether
+  //      the deployment is misconfigured or their secret is merely wrong.
+  //   2. tools/run4_release_gate.mjs requires the recorded local `functions serve` probe to
+  //      observe 401 with handlerReached === true on all four routes. That probe has no
+  //      internal secret configured, so a 500 on missing config would make the deploy
+  //      attestation unrecordable and hard-block the unit.
+  // This inverts the old order (service-key 500 guard, then a non-constant-time `!==`
+  // compare). The A22 concern that motivated that 500 guard — an unset env degenerating the
+  // expected header to the literal "Bearer undefined" — is structurally gone: the shape
+  // validator rejects absent/blank/malformed values on BOTH sides before any comparison.
+  const verdict = await verifyInternalSecretRequest(req, {
+    current: Deno.env.get("OUROBION_INTERNAL_SECRET_CURRENT"),
+    previous: Deno.env.get("OUROBION_INTERNAL_SECRET_PREVIOUS"),
+  })
+  if (!verdict.ok) {
+    console.error(`internal auth denied: ${verdict.reason}`) // reason only — never a value
+    return unauthorizedResponse()
   }
 
-  // Only nao's server route / the demo runbook / an admin curl may trigger the pipeline.
-  const auth = req.headers.get("Authorization")
-  if (!auth || auth !== `Bearer ${serviceRoleKey}`) {
-    return new Response("Unauthorized", { status: 401 })
-  }
-
+  // ── Configuration guards — reachable only by an AUTHORIZED caller, so a 500 here leaks
+  // nothing about deployment state to an anonymous prober.
   const supabaseUrl = Deno.env.get("SUPABASE_URL")
   if (!supabaseUrl) {
     console.error("SUPABASE_URL is not set — refusing to serve")
     return new Response(
       JSON.stringify({ error: "server misconfiguration: functions URL unavailable" }),
+      { status: 500 },
+    )
+  }
+
+  // Fan-out credentials. NOTE: no service-role key — this function no longer reads it.
+  // `apikey` + `Authorization` are the PUBLISHABLE anon key (gateway routing and
+  // `verify_jwt = true` only; `anon` has no privileges any stage relies on). The internal
+  // secret is the sole authorization input. Prefer CURRENT; fall back to PREVIOUS so a
+  // rotation window in which only PREVIOUS is set still fans out successfully.
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")
+  const configuredCurrent = Deno.env.get("OUROBION_INTERNAL_SECRET_CURRENT")
+  const outboundSecret = isWellFormedInternalSecret(configuredCurrent)
+    ? configuredCurrent
+    : Deno.env.get("OUROBION_INTERNAL_SECRET_PREVIOUS")
+  if (!anonKey || !isWellFormedInternalSecret(outboundSecret)) {
+    console.error("run-pipeline: anon key or internal secret unavailable for fan-out")
+    return new Response(
+      JSON.stringify({ error: "server misconfiguration: stage credentials unavailable" }),
       { status: 500 },
     )
   }
@@ -74,7 +111,9 @@ Deno.serve(async (req) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${serviceRoleKey}`,
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+          [INTERNAL_SECRET_HEADER_WIRE]: outboundSecret,
         },
         body: "{}",
       })

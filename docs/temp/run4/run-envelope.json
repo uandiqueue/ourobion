@@ -1,118 +1,156 @@
 {
-  "title": "Run 4 pre-flight candidate envelope",
-  "status": "accepted_u0_merged_u5_pass2_in_progress",
+  "title": "Run 4 active reconciliation envelope",
+  "status": "reconciliation-required",
   "approved": true,
-  "preflightPr": 156,
-  "date": "2026-07-28",
-  "issue": 155,
-  "claim": { "task": "run4-preflight-decision-packet", "agent": "codex", "device": "agentjwork" },
-  "worktree": "C:\\project\\ourobion-run4-preflight-155",
-  "sessionBranch": "docs/run4-preflight-155",
-  "implementationAuthorised": true,
-  "u0State": "merged_pr_161_exact_merge_sha_ci_19_of_19",
-  "u0Merge": { "pr": 161, "sha": "66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa", "workflowRun": 30285010079, "checksPassed": 19, "checksTotal": 19 },
-  "candidate": {
-    "integrationBranch": "dev-phase2-run4",
-    "branchCreatedAtSha": "854aa471970b61afdc59205ded0b1c8a9ab3f270",
-    "historicalEnvelopeBaseSha": "854aa471970b61afdc59205ded0b1c8a9ab3f270",
-    "historicallyLockedUnits": ["R4-U0", "R4-U1", "R4-U2", "R4-U3"],
-    "currentDeferredUnits": ["R4-U2", "R4-U3", "R4-U4"],
-    "caps": { "maxChangedPaths": 115, "maxAddedLines": 8500 },
-    "measurement": "final product landing-delta union from U0 unit base to candidate; historical pre-overlay snapshot f2f2dac excludes only MT4 paths/session, while the later U5 docs/script/session overlay was independently audited; exact pre-merge remeasurement remains mandatory",
-    "failureModes": ["missing-base", "shallow-history", "parse", "rename", "binary"]
+  "updated": "2026-07-28",
+  "integrationBranch": "dev-phase2-run4",
+  "historicalEnvelopeBaseSha": "854aa471970b61afdc59205ded0b1c8a9ab3f270",
+  "snapshot": {
+    "githubRefreshedOn": "2026-07-28",
+    "integrationTipBeforeDocsRefresh": "ad8ef178053c7e6514283f19ee7a4f3f0829dc0c",
+    "integrationTipSource": "merge PR #177",
+    "noPrNewerThan": 191,
+    "mustRefreshBeforeActing": true
   },
-  "requiredChecks": ["Run 4 release evidence", "Context — sessions / memory / decisions / index / couplings", "Flutter — Analyze & Test", "TypeScript — Type Check", "Node tools — tools/brain-ingest", "Node tools — tools/llm-router", "Node tools — tools/rules", "Node tools — tools/edge-loader", "Node tools — tools/engine-stats", "Node tools — tools/metric-view", "nao — typecheck & test", "Deno — compute-baselines", "Deno — evaluate-signals", "Deno — generate-insights", "Deno — run-pipeline", "Migrations — shadow apply (postgres:17)", "model-training — core (stdlib only, zero installs)", "model-training — lint / format / type-check", "Run 4 Gate"],
-  "preconditions": { "p1": "user override: dev-phase2-run4 intentionally remains unprotected; Run 4 Gate is stable CI evidence only, not branch-setting enforcement", "p2": "R4-U4 reviewer availability resolved: Alton and Jayden approve implementation and both actual shared-contract PR reviews remain required; current cap admission is NO-GO/pending because +344 remains versus +1,600 low; no U6 authority", "p3": "accepted: model training paused/excluded; train nothing", "p4": "accepted: immutable base, caps, and locked list", "p5": "accepted: local-only; no hosted/deployment/key changes", "p6": "accepted: O29 deferred; zero provider calls; OpenAI TEST-MODE", "p7": "complete: PR #144 closed and superseded" },
-  "forbidden": ["hosted writes", "provider calls", "settings changes", "PR #144 changes", "merge to dev-phase2", "merge to main"],
-  "historicalBootstrapEvidence": { "pr": 156, "target": "dev-phase2-run4", "requiredChecks": ["Context — sessions / memory / decisions / index / couplings", "Flutter — Analyze & Test", "TypeScript — Type Check", "Node tools — tools/brain-ingest", "Node tools — tools/llm-router", "Node tools — tools/rules", "Node tools — tools/edge-loader", "Node tools — tools/engine-stats", "Node tools — tools/metric-view", "nao — typecheck & test", "Deno — compute-baselines", "Deno — evaluate-signals", "Deno — generate-insights", "Migrations — shadow apply (postgres:17)"], "evidence": { "workflowRun": 30267437774, "ciEnablementCommit": "f60650838428d871690d6f83358e0fb05387d0bc", "checksPassed": 14, "trigger": "self-triggered on PR #156 targeting dev-phase2-run4", "doesNotClaim": "later evidence-recording commit tested" }, "currentMeaning": "historical evidence only; it does not test the current U0 SHA" },
-  "run4GitScope": "All Run 4 issue, branch, PR, and merge operations target dev-phase2-run4 only; never dev-phase2 or main.",
-  "authorities": { "sixPlanningAuthorityFiles": "copied byte-for-byte and counted in cap", "trackingAndApprovalUpdates": "counted in cap but not byte-for-byte authority material" },
-  "additionalSlice": {
-    "id": "R4-U5/pass-2",
-    "description": "local fixture-backed paper-to-Biotope slice",
-    "state": "db_load_complete_health_insight_pending",
-    "issue": 167,
-    "baseSha": "66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa",
-    "historicalEstimate": { "changedPaths": 6, "addedLinesApprox": 1900 },
-    "currentMeasurementBeforePlan": { "changedPaths": 10, "addedLines": 928, "deletedLines": 29 },
-    "u0U5UnionBeforePlan": { "changedPaths": 27, "addedLines": 2634, "deletedLines": 126, "cap": { "maxChangedPaths": 115, "maxAddedLines": 8500 }, "remeasureBeforeMerge": true },
-    "constraints": ["local-only", "no-provider-calls", "no-hosted-writes", "no-shared-changes", "no-model-training"],
-    "acceptance": "DOI 10.1016/j.isci.2026.116224 -> explicit local-agent synthesis artifact -> deterministic checks -> visible INTERIM uncertain/hold verification -> canonical-ID local edge load -> later health/insight/provenance evidence",
-    "canonicalPaperFiles": "locally cached read-only in ignored runtime storage",
-    "localDbStatus": "canonical run d3c2020a complete: one uncertain hold, zero servable edges",
-    "healthInsightStatus": "pending",
-    "humanSignoff": "pending",
-    "latestLocalExecution": {
-      "state": "partial_evidence_s0_through_s8_and_m1_passed_m2_blocked_not_accepted",
-      "harnessHardening": ["ansi_reset_output_normalization", "process_scoped_local_public_supabase_env", "api_redirect_suppression"],
-      "providerCalls": 0,
-      "hostedCalls": 0,
-      "edgeArtifacts": { "claims": 5, "verifiedEdges": 4, "u5Verdict": "uncertain", "u5Disposition": "hold" },
-      "demoUserId": "4483fefb-d5e5-49a9-8132-d347ad082b57",
-      "m1": { "simulatedGutRows": 14, "simulatedWearableRows": 14 },
-      "m2": {
-        "status": 401,
-        "reason": "active edge-runtime container is mounted from separately owned U2 worktree and enforces U2 internal auth before U5/base route",
-        "serviceRoleKeysCompareEqual": true,
-        "writes": { "baselineSnapshots": 0, "signals": 0, "insightCards": 0, "composedInsights": 0 },
-        "disposition": "not_u5_code_failure_health_insight_proof_awaits_stable_u2_reconciliation_do_not_restart_or_rebind_u2_owned_stack"
-      },
-      "u2Pr": "not_open",
-      "uiPr175": "exists_deferred_until_unit_boundary_not_inspected_or_merged"
+  "gate": {
+    "name": "Run 4 Gate",
+    "releaseEvidenceCheck": "Run 4 release evidence",
+    "checkedInUnitBaseShaAtRefresh": "c558c04f1b661a59c8987c96770768eeea46e0cc",
+    "historicalUnitBaseShas": [
+      "837b7e690f92dc1669428a2476c9d8d0456020e8",
+      "77c98213e23ad56ae37c86201b39ef4e7543a543"
+    ],
+    "baseReconciliationRequired": true,
+    "nextBaseMustEqualExactAcceptedIntegrationTip": true,
+    "caps": {
+      "maxChangedPaths": 115,
+      "maxAddedLines": 8500
+    },
+    "measurement": "unique paths and added lines in RUN4_UNIT_BASE_SHA..HEAD; generated, lock, session, tracking, and corrections count",
+    "failureModes": ["missing-base", "shallow-history", "parse", "rename", "binary", "stale-base"],
+    "rule": "advance per unit with CI and regenerated deploy attestation; never weaken or bypass silently",
+    "uiEnvelopeDecision": "full UI scope is not trimmed merely to fit the original product-unit cap; reconcile an explicit unit envelope and machine evidence"
+  },
+  "units": {
+    "R4-U0": {
+      "scope": "O24 + O31-O34",
+      "delivery": "merged",
+      "disposition": "reconciliation-required",
+      "prs": [161, 172]
+    },
+    "R4-U1": {
+      "scope": "O35 + O36",
+      "delivery": "built",
+      "prState": "open-unmerged",
+      "disposition": "reconciliation-required",
+      "canonicalCandidatePr": 180,
+      "predecessorPr": 170,
+      "rule": "do not merge predecessor alone"
+    },
+    "R4-U2": {
+      "scope": "O25",
+      "delivery": "merged",
+      "disposition": "reconciliation-required",
+      "mergedPr": 177,
+      "correctionPrs": [185, 186]
+    },
+    "R4-U3": {
+      "scope": "O26",
+      "delivery": "built",
+      "prState": "open-unmerged",
+      "disposition": "reconciliation-required",
+      "pr": 184,
+      "pending": ["gate base", "LoaderPanel target", "full 14+7 day HTTP walk"]
+    },
+    "R4-U4": {
+      "scope": "O27 + O38",
+      "delivery": "none",
+      "disposition": "startable",
+      "reviewers": ["Jayden", "Alton"]
+    },
+    "R4-U5": {
+      "scope": "single-paper authoring",
+      "delivery": "built",
+      "prState": "open-unmerged",
+      "disposition": "reconciliation-required",
+      "pr": 176,
+      "providerEvidencePr": 190,
+      "sentenceProvenance": "B-PL22 pending"
+    },
+    "R4-U6": {
+      "scope": "metric expansion",
+      "delivery": "none",
+      "disposition": "deferred"
+    },
+    "R4-U7": {
+      "scope": "full UI",
+      "delivery": "built",
+      "prState": "open-unmerged",
+      "disposition": "reconciliation-required",
+      "canonicalPr": 191,
+      "predecessorPr": 175,
+      "rule": "do not merge both"
     }
   },
-  "sentenceProvenanceTranche": {
-    "unit": "R4-U5",
-    "register": "B-PL22",
-    "planningState": "admitted",
-    "implementationState": "planning_admitted_implementation_deferred_by_cap_pending_later_envelope",
-    "noNewUnitOrPipeline": true,
-    "prePlanUnion": { "ref": "71a2ace", "base": "77c98213e23ad56ae37c86201b39ef4e7543a543", "changedPaths": 27, "addedLines": 2634, "deletedLines": 126 },
-    "planCommitUnion": { "ref": "a96c7c470cce0cb6be9e24c06d7959fd17f0f0e6", "base": "77c98213e23ad56ae37c86201b39ef4e7543a543", "changedPaths": 28, "addedLines": 2809, "deletedLines": 162 },
-    "currentUnionAtCanonicalFix": { "ref": "cdc16f9", "base": "77c98213e23ad56ae37c86201b39ef4e7543a543", "changedPaths": 28, "addedLines": 2851, "deletedLines": 162 },
-    "externalU1": { "state": "complete_external_pr_draft_open_unmerged", "pr": 170, "head": "baab1536", "mergeable": "CLEAN", "checks": { "passed": 21, "total": 21 }, "githubDiff": { "changedPaths": 10, "addedLines": 5060, "deletedLines": 0 } },
-    "combinedProductSnapshot": { "tree": "f2f2dac", "base": "77c98213e23ad56ae37c86201b39ef4e7543a543", "includes": ["U0", "PR172 shared gate updates", "U1 baab1536", "U5 cdc16f9"], "excludes": ["docs/temp/model-training/**", "MT4 session log", "later U5 docs/script/session overlay audited separately"], "changedPaths": 38, "addedLines": 8002, "deletedLines": 162 },
-    "remainingAtSnapshot": { "changedPaths": 77, "addedLines": 498 },
-    "finalPreCommitOverlay": { "includes": ["U5 docs", "harness script", "44-line session"], "changedPaths": 40, "addedLines": 8156, "deletedLines": 195, "remaining": { "changedPaths": 75, "addedLines": 344 }, "remeasureBeforeMerge": true },
-    "capDisposition": { "u1": "fits_complete_external_unmerged", "u2": "deferred_by_cap_pending_later_envelope", "u3": "deferred_by_cap_pending_later_envelope", "sentenceProvenanceImplementation": "deferred_by_cap_pending_later_envelope", "silentCapExpansion": false },
-    "minimalBoundedImplementation": { "totalTouchedPaths": 6, "reusedCurrentPaths": 2, "newUniquePaths": 4, "addedLinesApprox": 1900, "fits": false },
-    "sizes": { "persistedServedUi": { "changedPaths": 27, "addedLinesApprox": 4000, "reservedChangedPaths": 30, "reservedAddedLinesApprox": 4500 } },
-    "remeasureBeforeMerge": true,
-    "blocked": ["P2 remains unresolved for this sentence-provenance shared/persisted/served/UI contract"],
-    "deferred": ["O29 provider/model execution under zero-provider-call posture"],
-    "constraints": ["no-training", "no-runtime-import", "frozen-or-mocked-LlmRouter-only", "deterministic-enforcement", "fail-closed"],
-    "scope": ["versioned StructuredPaper", "JATS or frozen GROBID-style mapping", "sentence offsets/citations/refGraph roots", "curated mention rules", "INTERIM adapter provenance"]
+  "openPullRequestsAtRefresh": {
+    "170": { "prState": "open-unmerged", "draft": true, "checks": "21/21", "role": "U1 predecessor", "disposition": "reconciliation-required" },
+    "175": { "prState": "open-unmerged", "draft": false, "checks": "19/19", "role": "UI predecessor contained by #191", "disposition": "reconciliation-required" },
+    "176": { "prState": "open-unmerged", "draft": true, "checks": "17/19", "disposition": "reconciliation-required", "immediateFailure": "synthetic merge parents do not match current event base/head", "failures": ["Run 4 release evidence", "Run 4 Gate"] },
+    "180": { "prState": "open-unmerged", "draft": true, "checks": "18/21", "disposition": "reconciliation-required", "immediateFailure": "five full-history secret findings and 14131 additions above the 8500 cap", "failures": ["Secret scan & client-surface leak guard", "Run 4 release evidence", "Run 4 Gate"] },
+    "184": { "prState": "open-unmerged", "draft": true, "checks": "17/19", "disposition": "reconciliation-required", "immediateFailure": "15001 additions above the 8500 cap", "failures": ["Run 4 release evidence", "Run 4 Gate"] },
+    "185": { "prState": "open-unmerged", "draft": true, "checks": "17/19", "disposition": "reconciliation-required", "immediateFailure": "local runtime attestation config/lock hash mismatch", "failures": ["Run 4 release evidence", "Run 4 Gate"] },
+    "186": { "prState": "open-unmerged", "draft": true, "checks": "17/19", "disposition": "reconciliation-required", "immediateFailure": "8565 additions above the 8500 cap", "failures": ["Run 4 release evidence", "Run 4 Gate"] },
+    "190": { "prState": "open-unmerged", "draft": true, "checks": "17/19", "disposition": "reconciliation-required", "immediateFailure": "8840 additions above the 8500 cap", "failures": ["Run 4 release evidence", "Run 4 Gate"] },
+    "191": { "prState": "open-unmerged", "draft": false, "checks": "17/19", "disposition": "reconciliation-required", "immediateFailure": "13449 additions above the 8500 cap", "failures": ["Run 4 release evidence", "Run 4 Gate"] }
   },
-  "continuation": { "userInstructionDate": "2026-07-28", "direction": "continuous local Run 4 completion", "u1": "complete externally at baab1536; PR #170 draft/open and unmerged" },
-  "pr144": { "state": "CLOSED_NOT_MERGED", "closedAt": "2026-07-27T08:03:15Z", "base": "dev-phase2-run3@9b41f4abc0a52e2c3ebfebb6b6fe6b375709dca3", "head": "5eebdddc522d0e5c337573ab8b0224ce35f0313b", "supersededComment": "https://github.com/uandiqueue/ourobion/pull/144#issuecomment-5088805906", "checks": "15 green checks are stale evidence only" },
-  "localQualification": {
-    "state": "historical_pre_merge_passed_with_environment_blocks",
-    "historical": true,
-    "u0OverallState": "complete_pr161_exact_merge_sha_ci_19_of_19",
-    "complete": false,
-    "gateTests": { "passed": 9, "total": 9 },
-    "configWorkflow": "PASS",
-    "denoFrozenChecks": { "passed": 4, "total": 4, "deno": "2.8.1" },
-    "localAttestation": { "freshGraph": "PASS", "verification": "PASS", "supabaseCli": "2.81.2", "deno": "2.8.1", "localOnly": true, "hostedParityClaimed": false },
-    "shadowMigrations": { "passed": 23, "total": 23, "postgres": "17", "disposableInstanceRemoved": true },
-    "contextSync": "PASS",
-    "sharedTypeScript": "PASS",
-    "packageTests": { "brainIngest": 353, "llmRouter": 71, "rules": 82, "edgeLoader": 56, "engineStats": 49, "metricView": 5, "nao": 94, "total": 710, "includingGate": 719 },
-    "packageTypechecksAndDriftChecks": "PASS",
-    "installs": { "packageScopedNpmCi": "PASS after scoped Windows EPERM escalation", "rootNpmCi": "BLOCKED: sandbox could not replace root node_modules; clean root install pending Linux CI" },
-    "flutter": { "state": "BLOCKED_NOT_FAILED", "reason": "Windows Developer Mode off prevents isolated-worktree plugin symlinks", "analyzeEvidenceValid": false, "testsRun": 0, "cacheReuse": "refused because other-workspace inputs were not byte-identical", "pending": "exact PR-head Linux analyze/test" },
-    "auditNotices": { "shared": { "high": 1 }, "brainIngest": { "moderate": 1, "high": 2, "critical": 1 }, "nao": { "high": 6 }, "fixed": false },
-    "localServeProbe": { "routes": 4, "result": "handler-level 401 responses", "serverStopped": true, "secretsUsed": false, "hostedCalls": false, "providerCalls": false, "hostedParityClaimed": false },
-    "historicalPendingAtTime": ["clean root install in Linux CI", "exact PR-head Linux Flutter analyze/test", "full PR CI", "human review", "PR", "merge"]
+  "preconditions": {
+    "p1": "accepted override: dev-phase2-run4 intentionally unprotected; exact-head Run 4 Gate remains mandatory evidence",
+    "p2": "satisfied for Run 4 shared work: Jayden and Alton named; actual PR reviews required",
+    "p3": "accepted: no model training or serving; historical bundles are separate and non-serving",
+    "p4": "accepted: immutable historical envelope and per-unit machine cap; current base needs reconciliation",
+    "p5": "accepted: local-only; disposable Supabase reset and physical Android authorized",
+    "p6": "general O29 deferred; bounded issue-189 provider test complete",
+    "p7": "complete: PR #144 closed and superseded"
   },
-  "u0UnitGate": {
-    "unitBaseSha": "77c98213e23ad56ae37c86201b39ef4e7543a543",
-    "historicalUnitBaseShas": ["837b7e690f92dc1669428a2476c9d8d0456020e8"],
-    "caps": { "maxChangedPaths": 115, "maxAddedLines": 8500 },
-    "measurement": "final product landing-delta union from unitBaseSha to candidate tree; exclusions explicit; remeasureBeforeMerge required",
-    "remeasureBeforeMerge": true,
-    "concurrentSessionHandling": "The owner instructed U0 not to edit the separately owned model-training workstream. The active unit base is the exact consolidated Run 3/MT3 integration tip, so inherited history is not misrepresented as U0 work."
+  "providerException": {
+    "issue": 189,
+    "complete": true,
+    "openAi": { "role": "main synthesis over selected passages", "ceilingSgd": 20, "estimatedTotalSgd": 0.0648 },
+    "anthropic": { "role": "verifier only", "ceilingSgd": 2, "estimatedTotalSgd": 0.1340 },
+    "billingCaveat": "local estimates from returned token counts and provisional repository prices; provider billing authoritative",
+    "generalO29Unblocked": false,
+    "additionalCallsAuthorized": false
   },
-  "providerSpendUsd": 0,
-  "testsRun": true
+  "localEvidence": {
+    "paperCanonicalChars": 91162,
+    "providerPromptScope": "12 selected passages, not complete canonical text",
+    "realPaperEdge": "held: verifier had zero independent sources",
+    "fixedEdgeHarness": "20/20",
+    "simulatedHealthDays": 21,
+    "physicalAndroidRender": true,
+    "integrationLocation": "open PR #190, not yet on dev-phase2-run4"
+  },
+  "requiredSequence": [
+    "refresh live GitHub and ancestry",
+    "reconcile gate base and issue #171",
+    "reconcile U1 #170/#180",
+    "combine U2 corrections #185/#186",
+    "finish U3 #184 and full 14+7 day walk",
+    "implement U4 with Jayden+Alton review",
+    "finish U5 #176 and integrate #190 evidence",
+    "integrate canonical full UI #191 and supersede #175",
+    "run final full suite and two local exit passes",
+    "stop before cloud promotion"
+  ],
+  "forbidden": [
+    "merge outside dev-phase2-run4",
+    "hosted writes",
+    "deployment",
+    "production traffic",
+    "key mutation or rotation",
+    "model training or serving",
+    "additional provider calls without new explicit budget",
+    "scientific validation claim"
+  ],
+  "resumeCommand": "run docs\\temp\\run4\\orchestrator-prompt.md"
 }

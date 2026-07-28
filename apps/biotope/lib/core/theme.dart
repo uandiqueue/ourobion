@@ -3,13 +3,22 @@ import 'package:google_fonts/google_fonts.dart';
 
 // ─── Ourobion color tokens (M3) ────────────────────────────────────────────────
 // Source of truth: docs/biotope/ui/ui-design-context.md
+//
+// biomech-botanical reskin (2026-07-28): primary/primaryContainer/primaryFixed*
+// now carry the gold/porcelain brand ramp. The old forest-green and cyan tokens
+// are kept as `deltaPositive`/`deltaNegative` — semantic-only colors for trend
+// deltas (never brand chrome). See ui-design-context.md "Semantic-only colors".
 abstract final class OurobionColors {
-  static const primary             = Color(0xFF3c6752);
+  static const primary             = Color(0xFFA87840); // brand gold
   static const onPrimary           = Color(0xFFffffff);
-  static const primaryContainer    = Color(0xFF7daa92);
-  static const onPrimaryContainer  = Color(0xFF123f2c);
-  static const primaryFixed        = Color(0xFFbeedd3);
-  static const primaryFixedDim     = Color(0xFFa2d1b7);
+  static const primaryContainer    = Color(0xFFf4ecdc);
+  static const onPrimaryContainer  = Color(0xFF6E4C1E);
+  static const primaryFixed        = Color(0xFFe8d3a8);
+  static const primaryFixedDim     = Color(0xFFC8A878);
+
+  static const brandGold           = Color(0xFFA87840);
+  static const brandGoldLight      = Color(0xFFC8A878);
+  static const brandGoldDark       = Color(0xFF6E4C1E);
 
   static const secondary           = Color(0xFF2f647d);
   static const onSecondary         = Color(0xFFffffff);
@@ -23,7 +32,13 @@ abstract final class OurobionColors {
   static const onTertiaryContainer = Color(0xFF002021);
   static const tertiaryFixedDim    = Color(0xFF81d4d6);
 
-  static const surface             = Color(0xFFf9f9f8);
+  // Semantic-only: trend deltas (up/down), never used as brand/chrome color.
+  static const deltaPositive       = Color(0xFF3c6752); // old primary green
+  static const deltaNegative       = Color(0xFF2f647d); // old secondary blue
+
+  static const background          = Color(0xFFefece5);
+  static const surface             = Color(0xFFefece5);
+  static const surfaceCard         = Color(0xFFfdfcf9);
   static const surfaceLowest       = Color(0xFFffffff);
   static const surfaceLow          = Color(0xFFf3f4f3);
   static const surfaceContainer    = Color(0xFFedeeed);
@@ -34,6 +49,10 @@ abstract final class OurobionColors {
   static const outline             = Color(0xFF717973);
   static const outlineVariant      = Color(0xFFc1c8c2);
 }
+
+/// Card / button corner radii per docs/biotope/ui/ui-design-context.md.
+const double kCardRadius = 22;
+const double kButtonRadius = 16;
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 ThemeData ourobionTheme() {
@@ -125,7 +144,7 @@ ThemeData ourobionTheme() {
         elevation: WidgetStateProperty.resolveWith((states) =>
           states.contains(WidgetState.disabled) ? 0 : 2,
         ),
-        shadowColor: const WidgetStatePropertyAll(Color(0x403c6752)),
+        shadowColor: const WidgetStatePropertyAll(Color(0x40A87840)),
       ),
     ),
 

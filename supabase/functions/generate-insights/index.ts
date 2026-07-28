@@ -2,6 +2,7 @@
 import { createClient } from "jsr:@supabase/supabase-js@2.110.7"
 import { METRICS } from "../../../shared/metrics/registry.ts"
 import { validateCopyString } from "../../../shared/constants/copy_guidelines.ts"
+import { unauthorizedResponse, verifyInternalSecretRequest } from "../_shared/internal_auth.ts"
 import { classifyDaily } from "../evaluate-signals/stats.ts"
 import { PAIR_GATES, SIGNAL_CONFIG } from "../evaluate-signals/config.ts"
 import {
@@ -122,8 +123,17 @@ const SNAPSHOT_FRESHNESS_DAYS = 7
  * the USER changes the status. N-day auto-reactivation (a snooze-until column) is deliberately
  * deferred to Jayden (D17). Skipping happens at pushCard — the only writer into the
  * (user_id, rule_id) upsert batch — so a held card can never be re-upserted `status: 'active'`.
+ *
+ * ⚠ EVERY non-`active` value of insight_cards.status MUST appear here. A value that is missing
+ * is not "not held" — it is silently UN-held: the nightly pass re-upserts the card
+ * `status: 'active'` and the user's choice disappears with no error anywhere. `archived` (the
+ * biotope Archive tab's save, added 20260728040000) is held for exactly this reason.
+ * The value set is mirrored by shared/types/index.ts InsightCard.status, the migration's status
+ * CHECK, and the Dart `InsightStatus` enum; drift between them is caught by
+ * apps/biotope/test/m5b_insight_engine/insight_status_contract_test.dart, which parses THIS
+ * literal out of THIS file rather than trusting a copy.
  */
-const USER_HELD_STATUSES: ReadonlySet<string> = new Set(["dismissed", "snoozed"])
+const USER_HELD_STATUSES: ReadonlySet<string> = new Set(["dismissed", "snoozed", "archived"])
 
 /** Confidence-level → 0–1 score for RULE cards (preserved from the MVP for M6 / future use). */
 const CONFIDENCE_SCORE: Record<string, number> = {
@@ -259,8 +269,25 @@ async function fetchAll<T>(query: (from: number, to: number) => any): Promise<T[
 // ─── Handler ─────────────────────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
-  // A22: without this guard an unset env var degenerates the expected header to the literal
-  // string "Bearer undefined" — fail loudly (500, secret never echoed) before any compare.
+  // ── AUTHORIZATION FIRST (R4-U2) ─────────────────────────────────────────────────────────
+  // Only run-pipeline / pg_cron / an admin curl may invoke this function, proven by the
+  // dedicated `X-Ourobion-Internal-Secret` header and a CONSTANT-TIME compare against the
+  // CURRENT/PREVIOUS rotation pair. Replaces a plain `!==` against SUPABASE_SERVICE_ROLE_KEY
+  // that also sat AFTER a 500 config guard. Every denial (missing / blank / malformed header,
+  // wrong secret, or no secret configured) returns the same 401 with the same body bytes and
+  // never 500 — no "misconfigured vs wrong secret" oracle, and the recorded serve probe in
+  // tools/run4_release_gate.mjs (which configures no secret) still observes 401.
+  const verdict = await verifyInternalSecretRequest(req, {
+    current: Deno.env.get("OUROBION_INTERNAL_SECRET_CURRENT"),
+    previous: Deno.env.get("OUROBION_INTERNAL_SECRET_PREVIOUS"),
+  })
+  if (!verdict.ok) {
+    console.error(`internal auth denied: ${verdict.reason}`) // reason only — never a value
+    return unauthorizedResponse()
+  }
+
+  // ── Configuration guard — reachable only by an AUTHORIZED caller, so 500 leaks nothing.
+  // SUPABASE_SERVICE_ROLE_KEY is a DATABASE credential here, never a request credential.
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
   if (!serviceRoleKey) {
     console.error("SUPABASE_SERVICE_ROLE_KEY is not set — refusing to serve")
@@ -268,11 +295,6 @@ Deno.serve(async (req) => {
       JSON.stringify({ error: "server misconfiguration: service-role key unavailable" }),
       { status: 500 },
     )
-  }
-
-  const auth = req.headers.get("Authorization")
-  if (!auth || auth !== `Bearer ${serviceRoleKey}`) {
-    return new Response("Unauthorized", { status: 401 })
   }
 
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey)
@@ -476,6 +498,7 @@ Deno.serve(async (req) => {
   let firedPatternCount = 0
   let dismissedSkips = 0
   let snoozedSkips = 0
+  let archivedSkips = 0
   const branchCounts: Record<Branch, number> = {
     agree: 0,
     "research-context": 0,
@@ -509,11 +532,14 @@ Deno.serve(async (req) => {
 
     const pushCard = (card: CardRow): void => {
       const key = `${card.user_id}:${card.rule_id}`
-      // D17 / A18: a user-held card (dismissed OR snoozed) is never re-upserted — the upsert
-      // would rewrite `status: 'active'` over the user's choice. Held = held until the user acts.
+      // D17 / A18: a user-held card (dismissed, snoozed OR archived) is never re-upserted — the
+      // upsert would rewrite `status: 'active'` over the user's choice. Held = held until the user
+      // acts. Each held status is counted separately: folding `archived` into `snoozedSkipped`
+      // would silently misreport saves as snoozes once the Archive tab started writing `archived`.
       const held = heldStatusByKey.get(key)
       if (held !== undefined) {
         if (held === "dismissed") dismissedSkips++
+        else if (held === "archived") archivedSkips++
         else snoozedSkips++
         return
       }
@@ -1015,6 +1041,7 @@ Deno.serve(async (req) => {
         droppedAtRender: renderDrops,
         dismissedSkipped: dismissedSkips,
         snoozedSkipped: snoozedSkips,
+        archivedSkipped: archivedSkips,
       },
       gapLedger: { pairsTouched: gapEvents.length, demandByStatus: gapStatusCounts },
       brainScopeSkips,

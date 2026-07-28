@@ -1,42 +1,25 @@
 ---
 title: Run 4 — reviewed candidate scope and priority tranche
-summary: Run 4's active reviewed scope: accepted envelope, O31-O40 enforcement candidates, promoted pending-build register, and a priority tranche that rebuilds O24 before security, raw-truth, and scientific-semantics work.
+summary: Run 4 scope authority plus a current delivery overlay for merged, open, startable, and deferred units.
 type: plan
 scope: shared
-status: draft
-run4_u5_sentence_provenance: planning-admitted; implementation-cap-deferred-pending-later-envelope
+status: canonical
 updated: 2026-07-28
 ---
 
-> **U5/B-PL22 sentence-provenance planning admission.** This remains inside U5, not a new pipeline.
-> A future local tool-only tranche is versioned/rebuildable StructuredPaper text, native JATS or frozen
-> GROBID-style sections, sentence IDs/offsets, citation/refGraph roots, curated mention and deterministic
-> quote/tier/numeric/schema/negation/hedge gates. Frozen/mock LlmRouter seams must expose complete
-> `INTERIM:` metadata and only suggest; deterministic enforcement fails closed. The 14 / ~1,900 local
-> tranche is split/deferred; persisted/served/UI is P2-blocked. Verified combined product snapshot
-> `f2f2dac` (base `77c982`; U1 `baab1536` + U5 `cdc16f9`; MT4 paths/session excluded) is the historical
-> pre-overlay 38 / +8,002 / -162 snapshot, leaving 77 / +498. The later final pre-commit overlay (U5
-> docs + harness script + 44-line session) was independently audited at 40 / +8,156 / -195, leaving 75 /
-> +344. U1 fits, but U2/U3 expected additions and the minimal sentence tranche
-> (six touched, two reused, four new, ~+1,900) do not fit the line budget and are cap-deferred pending a
-> later envelope decision. Exact pre-merge remeasurement remains mandatory. Separately, O29 defers provider/model execution under the zero-call posture.
-
 # Run 4 — reviewed candidate scope and priority tranche
 
-**Historical preflight status (superseded).** U0 merged through PR #161 at
-`66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa`; exact merge-SHA CI run `30285010079` passed 19/19. The
-accepted base, cap, locked units, and intentionally unprotected
-`dev-phase2-run4` posture are recorded in the companion decision documents. The audit that produced the
-candidate list is [`run3-audit-findings.md`](./run3-audit-findings.md).
+**Current delivery overlay (2026-07-28):** U0 and U2 are merged. U1, U3, U5 and the canonical full UI
+are built but open/unmerged; U2 has two open corrections. U4 is startable because Jayden and Alton are
+the named reviewers. U6 remains deferred. The exact live state and reconciliation order are in
+[`continuation-status.md`](./continuation-status.md); that file supersedes older operational wording in
+this design document. The audit that produced the candidate list is
+[`run3-audit-findings.md`](./run3-audit-findings.md).
 
-**Current admitted sequence:** complete U5 health/insight proof, integrate completed U1, then run the
-Run 4 exit gate. U2, U3, and sentence-provenance implementation are cap-deferred pending an explicit
-later envelope decision and are not prerequisites for this exit gate.
-
-**Historical relationship to Run 3 (superseded sequencing context).** Run 3 closed without an accepted unit. PR #144 must not merge in its
-audited state; O24-O29 are therefore unfinished and have been promoted into
+**Historical relationship to Run 3.** Run 3 closed without an accepted unit. PR #144 did not merge in
+its audited state; O24-O29 were therefore promoted into
 [`pending-build-register.md`](./pending-build-register.md). Run 4 does not assume that all six fit.
-The original plan rebuilt O24 first and then prioritized O25-O27; O28 and O29 stayed deferred by default.
+Run 4 subsequently rebuilt and merged O24/U0 and O25/U2. O28 and general O29 remain deferred/partial.
 
 ## 1. Preconditions — resolve before Run 4 (and mostly before Run 3 continues)
 
@@ -45,11 +28,11 @@ These are not build units. Most are settings or decisions, and several block Run
 | ID | What | Why it blocks | Who |
 |---|---|---|---|
 | P1 | **Exact-current-SHA CI evidence** on `dev-phase2-run4` | User override: the branch intentionally remains unprotected; `Run 4 Gate` is evidence only, not GitHub branch-setting enforcement. No ADMIN or settings action is requested | U0 / CI |
-| P2 | **Two named `shared/` reviewers** | Historical audit A4 blocker resolved for U4 on 2026-07-28: Alton and Jayden approve implementation; both actual PR reviews remain required. Current cap admission separately fails (+344 remains versus U4 low +1,600); no U6 approval. | Alton + Jayden |
-| P3 | **Separate model-training from the Run 4 integration base before MT1 is cut** | Audit A3: MT0 alone changed 59 files / added 5,362 lines after the Run 3 candidate baseline and broke U0's mergeability. The exact model-training integration target is a human decision; do not invent a long-lived branch contrary to the normal workflow | Jayden + orchestrator |
-| P4 | **Approve a fresh immutable Run 4 base and one cap metric** | Do not retroactively exclude merged work. Define the run budget as the final landing delta from the accepted Run 4 base (`base..HEAD`), including generated/tracking files, with unique changed paths and added lines counted mechanically. Record the base SHA and cap before implementation | Jayden |
+| P2 | **Name two `shared/` reviewers** | **Satisfied for Run 4:** Jayden and Alton are named. Their review is still required on each actual shared PR | Jayden + Alton |
+| P3 | **Keep model training non-serving and outside product execution** | Historical bundles are present through merged history, but Run 4 trains nothing, touches neither training directory, and has no runtime dependency on them | orchestrator |
+| P4 | **Maintain an exact per-unit base and cap** | 115 paths / 8,500 additions remain the core-unit machine envelope. The checked-in base lags merged U2 and must be advanced with CI + regenerated attestation before the next landing | orchestrator |
 | P5 | **Record every credential/resource gate in Run 4 `human-decisions.md`** — B2/B3 (Cloudflare Worker + hosted Supabase secret keys), B5 (second provider key), B10 (Android device) | Record names and approval state only, never secret values. Missing external authority blocks only the affected unit; it cannot be inferred from this prompt | orchestrator |
-| P6 | **Decide O29's provider posture** — provision a second family, or rescope the vendor-agnostic clause | Audit A5: only `OPENAI_API_KEY` exists, `config.ts:288` hard-codes an Anthropic-verifier reject, and the caps (Anthropic ≤2 SGD / OpenAI ≤20 SGD) are allocated backwards for the only legal configuration | Jayden |
+| P6 | **Keep general O29 deferred** | A bounded issue-189 exception used OpenAI for main synthesis and Anthropic verifier-only within budget. It is complete and does not authorize another call or release promotion | Jayden + orchestrator |
 | P7 | **Close PR #144 as superseded; do not merge it** | Its 15 green checks belong to an old synthetic merge, the current base conflicts in the workflow under test, and the audit found fail-open/tautological gate logic. Rebuild the useful O24 intent on the fresh Run 4 base | Jayden + orchestrator |
 
 ## 2. New optimisation items (O31–O40)
@@ -142,25 +125,24 @@ study-design copy off its semantics. Resolving (b) needs a superseding ADR, not 
 
 ## 3. Recommended priority tranche
 
-This is the largest tranche accepted for the locked envelope. U0 is complete through PR #161 with
-exact merge-SHA CI run `30285010079` passing 19/19; Alton and Jayden resolve U4's reviewer gate, but
-the current cap keeps U4 pending/NO-GO; P3 excludes training and P5/P6 retain local-only, zero-provider constraints. The run may not
+This is the original locked-core tranche. Current delivery is an overlay: U0/U2 merged, U1/U3 built
+but unmerged, and U4 startable. P3 excludes training and P5/P6 retain local-only constraints. The run may not
 silently add O28, O29, O37, O39, O40, or any other register row.
 
 | Priority | Candidate unit | Contents | Start gate |
 |---|---|---|---|
-| 1 | R4-U0 · trustworthy release gate | Rebuild O24 with O31-O34; stable required aggregate, current landing-SHA evidence, fail-closed config/matrix coverage, and deploy-path dependency proof | COMPLETE: PR #161 merged at `66bfde5`; exact merge-SHA CI `30285010079` passed 19/19 |
-| 2 | R4-U1 · mechanical boundaries | O35 + O36; polyglot import/path guard and pinned secret scanning | COMPLETE externally at `baab1536`; PR #170 remains draft/open and unmerged, CLEAN, 21/21 green |
-| 3 | R4-U2 · authorization and key boundary | O25; nao RBAC/RLS, redacted global jobs, named server-key migration | DEFERRED BY CAP pending explicit later envelope decision |
-| 4 | R4-U3 · raw-truth and retry safety | O26; atomic demo loading and idempotent/single-flight pipeline publication | DEFERRED BY CAP with U2 pending explicit later envelope decision |
-| 5 | R4-U4 · scientific semantics | O27 + O38; claim-kind preservation, artifact trust, revision-bound dispositions, TS/Dart trust-label parity | Reviewer gate resolved (Alton + Jayden; both PR reviews mandatory); current cap NO-GO/pending (+344 versus +1,600 low); no U6 authority |
+| 1 | R4-U0 · trustworthy release gate | Rebuild O24 with O31-O34; stable required aggregate, current landing-SHA evidence, fail-closed config/matrix coverage, and deploy-path dependency proof | **merged #161**; per-unit convention #172; next base reconciliation pending |
+| 2 | R4-U1 · mechanical boundaries | O35 + O36; polyglot import/path guard and pinned secret scanning | **built/open #170+#180**; reconcile remediation and secret-scan failure |
+| 3 | R4-U2 · authorization and key boundary | O25; nao RBAC/RLS, redacted global jobs, named server-key migration | **merged #177**; combine corrections #185+#186 |
+| 4 | R4-U3 · raw-truth and retry safety | O26; atomic demo loading and idempotent/single-flight pipeline publication | **built/open #184**; base + LoaderPanel + full HTTP walk pending |
+| 5 | R4-U4 · scientific semantics | O27 + O38; claim-kind preservation, artifact trust, revision-bound dispositions, TS/Dart trust-label parity | **startable**; Jayden + Alton review; follows reconciliation |
 
 Default deferrals:
 
 - **O28/O37:** defer image goldens and the broader accessibility/UI tranche; use widget + semantics
   assertions only where R4-U4 touches UI.
-- **O29:** defer until a legal second-provider posture, immutable release inputs, and an approved
-  isolated rehearsal target exist. Zero live provider calls and zero hosted writes in R4-U0-U4.
+- **O29:** general promotion remains deferred. The bounded issue-189 local provider call is completed
+  evidence, not release authorization. No additional live provider call or hosted write is authorized.
 - **O39:** dependency-update policy is valuable maintenance, but it must not dilute the blocker
   tranche.
 - **O40:** perform only the Run 3→Run 4 routing needed for safe launch. Superseding ADR work remains a
@@ -178,9 +160,9 @@ section reconciles the two; it does not replace §3.
 *doable*. Several §3 default-deferrals were justified partly by untestability and should be re-examined
 on that basis — O28 in particular.
 
-**No model training in Run 4.** Custom-model artifacts are unavailable, non-serving, and forbidden from
-runtime import. Frozen/mock lightweight stand-ins use the existing LlmRouter only; O29 keeps provider
-execution deferred under the zero-call posture.
+**No model training in Run 4.** It lives in [`../model-training/`](../model-training/) with its own
+units, budget and gates. Run 4 may consume a frozen artifact but never waits on one. The Zebra build
+log has moved out of this folder.
 
 ### Coverage of the six priorities
 
@@ -195,15 +177,17 @@ execution deferred under the zero-call posture.
 
 ### Additional candidate units
 
-**R4-U5 · Single-paper end-to-end ingestion with stand-in seams.** Closes register **section C**. One
-real paper, start to finish, with **no empty checkpoints**: each planned custom-model slot is a
-replaceable existing-LlmRouter adapter exercised only with frozen/mock replies, or the deterministic
-path where one exists (`impactTier` is already OpenAlex + SJR). The exact contract is register §C.1.
+**R4-U5 · Single-paper end-to-end ingestion with LLM stand-ins.** Closes register **section C**. One
+real paper, start to finish, with **no empty checkpoints** — each planned custom-model slot filled by a
+cheap lightweight OpenAI call, or by the deterministic path where one exists (`impactTier` is already
+OpenAlex + SJR and needs nothing). The per-checkpoint stand-in contract is in the register §C.1.
 
-> Every frozen/mock output visibly records `INTERIM:` task, returned model, prompt version, timestamp,
-> confidence or abstention, and deterministic-fallback use. Deterministic enforcement alone advances
-> an artifact. OpenAI, Haiku, GMI and every live-provider target are historical or O29-deferred and
-> non-admitted here; R4-U5 makes no provider, decorrelation, model-performance or validation claim.
+> Two constraints. **A stand-in is an LLM call, not a custom model** — it reduces no tokens and proves
+> no model works, so every output carries an `INTERIM:` provenance marker. And `router.config.json`
+> runs `testMode` ON with all six nodes on OpenAI because only one key is provisioned, so this unit
+> **cannot** also satisfy `B-BR1`/`B-BR2` decorrelation. Scope it to *pipeline completeness only*;
+> decorrelation stays with the deferred O29. If a second family is wanted cheaply, GMI **serverless
+> inference** is OpenAI-compatible and is **not** behind the delayed container entitlement.
 
 **R4-U6 · biotope metrics, EASY + MEDIUM (~50).** Split into **U6a/U6b/U6c**.
 
@@ -225,19 +209,17 @@ Adding U5–U7 roughly doubles it, and three of the additions (U2's split extens
 substantially greenfield. On Run-3 calibration the combined scope plausibly lands at **150–250 changed
 paths** against a landing-delta cap.
 
-**Historical recommendation (superseded):** do not lock all eight; the earlier proposed sequence was:
+Recommended: **do not lock all eight.** Sequence by demonstrable value —
 
 **R4-U5 → R4-U2(+auth split) → R4-U0 → R4-U6a → R4-U6b → R4-U4 → R4-U7 → R4-U6c → R4-U1**
 
-That ordering no longer governs active work. The current admitted sequence is **U5 health/insight proof
-→ U1 integration → Run 4 exit gate**. U2, U3, and sentence-provenance implementation are cap-deferred
-pending an explicit later envelope decision. Anything outside the admitted sequence rolls forward rather
-than inflating the cap.
+R4-U5 first because a complete pipeline on one real paper is the highest-value demonstrable outcome and
+is nearly independent of the rest; the auth split second because dev access is what makes everything
+else testable. Anything not reached rolls to Run 5 rather than inflating the cap.
 
 ## 3c. Run 4 exit gate — local qualification before cloud promotion
 
-**This runs after every currently admitted/integration unit is complete, explicitly excluding
-cap-deferred units, and it gates promotion to the cloud demo database.**
+**This runs after every locked unit is complete, and it gates promotion to the cloud demo database.**
 Nothing is promoted until both passes below are green. Jayden's specification, 2026-07-27.
 
 ### Why two passes and not one
@@ -284,10 +266,9 @@ run, judged as a gate rather than as a build. Do not scope them as separate work
 2 is its acceptance evidence; if R4-U5 is cut, pass 2 still runs and will fail until the CLI stages are
 driven manually, which is itself the honest result.
 
-The stand-in constraint carries through: Pass 2 uses frozen/mock existing-LlmRouter seam replies with
-complete visible `INTERIM:` provenance under zero live calls. It may evidence local pipeline plumbing,
-not provider execution, decorrelation, model performance, semantic validity or scientific validation;
-all live targets remain historical/O29-deferred.
+Note the stand-in constraint carries through: outputs from LLM stand-ins are marked `INTERIM:` and
+`testMode` remains single-provider, so pass 2 evidences **pipeline completeness**, not decorrelated
+verification.
 
 ### Promotion rule
 
