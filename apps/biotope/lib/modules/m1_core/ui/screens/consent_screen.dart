@@ -7,8 +7,8 @@ import 'profile_setup_screen.dart';
 /// Every user-facing string this screen owns.
 ///
 /// Enumerated in one place so the non-diagnostic copy gate can assert over the
-/// whole set (test/m1_core/consent_copy_gate_test.dart), and so the honesty
-/// claims below are checkable rather than reviewer-trusted.
+/// whole set (test/m1_core/onboarding_truthfulness_test.dart), and so the
+/// honesty claims below are checkable rather than reviewer-trusted.
 abstract final class ConsentScreenCopy {
   static const appBarTitle = 'Privacy & Consent';
 

@@ -112,6 +112,43 @@ memory: none
 - `scan_tab_widgets_test.dart` — a whole-card tap-through must state its destination, and
   an inline-answerable card must not.
 
+## Verified on a physical device
+
+Samsung-class Huawei YAL-L21, Android 10 (API 29), debug APK against local Supabase over
+`adb reverse tcp:54321`. Traversal: sign-in → sign-up → consent → profile setup → shell →
+Profile → Scan → Insights, on a brand-new account created through the app.
+
+Confirmed on screen:
+
+- **Sign-in** — no "Forgot password?" control.
+- **Sign-up** — only "You'll set your data permissions in the next step."; no Terms /
+  Privacy Policy line.
+- **Consent** — "…changing them later is not built into the app yet."; the Wearable Data
+  row renders as a statement with **no switch**; "The app has no way to send that request
+  yet, so it has to be raised outside the app."
+- **Profile** — heading shows the real display name with the account email beneath it, not
+  duplicated. (The `noNameSet` fallback is a defensive path: Profile Setup makes display
+  name required and `AuthGate` routes a blank-name account back to it, so the fallback is
+  covered by test rather than reachable by traversal.)
+- **Insights** — SAVED reads `0` from `getArchivedInsights` for the new account, with the
+  honest "All caught up" state and no replay button (correct: there are no cards).
+
+Not confirmable on this device, and why:
+
+- **Items 1, 2, 11** (step counters, gap-card destination) — `DailyLogScreen` is reachable
+  ONLY through a Scan gap card, gap cards render only when the sweep reaches `done`, and
+  the sweep never finishes on this device (see the blocker below). Covered by test.
+- **Deck replay / save (items 7, 8) beyond the seeded count** — needs `insight_cards` rows
+  for the account; `psql` against the local stack was blocked by the permission classifier
+  this session, so no rows could be seeded. Covered by the four widget tests.
+
+A first attempt appeared to show "Forgot password?" still on screen. That was a stale app
+process surviving `adb install -r`; a clean `adb uninstall` + install showed the fix. Worth
+knowing for the next device session: **`install -r` is not sufficient evidence** — the
+running process can outlive it. Also worth knowing: a debug APK's `kernel_blob.bin` embeds
+Dart **source comments**, so grepping it for a removed string is not a valid check (the
+comment explaining a removal matches).
+
 ## Decided
 
 - **Deleted the step counters rather than deriving real ones.** A truthful absence beats a
@@ -155,6 +192,48 @@ Both are real PDPA gaps that need an affordance, not just honest copy. Recorded 
 
 ## Blockers
 
-- `gh issue create` and `gh pr create` were blocked by the local permission classifier, as
-  were direct `psql` reads against the local stack. The branch is pushed; the PR into
-  `dev-phase2-run4` needs to be opened by a human or an unblocked session.
+### DEMO BLOCKER — "Run sweep" never finishes without Health Connect
+
+Found by the traversal above, not by any change in this unit. On this device
+`WearableService.syncToday` → `health.requestAuthorization` **never returns**: Health
+Connect is not installed (Android 10, `pm list packages` shows no `healthdata` package) and
+the plugin neither fails fast nor times out. `scan_tab.dart:156-160` awaits that call inside
+`Future.wait`, so `_state` never reaches `done`. Observed stuck on "Sweeping…" for over 60
+seconds, twice.
+
+Consequences for the demo:
+
+- The Scan tab's coverage dial, gap cards and "Today is fully captured" state are
+  unreachable.
+- `DailyLogScreen` is unreachable **from anywhere in the UI** — a Scan gap card is its only
+  entry point (verified: the only `DailyLogScreen(` construction in `lib/` is
+  `scan_tab.dart:191`). So urine colour, stool form, symptom flags and antibiotics cannot be
+  logged at all on a device without Health Connect.
+
+Not fixed here on purpose: the fix is either a timeout around the awaited sync or moving it
+out of the blocking `Future.wait`, and both change when and whether wearable data arrives —
+the same owner decision as the render-time sync flagged above, and this unit was scoped to
+not redesign Scan. Recommendation: give the awaited `syncToday` a short timeout in
+`_runSweep` so a missing/unresponsive health provider degrades to "No data available"
+(which `WearableSyncRow` already renders) instead of hanging the screen. Worth doing before
+the demo, on its own branch.
+
+### The bundled Manrope fonts are not fonts
+
+`apps/biotope/assets/fonts/Manrope-{Regular,Medium,SemiBold,Bold,ExtraBold}.ttf` are five
+~307 KB **HTML documents** (a GitHub page — each begins `<!DOCTYPE html>`), declared in
+`pubspec.yaml`'s `fonts:` block. So the app's declared typeface is not shipping; text falls
+back to the platform default. Not touched: `apps/biotope/assets/` is exactly what
+`checkLandingDelta`'s fail-closed binary guard exists to protect, and replacing them is a
+binary change needing its own PR plus a recorded human decision.
+`test/core/asset_bundling_test.dart` checks images, not font validity.
+
+### Tooling
+
+- `gh issue create` / `gh pr create` and direct `psql` reads were blocked by the local
+  permission classifier, so no session issue was opened and no insight rows could be seeded.
+- The machine ran out of disk mid-session (10 MB free on C:). Reclaimed ~3.9 GB by deleting
+  two regenerable `apps/biotope/build/` directories (this worktree's and the main repo's).
+  No source was touched. `flutter pub get` also cannot complete in a fresh worktree
+  (Developer Mode off → "Building with plugins requires symlink support"), so
+  `flutter analyze` / `flutter test` / `flutter build` all need `--no-pub` here.
