@@ -54,15 +54,10 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
   bool _refreshing = false;
   final _trendKey = GlobalKey<MetricTrendSectionState>();
 
-  // Decorative only — cycles static, copy-compliant strings. Not derived from
-  // any real ingestion/telemetry feed (none exists yet); see session log.
-  static const _tickerLines = [
-    'Reviewing your last 7 days',
-    'Cross-checking sleep and gut patterns',
-    'Watching for new research matches',
-  ];
-  int _tickerIndex = 0;
-  Timer? _tickerTimer;
+  /// Real counts from `get_knowledge_base_stats()`. Null means the read failed
+  /// or has not returned — the row stays hidden in that case rather than
+  /// asserting an empty corpus it never actually read.
+  KnowledgeBaseStats? _kbStats;
 
   @override
   void initState() {
@@ -78,10 +73,6 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
     ).animate(CurvedAnimation(parent: _anim, curve: Curves.easeOut));
     _ticker = AnimationController(vsync: this, duration: const Duration(seconds: 1))
       ..repeat(reverse: true);
-    _tickerTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (!mounted) return;
-      setState(() => _tickerIndex = (_tickerIndex + 1) % _tickerLines.length);
-    });
     _load();
   }
 
@@ -89,7 +80,6 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
   void dispose() {
     _anim.dispose();
     _ticker.dispose();
-    _tickerTimer?.cancel();
     super.dispose();
   }
 
@@ -117,6 +107,9 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
           .maybeSingle(),
       EngagementService(client).getEngagementState(userId),
       InsightService(client).getInsights(userId),
+      // Returns null on failure rather than throwing, so a knowledge-base
+      // outage hides one row instead of breaking the whole Home load.
+      KnowledgeBaseService(client).getStats(),
       for (final key in metricKeys) baselineService.getBaseline(userId, key),
       for (final key in metricKeys) seriesService.getSeries(userId, key, windowDays: 14),
     ]);
@@ -126,6 +119,7 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
     final todayRow = results[i++] as Map<String, dynamic>?;
     final engagement = results[i++] as EngagementState?;
     final insights = results[i++] as List<InsightCard>;
+    final kbStats = results[i++] as KnowledgeBaseStats?;
     final baselineResults = results.sublist(i, i + metricKeys.length);
     i += metricKeys.length;
     final seriesResults = results.sublist(i, i + metricKeys.length);
@@ -138,6 +132,7 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
           : null;
       _engagement = engagement ?? EngagementState.zero;
       _activeInsightCount = insights.length;
+      _kbStats = kbStats;
       for (var k = 0; k < metricKeys.length; k++) {
         _baselines[metricKeys[k]] = baselineResults[k] as BaselineSnapshot?;
         _series[metricKeys[k]] = seriesResults[k] as List<MetricDailyPoint>;
@@ -163,6 +158,39 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
     if (h < 12) return 'Good morning';
     if (h < 17) return 'Good afternoon';
     return 'Good evening';
+  }
+
+  /// Short greeting for the design's `Morning, <name>` line.
+  String get _greetingShort {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Morning';
+    if (h < 18) return 'Afternoon';
+    return 'Evening';
+  }
+
+  /// "TUESDAY · 28 JULY" — the design's eyebrow. Real date, no formatting
+  /// package needed for two fixed lists.
+  String get _dateEyebrow {
+    const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+    const months = [
+      'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
+      'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER',
+    ];
+    final now = DateTime.now();
+    return '${days[now.weekday - 1]} · ${now.day} ${months[now.month - 1]}';
+  }
+
+  /// Change in the coverage index against the 7-day average, in whole points.
+  ///
+  /// Null unless BOTH numbers genuinely exist — the design shows a "▲ 4 PTS /
+  /// 7-DAY" pill, and inventing that delta when there is no baseline would be
+  /// exactly the fabricated-composite problem the status word avoids.
+  int? get _indexDelta {
+    final avg = _engagement.dqs7DayAvg;
+    final today = _todayDqs;
+    if (avg == null || today == null) return null;
+    final delta = (today - avg).round();
+    return delta == 0 ? null : delta;
   }
 
   /// Categorical status word derived from a real number (7-day DQS average),
@@ -210,8 +238,10 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Design puts the real date in the eyebrow and
+                              // the greeting on the display line.
                               Text(
-                                _greeting.toUpperCase(),
+                                _dateEyebrow,
                                 style: GoogleFonts.manrope(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
@@ -219,13 +249,15 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                                   color: OurobionColors.primary,
                                 ),
                               ),
-                              const SizedBox(height: 2),
+                              const SizedBox(height: 9),
                               Text(
-                                _displayName.isNotEmpty ? _displayName : 'Biome',
+                                _displayName.isNotEmpty
+                                    ? '$_greetingShort, $_displayName'
+                                    : _greeting,
                                 style: GoogleFonts.manrope(
-                                  fontSize: 28,
+                                  fontSize: 27,
                                   fontWeight: FontWeight.w600,
-                                  letterSpacing: -0.4,
+                                  letterSpacing: -0.7,
                                   color: OurobionColors.onSurface,
                                 ),
                               ),
@@ -268,20 +300,24 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                       statusWord: _statusWord,
                       index: (_engagement.dqs7DayAvg ?? _todayDqs)?.round(),
                       streak: _engagement.currentStreakDays,
+                      indexDelta: _indexDelta,
                     ),
 
-                    const SizedBox(height: 13),
-
-                    // ── Knowledge base ticker (decorative) ─────────────
-                    _KnowledgeTicker(
-                      line: _refreshing ? 'Ingesting new batch…' : _tickerLines[_tickerIndex],
-                    ),
+                    // ── Knowledge base (real counts, or nothing) ───────
+                    // Rendered only when a real read returned real content. An
+                    // empty corpus or a failed read shows no row at all, rather
+                    // than a pulsing animation implying work that is not
+                    // happening.
+                    if (_kbStats?.hasContent ?? false) ...[
+                      const SizedBox(height: 13),
+                      _KnowledgeBaseRow(stats: _kbStats!, refreshing: _refreshing),
+                    ],
 
                     const SizedBox(height: 22),
 
                     // ── Signals grid ────────────────────────────────────
-                    _Eyebrow('SIGNALS'),
-                    const SizedBox(height: 10),
+                    _Eyebrow('SIGNALS TODAY', rule: true),
+                    const SizedBox(height: 12),
                     _SignalsGrid(baselines: _baselines, series: _series),
 
                     const SizedBox(height: 20),
@@ -344,17 +380,135 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
 
 class _Eyebrow extends StatelessWidget {
   final String label;
-  const _Eyebrow(this.label);
+
+  /// Design pairs section eyebrows with a gold hairline that fades out across
+  /// the remaining width.
+  final bool rule;
+  const _Eyebrow(this.label, {this.rule = false});
 
   @override
   Widget build(BuildContext context) {
-    return Text(
+    final text = Text(
       label,
       style: GoogleFonts.manrope(
         fontSize: 10,
         fontWeight: FontWeight.w700,
         letterSpacing: 1.6,
         color: OurobionColors.primary,
+      ),
+    );
+    if (!rule) return text;
+    return Row(
+      children: [
+        text,
+        const SizedBox(width: 10),
+        Expanded(
+          child: Container(
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  OurobionColors.brandGold.withValues(alpha: 0.7),
+                  OurobionColors.brandGold.withValues(alpha: 0),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The design's slow `breathe` on the hero artwork.
+///
+/// Honours [MediaQueryData.disableAnimations]: when the user has turned motion
+/// off at the OS level this renders the child still, rather than animating
+/// anyway. A continuous ambient loop is exactly the kind of motion that setting
+/// exists to stop.
+class _Breathe extends StatefulWidget {
+  final Widget child;
+  const _Breathe({required this.child});
+
+  @override
+  State<_Breathe> createState() => _BreatheState();
+}
+
+class _BreatheState extends State<_Breathe> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 7),
+  );
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduced = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    if (reduced) {
+      if (_c.isAnimating) _c.stop();
+      return widget.child;
+    }
+    if (!_c.isAnimating) _c.repeat(reverse: true);
+    return ScaleTransition(
+      scale: Tween<double>(begin: 1.0, end: 1.035)
+          .animate(CurvedAnimation(parent: _c, curve: Curves.easeInOut)),
+      alignment: Alignment.bottomCenter,
+      child: widget.child,
+    );
+  }
+}
+
+/// "▲ 4 PTS · 7-DAY" — movement of the coverage index against its own 7-day
+/// average. Only built when that delta is genuinely known and non-zero.
+class _DeltaPill extends StatelessWidget {
+  final int points;
+  const _DeltaPill({required this.points});
+
+  @override
+  Widget build(BuildContext context) {
+    final rising = points > 0;
+    final tint = rising ? OurobionColors.deltaPositive : OurobionColors.deltaNegative;
+    final magnitude = points.abs();
+    return Semantics(
+      label: '${rising ? 'Up' : 'Down'} $magnitude '
+          '${magnitude == 1 ? 'point' : 'points'} against the 7 day average',
+      child: ExcludeSemantics(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: tint.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: tint.withValues(alpha: 0.18)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${rising ? '▲' : '▼'} $magnitude ${magnitude == 1 ? 'PT' : 'PTS'}',
+                style: GoogleFonts.manrope(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1,
+                  color: tint,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '7-DAY',
+                style: GoogleFonts.manrope(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w500,
+                  color: OurobionColors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -364,7 +518,13 @@ class _SystemStatusHero extends StatelessWidget {
   final String statusWord;
   final int? index;
   final int streak;
-  const _SystemStatusHero({required this.statusWord, required this.index, required this.streak});
+  final int? indexDelta;
+  const _SystemStatusHero({
+    required this.statusWord,
+    required this.index,
+    required this.streak,
+    required this.indexDelta,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -390,25 +550,30 @@ class _SystemStatusHero extends StatelessWidget {
               child: Stack(
                 children: [
                   Positioned(
-                    right: -30,
+                    right: -34,
                     bottom: -18,
-                    child: ShaderMask(
+                    child: _Breathe(
+                      child: ShaderMask(
+                      // Fades late and hard: the artwork is an opaque white
+                      // rectangle, so the whole left half must be masked out or
+                      // it sits as a visible block over the status text.
                       shaderCallback: (rect) => const LinearGradient(
-                        begin: Alignment.topLeft,
+                        begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                         colors: [Colors.transparent, Colors.white],
-                        stops: [0.05, 0.55],
+                        stops: [0.30, 0.78],
                       ).createShader(rect),
                       blendMode: BlendMode.dstIn,
-                      child: Opacity(
-                        opacity: 0.9,
-                        child: Image.asset(
-                          BiotopeGeneratedAssets.homeHeroRobotHandMain,
-                          width: 190,
-                          height: 220,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stack) =>
-                              const SizedBox(width: 190, height: 220),
+                        child: Opacity(
+                          opacity: 0.9,
+                          child: Image.asset(
+                            BiotopeGeneratedAssets.homeHeroRobotHandMain,
+                            width: 172,
+                            height: 210,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stack) =>
+                                const SizedBox(width: 172, height: 210),
+                          ),
                         ),
                       ),
                     ),
@@ -417,8 +582,10 @@ class _SystemStatusHero extends StatelessWidget {
               ),
             ),
           ),
+          // Design keeps status text to ~58% so it never runs under the
+          // artwork; the card holds a min height so the two never collide.
           FractionallySizedBox(
-            widthFactor: 0.6,
+            widthFactor: 0.58,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -442,10 +609,19 @@ class _SystemStatusHero extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
+                // Design's gold hairline fading to nothing, rather than a hard
+                // 60px rule.
                 Container(
                   height: 1,
-                  width: 60,
-                  color: OurobionColors.primary.withValues(alpha: 0.5),
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        OurobionColors.brandGold,
+                        OurobionColors.brandGold.withValues(alpha: 0),
+                      ],
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 if (index != null)
@@ -473,6 +649,13 @@ class _SystemStatusHero extends StatelessWidget {
                       ),
                     ],
                   ),
+                // Real movement against the 7-day average. Rendered only when
+                // both numbers exist, so an absent baseline shows no pill
+                // rather than a fabricated "▲ 0".
+                if (indexDelta != null) ...[
+                  const SizedBox(height: 10),
+                  _DeltaPill(points: indexDelta!),
+                ],
                 if (streak > 0) ...[
                   const SizedBox(height: 10),
                   Container(
@@ -502,55 +685,102 @@ class _SystemStatusHero extends StatelessWidget {
   }
 }
 
-class _KnowledgeTicker extends StatelessWidget {
-  final String line;
-  const _KnowledgeTicker({required this.line});
+/// Copy for the knowledge-base row. Every string here must describe something
+/// the row actually read; nothing may imply indexing that is not happening.
+abstract final class KnowledgeBaseCopy {
+  static const eyebrow = 'KNOWLEDGE BASE';
+
+  /// Singular matters: the Run 4 corpus really is one paper, and rounding that
+  /// up to a vaguer plural would overstate the evidence base.
+  static String studies(int n) => n == 1 ? '1 study indexed' : '$n studies indexed';
+
+  static String relationships(int n) =>
+      n == 1 ? '1 verified relationship' : '$n verified relationships';
+
+  static String lastIndexed(String date) => 'Last indexed $date';
+
+  static const ingesting = 'Refreshing the index…';
+
+  static const all = <String>[eyebrow, ingesting];
+}
+
+/// Home's knowledge-base row, backed by `get_knowledge_base_stats()`.
+///
+/// This used to rotate three hardcoded strings on a five-second timer with
+/// nothing behind them. The caller now renders it ONLY when a real read
+/// returned real content, so an empty corpus or a failed read shows nothing
+/// rather than a comforting animation.
+class _KnowledgeBaseRow extends StatelessWidget {
+  final KnowledgeBaseStats stats;
+  final bool refreshing;
+  const _KnowledgeBaseRow({required this.stats, required this.refreshing});
+
+  static String _dateOnly(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
-    return GoldCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: OurobionColors.brandGold,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 13),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'KNOWLEDGE BASE',
-                  style: GoogleFonts.manrope(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.4,
-                    color: OurobionColors.brandGoldLight,
-                  ),
+    final detail = refreshing
+        ? KnowledgeBaseCopy.ingesting
+        : stats.lastIndexedAt != null
+            ? KnowledgeBaseCopy.lastIndexed(_dateOnly(stats.lastIndexedAt!))
+            : KnowledgeBaseCopy.relationships(stats.edgesVerified);
+
+    return Semantics(
+      container: true,
+      label: '${KnowledgeBaseCopy.eyebrow}. '
+          '${KnowledgeBaseCopy.studies(stats.studiesIndexed)}. $detail',
+      child: ExcludeSemantics(
+        child: GoldCard(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: OurobionColors.brandGold,
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 5),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: Text(
-                    line,
-                    key: ValueKey(line),
-                    style: GoogleFonts.manrope(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: OurobionColors.primary,
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      KnowledgeBaseCopy.eyebrow,
+                      style: GoogleFonts.manrope(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.4,
+                        color: OurobionColors.brandGoldLight,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 5),
+                    Text(
+                      KnowledgeBaseCopy.studies(stats.studiesIndexed),
+                      style: GoogleFonts.manrope(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: OurobionColors.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      detail,
+                      style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: OurobionColors.primary,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
