@@ -43,16 +43,21 @@ export function hashTextEvidence(value) {
 //   77c98213e23ad56ae37c86201b39ef4e7543a543  (U0 unit base — consolidated Run 3/MT3 tip)
 //   c558c04f1b661a59c8987c96770768eeea46e0cc  (U0 post-reconciliation base; ACCEPTED for U0 only)
 //   ff0546434f081cadc3e5683217d484f250c19139  (R4-U7 canonical-UI base; ACCEPTED for U7/U8 only)
+//   547280f69fe37fe1c7271ea126002f9ffaadafb9  (U9 base — tip after #191/#202; ACCEPTED for U9 only)
+//   87a6364ff34cfd7072e29e466f2f1e90d3c1e25f  (U10 candidate base — tip after #206/#205/#208/#210/
+//                                              #211; superseded before push by #176/#190/#217
+//                                              landing while this unit was blocked on Docker)
 //
-// The U7 base worked exactly as intended and is now spent. Against it the integration branch
-// measures 60 paths / 7,981 added lines — the UI unit (#191) and the design alignment (#202) both
-// landed there — leaving roughly 55 paths and 519 lines. That is not a budget any real unit fits
-// in, and the shortfall is entirely already-merged work, not the next unit's.
+// This unit (U10) started against 87a6364 but the base moved twice more before the branch could
+// push: #176 (U5 paper authoring) and #190 (provider e2e) merged, advancing the tip to 9004599;
+// then #217 (Scan sweep timeout) merged, advancing it again to the current value. None of the
+// three intervening merges touched supabase/functions/**, supabase/deno.lock, or
+// supabase/config.toml (verified by diffing each step), so the attestation's graph/hash evidence
+// is unaffected -- only this constant needed to keep moving.
 //
-// Current value is the tip after #191 and #202 merged: the base for the Archive-trends (#200) and
-// Scan-motion (#201) units. Caps unchanged at 115 / 8,500 and still failing closed; only the
-// per-unit starting point moves.
-export const RUN4_UNIT_BASE_SHA = '547280f69fe37fe1c7271ea126002f9ffaadafb9';
+// Current value is the dev-phase2-run4 tip at push time. Caps unchanged at 115 / 8,500 and still
+// failing closed; only the per-unit starting point moves.
+export const RUN4_UNIT_BASE_SHA = '2749381a405de882c6d96cdf21a57034e28204ea';
 export const RUN4_MAX_CHANGED_PATHS = 115;
 export const RUN4_MAX_ADDED_LINES = 8500;
 export const RUN4_FUNCTIONS = Object.freeze([

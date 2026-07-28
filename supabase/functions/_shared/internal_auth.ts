@@ -42,10 +42,9 @@
 /**
  * The dedicated header the internal secret travels in.
  *
- * It is NOT `Authorization`: `supabase/config.toml` declares `verify_jwt = true` for all four
- * functions, so the platform gateway requires `Authorization` to be a project JWT and would
- * reject an opaque secret there before the handler ever ran. `config.toml` must not change —
- * its hash is part of the deploy attestation.
+ * It is NOT `Authorization`: replacement API keys are opaque values and must be sent only on
+ * `apikey`. `supabase/config.toml` disables the platform JWT precheck only for these four
+ * internal-secret-gated functions, allowing this verifier to be the first authoritative gate.
  *
  * Lower-case because `Headers.get()` is case-insensitive; the wire form callers send is
  * `X-Ourobion-Internal-Secret`.

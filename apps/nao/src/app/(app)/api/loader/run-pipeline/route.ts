@@ -22,9 +22,8 @@
 // route's own relay path under test, not a re-implementation of it.
 //
 // SECRET HANDLING (R4-U2): run-pipeline is gated by the internal-secret protocol, not by the
-// service-role key. This route sends three headers with three distinct jobs:
-//   apikey / Authorization      → the PUBLISHABLE anon key. Gateway routing (Kong locally
-//                                 requires apikey) and `verify_jwt = true`. Grants nothing.
+// service-role key. This route sends two headers with two distinct jobs:
+//   apikey                      → the opaque PUBLISHABLE key. Transport only; it grants nothing.
 //   X-Ourobion-Internal-Secret  → OUROBION_INTERNAL_SECRET, the ONLY authorization input,
 //                                 compared constant-time inside the function against its
 //                                 CURRENT/PREVIOUS rotation pair
@@ -45,7 +44,32 @@
 // Without this gate, `supabase.auth.getUser()` alone only proves "some authenticated session
 // exists" — including a Biotope-only account with no nao membership at all — which is exactly
 // the hole this gate closes.
-import { guardRole, recordControlEvent, redactRelayBody, redactText } from '@/lib/authzServer';
+//
+// TRUTHFUL CONTROL AUDIT (R4-U2 correction, issue #182). The relay is an EXTERNAL effect, so it
+// cannot share a Postgres transaction with its audit row. Its protocol is therefore durable
+// attempt → external effect → terminal outcome, orchestrated by runAuditedControlMutation():
+//   * a `pipeline.run`/`attempted` row commits BEFORE the fetch, keyed by the caller's
+//     `X-Ourobion-Operation-Id` (or a server-generated one), so a retry cannot double-count
+//   * an upstream non-2xx is an AUTHORITATIVE rejection → NaoControlMutationError → `failed`
+//   * a lost response (thrown fetch) is NOT `failed`: run-pipeline may have committed before the
+//     response vanished, so it stays unresolved and returns the opaque `control_outcome_unknown`
+//     503 with the operation id, for reconciliation via nao_unresolved_control_operations
+// Three of the catch arms below therefore return FIXED strings plus that operation id — they never
+// carry upstream payload or provider text, so the redaction contract above still covers every path
+// that relays anything at all.
+import {
+  NaoControlAuditError,
+  NaoControlMutationError,
+  NaoControlOutcomeUnknownError,
+  controlAuditErrorResponse,
+  controlOperationId,
+  controlOutcomeUnknownErrorResponse,
+  guardRole,
+  redactRelayBody,
+  redactText,
+  runAuditedControlMutation,
+} from '@/lib/authzServer';
+import { PublishableKeyConfigurationError, resolvePublishableKey } from '@/lib/serverKey';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,7 +97,7 @@ function supabaseUrl(): string | null {
   return url ? url.replace(/\/+$/, '') : null;
 }
 
-export async function POST(): Promise<Response> {
+export async function POST(req: Request): Promise<Response> {
   const gate = await guardRole('curator');
   if (!gate.ok) return gate.response;
 
@@ -93,31 +117,56 @@ export async function POST(): Promise<Response> {
       501,
     );
   }
-  // The anon key is a PUBLISHABLE value; the public mirror is an acceptable fallback.
-  const anonKey = process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!anonKey) {
-    return json({ error: 'server misconfiguration: SUPABASE_ANON_KEY unavailable' }, 501);
+  let publishableKey: string;
+  try {
+    publishableKey = resolvePublishableKey(process.env, {
+      allowLegacyLocalCli: true,
+      supabaseUrl: url,
+    }).value;
+  } catch (error) {
+    return json(
+      {
+        error:
+          error instanceof PublishableKeyConfigurationError
+            ? 'server misconfiguration: Supabase publishable key unavailable'
+            : 'server misconfiguration: Supabase key resolution failed',
+      },
+      501,
+    );
   }
 
-  await recordControlEvent('pipeline.run', 'run-pipeline');
+  const operation = controlOperationId(req);
+  if (!operation.ok) return json({ error: operation.error }, 400);
 
   // ── relay:begin — extracted verbatim and EXECUTED by apps/nao/tests/redact.test.ts ──
   try {
-    const res = await fetch(`${url}/functions/v1/run-pipeline`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Transport only: satisfies the gateway's `verify_jwt = true`. The `anon` role has no
-        // nao membership and no privilege any stage relies on, so this grants nothing.
-        Authorization: `Bearer ${anonKey}`,
-        // The gateway (Kong locally) requires an apikey header in addition to the bearer.
-        apikey: anonKey,
-        // The only authorization input. Compared constant-time inside run-pipeline.
-        [INTERNAL_SECRET_HEADER]: internalSecret,
+    const audited = await runAuditedControlMutation({
+      operationId: operation.operationId,
+      action: 'pipeline.run',
+      target: 'run-pipeline',
+      mutate: async () => {
+        const res = await fetch(`${url}/functions/v1/run-pipeline`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Opaque replacement publishable keys are not JWTs: they travel ONLY on `apikey`.
+            // No `Authorization` header is sent: `verify_jwt` is disabled for the four
+            // internal-secret-gated engine functions (supabase/config.toml), so a bearer would
+            // add nothing and an opaque `sb_publishable_*` key is not a valid JWT anyway.
+            apikey: publishableKey,
+            // The only authorization input. Compared constant-time inside run-pipeline.
+            [INTERNAL_SECRET_HEADER]: internalSecret,
+          },
+          body: '{}',
+        });
+        const text = await res.text();
+        if (!res.ok) {
+          throw new NaoControlMutationError('pipeline_failed', 'analysis pipeline failed', res.status);
+        }
+        return { res, text };
       },
-      body: '{}',
     });
-    const text = await res.text();
+    const { res, text } = audited.value;
     // Relay run-pipeline's 200/502 semantics unchanged, its PAYLOAD redacted (see header).
     try {
       return json(redactRelayBody(JSON.parse(text)), res.status);
@@ -128,6 +177,11 @@ export async function POST(): Promise<Response> {
       );
     }
   } catch (err) {
+    if (err instanceof NaoControlAuditError) return controlAuditErrorResponse(err);
+    if (err instanceof NaoControlOutcomeUnknownError) return controlOutcomeUnknownErrorResponse(err);
+    if (err instanceof NaoControlMutationError) {
+      return json({ error: redactText(err.message), code: err.auditCode, operationId: operation.operationId }, err.status);
+    }
     return json({ error: redactText(err instanceof Error ? err.message : String(err)) }, 502);
   }
   // ── relay:end ──

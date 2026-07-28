@@ -29,8 +29,16 @@
 // GATE ORDER (R4-U2 review finding 6): `guardRole` is the FIRST statement, before
 // `req.json()` and parseRejectBody — running the parse first handed a non-member a
 // 400-vs-403 schema oracle over this endpoint's request shape.
-import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { guardRole, recordControlEvent, redactDeep, redactText } from '@/lib/authzServer';
+import {
+  NaoControlAuditError,
+  NaoControlOutcomeUnknownError,
+  applyTransactionalControlMutation,
+  controlAuditErrorResponse,
+  controlOperationId,
+  controlOutcomeUnknownErrorResponse,
+  guardRole,
+  redactDeep,
+} from '@/lib/authzServer';
 import { parseRejectBody } from '@/lib/claimsControl';
 
 export const dynamic = 'force-dynamic';
@@ -55,38 +63,38 @@ export async function POST(req: Request): Promise<Response> {
   const parsed = parseRejectBody(body);
   if (!parsed.ok) return json({ error: parsed.error }, 400);
 
-  const supabase = await createServerSupabaseClient();
   const { edgeId, reason } = parsed.value;
+  const operation = controlOperationId(req);
+  if (!operation.ok) return json({ error: operation.error }, 400);
+  try {
+    const result = await applyTransactionalControlMutation({
+      operationId: operation.operationId,
+      action: 'claims.reject',
+      target: edgeId,
+      detail: { reason },
+      payload: { reason },
+    });
+    if (!result.ok) {
+      const message = result.errorCode === 'unknown_edge'
+        ? `unknown edge: ${edgeId}`
+        : result.errorCode === 'duplicate_operation'
+          ? 'this operationId was already accepted'
+          : 'claim mutation failed';
+      return json({ error: message, code: result.errorCode, operationId: result.operationId }, result.status);
+    }
+    return json(redactDeep({ ok: true, operationId: result.operationId, verdict: result.record }));
+  } catch (error) {
+    if (error instanceof NaoControlAuditError) return controlAuditErrorResponse(error);
+    if (error instanceof NaoControlOutcomeUnknownError) return controlOutcomeUnknownErrorResponse(error);
+    throw error;
+  }
 
   // `reason` is operator free text, so it goes into the audit log through the
   // same redaction as a response body (recordControlEvent → redactDeep): a
   // pasted uuid or a secret-shaped key never lands in nao_control_events.detail.
-  await recordControlEvent('claims.reject', edgeId, { reason });
-
   // Existence guard (stands in for the deliberately-absent FK — see header).
-  const known = await supabase
-    .from('relationship_claims')
-    .select('edge_id')
-    .eq('edge_id', edgeId)
-    .maybeSingle();
-  if (known.error) return json({ error: redactText(known.error.message) }, 500);
-  if (known.data === null) return json({ error: redactText(`unknown edge: ${edgeId}`) }, 404);
-
   // Explicit column list (layer-1 redaction): never select/return `created_by`
   // — the curator's raw uuid — even though the DB layer (Agent A) is also
   // revoking table-level SELECT on that column. Neither layer assumes the
   // other landed.
-  const { data, error } = await supabase
-    .from('edge_human_verdicts')
-    .insert({
-      edge_id: edgeId,
-      action: 'reject',
-      reason,
-      created_by: gate.userId,
-    })
-    .select('id, edge_id, action, reason, created_at')
-    .single();
-  if (error) return json({ error: redactText(error.message) }, 500);
-
-  return json(redactDeep({ ok: true, verdict: data }));
 }

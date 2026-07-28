@@ -458,12 +458,34 @@ function sanitizeAny(value: unknown, depth: number): unknown {
  * Deep-clone `value`, applying {@link sanitizeStorageText} to every string —
  * including object keys and array elements, at any depth — so the result can
  * never fail a Postgres `text`/`jsonb` insert on character-set grounds. Run
- * this AFTER {@link redactDeep}/{@link redactText}, not instead of them:
+ * For an audit/response surface, compose this AFTER
+ * {@link redactDeep}/{@link redactText}. For business truth, use it alone:
  * this function knows nothing about identity or secrets, only about which
- * bytes the database can store.
+ * bytes the database can store, and deliberately preserves ordinary content.
  */
 export function sanitizeStorageValue<T>(value: T, maxDepth: number = DEFAULT_MAX_DEPTH): T {
   return sanitizeAny(value, maxDepth) as T;
+}
+
+/**
+ * Prepare the two different trust surfaces of a transactional control RPC.
+ * Business target/payload values keep legitimate identity-shaped text and
+ * deny-key-shaped fields; only the audit detail is redacted before storage.
+ */
+export function prepareControlMutationStorage(input: {
+  target: string;
+  detail: Record<string, unknown>;
+  payload: Record<string, unknown>;
+}): {
+  target: string;
+  detail: Record<string, unknown>;
+  payload: Record<string, unknown>;
+} {
+  return {
+    target: sanitizeStorageValue(input.target),
+    detail: sanitizeStorageValue(redactDeep(input.detail)),
+    payload: sanitizeStorageValue(input.payload),
+  };
 }
 
 /**

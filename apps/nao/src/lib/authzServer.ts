@@ -55,12 +55,30 @@ import {
   redactDeep,
   redactRelayBody,
   redactText,
+  prepareControlMutationStorage,
   sanitizeStorageValue,
   satisfies,
   type NaoRole,
 } from './authz.ts';
+import {
+  CONTROL_OPERATION_HEADER,
+  NaoControlAuditError,
+  NaoControlMutationError,
+  NaoControlOutcomeUnknownError,
+  requireKnownControlRpcCall,
+  resolveControlOperationId,
+  runAuditedControlMutation as runAuditedControlMutationPure,
+  type ControlEventInput,
+  type NaoControlAction,
+} from './controlAudit.ts';
 
 export { redactDeep, redactRelayBody, redactText, sanitizeStorageValue };
+export {
+  CONTROL_OPERATION_HEADER,
+  NaoControlAuditError,
+  NaoControlMutationError,
+  NaoControlOutcomeUnknownError,
+};
 
 /**
  * Thrown by requireRole(). `status` is always exactly 401 (no session at all)
@@ -160,18 +178,10 @@ export function authzErrorResponse(err: NaoAuthzError): Response {
  * vocabulary cannot be reviewed — and this union is what makes a typo a
  * `tsc --noEmit` failure instead of a runtime 23514.
  */
-export type NaoControlAction =
-  | 'ingest_control.patch'
-  | 'ingest.trigger'
-  | 'seeds.add'
-  | 'seeds.toggle'
-  | 'models.cap_override'
-  | 'claims.reject'
-  | 'loader.simulate'
-  | 'pipeline.run';
+export type { NaoControlAction } from './controlAudit.ts';
 
 /**
- * Record ONE row in the append-only, admin-readable
+ * Record one phase in the append-only, admin-readable
  * `public.nao_control_events` log. Every mutating nao handler calls this — the
  * source-conformance test in apps/nao/tests/authz.test.ts fails if a mutating
  * handler does not.
@@ -190,61 +200,115 @@ export type NaoControlAction =
  * therefore cannot leak an `authorization`/`secret` key or a user uuid into the
  * audit log by accident.
  *
- * SANITISED FOR STORAGE, ALWAYS (R4-U2 re-review finding N1): after redaction,
+ * SANITISED FOR STORAGE, ALWAYS: after redaction,
  * `detail`/`target` also go through {@link sanitizeStorageValue}, which strips
  * any character Postgres `text`/`jsonb` cannot hold (NUL foremost — a NUL in
  * `paused` or `seed` used to make THIS insert fail with "unsupported Unicode
  * escape sequence" while the caller's own mutation, having no such
  * restriction, still succeeded — an authorized actor suppressing their own
- * audit row). This is what makes the catch-and-swallow below acceptable: it
- * now only catches failures this layer cannot prevent (the database being
- * unreachable, a schema change), never a failure caused by the CONTENT of the
- * event, because no such content survives to reach the insert.
- *
- * BEST-EFFORT BY DESIGN: a failed audit insert is logged — with the action and
- * (redacted) target named, plus the error, so a missing row is identifiable
- * after the fact — and swallowed. The alternative — 500ing a control action
- * that already succeeded — would be worse for both the operator and the audit
- * trail, and the row-level guarantees this log makes (append-only, unspoofable
- * attribution) are about rows that exist, not about liveness.
+ * audit row). Persistence failures now throw. The mutation does not start
+ * unless its attempt is durable, and an external post-effect outcome failure
+ * leaves that attempt unresolved for explicit reconciliation.
  */
+export async function recordControlEvent(event: ControlEventInput): Promise<void>;
+/** Temporary U3 compatibility: records an honest unresolved attempt, never a success event. */
 export async function recordControlEvent(
   action: NaoControlAction,
-  target: string | null = null,
-  detail: Record<string, unknown> = {},
+  target?: string | null,
+  detail?: Record<string, unknown>,
+): Promise<void>;
+export async function recordControlEvent(
+  eventOrAction: ControlEventInput | NaoControlAction,
+  legacyTarget: string | null = null,
+  legacyDetail: Record<string, unknown> = {},
 ): Promise<void> {
-  try {
-    const supabase = await createServerSupabaseClient();
-    // ── control-event:begin — extracted verbatim (this sentinel spans the
-    // rest of the try body AND the whole catch block below, not just the
-    // insert call — apps/nao/tests/redact.test.ts wraps it in its OWN
-    // `try { ... }` to reconstruct exactly this shape, so it can exercise
-    // both the success path and the swallow/log path for real) ──
-    // sanitizeStorageValue runs AFTER redactDeep/redactText: redaction removes
-    // IDENTITY, sanitisation removes any byte the database cannot store at
-    // all. Together they guarantee this insert can never fail on the
-    // CONTENT of an event, whatever validation upstream did or didn't catch —
-    // which is what makes swallowing the (now purely infrastructural) failure
-    // below acceptable rather than silently losing an authorized actor's audit
-    // row (R4-U2 re-review finding N1).
-    const safeTarget = target === null ? null : sanitizeStorageValue(redactText(target));
-    const safeDetail = sanitizeStorageValue(redactDeep(detail));
-    const { error } = await supabase.from('nao_control_events').insert({
-      action,
-      target: safeTarget,
-      detail: safeDetail,
+  const event: ControlEventInput = typeof eventOrAction === 'string'
+    ? {
+        operationId: crypto.randomUUID(),
+        action: eventOrAction,
+        phase: 'attempted',
+        target: legacyTarget,
+        detail: legacyDetail,
+        errorCode: null,
+      }
+    : eventOrAction;
+  const supabase = await createServerSupabaseClient();
+  // Redaction removes identity; sanitisation removes bytes Postgres cannot store.
+  const safeTarget = event.target === null ? null : sanitizeStorageValue(redactText(event.target));
+  const safeDetail = sanitizeStorageValue(redactDeep(event.detail));
+  const { data, error } = await supabase.rpc('nao_record_control_event', {
+    p_operation_id: event.operationId,
+    p_action: event.action,
+    p_phase: event.phase,
+    p_target: safeTarget,
+    p_detail: safeDetail,
+    p_error_code: event.errorCode,
+  });
+  if (error || data !== true) throw new Error('control audit persistence failed');
+}
+
+export function controlOperationId(req: Request): ReturnType<typeof resolveControlOperationId> {
+  return resolveControlOperationId(req.headers.get(CONTROL_OPERATION_HEADER));
+}
+
+export async function runAuditedControlMutation<T>(input: {
+  operationId: string;
+  action: NaoControlAction;
+  target?: string | null;
+  detail?: Record<string, unknown>;
+  mutate: () => Promise<T>;
+}): Promise<{ operationId: string; value: T }> {
+  return runAuditedControlMutationPure({ ...input, append: recordControlEvent });
+}
+
+export type TransactionalControlResult =
+  | { ok: true; operationId: string; record: Record<string, unknown> }
+  | { ok: false; operationId: string; errorCode: string; status: number };
+
+export async function applyTransactionalControlMutation(input: {
+  operationId: string;
+  action: Extract<NaoControlAction, 'seeds.add' | 'seeds.toggle' | 'claims.reject' | 'models.cap_override'>;
+  target: string;
+  detail?: Record<string, unknown>;
+  payload: Record<string, unknown>;
+}): Promise<TransactionalControlResult> {
+  const supabase = await createServerSupabaseClient();
+  const stored = prepareControlMutationStorage({
+    target: input.target,
+    detail: input.detail ?? {},
+    payload: input.payload,
+  });
+  return requireKnownControlRpcCall<TransactionalControlResult>(input.operationId, async () => {
+    const { data, error } = await supabase.rpc('nao_apply_control_mutation', {
+      p_operation_id: input.operationId,
+      p_action: input.action,
+      p_target: stored.target,
+      p_detail: stored.detail,
+      p_payload: stored.payload,
     });
-    if (error) {
-      console.error(
-        `nao_control_events insert failed for action=${action} target=${safeTarget ?? 'null'}: ${redactText(error.message)}`,
-      );
-    }
-  } catch (err) {
-    console.error(
-      `nao_control_events insert threw for action=${action} target=${target === null ? 'null' : redactText(target)}: ${redactText(err instanceof Error ? err.message : String(err))}`,
-    );
-  }
-  // ── control-event:end ──
+    return { data, error };
+  });
+}
+
+export function controlAuditErrorResponse(error: NaoControlAuditError): Response {
+  const message = error.code === 'audit_attempt_unavailable'
+    ? 'control action not started because its audit attempt could not be recorded'
+    : 'control action outcome is unresolved; reconcile it by operationId before retrying';
+  return new Response(JSON.stringify({ error: message, code: error.code, operationId: error.operationId }), {
+    status: 503,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
+export function controlOutcomeUnknownErrorResponse(error: NaoControlOutcomeUnknownError): Response {
+  return new Response(JSON.stringify({
+    error: 'control action outcome is unknown; reconcile it by operationId before retrying',
+    code: error.code,
+    operationId: error.operationId,
+  }), {
+    status: error.status,
+    headers: { 'content-type': 'application/json' },
+  });
 }
 
 export type RoleGate =

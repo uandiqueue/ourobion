@@ -3,6 +3,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2.110.7"
 import { METRICS } from "../../../shared/metrics/registry.ts"
 import { validateCopyString } from "../../../shared/constants/copy_guidelines.ts"
 import { unauthorizedResponse, verifyInternalSecretRequest } from "../_shared/internal_auth.ts"
+import { resolveServerKey, ServerKeyConfigurationError } from "../_shared/server_keys.ts"
 import { classifyDaily } from "../evaluate-signals/stats.ts"
 import { PAIR_GATES, SIGNAL_CONFIG } from "../evaluate-signals/config.ts"
 import {
@@ -286,18 +287,24 @@ Deno.serve(async (req) => {
     return unauthorizedResponse()
   }
 
-  // ── Configuration guard — reachable only by an AUTHORIZED caller, so 500 leaks nothing.
-  // SUPABASE_SERVICE_ROLE_KEY is a DATABASE credential here, never a request credential.
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
-  if (!serviceRoleKey) {
-    console.error("SUPABASE_SERVICE_ROLE_KEY is not set — refusing to serve")
+  // Replacement secret keys are privileged DATABASE credentials only. Resolution is after the
+  // internal-secret gate so malformed configuration cannot become an unauthenticated oracle.
+  let databaseSecret: string
+  try {
+    const env = Deno.env.toObject()
+    databaseSecret = resolveServerKey(env, "secret", {
+      allowLegacyLocalCli: true,
+      supabaseUrl: env.SUPABASE_URL,
+    }).value
+  } catch (error) {
+    console.error("Supabase secret-key configuration unavailable", error instanceof ServerKeyConfigurationError ? error.message : error)
     return new Response(
-      JSON.stringify({ error: "server misconfiguration: service-role key unavailable" }),
+      JSON.stringify({ error: "server misconfiguration: database credential unavailable" }),
       { status: 500 },
     )
   }
 
-  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey)
+  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, databaseSecret)
   const day = new Date().toISOString().split("T")[0]
   const now = new Date().toISOString()
   const seriesStart = addDays(day, -SIGNAL_CONFIG.windowDays) // 28 baseline days + today
