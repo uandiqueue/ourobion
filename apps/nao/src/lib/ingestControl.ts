@@ -72,6 +72,15 @@ export async function putIngestControl(config: IngestControlConfig): Promise<voi
  * message, or `null` when the body is acceptable.
  */
 export function validatePatchBody(body: IngestControlPatch): string | null {
+  // R4-U2 re-review finding N1: `paused` was NEVER type-checked, so it flowed
+  // straight into recordControlEvent's audit `detail` untouched — any string,
+  // number, or object a caller sent through what the type annotation ABOVE
+  // claims is a `boolean` (a compile-time-only claim; this function is exactly
+  // where the runtime value first gets checked). `null` is rejected too:
+  // unlike `openalexDailyUsd`, `paused` has no "clear the override" semantics.
+  if (body.paused !== undefined && typeof body.paused !== 'boolean') {
+    return 'paused must be a boolean';
+  }
   if (
     body.openalexDailyUsd !== undefined &&
     body.openalexDailyUsd !== null &&

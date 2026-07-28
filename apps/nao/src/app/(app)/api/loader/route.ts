@@ -17,9 +17,26 @@
 //
 // PROVENANCE (O11 locked; D3-recorded deviation): every row is stamped simulated —
 // daily_gut_rows.data_origin (new additive column) and wearable_daily.source (existing
-// column) = 'simulated:run2-demo'. Dev-only posture per D3: any authenticated user
-// (the two ourobion devs) may load; no extra role gate in v1.
+// column) = 'simulated:run2-demo'.
+//
+// AUTH (R4-U2): GET requires nao `viewer`, POST requires `curator` (running the
+// demo loader is a corpus/pipeline operation, per the R4-U2 design §A.1) via
+// requireRole()/guardRole() (apps/nao/src/lib/authzServer.ts) — NOT the same
+// tier the database enforces. The database twin here is unchanged per-user
+// RLS (`auth.uid() = user_id`), which authorizes ANY authenticated user
+// (including a `viewer`) to write their own rows directly via PostgREST. This
+// is a deliberate, accepted asymmetry (design §H.1 item 10): the route adds a
+// workflow preference (only curators run the demo loader through nao), not a
+// security boundary — the blast radius of writing through PostgREST directly
+// is the caller's own health rows, which they already own. Do NOT "fix" this
+// by gating daily_gut_rows/wearable_daily on nao_has_role — that would break
+// every Biotope-only user with no nao membership at all (invariant P).
+//
+// GATE ORDER (R4-U2 review finding 6): `guardRole` is the FIRST statement of POST,
+// before `req.json()` and validateLoaderBody — running validation first handed a
+// non-member a 400-vs-403 schema oracle over this endpoint's request shape.
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { guardRole, recordControlEvent, redactText } from '@/lib/authzServer';
 import {
   DEFAULT_FIRST_LOAD_DAYS,
   DEFAULT_INCREMENT_DAYS,
@@ -77,12 +94,10 @@ async function tableRange(
 }
 
 export async function GET(): Promise<Response> {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return json({ error: 'not authenticated' }, 401);
+  const gate = await guardRole('viewer');
+  if (!gate.ok) return gate.response;
 
+  const supabase = await createServerSupabaseClient();
   try {
     const [gut, wearable] = await Promise.all([
       tableRange(supabase, 'daily_gut_rows', 'log_date'),
@@ -90,11 +105,16 @@ export async function GET(): Promise<Response> {
     ]);
     return json({ today: todayUtc(), gut, wearable });
   } catch (err) {
-    return json({ error: err instanceof Error ? err.message : String(err) }, 500);
+    // A relayed Postgres message can embed a value (`Key (user_id, …)=(<uuid>, …)`),
+    // so every error string leaving a nao route goes through redactText.
+    return json({ error: redactText(err instanceof Error ? err.message : String(err)) }, 500);
   }
 }
 
 export async function POST(req: Request): Promise<Response> {
+  const gate = await guardRole('curator');
+  if (!gate.ok) return gate.response;
+
   let body: LoaderRequestBody;
   try {
     body = (await req.json()) as LoaderRequestBody;
@@ -105,14 +125,11 @@ export async function POST(req: Request): Promise<Response> {
   if (validationError) return json({ error: validationError }, 400);
 
   const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return json({ error: 'not authenticated' }, 401);
-
   const today = todayUtc();
   const seed = body.seed ?? DEFAULT_SEED;
   const scenario: LoaderScenario = body.scenario ?? 'recent-dip';
+
+  await recordControlEvent('loader.simulate', scenario, { days: body.days, seed });
 
   try {
     const gutRange = await tableRange(supabase, 'daily_gut_rows', 'log_date');
@@ -134,8 +151,14 @@ export async function POST(req: Request): Promise<Response> {
       }),
     );
 
-    const gutRows = generated.map((d) => ({ user_id: user.id, ...d.gut }));
-    const wearableRows = generated.map((d) => ({ user_id: user.id, ...d.wearable }));
+    // Invariant P (R4-U2 design §A.0): the acting dev's OWN user_id, written
+    // through the cookie-bound anon-key client under existing per-user RLS —
+    // this row construction, both upsert calls below, their onConflict
+    // targets, error checks, and response shape are byte-identical to
+    // pre-R4-U2 (only the auth GATE above changed). Not touched here; R4-U3
+    // owns the non-atomicity between the two upserts (see design §H.5).
+    const gutRows = generated.map((d) => ({ user_id: gate.userId, ...d.gut }));
+    const wearableRows = generated.map((d) => ({ user_id: gate.userId, ...d.wearable }));
 
     // Idempotent upserts on the tables' natural keys (biotope's writer convention).
     const gutWrite = await supabase
@@ -161,6 +184,7 @@ export async function POST(req: Request): Promise<Response> {
       today,
     });
   } catch (err) {
-    return json({ error: err instanceof Error ? err.message : String(err) }, 500);
+    // Same reason as GET: an upsert conflict message quotes (user_id, log_date).
+    return json({ error: redactText(err instanceof Error ? err.message : String(err)) }, 500);
   }
 }

@@ -5,9 +5,26 @@
 // project's public JWKS once, caches it at module scope, and reuses it (with its
 // own internal cache/refresh) for every verification.
 //
-// v1 authorization gate: any AUTHENTICATED user may view. We still read a role
-// claim (`user_role`, default 'viewer') so later phases can enforce roles
-// without re-plumbing the token path.
+// This module verifies WHO the caller is (a cryptographically valid,
+// `aud=authenticated` Supabase session) and nothing about WHAT they may do.
+// Nao capability tier (viewer/curator/admin) is a SEPARATE question, answered
+// exclusively by ./authzServer.ts's resolveNaoRole()/requireRole(), which read
+// the `nao_members` table via the `nao_role()` database function on every
+// request (see that module's header for why the role is never cached and
+// never read from a claim).
+//
+// R4-U2 removed this file's former `role()`/`user_role`/`Role` scaffold: it
+// read a `user_role` JWT claim that NOTHING ever set (the custom
+// access-token hook is disabled — supabase/config.toml), defaulted to
+// 'viewer' for any token that lacked it, and typed `Role` as an OPEN union
+// (`'viewer' | 'admin' | string`, i.e. any string at all). Left in place, a
+// future token-customisation hook populated from any user-influenceable
+// source would have silently become an authorization input — a claim is also
+// stale for the whole session TTL, unlike a table read. It was dead,
+// misleading scaffolding, not a security control; role must come from the
+// database, so it was deleted rather than wired up. See
+// apps/nao/tests/authz.test.ts's source-conformance assertions, which fail if
+// `user_role` reappears anywhere in this module or in any route file.
 //
 // Server-only module: relies on env.SUPABASE_URL (a Worker/.dev.vars secret,
 // mirrored from NEXT_PUBLIC_SUPABASE_URL by scripts/gen-env.mjs). Do not import
@@ -15,25 +32,19 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import type { JWTPayload, JWTVerifyResult } from 'jose';
 
-/** Roles understood in v1. Only 'viewer' is enforced (everyone authenticated). */
-export type Role = 'viewer' | 'admin' | string;
-
 /** Supabase access-token claims we care about. */
 export interface AccessClaims extends JWTPayload {
   /** Subject = Supabase user id (uuid). */
   sub?: string;
   email?: string;
-  /** Custom role claim; absent on default Supabase tokens. */
-  user_role?: string;
   /** Supabase's built-in coarse role ('authenticated' | 'anon' | ...). */
   role?: string;
 }
 
-/** Minimal authenticated-user view derived from verified claims. */
+/** Minimal authenticated-user view derived from verified claims. Carries no nao capability tier — see this module's header. */
 export interface AuthUser {
   sub: string;
   email?: string;
-  role: Role;
   claims: AccessClaims;
 }
 
@@ -64,18 +75,6 @@ function getJwks(): ReturnType<typeof createRemoteJWKSet> {
     );
   }
   return jwks;
-}
-
-/**
- * Read the effective role from verified claims.
- * Returns the `user_role` claim when present, otherwise 'viewer'.
- */
-export function role(claims: AccessClaims | null | undefined): Role {
-  const r = claims?.user_role;
-  if (typeof r === 'string' && r.length > 0) {
-    return r;
-  }
-  return 'viewer';
 }
 
 /**
@@ -137,7 +136,6 @@ export async function getUser(req: Request): Promise<AuthUser | null> {
   return {
     sub: claims.sub,
     email: claims.email,
-    role: role(claims),
     claims,
   };
 }

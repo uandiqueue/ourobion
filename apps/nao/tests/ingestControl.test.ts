@@ -51,6 +51,24 @@ test('validatePatchBody: accepts an empty patch (no-op)', () => {
   assert.equal(validatePatchBody({}), null);
 });
 
+// R4-U2 re-review finding N1: `paused` was never type-checked at all, so it
+// flowed straight into recordControlEvent's audit `detail` untouched. Layer 1
+// (authz.ts's sanitizeStorageValue) now makes the AUDIT INSERT unfailable
+// regardless; this is the boundary check that should have existed from the
+// start — reject anything that isn't a real boolean.
+test('validatePatchBody: rejects a non-boolean paused (string, number, null, object, and the string "true")', () => {
+  assert.match(validatePatchBody({ paused: 'true' } as unknown as { paused?: boolean }) ?? '', /paused/);
+  assert.match(validatePatchBody({ paused: 1 } as unknown as { paused?: boolean }) ?? '', /paused/);
+  assert.match(validatePatchBody({ paused: null } as unknown as { paused?: boolean }) ?? '', /paused/);
+  assert.match(validatePatchBody({ paused: {} } as unknown as { paused?: boolean }) ?? '', /paused/);
+  assert.match(validatePatchBody({ paused: [] } as unknown as { paused?: boolean }) ?? '', /paused/);
+});
+
+test('validatePatchBody: accepts a real boolean paused (true and false)', () => {
+  assert.equal(validatePatchBody({ paused: true }), null);
+  assert.equal(validatePatchBody({ paused: false }), null);
+});
+
 test('validatePatchBody: rejects a non-positive/NaN budget, accepts null (clear) and a positive number', () => {
   assert.match(validatePatchBody({ openalexDailyUsd: 0 }) ?? '', /positive number/);
   assert.match(validatePatchBody({ openalexDailyUsd: -1 }) ?? '', /positive number/);
