@@ -1,11 +1,13 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "scope": "local-only",
   "hostedDeployParityClaimed": false,
+  "productCapAcceptanceClaimed": false,
   "replayBoundary": "CI recomputes frozen graphs and validates this local evidence, but does not replay local serve or claim hosted deploy parity.",
   "generator": "node tools/run4_release_gate.mjs record-attestation",
   "provenance": {
-    "unitBaseSha": "2749381a405de882c6d96cdf21a57034e28204ea",
+    "unitBaseSha": "e975a21e8c75b6ec93ff0f90954a87bc4948c2dd",
+    "productCapBaseSha": "77c98213e23ad56ae37c86201b39ef4e7543a543",
     "maxChangedPaths": 115,
     "maxAddedLines": 8500
   },
@@ -18,33 +20,33 @@
       "name": "compute-baselines",
       "entrypoint": "./functions/compute-baselines/index.ts",
       "importMap": "./functions/compute-baselines/deno.json",
-      "entrypointSha256": "8e2f3e2c9e5a1c115ad15cfa74230e1b04d2d8c61b784400018aa4e2070b94a8",
+      "entrypointSha256": "21d1b63541686a961c71be8a9f6e13b47cb573703cdb1d1235d6f6f4b12a256f",
       "importMapSha256": "559f0671914e7e20a5396b944a780be2bdb0208c6a23da9d3ed1e62aedd63bae",
-      "moduleGraphSha256": "e906703acbf674bcc8e2436d0e6cd280708865ad0731ce673aedf7db5d334f6e"
+      "moduleGraphSha256": "65972cc03bf18d6a36db84bbfaf997af47c4add64a976b440ad7445e6134a2ff"
     },
     {
       "name": "generate-insights",
       "entrypoint": "./functions/generate-insights/index.ts",
       "importMap": "./functions/generate-insights/deno.json",
-      "entrypointSha256": "b30045ad956c08af1819cdd220174e9729152d2f95ea8a250abbb94e7ece919a",
+      "entrypointSha256": "af2343fc2e98a4a4e434f21bd2f1d703a24182a65f536b00bc36b4e6232b8408",
       "importMapSha256": "559f0671914e7e20a5396b944a780be2bdb0208c6a23da9d3ed1e62aedd63bae",
-      "moduleGraphSha256": "eaff12def0038bd5c574b8d3ee19f564804cbc528f204ec3a15ac6605aaa2d60"
+      "moduleGraphSha256": "e2f4b4aeabfcfe0ee811c93df00efe04fbd9886b9a6c245493871a18244ff932"
     },
     {
       "name": "evaluate-signals",
       "entrypoint": "./functions/evaluate-signals/index.ts",
       "importMap": "./functions/evaluate-signals/deno.json",
-      "entrypointSha256": "c5f744ddc124bcfa9a0f2b586aa30d5b5449755b66a8852f9678e29e31642fca",
+      "entrypointSha256": "e3f8ebd990b9334a5d1810615d3df53ce79fefa99928498529daaec521d7eb6a",
       "importMapSha256": "559f0671914e7e20a5396b944a780be2bdb0208c6a23da9d3ed1e62aedd63bae",
-      "moduleGraphSha256": "b0b11a0006c3092048f3d34e09bbc996748c502d870186e41796bed7d4d5f690"
+      "moduleGraphSha256": "ba4317d455f5d9968ce8f3366e3c69b00f58aee50253cc48b75553c6514b98df"
     },
     {
       "name": "run-pipeline",
       "entrypoint": "./functions/run-pipeline/index.ts",
       "importMap": "./functions/run-pipeline/deno.json",
-      "entrypointSha256": "d2bbf427cd746f277a38de2508c5d68c21a257736a160302e79aeef17f3ee155",
+      "entrypointSha256": "80e8aaeaedfcf5ee60986d719b8d3de38e9d2de425ded3c6925f267cf9b08a29",
       "importMapSha256": "559f0671914e7e20a5396b944a780be2bdb0208c6a23da9d3ed1e62aedd63bae",
-      "moduleGraphSha256": "13bf1b710898e883de660d2102a9ed42141bc173d3dc1f86b4c7749187b31c55"
+      "moduleGraphSha256": "60515bda161b45836acf4f5dccf4cca2df3fd654f0ceebca70274caf59178dcf"
     }
   ],
   "serveProbe": {

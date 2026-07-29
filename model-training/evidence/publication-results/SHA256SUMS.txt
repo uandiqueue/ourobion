@@ -1,0 +1,11 @@
+bc2d7a79e76b4626e90e3792902a018adb179859a86358a18cf844620e7061f7  ../zebra-training/v1/outputs/final/model/pytorch_model.bin
+809b0db44ab9b5a987a143745dacd7af56de7349e44a69b357446374e818e8f5  ../zebra-training/v1/outputs/v1-training-report.json
+ea0db07dcfb1bc444aff09ef4060973989f50987eda67e855235f4f6ff2dd7b2  ../zebra-training/v1/outputs/selection-report.json
+e9f0e0ebfbf1cd59f2a75bb341babc62801a57e16886b46ca9e1670a0375d9c4  ../zebra-training/v1/outputs/final/train-artifact.json
+1037fac41dec0fb82c5c5d281e820ae862ac389cc95727f7724ca42320a47df5  ../zebra-training/v1/TRAINING-REPORT.md
+4ea5915825cfe213cef62abe6231d5d92d55f980003fbfbd0c1c7f10a4ee16cc  ../viceroy-training/outputs/model/pytorch_model.bin
+f5d4c995bd7dd9ed55e03cef2e506763d5d05819e05f3c922c453c3de842a8c8  ../viceroy-training/outputs/metrics-artifact.json
+5c52d541ededb1158cca9f7041cb367a4fd200a5b3260756bd62dbb46ad4d24c  ../viceroy-training/outputs/train-artifact.json
+f7407811f3ecedf55423a187172b23a5b270faee26d3ed9630815b0f48bbf388  ../viceroy-training/outputs/eval-artifact.json
+2251904a2b9aa232309b89558c2a5d070d66d271c2068e5dca6858bf0deb875e  ../viceroy-training/outputs/split-artifact.json
+683c0409ca8b972dcfcb9364a964de19bcf144bae4622e12d7aee65eafce2464  ../viceroy-training/TRAINING-REPORT.md

@@ -187,6 +187,9 @@ model-training/
 
 ## Where the authoritative specs live
 
+- [`evidence/publication-results/`](evidence/publication-results/) —
+  canonical Zebra v1 and Viceroy v0 training/evaluation reports, aggregate results, and provenance
+  hashes
 - [`../docs/temp/model-training/README.md`](../docs/temp/model-training/README.md) — workstream overview
 - [`../docs/temp/model-training/model-roster.md`](../docs/temp/model-training/model-roster.md) — what we
   train, what we don't, and why
