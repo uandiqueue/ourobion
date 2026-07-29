@@ -190,7 +190,7 @@ test('source-text numstat recovery is narrow and fail-closed', () => {
   };
   const git = (_command, args, options = {}) => {
     const value = responses[args.join(' ')];
-    return options.encoding === 'buffer' ? value : (value ?? '');
+    return options.encoding === 'buffer' ? (Buffer.isBuffer(value) ? value : Buffer.from(value ?? '')) : (value ?? '');
   };
   assert.equal(checkLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git }).addedLines, 1);
   for (const [label, mutate] of [

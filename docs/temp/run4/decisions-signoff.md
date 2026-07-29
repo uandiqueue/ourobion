@@ -57,6 +57,11 @@ as binary even under numstat text mode. This recovery counts only additions prov
 independently parsed patch; missing, deleted, non-UTF-8, NUL-bearing, ambiguous, mismatched, or
 non-source rows remain fail-closed.
 
+**Amendment — adversarial hardening:** recovery now consumes raw patch bytes, validates a safe
+repo-relative ASCII path and exact single-file headers, and rejects binary markers, context,
+no-newline markers, rename/copy material, malformed or count-mismatched hunks. A raw NUL is
+allowed only in a removed historical line; added lines must be NUL-free fatal UTF-8.
+
 ## Historical provenance
 
 The original envelope/bootstrap SHA remains
