@@ -83,10 +83,103 @@ export interface VerifyRecord {
   evidenceTier: VerifyEvidenceTier;
   confidence: number;
   dqs: { weight: number };
+  /**
+   * The CONFIGURED verifier id (router config / a MOCK or INTERIM provenance stamp).
+   * This is a config echo, NOT attestation (B-BR1) — it is whatever the caller asked
+   * for, never proof of what answered. The provider-returned identity lives in
+   * {@link VerifyRecord.attestation} and nowhere else; the two are deliberately not
+   * collapsed into this one field.
+   */
   verifierModel: string;
   promptVersion: string;
   verifiedAt: string;
   status: VerifyStatus;
+  /**
+   * R4-U4/O27 · Mirror of `ArtifactRef` — which artifact bundle + exact bytes this
+   * record is. Optional: absent means UNTRUSTED (shared/brain trustFailures blocks
+   * serving), never "fine".
+   */
+  artifact?: VerifyArtifactRef;
+  /**
+   * R4-U4/O27 · Mirror of `ModelAttestation` — what the PROVIDER returned. Absent
+   * when no provider response backed this record (quoteCheck-only rung, mailbox
+   * fulfilment, fixtures). `attested` is true only for a provider-returned identity.
+   */
+  attestation?: VerifyModelAttestation;
+}
+
+/** Mirror of `ArtifactPosture` (relationships.ts) — 'fixture' = no provider was called. */
+export type VerifyArtifactPosture = 'fixture' | 'live';
+
+/** Mirror of `ArtifactRef` (relationships.ts). */
+export interface VerifyArtifactRef {
+  revision: string;
+  /** `sha256:<64 lowercase hex>` over this record's canonical bytes. */
+  contentHash: string;
+  posture: VerifyArtifactPosture;
+}
+
+/** Mirror of `ModelAttestation` (relationships.ts). */
+export interface VerifyModelAttestation {
+  returnedModel: string;
+  returnedVersion: string | null;
+  family: string;
+  decorrelated: boolean;
+  attested: boolean;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// R4-U3 · Raw provider evidence (SIDE artifact — deliberately NOT on VerifyRecord)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * R4-U3 · The raw provider response behind one verification, as persisted.
+ *
+ * WHY THIS IS NOT A FIELD OF {@link VerifyRecord}: `VerifyRecord` mirrors the
+ * `EdgeVerification` contract that `tools/edge-loader` ingests into
+ * `edge_verifications`, which is read by the serving path that composes
+ * user-facing cards. A raw provider body is unreviewed model output — evidence,
+ * not product — so putting it on that record would push megabytes of unvetted
+ * text into the exact table that feeds user-facing output. It therefore lives in
+ * its OWN append-only artifact beside the verifications, keyed by the same
+ * `(edgeId, verifiedAt)` identity the loader uses, so the two are joinable
+ * offline without the evidence ever entering the serving surface.
+ *
+ * It also keeps the brain contract in `shared/brain/` untouched (that would need
+ * the two-reviewer shared-contract process) while still making the evidence
+ * survive on disk, which was the actual requirement.
+ */
+export interface VerifyRawRecord {
+  /** Join key — same identity as the verification's dedupe key. */
+  edgeId: string;
+  /** Join key — the verification's `verifiedAt`. */
+  verifiedAt: string;
+  /** The CONFIGURED verifier id (config echo — mirrors VerifyRecord.verifierModel). */
+  verifierModel: string;
+  /** The PROVIDER-RETURNED id when the response was attested, else null. */
+  attestedModel: string | null;
+  /** True iff the response backing this body was provider-attested. */
+  attested: boolean;
+  /** The raw body itself, with its size cap and truncation flag. */
+  raw: VerifyRawBody;
+}
+
+/**
+ * The retained body. Structurally the router's `RawProviderResponse`; restated
+ * here for the same reason the contract mirrors above exist — this package does
+ * not take a value-level dependency on another package's shapes.
+ */
+export interface VerifyRawBody {
+  /** Verbatim response text, truncated to at most `capBytes`. */
+  body: string;
+  /** Byte length of the FULL body before capping. */
+  bytes: number;
+  /** True when `body` was cut. Truncation is recorded, never silent. */
+  truncated: boolean;
+  /** The cap applied, in bytes. */
+  capBytes: number;
+  /** `sha256:<hex>` over the FULL, untruncated body. */
+  sha256: string;
 }
 
 /** The shared zod gate, typed to this package's structural mirror. */

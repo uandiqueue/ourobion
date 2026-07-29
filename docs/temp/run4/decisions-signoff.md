@@ -30,6 +30,44 @@ updated: 2026-07-29
 | EXIT | Both local passes plus final full suite before cloud consideration | pending |
 | CLOUD | Hosted writes/deploy/promotion remain outside authorization | stopped by design |
 
+## D-241-NUL-SOURCE-NORMALIZATION
+
+**Choice:** retain the verification dedupe key's runtime NUL separator while representing it in
+`artifact.ts` as the ASCII source escape `\0` rather than a raw `0x00` byte.
+
+**Alternatives rejected:** allowing a binary TypeScript source file, which makes ordinary diff and
+release-cap tooling treat the file as unparsable; and changing the delimiter semantics, which would
+change the existing `(edgeId, verifiedAt)` identity.
+
+**Why:** the escaped literal evaluates to the same NUL character, preserving the loader identity and
+raw-retention dedupe behavior while restoring textual source/diff compatibility. A regression test
+pins both the runtime character code and the absence of raw NUL bytes in the source file.
+
+## D-241-SOURCE-TEXT-NUMSTAT-RECOVERY
+
+**Choice:** recover a `-\t-\tpath` numstat row only when the current head contains that exact
+supported source path as a NUL-free, fatally-valid UTF-8 blob and one path-scoped zero-context
+`git diff --text` patch has exact headers, hunks, and line counts.
+
+**Alternatives rejected:** applying `--text` globally, relying on Git attributes, accepting binary
+rows by extension alone, or relaxing rename/copy, path-set, MT4, and cap checks.
+
+**Why:** a historical binary base can make Git classify an otherwise textual current source change
+as binary even under numstat text mode. This recovery counts only additions proven by the
+independently parsed patch; missing, deleted, non-UTF-8, NUL-bearing, ambiguous, mismatched, or
+non-source rows remain fail-closed.
+
+**Amendment — adversarial hardening:** recovery now consumes raw patch bytes, validates a safe
+repo-relative ASCII path and exact single-file headers, and rejects binary markers, context,
+no-newline markers, rename/copy material, malformed or count-mismatched hunks. A raw NUL is
+allowed only in a removed historical line; added lines must be NUL-free fatal UTF-8.
+
+**Second amendment — final review correction:** every hunk header is now rejected before parsing
+when it contains a raw NUL, closing the optional-suffix regex path while preserving the sole
+removed-body exception. The release suite now executes the complete positive and adversarial matrix,
+including both landing and product-cap wiring; the earlier one-positive/two-negative test did not
+substantiate the prior session's broader coverage claim.
+
 ## Historical provenance
 
 The original envelope/bootstrap SHA remains

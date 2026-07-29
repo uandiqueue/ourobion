@@ -40,11 +40,9 @@ import { requestLocalAgent } from './routes/localAgent.js';
 import {
   estimateTokens,
   LLM_NODE_IDS,
-  TEST_MODE_LABEL,
   type LlmNodeId,
   type LlmRequest,
   type LlmResponse,
-  type TestModeState,
   type VendorFamily,
 } from './types.js';
 
@@ -79,6 +77,14 @@ export interface LlmRouterOptions {
   /** local_agent timing overrides (default from config.localAgent). */
   localAgentTimeoutMs?: number;
   localAgentPollIntervalMs?: number;
+  /**
+   * R4-U3 raw-body retention for api_worker calls. DEFAULTS TO RETAINED — the
+   * point of the retention is that the provider evidence cannot be lost, so it is
+   * opt-OUT (for a caller with a specific reason), never opt-in.
+   */
+  retainRawBody?: boolean;
+  /** Byte cap for a retained raw body (default DEFAULT_RAW_BODY_CAP_BYTES). */
+  rawBodyCapBytes?: number;
 }
 
 export class LlmRouter {
@@ -145,6 +151,8 @@ export class LlmRouter {
         ...(this.opts.sleep !== undefined ? { sleep: this.opts.sleep } : {}),
         ...(this.opts.maxAttempts !== undefined ? { maxAttempts: this.opts.maxAttempts } : {}),
         ...(this.opts.baseDelayMs !== undefined ? { baseDelayMs: this.opts.baseDelayMs } : {}),
+        ...(this.opts.retainRawBody !== undefined ? { retainRawBody: this.opts.retainRawBody } : {}),
+        ...(this.opts.rawBodyCapBytes !== undefined ? { rawBodyCapBytes: this.opts.rawBodyCapBytes } : {}),
       });
     } else {
       response = await requestLocalAgent(req, node.model, maxOutputTokens, {
@@ -157,19 +165,41 @@ export class LlmRouter {
     }
 
     this.ledger.record(req.nodeId, this.runId, node.model, response.usage);
-    const testMode = this.testModeState();
-    return testMode !== undefined ? { ...response, testMode } : response;
+    // R4-U4 follow-on (B-BR1/B-BR2): the ROUTE knows whether the provider returned
+    // an identity; only the ROUTER sees the whole config, so it fills the two
+    // config-derived members here. Neither can promote an unattested identity —
+    // `providerAttested` is decided at the route and never rewritten.
+    return {
+      ...response,
+      modelIdentity: {
+        ...response.modelIdentity,
+        family: response.modelIdentity.family ?? this.familyOfNode(req.nodeId),
+        decorrelatedFromSynthesis: this.decorrelatedFromSynthesis(req.nodeId),
+      },
+    };
+  }
+
+  /** Configured vendor family for a node, or null when the model matches no provider. */
+  private familyOfNode(nodeId: LlmNodeId): VendorFamily | null {
+    const node = this.config.nodes[nodeId];
+    if (node === undefined) return null;
+    return providerFor(this.config, node.model)?.family ?? null;
   }
 
   /**
-   * TEST-MODE state (label + reason) when the config carries a `testMode`
-   * block, else undefined. Attached to every route() result so downstream
-   * consumers can stamp verifier verdicts with {@link TEST_MODE_LABEL}.
+   * O7 / B-BR2 decorrelation for one node: true only when its configured family
+   * DIFFERS from the synthesis node's family. null when either family is
+   * unresolvable. FAIL CLOSED: this never returns true on missing information.
+   *
+   * R4-U3 removed the test-mode short-circuit that hard-returned false here; the
+   * invariant is now enforced at config load, so a router that constructed at all
+   * has a decorrelated verifier and this reports the real comparison.
    */
-  testModeState(): TestModeState | undefined {
-    return this.config.testMode !== undefined
-      ? { reason: this.config.testMode.reason, label: TEST_MODE_LABEL }
-      : undefined;
+  private decorrelatedFromSynthesis(nodeId: LlmNodeId): boolean | null {
+    const own = this.familyOfNode(nodeId);
+    const synthesis = this.familyOfNode('synthesis');
+    if (own === null || synthesis === null) return null;
+    return own !== synthesis;
   }
 
   /** Current budget snapshot (today's per-node spend + run totals). */
@@ -200,16 +230,15 @@ export interface CheckConfigReport {
   nodes: NodeReportRow[];
   decorrelation: {
     /**
-     * True when both decorrelation clauses hold. False is only reachable
-     * under TEST-MODE — outside it a violating config cannot load at all.
+     * True when family(verifier) !== family(synthesis). A config loaded through
+     * `loadConfig` can never report false — the invariant is a load failure. It
+     * stays a reported field because `checkConfig` also accepts a caller-supplied
+     * `config` object that bypassed validation.
      */
     ok: boolean;
     synthesisFamily: VendorFamily;
     verifierFamily: VendorFamily;
-    verifierNonAnthropic: boolean;
   };
-  /** Present exactly when the config carries a `testMode` block. */
-  testMode?: TestModeState;
   /** env-var → present, for every provider referenced by the config. */
   keys: Record<string, boolean>;
   budget: BudgetState;
@@ -271,18 +300,13 @@ export function checkConfig(opts: CheckConfigOptions = {}): CheckConfigReport {
 
   const synthesisFamily = familyOf(config, config.nodes.synthesis.model);
   const verifierFamily = familyOf(config, config.nodes.verifier.model);
-  const verifierNonAnthropic = verifierFamily !== 'anthropic';
   return {
     nodes,
     decorrelation: {
-      ok: synthesisFamily !== verifierFamily && verifierNonAnthropic,
+      ok: synthesisFamily !== verifierFamily,
       synthesisFamily,
       verifierFamily,
-      verifierNonAnthropic,
     },
-    ...(config.testMode !== undefined
-      ? { testMode: { reason: config.testMode.reason, label: TEST_MODE_LABEL } }
-      : {}),
     keys,
     budget: ledger.state(),
   };

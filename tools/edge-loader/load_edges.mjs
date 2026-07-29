@@ -4,7 +4,9 @@
 // Truth-tier edge artifacts (edges/claims.jsonl + edges/verifications.jsonl — R2, or a local
 // mirror directory for offline runs) → validate every line against the shared/brain zod contract
 // (HARD FAIL with line numbers on any violation) → join verifications to claims by edgeId →
-// precompute edge_score / serving_band via shared/brain edgeScore / servingBand → TRANSACTIONAL
+// precompute edge_score / serving_band via shared/brain edgeScore / servingBand → project the
+// R4-U4/O27 artifact-trust + model-attestation columns verbatim from the artifact (NULL, i.e.
+// UNTRUSTED, when the artifact asserts none — never derived) → TRANSACTIONAL
 // projection into the S6 tables: claims upsert on edge_id, verifications upsert on
 // (edge_id, verified_at) — prior active verifications of an edge land/flip 'superseded' — then
 // prune rows whose artifact line is gone. The tables end up a pure function of the current
@@ -44,6 +46,11 @@ import {
   R2_VERIFICATIONS_KEY,
 } from './lib/artifacts.mjs';
 
+// R4-U4/O27 (20260728030000_r4u4_artifact_trust_and_revision_bound_disposition.sql): the
+// artifact/attestation columns are written by the loader from here on — the U4 migration
+// deliberately left population to this follow-on. Order matters only in that it must match
+// the row-object keys the artifacts.mjs pipeline emits; the SQL builders below derive their
+// placeholders from these arrays, so adding a name here is the whole change.
 const CLAIM_COLUMNS = [
   'edge_id',
   'subject',
@@ -52,6 +59,9 @@ const CLAIM_COLUMNS = [
   'claim',
   'prompt_version',
   'synthesised_at',
+  'artifact_revision',
+  'artifact_content_hash',
+  'artifact_posture',
 ];
 
 const VERIFICATION_COLUMNS = [
@@ -62,6 +72,14 @@ const VERIFICATION_COLUMNS = [
   'status',
   'edge_score',
   'serving_band',
+  'artifact_revision',
+  'artifact_content_hash',
+  'artifact_posture',
+  'attestation_returned_model',
+  'attestation_returned_version',
+  'attestation_family',
+  'attestation_decorrelated',
+  'attestation_attested',
 ];
 
 const JSONB_COLUMNS = new Set(['claim', 'verification']);
@@ -393,6 +411,20 @@ async function main() {
       ? `${active.serving_band} @ ${active.edge_score.toFixed(3)} (${active.verdict}, ${active.verified_at})`
       : 'no active verification — not servable';
     console.log(`  - ${row.edge_id} → ${gate}`);
+    // R4-U4/O27: say the trust posture out loud at load time. An operator staging a demo
+    // must be able to see BEFORE the serving run that a record carries no artifact ref or
+    // no provider attestation — those edges cannot produce a card, and finding that out
+    // here is far better than staring at an empty insight_cards table afterwards.
+    if (active) {
+      const posture = active.artifact_posture ?? row.artifact_posture ?? 'no-artifact-ref';
+      const attested =
+        active.attestation_attested === true
+          ? `attested ${active.attestation_returned_model} (${active.attestation_family})`
+          : active.attestation_returned_model !== null
+            ? `NOT provider-attested (${active.attestation_returned_model})`
+            : 'no attestation captured';
+      console.log(`      trust: posture ${posture}; ${attested}`);
+    }
     // RU2 guardrail: surface WHY the edge scored as it did — the component breakdown alongside the
     // composite (uncited weights, so the composite is a rank aid, not a truth value). Review-only /
     // non-persisted: the DB projection stays edge_score + serving_band (persisting this is B2 backlog).

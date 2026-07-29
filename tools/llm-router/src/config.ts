@@ -3,20 +3,24 @@
  *
  * Validation is plain TS (no zod — matches the brain-ingest house style) and
  * FAILS LOUDLY at load. The load-bearing invariant is **decorrelation**
- * (memory 0013 / architecture §10.1 / brain-synthesis-design):
+ * (memory 0012 / 0013 / architecture §10.1 / brain-synthesis-design), and it is
+ * exactly ONE pairwise comparison:
  *
- *   family(nodes.synthesis.model) !== family(nodes.verifier.model)
- *   family(nodes.verifier.model)  !== 'anthropic'
+ *   family(nodes.verifier.model) !== family(nodes.synthesis.model)
  *
- * A same-family verifier shares the synthesizer's blind spots and rubber-stamps
- * it; per §10.1 the verifier is explicitly non-Anthropic. No config that
- * violates this can be constructed — EXCEPT under an explicit, loudly-labelled
- * TEST-MODE (`testMode` block, Run 2.0 single-provider posture): with
- * `testMode: { reason: "…" }` present, a decorrelation violation is DOWNGRADED
- * from a hard failure to a warning naming the violated invariant, and every
- * router result carries `testMode` metadata (label: TEST_MODE_LABEL from
- * types.ts) so downstream consumers stamp verifier verdicts accordingly.
- * Without the flag, validation behaves exactly as before (hard fail).
+ * Adversarial verification is only worth anything when the verifier is
+ * INDEPENDENT of the synthesizer; a same-family verifier inherits its training
+ * data and preferences, so it shares the blind spots it is supposed to catch and
+ * rubber-stamps the claim. WHICH vendor sits on either side is irrelevant — only
+ * the difference is load-bearing.
+ *
+ * NO config violating this can be constructed: the check is an unconditional
+ * `RouterConfigError` with no flag, no warning downgrade, and no test-mode
+ * escape hatch (R4-U3 removed the `testMode` block that used to provide one).
+ * Everything downstream — `edge_verifications.attestation_decorrelated`, the
+ * trust gate, the served card — reads "verified" as "verified independently",
+ * so a posture that cannot deliver that must fail at load rather than quietly
+ * produce records that overclaim.
  *
  * Paths in the config (`budget.ledgerPath`, `localAgent.mailboxDir`) are
  * repo-root-relative and resolved via `resolveRepoPath` — no hardcoded absolute
@@ -28,7 +32,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, isAbsolute, resolve } from 'node:path';
-import { LLM_NODE_IDS, TEST_MODE_LABEL, type LlmNodeId, type RouteKind, type VendorFamily } from './types.js';
+import { LLM_NODE_IDS, type LlmNodeId, type RouteKind, type VendorFamily } from './types.js';
 import { RouterConfigError } from './errors.js';
 
 /** Per-node routing entry. */
@@ -83,17 +87,6 @@ export interface LocalAgentConfig {
   pollIntervalMs: number;
 }
 
-/**
- * TEST-MODE flag (Run 2.0 single-provider posture). Presence of this block
- * downgrades the two decorrelation clauses from hard load failures to loud
- * warnings; it changes NOTHING else about validation. It must be explicit:
- * a non-empty `reason` is required, so nobody lands in test mode by accident.
- */
-export interface TestModeConfig {
-  /** Non-empty justification for running without decorrelation. REQUIRED. */
-  reason: string;
-}
-
 export interface RouterConfig {
   version: 1;
   nodes: Record<LlmNodeId, NodeConfig>;
@@ -101,8 +94,6 @@ export interface RouterConfig {
   prices: Record<string, PriceEntry>;
   budget: BudgetConfig;
   localAgent: LocalAgentConfig;
-  /** Optional TEST-MODE flag — see {@link TestModeConfig}. */
-  testMode?: TestModeConfig;
 }
 
 const VALID_ROUTES: readonly RouteKind[] = ['local_agent', 'api_worker'];
@@ -156,22 +147,38 @@ export function familyOf(config: RouterConfig, model: string): VendorFamily {
   return entry.family;
 }
 
-/** Options for {@link validateConfig} / {@link loadConfig}. */
-export interface ValidateOptions {
-  /**
-   * Sink for TEST-MODE decorrelation warnings (injectable for tests).
-   * Default: `console.warn`.
-   */
-  warn?: (message: string) => void;
+/**
+ * Resolve the vendor family of one decorrelation-relevant node, FAILING CLOSED.
+ *
+ * `providerFor` returns undefined for a model matching no `providers[]` prefix.
+ * An unresolvable family is NOT "probably fine" — it means we cannot show the
+ * verifier is independent of the synthesizer, which is indistinguishable, for
+ * trust purposes, from knowing that it isn't. So it throws, exactly like an
+ * outright violation would.
+ */
+function decorrelationFamilyOrFail(
+  config: RouterConfig,
+  nodeId: 'synthesis' | 'verifier',
+): VendorFamily {
+  const model = config.nodes[nodeId].model;
+  const family = providerFor(config, model)?.family;
+  if (family === undefined) {
+    fail(
+      `decorrelation cannot be evaluated: nodes.${nodeId}.model '${model}' resolves to NO vendor ` +
+        `family (no providers[] prefix matches it). FAIL CLOSED — an unresolvable family is ` +
+        `treated as a violation, never as a pass by default; add a providers[] entry for its prefix`,
+    );
+  }
+  return family;
 }
 
 /**
  * Validate an already-parsed config object. Returns the same object, typed.
  * Enforces: shape, all six nodes present, every node model resolves to a
  * family and has a price row, budget sanity, and the DECORRELATION INVARIANT
- * (downgraded to a warning ONLY when an explicit `testMode` block is present).
+ * (an unconditional hard failure — there is no downgrade path).
  */
-export function validateConfig(raw: unknown, opts: ValidateOptions = {}): RouterConfig {
+export function validateConfig(raw: unknown): RouterConfig {
   if (raw === null || typeof raw !== 'object') fail('config must be a JSON object');
   const c = raw as Partial<RouterConfig>;
 
@@ -236,18 +243,16 @@ export function validateConfig(raw: unknown, opts: ValidateOptions = {}): Router
   if (!isPositiveInt(la.timeoutMs)) fail('localAgent.timeoutMs must be a positive integer');
   if (!isPositiveInt(la.pollIntervalMs)) fail('localAgent.pollIntervalMs must be a positive integer');
 
-  // testMode (optional) — must be explicit and justified when present.
-  const tm = c.testMode;
-  if (tm !== undefined) {
-    if (tm === null || typeof tm !== 'object' || Array.isArray(tm)) {
-      fail('testMode must be an object when present');
-    }
-    if (typeof (tm as TestModeConfig).reason !== 'string' || (tm as TestModeConfig).reason.trim().length === 0) {
-      fail(
-        'testMode.reason must be a non-empty string — TEST-MODE (decorrelation downgraded to a ' +
-          'warning) requires an explicit justification',
-      );
-    }
+  // R4-U3: a `testMode` block used to downgrade the decorrelation invariant to a
+  // warning. It is gone, and a config still carrying one is REFUSED rather than
+  // ignored — silently accepting a key whose whole purpose was to disable this
+  // check would let an operator believe the check is off when it is not.
+  if ((c as { testMode?: unknown }).testMode !== undefined) {
+    fail(
+      'testMode is no longer supported and must be removed: the decorrelation invariant ' +
+        '(family(verifier) !== family(synthesis)) is unconditional and cannot be downgraded. ' +
+        'Configure a verifier in a different vendor family than synthesis instead.',
+    );
   }
 
   const config = c as RouterConfig;
@@ -261,35 +266,30 @@ export function validateConfig(raw: unknown, opts: ValidateOptions = {}): Router
     }
   }
 
-  // THE DECORRELATION INVARIANT (memory 0013 / §10.1). Fail loudly — unless an
-  // explicit testMode block downgrades a violation to an unmistakable warning.
-  const warn = opts.warn ?? console.warn;
-  const violated = (invariant: string, detail: string): void => {
-    if (config.testMode === undefined) fail(`decorrelation violated: ${detail}`);
-    warn(
-      `llm-router TEST-MODE WARNING — decorrelation invariant '${invariant}' is VIOLATED and ` +
-        `deliberately downgraded to this warning by config testMode ` +
-        `(reason: ${config.testMode.reason}): ${detail}. Verifier verdicts produced under this ` +
-        `posture are NOT independently verified and MUST carry the label ` +
-        `'${TEST_MODE_LABEL}'.`,
-    );
-  };
-
-  const synthesisFamily = familyOf(config, config.nodes.synthesis.model);
-  const verifierFamily = familyOf(config, config.nodes.verifier.model);
+  // ── THE DECORRELATION INVARIANT (memory 0012 / 0013 / architecture §10.1) ──
+  //
+  // A genuine PAIRWISE comparison of the two families, and nothing else:
+  //
+  //     family(nodes.verifier.model) !== family(nodes.synthesis.model)
+  //
+  // This replaces a hardcoded `verifierFamily === 'anthropic'` blacklist, which
+  // was a vendor rule wearing the invariant's clothes. It rejected a perfectly
+  // independent (openai synthesis, anthropic verifier) pairing while catching
+  // nothing the comparison below misses — the requirement was never "not that
+  // vendor", it is "not the SAME vendor as the synthesizer".
+  //
+  // HARD FAIL, and deliberately unskippable: no flag, no warning downgrade.
+  // Both families are resolved fail-closed (see decorrelationFamilyOrFail).
+  const synthesisFamily = decorrelationFamilyOrFail(config, 'synthesis');
+  const verifierFamily = decorrelationFamilyOrFail(config, 'verifier');
   if (synthesisFamily === verifierFamily) {
-    violated(
-      'family(synthesis) !== family(verifier)',
-      `synthesis ('${config.nodes.synthesis.model}', ${synthesisFamily}) and ` +
-        `verifier ('${config.nodes.verifier.model}', ${verifierFamily}) are the same vendor family — ` +
-        `a same-family verifier shares the synthesizer's blind spots (memory 0013)`,
-    );
-  }
-  if (verifierFamily === 'anthropic') {
-    violated(
-      "family(verifier) !== 'anthropic'",
-      `verifier ('${config.nodes.verifier.model}') is Anthropic-family — ` +
-        `per architecture §10.1 the verifier MUST be non-Anthropic`,
+    fail(
+      `decorrelation violated: the verifier and the synthesis node are the SAME vendor family — ` +
+        `synthesis ('${config.nodes.synthesis.model}' → ${synthesisFamily}) vs ` +
+        `verifier ('${config.nodes.verifier.model}' → ${verifierFamily}). Adversarial verification ` +
+        `requires an INDEPENDENT family: a same-family verifier inherits the synthesizer's blind ` +
+        `spots and rubber-stamps it (memory 0013 / architecture §10.1). Which vendor sits on either ` +
+        `side is free; only the difference is the invariant. This check has no override.`,
     );
   }
 
@@ -297,7 +297,7 @@ export function validateConfig(raw: unknown, opts: ValidateOptions = {}): Router
 }
 
 /** Load + validate the config file (default: the checked-in router.config.json). */
-export function loadConfig(configPath?: string, opts: ValidateOptions = {}): RouterConfig {
+export function loadConfig(configPath?: string): RouterConfig {
   const path = configPath ?? defaultConfigPath();
   let raw: unknown;
   try {
@@ -305,5 +305,5 @@ export function loadConfig(configPath?: string, opts: ValidateOptions = {}): Rou
   } catch (err) {
     fail(`cannot read/parse '${path}': ${err instanceof Error ? err.message : String(err)}`);
   }
-  return validateConfig(raw, opts);
+  return validateConfig(raw);
 }

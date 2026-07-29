@@ -154,6 +154,18 @@ export async function requestLocalAgent(
             outputTokens: estimateTokens(parsed.text),
           },
           model: parsed.model ?? model,
+          // R4-U4 follow-on (B-BR1): a mailbox fulfilment is a HOST AGENT SESSION
+          // writing a file — there is no provider response body at all, so the id
+          // here (whatever the fulfiller wrote, or the configured one) can never be
+          // attestation. providerAttested is false unconditionally on this route.
+          modelIdentity: {
+            model: parsed.model ?? model,
+            source: 'local-agent-mailbox',
+            providerAttested: false,
+            family: null,
+            returnedVersion: null,
+            decorrelatedFromSynthesis: null,
+          },
           route: 'local_agent',
         };
       }

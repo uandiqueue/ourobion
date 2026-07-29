@@ -32,10 +32,12 @@ import type {
   VerifyCitation,
   VerifyClaimKind,
   VerifyEvidenceTier,
+  VerifyModelAttestation,
   VerifyRecord,
   VerifyVerdict,
 } from './types.js';
 import type { QuoteCheckBlock } from './quoteCheck.js';
+import { buildArtifactRef, posturefor } from './attest.js';
 
 const CLAIM_KINDS: readonly VerifyClaimKind[] = ['causal', 'correlational', 'mechanistic'];
 const STANCES = ['supports', 'refutes', 'mixed', 'mentions'] as const;
@@ -130,10 +132,22 @@ export interface EnforceContext {
   claim: SynthClaim;
   quoteCheck: QuoteCheckBlock;
   retrieval: RetrievalResult;
+  /** The CONFIGURED verifier id — a config echo, never attestation (B-BR1). */
   verifierModel: string;
   promptVersion: string;
   verifiedAt: string;
   validateVerification: VerificationValidator;
+  /**
+   * R4-U4/O27 · What the PROVIDER returned for this call (built by attest.ts from
+   * the router response). Absent ⇒ the record carries no attestation and can never
+   * pass the serving trust gate.
+   */
+  attestation?: VerifyModelAttestation;
+  /**
+   * R4-U4/O27 · Artifact BUNDLE revision (operator-supplied). Absent ⇒ no artifact
+   * ref is stamped, which leaves the record unservable — never invented here.
+   */
+  artifactRevision?: string;
 }
 
 /**
@@ -215,7 +229,14 @@ export function enforceVerification(reply: ParsedVerifierReply, ctx: EnforceCont
     promptVersion: ctx.promptVersion,
     verifiedAt: ctx.verifiedAt,
     status: 'active',
+    ...(ctx.attestation !== undefined ? { attestation: ctx.attestation } : {}),
   };
+
+  // (6) R4-U4/O27 · artifact ref LAST, over the finished record: the content hash
+  // pins these exact bytes (attestation included), so any re-verification yields a
+  // different hash and retires a revision-bound expert verdict (B-BR7).
+  const artifact = buildArtifactRef(record, ctx.artifactRevision, posturefor(ctx.attestation));
+  if (artifact !== undefined) record.artifact = artifact;
 
   // (5) Shared zod hard-gate — the same invariants, at the contract.
   try {
@@ -233,6 +254,8 @@ export interface QuoteOnlyContext {
   promptVersion: string;
   verifiedAt: string;
   validateVerification: VerificationValidator;
+  /** R4-U4/O27 · artifact BUNDLE revision; absent ⇒ no artifact ref (unservable). */
+  artifactRevision?: string;
 }
 
 /**
@@ -261,6 +284,11 @@ export function buildQuoteOnlyRecord(ctx: QuoteOnlyContext): VerifyRecord {
     verifiedAt: ctx.verifiedAt,
     status: 'active',
   };
+  // R4-U4/O27: NO provider was called on this rung, so posture is 'fixture' and there
+  // is no attestation at all — the record is intentionally unservable either way
+  // (verdict 'uncertain' AND 'missing-attestation' at the trust gate).
+  const artifact = buildArtifactRef(record, ctx.artifactRevision, 'fixture');
+  if (artifact !== undefined) record.artifact = artifact;
   return ctx.validateVerification(record); // hard-gate (throws on any violation)
 }
 

@@ -257,15 +257,154 @@ test('MT4 exclusion set is bound to its provenance and cannot be widened', () =>
   );
 });
 
+const sourceRecoveryFixture = ({
+  path = 'tools/example.ts',
+  status = 'M',
+  headBlob = Buffer.from('export const x = 1;\n'),
+  patch = `diff --git a/tools/example.ts b/tools/example.ts
+index aaaaaaa..bbbbbbb 100644
+--- a/tools/example.ts
++++ b/tools/example.ts
+@@ -1 +1 @@
+-old
++new
+`,
+  headExists = true,
+  patchIsBuffer = true,
+} = {}) => {
+  const head = 'd'.repeat(40);
+  const patchText = Buffer.isBuffer(patch) ? patch : patch
+    .replaceAll('a/tools/example.ts', `a/${path}`)
+    .replaceAll('b/tools/example.ts', `b/${path}`);
+  const key = (args) => JSON.stringify(args);
+  const patchArgs = ['diff', '--text', '--unified=0', '--no-color', '--no-ext-diff', '--no-textconv', '--no-renames', `${RUN4_UNIT_BASE_SHA}..${head}`, '--', path];
+  const responses = new Map([
+    [key(['rev-parse', '--is-shallow-repository']), 'false\n'],
+    [key(['cat-file', '-t', RUN4_UNIT_BASE_SHA]), 'commit\n'],
+    [key(['rev-parse', 'HEAD']), `${head}\n`],
+    [key(['merge-base', RUN4_UNIT_BASE_SHA, head]), `${RUN4_UNIT_BASE_SHA}\n`],
+    [key(['diff', '--name-status', '-z', '--find-renames', `${RUN4_UNIT_BASE_SHA}..${head}`]), `${status}\0${path}\0`],
+    [key(['diff', '--numstat', '-z', `${RUN4_UNIT_BASE_SHA}..${head}`]), `-\t-\t${path}\0`],
+    [key(['cat-file', '-e', `${head}:${path}`]), ''],
+    [key(['cat-file', '-p', `${head}:${path}`]), headBlob],
+    [key(patchArgs), Buffer.isBuffer(patchText) ? patchText : Buffer.from(patchText, 'latin1')],
+  ]);
+  const git = (_command, args, options = {}) => {
+    if (!headExists && args[0] === 'cat-file' && args[1] === '-e') throw new Error('missing HEAD path');
+    const responseKey = key(args);
+    if (!responses.has(responseKey)) throw new Error(`unexpected git call: ${args.join(' ')}`);
+    const value = responses.get(responseKey);
+    if (options.encoding === 'buffer') {
+      if (!patchIsBuffer && responseKey === key(patchArgs)) return value.toString('latin1');
+      return Buffer.isBuffer(value) ? Buffer.from(value) : Buffer.from(String(value), 'latin1');
+    }
+    return Buffer.isBuffer(value) ? value.toString('utf8') : String(value);
+  };
+  const run = () => checkLandingDelta({
+    base: RUN4_UNIT_BASE_SHA,
+    maxPaths: RUN4_MAX_CHANGED_PATHS,
+    maxAdded: RUN4_MAX_ADDED_LINES,
+    git,
+  });
+  return { git, head, path, run };
+};
+
+test('source-text numstat recovery sums omitted counts and multiple zero-count hunks', () => {
+  assert.equal(sourceRecoveryFixture().run().addedLines, 1);
+  const patch = `diff --git a/tools/example.ts b/tools/example.ts
+index aaaaaaa..bbbbbbb 100644
+--- a/tools/example.ts
++++ b/tools/example.ts
+@@ -1 +1 @@
+-old
++new
+@@ -3,0 +4,2 @@
++two
++three
+@@ -5,2 +7,0 @@
+-old-two
+-old-three
+`;
+  assert.equal(sourceRecoveryFixture({ patch }).run().addedLines, 3);
+});
+
+test('source-text numstat recovery rejects unsafe heads, statuses, paths, and non-source rows', () => {
+  for (const [label, options, message] of [
+    ['invalid UTF-8 HEAD', { headBlob: Buffer.from([0xff]) }, /HEAD blob is not UTF-8/],
+    ['NUL HEAD', { headBlob: Buffer.from([0]) }, /HEAD blob contains NUL/],
+    ['missing HEAD path', { headExists: false }, /HEAD path is absent/],
+    ['status not modified', { status: 'D' }, /requires modified status/],
+    ['traversal path', { path: 'tools/../example.ts' }, /path is unsafe/],
+    ['space path', { path: 'tools/bad name.ts' }, /path is unsafe/],
+    ['image path', { path: 'assets/image.png' }, /binary\/unparsable/],
+  ]) assert.throws(() => sourceRecoveryFixture(options).run(), message, label);
+});
+
+test('source-text numstat recovery rejects ambiguous or malformed patch structures', () => {
+  const validHeader = `diff --git a/tools/example.ts b/tools/example.ts
+index aaaaaaa..bbbbbbb 100644
+--- a/tools/example.ts
++++ b/tools/example.ts
+`;
+  const vectors = [
+    ['non-Buffer patch', { patchIsBuffer: false }, /did not return a Buffer/],
+    ['binary marker', { patch: 'diff --git a/tools/example.ts b/tools/example.ts\nBinary files a/tools/example.ts and b/tools/example.ts differ\n' }, /patch headers are invalid/],
+    ['second patch/path', { patch: `${validHeader}@@ -1 +1 @@\n-old\n+new\ndiff --git a/tools/other.ts b/tools/other.ts\n` }, /context or marker/],
+    ['malformed file header', { patch: `${validHeader.replace('index aaaaaaa..bbbbbbb 100644', 'index malformed')}@@ -1 +1 @@\n-old\n+new\n` }, /patch headers are invalid/],
+    ['malformed hunk', { patch: `${validHeader}@@ malformed @@\n-old\n+new\n` }, /patch hunk is invalid/],
+    ['count mismatch', { patch: `${validHeader}@@ -1,2 +1 @@\n-old\n+new\n` }, /hunk counts mismatch/],
+    ['context line', { patch: `${validHeader}@@ -1,2 +1,2 @@\n context\n-old\n+new\n` }, /context or marker/],
+    ['no-newline marker', { patch: `${validHeader}@@ -1 +1 @@\n-old\n+new\n\\ No newline at end of file\n` }, /context or marker/],
+    ['zero change', { patch: `${validHeader}@@ -1,0 +1,0 @@\n` }, /patch has no changes/],
+    ['NUL file header', { patch: `${validHeader.replace('--- a/tools/example.ts', '--- a/tools/example.ts\0')}@@ -1 +1 @@\n-old\n+new\n` }, /patch old-file header contains a control byte/],
+    ['control hunk header', { patch: `${validHeader}@@ -1 +1 @@\x01\n-old\n+new\n` }, /patch hunk header contains a control byte/],
+    ['NUL hunk header', { patch: `${validHeader}@@ -1 +1 @@\0suffix\n-old\n+new\n` }, /patch hunk header contains a control byte/],
+    ['NUL added body', { patch: `${validHeader}@@ -1 +1 @@\n-old\n+new\0value\n` }, /added line contains NUL/],
+  ];
+  for (const [label, options, message] of vectors) {
+    assert.throws(() => sourceRecoveryFixture(options).run(), message, label);
+  }
+  const invalidUtf8Header = Buffer.concat([
+    Buffer.from('diff --git a/tools/example.ts b/tools/example.ts\nindex aaaaaaa..bbbbbbb 100644\n'),
+    Buffer.from([0xff]),
+    Buffer.from('--- a/tools/example.ts\n+++ b/tools/example.ts\n@@ -1 +1 @@\n-old\n+new\n'),
+  ]);
+  assert.throws(() => sourceRecoveryFixture({ patch: invalidUtf8Header }).run(), /patch old-file header is not UTF-8/);
+  const invalidUtf8Added = Buffer.concat([
+    Buffer.from(`${validHeader}@@ -1 +1 @@\n-old\n+`, 'utf8'),
+    Buffer.from([0xff]),
+    Buffer.from('\n', 'utf8'),
+  ]);
+  assert.throws(() => sourceRecoveryFixture({ patch: invalidUtf8Added }).run(), /added line is not UTF-8/);
+  const invalidUtf8Removed = Buffer.concat([
+    Buffer.from(`${validHeader}@@ -1 +1 @@\n-`, 'utf8'),
+    Buffer.from([0xff]),
+    Buffer.from('\n+new\n', 'utf8'),
+  ]);
+  assert.throws(() => sourceRecoveryFixture({ patch: invalidUtf8Removed }).run(), /removed line is not UTF-8/);
+  assert.equal(
+    sourceRecoveryFixture({ patch: `${validHeader}@@ -1 +1 @@\n-old\0value\n+new\n` }).run().addedLines,
+    1,
+    'raw NUL remains permitted only in removed body lines',
+  );
+});
+
 test('product cap measures the immutable union, reports breach without throwing, and stays non-acceptance', () => {
   // The per-unit base is preserved under an explicitly non-acceptance name (#183 scope line 3),
   // and it is the CURRENT unit base, not the stale MT4 merge.
   assert.equal(RUN4_NON_ACCEPTANCE_UNIT_BASE_SHA, RUN4_UNIT_BASE_SHA);
   assert.notEqual(RUN4_NON_ACCEPTANCE_UNIT_BASE_SHA, RUN4_MT4_MERGE_SHA);
 
-  const delta = productLandingDelta();
+  const recoveredPaths = [];
+  const delta = productLandingDelta({
+    git: (command, args, options) => {
+      if (command === 'git' && args[0] === 'diff' && args.includes('--text')) recoveredPaths.push(args.at(-1));
+      return execFileSync(command, args, options);
+    },
+  });
   assert.equal(delta.base, RUN4_PRODUCT_BASE_SHA);
   assert.equal(delta.excludedPaths, RUN4_MT4_EXCLUSION_COUNT);
+  assert.ok(recoveredPaths.includes('tools/brain-ingest/src/verify/artifact.ts'), 'product-cap must exercise source-text recovery for artifact.ts');
   assert.equal(delta.allowlistedBinaryPaths, 15);
   assert.ok(delta.allowlistedBinaryBytes > 0 && delta.allowlistedBinaryBytes <= RUN4_MAX_ALLOWLISTED_BINARY_BYTES);
   assert.ok(Number.isSafeInteger(delta.changedPaths) && Number.isSafeInteger(delta.addedLines));

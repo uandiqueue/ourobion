@@ -33,6 +33,10 @@
 import {
   effectiveClaimKind,
   parseClaimKind,
+  trustFailures,
+  type ServingEnvironment,
+  type TrustFailure,
+  type TrustInputs,
 } from "../../../shared/brain/trust_labels.ts"
 
 // ─── Inputs ────────────────────────────────────────────────────────────────────────────────
@@ -75,6 +79,28 @@ export interface ServableEdge {
       attested: boolean
     }
   } | null
+
+  // ── R4-U4/O27 · the verified_edges view's FLAT artifact/attestation columns ────────────────
+  //
+  // These are the columns the U4 migration added and the A11 edge-loader now populates. They are
+  // the PREFERRED source over the jsonb above: they are what the database actually constrains
+  // (`artifact_posture in ('fixture','live')`, `content_hash ~ '^sha256:[0-9a-f]{64}$'`), and
+  // reading them is what makes the loader's population observable at serving time at all — the
+  // fetch previously selected neither them nor `verification`, so the gate saw a null posture for
+  // EVERY database-loaded edge and no cited card could ever be produced.
+  //
+  // All optional + nullable: a pre-U4 row has them null, which means UNTRUSTED, never "fine".
+  claim_artifact_revision?: string | null
+  claim_artifact_content_hash?: string | null
+  claim_artifact_posture?: string | null
+  verification_artifact_revision?: string | null
+  verification_artifact_content_hash?: string | null
+  verification_artifact_posture?: string | null
+  attestation_returned_model?: string | null
+  attestation_returned_version?: string | null
+  attestation_family?: string | null
+  attestation_decorrelated?: boolean | null
+  attestation_attested?: boolean | null
 }
 
 /** A personal_signals row (§S5) — the D2 check. */
@@ -262,12 +288,102 @@ export function composeClaimKind(edge: ServableEdge): ComposedClaimKind {
   return { claimed, supported, effective, downgraded: effective !== claimed }
 }
 
-/** R4-U4/B-UI9 · Lift the artifact posture and returned-model attestation onto the edge ref. */
+/**
+ * R4-U4 follow-on (B-BR1) · Model strings that are PROVENANCE STAMPS, not provider-returned
+ * identities: the brain-ingest CLI's configured-node echo (`config:…`, formerly the opaque
+ * `router:verifier-node`), the unset default, MOCK proofs, INTERIM single-paper stamps,
+ * hand-authored fixtures, and the llm-router TEST-MODE label
+ * ("scaffolded + unit-tested (TEST-MODE: single-provider, decorrelation OFF)").
+ *
+ * WHY THE SERVING PATH CHECKS THIS AT ALL, given the producer already refuses to mark them
+ * attested: this is the last gate before a user-facing card, and `attestation_attested` is a
+ * plain boolean column in a database that also accepts hand-inserted and imported rows. A row
+ * asserting `attested = true` next to a returned model of "MOCK" is self-contradictory; the
+ * conservative reading of a self-contradictory trust claim is "not attested".
+ *
+ * DUPLICATION IS DELIBERATE: this is a Deno edge function and may not import from `tools/`.
+ * tools/brain-ingest/src/verify/attest.ts holds the producer-side twin, and a guard test
+ * (tools/rules/tests/edge_trust_gate.test.ts) pins the two lists' behaviour against the real
+ * TEST_MODE_LABEL so they cannot drift apart silently.
+ */
+export const NON_PROVIDER_MODEL_MARKERS: readonly RegExp[] = [
+  /^config:/i,
+  /^router:/i,
+  /^unset-/i,
+  /^mock\b/i,
+  /^interim:/i,
+  /^fixture:/i,
+  /TEST-MODE/i,
+]
+
+/** True when a recorded model string is one of the provenance stamps above. */
+export function isNonProviderModelString(model: string | null): boolean {
+  if (model === null) return false
+  return NON_PROVIDER_MODEL_MARKERS.some((re) => re.test(model.trim()))
+}
+
+/**
+ * An ArtifactRef assembled ATOMICALLY from one source — all three members, or nothing.
+ * Mixing (a revision from the flat column with a hash from the jsonb) could describe an
+ * artifact that never existed, so a partial group yields null rather than a hybrid.
+ */
+function artifactFrom(
+  revision: string | null | undefined,
+  contentHash: string | null | undefined,
+  posture: string | null | undefined,
+): { revision: string; contentHash: string; posture: string } | null {
+  if (
+    revision === null || revision === undefined ||
+    contentHash === null || contentHash === undefined ||
+    posture === null || posture === undefined
+  ) {
+    return null
+  }
+  return { revision, contentHash, posture }
+}
+
+/**
+ * R4-U4/B-UI9 · Lift the artifact posture and returned-model attestation onto the edge ref.
+ *
+ * SOURCE ORDER, per record: the flat U4 view columns first (what the loader wrote and the DB
+ * constrains), then the record's own jsonb (the truth-tier artifact copy — correct for rows
+ * loaded before the loader populated the columns). Within each, the VERIFICATION's artifact
+ * outranks the CLAIM's, as before: it is the newer record.
+ *
+ * Nothing is defaulted, inferred, or filled in from a sibling field. An absent value stays
+ * null so the gate below can see exactly what is missing.
+ */
 export function composeTrustPosture(edge: ServableEdge): ComposedTrustPosture {
-  // The verification's artifact wins when present (it is the newer record); the claim's is the
-  // fallback. Nothing is defaulted — an absent field stays null so the trust gate can see it.
-  const artifact = edge.verification?.artifact ?? edge.claim?.artifact ?? null
-  const attestation = edge.verification?.attestation ?? null
+  const artifact =
+    artifactFrom(
+      edge.verification_artifact_revision,
+      edge.verification_artifact_content_hash,
+      edge.verification_artifact_posture,
+    ) ??
+    artifactFrom(
+      edge.claim_artifact_revision,
+      edge.claim_artifact_content_hash,
+      edge.claim_artifact_posture,
+    ) ??
+    edge.verification?.artifact ??
+    edge.claim?.artifact ??
+    null
+
+  // The attestation column group is likewise taken whole-or-not-at-all: `attestation_attested`
+  // alone says nothing without the identity it is asserting about.
+  const columnAttestation =
+    edge.attestation_returned_model !== null && edge.attestation_returned_model !== undefined
+      ? {
+        returnedModel: edge.attestation_returned_model,
+        returnedVersion: edge.attestation_returned_version ?? null,
+        family: edge.attestation_family ?? null,
+        decorrelated: edge.attestation_decorrelated ?? null,
+        attested: edge.attestation_attested ?? null,
+      }
+      : null
+  const jsonbAttestation = edge.verification?.attestation ?? null
+  const attestation = columnAttestation ?? jsonbAttestation
+
   return {
     posture: artifact?.posture ?? null,
     artifactRevision: artifact?.revision ?? null,
@@ -276,8 +392,64 @@ export function composeTrustPosture(edge: ServableEdge): ComposedTrustPosture {
     returnedVersion: attestation?.returnedVersion ?? null,
     modelFamily: attestation?.family ?? null,
     decorrelated: attestation?.decorrelated ?? null,
+    // Recorded verbatim — the card carries the honest stored value. The SENTINEL correction
+    // is applied in the gate below, not here, so provenance keeps showing what the row said.
     attested: attestation?.attested ?? null,
   }
+}
+
+/**
+ * R4-U4/O27 · Map a composed trust posture onto the shared `TrustInputs` the serving gate
+ * evaluates. THE FAIL-CLOSED TRANSLATION LIVES HERE:
+ *
+ *  - a partial artifact group (any of revision / hash / posture missing) becomes `undefined`,
+ *    i.e. "no artifact ref" — never a half-populated one the gate might partly accept;
+ *  - a partial attestation group likewise becomes `undefined` — 'missing-attestation';
+ *  - `attested` is ANDed with "the returned model is not one of our own provenance stamps",
+ *    so a sentinel string can never satisfy the attestation requirement even if some row
+ *    claims it was attested. `decorrelated` falls to false when unknown; it is never assumed.
+ *
+ * Absence is treated as absence of trust at every branch. There is no path through this
+ * function that turns missing information into a passing input.
+ */
+export function trustInputsFor(trust: ComposedTrustPosture): TrustInputs {
+  const inputs: TrustInputs = {}
+
+  if (
+    trust.posture !== null &&
+    trust.artifactRevision !== null &&
+    trust.artifactContentHash !== null
+  ) {
+    inputs.artifact = {
+      revision: trust.artifactRevision,
+      contentHash: trust.artifactContentHash,
+      posture: trust.posture,
+    }
+  }
+
+  if (trust.returnedModel !== null && trust.modelFamily !== null) {
+    inputs.attestation = {
+      returnedModel: trust.returnedModel,
+      returnedVersion: trust.returnedVersion,
+      family: trust.modelFamily,
+      decorrelated: trust.decorrelated === true,
+      attested: trust.attested === true && !isNonProviderModelString(trust.returnedModel),
+    }
+  }
+
+  return inputs
+}
+
+/**
+ * R4-U4/O27 · Every reason this edge may not become a cited card in `environment`, or an empty
+ * array when it is clean. The ONE place the serving trust decision is made, so index.ts cannot
+ * drift from what the tests exercise. Empty ⇒ servable; non-empty ⇒ the card is NOT produced.
+ */
+export function edgeTrustFailures(
+  edge: ServableEdge,
+  environment: ServingEnvironment,
+): TrustFailure[] {
+  return trustFailures(trustInputsFor(composeTrustPosture(edge)), environment)
 }
 
 function toEdgeRef(edge: ServableEdge, states: Record<string, "up" | "down">): ComposedEdgeRef {

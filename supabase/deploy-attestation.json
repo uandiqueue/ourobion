@@ -28,9 +28,9 @@
       "name": "generate-insights",
       "entrypoint": "./functions/generate-insights/index.ts",
       "importMap": "./functions/generate-insights/deno.json",
-      "entrypointSha256": "a0d799be199770bd3e98d2cf1484ea7db2d1a19f33b10cfbc9a7499913d9864b",
+      "entrypointSha256": "76bcad727d32ba09eee1d7b12cd0f44b3b0849cd436836b0e7252fb366e5d91c",
       "importMapSha256": "559f0671914e7e20a5396b944a780be2bdb0208c6a23da9d3ed1e62aedd63bae",
-      "moduleGraphSha256": "69be79476369d0906802f68e7f369ab101bdd0245572bfbedef31b158c1fc6dd"
+      "moduleGraphSha256": "e6439c8d9019499978eb3bf348b63ebfe27ab4e4af201ea930125d9739d5d92c"
     },
     {
       "name": "evaluate-signals",

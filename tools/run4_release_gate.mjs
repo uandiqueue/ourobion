@@ -511,6 +511,71 @@ export function validateRun4Workflow(workflowText) {
 function gitText(git, args, options = {}) {
   return git('git', args, { cwd: repo, encoding: 'utf8', ...options });
 }
+function gitBytes(git, args) {
+  const value = git('git', args, { cwd: repo, encoding: 'buffer' });
+  if (!Buffer.isBuffer(value)) fail('binary source recovery did not return a Buffer');
+  return value;
+}
+
+function decodeUtf8(bytes, message) {
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { fail(message); }
+}
+
+function validatePatchStructuralLine(line, path, label) {
+  if (/[\0-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(line)) fail(`binary source recovery patch ${label} contains a control byte: ${path}`);
+  decodeUtf8(Buffer.from(line, 'latin1'), `binary source recovery patch ${label} is not UTF-8: ${path}`);
+}
+
+function validatePatchBodyLine(line, path, added) {
+  const bytes = Buffer.from(line.slice(1), 'latin1');
+  if (added && bytes.includes(0)) fail(`binary source recovery added line contains NUL: ${path}`);
+  decodeUtf8(bytes, `binary source recovery ${added ? 'added' : 'removed'} line is not UTF-8: ${path}`);
+}
+
+const SOURCE_TEXT_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.dart', '.sql']);
+
+/**
+ * Recover one numstat row only when Git calls a historical binary base "- -" but the current
+ * HEAD blob is demonstrably UTF-8 source text. Git numstat still reports a historical-NUL base
+ * as binary under --text, so recovery parses one zero-context, path-scoped patch instead.
+ */
+function sourceTextNumstatRecovery({ row, base, head, git, status }) {
+  const binary = /^-\t-\t([^\0]+)$/.exec(row);
+  if (!binary) return null;
+  const path = binary[1];
+  if (status !== 'M') fail(`binary source recovery requires modified status: ${path}`);
+  if (!/^[A-Za-z0-9._/-]+$/.test(path) || path.startsWith('/') || path.split('/').some((part) => !part || part === '.' || part === '..')) fail(`binary source recovery path is unsafe: ${path}`);
+  const extension = path.slice(path.lastIndexOf('.'));
+  if (!SOURCE_TEXT_EXTENSIONS.has(extension)) fail(`binary/unparsable diff row: ${row}`);
+  try { gitText(git, ['cat-file', '-e', `${head}:${path}`]); } catch { fail(`binary source recovery HEAD path is absent: ${path}`); }
+  const blob = gitBytes(git, ['cat-file', '-p', `${head}:${path}`]);
+  if (blob.includes(0)) fail(`binary source recovery HEAD blob contains NUL: ${path}`);
+  decodeUtf8(blob, `binary source recovery HEAD blob is not UTF-8: ${path}`);
+  const bytes = gitBytes(git, ['diff', '--text', '--unified=0', '--no-color', '--no-ext-diff', '--no-textconv', '--no-renames', `${base}..${head}`, '--', path]);
+  const lines = bytes.toString('latin1').split('\n'); if (lines.at(-1) === '') lines.pop();
+  if (lines.length < 5) fail(`binary source recovery patch headers are invalid: ${path}`);
+  for (const [index, label] of ['diff header', 'index header', 'old-file header', 'new-file header'].entries()) validatePatchStructuralLine(lines[index], path, label);
+  if (lines[0] !== `diff --git a/${path} b/${path}` || !/^index [0-9a-f]+\.\.[0-9a-f]+(?: \d+)?$/.test(lines[1]) || lines[2] !== `--- a/${path}` || lines[3] !== `+++ b/${path}`) fail(`binary source recovery patch headers are invalid: ${path}`);
+  let added = 0; let removed = 0; let hunks = 0; let index = 4;
+  while (index < lines.length) {
+    const hunkHeader = lines[index++];
+    validatePatchStructuralLine(hunkHeader, path, 'hunk header');
+    const hunk = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(?: .*)?$/.exec(hunkHeader);
+    if (!hunk) fail(`binary source recovery patch hunk is invalid: ${path}`);
+    hunks += 1;
+    const oldCount = Number(hunk[2] ?? '1'); const newCount = Number(hunk[4] ?? '1');
+    let oldSeen = 0; let newSeen = 0;
+    while (index < lines.length && !lines[index].startsWith('@@ ')) {
+      const line = lines[index++];
+      if (line.startsWith('-')) { validatePatchBodyLine(line, path, false); oldSeen += 1; removed += 1; continue; }
+      if (line.startsWith('+')) { validatePatchBodyLine(line, path, true); newSeen += 1; added += 1; continue; }
+      fail(`binary source recovery patch contains context or marker: ${path}`);
+    }
+    if (oldSeen !== oldCount || newSeen !== newCount) fail(`binary source recovery patch hunk counts mismatch: ${path}`);
+  }
+  if (!hunks || added + removed === 0) fail(`binary source recovery patch has no changes: ${path}`);
+  return [`${added}\t0\t${path}`, String(added), '0', path];
+}
 
 /** A directory-prefix entry ends in '/'; anything else is matched as an exact path. */
 function isAllowlistedBinaryPath(path) {
@@ -544,6 +609,7 @@ export function checkLandingDelta({ base, head = 'HEAD', maxPaths, maxAdded, git
   const nameTokens = gitText(git, ['diff', '--name-status', '-z', '--find-renames', `${base}..${resolvedHead}`]).split('\0');
   if (nameTokens.at(-1) === '') nameTokens.pop();
   const names = [];
+  const statusesByPath = new Map();
   const deletedPaths = new Set();
   for (let index = 0; index < nameTokens.length;) {
     const status = nameTokens[index++];
@@ -551,6 +617,7 @@ export function checkLandingDelta({ base, head = 'HEAD', maxPaths, maxAdded, git
     if (/^[RC]/.test(status)) fail('rename/copy diff is ambiguous for the landing path budget');
     const path = nameTokens[index++];
     if (!path) fail('landing diff contains an empty path');
+    statusesByPath.set(path, status);
     if (status.startsWith('D')) deletedPaths.add(path);
     names.push(path);
   }
@@ -561,24 +628,38 @@ export function checkLandingDelta({ base, head = 'HEAD', maxPaths, maxAdded, git
   let added = 0;
   let allowlistedBinaryPaths = 0;
   let allowlistedBinaryBytes = 0;
+  const statPaths = [];
   for (const row of statRows) {
+    const numericMatch = /^(\d+)\t(\d+)\t([^\0]+)$/.exec(row);
+    if (numericMatch) {
+      const plus = Number(numericMatch[1]);
+      if (!Number.isSafeInteger(plus) || !Number.isSafeInteger(added + plus)) fail('landing added-line count overflowed');
+      added += plus;
+      statPaths.push(numericMatch[3]);
+      continue;
+    }
     const binaryMatch = /^-\t-\t([^\0]+)$/.exec(row);
     if (binaryMatch) {
       const path = binaryMatch[1];
-      if (!isAllowlistedBinaryPath(path)) fail(`binary/unparsable diff row: ${row}`);
-      allowlistedBinaryPaths += 1;
-      const bytes = allowlistedBinaryBytesAtHead(git, resolvedHead, path, deletedPaths.has(path));
-      if (!Number.isSafeInteger(allowlistedBinaryBytes + bytes)) fail('landing allowlisted binary byte count overflowed');
-      allowlistedBinaryBytes += bytes;
+      statPaths.push(path);
+      if (!statusesByPath.has(path)) fail('name-status and numstat path sets differ');
+      if (isAllowlistedBinaryPath(path)) {
+        allowlistedBinaryPaths += 1;
+        const bytes = allowlistedBinaryBytesAtHead(git, resolvedHead, path, deletedPaths.has(path));
+        if (!Number.isSafeInteger(allowlistedBinaryBytes + bytes)) fail('landing allowlisted binary byte count overflowed');
+        allowlistedBinaryBytes += bytes;
+        continue;
+      }
+      const recovered = sourceTextNumstatRecovery({ row, base, head: resolvedHead, git, status: statusesByPath.get(path) });
+      if (!recovered) fail(`binary/unparsable diff row: ${row}`);
+      const plus = Number(recovered[1]);
+      if (!Number.isSafeInteger(plus) || !Number.isSafeInteger(added + plus)) fail('landing added-line count overflowed');
+      added += plus;
       continue;
     }
-    const match = /^(\d+)\t(\d+)\t([^\0]+)$/.exec(row);
-    if (!match) fail(`binary/unparsable diff row: ${row}`);
-    const plus = Number(match[1]);
-    if (!Number.isSafeInteger(plus) || !Number.isSafeInteger(added + plus)) fail('landing added-line count overflowed');
-    added += plus;
+    fail(`binary/unparsable diff row: ${row}`);
   }
-  if (statRows.length !== names.length) fail('name-status and numstat path counts differ');
+  if (statRows.length !== names.length || new Set(statPaths).size !== statPaths.length || statPaths.some((path) => !statusesByPath.has(path))) fail('name-status and numstat path sets differ');
   if (names.length > maxPaths) fail(`landing delta has ${names.length} paths; cap is ${maxPaths}`);
   if (added > maxAdded) fail(`landing delta has ${added} added lines; cap is ${maxAdded}`);
   if (allowlistedBinaryPaths > RUN4_MAX_ALLOWLISTED_BINARY_PATHS) fail(`landing delta has ${allowlistedBinaryPaths} allowlisted binary paths; cap is ${RUN4_MAX_ALLOWLISTED_BINARY_PATHS}`);
@@ -669,6 +750,14 @@ export function productLandingDelta({ head = 'HEAD', excludedPaths, git = execFi
   let allowlistedBinaryBytes = 0;
   const statPaths = [];
   for (const row of statRows) {
+    const numericMatch = /^(\d+)\t(\d+)\t([^\0]+)$/.exec(row);
+    if (numericMatch) {
+      const plus = Number(numericMatch[1]);
+      if (!Number.isSafeInteger(plus) || !Number.isSafeInteger(added + plus)) fail('product landing added-line count overflowed');
+      statPaths.push(numericMatch[3]);
+      if (!exclusionPaths.includes(numericMatch[3])) added += plus;
+      continue;
+    }
     const binaryMatch = /^-\t-\t([^\0]+)$/.exec(row);
     if (binaryMatch) {
       const path = binaryMatch[1];
@@ -676,19 +765,22 @@ export function productLandingDelta({ head = 'HEAD', excludedPaths, git = execFi
       const nameRecord = namesByPath.get(path);
       if (!nameRecord) fail('name-status and numstat path sets differ');
       if (exclusionPaths.includes(path)) continue;
-      if (!isAllowlistedBinaryPath(path)) fail(`binary/unparsable diff row: ${row}`);
-      allowlistedBinaryPaths += 1;
-      const bytes = allowlistedBinaryBytesAtHead(git, resolvedHead, path, nameRecord.status.startsWith('D'));
-      if (!Number.isSafeInteger(allowlistedBinaryBytes + bytes)) fail('product landing allowlisted binary byte count overflowed');
-      allowlistedBinaryBytes += bytes;
+      if (isAllowlistedBinaryPath(path)) {
+        allowlistedBinaryPaths += 1;
+        const bytes = allowlistedBinaryBytesAtHead(git, resolvedHead, path, nameRecord.status.startsWith('D'));
+        if (!Number.isSafeInteger(allowlistedBinaryBytes + bytes)) fail('product landing allowlisted binary byte count overflowed');
+        allowlistedBinaryBytes += bytes;
+        continue;
+      }
+      if (nameRecord.status !== 'M') fail(`binary/unparsable diff row: ${row}`);
+      const recovered = sourceTextNumstatRecovery({ row, base: RUN4_PRODUCT_BASE_SHA, head: resolvedHead, git, status: nameRecord.status });
+      if (!recovered) fail(`binary/unparsable diff row: ${row}`);
+      const plus = Number(recovered[1]);
+      if (!Number.isSafeInteger(plus) || !Number.isSafeInteger(added + plus)) fail('product landing added-line count overflowed');
+      added += plus;
       continue;
     }
-    const match = /^(\d+)\t(\d+)\t([^\0]+)$/.exec(row);
-    if (!match) fail(`binary/unparsable diff row: ${row}`);
-    const plus = Number(match[1]);
-    if (!Number.isSafeInteger(plus) || !Number.isSafeInteger(added + plus)) fail('product landing added-line count overflowed');
-    statPaths.push(match[3]);
-    if (!exclusionPaths.includes(match[3])) added += plus;
+    fail(`binary/unparsable diff row: ${row}`);
   }
   sameSet(statPaths, names.map(({ path }) => path), 'name-status and numstat path sets');
   if (allowlistedBinaryPaths > RUN4_MAX_ALLOWLISTED_BINARY_PATHS) fail(`product landing has ${allowlistedBinaryPaths} allowlisted binary paths; cap is ${RUN4_MAX_ALLOWLISTED_BINARY_PATHS}`);
