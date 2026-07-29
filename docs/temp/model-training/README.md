@@ -31,18 +31,6 @@ execution order is set by [`run2/README.md`](./run2/README.md) — Zebra first, 
 Viceroy — which supersedes the suggested order in `model-roster.md` §7 and the one-day priority
 list in the review §10.2.
 
-### Training results
-
-The formal
-[Zebra v1 and Viceroy v0 publication-results package](../../../model-training/evidence/publication-results/)
-contains separate human-readable
-[Zebra v1](../../../model-training/evidence/publication-results/zebra-v1-results.md)
-and
-[Viceroy v0](../../../model-training/evidence/publication-results/viceroy-v0-results.md)
-reports, plus shared machine-readable aggregate results and provenance hashes. Both checkpoints
-remain research-only and not serving-ready; public weight release is blocked pending model-specific
-licence clearance.
-
 ### Portable training bundles
 
 Self-contained folders that can be handed to a machine without this repository. Each carries its
