@@ -3,13 +3,15 @@
 // The factual dimensions (OA status, retrievability, work type, pipeline status)
 // are coloured from the brand coil ramp, exactly as the approved design mock.
 // These are FACTS, never quality grades. Pure constants — safe in both Server and
-// Client Components. Keep the ramp values in sync with src/lib/theme.css.
+// Client Components. Ramp values are the kit's dark coil ramp — verify against
+// assets/ourobion-nao-logo/color/colors.css (and src/lib/theme.css --accent-N /
+// --nao-coil-N, which mirror the same kit) before changing any hex here.
 
-const TEAL = '#2bc4be';
-const CYAN = '#2fb7d6';
-const BLUE = '#3fa2e6';
-const INDIGO = '#5e8df0';
-const SLATE = '#46606b'; // closed / unknown / no-data
+const TEAL = '#2bc4be'; // kit coil ramp stop 1
+const CYAN = '#2fb7d6'; // kit coil ramp stop 2
+const BLUE = '#3fa2e6'; // kit coil ramp stop 3
+const INDIGO = '#5e8df0'; // kit coil ramp stop 4
+const SLATE = '#46606b'; // closed / unknown / no-data (matches --chart-muted)
 export const MUTED = '#5b727a';
 
 export const OA_COLOR: Record<string, string> = {

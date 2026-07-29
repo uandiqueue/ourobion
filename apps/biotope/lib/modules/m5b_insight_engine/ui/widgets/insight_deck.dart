@@ -36,10 +36,36 @@ class InsightDeck extends StatefulWidget {
   State<InsightDeck> createState() => _InsightDeckState();
 }
 
-class _InsightDeckState extends State<InsightDeck> {
+class _InsightDeckState extends State<InsightDeck>
+    with TickerProviderStateMixin {
   int _idx = 0;
   double _dx = 0;
   bool _busy = false;
+  late final AnimationController _settleController;
+  late final AnimationController _exitController;
+  Animation<double>? _settle;
+  double _exitStart = 0;
+  int _exitDirection = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _settleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+    );
+    _exitController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+    );
+  }
+
+  @override
+  void dispose() {
+    _settleController.dispose();
+    _exitController.dispose();
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(covariant InsightDeck oldWidget) {
@@ -52,12 +78,17 @@ class _InsightDeckState extends State<InsightDeck> {
   void _advance() => setState(() {
         _idx += 1;
         _dx = 0;
+        _exitController.reset();
+        _settleController.reset();
       });
 
   Future<void> _save(InsightCard card) async {
     if (_busy) return;
     setState(() => _busy = true);
-    await widget.onSave(card);
+    await Future.wait([
+      widget.onSave(card),
+      _animateAcceptedExit(1),
+    ]);
     if (!mounted) return;
     setState(() => _busy = false);
     _advance();
@@ -66,7 +97,10 @@ class _InsightDeckState extends State<InsightDeck> {
   Future<void> _dismiss(InsightCard card) async {
     if (_busy) return;
     setState(() => _busy = true);
-    await widget.onDismiss(card);
+    await Future.wait([
+      widget.onDismiss(card),
+      _animateAcceptedExit(-1),
+    ]);
     if (!mounted) return;
     setState(() => _busy = false);
     _advance();
@@ -95,6 +129,41 @@ class _InsightDeckState extends State<InsightDeck> {
     });
   }
 
+  /// A rejected drag settles exactly like the HTML deck rather than snapping
+  /// back in a single frame. Reduced-motion retains the instant stable state.
+  void _settleBack(BuildContext context) {
+    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) {
+      setState(() => _dx = 0);
+      return;
+    }
+    _settle = Tween<double>(begin: _dx, end: 0).animate(
+      CurvedAnimation(parent: _settleController, curve: Curves.easeOutCubic),
+    );
+    _settleController.forward(from: 0).whenComplete(() {
+      if (mounted) setState(() => _dx = 0);
+    });
+    setState(() {});
+  }
+
+  /// The status write remains exactly the existing callback. This only gives
+  /// an accepted gesture a short physical exit while that callback resolves.
+  Future<void> _animateAcceptedExit(int direction) async {
+    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) return;
+    setState(() {
+      _exitStart = _dx;
+      _exitDirection = direction;
+    });
+    await _exitController.forward(from: 0);
+  }
+
+  double get _displayDx {
+    if (_exitController.isAnimating || _exitController.isCompleted) {
+      final progress = Curves.easeInCubic.transform(_exitController.value);
+      return _exitStart + (_exitDirection * 520 * progress);
+    }
+    return _settleController.isAnimating ? _settle!.value : _dx;
+  }
+
   @override
   Widget build(BuildContext context) {
     final left = widget.cards.length - _idx;
@@ -109,34 +178,44 @@ class _InsightDeckState extends State<InsightDeck> {
       );
     }
 
-    return Stack(
-      children: [
-        if (next2 != null) _GhostCard(opacity: 0.5, inset: 22),
-        if (next1 != null) _GhostCard(opacity: 0.8, inset: 11),
-        Positioned.fill(
-          child: GestureDetector(
-            onPanUpdate: (d) => setState(() => _dx += d.delta.dx),
-            onPanEnd: (_) {
-              final d = _dx;
-              if (d > 92) {
-                _save(current);
-              } else if (d < -92) {
-                _dismiss(current);
-              } else {
-                setState(() => _dx = 0);
-              }
-            },
-            onTap: _busy ? null : () => widget.onOpenDetail(current),
-            child: Transform.translate(
-              offset: Offset(_dx, 0),
-              child: Transform.rotate(
-                angle: _dx * 0.00035,
-                child: _FrontCard(card: current, dx: _dx),
+    return AnimatedBuilder(
+      animation: Listenable.merge([_settleController, _exitController]),
+      builder: (context, _) {
+        final dx = _displayDx;
+        return Stack(
+          children: [
+            if (next2 != null) _GhostCard(opacity: 0.46, inset: 20),
+            if (next1 != null) _GhostCard(opacity: 0.78, inset: 10),
+            Positioned.fill(
+              child: GestureDetector(
+                onPanUpdate: _busy
+                    ? null
+                    : (d) => setState(() => _dx += d.delta.dx),
+                onPanEnd: _busy
+                    ? null
+                    : (_) {
+                        final d = _dx;
+                        if (d > 92) {
+                          _save(current);
+                        } else if (d < -92) {
+                          _dismiss(current);
+                        } else {
+                          _settleBack(context);
+                        }
+                      },
+                onTap: _busy ? null : () => widget.onOpenDetail(current),
+                child: Transform.translate(
+                  offset: Offset(dx, 0),
+                  child: Transform.rotate(
+                    angle: dx * 0.00035,
+                    child: _FrontCard(card: current, dx: dx),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
@@ -197,12 +276,58 @@ class _FrontCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                height: 130,
+              SizedBox(
+                height: 208,
                 width: double.infinity,
-                color: InsightCardVisual.iconBg(card.category),
-                child: Center(
-                  child: Icon(InsightCardVisual.icon(card.category), size: 44, color: iconColor),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(
+                      InsightCardVisual.artwork(card.category),
+                      fit: BoxFit.cover,
+                      alignment: Alignment.center,
+                      errorBuilder: (context, error, stack) => Container(
+                        color: InsightCardVisual.iconBg(card.category),
+                        child: Icon(
+                          InsightCardVisual.icon(card.category),
+                          size: 44,
+                          color: iconColor,
+                        ),
+                      ),
+                    ),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.white.withValues(alpha: 0.05),
+                            OurobionColors.onSurface.withValues(alpha: 0.20),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 16,
+                      bottom: 14,
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.88),
+                          borderRadius: BorderRadius.circular(13),
+                          border: Border.all(
+                            color: OurobionColors.primary.withValues(alpha: 0.45),
+                          ),
+                        ),
+                        child: Icon(
+                          InsightCardVisual.icon(card.category),
+                          size: 20,
+                          color: iconColor,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Expanded(

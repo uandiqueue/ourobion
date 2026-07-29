@@ -4,7 +4,7 @@ summary: nao is ourobion's expert web window into the brain (query/visualise the
 type: design
 scope: nao
 status: canonical
-updated: 2026-07-26
+updated: 2026-07-28
 ---
 # Ourobion nao — Design (brain inspection & curation)
 
@@ -152,18 +152,39 @@ encodes everything nao must display:
 ## 7 · Visual design — "bio-neo-mythical"
 
 The brand mark already *is* this thesis: **mythical** (ouroboros — an *open* ring: "the loop of
-understanding is never finished"), **bio** (cell/nucleus, 23-segment ring = haploid chromosomes, DNA
-double-helix weave), **neo** (bioluminescent teal→blue gradient, fluorescence-microscopy glow). So nao
-is biotope's **dark, expert, graph-centric sibling** — biotope is the warm light *ecosystem*; nao is the
-deep, glowing *brain*. Tokens come from
-[`assets/ourobion-brand/`](../../assets/ourobion-brand/); the sibling system is
+understanding is never finished", the shared 23-segment/23-crossing ring + coiling serpent every
+Ourobion product wears), **bio** (that ring reads as haploid chromosomes woven in a DNA double-helix),
+**neo** (bioluminescent teal→blue→violet gradient, fluorescence-microscopy glow). Every Ourobion product
+keeps that ring and serpent and changes only the **nucleus** at the centre; nao's nucleus is a
+**knowledge graph** — a single bright hub node, four mid nodes radiating out on connecting edges, each
+branching again to smaller leaf nodes — intelligence that is *structured*, the orchestration core that
+coordinates everything downstream. So nao is biotope's **dark, expert, graph-centric sibling** — biotope
+is the warm light *ecosystem*; nao is the deep, glowing *brain*. Tokens and mark files come from the
+**Nao identity kit** at [`assets/ourobion-nao-logo/`](../../assets/ourobion-nao-logo/) (`DESIGN.md` +
+`README.md` + `color/colors.css` / `colors.json`) — nao's brand source of truth, distinct from the
+master kit at [`assets/ourobion-brand/`](../../assets/ourobion-brand/) that the shared ring/serpent
+construction derives from; the sibling system is
 [`../biotope/ui/ui-design-context.md`](../biotope/ui/ui-design-context.md).
 
 - **Palette (Ourobion dark):** background `#0B1D24`; accent ramp **`#2BC4BE` → `#2FB7D6` → `#3FA2E6` →
-  `#5E8DF0` → `#7C86F2`**; eyebrow labels `#2BC4BE`; light text on dark. The 23-step coil ramp is the
-  **data-viz gradient** (node colour by domain, edge colour by relation kind, glow by `edgeScore`).
-- **Typography:** **Manrope** for UI/body (continuity with biotope); **Outfit** for display/headers +
-  the wordmark. Keep biotope's **uppercase, letter-spaced eyebrow** labels.
+  `#5E8DF0` → `#7C86F2`**; eyebrow labels `#2BC4BE`; light text on dark. The 23-step coil ramp
+  (`color/colors.json`'s `coil_ramp_full_23`) is the **data-viz gradient** (node colour by domain, edge
+  colour by relation kind, glow by `edgeScore`).
+- **Mark usage — dark is primary:** nao is infrastructure, so **dark on `#0B1D24` or darker** is the
+  primary rendering; the **light** variant (teal→blue on white) is only for white/pale surfaces (print,
+  embedded docs, a light card dropped onto an otherwise-dark page — see the `.nao-light` /
+  `[data-theme="light"]` scope in `theme.css`). The app renders the fixed-**40px**
+  `/brand/nao-mark-dark.svg` in the top bar — the kit's documented legibility floor ("the full graph
+  holds together to ~40 px") — and the full **vertical lockup** (`/brand/nao-lockup-dark.svg`: mark
+  stacked over an `ourobion` kicker and `nao` wordmark) on the login surface, the one screen with room
+  for it. Keep clear space of at least the envelope-ring diameter around the mark; **below ~40 px use
+  the simplified hub-and-nodes favicon glyph, never the full mark** (the favicon in `<head>` already
+  does this).
+- **Typography:** the app loads **Outfit** (`next/font/google`, `apps/nao/src/app/layout.tsx`) for both
+  UI/body and display/headers, and **JetBrains Mono** for eyebrows, labels, numbers, and identifiers —
+  **not** Manrope; Manrope is not loaded anywhere in the app. In the kit's own SVG files the wordmark is
+  Outfit outlined to paths, so no font load is needed to render the logo itself. Keep biotope's
+  **uppercase, letter-spaced eyebrow** labels.
 - **Graph aesthetic:** dark canvas; nodes = glowing cyan orbs (size by connectivity); edges = teal→blue
   gradient strands (thickness/opacity by `confidence`/`edgeScore`; colour/style by `relation` kind);
   **bioluminescent glow on hover/active**. `react-force-graph` (WebGL) or Cytoscape.js are the candidate
@@ -190,7 +211,12 @@ deep, glowing *brain*. Tokens come from
 - [`tools/brain-ingest/src/types.ts`](../../tools/brain-ingest/src/types.ts) — `PaperRecord` (v1 model).
 - [`tools/brain-ingest/src/storage/r2.ts`](../../tools/brain-ingest/src/storage/r2.ts) — R2 key layout
   (`MANIFEST_KEY`, `metaKey`, `pdfKey`/`jatsKey`/`textKey`) + S3 client setup.
-- [`assets/ourobion-brand/`](../../assets/ourobion-brand/) — palette (`color/colors.json`), logo SVGs.
+- [`assets/ourobion-nao-logo/`](../../assets/ourobion-nao-logo/) — the **Nao identity kit**: palette
+  (`color/colors.json` / `colors.css`), mark + vertical lockup SVGs (dark + light), and the favicon
+  glyph. This is nao's source of truth for brand assets; `apps/nao/public/brand/` is a copy of it.
+- [`assets/ourobion-brand/`](../../assets/ourobion-brand/) — the master kit: palette and logo SVGs for
+  the shared open-ouroboros ring + coiling serpent construction every Ourobion product's mark derives
+  from (still accurate for that shared system; nao-specific work should use the Nao kit above).
 
 **Implemented foundation:**
 

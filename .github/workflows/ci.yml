@@ -74,7 +74,7 @@ jobs:
         run: npm ci
       - name: Assert exact landing SHA and current unit base
         env:
-          RUN4_UNIT_BASE_SHA: e975a21e8c75b6ec93ff0f90954a87bc4948c2dd
+          RUN4_UNIT_BASE_SHA: 38205d2532ef528ab3752d9013d457c2ee994314
           RUN4_MAX_CHANGED_PATHS: 115
           RUN4_MAX_ADDED_LINES: 8500
         run: |
@@ -593,4 +593,3 @@ jobs:
           npm run build
           node ../../tools/secret_scan_guard.mjs inspect-client-bundle \
             --dir .next/static --canary "$SUPABASE_SERVICE_ROLE_KEY"
-

@@ -30,6 +30,7 @@ See [`docs/biotope/metrics-registry-design.md`](../../docs/biotope/metrics-regis
 | `dqs` | `{ weight, countsTowardDailyCompleteness }` — only the `T1` spine counts; weights sum to 100 |
 | `signal` | S4 anomaly params ([ADR-0002](../../docs/shared/decisions/0002-anomaly-definition.md)): `{ deadbandK }`, the daily 3-state deadband in robust σ̂ (= MAD/0.6745) units — `neutral` iff \|x − median\| ≤ `deadbandK`·σ̂; set (typically `1.0`, provisional) for every `baselineApplicable` metric, else `null` |
 | `ui` | optional `{ label, inputType }` hint for M2 self-report screens |
+| `dailyProjection` | optional explicit primitive-to-day policy; absent/`null` by default. Events use UTC `count` / `sum` / `mean` / `latest`; state bands use UTC `presence` over half-open `[start,end)` only |
 | `status` | `active` \| `deprecated` |
 | `introducedIn` / `deprecatedAt` | lifecycle stamps |
 
@@ -58,6 +59,13 @@ continuous spine), `antibiotic_courses` → `state_bands`, `wearable_daily` → 
    `ADD COLUMN <key> … NULL`. Continuity primitive (`events` / `state_bands` / `signals` /
    `derived_metrics`): **no column and no migration** — rows carry the key as `metric_key`.
 3. Baselines, DQS, and engine validation pick it up **from the registry** — no separate edits.
+   A numeric/ordinal metric on `events` or `state_bands` must select `dailyProjection`; the view
+   generator fails closed instead of guessing. Event payload reducers accept JSON numbers only
+   (`count` ignores payload), state presence collapses overlapping bands to one, and neither path
+   manufactures a quiet-day zero.
+   When this changes production SQL, first update `VIEW_MIGRATION_RELPATH` to a new timestamped,
+   nonexistent migration, then run `npm run view:write`. The generator refuses to overwrite a
+   landed migration; `--check` continues to prove the current target has not drifted.
 4. (self-report only) add the UI input; (optional) add rule blueprints that use it.
 5. 2-reviewer `shared/` PR. Green tests = nothing silently broke.
 

@@ -42,6 +42,22 @@ export const metricAvailabilitySchema = z.enum([
   'hardware_gated',
 ]);
 export const metricStatusSchema = z.enum(['active', 'deprecated']);
+export const dailyProjectionSourceSchema = z.enum(['self_report', 'wearable', 'env', 'signal']);
+export const dailyProjectionSchema = z.discriminatedUnion('storage', [
+  z.object({
+    storage: z.literal('events'),
+    calendar: z.literal('utc'),
+    source: dailyProjectionSourceSchema,
+    reducer: z.enum(['count', 'sum', 'mean', 'latest']),
+  }),
+  z.object({
+    storage: z.literal('state_bands'),
+    calendar: z.literal('utc'),
+    source: dailyProjectionSourceSchema,
+    reducer: z.literal('presence'),
+    interval: z.literal('half_open'),
+  }),
+]);
 
 export const metricDefinitionSchema = z.object({
   key: z.string().regex(/^[a-z][a-z0-9_]*$/, 'key must be snake_case'),
@@ -64,6 +80,7 @@ export const metricDefinitionSchema = z.object({
   }),
   signal: z.object({ deadbandK: z.number().positive() }).nullable(),
   ui: z.object({ label: z.string(), inputType: z.string() }).nullable(),
+  dailyProjection: dailyProjectionSchema.nullable().default(null),
   status: metricStatusSchema,
   introducedIn: z.string(),
   deprecatedAt: z.string().nullable(),
@@ -114,11 +131,43 @@ export const registrySchema = z
       if (m.dqs.weight > 0 && !m.dqs.countsTowardDailyCompleteness) {
         ctx.addIssue({ code: 'custom', message: `${m.key}: dqs.weight > 0 requires countsTowardDailyCompleteness` });
       }
+      if (m.dailyProjection && m.dailyProjection.storage !== m.table) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `${m.key}: dailyProjection storage must match table ${m.table}`,
+        });
+      }
+      const primitiveTable = m.table === 'events' || m.table === 'state_bands';
+      const numericType = m.type === 'numeric' || m.type === 'ordinal';
+      if (m.status === 'active' && primitiveTable && numericType && !m.dailyProjection) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `${m.key}: active numeric|ordinal ${m.table} metric requires dailyProjection`,
+        });
+      }
+      if (m.dailyProjection && (!primitiveTable || !numericType)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `${m.key}: dailyProjection is only supported for numeric|ordinal events|state_bands metrics`,
+        });
+      }
+      if (
+        m.dailyProjection?.storage === 'events' &&
+        (m.dailyProjection.reducer === 'count' || m.dailyProjection.reducer === 'sum') &&
+        m.type !== 'numeric'
+      ) {
+        ctx.addIssue({ code: 'custom', message: `${m.key}: event ${m.dailyProjection.reducer} requires numeric type` });
+      }
+      if (m.dailyProjection?.storage === 'state_bands' && m.type !== 'numeric') {
+        ctx.addIssue({ code: 'custom', message: `${m.key}: state presence requires numeric type` });
+      }
     }
   });
 
 // ─── Compile-time AssertExact: zod-inferred type === MetricDefinition ────────────
-type ZodMetric = z.infer<typeof metricDefinitionSchema>;
+// Compare the authored/input shape: dailyProjection is optional there, while parse output
+// normalizes absence to null for runtime consumers.
+type ZodMetric = z.input<typeof metricDefinitionSchema>;
 type Exact<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 // If this line errors, registry.ts and registry.schema.ts have drifted apart.
 const _assertExact: Exact<ZodMetric, MetricDefinition> = true;

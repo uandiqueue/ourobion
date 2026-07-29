@@ -7,7 +7,9 @@ are **not yet proven**; do not read the presence of routes as deployment evidenc
 
 **Stack:** Next.js (App Router) → **OpenNext on Cloudflare Workers**; **R2** (native binding) for
 per-paper metadata; **Cloudflare D1 + FTS5** as a derived search index; **Supabase Auth** (edge-verified
-JWT) as the access gate. Design tokens: dark "bio-neo-mythical" theme, Outfit + JetBrains Mono.
+JWT) as the access gate. Design tokens: dark "bio-neo-mythical" theme from the **Ourobion Nao identity
+kit** (`assets/ourobion-nao-logo/`) — Outfit + JetBrains Mono, and **dark is primary** (nao has no light
+mode; the kit's light palette is only for white/pale surfaces).
 
 > Cross-platform: macOS, Linux, and Windows all work — nao needs only **Node + npm**. The repo's
 > Windows `scripts/biotope-env.ps1` toolchain is for the *biotope* Flutter app and is **not** required
@@ -97,6 +99,27 @@ npm run lint         # next lint
 npm run build        # next build (OpenNext)
 node --test          # d1/etl fixtures
 ```
+
+---
+
+## Brand assets
+
+`apps/nao/public/brand/` holds every brand file the app serves: `nao-mark-dark.svg` / `-light.svg`,
+`nao-lockup-dark.svg` / `-light.svg`, and the favicon set (`nao-favicon.svg`, `nao-favicon-16.png`,
+`nao-favicon-32.png`, `nao-apple-touch-icon-180.png`). These are **copied from
+[`assets/ourobion-nao-logo/`](../../assets/ourobion-nao-logo/)** — the Nao identity kit and this app's
+brand source of truth — and must **never be redrawn or hand-edited** in place. If the kit changes,
+re-copy the files; don't patch the copies. `apps/nao/tests/brand.test.ts` enforces byte-equality with
+the kit, so an in-place edit fails the suite.
+
+Favicons are wired through `metadata.icons` in `src/app/layout.tsx`, and `src/app/` deliberately holds
+**no** `icon.*` / `apple-icon.*` files: in Next 15 an explicit `metadata.icons` completely overrides the
+file-convention icons, so a file left there would look load-bearing while contributing nothing to
+`<head>`. One mechanism, one place.
+
+Where each asset is used: the **mark** at a fixed 40 px in the top bar (the kit's legibility floor), the
+full **vertical lockup** on the login canvas, and the simplified glyph as the favicon. The `-light`
+variants are bundled for white/pale surfaces and are intentionally unused by this dark-primary UI.
 
 ---
 

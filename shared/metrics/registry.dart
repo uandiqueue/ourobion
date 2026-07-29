@@ -10,7 +10,10 @@ class MetricScale {
 class MetricDqs {
   final num weight;
   final bool countsTowardDailyCompleteness;
-  const MetricDqs({required this.weight, required this.countsTowardDailyCompleteness});
+  const MetricDqs({
+    required this.weight,
+    required this.countsTowardDailyCompleteness,
+  });
 }
 
 class MetricSignal {
@@ -24,6 +27,92 @@ class MetricUi {
   final String label;
   final String inputType;
   const MetricUi({required this.label, required this.inputType});
+}
+
+enum DailyProjectionStorage {
+  events('events'),
+  stateBands('state_bands');
+
+  final String wireValue;
+  const DailyProjectionStorage(this.wireValue);
+}
+
+enum DailyProjectionCalendar {
+  utc('utc');
+
+  final String wireValue;
+  const DailyProjectionCalendar(this.wireValue);
+}
+
+enum DailyProjectionSource {
+  selfReport('self_report'),
+  wearable('wearable'),
+  env('env'),
+  signal('signal');
+
+  final String wireValue;
+  const DailyProjectionSource(this.wireValue);
+}
+
+enum EventDailyReducer {
+  count('count'),
+  sum('sum'),
+  mean('mean'),
+  latest('latest');
+
+  final String wireValue;
+  const EventDailyReducer(this.wireValue);
+}
+
+enum StateBandInterval {
+  halfOpen('half_open');
+
+  final String wireValue;
+  const StateBandInterval(this.wireValue);
+}
+
+enum StateBandDailyReducer {
+  presence('presence');
+
+  final String wireValue;
+  const StateBandDailyReducer(this.wireValue);
+}
+
+sealed class DailyProjection {
+  final DailyProjectionStorage storage;
+  final DailyProjectionCalendar calendar;
+  final DailyProjectionSource source;
+  const DailyProjection({
+    required this.storage,
+    required this.calendar,
+    required this.source,
+  });
+}
+
+class EventDailyProjection extends DailyProjection {
+  final EventDailyReducer reducer;
+  const EventDailyProjection({
+    required this.reducer,
+    required DailyProjectionSource source,
+  }) : super(
+         storage: DailyProjectionStorage.events,
+         calendar: DailyProjectionCalendar.utc,
+         source: source,
+       );
+}
+
+class StateBandDailyProjection extends DailyProjection {
+  final StateBandInterval interval;
+  final StateBandDailyReducer reducer;
+  const StateBandDailyProjection({
+    required this.reducer,
+    required this.interval,
+    required DailyProjectionSource source,
+  }) : super(
+         storage: DailyProjectionStorage.stateBands,
+         calendar: DailyProjectionCalendar.utc,
+         source: source,
+       );
 }
 
 class MetricDefinition {
@@ -78,6 +167,9 @@ class MetricDefinition {
   /// Optional hint for the M2 self-report screens.
   final MetricUi? ui;
 
+  /// Explicit primitive-to-day policy. Null until a primitive-homed metric is selected.
+  final DailyProjection? dailyProjection;
+
   final String status;
   final String introducedIn;
   final String? deprecatedAt;
@@ -100,6 +192,7 @@ class MetricDefinition {
     required this.dqs,
     this.signal,
     this.ui,
+    this.dailyProjection,
     required this.status,
     required this.introducedIn,
     this.deprecatedAt,

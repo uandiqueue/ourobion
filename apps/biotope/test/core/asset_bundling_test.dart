@@ -8,8 +8,8 @@
 // but a Flutter asset directory entry is NOT RECURSIVE — it bundles only files
 // sitting directly in that folder. That folder contains nothing but
 // subdirectories (home/, scan/, profile/, ...), so ZERO of the 25 PNGs were
-// packaged. Only assets/images/logo.png shipped, because it sits directly in a
-// declared directory.
+// packaged. Only the now-retired assets/images/logo.png shipped, because it sat
+// directly in a declared directory.
 //
 // Nothing caught it:
 //   * `flutter analyze` does not read pubspec asset globs;
@@ -23,6 +23,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:src/core/brand_assets.dart';
 import 'package:src/core/generated_assets.dart';
 
 /// Asset paths declared in pubspec.yaml's `flutter: assets:` block.
@@ -120,18 +121,30 @@ void main() {
       test(name, () {
         expect(_isBundled(path, entries), isTrue,
             reason:
-                '$path is NOT covered by any pubspec assets: entry. A directory '
-                'entry only bundles files DIRECTLY inside it — list the leaf '
-                'directory explicitly. This shipped the whole reskin as blank '
-                'space once already.');
+              '$path is NOT covered by any pubspec assets: entry. A directory '
+              'entry only bundles files DIRECTLY inside it — list the leaf '
+              'directory explicitly. This shipped the whole reskin as blank '
+              'space once already.');
       });
     });
   });
 
-  test('the logo used by the sign-in screens is bundled', () {
-    const logo = 'assets/images/logo.png';
-    expect(File(logo).existsSync(), isTrue);
-    expect(_isBundled(logo, entries), isTrue);
+  test('the canonical Biotope logo is bundled byte-for-byte', () {
+    final bundledLogo = File(BiotopeBrandAssets.markLight);
+    final canonicalLogo = File(
+      '../../assets/ourobion-biotope-logo/logo/svg/biotope-mark-light.svg',
+    );
+
+    expect(bundledLogo.existsSync(), isTrue);
+    expect(canonicalLogo.existsSync(), isTrue);
+    expect(_isBundled(BiotopeBrandAssets.markLight, entries), isTrue);
+    expect(bundledLogo.readAsBytesSync(), canonicalLogo.readAsBytesSync());
+  });
+
+  test('the retired green logo is not bundled', () {
+    const retiredLogo = 'assets/images/logo.png';
+    expect(File(retiredLogo).existsSync(), isTrue);
+    expect(_isBundled(retiredLogo, entries), isFalse);
   });
 
   test('a path in an undeclared subdirectory is reported as unbundled', () {

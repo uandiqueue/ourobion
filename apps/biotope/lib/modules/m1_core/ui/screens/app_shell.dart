@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/app_preferences.dart';
 import '../../../../core/theme.dart';
+import '../../../../core/widgets/biotope_bottom_navigation.dart';
+import '../../../../core/widgets/biotope_screen_entrance.dart';
 import '../../../m2_self_report/ui/screens/scan_tab.dart';
 import '../../../m5b_insight_engine/ui/screens/archive_tab.dart';
 import '../../../m5b_insight_engine/ui/screens/insights_tab.dart';
 import 'home_tab.dart';
 import 'profile_tab.dart';
+import '../widgets/living_backdrop.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -26,90 +29,41 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _index,
+      backgroundColor: Colors.transparent,
+      extendBody: true,
+      body: Stack(
         children: [
-          HomeTab(
-            key: _homeKey,
-            onScanTap: () => _switchTo(1),
-            onInsightsTap: () => _switchTo(2),
-            onProfileTap: () => _switchTo(4),
+          Positioned.fill(
+            child: ValueListenableBuilder<bool>(
+              valueListenable: AppPreferences.backdropEnabled,
+              builder: (context, enabled, child) => enabled
+                  ? const LivingBackdrop()
+                  : const ColoredBox(color: OurobionColors.background),
+            ),
           ),
-          const ScanTab(),
-          const InsightsTab(),
-          const ArchiveTab(),
-          const ProfileTab(),
+          IndexedStack(
+            index: _index,
+            children: [
+              BiotopeScreenEntrance(
+                active: _index == 0,
+                child: HomeTab(
+                  key: _homeKey,
+                  onScanTap: () => _switchTo(1),
+                  onInsightsTap: () => _switchTo(2),
+                  onProfileTap: () => _switchTo(4),
+                ),
+              ),
+              BiotopeScreenEntrance(active: _index == 1, child: const ScanTab()),
+              BiotopeScreenEntrance(active: _index == 2, child: const InsightsTab()),
+              BiotopeScreenEntrance(active: _index == 3, child: const ArchiveTab()),
+              BiotopeScreenEntrance(active: _index == 4, child: const ProfileTab()),
+            ],
+          ),
         ],
       ),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Divider(
-            height: 1,
-            thickness: 1,
-            color: OurobionColors.primary.withValues(alpha: 0.2),
-          ),
-          NavigationBarTheme(
-            data: NavigationBarThemeData(
-              backgroundColor: OurobionColors.surfaceContainer,
-              indicatorColor: OurobionColors.primaryFixed,
-              indicatorShape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              labelTextStyle: WidgetStateProperty.resolveWith((states) {
-                final active = states.contains(WidgetState.selected);
-                return GoogleFonts.manrope(
-                  fontSize: 11,
-                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                  color: active
-                      ? OurobionColors.brandGoldDark
-                      : OurobionColors.onSurfaceVariant,
-                );
-              }),
-              iconTheme: WidgetStateProperty.resolveWith((states) {
-                final active = states.contains(WidgetState.selected);
-                return IconThemeData(
-                  color: active
-                      ? OurobionColors.brandGoldDark
-                      : OurobionColors.onSurfaceVariant,
-                  size: 22,
-                );
-              }),
-            ),
-            child: NavigationBar(
-              selectedIndex: _index,
-              onDestinationSelected: _switchTo,
-              elevation: 0,
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Icons.home_outlined),
-                  selectedIcon: Icon(Icons.home_rounded),
-                  label: 'Home',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.radar_outlined),
-                  selectedIcon: Icon(Icons.radar_rounded),
-                  label: 'Scan',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.lightbulb_outline_rounded),
-                  selectedIcon: Icon(Icons.lightbulb_rounded),
-                  label: 'Insights',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.inventory_2_outlined),
-                  selectedIcon: Icon(Icons.inventory_2_rounded),
-                  label: 'Archive',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.person_outline_rounded),
-                  selectedIcon: Icon(Icons.person_rounded),
-                  label: 'Profile',
-                ),
-              ],
-            ),
-          ),
-        ],
+      bottomNavigationBar: BiotopeBottomNavigation(
+        selectedIndex: _index,
+        onSelected: _switchTo,
       ),
     );
   }

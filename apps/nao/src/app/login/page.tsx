@@ -10,6 +10,17 @@
 //
 // v1 keeps this deliberately small: one email/password form. (Magic-link/OTP
 // can be layered on later; the gate only cares that a valid session exists.)
+//
+// Brand: this is the one screen with room for the full vertical lockup
+// (/brand/nao-lockup-dark.svg — mark stacked over the "ourobion / nao"
+// wordmark). It replaces the old plain-text eyebrow.
+//
+// The lockup sits on the page canvas ABOVE the card, not inside it, and that
+// placement is deliberate: the kit's dark variant is keyed to "#0B1D24 or
+// darker", and the card surface (--surface, #102832) is LIGHTER than that
+// floor. --bg is exactly #0B1D24, so the canvas is the only surface on this
+// screen the dark artwork is actually specified for. `logoWrap` then applies
+// the DESIGN.md clear-space rule around it.
 import { Suspense, useState } from 'react';
 import type { CSSProperties, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -63,10 +74,11 @@ function LoginForm() {
 
   return (
     <main style={styles.main}>
+      <div style={styles.logoWrap}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/nao-lockup-dark.svg" alt="ourobion nao" style={styles.logo} />
+      </div>
       <section style={styles.card}>
-        <p className="eyebrow" style={styles.eyebrow}>
-          ourobion nao
-        </p>
         <h1 style={styles.heading}>Sign in</h1>
         <p style={styles.subtitle}>
           A window into the brain. Access is limited to authorized accounts.
@@ -120,6 +132,7 @@ const styles: Record<string, CSSProperties> = {
   main: {
     minHeight: '100vh',
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     padding: '2rem',
@@ -134,8 +147,23 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: 'var(--radius-lg)',
     boxShadow: 'var(--border-glow)',
   },
-  eyebrow: {
-    margin: 0,
+  logoWrap: {
+    display: 'flex',
+    justifyContent: 'center',
+    // Clear space of at least the envelope-ring diameter around the mark
+    // (DESIGN.md). At this render size the envelope ring is ~45% of the
+    // lockup width, so 2.5rem all round clears it comfortably.
+    padding: '0 2.5rem 2.5rem',
+  },
+  logo: {
+    width: '100%',
+    // 240px. The earlier 180px kept the mark legible but shrank the
+    // `ourobion` kicker below readability — it is a small tracked line in
+    // the supplied artwork, so the lockup has to be sized for the WORDMARK,
+    // not just for the 40px mark floor.
+    maxWidth: '15rem',
+    height: 'auto',
+    display: 'block',
   },
   heading: {
     margin: '0.5rem 0 0.25rem',

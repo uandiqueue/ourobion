@@ -41,6 +41,7 @@ dependencies:
   google_fonts: ^6.2.1
   country_picker: ^2.0.26
   health: ^13.3.1
+  flutter_svg: ^2.3.0
   # Device-local display preferences only (core/app_preferences.dart) — never
   # user data, which belongs in Supabase. Already resolved transitively before
   # this line existed; declared directly because the app now imports it.
@@ -77,7 +78,7 @@ flutter:
   # every BiotopeGeneratedAssets path is actually covered.
   assets:
     - .env.public
-    - assets/images/
+    - assets/images/biotope-mark-light.svg
     - assets/images/generated/biomech_botanical/archive/
     - assets/images/generated/biomech_botanical/decorative/
     - assets/images/generated/biomech_botanical/empty_states/
