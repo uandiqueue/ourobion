@@ -6,7 +6,7 @@
   "replayBoundary": "CI recomputes frozen graphs and validates this local evidence, but does not replay local serve or claim hosted deploy parity.",
   "generator": "node tools/run4_release_gate.mjs record-attestation",
   "provenance": {
-    "unitBaseSha": "e975a21e8c75b6ec93ff0f90954a87bc4948c2dd",
+    "unitBaseSha": "425b6ff4633014583d329ee46d3ebe17c01601b1",
     "productCapBaseSha": "77c98213e23ad56ae37c86201b39ef4e7543a543",
     "maxChangedPaths": 115,
     "maxAddedLines": 8500
