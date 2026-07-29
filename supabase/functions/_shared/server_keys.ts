@@ -86,6 +86,24 @@ function validateReplacementKey(value: string, kind: ServerKeyKind, variable: st
  * legacy fallback is deliberately last and exists only for the local Supabase CLI, which does
  * not currently expose replacement-key variables. Production must not rely on it.
  */
+/**
+ * Read ONLY the variables `resolveServerKey` can consult for `kind`, plus `SUPABASE_URL` for the
+ * strict-local-CLI check. Callers used to hand over the whole environment object — every unrelated
+ * secret in it — to a helper that needs at most four names. O36's H3 bulk-environment rule flags
+ * that, and correctly: a whole-env object in scope is one careless `console.error(env)` away from
+ * a leak. This keeps the blast radius to the names actually required, with identical resolution
+ * behaviour.
+ */
+export function readServerKeyEnv(kind: ServerKeyKind): Environment {
+  const vars = names(kind)
+  return {
+    [vars.named]: Deno.env.get(vars.named),
+    [vars.singular]: Deno.env.get(vars.singular),
+    [vars.legacy]: Deno.env.get(vars.legacy),
+    SUPABASE_URL: Deno.env.get("SUPABASE_URL"),
+  }
+}
+
 export function resolveServerKey(
   env: Environment,
   kind: ServerKeyKind,

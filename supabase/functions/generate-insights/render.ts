@@ -17,6 +17,14 @@
 // directly via tsx.
 
 import { validateCopyString } from "../../../shared/constants/copy_guidelines.ts"
+// R4-U4/O27: the claim-strength vocabulary and the causal-verb gate. Imported STRAIGHT from the
+// shared contract for the same reason validateCopyString is — one definition, no vendored copy
+// that could drift. trust_labels.ts is deliberately import-free so Deno can load it here.
+import {
+  causalCopyViolations,
+  POSTURE_DISCLOSURES,
+  relationPhraseFor,
+} from "../../../shared/brain/trust_labels.ts"
 
 // ─── Producers (must stay character-identical to the insight_cards producer CHECK) ────────
 
@@ -71,19 +79,45 @@ export interface RenderedCopy {
 export type RenderFailure =
   | { reason: "unresolved-placeholder"; field: "title" | "body"; placeholders: string[] }
   | { reason: "copy-gate"; field: "title" | "body" }
+  /** R4-U4/B-SCI1: the copy asserts causation the claim kind does not license. */
+  | { reason: "causal-copy-gate"; field: "title" | "body"; terms: string[]; claimKind: string }
+  /** R4-U4/B-SCI1: a cited card whose claim kind could not be established at all. */
+  | { reason: "claim-kind-missing"; field: "title" | "body" }
 
 export type RenderResult =
   | { ok: true; copy: RenderedCopy }
   | { ok: false; failure: RenderFailure }
 
 /**
- * Fill both templates and run the render-time copy gate on the FINAL text (not the raw
+ * R4-U4/B-SCI1 · The claim-strength context a cited card renders under.
+ *
+ * `effectiveKind` is the weaker of the synthesised and verifier-supported kinds. It is
+ * `string | null` rather than optional so a caller cannot forget it: passing null is an explicit
+ * statement that the kind is unknown, and unknown BLOCKS a cited render.
+ */
+export interface ClaimKindContext {
+  effectiveKind: string | null
+}
+
+/**
+ * Fill both templates and run the render-time copy gates on the FINAL text (not the raw
  * template — filled values are part of what the user reads). Any failure drops the card;
  * the caller logs it (§S8 failure mode: copy-gate failure -> card dropped + logged).
+ *
+ * TWO gates now run, in order:
+ *   1. the non-diagnostic copy gate (validateCopyString, docs/memory/0003) — unchanged;
+ *   2. R4-U4/B-SCI1 the CAUSAL-VERB gate — when `claimKind` is supplied, copy whose effective
+ *      claim kind is weaker than `causal` may contain no causal verb at all. This is defence in
+ *      depth behind `relationPhrase`: even if a template, a metric label, or a future phrasing
+ *      layer introduces causal wording by another route, a correlational card cannot ship with it.
+ *
+ * `claimKind` is omitted by the uncited "still researching" personal card, which makes no
+ * research claim and therefore has no claim kind to honour. Every CITED card must pass it.
  */
 export function renderCard(
   template: { title: string; body: string },
   values: Readonly<Record<string, string | number>>,
+  claimKind?: ClaimKindContext,
 ): RenderResult {
   const fields = ["title", "body"] as const
   const out: Record<string, string> = {}
@@ -97,6 +131,28 @@ export function renderCard(
     }
     if (!validateCopyString(filled.text)) {
       return { ok: false, failure: { reason: "copy-gate", field } }
+    }
+    if (claimKind !== undefined) {
+      // Fail closed: a cited card whose claim kind is unknown is dropped, never rendered on the
+      // assumption that some weaker kind was meant.
+      if (claimKind.effectiveKind === null) {
+        return { ok: false, failure: { reason: "claim-kind-missing", field } }
+      }
+      const terms = causalCopyViolations(
+        filled.text,
+        claimKind.effectiveKind as Parameters<typeof causalCopyViolations>[1],
+      )
+      if (terms.length > 0) {
+        return {
+          ok: false,
+          failure: {
+            reason: "causal-copy-gate",
+            field,
+            terms,
+            claimKind: claimKind.effectiveKind,
+          },
+        }
+      }
     }
     out[field] = filled.text
   }
@@ -117,21 +173,42 @@ export function renderCard(
 // when a gate-passing personal signal actually backs it (D15 posture: never claim corroboration
 // the data does not hold). Both variants are deterministic templates; edgeCardTemplate picks.
 
+// R4-U4/B-UI9: `{{posture_disclosure}}` leads the body so a fixture-derived card discloses that
+// BEFORE it states the claim. It resolves to the empty string for a live artifact, so a live
+// card reads exactly as it did before.
+
 export const EDGE_CARD_TEMPLATE = {
   title: "Research-linked pattern: {{metric_a_label}} and {{metric_b_label}}",
   body:
-    "Your {{metric_a_label}} data shifted {{direction_phrase}} today, and published research " +
-    "reports that {{metric_a_label}} {{relation_phrase}} {{metric_b_label}}. Worth watching, " +
-    "not a verdict.",
+    "{{posture_disclosure}}Your {{metric_a_label}} data shifted {{direction_phrase}} today, and " +
+    "published research reports that {{metric_a_label}} {{relation_phrase}} {{metric_b_label}}. " +
+    "Worth watching, not a verdict.",
 } as const
 
 export const EDGE_CARD_TEMPLATE_WITH_PERSONAL = {
   title: "Research-linked pattern: {{metric_a_label}} and {{metric_b_label}}",
   body:
-    "Your {{metric_a_label}} data shifted {{direction_phrase}} today, and published research " +
-    "reports that {{metric_a_label}} {{relation_phrase}} {{metric_b_label}}. Your own recent " +
-    "data shows a matching pattern — worth watching, not a verdict.",
+    "{{posture_disclosure}}Your {{metric_a_label}} data shifted {{direction_phrase}} today, and " +
+    "published research reports that {{metric_a_label}} {{relation_phrase}} {{metric_b_label}}. " +
+    "Your own recent data shows a matching pattern — worth watching, not a verdict.",
 } as const
+
+/**
+ * R4-U4/B-UI9 · The disclosure that leads a card's body.
+ *
+ * A FIXTURE-derived card says so before it says anything else. A live card adds nothing (an
+ * unconditional "built from a live source" banner would be noise on every card). A NULL posture
+ * never reaches here — the trust gate blocks an edge with no posture before rendering — so this
+ * throws rather than inventing a disclosure for an unknown provenance.
+ */
+export function postureDisclosure(posture: string | null): string {
+  if (posture === "fixture") return `${POSTURE_DISCLOSURES.fixture} `
+  if (posture === "live") return ""
+  throw new Error(
+    `postureDisclosure: artifact posture ${JSON.stringify(posture)} is not disclosable — ` +
+      `the trust gate must block this edge before render (B-UI9 fail-closed)`,
+  )
+}
 
 /** The agree-branch edge-card template: pairwise corroboration copy only when it is backed. */
 export function edgeCardTemplate(
@@ -149,17 +226,32 @@ export const PERSONAL_CARD_TEMPLATE = {
 } as const
 
 /**
- * Human phrase for a MONOTONIC relation, used inside the citation framing. Throws on any other
- * relation (A23): a context-only relation (`modulates`/`correlates`) must never be verbalised
- * as a directional claim (§1.3 monotonic-only invariant) — callers reach this only with an
- * agree-branch topEdge, which is monotonic by construction, so a throw here is a bug surfacing
- * loudly, not a runtime hazard.
+ * Human phrase for a MONOTONIC relation, used inside the citation framing.
+ *
+ * R4-U4/B-SCI1 — THE FIX. This function used to return "tends to raise" / "tends to lower" for
+ * every edge regardless of what the research actually claimed, so a purely CORRELATIONAL finding
+ * ("X is associated with higher Y") was rendered to users as a causal one. The phrase is now
+ * selected by the EFFECTIVE claim kind — the weaker of the synthesised kind and the kind the
+ * verifier independently found supportable — from the shared, TS/Dart parity-guarded vocabulary.
+ *
+ * Throws in two cases, both fail-closed:
+ *   * `effectiveKind` is null — the row could not establish a claim kind, so no directional
+ *     wording may be emitted at all (a "safe" default would fabricate a judgment nobody made);
+ *   * the relation is not monotonic (A23) — a context-only relation (`modulates`/`correlates`)
+ *     must never be verbalised as a directional claim (§1.3 monotonic-only invariant).
+ * Callers reach this only with an agree-branch cardEdge, which is monotonic by construction, so
+ * a throw is a bug surfacing loudly rather than a runtime hazard.
  */
-export function relationPhrase(relation: string): string {
-  if (relation === "increases") return "tends to raise"
-  if (relation === "decreases") return "tends to lower"
-  throw new Error(
-    `relationPhrase: non-monotonic relation "${relation}" cannot carry a directional phrase`,
+export function relationPhrase(relation: string, effectiveKind: string | null): string {
+  if (effectiveKind === null) {
+    throw new Error(
+      `relationPhrase: relation "${relation}" has no established claim kind — refusing to emit ` +
+        `directional wording (B-SCI1 fail-closed)`,
+    )
+  }
+  return relationPhraseFor(
+    effectiveKind as Parameters<typeof relationPhraseFor>[0],
+    relation as Parameters<typeof relationPhraseFor>[1],
   )
 }
 
