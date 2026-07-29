@@ -83,9 +83,9 @@ gated by the four structural gaps below, which collapse most of the challenging 
 | A4-S0 · fail-closed daily-projection policy scaffold | built, draft PR open; **does not close A4** | #229 adds per-metric event/state reducer contracts and synthetic negative/runtime proof without activating a production metric or rewriting a landed migration; requires actual Jayden + Alton reviews |
 | A4-1/A4-2 · production event/state projection | decision-gated | Current registry contains zero `events`/`state_bands` metrics, not 17. Jayden must record calendar, reducer, interval, overlap, and open-band semantics on #220 before a metric-specific forward migration activates these paths |
 | A4-3 · registry/parity activation | collector-gated | Lands only with real metric collectors and their explicit policies; U6c issue #222 owns the future family slices |
-| A5-0 · daily-log storage options | options brief open; **does not close A5** | #224 compares four compatibility/migration designs; Jayden's recorded selection on #220 is required before implementation |
-| U6b · EASY self-report batches | blocked on A5 | Issue #221; no schema or form work started |
-| U6c · MEDIUM collector families | blocked on A4 + real collector/device evidence | Issue #222; no placeholder or fake collector work started |
+| A5-0 · daily-log storage options | #224 merged; **generalized A5 remains deferred** | Owner selected option 1 for bounded U6b: typed nullable columns on authoritative `daily_gut_rows`, unchanged seven-field DQS, omission-preserving writes; this does not authorize a generalized table |
+| U6b · EASY self-report batches | three local slices complete; publication pending | Issue #221; `cf33a5d` schema, `5f2fb30` collector, `e0019ae` promotion. No hosted implementation PRs or reviews yet; promotion requires actual Jayden + Alton reviews |
+| U6c · MEDIUM collector families | stopped / out of current scope | Issue #222; do not resume without separate scope, A4 semantics, real collectors and device evidence; no placeholder or fake collector work |
 
 Also: CGM (glucose_cgm) needs hardware; several wearable datatypes need a real device + platform
 testing; iOS remains Mac + paid-Apple-account gated (memory 0010).

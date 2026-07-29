@@ -4,7 +4,7 @@ summary: Live orchestration ledger for the small-PR delivery of U6a storage prim
 type: status
 scope: run4
 status: draft
-updated: 2026-07-28
+updated: 2026-07-29
 ---
 
 # R4-U6 progress ledger
@@ -16,10 +16,10 @@ or work across the release-blocker session's ownership boundary.
 
 - Integration branch: `dev-phase2-run4`
 - Refreshed integration tip at session start: `900459924bb45fcc883a1a4a86858887931bf7cf`
-- Current integration tip after U2 corrections PR #214: `da6b11b5df057fe6b5f5f6dcb14f13343805a94b`
-- Checked-in landing base: `2749381a405de882c6d96cdf21a57034e28204ea`
+- Current integration tip after the A5 decision-record merge PR #224: `147a67111acda858aad84e3049ce60616b43db8a`
+- Checked-in landing base: `789e6a0ff8232057402e1d34583647349c85bb89`
 - Caps: 115 changed paths / 8,500 added lines; unchanged
-- Measured integration delta from the accepted landing base: 41 paths / 2,878 additions
+- Measured integration delta from the accepted landing base: 25 paths / 6,383 additions
 - Subunit issues: U6a #220 · U6b #221 · U6c #222
 - Release-gate pointer and blocker PRs remain owned by the separate release session.
 - Local Supabase migration/runtime verification: Docker restarted; local stack confirmed running.
@@ -35,26 +35,26 @@ or work across the release-blocker session's ownership boundary.
 | A4-2 · state-bands day-series branch | unassigned | at most `gpt-5.6-sol` medium | pending | pending | blocked on semantics review | pending | Day boundaries, open bands, overlaps, and stacking order must be explicit. |
 | A4-3 · registry/parity activation | unassigned | at most `gpt-5.6-sol` medium | pending | pending | blocked on A4-1/A4-2 and collectors | pending | `shared/` change requires Jayden + Alton on the actual PR. |
 | A5 inventory / option extraction | `u6_a5_metric_map` | `gpt-5.6-terra` low | — | — | complete, read-only | — | Confirms A5 is structural and full-row upsert safety is a central compatibility constraint. |
-| A5-0 · daily-log options brief | `u6_a5_options_writer` | `gpt-5.6-terra` low | `docs/run4-u6a/daily-log-options` | #224 | open; refreshed to `da6b11`; CI rerun | 2 paths / 207 additions | Documentation only; implementation waits for Jayden's recorded decision. |
-| U6b · EASY batches | unassigned | `gpt-5.6-terra` medium | pending | pending | decision-gated | pending | No work before A5 decision; batches target about five metrics and one form section. |
+| A5-0 · daily-log options brief | `u6_a5_options_writer` | `gpt-5.6-terra` low | `docs/run4-u6a/daily-log-options` | #224 | merged as `147a671` | 2 paths / 220 additions | Records option 1 for U6b: typed nullable `daily_gut_rows` columns; generalized storage remains deferred. |
+| U6b · EASY batches | local slice owners | `gpt-5.6-terra` medium | three local branches below | pending | local complete; publication pending | Publish sequentially from the current tip; U6b-3 requires actual Jayden + Alton PR reviews. |
 | U6c · MEDIUM families | unassigned | `gpt-5.6-terra` medium | pending | pending | A4-gated | pending | Excludes A1/A2/A3, CGM, device-only/iOS-only work, and fake collectors. |
 
 ## Current findings
 
-### U6b status update (2026-07-28)
+### U6b status update (2026-07-29)
 
 The planning rows above are superseded by these locally complete slices; none has a hosted PR.
 
 | Slice | Branch / commit | State | Evidence / next gate |
 |---|---|---|---|
-| U6b-1 wellbeing schema | `feat/m2/u6b-wellbeing-schema` / `cf33a5d` | local complete; auth-blocked | 3 paths / +283; full Flutter 346 pass, 26 skip; Docker schema PASS. |
-| U6b-2 wellbeing collector | `feat/m2/u6b-wellbeing-collector` / `5f2fb30` | local complete; auth-blocked | 7 paths / +595/-106; full Flutter 354 pass, 26 skip; accessible five-field optional UI; no `shared/` changes. |
-| U6b-3 wellbeing promotion | `feat/m5a/u6b-wellbeing-promotion` / `e0019ae` | local complete; auth-blocked | 14 paths / +923/-24 (201 generated); metric-view 18; focused guards 27; full Flutter 358 pass, 26 skip; Docker schema + projection PASS; landing from `2749381`: 69 paths / 5,541 additions. Actual Jayden + Alton PR reviews required. |
+| U6b-1 wellbeing schema | `feat/m2/u6b-wellbeing-schema` / `cf33a5d` | local complete; publication pending | 3 paths / +283; full Flutter 346 pass, 26 skip; Docker schema PASS. |
+| U6b-2 wellbeing collector | `feat/m2/u6b-wellbeing-collector` / `5f2fb30` | local complete; publication pending | 7 paths / +595/-106; full Flutter 354 pass, 26 skip; accessible five-field optional UI; no `shared/` changes. |
+| U6b-3 wellbeing promotion | `feat/m5a/u6b-wellbeing-promotion` / `e0019ae` | local complete; publication pending | 14 paths / +923/-24 (201 generated); metric-view 18; focused guards 27; full Flutter 358 pass, 26 skip; Docker schema + projection PASS; prior landing measurement from `2749381`: 69 paths / 5,541 additions. Re-measure from the live base and obtain actual Jayden + Alton PR reviews. |
 
 - **A5/U6b decision:** deliberately defer a new generalized table. `daily_gut_rows` remains the
   authoritative storage surface for the wellbeing slice.
-- No PRs, pushes, or issue comments were made: the GitHub token is invalid and escalation was
-  rejected. Legitimate reauthentication is required before hosted actions can resume.
+- GitHub authentication is restored and issue truth has been corrected. The three implementation
+  branches remain local-only: no U6b implementation PR, review, hosted write, or deployment exists.
 - U6c is stopped and remains out of scope.
 
 - The register's “17 collectible” statement is planning/catalog scope, not current registry state:
@@ -78,5 +78,5 @@ The planning rows above are superseded by these locally complete slices; none ha
 - Jayden and Alton must both review every actual PR that changes `shared/metrics/**`.
 - The separate release owner must re-record #229's `compute-baselines` deployment graph attestation;
   #229 remains that separate owner's blocker, and its release files are untouched here.
-- Agents do not merge. Each implementation slice targets `dev-phase2-run4` and remains for human
-  review after its own tests and landing measurement.
+- Each implementation slice targets `dev-phase2-run4`; serialize publication and merge decisions,
+  refresh from the live tip, rerun its own tests and landing measurement, and honor required reviews.
