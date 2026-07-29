@@ -1,0 +1,17 @@
+{
+  "model_name": "viceroy-v0",
+  "model_version": "v0",
+  "intended_use": "demo",
+  "status": "pending_upload",
+  "storage_provider": "cloudflare-r2",
+  "bucket": "ourobion-model-artifacts",
+  "object_prefix": "models/viceroy-v0/releases/REPLACE_WITH_RELEASE_ID/model/",
+  "access": "private",
+  "local_staging_path": "model/viceroy-v0/v0/",
+  "bundle_size_bytes": 438942033,
+  "weights": {
+    "file": "pytorch_model.bin",
+    "size_bytes": 438007278,
+    "sha256": "4ea5915825cfe213cef62abe6231d5d92d55f980003fbfbd0c1c7f10a4ee16cc"
+  }
+}
