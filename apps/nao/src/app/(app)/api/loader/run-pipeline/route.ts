@@ -319,7 +319,7 @@ export async function POST(req: Request): Promise<Response> {
             'Content-Type': 'application/json',
             // Opaque replacement publishable keys are not JWTs: they travel ONLY on `apikey`.
             // No `Authorization` header is sent: `verify_jwt` is disabled for the four
-            // internal-secret-gated engine functions (supabase/config.toml), so a bearer would
+            // internal-secret-gated engine functions (project function config), so a bearer would
             // add nothing and an opaque `sb_publishable_*` key is not a valid JWT anyway.
             apikey: publishableKey,
             // The only authorization input. Compared constant-time inside run-pipeline.

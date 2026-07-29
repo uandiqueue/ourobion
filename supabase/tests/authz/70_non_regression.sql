@@ -106,17 +106,17 @@ select authz_probe.expect_value('nonreg.column_privileges_unchanged_on_untouched
      (select * from authz_probe.colpriv_state except select * from authz_probe.colpriv_snapshot)
    ) d join authz_probe.untouched_tables u using (tablename)', '0');
 
--- Across every table that already existed before R4-U2, the ONLY effective column-privilege changes
--- are on the three redacted tables. (Tables the unit created — nao_members, nao_control_events — are
--- excluded by requiring the table to appear in the pre-U2 snapshot; their privilege map is asserted
--- directly in section 5 instead.)
+-- Across every column that already existed before R4-U2, the ONLY effective privilege changes are
+-- on the three redacted tables. Later units may add columns to an existing table; those columns have
+-- no pre-U2 privilege state to compare, while every pre-existing column remains covered here.
 select authz_probe.expect_value('nonreg.column_privileges_changed_only_on_the_three_redacted_tables',
   'select count(*) from (
      (select * from authz_probe.colpriv_snapshot except select * from authz_probe.colpriv_state)
      union all
      (select * from authz_probe.colpriv_state except select * from authz_probe.colpriv_snapshot)
    ) d
-   where d.tablename in (select distinct tablename from authz_probe.colpriv_snapshot)
+   where exists (select 1 from authz_probe.colpriv_snapshot s
+                 where s.tablename = d.tablename and s.columnname = d.columnname)
      and d.tablename not in (''llm_router_cap_overrides'', ''edge_human_verdicts'',
                              ''ingestion_seeds'')', '0');
 

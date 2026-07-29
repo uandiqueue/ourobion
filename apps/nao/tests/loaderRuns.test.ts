@@ -85,6 +85,7 @@ const RELAY_ROUTE = path.join(
 );
 const LOADER_RUNS_LIB = path.join(NAO_ROOT, 'src', 'lib', 'loaderRuns.ts');
 const SIMULATED_HEALTH_LIB = path.join(NAO_ROOT, 'src', 'lib', 'simulatedHealth.ts');
+const LOADER_PANEL = path.join(NAO_ROOT, 'src', 'components', 'LoaderPanel.tsx');
 
 /** Every file R4-U3 owns in the nao app. The source-conformance walk covers all of them. */
 const U3_FILES: readonly string[] = [LOADER_ROUTE, RELAY_ROUTE, LOADER_RUNS_LIB, SIMULATED_HEALTH_LIB];
@@ -160,6 +161,17 @@ test('source-conformance: POST /api/loader refuses a target equal to the caller 
   );
   assert.match(source, /targetError[\s\S]{0,80}?403/, 'a not-permitted target must be a 403');
   assert.match(source, /validationError[\s\S]{0,80}?400/, 'a malformed/absent field must be a 400');
+});
+
+test('LoaderPanel requires an approved target and scopes analysis to the loader request key', () => {
+  const source = code(LOADER_PANEL);
+  assert.match(source, /target:\s*target\.trim\(\)/, 'the loader request must name the selected target');
+  assert.match(source, /aria-label="Approved demo target ID"[\s\S]{0,250}?required/,
+    'the target input must be required before a loader request is submitted');
+  assert.match(source, /JSON\.stringify\(\{ requestKey: loadResult\.requestKey \}\)/,
+    'the pipeline relay must receive the completed loader request key');
+  assert.match(source, /disabled=\{busy \|\| loadResult === null\}/,
+    'analysis must not be offered without a completed, scoped loader run');
 });
 
 test('source-conformance: the loader NEVER writes the caller’s own user_id, and the two non-atomic upserts are gone', () => {

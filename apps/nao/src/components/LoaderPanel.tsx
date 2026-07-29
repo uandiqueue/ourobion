@@ -38,6 +38,8 @@ interface LoadResult {
   seed: string;
   scenario: string;
   range: RangeSummary;
+  requestKey: string;
+  targetLabel: string | null;
 }
 
 interface StageResult {
@@ -92,9 +94,7 @@ export function LoaderPanel() {
   const [days, setDays] = useState('');
   const [seed, setSeed] = useState(DEFAULT_SEED);
   const [scenario, setScenario] = useState<LoaderScenario>('recent-dip');
-
-  const hasData = (loader?.gut.days ?? 0) > 0;
-  const defaultDays = hasData ? DEFAULT_INCREMENT_DAYS : DEFAULT_FIRST_LOAD_DAYS;
+  const [target, setTarget] = useState('');
 
   async function refresh(): Promise<void> {
     try {
@@ -122,6 +122,7 @@ export function LoaderPanel() {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          target: target.trim(),
           ...(Number.isFinite(n) && n > 0 ? { days: n } : {}),
           seed: seed.trim() === '' ? undefined : seed.trim(),
           scenario,
@@ -139,11 +140,19 @@ export function LoaderPanel() {
   }
 
   async function runAnalysis(): Promise<void> {
+    if (loadResult === null) {
+      setError('Load an approved demo target first; analysis is scoped to that load.');
+      return;
+    }
     setBusy(true);
     setError(null);
     setPipeline(null);
     try {
-      const res = await fetch('/api/loader/run-pipeline', { method: 'POST' });
+      const res = await fetch('/api/loader/run-pipeline', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ requestKey: loadResult.requestKey }),
+      });
       const data = (await res.json()) as PipelineResult | { error: string };
       if (!('stages' in data)) throw new Error('error' in data ? data.error : `HTTP ${res.status}`);
       setPipeline(data);
@@ -173,7 +182,7 @@ export function LoaderPanel() {
     <div className="ingest-grid">
       {/* Current range */}
       <div className="panel ingest-panel">
-        <div className="eyebrow panel__label">Loaded range (your account)</div>
+        <div className="eyebrow panel__label">Signed-in account range</div>
         <p className="fmt__cap">
           daily_gut_rows: {fmtRange(loader.gut)}
           <br />
@@ -182,8 +191,8 @@ export function LoaderPanel() {
           server today (UTC): {loader.today}
         </p>
         <p className="fmt__cap">
-          Rows are written as YOUR user (RLS) and provenance-flagged simulated — never mixed up with
-          real logging data.
+          This shows the signed-in account only. Loads below target an approved, separate demo account
+          and are provenance-flagged simulated data.
         </p>
       </div>
 
@@ -192,13 +201,21 @@ export function LoaderPanel() {
         <div className="eyebrow panel__label">Load simulated days</div>
         <form className="ingest-form" onSubmit={submitLoad}>
           <input
+            type="text"
+            value={target}
+            onChange={(e) => setTarget(e.target.value)}
+            aria-label="Approved demo target ID"
+            placeholder="Approved demo target ID"
+            required
+          />
+          <input
             type="number"
             min={1}
             max={60}
             value={days}
             onChange={(e) => setDays(e.target.value)}
             aria-label="Days to load"
-            placeholder={`${defaultDays} (default)`}
+            placeholder={`${DEFAULT_FIRST_LOAD_DAYS} first / ${DEFAULT_INCREMENT_DAYS} more (server default)`}
           />
           <select
             value={scenario}
@@ -230,7 +247,7 @@ export function LoaderPanel() {
           <p className="fmt__cap ingest-success">
             Loaded {loadResult.loadedDays} day(s) ({loadResult.forwardDays} forward,{' '}
             {loadResult.backfillDays} backfill) · scenario {loadResult.scenario} · seed{' '}
-            {loadResult.seed} · range now {fmtRange(loadResult.range)}
+            {loadResult.seed} · target {loadResult.targetLabel ?? 'approved demo'} · range now {fmtRange(loadResult.range)}
           </p>
         ) : null}
       </div>
@@ -239,13 +256,13 @@ export function LoaderPanel() {
       <div className="panel ingest-panel">
         <div className="eyebrow panel__label">Run analysis</div>
         <div className="ingest-pause">
-          <button type="button" className="ingest-btn" disabled={busy} onClick={() => void runAnalysis()}>
+          <button type="button" className="ingest-btn" disabled={busy || loadResult === null} onClick={() => void runAnalysis()}>
             Run analysis
           </button>
         </div>
         <p className="fmt__cap">
-          Triggers the serve pipeline (compute-baselines → evaluate-signals → generate-insights) via
-          the run-pipeline edge function, server-side. Summaries below are the stages&apos; own JSON.
+          Runs the serve pipeline for the latest completed demo load (compute-baselines → evaluate-signals
+          → generate-insights) via the server-side relay. Summaries below are the stages&apos; own JSON.
         </p>
         {pipeline ? (
           <div>

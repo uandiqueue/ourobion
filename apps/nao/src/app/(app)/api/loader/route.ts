@@ -1,19 +1,8 @@
-// ourobion nao — simulated health-data loader API (O11, run-2 U6).
-//
-// GET  → the signed-in user's current loaded range (min/max log_date + day counts for
-//        daily_gut_rows and wearable_daily) plus the server's "today" (UTC — the same
-//        day the engine evaluates).
-// POST → validate { days?, seed?, scenario? }, plan where the days go (forward to
-//        today first, then history backfill — see lib/simulatedHealth.ts's
-//        planLoadRange), generate deterministic simulated rows and UPSERT them into
-//        biotope's truth tables AS THE AUTHENTICATED USER.
-//
-// AUTH + RLS: the writes use the cookie-bound @supabase/ssr server client — the anon
-// key + the user's own session, NEVER the service role — so daily_gut_rows /
-// wearable_daily RLS ("insert/update own rows", auth.uid() = user_id) is enforced by
-// Postgres, and the loader can only ever touch the signed-in user's data. Upserts on
-// the tables' natural keys make re-loads idempotent (biotope's own writer convention:
-// onConflict user_id,log_date / user_id,date).
+// ourobion nao — simulated health-data loader API (R4-U3 / O26).
+// GET reports the signed-in account's range. POST requires a curator, an explicit
+// distinct approved demo target, and writes both truth tables through one gated,
+// atomic RPC. The cookie session is the only caller credential; nao never reads a
+// service-role key. Durable request keys make replay and pipeline publication scoped.
 //
 // PROVENANCE (O11 locked; D3-recorded deviation): every row is stamped simulated —
 // daily_gut_rows.data_origin (new additive column) and wearable_daily.source (existing
@@ -50,11 +39,6 @@
 //     fixed message and errcode 42501, so it is not an oracle over the demo roster.
 //     The RPC's parameter has NO DEFAULT: omitting it is a function-resolution
 //     failure, not a silent fall back to auth.uid().
-//     CONSEQUENCE, STATED PLAINLY: components/LoaderPanel.tsx still POSTs without a
-//     `target` and therefore now receives a 400 naming the missing field. Adding the
-//     field to that panel belongs to whichever unit owns
-//     apps/nao/src/components/** — it is outside this unit's owned paths.
-//
 //  3. PLANNING READS BOTH TRUTH TABLES. The plan used to come from
 //     `daily_gut_rows` alone, so a day present only on the wearable side was
 //     invisible to planning. The range now comes from `nao_loader_watermark`, over
@@ -84,7 +68,18 @@
 // before `req.json()` and validateLoaderBody — running validation first handed a
 // non-member a 400-vs-403 schema oracle over this endpoint's request shape.
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { guardRole, recordControlEvent, redactDeep, redactText } from '@/lib/authzServer';
+import {
+  NaoControlAuditError,
+  NaoControlMutationError,
+  NaoControlOutcomeUnknownError,
+  controlAuditErrorResponse,
+  controlOperationId,
+  controlOutcomeUnknownErrorResponse,
+  guardRole,
+  redactDeep,
+  redactText,
+  runAuditedControlMutation,
+} from '@/lib/authzServer';
 import {
   DEFAULT_FIRST_LOAD_DAYS,
   DEFAULT_INCREMENT_DAYS,
@@ -243,22 +238,8 @@ export async function POST(req: Request): Promise<Response> {
         watermarkDigest: watermarkBefore.digest,
       }));
 
-    // GATE ORDER + AUDIT ORDER (R4-U2 finding 2, C4): this stays the FIRST
-    // recordControlEvent in this handler and the action stays 'loader.simulate' —
-    // apps/nao/tests/authz.test.ts pins both, and inventing a new action would
-    // require altering nao_control_events' CHECK constraint, which is U2's.
-    // It also stays BEFORE the RPC, which means an audit row can exist for a run
-    // that then rolled back. That is correct and deliberate: the audit log records
-    // ATTEMPTS BY AN ACTOR, `nao_loader_runs` records WHAT COMMITTED. `requestKey`
-    // is what joins the two, and it is a hash — the audit row still carries no
-    // identity of the target.
-    await recordControlEvent('loader.simulate', scenario, {
-      days: body.days,
-      seed,
-      origin,
-      requestKey,
-      requestKeyMode,
-    });
+    const operation = controlOperationId(req);
+    if (!operation.ok) return json({ error: operation.error }, 400);
 
     const generated: SimulatedDay[] = plan.segments.flatMap((segment) =>
       generateSimulatedDays({
@@ -280,31 +261,47 @@ export async function POST(req: Request): Promise<Response> {
     // upserts with row-count assertions. Gut and wearable rows travel together in
     // `p_days` as matched pairs, so there is no ordering between them to get wrong
     // and no window in which one exists without the other.
-    const applyCall = await supabase.rpc(
-      'nao_loader_apply_simulated_days',
-      buildApplyArgs({
-        target: body.target,
-        requestKey,
-        origin,
-        seed,
-        scenario,
-        anchorDate: today,
-        daysRequested: days,
-        plan,
-        generated,
-      }),
-    );
-    if (applyCall.error) {
-      // 403 authorization / 409 provenance conflict (nothing written) / 400 payload
-      // / 500 otherwise — and the message is redacted either way, because a relayed
-      // Postgres message can quote a conflicting value.
-      return json(
-        { error: redactText(applyCall.error.message) },
-        httpStatusForLoaderError(applyCall.error.code),
-      );
+    let applied: ReturnType<typeof parseApplyResult>;
+    try {
+      const audited = await runAuditedControlMutation({
+        operationId: operation.operationId,
+        action: 'loader.simulate',
+        target: planInputs.targetLabel,
+        detail: { days: body.days, seed, origin, requestKey, requestKeyMode },
+        mutate: async () => {
+          const applyCall = await supabase.rpc(
+            'nao_loader_apply_simulated_days',
+            buildApplyArgs({
+              target: body.target,
+              requestKey,
+              origin,
+              seed,
+              scenario,
+              anchorDate: today,
+              daysRequested: days,
+              plan,
+              generated,
+            }),
+          );
+          if (applyCall.error) {
+            throw new NaoControlMutationError(
+              'loader_apply_rejected',
+              redactText(applyCall.error.message),
+              httpStatusForLoaderError(applyCall.error.code),
+            );
+          }
+          return parseApplyResult(applyCall.data);
+        },
+      });
+      applied = audited.value;
+    } catch (error) {
+      if (error instanceof NaoControlAuditError) return controlAuditErrorResponse(error);
+      if (error instanceof NaoControlOutcomeUnknownError) return controlOutcomeUnknownErrorResponse(error);
+      if (error instanceof NaoControlMutationError) {
+        return json({ error: redactText(error.message), code: error.auditCode, operationId: operation.operationId }, error.status);
+      }
+      throw error;
     }
-
-    const applied = parseApplyResult(applyCall.data);
 
     // Re-read the watermark AFTER the apply committed, through the same gated RPC.
     // This is the response's `range` (the pre-U3 field, same shape) and the digest a
@@ -314,8 +311,8 @@ export async function POST(req: Request): Promise<Response> {
     const watermarkAfter = afterRead.error ? null : (parsePlanInputs(afterRead.data)?.watermark ?? null);
 
     return json(
-      redactDeep(
-        buildLoaderResponse({
+      redactDeep({
+        ...buildLoaderResponse({
           loadedDays: generated.length,
           plan,
           seed,
@@ -331,7 +328,8 @@ export async function POST(req: Request): Promise<Response> {
             targetLabel: applied.targetLabel ?? planInputs.targetLabel,
           },
         }),
-      ),
+        operationId: operation.operationId,
+      }),
     );
   } catch (err) {
     // Same reason as GET: a relayed Postgres message can embed a value.
