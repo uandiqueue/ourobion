@@ -4,7 +4,7 @@ summary: Current acceptance register for Run 4 integration, unit reconciliation,
 type: decision-register
 scope: run4
 status: draft
-updated: 2026-07-28
+updated: 2026-07-29
 ---
 
 # Run 4 Decisions and Signoff
@@ -46,3 +46,34 @@ base without checking the current machine files and integration tip.
 checks on the actual head, independent review, applicable human reviews, executed acceptance evidence,
 and reconciled tracking. The authoritative working disposition is
 [`continuation-status.md`](./continuation-status.md).
+
+## D-229-REVIEW-DEVIATION — owner-authorized shared-metric review interpretation
+
+**Choice.** Count Alton/`altogennn`'s explicit `approve` intent in the GitHub review submitted as
+`COMMENTED`, alongside uandiqueue's formal `APPROVED` review, for PR #229's shared-metrics change.
+The review permalink is
+https://github.com/uandiqueue/ourobion/pull/229#pullrequestreview-4798922803. `COMMENTED` is not a
+formal GitHub approval. This is a documented, owner-authorized deviation from
+[`docs/memory/0002-shared-contract-two-reviewers.md`](../../memory/0002-shared-contract-two-reviewers.md),
+not a reinterpretation of that rule.
+
+**Alternatives rejected.** Require Alton to submit a second formal `APPROVED` review before any
+progress on #229; rejected because the owner explicitly chose to accept the unambiguous review intent
+while recording the exception. Treat `COMMENTED` as equivalent to `APPROVED` generally; rejected
+because GitHub distinguishes the states and the two-review rule remains the normal requirement.
+
+**Why.** The owner made a specific, auditable exception for this PR. Recording the state difference
+and its authorization preserves both the shared-contract safeguard and an accurate signoff record.
+
+## D-215-ISSUE-RETENTION — follow-on work keeps the issue live
+
+**Choice.** Keep issue #215 open. PR #216 is merged, but #215 remains the live tracker for the
+pending private-R2 upload/pointer replacement and licence-blocked distribution. This corrects the
+stale resume instruction that implied #215 should be closed; its deliberate retention is recorded at
+https://github.com/uandiqueue/ourobion/issues/215#issuecomment-5111946241.
+
+**Alternatives rejected.** Close #215 because #216 merged; rejected because the merged PR did not
+complete the private-R2 upload/pointer replacement or resolve the distribution licence block. Leave
+the stale handoff uncorrected; rejected because it risks prematurely closing live follow-on work.
+
+**Why.** Issue state must describe remaining work, not merely the merge state of one delivery PR.
