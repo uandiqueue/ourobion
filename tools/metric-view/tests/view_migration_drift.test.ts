@@ -29,7 +29,7 @@ test('committed view migration matches the registry-generated SQL (no drift)', (
     committed,
     generated,
     `${VIEW_MIGRATION_RELPATH} has drifted from shared/metrics/registry.ts — ` +
-      'regenerate with: node tools/metric-view/gen_metric_view.mjs --write',
+      'do not overwrite it; point VIEW_MIGRATION_RELPATH at a new timestamped migration',
   );
 });
 

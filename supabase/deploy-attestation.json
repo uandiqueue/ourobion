@@ -6,14 +6,14 @@
   "replayBoundary": "CI recomputes frozen graphs and validates this local evidence, but does not replay local serve or claim hosted deploy parity.",
   "generator": "node tools/run4_release_gate.mjs record-attestation",
   "provenance": {
-    "unitBaseSha": "e975a21e8c75b6ec93ff0f90954a87bc4948c2dd",
+    "unitBaseSha": "425b6ff4633014583d329ee46d3ebe17c01601b1",
     "productCapBaseSha": "77c98213e23ad56ae37c86201b39ef4e7543a543",
     "maxChangedPaths": 115,
     "maxAddedLines": 8500
   },
   "cliVersion": "2.81.2",
   "denoVersion": "2.8.1",
-  "configSha256": "9dcc18f47eaa41b452499433103db54619050802c6e8a546e8643bf1f16f4545",
+  "configSha256": "3c7f17102c88b88c46550170058a1ed962f94f5370188899ddce29e78a679e88",
   "lockSha256": "47cf575c1e3c9892792729d206e2e5b0e6ed9fdcaf792c32c1776b4ee9175c89",
   "functions": [
     {
@@ -22,7 +22,7 @@
       "importMap": "./functions/compute-baselines/deno.json",
       "entrypointSha256": "21d1b63541686a961c71be8a9f6e13b47cb573703cdb1d1235d6f6f4b12a256f",
       "importMapSha256": "559f0671914e7e20a5396b944a780be2bdb0208c6a23da9d3ed1e62aedd63bae",
-      "moduleGraphSha256": "65972cc03bf18d6a36db84bbfaf997af47c4add64a976b440ad7445e6134a2ff"
+      "moduleGraphSha256": "946f4710444d74631299092ae9628e0f3c3b360af5c15a0a36cbb0f8050a36a9"
     },
     {
       "name": "generate-insights",
@@ -30,7 +30,7 @@
       "importMap": "./functions/generate-insights/deno.json",
       "entrypointSha256": "a0d799be199770bd3e98d2cf1484ea7db2d1a19f33b10cfbc9a7499913d9864b",
       "importMapSha256": "559f0671914e7e20a5396b944a780be2bdb0208c6a23da9d3ed1e62aedd63bae",
-      "moduleGraphSha256": "3c304bdc2b50f7e1e844b34baa427364615781a6f4c51177baf527078613d154"
+      "moduleGraphSha256": "69be79476369d0906802f68e7f369ab101bdd0245572bfbedef31b158c1fc6dd"
     },
     {
       "name": "evaluate-signals",
@@ -38,7 +38,7 @@
       "importMap": "./functions/evaluate-signals/deno.json",
       "entrypointSha256": "e3f8ebd990b9334a5d1810615d3df53ce79fefa99928498529daaec521d7eb6a",
       "importMapSha256": "559f0671914e7e20a5396b944a780be2bdb0208c6a23da9d3ed1e62aedd63bae",
-      "moduleGraphSha256": "ba4317d455f5d9968ce8f3366e3c69b00f58aee50253cc48b75553c6514b98df"
+      "moduleGraphSha256": "ac8a0e2336d29a0ef3bdad4ece7dc62cbb33c229ba6a691ed7c09ce52f9a969a"
     },
     {
       "name": "run-pipeline",

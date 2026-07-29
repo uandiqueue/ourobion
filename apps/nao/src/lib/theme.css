@@ -1,15 +1,25 @@
 /*
  * ourobion nao — design tokens ("bio-neo-mythical", dark).
  *
- * Calibrated to the approved Claude Design mock ("Ourobion Nao.dc.html"): dark
- * teal canvas, panel surfaces, the cyan→blue coil ramp as the data-viz gradient,
- * mono (JetBrains) eyebrows/labels/numbers over Outfit body. Font-family vars are
- * bound to the next/font CSS variables set on <html> in src/app/layout.tsx.
+ * Tokens follow the Ourobion Nao identity kit at assets/ourobion-nao-logo/
+ * (DESIGN.md + color/colors.css / colors.json) — the source of truth: dark
+ * teal canvas, panel surfaces, the teal→violet coil ramp as the data-viz
+ * gradient, mono (JetBrains) eyebrows/labels/numbers over Outfit body.
+ * Font-family vars are bound to the next/font CSS variables set on <html> in
+ * src/app/layout.tsx.
  *
  * Naming:
  *   --bg / --panel / --panel-inset  canvas + card surfaces (exact mock hexes)
- *   --accent-N                       5-stop coil ramp (cyan → blue)
+ *   --accent-N                       5-stop coil ramp (teal → violet)
  *   --deep-N                         deeper teal stops used for bars/funnels
+ *                                     (these reuse the kit's light-palette
+ *                                     coil-ramp hexes as a darker data-viz
+ *                                     variant; not a brand light/dark switch)
+ *   --nao-*                          kit brand-role tokens, mirrored verbatim
+ *                                     from color/colors.css (bg/ring/coil-N/
+ *                                     node/envelope/wordmark), including a
+ *                                     `.nao-light` / [data-theme="light"]
+ *                                     scope carrying the kit's light palette
  *   --text-*                         typography shades
  *   --hairline*                      the faint borders on dark surfaces
  *   --chart-muted                    the neutral slate used for "closed/unknown"
@@ -59,6 +69,34 @@
   --ring: #2a6b78;
   --wordmark: #e7f1f3;
 
+  /* ── Kit brand-role tokens (assets/ourobion-nao-logo/color/colors.css) ──
+   * Mirrored verbatim from the kit's dark palette. --nao-bg / --nao-ring /
+   * --nao-coil-N duplicate --bg / --ring / --accent-N above by value (the
+   * mock already matched the kit here) — they're added anyway, under the
+   * kit's own names, so code can adopt the kit vocabulary directly instead
+   * of tracing it back through the mock aliases. --nao-node and
+   * --nao-envelope are new: the kit calls out "node/graph" and "envelope"
+   * as distinct brand roles that had no token here before.
+   *
+   * --nao-wordmark (#2bc4be) corrects the legacy --wordmark above, which
+   * drifted to a near-white text shade (#e7f1f3) and disagrees with the
+   * kit's #2bc4be. --wordmark is intentionally left unchanged rather than
+   * redefined: nothing in src/ currently reads var(--wordmark) (grepped),
+   * but repointing it risks silently changing a text colour some future
+   * caller assumes is a light neutral. New/updated call sites that want the
+   * brand wordmark colour should reach for --nao-wordmark instead.
+   */
+  --nao-bg: #0b1d24;
+  --nao-ring: #2a6b78;
+  --nao-coil-1: #2bc4be;
+  --nao-coil-2: #2fb7d6;
+  --nao-coil-3: #3fa2e6;
+  --nao-coil-4: #5e8df0;
+  --nao-coil-5: #7c86f2;
+  --nao-node: #2bc4be;
+  --nao-envelope: #1c9fb0;
+  --nao-wordmark: #2bc4be;
+
   /* ── Eyebrow (uppercase, letter-spaced, mono) ──────────────────────── */
   --eyebrow: #2bc4be;
 
@@ -79,6 +117,13 @@
   --glow-blue: 0 0 30px -12px rgba(63, 162, 230, 0.42);
 
   /* ── State colours ─────────────────────────────────────────────────── */
+  /* These communicate STATUS (good / caution / paused), not brand — they are
+   * deliberately kept out of the kit's teal→violet coil ramp so status never
+   * gets confused with the data-viz brand gradient. --state-high reuses the
+   * brand teal because "good" and "on-brand" happen to coincide, but
+   * --state-mid (amber, a genuine warning colour) and --state-hold (a
+   * desaturated slate for "paused") are intentionally NOT coil-ramp stops
+   * and must not be folded into --nao-coil-N / --accent-N. */
   --state-high: #2bc4be;
   --state-mid: #f0b34a;
   --state-hold: #6f8a91;
@@ -93,4 +138,27 @@
   --font-ui: var(--font-outfit, system-ui, sans-serif);
   --font-display: var(--font-outfit, var(--font-ui));
   --font-mono: var(--font-jetbrains, ui-monospace, 'SFMono-Regular', monospace);
+}
+
+/* ── Kit light palette (assets/ourobion-nao-logo/color/colors.css) ────────
+ * nao is dark-primary — this app does not have a light mode and this scope
+ * does not add one. It exists only so any surface that is deliberately
+ * white/pale (e.g. a print export, an embedded doc, a light card dropped
+ * onto an otherwise-dark page) has real kit tokens to reach for, using the
+ * kit's own scoping idiom (`.nao-light` class or `data-theme="light"`
+ * attribute) rather than a global toggle. `:root`'s `color-scheme: dark`
+ * above is unaffected — this block only overrides the --nao-* custom
+ * properties within whatever element opts into the scope. */
+.nao-light,
+[data-theme='light'] {
+  --nao-bg: #ffffff;
+  --nao-ring: #083e49;
+  --nao-coil-1: #0a5160;
+  --nao-coil-2: #11788b;
+  --nao-coil-3: #1c9fb0;
+  --nao-coil-4: #2d93c6;
+  --nao-coil-5: #2e66b2;
+  --nao-node: #0a5160;
+  --nao-envelope: #1c9fb0;
+  --nao-wordmark: #0c5d6e;
 }

@@ -400,7 +400,7 @@ export default async function OverviewPage() {
       {/* v2 knowledge-graph teaser */}
       <div className="teaser ov__row">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="teaser__mark" src="/brand/ourobion-mark-dark.svg" alt="" aria-hidden />
+        <img className="teaser__mark" src="/brand/nao-mark-dark.svg" alt="" aria-hidden />
         <div className="teaser__body">
           <div className="eyebrow teaser__eyebrow">Coming in v2</div>
           <h2 className="teaser__title">Knowledge graph</h2>

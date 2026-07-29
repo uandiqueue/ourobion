@@ -54,6 +54,30 @@ abstract final class OurobionColors {
 const double kCardRadius = 22;
 const double kButtonRadius = 16;
 
+/// Shared geometry for the porcelain-and-gold shell.
+///
+/// These values intentionally mirror the reference implementation rather than
+/// relying on Material defaults, which are designed for a full-width bar.
+abstract final class BiotopeGeometry {
+  static const screenHorizontalPadding = 24.0;
+  static const navigationHorizontalInset = 12.0;
+  static const navigationRadius = 26.0;
+  static const navigationHeight = 64.0;
+}
+
+/// Shared motion timings for the biomech-botanical visual language.
+///
+/// Keep visual motion here so screens do not slowly diverge from the reference
+/// timing. Every caller must still respect [MediaQuery.disableAnimations].
+abstract final class BiotopeMotion {
+  static const expressiveCurve = Cubic(0.2, 0, 0, 1);
+  static const screenEnter = Duration(milliseconds: 480);
+  static const screenEnterOffset = 16.0;
+  static const navigationSettle = Duration(milliseconds: 260);
+  static const authBreathe = Duration(seconds: 6);
+  static const wakingBreathe = Duration(seconds: 4);
+}
+
 // ─── Theme ────────────────────────────────────────────────────────────────────
 ThemeData ourobionTheme() {
   final base = ThemeData(
