@@ -193,15 +193,18 @@ test('an unresolved {{placeholder}} DROPS the card (broken copy never ships)', (
 });
 
 test('the shipped composer templates render clean with representative values', () => {
+  // R4-U4/B-SCI1: a CAUSAL claim kind is what licenses "tends to raise", and B-UI9 adds the
+  // posture disclosure placeholder that leads the body (empty string for a live artifact).
   const edgeValues = {
     metric_a_label: 'sleep duration min',
     metric_b_label: 'hrv sdnn ms',
     pattern_metric_label: 'sleep duration min',
     direction_phrase: 'upward',
     relation_phrase: 'tends to raise',
+    posture_disclosure: '',
   };
   for (const template of [EDGE_CARD_TEMPLATE, EDGE_CARD_TEMPLATE_WITH_PERSONAL]) {
-    const edgeCard = renderCard(template, edgeValues);
+    const edgeCard = renderCard(template, edgeValues, { effectiveKind: 'causal' });
     assert.ok(edgeCard.ok, JSON.stringify(edgeCard));
   }
   const personalCard = renderCard(PERSONAL_CARD_TEMPLATE, {
@@ -228,11 +231,31 @@ test('A21: agree card without a gate-passing personal signal omits the matching-
 });
 
 // A23: a non-monotonic relation must fail loudly, never default to a directional phrase.
+// R4-U4/B-SCI1 extends this: the phrase is now chosen by the EFFECTIVE claim kind, and an
+// unknown kind is as fatal as a non-monotonic relation.
 test('A23: relationPhrase throws on non-monotonic relations', () => {
-  assert.equal(relationPhrase('increases'), 'tends to raise');
-  assert.equal(relationPhrase('decreases'), 'tends to lower');
-  assert.throws(() => relationPhrase('correlates'), /non-monotonic/);
-  assert.throws(() => relationPhrase('modulates'), /non-monotonic/);
+  assert.equal(relationPhrase('increases', 'causal'), 'tends to raise');
+  assert.equal(relationPhrase('decreases', 'causal'), 'tends to lower');
+  assert.throws(() => relationPhrase('correlates', 'causal'), /not monotonic/);
+  assert.throws(() => relationPhrase('modulates', 'causal'), /not monotonic/);
+});
+
+// B-SCI1 · THE REGRESSION TEST FOR THE DEFECT THIS UNIT FIXES. Before R4-U4 every relation
+// rendered as "tends to raise"/"tends to lower" regardless of what the research claimed, so a
+// correlational finding was stated causally. Each kind must now get its own wording.
+test('B-SCI1: relationPhrase never states a correlational claim causally', () => {
+  assert.equal(relationPhrase('increases', 'correlational'), 'is associated with higher');
+  assert.equal(relationPhrase('decreases', 'correlational'), 'is associated with lower');
+  assert.equal(relationPhrase('increases', 'mechanistic'), 'has a proposed route to higher');
+  assert.equal(relationPhrase('decreases', 'mechanistic'), 'has a proposed route to lower');
+  // The specific inflation B-SCI1 records must be impossible.
+  assert.notEqual(relationPhrase('increases', 'correlational'), 'tends to raise');
+  assert.notEqual(relationPhrase('decreases', 'correlational'), 'tends to lower');
+});
+
+// Fail-closed: an edge whose claim kind could not be established gets NO directional wording.
+test('B-SCI1: relationPhrase refuses to render without an established claim kind', () => {
+  assert.throws(() => relationPhrase('increases', null), /no established claim kind/);
 });
 
 test('producer rule_id namespaces are disjoint and pair-order-stable', () => {

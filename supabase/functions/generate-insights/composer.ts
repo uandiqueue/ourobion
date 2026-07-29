@@ -30,6 +30,11 @@
 // with a cardEdge, plus `idiosyncratic`, ever render; research-context/contradiction are
 // gap-only).
 
+import {
+  effectiveClaimKind,
+  parseClaimKind,
+} from "../../../shared/brain/trust_labels.ts"
+
 // ─── Inputs ────────────────────────────────────────────────────────────────────────────────
 
 /** A verified_edges view row (§S6) — the parts the composer reads. */
@@ -41,8 +46,35 @@ export interface ServableEdge {
   verified_at: string
   edge_score: number
   serving_band: string
-  /** RelationshipClaim jsonb — citations surfaced onto the insight payload. */
-  claim: { citations?: { paperId: string }[] } | null
+  /**
+   * RelationshipClaim jsonb — citations surfaced onto the insight payload, and (R4-U4/B-SCI1)
+   * the synthesised `claimKind`. The claim kind was previously NOT read here at all: the row
+   * carried it, this type narrowed it away, and the card was rendered with directional wording
+   * regardless of what the research actually claimed. That drop is the defect B-SCI1 records.
+   */
+  claim: {
+    citations?: { paperId: string }[]
+    claimKind?: string
+    quoteSpans?: { paperId: string }[]
+    artifact?: { revision: string; contentHash: string; posture: string }
+  } | null
+  /**
+   * EdgeVerification jsonb — R4-U4 reads the verifier's INDEPENDENTLY judged supported claim kind
+   * plus the returned-model attestation. `verification` is already selected by the view; only the
+   * TypeScript view of it is widened here.
+   */
+  verification?: {
+    claimKindCheck?: { matchesClaim?: boolean; supportedKind?: string }
+    evidenceTier?: number
+    artifact?: { revision: string; contentHash: string; posture: string }
+    attestation?: {
+      returnedModel: string
+      returnedVersion: string | null
+      family: string
+      decorrelated: boolean
+      attested: boolean
+    }
+  } | null
 }
 
 /** A personal_signals row (§S5) — the D2 check. */
@@ -147,6 +179,36 @@ export function gradeApplicability(paperId: string): ApplicabilityGrade {
 
 export type Branch = "agree" | "research-context" | "idiosyncratic" | "contradiction"
 
+/**
+ * R4-U4/B-SCI1 · The scientific meaning that must survive to the card, carried per edge.
+ * `claimed` is what synthesis proposed, `supported` is what the verifier independently judged,
+ * and `effective` — the weaker of the two — is the ONLY kind rendering may state. All three are
+ * retained (never collapsed) so provenance can show that synthesis overstated and the verifier
+ * caught it. `null` members mean the row could not establish a kind, which fails closed at
+ * render: no directional wording is emitted at all.
+ */
+export interface ComposedClaimKind {
+  claimed: string | null
+  supported: string | null
+  effective: string | null
+  downgraded: boolean
+}
+
+/** R4-U4/B-UI9 · Where an edge's underlying artifact came from, carried per edge to the card. */
+export interface ComposedTrustPosture {
+  /** 'fixture' | 'live', or null when the artifact did not state one (untrusted). */
+  posture: string | null
+  artifactRevision: string | null
+  artifactContentHash: string | null
+  /** Provider-RETURNED model identity, not the configured id (B-BR1). */
+  returnedModel: string | null
+  returnedVersion: string | null
+  modelFamily: string | null
+  /** null when unknown — never defaulted to true. */
+  decorrelated: boolean | null
+  attested: boolean | null
+}
+
 export interface ComposedEdgeRef {
   edgeId: string
   verifiedAt: string
@@ -157,6 +219,12 @@ export interface ComposedEdgeRef {
   direction: "consistent" | "inconsistent" | null
   citations: { paperId: string }[]
   applicability: ApplicabilityGrade[]
+  /** R4-U4/B-SCI1 — source + verifier-supported claim kind, and the effective (weaker) one. */
+  claimKind: ComposedClaimKind
+  /** R4-U4/B-UI9 — fixture-vs-live posture, artifact identity, and returned-model attestation. */
+  trust: ComposedTrustPosture
+  /** R4-U4 — study-design tier (renamed from "evidence tier", B-SCI2); null when unstated. */
+  studyDesignTier: number | null
 }
 
 export interface Completeness {
@@ -175,6 +243,43 @@ export interface ComposedInsight {
   completeness: Completeness
 }
 
+/**
+ * R4-U4/B-SCI1 · Resolve the claim kind for one edge row.
+ *
+ * The verifier's `supportedKind` CAPS the synthesised kind — `effectiveClaimKind` takes the
+ * weaker of the two. When either side is missing or unrecognised the effective kind is `null`,
+ * which fails closed downstream: the render path refuses to emit a directional phrase rather
+ * than assuming a safe default. (Assuming "correlational" would be the *safe-sounding* default,
+ * but it would silently fabricate a scientific judgment nobody made.)
+ */
+export function composeClaimKind(edge: ServableEdge): ComposedClaimKind {
+  const claimed = parseClaimKind(edge.claim?.claimKind)
+  const supported = parseClaimKind(edge.verification?.claimKindCheck?.supportedKind)
+  if (claimed === null || supported === null) {
+    return { claimed, supported, effective: null, downgraded: false }
+  }
+  const effective = effectiveClaimKind(claimed, supported)
+  return { claimed, supported, effective, downgraded: effective !== claimed }
+}
+
+/** R4-U4/B-UI9 · Lift the artifact posture and returned-model attestation onto the edge ref. */
+export function composeTrustPosture(edge: ServableEdge): ComposedTrustPosture {
+  // The verification's artifact wins when present (it is the newer record); the claim's is the
+  // fallback. Nothing is defaulted — an absent field stays null so the trust gate can see it.
+  const artifact = edge.verification?.artifact ?? edge.claim?.artifact ?? null
+  const attestation = edge.verification?.attestation ?? null
+  return {
+    posture: artifact?.posture ?? null,
+    artifactRevision: artifact?.revision ?? null,
+    artifactContentHash: artifact?.contentHash ?? null,
+    returnedModel: attestation?.returnedModel ?? null,
+    returnedVersion: attestation?.returnedVersion ?? null,
+    modelFamily: attestation?.family ?? null,
+    decorrelated: attestation?.decorrelated ?? null,
+    attested: attestation?.attested ?? null,
+  }
+}
+
 function toEdgeRef(edge: ServableEdge, states: Record<string, "up" | "down">): ComposedEdgeRef {
   const citations = edge.claim?.citations ?? []
   return {
@@ -187,6 +292,9 @@ function toEdgeRef(edge: ServableEdge, states: Record<string, "up" | "down">): C
     direction: edgeDirectionConsistent(edge, states),
     citations: citations.map((c) => ({ paperId: c.paperId })),
     applicability: citations.map((c) => gradeApplicability(c.paperId)),
+    claimKind: composeClaimKind(edge),
+    trust: composeTrustPosture(edge),
+    studyDesignTier: edge.verification?.evidenceTier ?? null,
   }
 }
 

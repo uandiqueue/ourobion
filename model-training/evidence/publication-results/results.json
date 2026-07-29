@@ -1,0 +1,215 @@
+{
+  "schema_version": "publication-results-v1",
+  "prepared_date": "2026-07-28",
+  "scope": [
+    "zebra-v1",
+    "viceroy-v0"
+  ],
+  "models": {
+    "zebra-v1": {
+      "task": "three-way scientific claim/evidence classification",
+      "labels": [
+        "supported",
+        "contradicted",
+        "insufficient_evidence"
+      ],
+      "base_model": "microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext",
+      "selected_recipe": {
+        "evidence_selector": "label-blind BM25 top-3",
+        "loss": "inverse-frequency class-weighted cross-entropy",
+        "epochs": 5,
+        "learning_rate": 0.00002,
+        "effective_batch_size": 32,
+        "physical_batch_size": 8,
+        "seed_for_final_checkpoint": 42
+      },
+      "training": {
+        "rows": 1007,
+        "label_counts": {
+          "supported": 402,
+          "contradicted": 207,
+          "insufficient_evidence": 398
+        },
+        "device": "mps",
+        "precision": "fp32",
+        "per_epoch_loss": [
+          1.0263509225277674,
+          0.7863443694890492,
+          0.6284331615482058,
+          0.49397868958730545,
+          0.4492242882649104
+        ],
+        "wallclock_seconds": 313.389424999943
+      },
+      "evaluation": {
+        "design": "four grouped folds with complete out-of-fold predictions for seeds 42, 17 and 73",
+        "independent_holdout_evaluated": false,
+        "independent_holdout_reason": "the Zebra v0 holdout was consumed and forbidden for v1 selection or evaluation",
+        "macro_f1_mean": 0.5991390943058968,
+        "macro_f1_std_across_seeds": 0.00812365562713369,
+        "balanced_accuracy_mean": 0.6005115305016281,
+        "accuracy_mean": 0.6259516716319099,
+        "ece_mean": 0.04914365960880054,
+        "per_class_mean": {
+          "supported": {
+            "precision": 0.6242780520758241,
+            "recall": 0.6293532338308457,
+            "f1": 0.6258690939982227,
+            "minimum_seed_recall": 0.5796019900497512
+          },
+          "contradicted": {
+            "precision": 0.4024766583629173,
+            "recall": 0.4669887278582931,
+            "f1": 0.4307863926133211,
+            "minimum_seed_recall": 0.43478260869565216
+          },
+          "insufficient_evidence": {
+            "precision": 0.7806469477613368,
+            "recall": 0.7051926298157455,
+            "f1": 0.7407617963061465,
+            "minimum_seed_recall": 0.6909547738693468
+          }
+        },
+        "gates": {
+          "macro_f1_at_least_0.70": false,
+          "every_class_minimum_seed_recall_at_least_0.60": false,
+          "ece_at_most_0.10": true
+        }
+      },
+      "verdict": "research-only; selected recipe improves contradiction behavior but fails preregistered readiness gates and awaits a fresh independent dual-reviewed domain audit",
+      "serving_ready": false,
+      "validated": false,
+      "checkpoint": {
+        "path": "model/zebra-v1/v1",
+        "size_mib_approx": 419,
+        "pytorch_model_bin_sha256": "bc2d7a79e76b4626e90e3792902a018adb179859a86358a18cf844620e7061f7"
+      },
+      "release_clearance": {
+        "public_weights_cleared": false,
+        "reason": "current approval is scoped to non-commercial, non-serving research and does not provide a dedicated public-checkpoint release determination; raw SciFact redistribution is excluded"
+      }
+    },
+    "viceroy-v0": {
+      "task": "four-way classification of causal language used in biomedical conclusion sentences",
+      "labels": [
+        "no_relationship",
+        "direct_causal",
+        "conditional_causal",
+        "correlational"
+      ],
+      "base_model": "microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext",
+      "selected_recipe": {
+        "loss": "inverse-frequency class-weighted cross-entropy",
+        "epochs": 5,
+        "learning_rate": 0.00002,
+        "effective_batch_size": 16,
+        "physical_batch_size": 8,
+        "seed": 42
+      },
+      "training": {
+        "source_rows": 3061,
+        "conflicting_rows_dropped": 2,
+        "retained_rows": 3059,
+        "train_rows": 2447,
+        "holdout_rows": 612,
+        "device": "mps",
+        "precision": "fp32",
+        "per_epoch_loss": [
+          1.0389663643794123,
+          0.3957975552435599,
+          0.18658246044556495,
+          0.11488645196301875,
+          0.06755144615791543
+        ],
+        "wallclock_seconds": 476.7687755841762
+      },
+      "evaluation": {
+        "design": "one frozen surrogate-grouped fold-0 holdout",
+        "completed_five_fold_cross_validation": false,
+        "n_eval": 612,
+        "n_eval_surrogate_groups": 608,
+        "macro_f1": 0.865569802644827,
+        "macro_f1_group_bootstrap_95ci": [
+          0.8327016661822595,
+          0.8958302024030973
+        ],
+        "balanced_accuracy": 0.8867574170605028,
+        "balanced_accuracy_group_bootstrap_95ci": [
+          0.855521322974353,
+          0.9166693443009232
+        ],
+        "accuracy": 0.8839869281045751,
+        "majority_class_accuracy": 0.44281045751633985,
+        "raw_ece_equal_mass": 0.09185706590320554,
+        "multiclass_brier": 0.20678583297035932,
+        "cue_lexicon_macro_f1": 0.5067567335989942,
+        "macro_f1_delta_vs_cue": 0.35881306904583277,
+        "per_class": {
+          "no_relationship": {
+            "precision": 0.9227799227799228,
+            "recall": 0.8819188191881919,
+            "f1": 0.9018867924528302,
+            "support": 271
+          },
+          "direct_causal": {
+            "precision": 0.819047619047619,
+            "recall": 0.8686868686868687,
+            "f1": 0.8431372549019608,
+            "support": 99
+          },
+          "conditional_causal": {
+            "precision": 0.75,
+            "recall": 0.9069767441860465,
+            "f1": 0.8210526315789475,
+            "support": 43
+          },
+          "correlational": {
+            "precision": 0.9030612244897959,
+            "recall": 0.8894472361809045,
+            "f1": 0.8962025316455696,
+            "support": 199
+          }
+        },
+        "confusion_matrix": [
+          [239, 10, 9, 13],
+          [5, 86, 2, 6],
+          [2, 2, 39, 0],
+          [13, 7, 2, 177]
+        ],
+        "directional_confusion": {
+          "causal_read_as_correlational": {
+            "n": 6,
+            "support": 142,
+            "rate": 0.04225352112676056
+          },
+          "correlational_read_as_causal": {
+            "n": 9,
+            "support": 199,
+            "rate": 0.04522613065326633
+          }
+        },
+        "leakage_audit": {
+          "group_policy": "lexical surrogate; corpus has no PMID",
+          "split_hash": "c50b081cbcb41189",
+          "n_groups": 3044,
+          "n_above_grouping_threshold_crossing": 0,
+          "n_residual_pairs_crossing_folds": 45,
+          "same_paper_leakage_controlled": false
+        }
+      },
+      "verdict": "research-complete and promising on one holdout; not completed cross-validation, independently audited, evidence-validating or serving-ready",
+      "serving_ready": false,
+      "validated": false,
+      "checkpoint": {
+        "path": "model/viceroy-v0/v0",
+        "size_mib_approx": 419,
+        "pytorch_model_bin_sha256": "4ea5915825cfe213cef62abe6231d5d92d55f980003fbfbd0c1c7f10a4ee16cc"
+      },
+      "release_clearance": {
+        "public_weights_cleared": false,
+        "reason": "current owner waiver explicitly excludes publishing or distributing weights and requires a fresh GPL/data/copyright determination first"
+      }
+    }
+  },
+  "comparison_warning": "Zebra v1 and Viceroy v0 solve different tasks on different datasets with different evaluation designs; their metrics are not directly comparable."
+}
