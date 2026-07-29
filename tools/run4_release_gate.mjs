@@ -59,11 +59,11 @@ export function hashTextEvidence(value) {
 // the attestation manifest, so the base advance is folded into this PR rather than opening a
 // separate base-advance PR that would collide with it.
 //
-// Advanced after #229 and #231 merged. This is the exact dev-phase2-run4 tip at branch cut.
-// Re-check the remote immediately before push; if it moved, this value and the generated
+// Advanced after the accepted U3 head. This is the exact stacked U3 branch tip at branch cut.
+// Re-check that branch immediately before push; if it moved, this value and the generated
 // attestation must move again. Caps remain 115 / 8,500 and fail closed; only the per-unit
 // starting point changes.
-export const RUN4_UNIT_BASE_SHA = '425b6ff4633014583d329ee46d3ebe17c01601b1';
+export const RUN4_UNIT_BASE_SHA = '38205d2532ef528ab3752d9013d457c2ee994314';
 
 // ---------------------------------------------------------------------------------------------
 // Immutable product cap (issue #183) — MEASURED AND RECORDED, NOT YET GATING.
