@@ -98,8 +98,9 @@ class ScanTab extends StatefulWidget {
   State<ScanTab> createState() => _ScanTabState();
 }
 
-class _ScanTabState extends State<ScanTab> with SingleTickerProviderStateMixin {
+class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
   late final AnimationController _sweepAnim;
+  late final AnimationController _completionAnim;
   _SweepState _state = _SweepState.idle;
   Map<String, dynamic>? _todayRow;
   WearableReading? _wearableReading;
@@ -112,13 +113,24 @@ class _ScanTabState extends State<ScanTab> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _sweepAnim = AnimationController(vsync: this, duration: const Duration(seconds: 3));
+    // Mirrors the reference's 1.5 s `scanSweep` keyframe.  It is deliberately
+    // a one-shot rather than a perpetual spinner: a completed sweep means the
+    // highlight reaches the final channel before the result is shown.
+    _sweepAnim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    _completionAnim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );
     _loadQuiet();
   }
 
   @override
   void dispose() {
     _sweepAnim.dispose();
+    _completionAnim.dispose();
     super.dispose();
   }
 
@@ -156,7 +168,7 @@ class _ScanTabState extends State<ScanTab> with SingleTickerProviderStateMixin {
     // same gate applied elsewhere in this app.
     final reduced = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     setState(() => _state = _SweepState.scanning);
-    if (!reduced) _sweepAnim.repeat();
+    if (!reduced) _sweepAnim.forward(from: 0);
 
     final client = Supabase.instance.client;
     final userId = client.auth.currentUser!.id;
@@ -168,13 +180,13 @@ class _ScanTabState extends State<ScanTab> with SingleTickerProviderStateMixin {
     ]);
 
     if (!mounted) return;
-    if (_sweepAnim.isAnimating) _sweepAnim.stop();
     setState(() {
       _todayRow = results[0] as Map<String, dynamic>?;
       _wearableReading = results[1] as WearableReading?;
       _hasSweptThisSession = true;
       _state = _SweepState.done;
     });
+    if (!reduced) _completionAnim.forward(from: 0);
   }
 
   /// Full-form route. Still the only path for anything a chip cannot express
@@ -264,26 +276,28 @@ class _ScanTabState extends State<ScanTab> with SingleTickerProviderStateMixin {
               const SizedBox(height: 24),
 
               Center(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 420),
-                  curve: const Cubic(0.2, 0, 0, 1),
-                  width: dialSize,
-                  height: dialSize,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [Colors.white, OurobionColors.primaryContainer.withValues(alpha: 0.6)],
-                    ),
-                    border: Border.all(color: OurobionColors.primary.withValues(alpha: 0.6)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: OurobionColors.primary.withValues(alpha: 0.28),
-                        blurRadius: 56,
-                        offset: const Offset(0, 28),
+                child: _ScanDialBreathe(
+                  active: _state != _SweepState.done,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 420),
+                    curve: const Cubic(0.2, 0, 0, 1),
+                    width: dialSize,
+                    height: dialSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [Colors.white, OurobionColors.primaryContainer.withValues(alpha: 0.6)],
                       ),
-                    ],
-                  ),
-                  child: Stack(
+                      border: Border.all(color: OurobionColors.primary.withValues(alpha: 0.6)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: OurobionColors.primary.withValues(alpha: 0.28),
+                          blurRadius: 56,
+                          offset: const Offset(0, 28),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
                     alignment: Alignment.center,
                     children: [
                       ClipOval(
@@ -299,8 +313,10 @@ class _ScanTabState extends State<ScanTab> with SingleTickerProviderStateMixin {
                         AnimatedBuilder(
                           animation: _sweepAnim,
                           builder: (context, child) {
+                            final sweep = const Cubic(0.4, 0, 0.6, 1)
+                                .transform(_sweepAnim.value);
                             return Align(
-                              alignment: Alignment(0, -1 + _sweepAnim.value * 3.4),
+                              alignment: Alignment(0, -1.2 + sweep * 3.4),
                               child: Container(
                                 height: dialSize * 0.34,
                                 width: dialSize,
@@ -320,14 +336,26 @@ class _ScanTabState extends State<ScanTab> with SingleTickerProviderStateMixin {
                           },
                         ),
                       if (_state == _SweepState.done)
-                        Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withValues(alpha: 0.9),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
+                        AnimatedBuilder(
+                          animation: _completionAnim,
+                          builder: (context, child) {
+                            final progress = reduced ? 1.0 : _completionAnim.value;
+                            return Opacity(
+                              opacity: progress,
+                              child: Transform.scale(
+                                scale: 0.94 + (0.06 * progress),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
                               Text(
                                 'COVERAGE',
                                 style: GoogleFonts.manrope(
@@ -358,10 +386,12 @@ class _ScanTabState extends State<ScanTab> with SingleTickerProviderStateMixin {
                                   color: OurobionColors.onSurfaceVariant,
                                 ),
                               ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                     ],
+                  ),
                   ),
                 ),
               ),
@@ -480,19 +510,101 @@ class _ScanTabState extends State<ScanTab> with SingleTickerProviderStateMixin {
                   ),
                   const SizedBox(height: 13),
                   for (final key in missing) ...[
-                    GapCard(
-                      metricKey: key,
-                      weight: kDailyCoreDqsWeights[key]!,
-                      inlineOptions: kInlineAnswerableOptions[key],
-                      saving: _savingKeys.contains(key),
-                      onAnswer: (value) => _answerInline(key, value),
-                      onOpenFullLog: _openGap,
+                    _GapReveal(
+                      delay: Duration(milliseconds: 55 * missing.indexOf(key)),
+                      child: GapCard(
+                        metricKey: key,
+                        weight: kDailyCoreDqsWeights[key]!,
+                        inlineOptions: kInlineAnswerableOptions[key],
+                        saving: _savingKeys.contains(key),
+                        onAnswer: (value) => _answerInline(key, value),
+                        onOpenFullLog: _openGap,
+                      ),
                     ),
                     const SizedBox(height: 11),
                   ],
                 ],
               ],
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The bloom has the same quiet, seven-second breathing cadence as the design
+/// reference. It is presentation-only: the sweep's real service calls remain
+/// entirely in [_ScanTabState].
+class _ScanDialBreathe extends StatefulWidget {
+  final bool active;
+  final Widget child;
+
+  const _ScanDialBreathe({required this.active, required this.child});
+
+  @override
+  State<_ScanDialBreathe> createState() => _ScanDialBreatheState();
+}
+
+class _ScanDialBreatheState extends State<_ScanDialBreathe>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 7),
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduced = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final shouldMove = widget.active && !reduced;
+    if (shouldMove && !_controller.isAnimating) _controller.repeat(reverse: true);
+    if (!shouldMove && _controller.isAnimating) _controller.stop();
+
+    if (!shouldMove) return widget.child;
+    return AnimatedBuilder(
+      animation: CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+      child: widget.child,
+      builder: (context, child) => Transform.scale(
+        scale: 1 + (_controller.value * 0.035),
+        child: child,
+      ),
+    );
+  }
+}
+
+/// Gives each returned gap card the reference's short fade-and-expand reveal
+/// without changing where a card routes or how it writes an inline answer.
+class _GapReveal extends StatelessWidget {
+  final Duration delay;
+  final Widget child;
+
+  const _GapReveal({required this.delay, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final reduced = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    if (reduced) return child;
+    return TweenAnimationBuilder<double>(
+      // A tiny increasing duration keeps the cards from landing in lockstep
+      // while avoiding a timer that could outlive a resumed screen.
+      duration: const Duration(milliseconds: 380) + delay,
+      curve: const Cubic(0.2, 0, 0, 1),
+      tween: Tween(begin: 0, end: 1),
+      child: child,
+      builder: (context, progress, revealed) => Opacity(
+        opacity: progress,
+        child: Transform.scale(
+          alignment: Alignment.topCenter,
+          scale: 0.96 + (0.04 * progress),
+          child: Transform.translate(
+            offset: Offset(0, (1 - progress) * 14),
+            child: revealed,
           ),
         ),
       ),
@@ -537,7 +649,7 @@ class ChannelScanSweep extends StatefulWidget {
 class _ChannelScanSweepState extends State<ChannelScanSweep>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
 
   @override
   void dispose() {
@@ -572,7 +684,10 @@ class _ChannelScanSweepState extends State<ChannelScanSweep>
                   builder: (context, _) => Align(
                     // scanSweep keyframe: translateY(-120%) → translateY(220%),
                     // i.e. alignment.y sweeping from -1.2 to 2.2.
-                    alignment: Alignment(0, -1.2 + _c.value * 3.4),
+                    alignment: Alignment(
+                      0,
+                      -1.2 + const Cubic(0.4, 0, 0.6, 1).transform(_c.value) * 3.4,
+                    ),
                     child: Container(
                       key: ChannelScanSweep.bandKey,
                       width: constraints.maxWidth,

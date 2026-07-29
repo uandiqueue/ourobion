@@ -28,8 +28,7 @@ abstract final class ProfileTabCopy {
   /// rather than the device — but nothing in this repo composes or sends a
   /// digest. The row says both. "Account" rather than "profile" because the
   /// value is deliberately NOT on the `profiles` table.
-  static const digestSubtitle =
-      'Saved to your account. No digest is sent yet.';
+  static const digestSubtitle = 'Saved to your account. No digest is sent yet.';
   static const digestSaveFailed =
       'Not saved — check your connection and try again.';
 
@@ -127,8 +126,9 @@ class _ProfileTabState extends State<ProfileTab> {
   Future<void> _toggleWearableOwned(bool value) async {
     setState(() => _profile = _profile?.copyWith(wearableOwned: value));
     final client = Supabase.instance.client;
-    await ProfileService(client)
-        .updateProfile(client.auth.currentUser!.id, {'wearable_owned': value});
+    await ProfileService(
+      client,
+    ).updateProfile(client.auth.currentUser!.id, {'wearable_owned': value});
   }
 
   /// Both preference rows write through [ProfileService] — the wearable toggle
@@ -170,9 +170,8 @@ class _ProfileTabState extends State<ProfileTab> {
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
-        builder: (_) => SignInScreen(
-          authService: AuthService(Supabase.instance.client),
-        ),
+        builder: (_) =>
+            SignInScreen(authService: AuthService(Supabase.instance.client)),
       ),
       (_) => false,
     );
@@ -230,12 +229,14 @@ class _ProfileTabState extends State<ProfileTab> {
       backgroundColor: OurobionColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+          // Mirrors the 390px reference's 22px side gutter while remaining a
+          // normal responsive scroll surface on compact devices.
+          padding: const EdgeInsets.fromLTRB(22, 10, 22, 40),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'PROFILE',
+                'ACCOUNT',
                 style: GoogleFonts.manrope(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
@@ -243,77 +244,28 @@ class _ProfileTabState extends State<ProfileTab> {
                   color: OurobionColors.primary,
                 ),
               ),
-              const SizedBox(height: 20),
-
-              Center(
-                child: Column(
-                  children: [
-                    Container(
-                      width: 84,
-                      height: 84,
-                      decoration: BoxDecoration(
-                        color: OurobionColors.surfaceLowest,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: OurobionColors.primary.withValues(alpha: 0.5)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: OurobionColors.primary.withValues(alpha: 0.2),
-                            blurRadius: 28,
-                            offset: const Offset(0, 12),
-                          ),
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          BiotopeGeneratedAssets.profileBotanicalCrest,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stack) => const Icon(
-                            Icons.person_outline_rounded,
-                            size: 32,
-                            color: OurobionColors.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      heading,
-                      style: GoogleFonts.manrope(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -0.3,
-                        color: OurobionColors.onSurface,
-                      ),
-                    ),
-                    if (profile != null && (profile.city.isNotEmpty || profile.region.isNotEmpty)) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        [profile.city, profile.region].where((s) => s.isNotEmpty).join(', '),
-                        style: GoogleFonts.manrope(
-                          fontSize: 13,
-                          color: OurobionColors.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                    // Suppressed when the email is already carrying the heading
-                    // — it must not appear twice on the same card.
-                    if (accountEmail != null && accountEmail != heading) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        accountEmail,
-                        style: GoogleFonts.manrope(
-                          fontSize: 12,
-                          color: OurobionColors.outline,
-                        ),
-                      ),
-                    ],
-                  ],
+              const SizedBox(height: 9),
+              Text(
+                'Profile',
+                style: GoogleFonts.manrope(
+                  fontSize: 27,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.7,
+                  color: OurobionColors.onSurface,
                 ),
               ),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 22),
+              _ProfileIdentityCard(
+                heading: heading,
+                city: profile?.city ?? '',
+                region: profile?.region ?? '',
+                email: accountEmail != heading ? accountEmail : null,
+              ),
+
+              const SizedBox(height: 20),
               Text(
-                'DEVICES',
+                'PREFERENCES',
                 style: GoogleFonts.manrope(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
@@ -329,17 +281,7 @@ class _ProfileTabState extends State<ProfileTab> {
                 onChanged: _toggleWearableOwned,
               ),
 
-              const SizedBox(height: 20),
-              Text(
-                'APPEARANCE',
-                style: GoogleFonts.manrope(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.6,
-                  color: OurobionColors.primary,
-                ),
-              ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 9),
               ValueListenableBuilder<bool>(
                 valueListenable: AppPreferences.backdropEnabled,
                 builder: (context, enabled, child) => _ToggleRow(
@@ -365,9 +307,15 @@ class _ProfileTabState extends State<ProfileTab> {
                   onPressed: _signOut,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Theme.of(context).colorScheme.error,
-                    side: BorderSide(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.4)),
+                    side: BorderSide(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.error.withValues(alpha: 0.4),
+                    ),
                     minimumSize: const Size(double.infinity, 52),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kButtonRadius)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(kButtonRadius),
+                    ),
                   ),
                   child: const Text('Sign out'),
                 ),
@@ -375,6 +323,145 @@ class _ProfileTabState extends State<ProfileTab> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The account identity is deliberately a wide, decorative card rather than a
+/// generic avatar stack. It matches the reference composition while preserving
+/// the profile values already loaded by [ProfileTab]: a real name/email and a
+/// real city/region when either is available. The camellia is ornamental only;
+/// it does not communicate an account state or introduce a new preference.
+class _ProfileIdentityCard extends StatelessWidget {
+  final String heading;
+  final String city;
+  final String region;
+  final String? email;
+
+  const _ProfileIdentityCard({
+    required this.heading,
+    required this.city,
+    required this.region,
+    required this.email,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final location = [city, region].where((part) => part.isNotEmpty).join(', ');
+    final detail = location.isNotEmpty ? location : email;
+
+    return Container(
+      height: 102,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [OurobionColors.surfaceLowest, Color(0xFFFAF6EC)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: OurobionColors.primary.withValues(alpha: 0.45),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: OurobionColors.primary.withValues(alpha: 0.14),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -24,
+            bottom: -30,
+            width: 140,
+            height: 140,
+            child: Opacity(
+              opacity: 0.6,
+              child: Image.asset(
+                BiotopeGeneratedAssets.profilePorcelainCamellia,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stack) => const SizedBox(),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  width: 62,
+                  height: 62,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: OurobionColors.surfaceLowest,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: OurobionColors.primary.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Image.asset(
+                    BiotopeGeneratedAssets.profileBotanicalCrest,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stack) => const Icon(
+                      Icons.person_outline_rounded,
+                      size: 28,
+                      color: OurobionColors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        heading,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.manrope(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.3,
+                          color: OurobionColors.onSurface,
+                        ),
+                      ),
+                      if (detail != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          detail,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.manrope(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: OurobionColors.outline,
+                          ),
+                        ),
+                      ],
+                      if (location.isNotEmpty && email != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          email!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.manrope(
+                            fontSize: 10,
+                            color: OurobionColors.outline,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
