@@ -39,6 +39,20 @@ couplings:
     status: active
     phase: P1S2
 
+  - id: brain-trust-labels-ts-dart-parity
+    from: shared/brain/trust_labels.ts
+    to: shared/brain/trust_labels.dart
+    why: >
+      O38. The user-facing vocabulary for artifact trust posture and claim strength exists in both
+      TS (serving/render) and Dart (app) with no import linking them — a Dart file may not import
+      TypeScript, and shared/ is the only cross-language seam, so a direct cross-language import is
+      forbidden. If the two drift, the app could label an edge's posture, study-design tier, or
+      claim kind differently from the backend that rendered it — the exact class of inflation
+      B-SCI1/B-SCI2 exist to prevent. Parity-guarded constants are the sanctioned mechanism.
+    guard: apps/biotope/test/guards/brain_trust_labels_parity_test.dart
+    status: active
+    phase: P2R4
+
   - id: daily-gut-row-to-schema
     from: shared/SHARED-CONTEXT.md DailyGutRow + shared/types
     to: supabase/migrations (daily_gut_rows columns) + the M2 Flutter model

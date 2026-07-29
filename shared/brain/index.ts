@@ -13,6 +13,20 @@ import {
 
 export * from './relationships';
 
+// R4-U4 / O27 · `provenance.ts` (artifact trust posture, claim-strength semantics,
+// provenance-chain and exact-quote checks, revision-bound expert disposition) and
+// `trust_labels.ts` (the O38 parity-guarded vocabulary) are deliberately NOT re-exported here.
+//
+// `relationships.ts` is type-only, so re-exporting it costs nothing at runtime. Those two modules
+// export VALUES, and this barrel is on `tools/edge-loader/load_edges.mjs`'s import path — pulling
+// a value re-export chain in breaks that CLI under Node's CommonJS-loading-ESM interop
+// ("does not provide an export named ..."). Consumers import them directly instead:
+//
+//   import { trustFailures } from 'shared/brain/trust_labels';   // also the Deno-safe entrypoint
+//   import { resolveDisposition } from 'shared/brain/provenance';
+//
+// which is what the edge functions and the tests already do.
+
 /**
  * Deterministic edge identity. Synthesis and verification both address an edge by this key, so a
  * re-run updates the same edge instead of duplicating it. Mirrors a metric's canonical `key`.
@@ -169,13 +183,64 @@ export function servableEdges(edges: readonly VerifiedEdge[]): VerifiedEdge[] {
 }
 
 /**
- * Edges needing human review or a re-run: contradicted (suppress + flag the source), or grounded but
- * low-scoring. `uncertain` typically means re-run the verifier with retrieval, not human review.
+ * Why an edge is flagged for human review. Codes rather than prose so callers (nao's review queue,
+ * the gap ledger) can route on the reason instead of re-deriving it.
  */
-export function needsReview(edges: readonly VerifiedEdge[]): VerifiedEdge[] {
-  return edges.filter(
-    (e) =>
-      e.verification.verdict === 'contradicted' ||
-      (SERVABLE_VERDICTS.has(e.verification.verdict) && servingBand(e.verification) === 'hold'),
-  );
+export type ReviewReason =
+  /** The verifier found independent evidence pointing the other way. */
+  | 'verifier-contradicted'
+  /** Grounded and servable-in-principle, but scoring below the serving floor. */
+  | 'grounded-but-held'
+  /** B-BR10: the USER'S OWN data moved opposite to what this edge claims. */
+  | 'personal-data-contradiction'
+  /** R4-U4: the edge's provenance/trust chain is incomplete, so it cannot be trusted as-is. */
+  | 'untrusted-provenance';
+
+/**
+ * Review signals the CALLER observes that the verification record cannot know by itself.
+ *
+ * B-BR10 exists because the serving layer's `contradiction` branch — a gate-passing personal
+ * signal moving OPPOSITE to a servable edge — was computed in the insight composer and then
+ * dropped on the floor: it wrote a gap event but never reached `needsReview()`, so an edge the
+ * user's own data disagreed with was never queued for a human. Passing those edge ids here wires
+ * that branch into the shared review path.
+ */
+export interface ReviewSignals {
+  /** Edge ids whose claim is opposed by a gate-passing personal signal (composer `contradiction`). */
+  personalContradictions?: readonly string[];
+  /** Edge ids whose artifact-trust or provenance chain failed (see provenance.trustFailures). */
+  untrustedEdgeIds?: readonly string[];
+}
+
+/**
+ * Every reason this edge needs human review — empty when it needs none.
+ *
+ * `uncertain` is deliberately NOT a reason: it typically means re-run the verifier with retrieval,
+ * which is a job to schedule, not a judgment to ask a human for.
+ */
+export function reviewReasons(edge: VerifiedEdge, signals: ReviewSignals = {}): ReviewReason[] {
+  const reasons: ReviewReason[] = [];
+  const v = edge.verification;
+  if (v.verdict === 'contradicted') reasons.push('verifier-contradicted');
+  if (SERVABLE_VERDICTS.has(v.verdict) && servingBand(v) === 'hold') reasons.push('grounded-but-held');
+  if (signals.personalContradictions?.includes(edge.claim.edgeId)) {
+    reasons.push('personal-data-contradiction');
+  }
+  if (signals.untrustedEdgeIds?.includes(edge.claim.edgeId)) reasons.push('untrusted-provenance');
+  return reasons;
+}
+
+/**
+ * Edges needing human review or a re-run: contradicted (suppress + flag the source), grounded but
+ * low-scoring, contradicted by the user's own data (B-BR10), or carrying a broken provenance
+ * chain. `uncertain` typically means re-run the verifier with retrieval, not human review.
+ *
+ * `signals` is optional so every existing caller keeps its exact behaviour; supplying it is what
+ * wires the serving layer's contradiction branch in.
+ */
+export function needsReview(
+  edges: readonly VerifiedEdge[],
+  signals: ReviewSignals = {},
+): VerifiedEdge[] {
+  return edges.filter((e) => reviewReasons(e, signals).length > 0);
 }

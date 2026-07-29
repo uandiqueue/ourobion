@@ -74,7 +74,7 @@ jobs:
         run: npm ci
       - name: Assert exact landing SHA and current unit base
         env:
-          RUN4_UNIT_BASE_SHA: 2749381a405de882c6d96cdf21a57034e28204ea
+          RUN4_UNIT_BASE_SHA: 789e6a0ff8232057402e1d34583647349c85bb89
           RUN4_MAX_CHANGED_PATHS: 115
           RUN4_MAX_ADDED_LINES: 8500
         run: |
@@ -262,7 +262,7 @@ jobs:
   run4-gate:
     name: Run 4 Gate
     if: ${{ always() && ((github.event_name == 'push' && github.ref == 'refs/heads/dev-phase2-run4') || (github.event_name == 'pull_request' && github.base_ref == 'dev-phase2-run4')) }}
-    needs: [context, run4-release, flutter, typescript, node-tools, nao, deno-check, migrations-apply, model-training-core, model-training-lint-type]
+    needs: [context, run4-release, flutter, typescript, node-tools, nao, deno-check, migrations-apply, model-training-core, model-training-lint-type, arch-boundaries, secret-scan]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -396,4 +396,201 @@ jobs:
 
       - name: Type check
         run: mypy src
+
+  # ─── Run 4 O35 / O36 (unit R4-U1) ──────────────────────────────────────────────────────────
+  # Required by Run 4 Gate. tools/run4_release_gate.mjs freezes both jobs' step sets and complete
+  # parsed-job hashes, so removal, command drift, action-pin drift, or aggregate omission fails CI.
+  #
+  # Invariants, all load-bearing:
+  #   * no continue-on-error, no `|| true`, no `set +e`, no per-step `if:`, no always()
+  #   * every multi-command run: block opens with `set -euo pipefail` — GitHub's default
+  #     shell is `bash -e {0}` (no pipefail, no -u), so an unset path variable would
+  #     otherwise sail past silently
+  #   * third-party actions pinned by immutable commit SHA; the scanner pinned by version
+  #     AND by SHA256 of the exact linux-x64 artifact (tools/secret-scan/pins.json)
+  #   * no `npm ci`: both guards are Node-stdlib-only, so node_modules never exists and the
+  #     `gitleaks dir .` scan sees only tracked files
+  #   * the scanner's execution is PROVED by a canary scan, never inferred from exit 0
+  #   * `--redact=100` uses the equals form on purpose: `--redact` is declared `uint[=100]`,
+  #     so `--redact 100` parses as flag-plus-positional and aborts with
+  #     "accepts at most 1 arg(s)". Measured against gitleaks 8.30.1.
+  arch-boundaries:
+    name: Architecture boundaries — module /impl + model-training isolation
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/dev-phase2-run4') || (github.event_name == 'pull_request' && github.base_ref == 'dev-phase2-run4') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - name: Guard unit tests (positive + negative fixtures per rule)
+        run: node --test tools/check_arch_boundaries.test.mjs
+
+      - name: Enforce architecture boundaries over the tracked tree
+        run: node tools/check_arch_boundaries.mjs
+
+  secret-scan:
+    name: Secret scan & client-surface leak guard
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/dev-phase2-run4') || (github.event_name == 'pull_request' && github.base_ref == 'dev-phase2-run4') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Full history: the history scan must see every commit in the landing ref's ancestry.
+          # A range scan derived from github.event.before fails open three ways (all-zeros on
+          # branch creation, a dangling before after a force-push, and hiding a leak commit by
+          # force-pushing), so the whole ancestry is fetched and walked instead.
+          #
+          # fetch-depth: 0 also brings down every OTHER ref the remote has. gitleaks' git mode
+          # defaults to walking all of them, which makes this job fail on findings that belong to
+          # unrelated sibling branches and are absent from this ref's ancestry. That is not this
+          # branch's leak to fail on — it is the sibling branch's own CI run — so the history step
+          # below pins traversal to HEAD. The traversal floor and the history canary in the two
+          # steps that follow are what keep that scoping honest.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '26'
+
+      - name: Resolve pinned scanner
+        run: |
+          set -euo pipefail
+          node tools/secret-scan/pin.mjs --github-env "$GITHUB_ENV"
+
+      - name: Install pinned gitleaks (SHA256-verified)
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \
+            --retry 3 --retry-connrefused --max-time 120 \
+            --output "$GITLEAKS_HOME/$GITLEAKS_ASSET" "$GITLEAKS_URL"
+          printf '%s  %s\n' "$GITLEAKS_SHA256" "$GITLEAKS_ASSET" > "$GITLEAKS_HOME/SHA256SUMS"
+          cd "$GITLEAKS_HOME" && sha256sum --check --strict SHA256SUMS
+          tar -xzf "$GITLEAKS_HOME/$GITLEAKS_ASSET" -C "$GITLEAKS_HOME" gitleaks
+          chmod +x "$GITLEAKS_BIN"
+          test -x "$GITLEAKS_BIN"
+
+      - name: Verify scanner identity
+        run: |
+          set -euo pipefail
+          node tools/secret_scan_guard.mjs verify-binary \
+            --binary "$GITLEAKS_BIN" --expect-version "$GITLEAKS_VERSION"
+
+      - name: Validate scanner policy and allowlist narrowness
+        run: |
+          set -euo pipefail
+          node tools/secret_scan_guard.mjs policy \
+            --config tools/secret-scan/gitleaks.toml \
+            --allowlist tools/secret-scan/allowlist.json \
+            --emit-ignore "$GITLEAKS_IGNORE_PATH"
+
+      - name: Guard unit tests (reachable-failure-path proof)
+        run: node --test tools/secret_scan_guard.test.mjs
+
+      - name: Prove the scanner detects (canary)
+        run: |
+          set -euo pipefail
+          node tools/secret_scan_guard.mjs canary \
+            --binary "$GITLEAKS_BIN" \
+            --config tools/secret-scan/gitleaks.toml \
+            --gitleaks-ignore-path "$GITLEAKS_IGNORE_PATH" \
+            --dir "$GITLEAKS_HOME/canary" \
+            --report "$GITLEAKS_REPORT_DIR/canary.json"
+
+      - name: Scan working tree at HEAD
+        run: |
+          set -euo pipefail
+          "$GITLEAKS_BIN" dir . \
+            --config tools/secret-scan/gitleaks.toml \
+            --gitleaks-ignore-path "$GITLEAKS_IGNORE_PATH" \
+            --ignore-gitleaks-allow \
+            --redact=100 \
+            --no-banner \
+            --no-color \
+            --report-format json \
+            --report-path "$GITLEAKS_REPORT_DIR/worktree.json" \
+            --exit-code 1 \
+            --log-level info
+
+      - name: Verify the working-tree scan actually covered the tree
+        run: |
+          set -euo pipefail
+          node tools/secret_scan_guard.mjs verify-report \
+            --report "$GITLEAKS_REPORT_DIR/worktree.json" \
+            --scope worktree \
+            --min-files 500 \
+            --sentinel .github/workflows/ci.yml \
+            --sentinel AGENTS.md
+
+      - name: Prove history scanning detects an ancestry-only secret (canary)
+        run: |
+          set -euo pipefail
+          node tools/secret_scan_guard.mjs history-canary \
+            --binary "$GITLEAKS_BIN" \
+            --config tools/secret-scan/gitleaks.toml \
+            --gitleaks-ignore-path "$GITLEAKS_IGNORE_PATH" \
+            --dir "$GITLEAKS_HOME/history-canary" \
+            --report "$GITLEAKS_REPORT_DIR/history-canary.json" \
+            --log-opts HEAD
+
+      - name: Scan the full history of the landing ref
+        run: |
+          set -euo pipefail
+          "$GITLEAKS_BIN" git . \
+            --log-opts=HEAD \
+            --config tools/secret-scan/gitleaks.toml \
+            --gitleaks-ignore-path "$GITLEAKS_IGNORE_PATH" \
+            --ignore-gitleaks-allow \
+            --redact=100 \
+            --no-banner \
+            --no-color \
+            --report-format json \
+            --report-path "$GITLEAKS_REPORT_DIR/history.json" \
+            --exit-code 1 \
+            --log-level info
+
+      - name: Verify the history scan actually walked the ref's ancestry
+        run: |
+          set -euo pipefail
+          node tools/secret_scan_guard.mjs verify-report \
+            --report "$GITLEAKS_REPORT_DIR/history.json" \
+            --scope history \
+            --min-commits 250 \
+            --sentinel-commit 77c98213e23ad56ae37c86201b39ef4e7543a543
+
+      - name: Client-surface leak assertions
+        run: |
+          set -euo pipefail
+          node tools/secret_scan_guard.mjs client-surface \
+            --surface-report "$GITLEAKS_REPORT_DIR/surfaces.json"
+
+      - name: Install nao dependencies for local client canary
+        working-directory: apps/nao
+        run: npm ci
+
+      - name: Build and inspect local Next client canary
+        working-directory: apps/nao
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.invalid
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: synthetic-public-anon
+          NEXT_PUBLIC_APP_ENV: ci
+          SUPABASE_SERVICE_ROLE_KEY: run4-u1-synthetic-server-canary-178-not-a-secret
+        run: |
+          set -euo pipefail
+          npm run build
+          node ../../tools/secret_scan_guard.mjs inspect-client-bundle \
+            --dir .next/static --canary "$SUPABASE_SERVICE_ROLE_KEY"
 

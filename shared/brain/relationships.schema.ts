@@ -57,6 +57,27 @@ export const evidencePassageSchema = z.object({
   locator: z.string().min(1),
 });
 
+// R4-U4/O27: artifact trust posture. ADDITIVE + OPTIONAL on both records, so pre-U4 artifacts
+// still validate — but the SERVING gate (provenance.trustFailures) treats absence as untrusted,
+// so "still validates" never means "still servable on a path that requires trust".
+export const artifactPostureSchema = z.enum(['fixture', 'live']);
+
+export const artifactRefSchema = z.object({
+  revision: z.string().min(1),
+  // The hash format is pinned here, not just at the serving gate, so a malformed hash cannot be
+  // written into an artifact in the first place.
+  contentHash: z.string().regex(/^sha256:[0-9a-f]{64}$/, 'contentHash must be sha256:<64 hex>'),
+  posture: artifactPostureSchema,
+});
+
+export const modelAttestationSchema = z.object({
+  returnedModel: z.string().min(1),
+  returnedVersion: z.string().min(1).nullable(),
+  family: z.string().min(1),
+  decorrelated: z.boolean(),
+  attested: z.boolean(),
+});
+
 export const citationSchema = z.object({
   paperId: z.string().min(1),
   title: z.string().min(1),
@@ -107,6 +128,7 @@ export const relationshipClaimSchema = z
     synthesisModel: z.string().min(1),
     promptVersion: z.string().min(1),
     synthesisedAt: z.string().datetime({ offset: true }),
+    artifact: artifactRefSchema.optional(),
   })
   .superRefine((c, ctx) => {
     // No self-loops — a metric can't relate to itself.
@@ -162,6 +184,8 @@ export const edgeVerificationSchema = z
     promptVersion: z.string().min(1),
     verifiedAt: z.string().datetime({ offset: true }),
     status: verificationStatusSchema,
+    artifact: artifactRefSchema.optional(),
+    attestation: modelAttestationSchema.optional(),
   })
   .superRefine((v, ctx) => {
     // THE safeguard invariant: every SERVABLE verdict requires INDEPENDENT grounding. Re-opining over
