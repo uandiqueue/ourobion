@@ -497,7 +497,9 @@ function sourceTextNumstatRecovery({ row, base, head, git, status }) {
   if (lines.length < 5 || lines.slice(0, 4).some((line) => line.includes('\0')) || lines[0] !== `diff --git a/${path} b/${path}` || !/^index [0-9a-f]+\.\.[0-9a-f]+(?: \d+)?$/.test(lines[1]) || lines[2] !== `--- a/${path}` || lines[3] !== `+++ b/${path}`) fail(`binary source recovery patch headers are invalid: ${path}`);
   let added = 0; let removed = 0; let hunks = 0; let index = 4;
   while (index < lines.length) {
-    const hunk = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(?: .*)?$/.exec(lines[index++]);
+    const hunkHeader = lines[index++];
+    if (hunkHeader.includes('\0')) fail(`binary source recovery patch hunk contains NUL: ${path}`);
+    const hunk = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(?: .*)?$/.exec(hunkHeader);
     if (!hunk) fail(`binary source recovery patch hunk is invalid: ${path}`);
     hunks += 1;
     const oldCount = Number(hunk[2] ?? '1'); const newCount = Number(hunk[4] ?? '1');

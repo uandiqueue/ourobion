@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -174,33 +175,116 @@ test('MT4 exclusion set is bound to its provenance and cannot be widened', () =>
   );
 });
 
-test('source-text numstat recovery is narrow and fail-closed', () => {
+const sourceRecoveryFixture = ({
+  path = 'tools/example.ts',
+  status = 'M',
+  headBlob = Buffer.from('export const x = 1;\n'),
+  patch = `diff --git a/tools/example.ts b/tools/example.ts
+index aaaaaaa..bbbbbbb 100644
+--- a/tools/example.ts
++++ b/tools/example.ts
+@@ -1 +1 @@
+-old
++new
+`,
+  headExists = true,
+  patchIsBuffer = true,
+} = {}) => {
   const head = 'd'.repeat(40);
-  const path = 'tools/example.ts';
-  const responses = {
-    'rev-parse --is-shallow-repository': 'false\n',
-    [`cat-file -t ${RUN4_UNIT_BASE_SHA}`]: 'commit\n',
-    'rev-parse HEAD': `${head}\n`,
-    [`merge-base ${RUN4_UNIT_BASE_SHA} ${head}`]: `${RUN4_UNIT_BASE_SHA}\n`,
-    [`diff --name-status -z --find-renames ${RUN4_UNIT_BASE_SHA}..${head}`]: `M\0${path}\0`,
-    [`diff --numstat -z ${RUN4_UNIT_BASE_SHA}..${head}`]: `-\t-\t${path}\0`,
-    [`cat-file -e ${head}:${path}`]: '',
-    [`cat-file -p ${head}:${path}`]: Buffer.from('export const x = 1;\n'),
-    [`diff --text --unified=0 --no-color --no-ext-diff --no-textconv --no-renames ${RUN4_UNIT_BASE_SHA}..${head} -- ${path}`]: `diff --git a/${path} b/${path}\nindex aaaaaaa..bbbbbbb 100644\n--- a/${path}\n+++ b/${path}\n@@ -1 +1 @@\n-old\n+new\n`,
-  };
+  const patchText = patch
+    .replaceAll('a/tools/example.ts', `a/${path}`)
+    .replaceAll('b/tools/example.ts', `b/${path}`);
+  const key = (args) => JSON.stringify(args);
+  const patchArgs = ['diff', '--text', '--unified=0', '--no-color', '--no-ext-diff', '--no-textconv', '--no-renames', `${RUN4_UNIT_BASE_SHA}..${head}`, '--', path];
+  const responses = new Map([
+    [key(['rev-parse', '--is-shallow-repository']), 'false\n'],
+    [key(['cat-file', '-t', RUN4_UNIT_BASE_SHA]), 'commit\n'],
+    [key(['rev-parse', 'HEAD']), `${head}\n`],
+    [key(['merge-base', RUN4_UNIT_BASE_SHA, head]), `${RUN4_UNIT_BASE_SHA}\n`],
+    [key(['diff', '--name-status', '-z', '--find-renames', `${RUN4_UNIT_BASE_SHA}..${head}`]), `${status}\0${path}\0`],
+    [key(['diff', '--numstat', '-z', `${RUN4_UNIT_BASE_SHA}..${head}`]), `-\t-\t${path}\0`],
+    [key(['cat-file', '-e', `${head}:${path}`]), ''],
+    [key(['cat-file', '-p', `${head}:${path}`]), headBlob],
+    [key(patchArgs), Buffer.isBuffer(patchText) ? patchText : Buffer.from(patchText, 'latin1')],
+  ]);
   const git = (_command, args, options = {}) => {
-    const value = responses[args.join(' ')];
-    return options.encoding === 'buffer' ? (Buffer.isBuffer(value) ? value : Buffer.from(value ?? '')) : (value ?? '');
+    if (!headExists && args[0] === 'cat-file' && args[1] === '-e') throw new Error('missing HEAD path');
+    const responseKey = key(args);
+    if (!responses.has(responseKey)) throw new Error(`unexpected git call: ${args.join(' ')}`);
+    const value = responses.get(responseKey);
+    if (options.encoding === 'buffer') {
+      if (!patchIsBuffer && responseKey === key(patchArgs)) return value.toString('latin1');
+      return Buffer.isBuffer(value) ? Buffer.from(value) : Buffer.from(String(value), 'latin1');
+    }
+    return Buffer.isBuffer(value) ? value.toString('utf8') : String(value);
   };
-  assert.equal(checkLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git }).addedLines, 1);
-  for (const [label, mutate] of [
-    ['image', () => { responses[`diff --name-status -z --find-renames ${RUN4_UNIT_BASE_SHA}..${head}`] = 'M\0image.png\0'; responses[`diff --numstat -z ${RUN4_UNIT_BASE_SHA}..${head}`] = '-\t-\timage.png\0'; }],
-    ['nul', () => { responses[`cat-file -p ${head}:${path}`] = Buffer.from([0]); }],
-  ]) {
-    const copy = structuredClone(responses); mutate();
-    assert.throws(() => checkLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git }), /binary source recovery|binary\/unparsable/, label);
-    Object.assign(responses, copy);
+  const run = () => checkLandingDelta({
+    base: RUN4_UNIT_BASE_SHA,
+    maxPaths: RUN4_MAX_CHANGED_PATHS,
+    maxAdded: RUN4_MAX_ADDED_LINES,
+    git,
+  });
+  return { git, head, path, run };
+};
+
+test('source-text numstat recovery sums omitted counts and multiple zero-count hunks', () => {
+  assert.equal(sourceRecoveryFixture().run().addedLines, 1);
+  const patch = `diff --git a/tools/example.ts b/tools/example.ts
+index aaaaaaa..bbbbbbb 100644
+--- a/tools/example.ts
++++ b/tools/example.ts
+@@ -1 +1 @@
+-old
++new
+@@ -3,0 +4,2 @@
++two
++three
+@@ -5,2 +7,0 @@
+-old-two
+-old-three
+`;
+  assert.equal(sourceRecoveryFixture({ patch }).run().addedLines, 3);
+});
+
+test('source-text numstat recovery rejects unsafe heads, statuses, paths, and non-source rows', () => {
+  for (const [label, options, message] of [
+    ['invalid UTF-8 HEAD', { headBlob: Buffer.from([0xff]) }, /HEAD blob is not UTF-8/],
+    ['NUL HEAD', { headBlob: Buffer.from([0]) }, /HEAD blob contains NUL/],
+    ['missing HEAD path', { headExists: false }, /HEAD path is absent/],
+    ['status not modified', { status: 'D' }, /requires modified status/],
+    ['traversal path', { path: 'tools/../example.ts' }, /path is unsafe/],
+    ['space path', { path: 'tools/bad name.ts' }, /path is unsafe/],
+    ['image path', { path: 'assets/image.png' }, /binary\/unparsable/],
+  ]) assert.throws(() => sourceRecoveryFixture(options).run(), message, label);
+});
+
+test('source-text numstat recovery rejects ambiguous or malformed patch structures', () => {
+  const validHeader = `diff --git a/tools/example.ts b/tools/example.ts
+index aaaaaaa..bbbbbbb 100644
+--- a/tools/example.ts
++++ b/tools/example.ts
+`;
+  const vectors = [
+    ['non-Buffer patch', { patchIsBuffer: false }, /did not return a Buffer/],
+    ['binary marker', { patch: 'diff --git a/tools/example.ts b/tools/example.ts\nBinary files a/tools/example.ts and b/tools/example.ts differ\n' }, /patch headers are invalid/],
+    ['second patch/path', { patch: `${validHeader}@@ -1 +1 @@\n-old\n+new\ndiff --git a/tools/other.ts b/tools/other.ts\n` }, /context or marker/],
+    ['malformed file header', { patch: `${validHeader.replace('index aaaaaaa..bbbbbbb 100644', 'index malformed')}@@ -1 +1 @@\n-old\n+new\n` }, /patch headers are invalid/],
+    ['malformed hunk', { patch: `${validHeader}@@ malformed @@\n-old\n+new\n` }, /patch hunk is invalid/],
+    ['count mismatch', { patch: `${validHeader}@@ -1,2 +1 @@\n-old\n+new\n` }, /hunk counts mismatch/],
+    ['context line', { patch: `${validHeader}@@ -1,2 +1,2 @@\n context\n-old\n+new\n` }, /context or marker/],
+    ['no-newline marker', { patch: `${validHeader}@@ -1 +1 @@\n-old\n+new\n\\ No newline at end of file\n` }, /context or marker/],
+    ['zero change', { patch: `${validHeader}@@ -1,0 +1,0 @@\n` }, /patch has no changes/],
+    ['NUL hunk header', { patch: `${validHeader}@@ -1 +1 @@\0suffix\n-old\n+new\n` }, /patch hunk contains NUL/],
+    ['NUL added body', { patch: `${validHeader}@@ -1 +1 @@\n-old\n+new\0value\n` }, /added line contains NUL/],
+  ];
+  for (const [label, options, message] of vectors) {
+    assert.throws(() => sourceRecoveryFixture(options).run(), message, label);
   }
+  assert.equal(
+    sourceRecoveryFixture({ patch: `${validHeader}@@ -1 +1 @@\n-old\0value\n+new\n` }).run().addedLines,
+    1,
+    'raw NUL remains permitted only in removed body lines',
+  );
 });
 
 test('product cap measures the immutable union, reports breach without throwing, and stays non-acceptance', () => {
@@ -209,9 +293,16 @@ test('product cap measures the immutable union, reports breach without throwing,
   assert.equal(RUN4_NON_ACCEPTANCE_UNIT_BASE_SHA, RUN4_UNIT_BASE_SHA);
   assert.notEqual(RUN4_NON_ACCEPTANCE_UNIT_BASE_SHA, RUN4_MT4_MERGE_SHA);
 
-  const delta = productLandingDelta();
+  const recoveredPaths = [];
+  const delta = productLandingDelta({
+    git: (command, args, options) => {
+      if (command === 'git' && args[0] === 'diff' && args.includes('--text')) recoveredPaths.push(args.at(-1));
+      return execFileSync(command, args, options);
+    },
+  });
   assert.equal(delta.base, RUN4_PRODUCT_BASE_SHA);
   assert.equal(delta.excludedPaths, RUN4_MT4_EXCLUSION_COUNT);
+  assert.ok(recoveredPaths.includes('tools/brain-ingest/src/verify/artifact.ts'), 'product-cap must exercise source-text recovery for artifact.ts');
   assert.ok(Number.isSafeInteger(delta.changedPaths) && Number.isSafeInteger(delta.addedLines));
   // Measurement reports breach as data; only the enforcement wrapper throws. This is the whole
   // "record, don't gate" split — if these two ever agree, the measurement has become a gate.

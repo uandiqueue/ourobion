@@ -62,6 +62,12 @@ repo-relative ASCII path and exact single-file headers, and rejects binary marke
 no-newline markers, rename/copy material, malformed or count-mismatched hunks. A raw NUL is
 allowed only in a removed historical line; added lines must be NUL-free fatal UTF-8.
 
+**Second amendment — final review correction:** every hunk header is now rejected before parsing
+when it contains a raw NUL, closing the optional-suffix regex path while preserving the sole
+removed-body exception. The release suite now executes the complete positive and adversarial matrix,
+including both landing and product-cap wiring; the earlier one-positive/two-negative test did not
+substantiate the prior session's broader coverage claim.
+
 ## Historical provenance
 
 The original envelope/bootstrap SHA remains
