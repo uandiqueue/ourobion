@@ -1,23 +1,34 @@
 ---
 title: Run 4 U6 A5 daily-log storage options
-summary: Decision-neutral comparison for the daily self-report storage primitive before any U6 EASY metric is authored.
+summary: A5 options analysis and the selected U6b posture: retain daily_gut_rows and add typed nullable columns while deferring a generalized daily-log table.
 type: brief
 scope: shared
-status: draft
-updated: 2026-07-28
+status: canonical
+updated: 2026-07-29
 ---
 
 # Run 4 U6 A5 — daily-log storage options
 
-## Decision required
+## Recorded decision (2026-07-29)
+
+Jayden selected **option 1 for the U6b wellbeing slice**: keep `daily_gut_rows` as the
+authoritative raw-truth store and add typed nullable columns for the five approved wellbeing
+fields. A new generalized daily-log table remains deferred. The existing seven-field DQS stays
+unchanged, new writes must preserve omitted fields, and every `shared/metrics/**` PR still requires
+actual Jayden and Alton reviews. This decision authorizes the bounded U6b slices; it does not select
+a generalized storage primitive for unrelated future metric families.
+
+The comparison below is retained as the decision evidence and migration trade-off record.
+
+## Original decision question
 
 `register A5` is deliberately unresolved: the current `daily_gut_rows` table is a
 grandfathered instance of the daily-log primitive, not a general primitive. The register
 therefore blocks roughly 15 EASY daily self-report metrics on a deliberate build-versus-
 defer choice ([pending-build-register.md](./pending-build-register.md):66-77). This brief
-does not choose a design. **Jayden must record the decision before implementation begins.**
-Any later change to `shared/metrics` also requires actual reviews from both Jayden and Alton;
-their names alone are not a substitute for reviews.
+originally did not choose a design. The recorded decision above now resolves the U6b slice while
+preserving the broader design question. Any later change to `shared/metrics` requires actual
+reviews from both Jayden and Alton; their names alone are not a substitute for reviews.
 
 The governing constraints are:
 
@@ -144,14 +155,16 @@ published contract during transition.
 - **Cost of deferral:** avoids an invasive migration now, but preserves the naming and modeling
   mismatch that A5 records.
 
-## Decision record required before a build slice
+## Decision record checklist
 
-Jayden's recorded choice should state: selected option; authoritative raw store for every
+Jayden's recorded choice states the selected option and U6b authoritative store. Any future
+generalized primitive decision must additionally state: authoritative raw store for every
 legacy and new metric; RLS ownership model; old-client/read/write compatibility window; partial-
 write and retry semantics; DQS treatment and historical behavior; migration/backfill/rollback
 plan; and the metrics that trigger the first implementation. It must also state whether any
 `shared/metrics` changes follow, so Jayden and Alton can provide actual PR reviews.
 
-Until that record exists, U6b metric-authoring remains blocked by A5. This brief intentionally
-does not treat the already-existing `events`/`state_bands` work as a substitute: those are A4
-and solve a different continuity class ([20260715140420_create_continuity_storage_primitives.sql](../../../supabase/migrations/20260715140420_create_continuity_storage_primitives.sql):4-14).
+U6b is no longer blocked by A5: its bounded option-1 implementation is locally complete and awaits
+normal PR/review integration. This brief intentionally does not treat the already-existing
+`events`/`state_bands` work as a substitute: those are A4 and solve a different continuity class
+([20260715140420_create_continuity_storage_primitives.sql](../../../supabase/migrations/20260715140420_create_continuity_storage_primitives.sql):4-14).
