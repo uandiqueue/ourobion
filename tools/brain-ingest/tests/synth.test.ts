@@ -280,6 +280,15 @@ test('synthesize: end-to-end accepts the grounded claim, rejects the fabricated 
       return {
         text: JSON.stringify({ claims: [validRawClaim(), fabricated] }),
         model: 'mock-fable',
+        // R4-U4/O27 (B-BR1): a mailbox fulfilment is never provider-attested.
+        modelIdentity: {
+          model: 'mock-fable',
+          source: 'local-agent-mailbox',
+          providerAttested: false,
+          family: null,
+          returnedVersion: null,
+          decorrelatedFromSynthesis: null,
+        },
         route: 'local_agent',
         usage: { inputTokens: 10, outputTokens: 20 },
       };

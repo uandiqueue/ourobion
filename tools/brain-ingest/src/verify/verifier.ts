@@ -35,6 +35,7 @@ import {
 } from './enforce.js';
 import { loadVerificationValidator } from './load.js';
 import { appendVerificationsToDir } from './artifact.js';
+import { buildArtifactRef, buildAttestation, posturefor } from './attest.js';
 import type {
   RetrievalResult,
   SynthClaim,
@@ -42,6 +43,7 @@ import type {
   TriageDecision,
   VerificationValidator,
   VerifyCitation,
+  VerifyModelAttestation,
   VerifyRecord,
 } from './types.js';
 
@@ -86,8 +88,18 @@ export interface VerifyClaimOptions {
   texts?: ReadonlyMap<string, string>;
   /** The shared zod gate (injected in tests); default loaded from shared/brain. */
   validateVerification?: VerificationValidator;
-  /** Provenance stamp written to `verifierModel` (MOCK proofs override this). */
+  /**
+   * Provenance stamp written to `verifierModel` (MOCK proofs override this).
+   * This is the CONFIGURED id — a config echo, NOT attestation (B-BR1). What the
+   * provider returned is captured separately into `record.attestation`.
+   */
   verifierModel?: string;
+  /**
+   * R4-U4/O27 · Artifact BUNDLE revision stamped onto every record this run emits
+   * (`--artifact-revision`). Absent ⇒ records carry NO artifact ref and can never
+   * pass the serving trust gate — deliberately fail-closed, never auto-invented.
+   */
+  artifactRevision?: string;
   /** Clock for `verifiedAt` (tests inject a fixed one). */
   now?: () => number;
   /** Only compute + return the triage decision (no retrieval, no LLM, no record). */
@@ -133,7 +145,13 @@ function buildFallbackUncertain(
   claim: SynthClaim,
   quoteCheck: QuoteCheckBlock,
   retrieval: RetrievalResult,
-  ctx: { verifierModel: string; verifiedAt: string; validateVerification: VerificationValidator },
+  ctx: {
+    verifierModel: string;
+    verifiedAt: string;
+    validateVerification: VerificationValidator;
+    attestation?: VerifyModelAttestation;
+    artifactRevision?: string;
+  },
 ): VerifyRecord {
   // Retrieval sources kept (with their neutral 'mentions' stance) — no verdict trusted.
   const sources: VerifyCitation[] = retrieval.sources.map((s) => ({ ...s, stance: 'mentions' as const }));
@@ -154,7 +172,12 @@ function buildFallbackUncertain(
     promptVersion: VERIFIER_PROMPT_VERSION,
     verifiedAt: ctx.verifiedAt,
     status: 'active',
+    ...(ctx.attestation !== undefined ? { attestation: ctx.attestation } : {}),
   };
+  // The attestation is kept even here — a provider DID answer, the answer just could
+  // not be enforced. Honest history; the 'uncertain' verdict is what keeps it unserved.
+  const artifact = buildArtifactRef(record, ctx.artifactRevision, posturefor(ctx.attestation));
+  if (artifact !== undefined) record.artifact = artifact;
   return ctx.validateVerification(record);
 }
 
@@ -206,6 +229,7 @@ export async function verifyClaim(
       promptVersion: VERIFIER_PROMPT_VERSION,
       verifiedAt,
       validateVerification,
+      ...(opts.artifactRevision !== undefined ? { artifactRevision: opts.artifactRevision } : {}),
     });
     log(`verify: ${claim.edgeId} — quoteCheck-only (uncertain), no LLM spend`);
     return { claim, triage, quoteCheck, record };
@@ -240,14 +264,22 @@ export async function verifyClaim(
       log(`verify: ${claim.edgeId} — attempt ${attempt} unparseable reply; ${attempt < maxAttempts ? 'retrying' : 'falling back'}`);
       continue;
     }
+    // R4-U4/O27 (B-BR1): `verifierModel` stays the CONFIGURED id. It used to be
+    // overwritten with `response.model`, which collapsed "what the provider returned"
+    // into "what we configured" — one string that could mean either, so no consumer
+    // could tell attestation from a config echo. The provider-returned identity now
+    // travels in `attestation`, which carries its own `attested` flag.
+    const attestation = buildAttestation(response);
     const enforced = enforceVerification(reply, {
       claim,
       quoteCheck,
       retrieval,
-      verifierModel: response.model || verifierModel,
+      verifierModel,
       promptVersion: VERIFIER_PROMPT_VERSION,
       verifiedAt,
       validateVerification,
+      ...(attestation !== undefined ? { attestation } : {}),
+      ...(opts.artifactRevision !== undefined ? { artifactRevision: opts.artifactRevision } : {}),
     });
     if (enforced.ok) {
       log(`verify: ${claim.edgeId} — verdict ${enforced.record.verdict} (conf ${enforced.record.confidence}) via ${response.route}`);
@@ -258,10 +290,13 @@ export async function verifyClaim(
   }
 
   // Exhausted retries → safe uncertain fallback (§A10 failure mode 7).
+  const fallbackAttestation = buildAttestation(response);
   const record = buildFallbackUncertain(claim, quoteCheck, retrieval, {
-    verifierModel: response?.model || verifierModel,
+    verifierModel, // configured id, not the response's (B-BR1 — see the enforce call above)
     verifiedAt,
     validateVerification,
+    ...(fallbackAttestation !== undefined ? { attestation: fallbackAttestation } : {}),
+    ...(opts.artifactRevision !== undefined ? { artifactRevision: opts.artifactRevision } : {}),
   });
   return {
     claim,
@@ -390,6 +425,15 @@ export {
   type EnforceResult,
 } from './enforce.js';
 export { loadVerificationValidator } from './load.js';
+export {
+  buildArtifactRef,
+  buildAttestation,
+  canonicalJson,
+  isNonProviderModelString,
+  posturefor,
+  recordContentHash,
+  NON_PROVIDER_MODEL_MARKERS,
+} from './attest.js';
 export {
   appendVerificationsToDir,
   appendVerificationsToR2,

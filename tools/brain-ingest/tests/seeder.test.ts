@@ -295,7 +295,21 @@ function fakeRouter(reply: string): SeederRouter {
     async route(req: LlmRequest): Promise<LlmResponse> {
       assert.equal(req.nodeId, 'seeder');
       assert.equal(req.expectJson, true);
-      return { text: reply, model: 'claude-fable-5', route: 'local_agent', usage: { inputTokens: 10, outputTokens: 20 } };
+      return {
+        text: reply,
+        model: 'claude-fable-5',
+        // R4-U4/O27 (B-BR1): a mailbox fulfilment is never provider-attested.
+        modelIdentity: {
+          model: 'claude-fable-5',
+          source: 'local-agent-mailbox',
+          providerAttested: false,
+          family: null,
+          returnedVersion: null,
+          decorrelatedFromSynthesis: null,
+        },
+        route: 'local_agent',
+        usage: { inputTokens: 10, outputTokens: 20 },
+      };
     },
   };
 }

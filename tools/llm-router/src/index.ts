@@ -12,6 +12,8 @@ export {
   type LlmRequest,
   type LlmResponse,
   type LlmUsage,
+  type ModelIdentity,
+  type ModelIdentitySource,
   type RouteKind,
   type TestModeState,
   type VendorFamily,

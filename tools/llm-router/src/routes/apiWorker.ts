@@ -25,7 +25,7 @@
 import type { RouterConfig } from '../config.js';
 import { providerFor } from '../config.js';
 import { RouterConfigError, RouterHttpError, RouterKeyMissingError } from '../errors.js';
-import type { LlmRequest, LlmResponse } from '../types.js';
+import type { LlmRequest, LlmResponse, ModelIdentity, VendorFamily } from '../types.js';
 
 export const ANTHROPIC_MESSAGES_URL = 'https://api.anthropic.com/v1/messages';
 export const ANTHROPIC_VERSION = '2023-06-01';
@@ -111,6 +111,33 @@ async function postWithRetry(
   );
 }
 
+/**
+ * R4-U4 follow-on (B-BR1) · Decide the model identity of one API-worker response.
+ *
+ * The ONLY thing that makes an identity attestable is the provider having put a
+ * model id in its own response body. `requested` is what we asked for; when the
+ * body carries nothing usable we fall back to it and say so — `providerAttested`
+ * stays false, and downstream `attestation_attested` can never become true off a
+ * config echo. Neither implemented surface returns a version distinct from the
+ * model id, so `returnedVersion` is null here (a genuine "no version").
+ * `decorrelatedFromSynthesis` is left null: only the router sees the whole config.
+ */
+function apiWorkerIdentity(
+  returned: unknown,
+  requested: string,
+  family: VendorFamily,
+): ModelIdentity {
+  const providerModel = typeof returned === 'string' && returned.trim() !== '' ? returned : null;
+  return {
+    model: providerModel ?? requested,
+    source: providerModel !== null ? 'provider-response' : 'router-config',
+    providerAttested: providerModel !== null,
+    family,
+    returnedVersion: null,
+    decorrelatedFromSynthesis: null,
+  };
+}
+
 /** Anthropic Messages API response subset we consume. */
 interface AnthropicResponse {
   model?: string;
@@ -155,6 +182,7 @@ async function callAnthropic(
       outputTokens: json.usage?.output_tokens ?? 0,
     },
     model: json.model ?? model,
+    modelIdentity: apiWorkerIdentity(json.model, model, 'anthropic'),
     route: 'api_worker',
   };
 }
@@ -203,6 +231,7 @@ async function callOpenAi(
       outputTokens: json.usage?.completion_tokens ?? 0,
     },
     model: json.model ?? model,
+    modelIdentity: apiWorkerIdentity(json.model, model, 'openai'),
     route: 'api_worker',
   };
 }

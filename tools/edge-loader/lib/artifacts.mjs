@@ -143,6 +143,43 @@ export function canonicalVerifiedAt(verifiedAt) {
 }
 
 /**
+ * R4-U4/O27 · Project a contract `ArtifactRef` onto the three artifact_* columns the U4
+ * migration added to BOTH relationship_claims and edge_verifications
+ * (20260728030000_r4u4_artifact_trust_and_revision_bound_disposition.sql).
+ *
+ * NULL DISCIPLINE (the migration's header, restated because it is easy to get wrong): a NULL
+ * here is not a neutral "unset" — it is UNTRUSTED. The loader therefore projects the artifact
+ * ref verbatim or leaves all three NULL together; it never synthesises a revision, never
+ * back-fills a posture, and never hashes the line itself to manufacture a content hash the
+ * producer did not assert. Deriving any of them would mean the loader — which has no idea
+ * whether a provider was ever called — inventing provenance. Only the producer knows.
+ */
+function artifactColumns(artifact) {
+  return {
+    artifact_revision: artifact?.revision ?? null,
+    artifact_content_hash: artifact?.contentHash ?? null,
+    artifact_posture: artifact?.posture ?? null,
+  };
+}
+
+/**
+ * R4-U4/O27 · Project a contract `ModelAttestation` onto the five attestation_* columns on
+ * edge_verifications. `attestation_attested` is the B-BR1 field: true ONLY when the artifact
+ * says the identity came back from a provider response. `?? null` (never `?? false`, and
+ * absolutely never `?? true`) keeps "no attestation captured" distinguishable from "captured
+ * and false", and both fail the serving gate — 'missing-attestation' vs 'unattested-model'.
+ */
+function attestationColumns(attestation) {
+  return {
+    attestation_returned_model: attestation?.returnedModel ?? null,
+    attestation_returned_version: attestation?.returnedVersion ?? null,
+    attestation_family: attestation?.family ?? null,
+    attestation_decorrelated: attestation?.decorrelated ?? null,
+    attestation_attested: attestation?.attested ?? null,
+  };
+}
+
+/**
  * Join validated claims + verifications into S6-table rows.
  *
  * - Claims: the artifact is append-only, so a re-synthesised edge appears as a LATER line for the
@@ -192,6 +229,12 @@ export function joinEdges(claims, verifications) {
       claim: c,
       prompt_version: c.promptVersion,
       synthesised_at: c.synthesisedAt,
+      // R4-U4/O27 · artifact trust posture, projected into its own columns so the serving
+      // gate can read it without parsing the jsonb. NULL when the artifact line carries no
+      // ArtifactRef — and NULL means UNTRUSTED, not "fine": shared/brain trustFailures()
+      // blocks any card derived from a record with no artifact ref. Nothing is derived or
+      // defaulted here; the loader projects exactly what the TRUTH-tier artifact states.
+      ...artifactColumns(c.artifact),
     }));
 
   const verificationRows = [];
@@ -215,6 +258,8 @@ export function joinEdges(claims, verifications) {
         status: superseded ? 'superseded' : v.status,
         edge_score: brain.edgeScore(v),
         serving_band: brain.servingBand(v),
+        ...artifactColumns(v.artifact),
+        ...attestationColumns(v.attestation),
       });
     }
   }

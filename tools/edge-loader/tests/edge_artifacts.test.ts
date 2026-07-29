@@ -404,3 +404,109 @@ test('joinEdges is pure over already-validated records (empty inputs → empty o
   const out = joinEdges([], []);
   assert.deepEqual(out, { claimRows: [], verificationRows: [], errors: [] });
 });
+
+// ── R4-U4/O27 · artifact trust + model attestation projection (issue #240) ───────────────────────
+//
+// The U4 migration added these columns and deliberately left population to a follow-on; this is
+// that follow-on. The failure mode being locked down is NOT a crash — it is silence: if the
+// loader stops projecting one of these, the serving trust gate simply sees null forever and no
+// cited edge card is ever produced, with nothing in any log to say why.
+
+const VALID_HASH = `sha256:${'0123abcd'.repeat(8)}`;
+
+test('R4-U4: artifact + attestation are projected onto the U4 columns, verbatim', () => {
+  const claims = mutateLine(claimsText, EDGE_SLEEP_HRV, (record) => {
+    record.artifact = { revision: 'edges-2026-07-29', contentHash: VALID_HASH, posture: 'live' };
+  });
+  const verifications = mutateLine(verificationsText, EDGE_SLEEP_HRV, (record) => {
+    record.artifact = { revision: 'edges-2026-07-29', contentHash: VALID_HASH, posture: 'live' };
+    record.attestation = {
+      returnedModel: 'gpt-5-2026-01-14',
+      returnedVersion: null,
+      family: 'openai',
+      decorrelated: true,
+      attested: true,
+    };
+  });
+  const { claimRows, verificationRows, errors } = buildLoad(claims, verifications);
+  assert.deepEqual(errors, []);
+
+  const claimRow = claimRows.find((r) => r.edge_id === EDGE_SLEEP_HRV)!;
+  assert.equal(claimRow.artifact_revision, 'edges-2026-07-29');
+  assert.equal(claimRow.artifact_content_hash, VALID_HASH);
+  assert.equal(claimRow.artifact_posture, 'live');
+
+  // Both fixture verifications of this edge carry the stamp (mutateLine rewrites every line for
+  // the edge), so assert over all of them rather than assuming which one stays active.
+  const verRows = verificationRows.filter((r) => r.edge_id === EDGE_SLEEP_HRV);
+  assert.ok(verRows.length > 0);
+  for (const row of verRows) {
+    assert.equal(row.artifact_revision, 'edges-2026-07-29');
+    assert.equal(row.artifact_content_hash, VALID_HASH);
+    assert.equal(row.artifact_posture, 'live');
+    assert.equal(row.attestation_returned_model, 'gpt-5-2026-01-14');
+    assert.equal(row.attestation_returned_version, null);
+    assert.equal(row.attestation_family, 'openai');
+    assert.equal(row.attestation_decorrelated, true);
+    assert.equal(row.attestation_attested, true);
+  }
+});
+
+test('R4-U4: an artifact with NO trust fields projects NULLs — never a default', () => {
+  // The unmutated fixtures carry neither block. Every U4 column must come out null: not false,
+  // not '', not 'fixture'. NULL is what the serving gate reads as UNTRUSTED, and inventing any
+  // value here would be the loader fabricating provenance it cannot possibly know.
+  const { claimRows, verificationRows, errors } = buildLoad(claimsText, verificationsText);
+  assert.deepEqual(errors, []);
+  for (const row of claimRows) {
+    assert.equal(row.artifact_revision, null);
+    assert.equal(row.artifact_content_hash, null);
+    assert.equal(row.artifact_posture, null);
+  }
+  for (const row of verificationRows) {
+    assert.equal(row.artifact_revision, null);
+    assert.equal(row.artifact_content_hash, null);
+    assert.equal(row.artifact_posture, null);
+    assert.equal(row.attestation_returned_model, null);
+    assert.equal(row.attestation_returned_version, null);
+    assert.equal(row.attestation_family, null);
+    assert.equal(row.attestation_decorrelated, null);
+    assert.equal(row.attestation_attested, null);
+  }
+});
+
+test('R4-U4: attested=false is preserved as FALSE, distinct from "no attestation" (null)', () => {
+  const verifications = mutateLine(verificationsText, EDGE_SLEEP_RHR, (record) => {
+    record.attestation = {
+      returnedModel: 'config:gpt-5',
+      returnedVersion: null,
+      family: 'openai',
+      decorrelated: false,
+      attested: false,
+    };
+  });
+  const { verificationRows, errors } = buildLoad(claimsText, verifications);
+  assert.deepEqual(errors, []);
+  const row = verificationRows.find((r) => r.edge_id === EDGE_SLEEP_RHR)!;
+  assert.equal(row.attestation_attested, false);
+  assert.notEqual(row.attestation_attested, null); // captured-and-false ≠ never captured
+  assert.equal(row.attestation_decorrelated, false);
+});
+
+test('R4-U4: a malformed content hash is a line-numbered HARD FAIL, not a silent null', () => {
+  const verifications = mutateLine(verificationsText, EDGE_SLEEP_RHR, (record) => {
+    record.artifact = { revision: 'r', contentHash: 'not-a-hash', posture: 'live' };
+  });
+  const { errors } = parseVerifications(verifications);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0]!.message, /contentHash/);
+});
+
+test('R4-U4: an unknown artifact posture is a HARD FAIL at the contract', () => {
+  const claims = mutateLine(claimsText, EDGE_SLEEP_HRV, (record) => {
+    record.artifact = { revision: 'r', contentHash: VALID_HASH, posture: 'probably-fine' };
+  });
+  const { errors } = parseClaims(claims);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0]!.message, /posture/);
+});

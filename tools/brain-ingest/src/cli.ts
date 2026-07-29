@@ -53,7 +53,7 @@ Commands:
                                                    RelationshipClaims (via router), quoteCheck-gated;
                                                    appends data/corpus/edges/claims.jsonl (edge-loader reads it)
   verify [--from-claims <path>] [--corpus <path>] [--edge <edgeId>]
-         [--edges-dir <dir>] [--dry-run] [--triage-only]
+         [--edges-dir <dir>] [--artifact-revision <id>] [--dry-run] [--triage-only]
                                                    A10 adversarial verification: A9 quoteCheck →
                                                    budget triage (C7) → verifier-owned retrieval →
                                                    refute-first LLM (router node 'verifier',
@@ -358,6 +358,10 @@ async function runSynthesize(
  *  - `--edge <edgeId>`: verify only this edge.
  *  - `--edges-dir <dir>`: where claims.jsonl defaults from / verifications.jsonl is written
  *    (default data/corpus/edges).
+ *  - `--artifact-revision <id>`: R4-U4/O27 — the artifact BUNDLE revision stamped onto every
+ *    emitted record (with a content hash of the record's own bytes and its fixture/live
+ *    posture). WITHOUT it records carry no artifact ref and can NEVER pass the serving trust
+ *    gate; a revision is operator knowledge, so it is never invented here.
  *  - `--triage-only`: print the budget-triage decision per claim; no retrieval / LLM / write.
  *  - `--dry-run`: run quoteCheck + retrieval + assemble the prompt; no LLM call / no write.
  *  - default: full run — routes the verifier node (api_worker per config; real runs need the
@@ -409,9 +413,30 @@ async function runVerify(flags: Set<string>, options: Map<string, string>): Prom
       // a real dispatch surfaces the missing key (run decision D4 / register B5).
       // U8/D13 carry-forward: the async factory fetches nao's cap overrides
       // (llm_router_cap_overrides) FAIL-SOFT so they bind this real verify run.
-      runOpts.router = await LlmRouter.create();
-      runOpts.verifierModel = 'router:verifier-node';
+      const router = await LlmRouter.create();
+      runOpts.router = router;
+      // R4-U4/O27 (B-BR1): this is the CONFIGURED id, and the `config:` prefix says so
+      // out loud. It used to be the opaque sentinel 'router:verifier-node', which read
+      // like an identity while being a stand-in; either way it is a config echo and can
+      // never be attestation. What the provider RETURNS is captured separately at
+      // response time and lands in the record's `attestation` block.
+      runOpts.verifierModel = `config:${router.config.nodes.verifier.model}`;
     }
+  }
+
+  // R4-U4/O27: the artifact BUNDLE revision. Absent ⇒ no artifact ref is stamped and the
+  // records stay unservable by construction — say so loudly rather than silently emitting
+  // provenance-less records that will be blocked much later at the serving gate.
+  const artifactRevision = options.get('artifact-revision');
+  if (artifactRevision !== undefined && artifactRevision.trim() !== '') {
+    runOpts.artifactRevision = artifactRevision.trim();
+  } else if (!triageOnly && !dryRun) {
+    log(
+      'verify: WARNING — no --artifact-revision supplied: emitted records carry NO artifact ' +
+        'reference (revision / content hash / posture), so the serving trust gate will block ' +
+        'every card derived from them (missing-artifact-ref). Pass --artifact-revision <id> ' +
+        'naming the artifact bundle this run belongs to.',
+    );
   }
 
   const result = await verify(runOpts);

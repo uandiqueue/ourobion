@@ -24,6 +24,7 @@ import {
   gapStatusFor,
   composeClaimKind,
   composeTrustPosture,
+  edgeTrustFailures,
   insightId,
   pairKey,
   personalPassesGate,
@@ -52,10 +53,10 @@ import {
 // copy_guidelines.ts: one definition, no vendored copy that could drift. It must be this module
 // and not provenance.ts, because Deno resolves specifiers literally and cannot follow the
 // extensionless imports the rest of shared/brain uses.
-import {
-  trustFailures,
-  type ServingEnvironment,
-} from "../../../shared/brain/trust_labels.ts"
+// (The `trustFailures` CALL now happens inside composer.ts's `edgeTrustFailures`, which is the
+// one testable place the view row → TrustInputs mapping is decided; this file keeps only the
+// environment type it must supply.)
+import { type ServingEnvironment } from "../../../shared/brain/trust_labels.ts"
 
 /**
  * R4-U4/O27 · Which trust posture this serving path runs under.
@@ -482,7 +483,21 @@ Deno.serve(async (req) => {
     edges = await fetchAll<ServableEdge>((from, to) =>
       supabase
         .from("verified_edges")
-        .select("edge_id, subject, object, relation, verified_at, edge_score, serving_band, claim")
+        // R4-U4 follow-on · `verification` and the U4 artifact/attestation columns are fetched
+        // HERE. They were absent from this select, which is why the fail-closed trust gate below
+        // saw a null posture for every database-loaded edge and no `producer='edge'` card could
+        // be produced truthfully: the columns existed and the loader could fill them, but the
+        // serving path never read them. Adding them is what makes the gate evaluate real data
+        // instead of uniform absence — it does not loosen the gate by one bit.
+        .select(
+          "edge_id, subject, object, relation, verified_at, edge_score, serving_band, claim, " +
+            "verification, " +
+            "claim_artifact_revision, claim_artifact_content_hash, claim_artifact_posture, " +
+            "verification_artifact_revision, verification_artifact_content_hash, " +
+            "verification_artifact_posture, attestation_returned_model, " +
+            "attestation_returned_version, attestation_family, attestation_decorrelated, " +
+            "attestation_attested",
+        )
         .in("serving_band", ["high", "mid"]) // hold is never served (shared/brain isServable)
         // O13: a human REJECT supersedes the verifier FOR SERVING — a rejected edge must never
         // be cited by a NEW card (already-served cards keep honest provenance via the O12 RPC).
@@ -950,34 +965,12 @@ Deno.serve(async (req) => {
             // rule (shared/brain/provenance.ts); this call site only supplies the environment.
             const edgeClaimKind = composeClaimKind(cardEdge)
             const edgeTrust = composeTrustPosture(cardEdge)
-            const failures = trustFailures(
-              {
-                artifact:
-                  edgeTrust.posture === null ||
-                  edgeTrust.artifactRevision === null ||
-                  edgeTrust.artifactContentHash === null
-                    ? undefined
-                    : {
-                        revision: edgeTrust.artifactRevision,
-                        contentHash: edgeTrust.artifactContentHash,
-                        posture: edgeTrust.posture as "fixture" | "live",
-                      },
-                attestation:
-                  edgeTrust.returnedModel === null ||
-                  edgeTrust.modelFamily === null ||
-                  edgeTrust.decorrelated === null ||
-                  edgeTrust.attested === null
-                    ? undefined
-                    : {
-                        returnedModel: edgeTrust.returnedModel,
-                        returnedVersion: edgeTrust.returnedVersion,
-                        family: edgeTrust.modelFamily,
-                        decorrelated: edgeTrust.decorrelated,
-                        attested: edgeTrust.attested,
-                      },
-              },
-              SERVING_ENVIRONMENT,
-            )
+            // The mapping used to be spelled out inline here, where nothing could test it. It
+            // now lives in composer.ts (`edgeTrustFailures` → `trustInputsFor`) so the exact
+            // rule this call site enforces is the one the positive/negative gate vectors in
+            // tools/rules/tests/edge_trust_gate.test.ts exercise. Same fail-closed semantics,
+            // plus the sentinel-model rejection a raw column read cannot express.
+            const failures = edgeTrustFailures(cardEdge, SERVING_ENVIRONMENT)
             if (failures.length > 0) {
               // BLOCK, never warn-and-serve (B-UI9 fail-closed).
               const reason =

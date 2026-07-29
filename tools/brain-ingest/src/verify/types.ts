@@ -83,10 +83,49 @@ export interface VerifyRecord {
   evidenceTier: VerifyEvidenceTier;
   confidence: number;
   dqs: { weight: number };
+  /**
+   * The CONFIGURED verifier id (router config / a MOCK or INTERIM provenance stamp).
+   * This is a config echo, NOT attestation (B-BR1) — it is whatever the caller asked
+   * for, never proof of what answered. The provider-returned identity lives in
+   * {@link VerifyRecord.attestation} and nowhere else; the two are deliberately not
+   * collapsed into this one field.
+   */
   verifierModel: string;
   promptVersion: string;
   verifiedAt: string;
   status: VerifyStatus;
+  /**
+   * R4-U4/O27 · Mirror of `ArtifactRef` — which artifact bundle + exact bytes this
+   * record is. Optional: absent means UNTRUSTED (shared/brain trustFailures blocks
+   * serving), never "fine".
+   */
+  artifact?: VerifyArtifactRef;
+  /**
+   * R4-U4/O27 · Mirror of `ModelAttestation` — what the PROVIDER returned. Absent
+   * when no provider response backed this record (quoteCheck-only rung, mailbox
+   * fulfilment, fixtures). `attested` is true only for a provider-returned identity.
+   */
+  attestation?: VerifyModelAttestation;
+}
+
+/** Mirror of `ArtifactPosture` (relationships.ts) — 'fixture' = no provider was called. */
+export type VerifyArtifactPosture = 'fixture' | 'live';
+
+/** Mirror of `ArtifactRef` (relationships.ts). */
+export interface VerifyArtifactRef {
+  revision: string;
+  /** `sha256:<64 lowercase hex>` over this record's canonical bytes. */
+  contentHash: string;
+  posture: VerifyArtifactPosture;
+}
+
+/** Mirror of `ModelAttestation` (relationships.ts). */
+export interface VerifyModelAttestation {
+  returnedModel: string;
+  returnedVersion: string | null;
+  family: string;
+  decorrelated: boolean;
+  attested: boolean;
 }
 
 /** The shared zod gate, typed to this package's structural mirror. */

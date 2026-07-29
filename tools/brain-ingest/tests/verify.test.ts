@@ -47,7 +47,23 @@ import type {
   VerifyImpactTier,
 } from '../src/verify/types.js';
 import type { Candidate } from '../src/types.js';
-import type { LlmRequest, LlmResponse } from '../../llm-router/src/index.js';
+import type { LlmRequest, LlmResponse, ModelIdentity } from '../../llm-router/src/index.js';
+
+/**
+ * R4-U4/O27 (B-BR1): a MOCK router is NOT a provider. Its identity is a config
+ * echo, so `providerAttested` is false and any record built from it must fail the
+ * serving trust gate with 'unattested-model' — asserted in attestation.test.ts.
+ */
+function mockIdentity(model: string): ModelIdentity {
+  return {
+    model,
+    source: 'router-config',
+    providerAttested: false,
+    family: 'openai',
+    returnedVersion: null,
+    decorrelatedFromSynthesis: true,
+  };
+}
 
 // ── fixtures ─────────────────────────────────────────────────────────────────
 
@@ -478,6 +494,7 @@ test('verifyClaim full end-to-end: mocked router → schema-valid supported veri
       return {
         text: reply({ sourceStances: [{ paperId: 'corpus:gut-mood-2024', stance: 'supports' }] }),
         model: 'MOCK:mock-verifier (NOT a real verdict)',
+        modelIdentity: mockIdentity('MOCK:mock-verifier (NOT a real verdict)'),
         route: 'api_worker',
         usage: { inputTokens: 10, outputTokens: 20 },
       };
@@ -503,7 +520,7 @@ test('artifact: appendVerificationsToDir dedupes on (edgeId, verifiedAt)', async
   const validate = await loadVerificationValidator();
   const router = {
     async route(): Promise<LlmResponse> {
-      return { text: reply({ sourceStances: [{ paperId: 'corpus:gut-mood-2024', stance: 'supports' }] }), model: 'MOCK', route: 'api_worker', usage: { inputTokens: 1, outputTokens: 1 } };
+      return { text: reply({ sourceStances: [{ paperId: 'corpus:gut-mood-2024', stance: 'supports' }] }), model: 'MOCK', modelIdentity: mockIdentity('MOCK'), route: 'api_worker', usage: { inputTokens: 1, outputTokens: 1 } };
     },
   };
   const res = await verifyClaim(makeClaim(), {

@@ -27,6 +27,30 @@ const migrationFile = readdirSync(migrationsDir).find((f) =>
 assert.ok(migrationFile, 'brain edge read store migration not found in supabase/migrations');
 const sql = readFileSync(path.join(migrationsDir, migrationFile), 'utf8');
 
+// R4-U4/O27 added the artifact-trust + attestation columns by ALTER TABLE, so a table's real
+// column set is now "the create-table block" ∪ "every later add column". The loader populates
+// those columns (this follow-on unit), so the column-set equality below has to see both files
+// or it would report the loader as writing columns that "do not exist".
+const u4MigrationFile = readdirSync(migrationsDir).find((f) =>
+  /r4u4_artifact_trust_and_revision_bound_disposition\.sql$/.test(f),
+);
+assert.ok(u4MigrationFile, 'R4-U4 artifact-trust migration not found in supabase/migrations');
+const u4Sql = readFileSync(path.join(migrationsDir, u4MigrationFile), 'utf8');
+
+/** Columns an `alter table public.<table> add column ...` block introduces. */
+function alterAddedColumns(source: string, table: string): Set<string> {
+  const cols = new Set<string>();
+  const blocks = source
+    .replace(/\r\n/g, '\n')
+    .matchAll(new RegExp(`alter table public\\.${table}\\b([\\s\\S]*?);`, 'g'));
+  for (const block of blocks) {
+    for (const m of (block[1] ?? '').matchAll(/add column\s+([a-z_][a-z0-9_]*)/g)) {
+      cols.add(m[1]!);
+    }
+  }
+  return cols;
+}
+
 const FIXTURES = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'edges');
 const { claimRows, verificationRows, errors } = buildLoad(
   readFileSync(path.join(FIXTURES, 'claims.jsonl'), 'utf8'),
@@ -63,13 +87,46 @@ function checkSet(source: string, column: string): string[] {
 test('relationship_claims columns equal the loader claim-row keys (+ DB-defaulted loaded_at)', () => {
   const rowKeys = new Set<string>(Object.keys(claimRows[0]!));
   rowKeys.add('loaded_at'); // DB-defaulted load metadata — the one column the loader never sets
-  assert.deepEqual([...tableColumns(sql, 'relationship_claims')].sort(), [...rowKeys].sort());
+  const dbColumns = new Set<string>([
+    ...tableColumns(sql, 'relationship_claims'),
+    ...alterAddedColumns(u4Sql, 'relationship_claims'),
+  ]);
+  assert.deepEqual([...dbColumns].sort(), [...rowKeys].sort());
 });
 
 test('edge_verifications columns equal the loader verification-row keys (+ loaded_at)', () => {
   const rowKeys = new Set<string>(Object.keys(verificationRows[0]!));
   rowKeys.add('loaded_at');
-  assert.deepEqual([...tableColumns(sql, 'edge_verifications')].sort(), [...rowKeys].sort());
+  const dbColumns = new Set<string>([
+    ...tableColumns(sql, 'edge_verifications'),
+    ...alterAddedColumns(u4Sql, 'edge_verifications'),
+  ]);
+  assert.deepEqual([...dbColumns].sort(), [...rowKeys].sort());
+});
+
+// The point of THIS unit: the U4 columns exist AND the loader writes them. A regression that
+// silently drops one from the loader's row objects would otherwise only surface as a
+// permanently-null trust posture — i.e. as "the demo produces no edge cards", with no error.
+test('R4-U4: every artifact/attestation column the U4 migration added is written by the loader', () => {
+  const claimKeys = new Set<string>(Object.keys(claimRows[0]!));
+  for (const col of alterAddedColumns(u4Sql, 'relationship_claims')) {
+    assert.ok(claimKeys.has(col), `loader claim row does not write U4 column '${col}'`);
+  }
+  const verificationKeys = new Set<string>(Object.keys(verificationRows[0]!));
+  for (const col of alterAddedColumns(u4Sql, 'edge_verifications')) {
+    assert.ok(verificationKeys.has(col), `loader verification row does not write U4 column '${col}'`);
+  }
+  // …and the five attestation columns specifically, named, so a rename in the migration that
+  // the loader does not follow fails here rather than at a hosted run.
+  for (const col of [
+    'attestation_returned_model',
+    'attestation_returned_version',
+    'attestation_family',
+    'attestation_decorrelated',
+    'attestation_attested',
+  ]) {
+    assert.ok(verificationKeys.has(col), `loader verification row is missing '${col}'`);
+  }
 });
 
 test('relation / verdict / status CHECK sets equal the shared/brain zod enums', () => {

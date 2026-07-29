@@ -158,7 +158,41 @@ export class LlmRouter {
 
     this.ledger.record(req.nodeId, this.runId, node.model, response.usage);
     const testMode = this.testModeState();
-    return testMode !== undefined ? { ...response, testMode } : response;
+    // R4-U4 follow-on (B-BR1/B-BR2): the ROUTE knows whether the provider returned
+    // an identity; only the ROUTER sees the whole config, so it fills the two
+    // config-derived members here. Neither can promote an unattested identity —
+    // `providerAttested` is decided at the route and never rewritten.
+    const withIdentity: LlmResponse = {
+      ...response,
+      modelIdentity: {
+        ...response.modelIdentity,
+        family: response.modelIdentity.family ?? this.familyOfNode(req.nodeId),
+        decorrelatedFromSynthesis: this.decorrelatedFromSynthesis(req.nodeId),
+      },
+    };
+    return testMode !== undefined ? { ...withIdentity, testMode } : withIdentity;
+  }
+
+  /** Configured vendor family for a node, or null when the model matches no provider. */
+  private familyOfNode(nodeId: LlmNodeId): VendorFamily | null {
+    const node = this.config.nodes[nodeId];
+    if (node === undefined) return null;
+    return providerFor(this.config, node.model)?.family ?? null;
+  }
+
+  /**
+   * O7 / B-BR2 decorrelation for one node: true only when its configured family
+   * DIFFERS from the synthesis node's family and the run is not under TEST-MODE
+   * (test mode exists precisely because the invariant is switched off there, so a
+   * test-mode run is never decorrelated). null when either family is unresolvable.
+   * FAIL CLOSED: this never returns true on missing information.
+   */
+  private decorrelatedFromSynthesis(nodeId: LlmNodeId): boolean | null {
+    if (this.config.testMode !== undefined) return false;
+    const own = this.familyOfNode(nodeId);
+    const synthesis = this.familyOfNode('synthesis');
+    if (own === null || synthesis === null) return null;
+    return own !== synthesis;
   }
 
   /**
