@@ -57,6 +57,16 @@ The complete live snapshot, check counts, dependencies, and required order are i
 | [`pending-build-register.md`](./pending-build-register.md) | Full gap superset; current overlay distinguishes delivered, open, partial and deferred work |
 | [`run3-audit-findings.md`](./run3-audit-findings.md) | Historical audit explaining why Run 4 gates exist; not current status |
 | [`run4-launch-prompt.md`](./run4-launch-prompt.md) | Superseded launch snapshot; retained only to route readers to the orchestrator prompt |
+| [`provider-e2e-status.md`](./provider-e2e-status.md) | Issue-189 provider spend, full canonical extraction plus passage synthesis, matched health data, generated cards, Android render evidence, and blockers |
+
+### Bounded provider-test exception (2026-07-28)
+
+The user authorised one local-only provider test under ceilings of SGD 20 for OpenAI and SGD 2 for
+Anthropic, with OpenAI as the main paper-synthesis driver and Anthropic verifier-only. The complete
+paper was extracted locally, while the existing runtime sent OpenAI its 12 selected passages. This narrowly
+supersedes the zero-provider-call posture for issue #189 evidence; it does not authorise hosted writes,
+deployment, training, model promotion or general provider execution. See
+[`provider-e2e-status.md`](./provider-e2e-status.md) for actual calls, spend and fail-closed results.
 
 ## Current integration facts
 

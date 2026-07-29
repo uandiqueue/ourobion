@@ -37,7 +37,16 @@
 // instead (recordControlEvent below), which is exactly what
 // 20260728010002_nao_redaction_grants.sql's column comments claim.
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { guardRole, recordControlEvent, redactDeep } from '@/lib/authzServer';
+import {
+  NaoControlAuditError,
+  NaoControlOutcomeUnknownError,
+  controlAuditErrorResponse,
+  controlOperationId,
+  controlOutcomeUnknownErrorResponse,
+  guardRole,
+  redactDeep,
+  runAuditedControlMutation,
+} from '@/lib/authzServer';
 import { getIngestControl, putIngestControl, validatePatchBody, applyIngestControlPatch } from '@/lib/ingestControl';
 import type { IngestControlPatch } from '@/lib/types';
 
@@ -82,16 +91,25 @@ export async function POST(req: Request): Promise<Response> {
     return json({ error: validationError }, 400);
   }
 
-  await recordControlEvent('ingest_control.patch', 'ingest-control', {
-    paused: body.paused,
-    openalexDailyUsd: body.openalexDailyUsd,
-  });
-
   const email = await currentUserEmail();
   const now = new Date().toISOString();
   const current = await getIngestControl();
   const next = applyIngestControlPatch(current, body, email, now);
 
-  await putIngestControl(next);
-  return json(redactDeep(next));
+  const operation = controlOperationId(req);
+  if (!operation.ok) return json({ error: operation.error }, 400);
+  try {
+    await runAuditedControlMutation({
+      operationId: operation.operationId,
+      action: 'ingest_control.patch',
+      target: 'ingest-control',
+      detail: { paused: body.paused, openalexDailyUsd: body.openalexDailyUsd },
+      mutate: async () => putIngestControl(next),
+    });
+    return json(redactDeep({ ...next, operationId: operation.operationId }));
+  } catch (error) {
+    if (error instanceof NaoControlAuditError) return controlAuditErrorResponse(error);
+    if (error instanceof NaoControlOutcomeUnknownError) return controlOutcomeUnknownErrorResponse(error);
+    throw error;
+  }
 }

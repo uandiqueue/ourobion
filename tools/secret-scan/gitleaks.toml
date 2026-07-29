@@ -1,0 +1,31 @@
+# tools/secret-scan/gitleaks.toml
+#
+# O36 fail-closed secret-scanning guard — scanner configuration.
+#
+# `useDefault = true` pulls in gitleaks' full published default ruleset (aws-access-token,
+# generic-api-key, stripe-access-token, jwt, curl-auth-header, and ~170 others as of v8.30.1) —
+# we do not hand-roll replacements for any of those. This file only *adds* to that ruleset; it
+# never narrows it.
+#
+# Deliberately absent from this file, by policy (see tools/secret_scan_guard.mjs `policy`
+# subcommand, and design §C.5 / §B.1 #9,#15):
+#   - any [[allowlists]] block, or a `paths =` / `regexes =` / `stopwords =` / `regexTarget =`
+#     key anywhere — those are the broad, un-reviewed gitleaks-native suppression channels.
+#     The only suppression channel this guard recognises is the authored, per-fingerprint
+#     tools/secret-scan/allowlist.json, converted at scan time into a generated .gitleaksignore.
+#   - `useDefault = false` — turning off the default ruleset must never happen silently.
+#
+# `ourobion-canary` is the one custom rule. Its sole purpose is proof-of-execution (design
+# §B.1 #11): the `secret_scan_guard.mjs canary` subcommand writes a fixture containing this
+# token's shape plus the canonical AWS documentation example key, scans it with this exact
+# config, and asserts BOTH a custom rule and a default rule fired. If the canary comes back
+# clean, the whole job fails — a scanner that silently stopped loading rules must not pass.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "ourobion-canary"
+description = "Ourobion canary token (proof that this custom gitleaks.toml, not just the default ruleset, was loaded for the scan)."
+regex = '''OUROBION_CANARY_SECRET_[A-Z0-9]{32}'''
+tags = ["canary", "ourobion", "proof-of-execution"]

@@ -138,11 +138,33 @@ void main() {
       expect(find.text(ScanTabCopy.gapAnswerHere), findsNothing);
       expect(find.text(ScanTabCopy.gapOpenFullLog), findsNothing);
 
+      // The card names ONE metric but the tap pushes the whole DailyLogScreen,
+      // which has no per-field focus seam — so it has to say where it goes.
+      expect(find.text(ScanTabCopy.gapOpensFullLog), findsOneWidget,
+          reason: 'a whole-card tap-through must state its destination rather '
+              'than imply a view of the metric it names');
+
       await tester.tap(find.byType(GapCard));
       await tester.pump();
 
       expect(opened, 1);
       expect(answered, 0);
+    });
+
+    testWidgets('an inline-answerable card does not claim to open the form',
+        (tester) async {
+      await tester.pumpWidget(_harness(GapCard(
+        metricKey: 'mood_score',
+        weight: 7,
+        inlineOptions: kInlineAnswerableOptions['mood_score'],
+        onAnswer: (_) {},
+        onOpenFullLog: () {},
+      )));
+
+      expect(find.text(ScanTabCopy.gapOpensFullLog), findsNothing,
+          reason: 'this card answers in place; the explicit "Open full log" '
+              'button carries the route');
+      expect(find.text(ScanTabCopy.gapOpenFullLog), findsOneWidget);
     });
 
     testWidgets('goes inert while a write is in flight', (tester) async {

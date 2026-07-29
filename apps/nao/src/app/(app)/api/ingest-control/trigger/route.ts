@@ -17,7 +17,17 @@
 // GATE ORDER (R4-U2 review finding 6): `guardRole` is the FIRST statement, before
 // `req.json()` and validateTriggerBody — running validation first handed a
 // non-member a 400-vs-403 schema oracle over this endpoint's request shape.
-import { guardRole, recordControlEvent, redactText } from '@/lib/authzServer';
+import {
+  NaoControlAuditError,
+  NaoControlMutationError,
+  NaoControlOutcomeUnknownError,
+  controlAuditErrorResponse,
+  controlOperationId,
+  controlOutcomeUnknownErrorResponse,
+  guardRole,
+  redactText,
+  runAuditedControlMutation,
+} from '@/lib/authzServer';
 import { getIngestControl, validateTriggerBody } from '@/lib/ingestControl';
 import { dispatchIngestWorkflow } from '@/lib/githubDispatch';
 import type { IngestTriggerBody } from '@/lib/types';
@@ -47,16 +57,34 @@ export async function POST(req: Request): Promise<Response> {
     return json({ error: validationError }, 400);
   }
 
-  await recordControlEvent('ingest.trigger', body.seed ?? null, { limit: body.limit });
-
   const control = await getIngestControl();
   if (control.paused) {
     return json({ error: 'Ingestion is paused — resume it first (Pipeline state panel) before triggering a run.' }, 409);
   }
 
-  const result = await dispatchIngestWorkflow(body);
-  if (!result.ok) {
-    return json({ error: redactText(result.error ?? 'dispatch failed') }, 502);
+  const operation = controlOperationId(req);
+  if (!operation.ok) return json({ error: operation.error }, 400);
+  try {
+    await runAuditedControlMutation({
+      operationId: operation.operationId,
+      action: 'ingest.trigger',
+      target: body.seed ?? null,
+      detail: { limit: body.limit },
+      mutate: async () => {
+        const result = await dispatchIngestWorkflow(body);
+        if (!result.ok) {
+          if (result.outcome === 'unknown') throw new Error('GitHub dispatch outcome unknown');
+          throw new NaoControlMutationError('github_dispatch_failed', 'dispatch failed', 502);
+        }
+      },
+    });
+    return json({ ok: true, operationId: operation.operationId });
+  } catch (error) {
+    if (error instanceof NaoControlAuditError) return controlAuditErrorResponse(error);
+    if (error instanceof NaoControlOutcomeUnknownError) return controlOutcomeUnknownErrorResponse(error);
+    if (error instanceof NaoControlMutationError) {
+      return json({ error: redactText(error.message), code: error.auditCode, operationId: operation.operationId }, error.status);
+    }
+    throw error;
   }
-  return json({ ok: true });
 }

@@ -14,7 +14,7 @@ import 'sign_in_screen.dart';
 /// Every user-facing string the Profile tab's preference rows own.
 ///
 /// Enumerated in one place so the non-diagnostic copy gate can assert over the
-/// whole set (test/m1_core/profile_copy_gate_test.dart) instead of trusting a
+/// whole set (test/m1_core/profile_digest_test.dart) instead of trusting a
 /// reviewer to spot a banned word inline.
 abstract final class ProfileTabCopy {
   static const backdropLabel = 'Living backdrop';
@@ -45,6 +45,13 @@ abstract final class ProfileTabCopy {
       'Could not load your profile — check your connection and try again.';
   static const retry = 'Try again';
 
+  /// Last-resort heading when the profile row carries no display name AND no
+  /// account email. It must never be a name-shaped literal: this slot used to
+  /// fall back to 'Biome', which rendered at 22pt as if the user had told us
+  /// that was their name. An explicit empty state is the truthful option — the
+  /// account email is preferred over it when one is known.
+  static const noNameSet = 'No name set';
+
   static const all = <String>[
     backdropLabel,
     backdropSubtitle,
@@ -55,6 +62,7 @@ abstract final class ProfileTabCopy {
     wearableSubtitle,
     loadFailed,
     retry,
+    noNameSet,
   ];
 }
 
@@ -208,6 +216,16 @@ class _ProfileTabState extends State<ProfileTab> {
     }
     final profile = _profile;
 
+    // The heading must only ever show something the account actually told us:
+    // the display name, else the account email, else an explicit empty state.
+    // Never a name-shaped literal — a null/blank profile read used to render
+    // 'Biome' here at 22pt, indistinguishable from a real name the user chose.
+    final accountEmail = profile?.email;
+    final displayName = profile?.displayName ?? '';
+    final heading = displayName.isNotEmpty
+        ? displayName
+        : (accountEmail ?? ProfileTabCopy.noNameSet);
+
     return Scaffold(
       backgroundColor: OurobionColors.background,
       body: SafeArea(
@@ -259,7 +277,7 @@ class _ProfileTabState extends State<ProfileTab> {
                     ),
                     const SizedBox(height: 14),
                     Text(
-                      profile?.displayName.isNotEmpty == true ? profile!.displayName : 'Biome',
+                      heading,
                       style: GoogleFonts.manrope(
                         fontSize: 22,
                         fontWeight: FontWeight.w600,
@@ -277,10 +295,12 @@ class _ProfileTabState extends State<ProfileTab> {
                         ),
                       ),
                     ],
-                    if (profile?.email != null) ...[
+                    // Suppressed when the email is already carrying the heading
+                    // — it must not appear twice on the same card.
+                    if (accountEmail != null && accountEmail != heading) ...[
                       const SizedBox(height: 2),
                       Text(
-                        profile!.email!,
+                        accountEmail,
                         style: GoogleFonts.manrope(
                           fontSize: 12,
                           color: OurobionColors.outline,
@@ -360,10 +380,16 @@ class _ProfileTabState extends State<ProfileTab> {
   }
 }
 
-/// The account-level daily-digest preference, persisted to
-/// `profiles.daily_digest_enabled` via the caller's [onWrite] — which
-/// [ProfileTab] points at the same `ProfileService.updateProfile` the wearable
-/// toggle uses. There is no second write path.
+/// The account-level daily-digest preference, persisted via the caller's
+/// [onWrite] — which [ProfileTab] points at
+/// `ProfileService.setDailyDigestEnabled`, an RPC over
+/// `public.profile_notification_prefs` (profile_service.dart). It is NOT a
+/// `profiles` column and does NOT go through `updateProfile`: R4-U2's
+/// non-regression suite pins the `profiles` column-privilege map, so the
+/// preference lives in its own table behind an RPC instead (see the header of
+/// migration 20260728040001_profile_daily_digest.sql and the note on
+/// [UserProfile]). The wearable toggle beside it is the one that writes a
+/// `profiles` column.
 ///
 /// Split out of [ProfileTab] so the FAILURE behaviour is testable without a
 /// live Supabase, because that is the part worth pinning: the switch moves

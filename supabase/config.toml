@@ -389,7 +389,9 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 
 [functions.compute-baselines]
 enabled = true
-verify_jwt = true
+# API keys are opaque, not JWTs. The first handler action is the dedicated
+# X-Ourobion-Internal-Secret verifier, which fails closed before any database work.
+verify_jwt = false
 import_map = "./functions/compute-baselines/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
@@ -400,7 +402,7 @@ entrypoint = "./functions/compute-baselines/index.ts"
 
 [functions.generate-insights]
 enabled = true
-verify_jwt = true
+verify_jwt = false
 import_map = "./functions/generate-insights/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
@@ -414,7 +416,7 @@ entrypoint = "./functions/generate-insights/index.ts"
 # served/deployed/invoked; whether it ALSO gets a nightly cron is human decision H3 (Jayden).
 [functions.evaluate-signals]
 enabled = true
-verify_jwt = true
+verify_jwt = false
 import_map = "./functions/evaluate-signals/deno.json"
 entrypoint = "./functions/evaluate-signals/index.ts"
 
@@ -422,6 +424,6 @@ entrypoint = "./functions/evaluate-signals/index.ts"
 # generate-insights in sequence). Service-role gated like its siblings; adds no cron (H3).
 [functions.run-pipeline]
 enabled = true
-verify_jwt = true
+verify_jwt = false
 import_map = "./functions/run-pipeline/deno.json"
 entrypoint = "./functions/run-pipeline/index.ts"
