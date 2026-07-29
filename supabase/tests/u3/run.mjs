@@ -61,10 +61,10 @@ const REPO = resolve(HERE, '..', '..', '..');
 // The four migrations this unit owns. Their presence is checked so a rename cannot make the suite
 // silently pass against a schema that lacks them.
 const U3_MIGRATIONS = [
-  '20260728030000_nao_simulation_provenance.sql',
-  '20260728030001_nao_loader_runs.sql',
-  '20260728030002_nao_loader_apply_simulated_days.sql',
-  '20260728030003_gap_demand_identity.sql',
+  '20260729010000_nao_simulation_provenance.sql',
+  '20260729010001_nao_loader_runs.sql',
+  '20260729010002_nao_loader_apply_simulated_days.sql',
+  '20260729010003_gap_demand_identity.sql',
 ];
 
 // A silent pass over zero assertions must be impossible. Deliberately below the suite's real size, so

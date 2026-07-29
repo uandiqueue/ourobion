@@ -46,7 +46,7 @@ const PROVENANCE_MIGRATION = path.join(
   REPO_ROOT,
   'supabase',
   'migrations',
-  '20260728030000_nao_simulation_provenance.sql',
+  '20260729010000_nao_simulation_provenance.sql',
 );
 
 const TODAY = '2026-07-24';

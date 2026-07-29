@@ -478,7 +478,7 @@ const SQL_FOLD_TERMS: readonly { status: LoaderRunStatus; condition: RegExp }[] 
 
 test('the TypeScript fold and the EXECUTABLE SQL fold declare the SAME total order (they must never drift)', () => {
   const migration = readFileSync(
-    path.join(REPO_ROOT, 'supabase', 'migrations', '20260728030001_nao_loader_runs.sql'),
+    path.join(REPO_ROOT, 'supabase', 'migrations', '20260729010001_nao_loader_runs.sql'),
     'utf8',
   );
   const { severityExpr, statusExpr } = executableFold(migration);
@@ -554,11 +554,11 @@ test('the SQL status verdict is RUN-SCOPED, so an over-running pipeline cannot b
   // raced run reported `pending` (severity 1) instead of `mixed` (severity 3) and the
   // returned requestKey was somebody else's.
   const runs = readFileSync(
-    path.join(REPO_ROOT, 'supabase', 'migrations', '20260728030001_nao_loader_runs.sql'),
+    path.join(REPO_ROOT, 'supabase', 'migrations', '20260729010001_nao_loader_runs.sql'),
     'utf8',
   ).replace(/--.*$/gm, '');
   const apply = readFileSync(
-    path.join(REPO_ROOT, 'supabase', 'migrations', '20260728030002_nao_loader_apply_simulated_days.sql'),
+    path.join(REPO_ROOT, 'supabase', 'migrations', '20260729010002_nao_loader_apply_simulated_days.sql'),
     'utf8',
   ).replace(/--.*$/gm, '');
 
@@ -587,7 +587,7 @@ test('SQL source-conformance: BOTH truth-table upserts guard their DO UPDATE bra
   // is the two-process TOCTOU race in supabase/tests/u3 (u3.toctou.*), which cannot run
   // in CI (docker); this one can, and it catches the guard being deleted.
   const apply = readFileSync(
-    path.join(REPO_ROOT, 'supabase', 'migrations', '20260728030002_nao_loader_apply_simulated_days.sql'),
+    path.join(REPO_ROOT, 'supabase', 'migrations', '20260729010002_nao_loader_apply_simulated_days.sql'),
     'utf8',
   ).replace(/--.*$/gm, '');
 
@@ -785,7 +785,7 @@ test('a TRANSIENT serialization failure is retryable, not a 500 (the single-flig
   }
   // The assumption is not merely handled, it is WRITTEN DOWN where the dependency lives.
   const apply = readFileSync(
-    path.join(REPO_ROOT, 'supabase', 'migrations', '20260728030002_nao_loader_apply_simulated_days.sql'),
+    path.join(REPO_ROOT, 'supabase', 'migrations', '20260729010002_nao_loader_apply_simulated_days.sql'),
     'utf8',
   );
   assert.match(apply, /READ COMMITTED/, 'the migration header must state the isolation-level dependency');
@@ -1206,7 +1206,7 @@ test(
   () => {
     // The gap fixed by this unit: record_gap_events is additive (demand = demand + 1 per
     // event), so a retried pipeline used to double-count gap_ledger.demand. The migration's
-    // record_gap_events_keyed (supabase/migrations/20260728030003_gap_demand_identity.sql)
+    // record_gap_events_keyed (supabase/migrations/20260729010003_gap_demand_identity.sql)
     // applies each (demand_key, pair, scope, status) at most once; this pins the CALL SITE so
     // a regression back to the unkeyed RPC — or a key derived from the emitted events instead
     // of the run's inputs — fails a test, not a demo replay.

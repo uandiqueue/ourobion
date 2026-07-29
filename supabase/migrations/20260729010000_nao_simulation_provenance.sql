@@ -40,7 +40,7 @@
 -- zero-row result.
 --
 -- The only reader/writer of these tables in the request path is a SECURITY DEFINER function owned
--- by the table owner (20260728030002).
+-- by the table owner (20260729010002).
 
 -- ═══════════════════════════════════════════════════════════════
 -- 1. NAO_SIMULATION_ORIGINS — the closed provenance vocabulary, as data

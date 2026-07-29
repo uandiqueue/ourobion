@@ -1,6 +1,6 @@
 ---
 title: Final Run 4 U3 reconciliation
-summary: Rebased the secret-clean atomic loader onto the advanced base, closed loader audit and UI gaps, and re-proved raw-truth, retry, authorization, runtime, and cap boundaries while recording the unrecoverable HTTP artifact blocker.
+summary: Reconciled the secret-clean atomic loader onto the advanced base, resolved its migration collision and partial-failure relay, and isolated the post-U4 trusted-edge prerequisite without weakening either gate.
 type: session
 scope: run4
 status: canonical
@@ -18,6 +18,8 @@ Issue: #179 · canonical PR: #184 · integration branch: `dev-phase2-run4`
 - Close the loader's truthful audit-lifecycle and operator-panel target/request-key gaps.
 - Run the database, authorization, Nao, Flutter, Deno, release, security, forced-negative, runtime
   attestation, and full 14+7 HTTP acceptance gates.
+- Recover the missing ignored verifier artifact or, under the user's explicit one-call authority,
+  produce exactly one bounded Anthropic verification inside the SGD 1 budget.
 
 ## Changed
 
@@ -36,28 +38,41 @@ Issue: #179 · canonical PR: #184 · integration branch: `dev-phase2-run4`
   U3 commit so the secret-shaped source literal is absent from the full branch history.
 - Regenerated local-only runtime attestation through the generator from fresh frozen graphs and
   four live 401 handler probes.
+- Used exactly one Anthropic request (`claude-sonnet-5`) for the missing gut-comfort/mood verifier
+  fixture: 1,895 input tokens, 815 output tokens, US$0.01791 actual cost (US$0.03354 preflight
+  worst case), one HTTP attempt and one enforcement attempt, verdict `supported`, no fallback.
+- Renumbered the four unmerged U3 migrations from the colliding `20260728030000..003` range to
+  `20260729010000..003`. This preserves the already-merged U4 migration at `20260728030000` and
+  lets a clean shadow/local migration apply reach the U3 schema.
+- Preserved authoritative non-2xx audit semantics in the Nao pipeline relay while passing the
+  already-read, redacted partial stage envelope through the publication fold. A 502 therefore
+  records `failed`, remains retryable, and no longer loses the stages needed to diagnose/retry it.
 
 ## Decided
 
 - Nao continues to use cookie sessions and publishable-key transport only; it does not consume a
-  service-role key. No hosted write, deploy, provider call, env flip, or shared-contract edit occurred.
+  service-role key. No hosted write, deploy, env flip, or shared-contract edit occurred.
 - The 115-path and 8,500-added-line caps, accepted unit base, immutable product base, exclusion
   hashes, and no-hosted-parity attestation scope remain unchanged.
-- Missing verifier output will not be reconstructed from prose or the later INTERIM database row;
-  doing so would fabricate evidence.
+- Provider-returned model attestation will not be reconstructed from the configured model id.
+  The router's retained response model may fall back to configuration, so retrospectively setting
+  `attested=true` would fabricate evidence.
 
 ## Left
 
-- Recover the original ignored `data/corpus/demo-edges/verifications.jsonl`, or obtain explicit
-  authority for one bounded verifier call, then run the complete 14+7 HTTP walk and B-PL15 live
-  partial-pipeline path on this exact head.
-- Only after that evidence and fresh PR checks pass may canonical PR #184 be merged.
+- Resolve #240: capture provider-returned model identity separately from router fallback, persist
+  artifact refs/posture and attestation through edge-loader, fetch them in generate-insights, and
+  produce or recover one genuinely provider-attested monotonic verification.
+- Then rerun the complete 14+7 HTTP walk, provenance/reject legs, and B-PL15 live partial-pipeline
+  path on the immutable PR head. Only after that evidence and fresh checks pass may #184 merge.
 
 ## Blockers
 
-- The fifth U12 OpenAI `EdgeVerification` is absent from every ref/worktree, unreachable objects,
-  Actions artifacts, comments, and local database history. `-SkipLiveLlm` therefore has no honest
-  input; current scope forbids the only reproducible alternative, a new provider call.
+- Merged U4 correctly fails closed on missing artifact/attestation provenance, but edge-loader does
+  not populate those columns and generate-insights does not fetch them. The retained live Anthropic
+  result is a non-directional `correlates` edge and cannot drive U3's required edge-card positive
+  control. Accepting zero cards or inventing attestation would weaken/fabricate the gate; #240 is
+  the required follow-on, and a further provider call requires new human authority.
 
 ## Verification
 
@@ -71,6 +86,20 @@ Issue: #179 · canonical PR: #184 · integration branch: `dev-phase2-run4`
   violations; config, context, diff, and fresh local runtime attestation passed.
 - Exact pinned gitleaks v8.30.1 scans after remediation: HEAD tree found no leaks; full history walked
   335 commits and found no leaks. The two affected Nao fixture suites passed 75/75.
-- Final landing and fresh GitHub checks remain to be run on the committed immutable head.
+- Post-reconciliation Nao typecheck passed; the full Nao suite passed 291/291. Focused executable
+  relay/redaction and loader/publication suites passed 44/44 and 50/50 respectively. `git diff
+  --check` passed.
+- Reconciled-migration database rerun passed the U3 228-assertion suite (including real advisory-
+  lock concurrency, target-write TOCTOU, forced second-table abort, and retry) and the U2
+  authorization non-regression suite 468/468. The local Supabase stack was then stopped with zero
+  Ourobion containers left running and its volume-backed data preserved.
+- The post-U4 full local demo flow passed environment, clean reset, rule load, five artifact lines,
+  edge-loader (5 claims / 4 verified edges), curator/auth/Nao, atomic 14-day load, replay/concurrency,
+  all three pipeline stages, publication, and +7 backfill (21/21 raw-truth rows). It then failed
+  honestly at M4 because no edge could pass the new artifact-trust gate; later legs were not run.
+- Final measured branch delta is 32 paths / 8,243 added lines, below the immutable 115 / 8,500
+  caps. Architecture 50/50, secret-guard 111/111 plus live client/local-artifact guards, release
+  gate 12/12 + config, and context integrity all passed. Fresh GitHub checks remain to be run on
+  the committed immutable head.
 
 memory: none

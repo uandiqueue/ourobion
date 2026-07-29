@@ -411,7 +411,7 @@ export const LOADER_CONFLICT_SQLSTATE = 'OU409';
  * loser never sees that row, and its insert raises 40001 instead of replaying.
  * Nothing in supabase/ or ci/ sets a non-default isolation level, so this is a latent
  * assumption rather than a live bug (it is stated in
- * 20260728030002_nao_loader_apply_simulated_days.sql's header) — but leaving 40001 out
+ * 20260729010002_nao_loader_apply_simulated_days.sql's header) — but leaving 40001 out
  * of the map turned that assumption into an opaque HTTP 500, which is exactly how a
  * latent assumption becomes an outage nobody can read.
  *

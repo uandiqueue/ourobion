@@ -10,7 +10,7 @@
 -- from colpriv_snapshot and fail those assertions. So: no column is added to any pre-U2 table by
 -- this unit. Run identity, watermarks, leases and demand keys are new tables only.
 --
--- ZERO POLICIES, RLS ON, EXPLICIT REVOKE — see 20260728030000's header for why this is required
+-- ZERO POLICIES, RLS ON, EXPLICIT REVOKE — see 20260729010000's header for why this is required
 -- rather than merely prudent.
 
 -- ═══════════════════════════════════════════════════════════════

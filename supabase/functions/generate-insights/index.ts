@@ -309,7 +309,7 @@ async function fetchAll<T>(query: (from: number, to: number) => any): Promise<T[
   return rows
 }
 
-// ─── R4-U3 demand key (supabase/migrations/20260728030003_gap_demand_identity.sql) ──────────
+// ─── R4-U3 demand key (supabase/migrations/20260729010003_gap_demand_identity.sql) ──────────
 //
 // record_gap_events_keyed's demand_key must be "sha256('gi.v1' | day | inputDigest) computed
 // ... over its INPUTS — the metric values, personal signals, baseline snapshots, verified
@@ -335,7 +335,7 @@ async function sha256Hex(value: string): Promise<string> {
 
 // Field / row / surface separators — control characters that cannot appear in any fetched
 // column, so no encoding ambiguity is possible (mirrors nao_loader_watermark's chr(31)/chr(30)
-// digest convention, 20260728030001_nao_loader_runs.sql:224-231).
+// digest convention, 20260729010001_nao_loader_runs.sql:224-231).
 const DK_FIELD_SEP = "\u001f"
 const DK_ROW_SEP = "\u001e"
 const DK_SURFACE_SEP = "\u001d"

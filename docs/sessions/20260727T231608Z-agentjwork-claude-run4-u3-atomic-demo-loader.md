@@ -24,7 +24,7 @@ fail-closed, with explicit simulation provenance that never overwrites real rows
 19 paths / 6,332 added lines. Migrations 1,347 · new/changed app code 1,333 · tests 2,589 ·
 acceptance script 392 · attestation 2 · session record.
 
-- **Migrations** `20260728030000..030003`: `nao_simulation_origins` + `nao_demo_targets`;
+- **Migrations** `20260729010000..010003`: `nao_simulation_origins` + `nao_demo_targets`;
   `nao_loader_runs` / `nao_loader_run_stages` + `nao_loader_assert_target` / `nao_loader_watermark` /
   `nao_loader_plan_inputs` / `nao_loader_status`; the atomic
   `nao_loader_apply_simulated_days` RPC plus `nao_loader_release_simulated_days` and

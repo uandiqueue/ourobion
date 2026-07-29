@@ -25,7 +25,7 @@
 -- CHECK constraint is added to public.wearable_daily and dropped again, to force a failure on the
 -- SECOND table after the first has already been written. That constraint exists ONLY in this
 -- disposable container — it is not in any migration (a migration-level CHECK on either truth table
--- would break four R4-U2 expect_ok assertions; see 20260728030000's header).
+-- would break four R4-U2 expect_ok assertions; see 20260729010000's header).
 
 set authz_probe.phase = 'u3';
 

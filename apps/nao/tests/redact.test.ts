@@ -28,6 +28,7 @@ import {
   sanitizeStorageValue,
   suppressSmallCohort,
 } from '../src/lib/authz.ts';
+import { buildPublicationSummary, stagesFromRelayBody } from '../src/lib/loaderRuns.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const NAO_ROOT = path.resolve(__dirname, '..');
@@ -428,6 +429,7 @@ async function runRelay(upstream: { status: number; ok: boolean; text: string } 
   status: number;
   body: unknown;
   request?: { url: string; init?: RequestInit };
+  auditOutcome?: 'failed' | 'succeeded';
 }> {
   const compiled = new AsyncFunction(
     'fetch',
@@ -447,13 +449,30 @@ async function runRelay(upstream: { status: number; ok: boolean; text: string } 
     'operation',
     extractRelayBlock(),
   );
-  const captured: { status: number; body: unknown; request?: { url: string; init?: RequestInit } } = {
+  const captured: {
+    status: number;
+    body: unknown;
+    request?: { url: string; init?: RequestInit };
+    auditOutcome?: 'failed' | 'succeeded';
+  } = {
     status: 0,
     body: null,
   };
   const jsonStub = (body: unknown, status = 200) => {
     captured.status = status;
-    captured.body = body;
+    // This is the real route seam: its outer `json` closure records these stages
+    // and adds the derived publication summary. Model that pure closure here so
+    // the extracted relay proves it sends partial failures through the seam.
+    captured.body =
+      body !== null && typeof body === 'object' && !Array.isArray(body) && Array.isArray((body as PipelineEnvelope).stages)
+        ? {
+            ...(body as Record<string, unknown>),
+            publication: buildPublicationSummary({
+              stages: stagesFromRelayBody(body, null),
+              expectedDigest: null,
+            }),
+          }
+        : body;
     return { status, body };
   };
   const fetchStub = async (url: string, init?: RequestInit) => {
@@ -492,9 +511,14 @@ async function runRelay(upstream: { status: number; ok: boolean; text: string } 
     'X-Ourobion-Internal-Secret',
     async (input: { mutate: () => Promise<unknown> }) => {
       try {
-        return { value: await input.mutate() };
+        const value = await input.mutate();
+        captured.auditOutcome = 'succeeded';
+        return { value };
       } catch (error) {
-        if (error instanceof MutationError) throw error;
+        if (error instanceof MutationError) {
+          captured.auditOutcome = 'failed';
+          throw error;
+        }
         throw new OutcomeUnknownError(operation.operationId);
       }
     },
@@ -560,6 +584,35 @@ test('ROUTE relay path: the non-JSON `raw` branch scrubs an embedded uuid', asyn
   assert.equal(status, 502, 'a non-JSON 200 is relayed as 502, unchanged behaviour');
   assert.deepEqual(uuidsIn(body), []);
   assert.match(JSON.stringify(body), /internal error for user/);
+});
+
+test('ROUTE relay path: a failed partial pipeline remains auditable, retryable, and redacted', async () => {
+  const leakedSecret = 'sk-live-should-not-reach-browser';
+  const upstreamBody = JSON.stringify({
+    ok: false,
+    stages: [
+      { stage: 'compute-baselines', status: 200, ok: true, summary: { users: 5 } },
+      {
+        stage: 'evaluate-signals',
+        status: 502,
+        ok: false,
+        summary: { secret: leakedSecret, reason: `worker failed for ${SAMPLE_UUID}` },
+      },
+    ],
+  });
+
+  const { status, body, auditOutcome } = await runRelay({ status: 502, ok: false, text: upstreamBody });
+  assert.equal(status, 502, 'the failed upstream status must be preserved');
+  assert.equal(auditOutcome, 'failed', 'the non-2xx must still fail the truthful control audit');
+  assert.equal((body as PipelineEnvelope).stages.length, 2, 'partial stages must reach the json publication closure');
+  assert.equal((body as PipelineEnvelope).stages[1].ok, false, 'the failed stage must remain recordable');
+  assert.equal((body as PipelineEnvelope).stages[1].status, 502);
+  const publication = (body as { publication: { status: string; published: boolean; retryable: boolean } }).publication;
+  assert.equal(publication.status, 'failed', 'the partial failure must never publish');
+  assert.equal(publication.published, false);
+  assert.equal(publication.retryable, true);
+  assert.equal(JSON.stringify(body).includes(leakedSecret), false, 'secret-shaped fields must not relay');
+  assert.deepEqual(uuidsIn(body), [], 'partial failure must not relay user identifiers');
 });
 
 test('ROUTE relay path: response loss returns opaque outcome-unknown with operation id', async () => {

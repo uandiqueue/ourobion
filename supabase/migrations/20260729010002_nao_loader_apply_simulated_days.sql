@@ -28,7 +28,7 @@
 -- Likewise no CHECK on data_origin/source (it would break four expect_ok assertions in pa/pb_probe
 -- and, through pb_probe, nonreg.pb_probe_identical_pre_and_post) and no trigger on either table (it
 -- would change the literal values the `…_took_effect` assertions pin). Provenance is enforced at
--- this writer, against the 20260728030000 registries.
+-- this writer, against the 20260729010000 registries.
 --
 -- ═══════════════════════════════════════════════════════════════════════════════════════════════
 -- THE TRANSACTION BOUNDARY, EXACTLY (design §C.1)
@@ -212,7 +212,7 @@ begin
     into v_gut_expected, v_wear_expected
     from jsonb_array_elements(p_days) d;
 
-  -- ── 3 · Target validation — five checks, ONE fixed message (see 20260728030001). ───────────
+  -- ── 3 · Target validation — five checks, ONE fixed message (see 20260729010001). ───────────
   v_label := public.nao_loader_assert_target(p_target_user_id);
 
   -- ── 4 · Single-flight, half one: SERIALISE. Transaction-scoped, so it releases on commit and
@@ -771,7 +771,7 @@ begin
     from jsonb_array_elements(p_stages) s
   -- WORST-WINS PER STAGE, ACROSS CALLS (review finding F5). The update branch applies only while
   -- the ALREADY RECORDED observation is ok, so a later ok can never improve a recorded failure for
-  -- the SAME stage — which is what 20260728030001's "no code path can overwrite a status" and
+  -- the SAME stage — which is what 20260729010001's "no code path can overwrite a status" and
   -- apps/nao/src/lib/loaderRuns.ts's "a not-ok observation is never replaced by a later ok one"
   -- both claim, and what a plain last-write-wins upsert made false the moment a stage was
   -- re-recorded. Worsening is still allowed (ok ⇒ not ok, and a moved digest over an ok row), so

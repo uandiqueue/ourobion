@@ -307,6 +307,13 @@ export async function POST(req: Request): Promise<Response> {
   };
 
   // ── relay:begin — extracted verbatim and EXECUTED by apps/nao/tests/redact.test.ts ──
+  // Kept request-local so an authoritative non-2xx can still be relayed after
+  // `runAuditedControlMutation()` has recorded its terminal failed audit row.
+  // This block is source-extracted in redact.test.ts: do not move this state
+  // outside the sentinels or add an outer dependency.
+  // Plain JS syntax is intentional: redact.test.ts executes this delimited block
+  // verbatim via AsyncFunction, so TypeScript-only annotations cannot appear here.
+  let rejectedResponse = { present: false, status: 0, text: '' };
   try {
     const audited = await runAuditedControlMutation({
       operationId: operation.operationId,
@@ -329,6 +336,7 @@ export async function POST(req: Request): Promise<Response> {
         });
         const text = await res.text();
         if (!res.ok) {
+          rejectedResponse = { present: true, status: res.status, text };
           throw new NaoControlMutationError('pipeline_failed', 'analysis pipeline failed', res.status);
         }
         return { res, text };
@@ -348,6 +356,20 @@ export async function POST(req: Request): Promise<Response> {
     if (err instanceof NaoControlAuditError) return controlAuditErrorResponse(err);
     if (err instanceof NaoControlOutcomeUnknownError) return controlOutcomeUnknownErrorResponse(err);
     if (err instanceof NaoControlMutationError) {
+      // An upstream non-2xx is deliberately thrown above so the audited mutation
+      // records `failed`, never `succeeded`. Its already-read body is nevertheless
+      // useful partial stage evidence for the loader run, but only after the same
+      // redaction gate as a successful relay.
+      if (rejectedResponse.present) {
+        try {
+          return json(redactRelayBody(JSON.parse(rejectedResponse.text)), rejectedResponse.status);
+        } catch {
+          return json(
+            { ok: false, status: rejectedResponse.status, raw: redactText(rejectedResponse.text.slice(0, 2000)) },
+            rejectedResponse.status,
+          );
+        }
+      }
       return json({ error: redactText(err.message), code: err.auditCode, operationId: operation.operationId }, err.status);
     }
     return json({ error: redactText(err instanceof Error ? err.message : String(err)) }, 502);

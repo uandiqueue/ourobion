@@ -70,7 +70,7 @@ export interface SimulationOrigin {
 }
 
 /**
- * Mirror of the seed rows in `20260728030000_nao_simulation_provenance.sql`.
+ * Mirror of the seed rows in `20260729010000_nao_simulation_provenance.sql`.
  *
  * DESCRIPTIVE for rows that already exist, PRESCRIPTIVE for what this loader may
  * write: an unregistered marker (a typo such as `simulated:run4-demoo`, or a real
