@@ -1,0 +1,28 @@
+/* Ourobion Nao — brand colours */
+:root{
+  /* Dark (primary) */
+  --nao-bg: #0B1D24;
+  --nao-ring: #2A6B78;
+  --nao-coil-1: #2BC4BE;
+  --nao-coil-2: #2FB7D6;
+  --nao-coil-3: #3FA2E6;
+  --nao-coil-4: #5E8DF0;
+  --nao-coil-5: #7C86F2;
+  --nao-node: #2BC4BE;
+  --nao-envelope: #1C9FB0;
+  --nao-wordmark: #2BC4BE;
+}
+
+.nao-light,[data-theme="light"]{
+  /* Light */
+  --nao-bg: #FFFFFF;
+  --nao-ring: #083E49;
+  --nao-coil-1: #0A5160;
+  --nao-coil-2: #11788B;
+  --nao-coil-3: #1C9FB0;
+  --nao-coil-4: #2D93C6;
+  --nao-coil-5: #2E66B2;
+  --nao-node: #0A5160;
+  --nao-envelope: #1C9FB0;
+  --nao-wordmark: #0C5D6E;
+}

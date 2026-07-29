@@ -77,3 +77,19 @@ complete the private-R2 upload/pointer replacement or resolve the distribution l
 the stale handoff uncorrected; rejected because it risks prematurely closing live follow-on work.
 
 **Why.** Issue state must describe remaining work, not merely the merge state of one delivery PR.
+
+## D-231-PRODUCT-BINARY-ACCOUNTING — narrow binary accounting applies to the product union
+
+**Choice.** Apply the same exact identity-kit allowlist and the existing 24-path / 2,000,000-byte
+caps to binary rows in the immutable product-union measurement. Allowlisted binaries remain changed
+paths, contribute zero added lines, and are reported with path and byte totals; deleted allowlisted
+paths measure zero bytes, while every other blob must be measured at the immutable head.
+
+**Alternatives rejected.** Accept binary rows generally; rejected because it would make arbitrary
+compiled or unreviewable content invisible to the line budget. Reject every binary row in the
+product union; rejected because it makes the explicitly approved Nao identity assets structurally
+unmeasurable even though the narrower landing gate already accounts for them under fixed caps.
+
+**Why.** The product union and per-unit landing are two views of the same changed paths. Reusing the
+same reviewed allowlist and caps keeps their accounting consistent without widening accepted paths:
+non-allowlisted, over-cap, or unmeasurable binary content still fails closed.

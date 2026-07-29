@@ -15,8 +15,23 @@
 }
 
 /* ── Top bar ─────────────────────────────────────────────────────────────── */
+/*
+ * Nao identity: brand mark is /brand/nao-mark-dark.svg (the knowledge-graph
+ * nucleus mark), rendered at a fixed 40px — the legibility floor documented
+ * in assets/ourobion-nao-logo/DESIGN.md ("the full graph holds together to
+ * ~40 px"). The bar height/padding below are sized around that 40px mark.
+ *
+ * 40px rule: the mark's width/height are fixed px (not relative units), so it
+ * can never shrink below the 40px threshold, on any viewport — there's no
+ * media-query swap to a simplified glyph. Instead the narrow-viewport rule
+ * below (max-width: 720px) compresses/hides the *other* bar elements (email,
+ * kbd hint, gaps/padding) around the mark, which stays put. This keeps a
+ * single mark asset in the bar at all sizes and guarantees the floor by
+ * construction rather than by a breakpoint that could drift out of sync with
+ * the documented threshold.
+ */
 .topbar {
-  height: 62px;
+  height: 68px;
   flex: none;
   display: flex;
   align-items: center;
@@ -41,39 +56,46 @@
 }
 
 .topbar__mark {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
+  flex: none;
   filter: drop-shadow(0 0 12px rgba(43, 196, 190, 0.35));
 }
 
+/* Stacked kicker-over-name, mirroring /brand/nao-lockup-dark.svg's
+   proportions as closely as a horizontal bar allows (the lockup itself is a
+   vertical asset — see login page — so here we approximate its typography
+   and stacking instead of embedding it directly). No divider pipe: the
+   two-line stack already separates "ourobion" from "nao" without one. */
 .topbar__lockup {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
 }
 
+/* Lowercase, not uppercased: the supplied artwork sets the kicker in lowercase
+   Outfit 300, and this bar is meant to read as that lockup. Both lines take
+   the kit's own wordmark colour (--nao-wordmark, #2BC4BE) because both are
+   teal in the artwork — neither is a text shade. The kicker is dimmed with
+   opacity rather than a second hue so it stays the same brand teal. */
 .topbar__word {
   font-family: var(--font-display);
-  font-weight: 200;
-  font-size: 20px;
-  letter-spacing: 0.2em;
-  color: var(--text-primary);
-}
-
-.topbar__divider {
-  width: 1px;
-  height: 18px;
-  background: var(--hairline-strong);
+  font-weight: 300;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  color: var(--nao-wordmark);
+  opacity: 0.72;
 }
 
 .topbar__sub {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: 12px;
+  font-family: var(--font-display);
+  font-weight: 200;
+  font-size: 20px;
   line-height: 1;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--accent-1);
+  letter-spacing: 0.04em;
+  color: var(--nao-wordmark);
 }
 
 .topbar__searchwrap {
@@ -174,7 +196,7 @@
   border-bottom: 1px solid var(--hairline-soft);
   background: rgba(11, 29, 36, 0.4);
   position: sticky;
-  top: 62px;
+  top: 68px;
   z-index: 19;
   backdrop-filter: blur(10px);
 }
