@@ -174,6 +174,35 @@ test('MT4 exclusion set is bound to its provenance and cannot be widened', () =>
   );
 });
 
+test('source-text numstat recovery is narrow and fail-closed', () => {
+  const head = 'd'.repeat(40);
+  const path = 'tools/example.ts';
+  const responses = {
+    'rev-parse --is-shallow-repository': 'false\n',
+    [`cat-file -t ${RUN4_UNIT_BASE_SHA}`]: 'commit\n',
+    'rev-parse HEAD': `${head}\n`,
+    [`merge-base ${RUN4_UNIT_BASE_SHA} ${head}`]: `${RUN4_UNIT_BASE_SHA}\n`,
+    [`diff --name-status -z --find-renames ${RUN4_UNIT_BASE_SHA}..${head}`]: `M\0${path}\0`,
+    [`diff --numstat -z ${RUN4_UNIT_BASE_SHA}..${head}`]: `-\t-\t${path}\0`,
+    [`cat-file -e ${head}:${path}`]: '',
+    [`cat-file -p ${head}:${path}`]: Buffer.from('export const x = 1;\n'),
+    [`diff --text --unified=0 --no-color --no-ext-diff --no-textconv --no-renames ${RUN4_UNIT_BASE_SHA}..${head} -- ${path}`]: `diff --git a/${path} b/${path}\nindex aaaaaaa..bbbbbbb 100644\n--- a/${path}\n+++ b/${path}\n@@ -1 +1 @@\n-old\n+new\n`,
+  };
+  const git = (_command, args, options = {}) => {
+    const value = responses[args.join(' ')];
+    return options.encoding === 'buffer' ? value : (value ?? '');
+  };
+  assert.equal(checkLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git }).addedLines, 1);
+  for (const [label, mutate] of [
+    ['image', () => { responses[`diff --name-status -z --find-renames ${RUN4_UNIT_BASE_SHA}..${head}`] = 'M\0image.png\0'; responses[`diff --numstat -z ${RUN4_UNIT_BASE_SHA}..${head}`] = '-\t-\timage.png\0'; }],
+    ['nul', () => { responses[`cat-file -p ${head}:${path}`] = Buffer.from([0]); }],
+  ]) {
+    const copy = structuredClone(responses); mutate();
+    assert.throws(() => checkLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES, git }), /binary source recovery|binary\/unparsable/, label);
+    Object.assign(responses, copy);
+  }
+});
+
 test('product cap measures the immutable union, reports breach without throwing, and stays non-acceptance', () => {
   // The per-unit base is preserved under an explicitly non-acceptance name (#183 scope line 3),
   // and it is the CURRENT unit base, not the stale MT4 merge.

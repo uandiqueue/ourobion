@@ -48,6 +48,7 @@ import type {
 } from '../src/verify/types.js';
 import type { Candidate } from '../src/types.js';
 import type { LlmRequest, LlmResponse, ModelIdentity } from '../../llm-router/src/index.js';
+import { verificationDedupeKey } from '../src/verify/artifact.js';
 
 /**
  * R4-U4/O27 (B-BR1): a MOCK router is NOT a provider. Its identity is a config
@@ -515,6 +516,14 @@ test('verifyClaim full end-to-end: mocked router → schema-valid supported veri
 });
 
 // ── artifact dedupe ─────────────────────────────────────────────────────────────
+
+test('artifact: dedupe key keeps a runtime NUL separator without a binary source byte', () => {
+  const key = verificationDedupeKey({ edgeId: 'edge-a', verifiedAt: '2026-07-29T00:00:00.000Z' });
+  assert.equal(key.charCodeAt('edge-a'.length), 0);
+
+  const source = readFileSync(new URL('../src/verify/artifact.ts', import.meta.url));
+  assert.equal(source.includes(0), false, 'TypeScript source must contain no raw NUL byte');
+});
 
 test('artifact: appendVerificationsToDir dedupes on (edgeId, verifiedAt)', async () => {
   const validate = await loadVerificationValidator();

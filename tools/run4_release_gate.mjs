@@ -466,6 +466,53 @@ function gitText(git, args, options = {}) {
   return git('git', args, { cwd: repo, encoding: 'utf8', ...options });
 }
 
+const SOURCE_TEXT_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.dart', '.sql']);
+
+/**
+ * Recover one numstat row only when Git calls a historical binary base "- -" but the current
+ * HEAD blob is demonstrably UTF-8 source text. Git numstat still reports a historical-NUL base
+ * as binary under --text, so recovery parses one zero-context, path-scoped patch instead.
+ */
+function sourceTextNumstatRecovery({ row, base, head, git }) {
+  const binary = /^-\t-\t([^\0]+)$/.exec(row);
+  if (!binary) return null;
+  const path = binary[1];
+  const extension = path.slice(path.lastIndexOf('.'));
+  if (!SOURCE_TEXT_EXTENSIONS.has(extension)) fail(`binary/unparsable diff row: ${row}`);
+  try { gitText(git, ['cat-file', '-e', `${head}:${path}`]); } catch { fail(`binary source recovery HEAD path is absent: ${path}`); }
+  const blob = git('git', ['cat-file', '-p', `${head}:${path}`], { cwd: repo, encoding: 'buffer' });
+  if (!Buffer.isBuffer(blob)) fail(`binary source recovery did not return a Buffer: ${path}`);
+  if (blob.includes(0)) fail(`binary source recovery HEAD blob contains NUL: ${path}`);
+  let text;
+  try { text = new TextDecoder('utf-8', { fatal: true }).decode(blob); } catch { fail(`binary source recovery HEAD blob is not UTF-8: ${path}`); }
+  if (text.includes('\0')) fail(`binary source recovery HEAD blob contains NUL: ${path}`);
+  const patch = gitText(git, ['diff', '--text', '--unified=0', '--no-color', '--no-ext-diff', '--no-textconv', '--no-renames', `${base}..${head}`, '--', path]);
+  const lines = patch.split('\n');
+  if (lines.at(-1) === '') lines.pop();
+  if (lines.length < 5 || lines[0] !== `diff --git a/${path} b/${path}` || !/^index [0-9a-f]+\.\.[0-9a-f]+(?: \d+)?$/.test(lines[1]) || lines[2] !== `--- a/${path}` || lines[3] !== `+++ b/${path}`) fail(`binary source recovery patch headers are invalid: ${path}`);
+  let added = 0; let hunks = 0; let index = 4;
+  while (index < lines.length) {
+    const hunk = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(?: .*)?$/.exec(lines[index++]);
+    if (!hunk) fail(`binary source recovery patch hunk is invalid: ${path}`);
+    hunks += 1;
+    const oldCount = Number(hunk[2] ?? '1'); const newCount = Number(hunk[4] ?? '1');
+    let oldSeen = 0; let newSeen = 0;
+    while (index < lines.length && !lines[index].startsWith('@@ ')) {
+      const line = lines[index++];
+      if (line.startsWith('-')) { oldSeen += 1; continue; }
+      if (line.startsWith('+')) { newSeen += 1; added += 1; continue; }
+      fail(`binary source recovery patch contains context or marker: ${path}`);
+    }
+    if (oldSeen !== oldCount || newSeen !== newCount) fail(`binary source recovery patch hunk counts mismatch: ${path}`);
+  }
+  if (!hunks || !added && !patch.includes('\n-')) fail(`binary source recovery patch has no changes: ${path}`);
+  return [`${added}\t0\t${path}`, String(added), '0', path];
+}
+
+function numericNumstatRow({ row, base, head, git }) {
+  return /^(\d+)\t(\d+)\t([^\0]+)$/.exec(row) ?? sourceTextNumstatRecovery({ row, base, head, git });
+}
+
 export function checkLandingDelta({ base, head = 'HEAD', maxPaths, maxAdded, git = execFileSync }) {
   if (base !== RUN4_UNIT_BASE_SHA) fail(`base must equal accepted current unit SHA ${RUN4_UNIT_BASE_SHA}`);
   if (!Number.isSafeInteger(maxPaths) || maxPaths < 0 || maxPaths !== RUN4_MAX_CHANGED_PATHS) fail(`maxPaths must equal accepted cap ${RUN4_MAX_CHANGED_PATHS}`);
@@ -494,7 +541,7 @@ export function checkLandingDelta({ base, head = 'HEAD', maxPaths, maxAdded, git
   if (statRows.at(-1) === '') statRows.pop();
   let added = 0;
   for (const row of statRows) {
-    const match = /^(\d+)\t(\d+)\t([^\0]+)$/.exec(row);
+    const match = numericNumstatRow({ row, base, head: resolvedHead, git });
     if (!match) fail(`binary/unparsable diff row: ${row}`);
     const plus = Number(match[1]);
     if (!Number.isSafeInteger(plus) || !Number.isSafeInteger(added + plus)) fail('landing added-line count overflowed');
@@ -586,7 +633,7 @@ export function productLandingDelta({ head = 'HEAD', excludedPaths, git = execFi
   let added = 0;
   const statPaths = [];
   for (const row of statRows) {
-    const match = /^(\d+)\t(\d+)\t([^\0]+)$/.exec(row);
+    const match = numericNumstatRow({ row, base: RUN4_PRODUCT_BASE_SHA, head: resolvedHead, git });
     if (!match) fail(`binary/unparsable diff row: ${row}`);
     const plus = Number(match[1]);
     if (!Number.isSafeInteger(plus) || !Number.isSafeInteger(added + plus)) fail('product landing added-line count overflowed');
