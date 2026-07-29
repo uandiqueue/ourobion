@@ -101,5 +101,10 @@ Issue: #179 · canonical PR: #184 · integration branch: `dev-phase2-run4`
   caps. Architecture 50/50, secret-guard 111/111 plus live client/local-artifact guards, release
   gate 12/12 + config, and context integrity all passed. Fresh GitHub checks remain to be run on
   the committed immutable head.
+- First fresh CI correctly rejected two comment-only migration-reference edits in the attested
+  `generate-insights` source. Those two comments were restored byte-for-byte (the executable was
+  never changed), preserving the reviewed runtime attestation without editing its manifest. The
+  Windows host lacks the pinned Deno binary needed to regenerate CI's module graphs; equivalence is
+  instead exact: the file has zero diff from the prior `d398b5e` head whose attestation check passed.
 
 memory: none
