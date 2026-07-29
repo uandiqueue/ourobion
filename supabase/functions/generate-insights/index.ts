@@ -96,8 +96,9 @@ const SERVING_ENVIRONMENT: ServingEnvironment = ((): ServingEnvironment => {
 // contradiction are GAP-ONLY (composed row + A1 gap event — architecture §S7, decision O18(a)),
 // and an object-only fired signal (O16: the fired metric is only an edge's OBJECT endpoint)
 // likewise records a gap event instead of a card — a card never states the non-fired endpoint
-// as having moved. Gap events land in gap_ledger via record_gap_events() (§A1): aggregate
-// demand per (pair, status), deduped per user per run, NO user ids (privacy invariant).
+// as having moved. Gap events land in gap_ledger via record_gap_events_keyed() (§A1, keyed —
+// R4-U3): aggregate demand per (pair, status), deduped per user per run and per input digest
+// (a replayed run over unchanged inputs cannot double-count), NO user ids (privacy invariant).
 //
 // The S8 producer renders deterministic template copy (NO LLM in this function — the phrasing
 // LLM is a later, copy-gated, cached layer; the template path shipped here stays its fallback),
@@ -256,7 +257,7 @@ interface InsightRow {
   payload: Record<string, unknown>
 }
 
-/** One record_gap_events() element (§A1 aggregate demand — NO user id ever leaves the batch). */
+/** One record_gap_events_keyed() element (§A1 aggregate demand — NO user id ever leaves the batch). */
 interface GapEventRow {
   metric_a: string
   metric_b: string
@@ -306,6 +307,79 @@ async function fetchAll<T>(query: (from: number, to: number) => any): Promise<T[
     if (page.length < PAGE_SIZE) break
   }
   return rows
+}
+
+// ─── R4-U3 demand key (supabase/migrations/20260728030003_gap_demand_identity.sql) ──────────
+//
+// record_gap_events_keyed's demand_key must be "sha256('gi.v1' | day | inputDigest) computed
+// ... over its INPUTS — the metric values, personal signals, baseline snapshots, verified
+// edges and rule templates it fetched — not over the emitted events" (migration comment,
+// gap_demand_applications.demand_key). That is exactly the five read surfaces fetched above
+// (ruleRows, baselines, personalRows, edges, seriesRows — existingCards is output state, not
+// an input to what fires). Keying on those INPUTS, not on gapByAggKey's emitted events, is what
+// makes a byte-identical replay (same day, same fetched rows) derive the SAME key — so the
+// per-(key, pair, scope, status) idempotency ledger blocks the double count — while a run over
+// genuinely different inputs (any fetched row differs, including tomorrow's `day`) derives a
+// different key and still increments gap_ledger.demand additively, exactly as A1 intends.
+//
+// generate-insights takes no request body (verified U5; run-pipeline always POSTs `{}`, see
+// run-pipeline/index.ts:21), so there is no request/run key propagated into this function to
+// reuse — the demand key is derived from these fetched rows instead, mirroring (not reusing;
+// the loader watermark is scoped to one target's two truth tables, this run is over all users'
+// five engine-input surfaces) nao_loader_watermark's own "digest over the fetched rows" shape.
+
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("")
+}
+
+// Field / row / surface separators — control characters that cannot appear in any fetched
+// column, so no encoding ambiguity is possible (mirrors nao_loader_watermark's chr(31)/chr(30)
+// digest convention, 20260728030001_nao_loader_runs.sql:224-231).
+const DK_FIELD_SEP = "\u001f"
+const DK_ROW_SEP = "\u001e"
+const DK_SURFACE_SEP = "\u001d"
+
+/** Deterministic per-row serialization for each of the five fetched input surfaces, in order. */
+function serializeInputSurface<T>(rows: readonly T[], fields: (row: T) => unknown[]): string {
+  return rows.map((row) => fields(row).map((v) => v ?? "").join(DK_FIELD_SEP)).join(DK_ROW_SEP)
+}
+
+/**
+ * demand_key for record_gap_events_keyed: sha256("gi.v1" ⟂ day ⟂ inputDigest), where inputDigest
+ * is a sha256 over the five fetched input surfaces (rule templates, baseline snapshots, personal
+ * signals, verified edges, metric values), each serialized in its already-stable fetch order
+ * (every fetchAll query above orders explicitly). Never over gapByAggKey's emitted events — see
+ * header comment.
+ */
+async function computeDemandKey(
+  day: string,
+  ruleRows: readonly RuleRow[],
+  baselines: readonly BaselineRow[],
+  personalRows: readonly (PersonalSignalRow & { user_id: string })[],
+  edges: readonly ServableEdge[],
+  seriesRows: readonly SeriesRow[],
+): Promise<string> {
+  const surfaces = [
+    serializeInputSurface(ruleRows, (r) => [
+      r.rule_id, r.condition_type, JSON.stringify(r.condition_params), r.title_template,
+      r.body_template, r.enabled_phase, r.effective_from, r.effective_to, r.deprecated_at,
+      r.expiry_days,
+    ]),
+    serializeInputSurface(baselines, (b) => [
+      b.user_id, b.metric_key, b.mean, b.std_dev, b.min, b.max, b.trend, b.confidence,
+      (b.data_sources ?? []).join(","), b.window_days,
+    ]),
+    serializeInputSurface(personalRows, (p) => [
+      p.user_id, p.metric_a, p.metric_b, p.rho, p.n_eff, p.q_value, p.stable,
+    ]),
+    serializeInputSurface(edges, (e) => [
+      e.edge_id, e.subject, e.object, e.relation, e.verified_at, e.edge_score, e.serving_band,
+    ]),
+    serializeInputSurface(seriesRows, (s) => [s.user_id, s.metric_key, s.log_date, s.value, s.source]),
+  ]
+  const inputDigest = await sha256Hex(surfaces.join(DK_SURFACE_SEP))
+  return sha256Hex(["gi.v1", day, inputDigest].join(DK_FIELD_SEP))
 }
 
 // ─── Handler ─────────────────────────────────────────────────────────────────────────────────
@@ -1113,12 +1187,19 @@ Deno.serve(async (req) => {
   }
 
   // A1 gap events (§S7 "emits gap events to A1" — same run, beside the composed rows; the
-  // upsert-increment is atomic per event inside record_gap_events).
+  // upsert-increment is atomic per event inside record_gap_events_keyed). R4-U3: keyed on this
+  // run's INPUT digest (computeDemandKey, above) so a replayed pipeline over unchanged inputs
+  // cannot double-count gap_ledger.demand, while a run over genuinely new inputs still does —
+  // see the "R4-U3 demand key" comment above fetchAll for the full rationale.
   const gapEvents = [...gapByAggKey.values()]
   if (gapEvents.length > 0) {
-    const { error } = await supabase.rpc("record_gap_events", { events: gapEvents })
+    const demandKey = await computeDemandKey(day, ruleRows, baselines, personalRows, edges, seriesRows)
+    const { error } = await supabase.rpc("record_gap_events_keyed", {
+      events: gapEvents,
+      p_demand_key: demandKey,
+    })
     if (error) {
-      console.error("gap_ledger record_gap_events error", error)
+      console.error("gap_ledger record_gap_events_keyed error", error)
       return new Response(JSON.stringify({ error: error.message }), { status: 500 })
     }
   }

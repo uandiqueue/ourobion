@@ -531,7 +531,7 @@ const MUTATING_ACTIONS: Readonly<Record<string, string>> = Object.freeze({
   'PATCH /api/seeds': 'seeds.toggle',
 });
 
-test('source-conformance: every non-U3 mutating handler uses a lifecycle boundary with its declared action', () => {
+test('source-conformance: every mutating handler uses a lifecycle boundary with its declared action', () => {
   const handlers = discoverHandlers();
   const mutating = handlers.filter((h) => h.method !== 'GET' && h.method !== 'HEAD' && h.method !== 'OPTIONS');
   assert.equal(mutating.length, 8, `expected 8 mutating handlers, found ${mutating.length}`);
@@ -544,13 +544,19 @@ test('source-conformance: every non-U3 mutating handler uses a lifecycle boundar
     const call = /(?:action:\s*|recordControlEvent\(\s*)'([a-z_.]+)'/.exec(h.body);
     assert.ok(call, `${key} (${rel}): no declared audit action`);
     assert.equal(call[1], expected, `${key} (${rel}): records '${call[1]}' but should record '${expected}'`);
-    if (key !== 'POST /api/loader') {
-      assert.match(
-        h.body,
-        /(?:runAuditedControlMutation|applyTransactionalControlMutation)\(/,
-        `${key} (${rel}): missing truthful lifecycle boundary`,
-      );
-      assert.match(h.body, /controlOperationId\(req\)/, `${key} (${rel}): missing stable operation id`);
+    assert.match(
+      h.body,
+      /(?:runAuditedControlMutation|applyTransactionalControlMutation)\(/,
+      `${key} (${rel}): missing truthful lifecycle boundary`,
+    );
+    assert.match(h.body, /controlOperationId\(req\)/, `${key} (${rel}): missing stable operation id`);
+    if (key === 'POST /api/loader') {
+      assert.match(h.body, /action:\s*'loader\.simulate'/,
+        `${key} (${rel}): loader attempt must use the closed loader action`);
+      assert.match(h.body, /NaoControlOutcomeUnknownError/,
+        `${key} (${rel}): response-loss ambiguity must remain outcome unknown`);
+      assert.match(h.body, /controlOutcomeUnknownErrorResponse\(error\)/,
+        `${key} (${rel}): outcome unknown must expose the stable operation id for reconciliation`);
     }
   }
   // No stale entry either.
@@ -602,7 +608,7 @@ test('source-conformance: recordControlEvent redacts detail and target, and neve
   // with a literal '\n' finds nothing and returns -1 — and `slice(0, -1)` then
   // silently widens `signature` to the WHOLE remainder of the module, which
   // matches `userId` inside guardRole() and fails for the wrong reason. The
-  // assertion below must test the overload signatures only.
+  // assertion below must test the function signature only.
   const server = readFileSync(path.join(NAO_ROOT, 'src', 'lib', 'authzServer.ts'), 'utf8')
     .replace(/\r\n/g, '\n');
   const fn = server.slice(server.indexOf('export async function recordControlEvent'));
@@ -610,9 +616,12 @@ test('source-conformance: recordControlEvent redacts detail and target, and neve
   assert.match(fn, /redactText\(event\.target\)/, 'target must be redacted before insert');
   // Attribution comes from the DB trigger (auth.uid()), never from a parameter —
   // there must be no actor/userId/role argument to get wrong or to lie in.
-  const implementationStart = fn.indexOf('export async function recordControlEvent(\n  eventOrAction');
-  assert.notEqual(implementationStart, -1, 'recordControlEvent lost its overload implementation signature');
-  const signature = fn.slice(0, implementationStart);
+  const signatureEnd = fn.indexOf('): Promise<void> {\n');
+  assert.notEqual(signatureEnd, -1, 'recordControlEvent lost its event-only implementation signature');
+  const signature = fn.slice(0, signatureEnd);
+  assert.match(signature, /event:\s*ControlEventInput/);
+  assert.doesNotMatch(signature, /legacy|eventOrAction|NaoControlAction/,
+    'recordControlEvent must not retain the U3 compatibility overload');
   for (const forbidden of ['actor', 'userId', 'user_id', 'role']) {
     assert.doesNotMatch(
       signature,

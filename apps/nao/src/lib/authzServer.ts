@@ -211,27 +211,9 @@ export type { NaoControlAction } from './controlAudit.ts';
  * leaves that attempt unresolved for explicit reconciliation.
  */
 export async function recordControlEvent(event: ControlEventInput): Promise<void>;
-/** Temporary U3 compatibility: records an honest unresolved attempt, never a success event. */
 export async function recordControlEvent(
-  action: NaoControlAction,
-  target?: string | null,
-  detail?: Record<string, unknown>,
-): Promise<void>;
-export async function recordControlEvent(
-  eventOrAction: ControlEventInput | NaoControlAction,
-  legacyTarget: string | null = null,
-  legacyDetail: Record<string, unknown> = {},
+  event: ControlEventInput,
 ): Promise<void> {
-  const event: ControlEventInput = typeof eventOrAction === 'string'
-    ? {
-        operationId: crypto.randomUUID(),
-        action: eventOrAction,
-        phase: 'attempted',
-        target: legacyTarget,
-        detail: legacyDetail,
-        errorCode: null,
-      }
-    : eventOrAction;
   const supabase = await createServerSupabaseClient();
   // Redaction removes identity; sanitisation removes bytes Postgres cannot store.
   const safeTarget = event.target === null ? null : sanitizeStorageValue(redactText(event.target));
