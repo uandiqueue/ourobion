@@ -17,7 +17,7 @@ import assert from 'node:assert/strict';
 
 import { callApiWorker, type FetchLike } from '../src/routes/apiWorker.js';
 import { LlmRouter } from '../src/router.js';
-import { TEST_MODE_LABEL, type LlmRequest } from '../src/types.js';
+import type { LlmRequest } from '../src/types.js';
 import { anthropicBody, jsonResponse, openaiBody, testConfig } from './helpers.js';
 
 const ENV = { ANTHROPIC_API_KEY: 'test-anthropic-key', OPENAI_API_KEY: 'test-openai-key' };
@@ -107,11 +107,12 @@ test('router: fills the vendor family and the decorrelation verdict for the veri
   assert.equal(res.modelIdentity.providerAttested, true);
 });
 
-test('router: TEST-MODE forces decorrelated FALSE (the invariant is off by definition)', async () => {
+test('router: a SAME-FAMILY verifier records decorrelated FALSE, attested still TRUE', async () => {
+  // R4-U3: such a config can no longer be LOADED (validateConfig hard-fails), but an
+  // injected object bypasses validation — so the router must still report the honest
+  // verdict rather than assume the invariant held.
   const config = testConfig();
-  // A single-provider test-mode posture: the verifier shares the synthesis family.
   config.nodes.verifier = { ...config.nodes.verifier, model: 'claude-sonnet-5' };
-  config.testMode = { reason: 'unit test' };
   const router = new LlmRouter({
     config,
     env: ENV,
@@ -120,7 +121,6 @@ test('router: TEST-MODE forces decorrelated FALSE (the invariant is off by defin
   });
   const res = await router.route(verifierReq);
   assert.equal(res.modelIdentity.decorrelatedFromSynthesis, false);
-  assert.equal(res.testMode?.label, TEST_MODE_LABEL);
   // Attestation is INDEPENDENT of decorrelation: a real provider still answered for itself.
   // Keeping the two apart is the point — collapsing them would either forgive a correlated
   // verifier or discard a genuine attestation.

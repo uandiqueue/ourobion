@@ -27,7 +27,17 @@ export interface StatusRow {
   per_day_usd_cap: number;
   per_run_token_cap: number;
   hard_stop_fraction: number;
+  /**
+   * R4-U3: ALWAYS false now. The router's `testMode` config block — the only
+   * thing that could ever set this true — was removed along with the
+   * decorrelation downgrade it enabled. The column and this field are RETAINED
+   * (rather than dropped) so the O10 projection table
+   * (20260724130000_create_o10_llm_router_boundaries.sql) and nao's ModelsPanel
+   * need no migration, and so historical rows published during the Run 2.0
+   * window keep their meaning.
+   */
   test_mode: boolean;
+  /** R4-U3: always null — see {@link StatusRow.test_mode}. */
   test_mode_reason: string | null;
   published_at: string;
 }
@@ -64,8 +74,6 @@ export function buildStatusRows(
   ledger: LedgerFile,
   publishedAt: string,
 ): PublishRows {
-  const testMode = config.testMode !== undefined;
-
   const status: StatusRow[] = LLM_NODE_IDS.map((node) => {
     const n = config.nodes[node];
     return {
@@ -76,8 +84,9 @@ export function buildStatusRows(
       per_day_usd_cap: config.budget.perDayUsdPerNode,
       per_run_token_cap: config.budget.perRunOutputTokens,
       hard_stop_fraction: config.budget.hardStopFraction,
-      test_mode: testMode,
-      test_mode_reason: testMode ? config.testMode!.reason : null,
+      // R4-U3: no config can request test mode any more — see StatusRow.test_mode.
+      test_mode: false,
+      test_mode_reason: null,
       published_at: publishedAt,
     };
   });

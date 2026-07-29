@@ -90,7 +90,7 @@ async function main(): Promise<number> {
     return 1;
   }
 
-  const config = loadConfig(); // TEST-MODE warning (if any) prints here — deliberate.
+  const config = loadConfig(); // Throws on any decorrelation violation — deliberate.
   const ledgerPath = resolveRepoPath(config.budget.ledgerPath);
   let ledger: LedgerFile = { version: 1, days: {}, runs: {} };
   if (existsSync(ledgerPath)) {

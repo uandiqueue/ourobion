@@ -9,8 +9,12 @@
  *    is the stable, exhaustively documented surface and the router only needs
  *    single-turn text/JSON — recorded as a session decision. Swapping to
  *    Responses later is contained to this file.
- *  - `google` family: no adapter yet (verifier is provisionally gpt-5 per C6);
- *    dispatching a google-family model throws a clear RouterConfigError.
+ *  - `google` family: no adapter yet; dispatching a google-family model throws a
+ *    clear RouterConfigError.
+ *
+ * R4-U3 · RAW BODY RETENTION: both adapters keep the provider's verbatim response
+ * text on `LlmResponse.rawBody` (defaulted ON, byte-capped, truncation recorded).
+ * The parsed subset below is a lossy projection; the raw body is the evidence.
  *
  * Retry: exponential backoff on 429 and 5xx (attempt n sleeps
  * baseDelayMs * 2^(n-1)); other non-2xx statuses fail immediately with a typed
@@ -25,7 +29,14 @@
 import type { RouterConfig } from '../config.js';
 import { providerFor } from '../config.js';
 import { RouterConfigError, RouterHttpError, RouterKeyMissingError } from '../errors.js';
-import type { LlmRequest, LlmResponse, ModelIdentity, VendorFamily } from '../types.js';
+import { captureRawBody } from '../raw.js';
+import {
+  DEFAULT_RAW_BODY_CAP_BYTES,
+  type LlmRequest,
+  type LlmResponse,
+  type ModelIdentity,
+  type VendorFamily,
+} from '../types.js';
 
 export const ANTHROPIC_MESSAGES_URL = 'https://api.anthropic.com/v1/messages';
 export const ANTHROPIC_VERSION = '2023-06-01';
@@ -45,6 +56,16 @@ export interface ApiWorkerOptions {
   baseDelayMs?: number;
   /** Injectable sleep for deterministic tests. */
   sleep?: (ms: number) => Promise<void>;
+  /**
+   * R4-U3 · Retain the provider's raw response body on the LlmResponse.
+   * DEFAULT TRUE. Retention is opt-OUT rather than opt-in on purpose: the whole
+   * reason this exists is that a previous run's provider evidence was discarded
+   * at parse time and could not be recovered, so "forgot to switch it on" must
+   * not be a way to lose it again.
+   */
+  retainRawBody?: boolean;
+  /** Byte cap for a retained raw body (default {@link DEFAULT_RAW_BODY_CAP_BYTES}). */
+  rawBodyCapBytes?: number;
 }
 
 function realSleep(ms: number): Promise<void> {
@@ -60,6 +81,8 @@ interface ResolvedOptions {
   maxAttempts: number;
   baseDelayMs: number;
   sleep: (ms: number) => Promise<void>;
+  retainRawBody: boolean;
+  rawBodyCapBytes: number;
 }
 
 function resolveOptions(opts: ApiWorkerOptions): ResolvedOptions {
@@ -69,16 +92,43 @@ function resolveOptions(opts: ApiWorkerOptions): ResolvedOptions {
     maxAttempts: opts.maxAttempts ?? 3,
     baseDelayMs: opts.baseDelayMs ?? 500,
     sleep: opts.sleep ?? realSleep,
+    // Defaulted ON — see ApiWorkerOptions.retainRawBody.
+    retainRawBody: opts.retainRawBody ?? true,
+    rawBodyCapBytes: opts.rawBodyCapBytes ?? DEFAULT_RAW_BODY_CAP_BYTES,
   };
 }
 
-/** POST once-with-retries; returns the parsed JSON body of the first 2xx. */
+/** The first 2xx of a POST: the parsed JSON body AND the exact text it was parsed from. */
+interface ProviderReply {
+  json: unknown;
+  /** Verbatim response text — the retention evidence (R4-U3). */
+  rawText: string;
+}
+
+/**
+ * Attach the retained raw body to a response, when retention is on.
+ *
+ * Spread as `...rawBodyField(o, rawText)` so `rawBody` is absent (not
+ * `undefined`) when retention is off — `exactOptionalPropertyTypes` distinguishes
+ * the two, and an absent field serialises out of the artifact cleanly.
+ */
+function rawBodyField(o: ResolvedOptions, rawText: string): Pick<LlmResponse, 'rawBody'> | object {
+  return o.retainRawBody ? { rawBody: captureRawBody(rawText, o.rawBodyCapBytes) } : {};
+}
+
+/**
+ * POST once-with-retries; returns the first 2xx body BOTH parsed and verbatim.
+ *
+ * The response is read as TEXT and parsed here rather than via `res.json()`,
+ * because `res.json()` consumes the stream and leaves no way to recover the
+ * original bytes — which is precisely the evidence R4-U3 exists to keep.
+ */
 async function postWithRetry(
   o: ResolvedOptions,
   url: string,
   headers: Record<string, string>,
   body: unknown,
-): Promise<unknown> {
+): Promise<ProviderReply> {
   let lastStatus = 0;
   let lastBody = '';
   for (let attempt = 1; attempt <= o.maxAttempts; attempt++) {
@@ -88,7 +138,19 @@ async function postWithRetry(
       body: JSON.stringify(body),
     });
     if (res.ok) {
-      return (await res.json()) as unknown;
+      const rawText = await res.text();
+      let json: unknown;
+      try {
+        json = JSON.parse(rawText) as unknown;
+      } catch (err) {
+        throw new RouterHttpError(
+          res.status,
+          rawText.slice(0, 2000),
+          `llm-router api_worker: ${url} returned ${res.status} with a non-JSON body: ` +
+            `${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+      return { json, rawText };
     }
     lastStatus = res.status;
     lastBody = (await res.text()).slice(0, 2000);
@@ -164,12 +226,13 @@ async function callAnthropic(
   if (system !== undefined && system.length > 0) body.system = system;
   if (req.temperature !== undefined) body.temperature = req.temperature;
 
-  const json = (await postWithRetry(
+  const reply = await postWithRetry(
     o,
     ANTHROPIC_MESSAGES_URL,
     { 'x-api-key': apiKey, 'anthropic-version': ANTHROPIC_VERSION },
     body,
-  )) as AnthropicResponse;
+  );
+  const json = reply.json as AnthropicResponse;
 
   const text = (json.content ?? [])
     .filter((b) => b.type === 'text' && typeof b.text === 'string')
@@ -184,6 +247,9 @@ async function callAnthropic(
     model: json.model ?? model,
     modelIdentity: apiWorkerIdentity(json.model, model, 'anthropic'),
     route: 'api_worker',
+    // R4-U3: everything this adapter did NOT map above (stop_reason, refusal
+    // metadata, ids, cache counters) survives only here.
+    ...rawBodyField(o, reply.rawText),
   };
 }
 
@@ -217,12 +283,13 @@ async function callOpenAi(
   if (req.temperature !== undefined) body.temperature = req.temperature;
   if (req.expectJson === true) body.response_format = { type: 'json_object' };
 
-  const json = (await postWithRetry(
+  const reply = await postWithRetry(
     o,
     OPENAI_CHAT_COMPLETIONS_URL,
     { authorization: `Bearer ${apiKey}` },
     body,
-  )) as OpenAiResponse;
+  );
+  const json = reply.json as OpenAiResponse;
 
   return {
     text: json.choices?.[0]?.message?.content ?? '',
@@ -233,6 +300,9 @@ async function callOpenAi(
     model: json.model ?? model,
     modelIdentity: apiWorkerIdentity(json.model, model, 'openai'),
     route: 'api_worker',
+    // R4-U3: same treatment as the Anthropic path — symmetric by design, so
+    // which provider answered never changes what evidence is kept.
+    ...rawBodyField(o, reply.rawText),
   };
 }
 
@@ -265,9 +335,9 @@ export async function callApiWorker(
       return callOpenAi(o, key, req, model, maxOutputTokens);
     case 'google':
       throw new RouterConfigError(
-        `llm-router api_worker: no Google adapter is implemented yet (verifier is provisionally ` +
-          `gpt-5-family per phase2-run-config C6). Add an adapter in routes/apiWorker.ts before ` +
-          `routing '${model}' through api_worker.`,
+        `llm-router api_worker: no Google adapter is implemented yet (the shipped posture is ` +
+          `OpenAI synthesis + Anthropic verifier — run-4 config decision C13). Add an adapter in ` +
+          `routes/apiWorker.ts before routing '${model}' through api_worker.`,
       );
   }
 }

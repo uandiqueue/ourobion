@@ -39,23 +39,13 @@ test('status: one row per node in LLM_NODE_IDS order, fields projected from conf
   assert.equal(synthesis.published_at, PUBLISHED_AT);
 });
 
-test('status: test_mode false + null reason without a testMode block', () => {
+test('status: test_mode is ALWAYS false now — no config can request it (R4-U3)', () => {
+  // The `testMode` config block was removed with the decorrelation downgrade it
+  // enabled; the projected column is retained (no migration) but pinned false.
   const { status } = buildStatusRows(testConfig(), emptyLedger(), PUBLISHED_AT);
   for (const row of status) {
     assert.equal(row.test_mode, false);
     assert.equal(row.test_mode_reason, null);
-  }
-});
-
-test('status: test_mode true + verbatim reason with a testMode block', () => {
-  const reason = 'Run 2.0 single-provider posture (unit test)';
-  const config = testConfig((raw) => {
-    raw.testMode = { reason };
-  });
-  const { status } = buildStatusRows(config, emptyLedger(), PUBLISHED_AT);
-  for (const row of status) {
-    assert.equal(row.test_mode, true);
-    assert.equal(row.test_mode_reason, reason);
   }
 });
 

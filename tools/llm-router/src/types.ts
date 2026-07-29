@@ -12,9 +12,10 @@
  * Node ids map onto the §10.1 inventory:
  *  - `seeder`           — agentic research-query seeder (memory 0013 roster)
  *  - `synthesis`        — A8 RelationshipClaim synthesis
- *  - `verifier`         — A10 adversarial verification (MUST be non-Anthropic
- *                         and a different vendor family than `synthesis` —
- *                         enforced at config load, see `config.ts`)
+ *  - `verifier`         — A10 adversarial verification (MUST be a DIFFERENT
+ *                         vendor family than `synthesis`; which vendor sits on
+ *                         either side is free — enforced at config load, see
+ *                         `config.ts`)
  *  - `phrasing_card`    — S8 grounded card phrasing (cheap tier)
  *  - `report_narrative` — S9 report narrative
  *  - `extract_assist`   — A4 role-tagging / A5 tiering assist (cheap tier)
@@ -44,26 +45,19 @@ export const LLM_NODE_IDS: readonly LlmNodeId[] = [
 export type RouteKind = 'local_agent' | 'api_worker';
 
 /**
- * The exact stamp downstream consumers MUST put on verifier verdicts / UI /
- * logs produced while the router runs under TEST-MODE (config `testMode` —
- * see config.ts). Wording is load-bearing (Run 2.0 posture decision): it says
- * the verdict came from a single-provider setup with the synthesis↔verifier
- * family-decorrelation invariant switched off, i.e. NOT an independent check.
+ * REJECTION SENTINEL (R4-U3). The router can no longer PRODUCE this label: the
+ * `testMode` config block that once downgraded the decorrelation invariant to a
+ * warning is gone, and the invariant is now an unconditional load failure
+ * (config.ts). The constant survives because artifacts written during the Run 2.0
+ * single-provider window still carry this exact string as their `verifierModel`,
+ * and the trust gate must keep recognising it as a NON-provider provenance stamp
+ * that can never read as an attested model identity —
+ * `brain-ingest verify/attest.ts` NON_PROVIDER_MODEL_MARKERS matches `/TEST-MODE/i`
+ * and a guard test pins that against this constant. Do not delete it, do not
+ * re-introduce a code path that emits it.
  */
 export const TEST_MODE_LABEL =
   'scaffolded + unit-tested (TEST-MODE: single-provider, decorrelation OFF)' as const;
-
-/**
- * Test-mode state attached to router results (and the operator report) when
- * the config carries a `testMode` block, so downstream consumers can label
- * verifier verdicts. Absent entirely outside test mode.
- */
-export interface TestModeState {
-  /** The operator-supplied justification from config `testMode.reason`. */
-  reason: string;
-  /** Always {@link TEST_MODE_LABEL} — the exact stamp for verdicts/UI/logs. */
-  label: string;
-}
 
 /** Vendor family used for the decorrelation invariant. */
 export type VendorFamily = 'anthropic' | 'openai' | 'google';
@@ -116,10 +110,55 @@ export interface ModelIdentity {
   returnedVersion: string | null;
   /**
    * True iff this node's configured family differs from the `synthesis` node's
-   * family AND the run is not under TEST-MODE (O7 / B-BR2 decorrelation). null
-   * when the router could not determine it. NEVER defaulted to true.
+   * family (O7 / B-BR2 decorrelation). null when the router could not determine
+   * it. NEVER defaulted to true.
    */
   decorrelatedFromSynthesis: boolean | null;
+}
+
+/**
+ * R4-U3 · Default cap on a retained raw provider body, in BYTES (256 KiB).
+ *
+ * Sized to hold an entire realistic verifier response (a few thousand output
+ * tokens of JSON plus provider metadata is well under 100 KiB) while bounding
+ * one pathological body's effect on the on-disk artifact. Truncation at this cap
+ * is always RECORDED, never silent — see {@link RawProviderResponse.truncated}.
+ */
+export const DEFAULT_RAW_BODY_CAP_BYTES = 262144;
+
+/**
+ * R4-U3 · The provider's RAW response body, retained verbatim.
+ *
+ * Why this exists: `callAnthropic` / `callOpenAi` parse the provider JSON and keep
+ * only text, usage, and the model id — everything else (refusal metadata, stop
+ * reasons, service tier, request ids, the exact bytes that were signed off as
+ * evidence) was dropped at the point of capture and is unrecoverable afterwards.
+ * A previous run permanently lost its provider evidence exactly this way. The raw
+ * body is the ONLY artifact that can later settle "what did the provider actually
+ * say", so it is retained by default rather than on request.
+ *
+ * PRIVACY / SURFACE BOUNDARY: these are provider responses about scientific
+ * claims, not user data, but they are UNREVIEWED model output. They are written
+ * to a side artifact (`edges/verification-raw.jsonl`) and are deliberately NOT a
+ * field of the `EdgeVerification` record that the edge-loader ingests into
+ * `edge_verifications` — nothing here may reach a table or field that feeds
+ * user-facing output.
+ */
+export interface RawProviderResponse {
+  /** The response body as text, verbatim, truncated to {@link capBytes} at most. */
+  body: string;
+  /** Byte length of the FULL body BEFORE any capping. */
+  bytes: number;
+  /** True when {@link body} is shorter than the original. Truncation is never silent. */
+  truncated: boolean;
+  /** The cap that was applied, in bytes — recorded so the cut is auditable. */
+  capBytes: number;
+  /**
+   * `sha256:<64 lowercase hex>` over the FULL, UNTRUNCATED body. A truncated copy
+   * still identifies the original bytes, so a retained-but-cut body is evidence of
+   * exactly which response it came from rather than an anonymous fragment.
+   */
+  sha256: string;
 }
 
 /** A single-turn request from a pipeline node. */
@@ -178,11 +217,12 @@ export interface LlmResponse {
   /** Which route served the call. */
   route: RouteKind;
   /**
-   * Present exactly when the router config carries a `testMode` block: the
-   * call was served under a posture where the decorrelation invariant may be
-   * off, and any verdict derived from it must carry `testMode.label`.
+   * R4-U3 · The provider's raw response body, retained. Present for every
+   * api_worker call unless retention was explicitly switched off; absent for the
+   * local_agent mailbox route, where no provider response exists to retain.
+   * See {@link RawProviderResponse} for the size cap and the surface boundary.
    */
-  testMode?: TestModeState;
+  rawBody?: RawProviderResponse;
 }
 
 /**

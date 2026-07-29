@@ -91,18 +91,14 @@ async function main(argv: string[]): Promise<number> {
     if (report.decorrelation.ok) {
       process.stdout.write(
         `\nDecorrelation: OK — synthesis=${report.decorrelation.synthesisFamily}, ` +
-          `verifier=${report.decorrelation.verifierFamily} (non-Anthropic enforced)\n`,
+          `verifier=${report.decorrelation.verifierFamily} (independent families enforced)\n`,
       );
     } else {
+      // Unreachable for a config loaded from disk (the invariant is a load
+      // failure); reachable only for an injected, unvalidated config object.
       process.stdout.write(
-        `\nDecorrelation: VIOLATED (allowed by TEST-MODE) — synthesis=${report.decorrelation.synthesisFamily}, ` +
-          `verifier=${report.decorrelation.verifierFamily}\n`,
-      );
-    }
-    if (report.testMode !== undefined) {
-      process.stdout.write(
-        `\nTEST-MODE ACTIVE — reason: ${report.testMode.reason}\n` +
-          `  All results must carry the label: ${report.testMode.label}\n`,
+        `\nDecorrelation: VIOLATED — synthesis=${report.decorrelation.synthesisFamily}, ` +
+          `verifier=${report.decorrelation.verifierFamily} are the SAME vendor family\n`,
       );
     }
     process.stdout.write('\nKeys:\n');

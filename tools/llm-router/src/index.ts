@@ -5,6 +5,7 @@
  */
 
 export {
+  DEFAULT_RAW_BODY_CAP_BYTES,
   estimateTokens,
   LLM_NODE_IDS,
   TEST_MODE_LABEL,
@@ -14,10 +15,11 @@ export {
   type LlmUsage,
   type ModelIdentity,
   type ModelIdentitySource,
+  type RawProviderResponse,
   type RouteKind,
-  type TestModeState,
   type VendorFamily,
 } from './types.js';
+export { captureRawBody } from './raw.js';
 export {
   RouterBudgetExceededError,
   RouterConfigError,
@@ -38,8 +40,6 @@ export {
   type PriceEntry,
   type ProviderEntry,
   type RouterConfig,
-  type TestModeConfig,
-  type ValidateOptions,
 } from './config.js';
 export {
   BudgetLedger,

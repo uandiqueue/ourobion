@@ -29,6 +29,7 @@ import type {
   VerifyArtifactPosture,
   VerifyArtifactRef,
   VerifyModelAttestation,
+  VerifyRawRecord,
   VerifyRecord,
 } from './types.js';
 
@@ -79,6 +80,43 @@ export function buildAttestation(response: LlmResponse | undefined): VerifyModel
     // NEVER default decorrelation to true: null (undetermined) records as false.
     decorrelated: identity.decorrelatedFromSynthesis === true,
     attested,
+  };
+}
+
+/**
+ * R4-U3 · Pair one verification with the RAW provider body that produced it, for
+ * the side artifact (`edges/verification-raw.jsonl`).
+ *
+ * Returns undefined when there is nothing to retain — no response at all
+ * (quoteCheck-only rung, fixtures) or a route that has no provider body to keep
+ * (the local-agent mailbox). That absence is honest: no raw record is written,
+ * rather than an empty one that would read as "the provider said nothing".
+ *
+ * This function does NOT decide truncation or hashing; it carries through exactly
+ * what the router captured, so the `sha256` on disk is the router's hash of the
+ * FULL body and the `truncated` flag is the router's, not a second opinion.
+ */
+export function buildRawRecord(
+  record: Pick<VerifyRecord, 'edgeId' | 'verifiedAt' | 'verifierModel'>,
+  response: LlmResponse | undefined,
+): VerifyRawRecord | undefined {
+  const raw = response?.rawBody;
+  if (response === undefined || raw === undefined) return undefined;
+  const attestation = buildAttestation(response);
+  const attested = attestation?.attested === true;
+  return {
+    edgeId: record.edgeId,
+    verifiedAt: record.verifiedAt,
+    verifierModel: record.verifierModel,
+    attestedModel: attested ? response.modelIdentity.model : null,
+    attested,
+    raw: {
+      body: raw.body,
+      bytes: raw.bytes,
+      truncated: raw.truncated,
+      capBytes: raw.capBytes,
+      sha256: raw.sha256,
+    },
   };
 }
 

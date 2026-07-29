@@ -1,7 +1,9 @@
 /**
- * Config validation tests — the DECORRELATION INVARIANT is the load-bearing
- * check (memory 0013 / architecture §10.1): no config with a same-family or
- * Anthropic-family verifier can be constructed. node:test, run via tsx.
+ * Config validation tests — shape, families, prices, budget sanity.
+ *
+ * The DECORRELATION INVARIANT itself (`family(verifier) !== family(synthesis)`)
+ * has its own suite in `decorrelation.test.ts`; only the two cases that belong
+ * to ordinary shape validation are duplicated here. node:test, run via tsx.
  */
 
 import { test } from 'node:test';
@@ -11,25 +13,21 @@ import { defaultConfigPath, familyOf, loadConfig, providerFor, validateConfig } 
 import { RouterConfigError } from '../src/errors.js';
 import { baseConfigObject, testConfig } from './helpers.js';
 
-test('the shipped router.config.json loads: Run 2.0 OpenAI-only TEST-MODE posture', () => {
-  const warnings: string[] = [];
-  const config = loadConfig(defaultConfigPath(), { warn: (m) => warnings.push(m) });
-  // Run 2.0 posture: heavy nodes gpt-5, cheap tier gpt-5-mini, ALL api_worker.
+test('the shipped router.config.json loads: run-4 OpenAI + Anthropic-verifier posture (C13)', () => {
+  const config = loadConfig(defaultConfigPath());
+  // C13 posture: OpenAI drives everything except the verifier, which is Anthropic.
   assert.equal(config.nodes.synthesis.model, 'gpt-5');
-  assert.equal(config.nodes.verifier.model, 'gpt-5');
+  assert.equal(config.nodes.verifier.model, 'claude-sonnet-5');
   assert.equal(config.nodes.seeder.model, 'gpt-5-mini');
   assert.equal(config.nodes.phrasing_card.model, 'gpt-5-mini');
   assert.equal(config.nodes.extract_assist.model, 'gpt-5-mini');
   assert.equal(config.nodes.report_narrative.model, 'gpt-5-mini');
-  for (const node of Object.values(config.nodes)) {
+  for (const [nodeId, node] of Object.entries(config.nodes)) {
     assert.equal(node.route, 'api_worker');
-    assert.equal(familyOf(config, node.model), 'openai');
+    assert.equal(familyOf(config, node.model), nodeId === 'verifier' ? 'anthropic' : 'openai');
   }
-  // Single provider ⇒ decorrelation is violated but downgraded by testMode:
-  // the config loads AND a loud warning names the invariant.
-  assert.ok(config.testMode !== undefined && config.testMode.reason.length > 0);
-  assert.equal(warnings.length, 1);
-  assert.match(warnings[0]!, /family\(synthesis\) !== family\(verifier\)/);
+  // No test-mode escape hatch survives in the shipped file (R4-U3).
+  assert.equal((config as unknown as Record<string, unknown>).testMode, undefined);
   // C7 caps set LOW for the 20-SGD run: US$1/day/node, 60k output tokens/run.
   assert.equal(config.budget.perRunOutputTokens, 60000);
   assert.equal(config.budget.perDayUsdPerNode, 1.0);
@@ -37,6 +35,10 @@ test('the shipped router.config.json loads: Run 2.0 OpenAI-only TEST-MODE postur
   // Shipped prices are all explicitly provisional.
   for (const price of Object.values(config.prices)) {
     assert.equal(price.provisional, true);
+  }
+  // Every node model has a price row (budget accounting is never blind).
+  for (const node of Object.values(config.nodes)) {
+    assert.ok(config.prices[node.model] !== undefined, `${node.model} needs a prices[] entry`);
   }
 });
 
@@ -48,22 +50,11 @@ test('a well-formed config validates and provider prefixes resolve families', ()
   assert.equal(providerFor(config, 'claude-haiku-4-5')?.envKey, 'ANTHROPIC_API_KEY');
 });
 
-test('DECORRELATION: an Anthropic-family verifier is refused at load', () => {
-  assert.throws(
-    () =>
-      testConfig((raw) => {
-        raw.nodes.verifier.model = 'claude-haiku-4-5';
-      }),
-    (err: unknown) =>
-      err instanceof RouterConfigError && /non-Anthropic|decorrelation/.test(err.message),
-  );
-});
-
 test('DECORRELATION: synthesis and verifier in the same family is refused', () => {
   assert.throws(
     () =>
       testConfig((raw) => {
-        // Both openai: still non-Anthropic verifier, but same-family — must fail.
+        // Both openai — must fail. (Full matrix in decorrelation.test.ts.)
         raw.nodes.synthesis.model = 'gpt-5';
         raw.prices['gpt-5'] = { inputUsdPerMTok: 1.25, outputUsdPerMTok: 10 };
       }),

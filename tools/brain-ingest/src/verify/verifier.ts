@@ -8,11 +8,14 @@
  *       (prompt.ts) → router node 'verifier' (api_worker) → parse → POST-ENFORCE
  *       the schema invariants (enforce.ts, never trusting the LLM) → validate
  *   → [quoteCheck-only] the cheap uncertain record (no retrieval, no LLM)
- *   → append `edges/verifications.jsonl` (artifact.ts) the A11 edge-loader reads.
+ *   → append `edges/verifications.jsonl` (artifact.ts) the A11 edge-loader reads,
+ *     PLUS the raw provider body to `edges/verification-raw.jsonl` (R4-U3).
  *
- * ROUTE CONSTRAINT (docs/memory/0012-0013): the verifier MUST run non-Anthropic
- * (decorrelation) — enforced by the router config load. In production it routes
- * `api_worker`; real runs are BLOCKED on the non-Anthropic key. Tests mock the
+ * ROUTE CONSTRAINT (docs/memory/0012-0013): the verifier MUST run in a DIFFERENT
+ * vendor family than the synthesis node (decorrelation) — enforced unconditionally
+ * at router config load. Which vendor is free; the run-4 posture is OpenAI
+ * synthesis + Anthropic verifier (config decision C13). In production it routes
+ * `api_worker`; real runs are BLOCKED on the verifier vendor's key. Tests mock the
  * router; any fixture verdict is stamped MOCK in `verifierModel` so it can never be
  * mistaken for a real verdict.
  *
@@ -34,8 +37,8 @@ import {
   type EnforceResult,
 } from './enforce.js';
 import { loadVerificationValidator } from './load.js';
-import { appendVerificationsToDir } from './artifact.js';
-import { buildArtifactRef, buildAttestation, posturefor } from './attest.js';
+import { appendVerificationsToDir, type WriteResult } from './artifact.js';
+import { buildArtifactRef, buildAttestation, buildRawRecord, posturefor } from './attest.js';
 import type {
   RetrievalResult,
   SynthClaim,
@@ -44,6 +47,7 @@ import type {
   VerificationValidator,
   VerifyCitation,
   VerifyModelAttestation,
+  VerifyRawRecord,
   VerifyRecord,
 } from './types.js';
 
@@ -354,7 +358,7 @@ export interface VerifyRunResult {
   results: VerifyClaimResult[];
   records: VerifyRecord[];
   rejectedCount: number;
-  write?: { path: string; written: number; skipped: number };
+  write?: WriteResult;
 }
 
 /**
@@ -376,11 +380,19 @@ export async function verify(opts: VerifyRunOptions): Promise<VerifyRunResult> {
 
   const results: VerifyClaimResult[] = [];
   const records: VerifyRecord[] = [];
+  // R4-U3: the raw provider body behind each written verification. Collected in
+  // the SAME loop as the records so evidence and verdict cannot drift apart, and
+  // written unconditionally with them — the retention is not opt-in.
+  const rawRecords: VerifyRawRecord[] = [];
   let rejectedCount = 0;
   for (const claim of claims) {
     const r = await verifyClaim(claim, opts);
     results.push(r);
-    if (r.record) records.push(r.record);
+    if (r.record) {
+      records.push(r.record);
+      const raw = buildRawRecord(r.record, r.response);
+      if (raw !== undefined) rawRecords.push(raw);
+    }
     if (r.rejected && !r.record) {
       rejectedCount++;
       log(`verify: REJECT ${claim.edgeId} — ${r.rejected.reason}: ${r.rejected.detail}`);
@@ -389,8 +401,14 @@ export async function verify(opts: VerifyRunOptions): Promise<VerifyRunResult> {
 
   const out: VerifyRunResult = { results, records, rejectedCount };
   if (!opts.triageOnly && !opts.dryRun && opts.edgesDir && records.length > 0) {
-    out.write = appendVerificationsToDir(opts.edgesDir, records);
+    out.write = appendVerificationsToDir(opts.edgesDir, records, rawRecords);
     log(`verify: wrote ${out.write.written} verification(s) (${out.write.skipped} dup) → ${out.write.path}`);
+    if (out.write.raw !== undefined) {
+      log(
+        `verify: retained ${out.write.raw.written} raw provider body/bodies ` +
+          `(${out.write.raw.skipped} dup) → ${out.write.raw.path}`,
+      );
+    }
   }
   return out;
 }
@@ -428,6 +446,7 @@ export { loadVerificationValidator } from './load.js';
 export {
   buildArtifactRef,
   buildAttestation,
+  buildRawRecord,
   canonicalJson,
   isNonProviderModelString,
   posturefor,
@@ -435,12 +454,16 @@ export {
   NON_PROVIDER_MODEL_MARKERS,
 } from './attest.js';
 export {
+  appendRawVerificationsToDir,
   appendVerificationsToDir,
   appendVerificationsToR2,
   verificationDedupeKey,
   dedupeAgainst,
+  rawVerificationsPath,
   verificationsPath,
+  RAW_VERIFICATIONS_BASENAME,
   VERIFICATIONS_BASENAME,
   R2_VERIFICATIONS_KEY,
+  type WriteResult,
 } from './artifact.js';
 export type * from './types.js';

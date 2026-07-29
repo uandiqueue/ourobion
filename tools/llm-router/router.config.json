@@ -1,12 +1,9 @@
 {
   "version": 1,
-  "testMode": {
-    "reason": "Run 2.0 single-provider posture (Jayden, 2026-07-24): only OPENAI_API_KEY is provisioned, so all six nodes run OpenAI and the synthesis<->verifier family-decorrelation invariant is deliberately OFF. Verifier verdicts are scaffolded + unit-tested, NOT independently verified. Restore a second provider and delete this block to re-arm the hard invariant."
-  },
   "nodes": {
     "seeder": { "model": "gpt-5-mini", "route": "api_worker", "maxOutputTokens": 8000 },
     "synthesis": { "model": "gpt-5", "route": "api_worker", "maxOutputTokens": 8000 },
-    "verifier": { "model": "gpt-5", "route": "api_worker", "maxOutputTokens": 8000 },
+    "verifier": { "model": "claude-sonnet-5", "route": "api_worker", "maxOutputTokens": 8000 },
     "phrasing_card": { "model": "gpt-5-mini", "route": "api_worker", "maxOutputTokens": 2000 },
     "report_narrative": { "model": "gpt-5-mini", "route": "api_worker", "maxOutputTokens": 4000 },
     "extract_assist": { "model": "gpt-5-mini", "route": "api_worker", "maxOutputTokens": 2000 }

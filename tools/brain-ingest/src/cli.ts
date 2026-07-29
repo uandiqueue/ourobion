@@ -56,9 +56,11 @@ Commands:
          [--edges-dir <dir>] [--artifact-revision <id>] [--dry-run] [--triage-only]
                                                    A10 adversarial verification: A9 quoteCheck →
                                                    budget triage (C7) → verifier-owned retrieval →
-                                                   refute-first LLM (router node 'verifier',
-                                                   non-Anthropic) → schema-enforced EdgeVerification;
-                                                   appends <edges-dir>/verifications.jsonl.
+                                                   refute-first LLM (router node 'verifier', in a
+                                                   different vendor family than synthesis) →
+                                                   schema-enforced EdgeVerification; appends
+                                                   <edges-dir>/verifications.jsonl + the raw provider
+                                                   body to <edges-dir>/verification-raw.jsonl.
                                                    --corpus <path>: JSONL of CorpusDoc lines the
                                                    verifier retrieves over (O15; corpus texts also
                                                    serve the quoteCheck for papers they cover);
@@ -365,7 +367,8 @@ async function runSynthesize(
  *  - `--triage-only`: print the budget-triage decision per claim; no retrieval / LLM / write.
  *  - `--dry-run`: run quoteCheck + retrieval + assemble the prompt; no LLM call / no write.
  *  - default: full run — routes the verifier node (api_worker per config; real runs need the
- *    non-Anthropic key) and appends edges/verifications.jsonl.
+ *    verifier vendor's key — ANTHROPIC_API_KEY under the C13 posture) and appends
+ *    edges/verifications.jsonl plus edges/verification-raw.jsonl (R4-U3 raw evidence).
  */
 async function runVerify(flags: Set<string>, options: Map<string, string>): Promise<number> {
   const log = (line: string) => process.stdout.write(line + '\n');
@@ -409,8 +412,9 @@ async function runVerify(flags: Set<string>, options: Map<string, string>): Prom
     }
 
     if (!dryRun) {
-      // The router config enforces the non-Anthropic decorrelation invariant at load;
-      // a real dispatch surfaces the missing key (run decision D4 / register B5).
+      // The router config enforces the decorrelation invariant (family(verifier) !==
+      // family(synthesis)) unconditionally at load; a real dispatch surfaces the missing
+      // key (run decision D4 / register B5).
       // U8/D13 carry-forward: the async factory fetches nao's cap overrides
       // (llm_router_cap_overrides) FAIL-SOFT so they bind this real verify run.
       const router = await LlmRouter.create();

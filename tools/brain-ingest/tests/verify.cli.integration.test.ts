@@ -39,9 +39,9 @@ const EVIDENCE_SNIPPETS = [
   'improvement in mood tracked the improvement in gut comfort',
 ];
 
-/** A canned OpenAI chat/completions body carrying a schema-passable verifier reply. */
-function openAiBody(): unknown {
-  const reply = JSON.stringify({
+/** The schema-passable verifier reply both canned bodies carry. */
+function verifierReply(): string {
+  return JSON.stringify({
     verdict: 'uncertain',
     sourceStances: [],
     directionCheck: { matchesClaim: false },
@@ -51,24 +51,39 @@ function openAiBody(): unknown {
     evidenceTier: 3,
     confidence: 0.4,
   });
+}
+
+/**
+ * R4-U3: the verifier node now routes to ANTHROPIC (config decision C13 — OpenAI
+ * synthesis, Anthropic verifier, decorrelated). The canned body must therefore be
+ * the Anthropic Messages shape; an OpenAI body would parse to empty text and the
+ * assertion would pass against a fallback record instead of a real seam.
+ */
+function anthropicBody(): unknown {
   return {
-    model: 'gpt-5-test',
-    choices: [{ message: { content: reply } }],
-    usage: { prompt_tokens: 50, completion_tokens: 30 },
+    id: 'msg_cli_test',
+    type: 'message',
+    model: 'claude-sonnet-5-test',
+    content: [{ type: 'text', text: verifierReply() }],
+    stop_reason: 'end_turn',
+    usage: { input_tokens: 50, output_tokens: 30 },
   };
 }
 
 test('ACCEPTANCE (i): real CLI verify seam puts evidence TEXT + provenance in the router request', async () => {
   const edgesDir = mkdtempSync(join(tmpdir(), 'verify-cli-'));
 
-  // Env the CLI seam needs: dummy R2/config keys + an OpenAI key so the api_worker route
-  // reaches fetch (the config's OpenAI-only TEST-MODE posture routes the verifier there).
+  // Env the CLI seam needs: dummy R2/config keys + BOTH provider keys so the api_worker
+  // route reaches fetch. The shipped posture (C13) sends the verifier to Anthropic and
+  // everything else to OpenAI, so a single key is no longer enough to get past the
+  // key-presence check. Both are dummies; the stubbed fetch answers, nothing is spent.
   const savedEnv: Record<string, string | undefined> = {};
   const setEnv = (k: string, v: string): void => {
     savedEnv[k] = process.env[k];
     process.env[k] = v;
   };
   setEnv('OPENAI_API_KEY', 'sk-test-dummy');
+  setEnv('ANTHROPIC_API_KEY', 'sk-ant-test-dummy');
   setEnv('INGEST_CONTACT_EMAIL', 'test@example.com');
   setEnv('OPENALEX_API_KEY', 'dummy');
   setEnv('R2_ENDPOINT', 'https://example.com');
@@ -83,8 +98,8 @@ test('ACCEPTANCE (i): real CLI verify seam puts evidence TEXT + provenance in th
     return {
       ok: true,
       status: 200,
-      json: async () => openAiBody(),
-      text: async () => JSON.stringify(openAiBody()),
+      json: async () => anthropicBody(),
+      text: async () => JSON.stringify(anthropicBody()),
     } as unknown as Response;
   }) as typeof fetch;
 

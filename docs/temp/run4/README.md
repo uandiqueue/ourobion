@@ -53,6 +53,7 @@ The complete live snapshot, check counts, dependencies, and required order are i
 | [`run-envelope.json`](./run-envelope.json) | Machine-readable branch, gate, unit and PR snapshot |
 | [`orchestration-log.md`](./orchestration-log.md) | Historical preflight evidence plus the current resume pointer |
 | [`decisions-signoff.md`](./decisions-signoff.md) | Accepted decisions and remaining signoff work |
+| [`config-decisions.md`](./config-decisions.md) | Run 4 C-entries: config values shipped (model ids, provider posture, retention caps) as value shipped · alternatives · rationale |
 | [`next-build-optimizations.md`](./next-build-optimizations.md) | Scope/design authority and the candidate units |
 | [`pending-build-register.md`](./pending-build-register.md) | Full gap superset; current overlay distinguishes delivered, open, partial and deferred work |
 | [`run3-audit-findings.md`](./run3-audit-findings.md) | Historical audit explaining why Run 4 gates exist; not current status |
