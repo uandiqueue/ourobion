@@ -4,7 +4,7 @@ summary: The submission-ready write-up (≤1,000 words across the five judging p
 type: reference
 scope: repo
 status: draft
-updated: 2026-07-28
+updated: 2026-07-29
 ---
 
 # Ourobion — Launchpad 2026 AI Challenge Write-up
@@ -115,7 +115,7 @@ portability is a direction, not a claim we're making today.
 | Claim | File / PR |
 |---|---|
 | Grounding invariant, `EdgeVerification`, `independentRetrieval` | `shared/brain/relationships.ts`, `shared/brain/index.ts`, `shared/brain/relationships.schema.ts` |
-| The one end-to-end run (91,162-char extraction, 12 passages, held edge) | PR #190 (open, unmerged) |
+| The one end-to-end run (91,162-char extraction, 12 passages, held edge) | PR #190 (merged) |
 | Synthesis + passage selection | `tools/brain-ingest/src/synth/` |
 | Verification + retrieval | `tools/brain-ingest/src/verify/` |
 | Deterministic insight engine | `tools/rules/`, `supabase/functions/generate-insights/` |
@@ -129,10 +129,12 @@ portability is a direction, not a claim we're making today.
 | | Count | Span |
 |---|---|---|
 | Prebuild | 118 commits, ending `2214fbb` (merge of PR #38) | through 2026-07-03 |
-| Delta | 248 commits | 2026-07-13 → 2026-07-28 |
+| Delta snapshot | 248 commits through `547280f` | 2026-07-13 → 2026-07-28, before this write-up commit |
 
-Re-measured directly from `git log` on 2026-07-28. No commits exist between 4 and 12 Jul — the delta is
-~16 days of work, not four continuous weeks.
+Re-measured directly from `git log` on 2026-07-28: `git rev-list --count 2214fbb..547280f` returns
+248. The write-up commit and later reconciliation merges are deliberately outside that frozen
+snapshot. No commits exist between 4 and 12 Jul — the delta is ~16 days of work, not four continuous
+weeks.
 
 **Action still required before submission:** `git tag -l` returns empty — the `pre-hackathon-baseline` tag
 has not been created yet. Until it exists, the sentence "everything before the tag is prior work" is not
@@ -184,4 +186,4 @@ cross-examining one model with another.
 
 ---
 
-*Word count, five pillar sections only (appendices excluded, per the rules): 998 words.*
+*Word count, five pillar sections only (appendices excluded, per the rules): 997 whitespace-delimited tokens.*
