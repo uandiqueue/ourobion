@@ -161,7 +161,9 @@ class _ArchiveTabState extends State<ArchiveTab> {
                                 const SizedBox(height: 12),
                                 if (_cards.isEmpty)
                                   const _EmptyArchive()
-                                else
+                                else ...[
+                                  const _ArchiveCollectionArtwork(),
+                                  const SizedBox(height: 12),
                                   for (var i = 0; i < _cards.length; i++) ...[
                                     if (i > 0) const SizedBox(height: 11),
                                     _ArchiveTile(
@@ -169,6 +171,7 @@ class _ArchiveTabState extends State<ArchiveTab> {
                                       onTap: () => _openDetail(_cards[i]),
                                     ),
                                   ],
+                                ],
 
                                 // ── Historical metric trends (issue #200) ──
                                 // Real per-metric daily series over the same
@@ -277,21 +280,30 @@ class _ArchiveTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = InsightCardVisual.iconColor(card.category);
     return GoldCard(
       onTap: onTap,
       padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: InsightCardVisual.iconBg(card.category),
-              borderRadius: BorderRadius.circular(14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: SizedBox(
+              width: 58,
+              height: 64,
+              child: Image.asset(
+                BiotopeGeneratedAssets.archivePreservedFlowerFragment,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stack) => Container(
+                  color: InsightCardVisual.iconBg(card.category),
+                  child: Icon(
+                    InsightCardVisual.icon(card.category),
+                    size: 21,
+                    color: InsightCardVisual.iconColor(card.category),
+                  ),
+                ),
+              ),
             ),
-            child: Icon(InsightCardVisual.icon(card.category), size: 21, color: iconColor),
           ),
           const SizedBox(width: 13),
           Expanded(
@@ -304,7 +316,7 @@ class _ArchiveTile extends StatelessWidget {
                     fontSize: 9,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.4,
-                    color: iconColor,
+                  color: InsightCardVisual.iconColor(card.category),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -341,36 +353,103 @@ class _EmptyArchive extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              BiotopeGeneratedAssets.emptyArchiveSpecimen,
-              width: 120,
-              height: 120,
-              errorBuilder: (context, error, stack) => const SizedBox(width: 120, height: 120),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              'Nothing saved yet',
-              style: GoogleFonts.manrope(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                letterSpacing: -0.2,
-                color: OurobionColors.onSurface,
+    return GoldCard(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 23),
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            right: -42,
+            top: -38,
+            child: Opacity(
+              opacity: 0.42,
+              child: Image.asset(
+                BiotopeGeneratedAssets.archiveHerbariumSpecimen,
+                width: 130,
+                height: 130,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stack) => const SizedBox.shrink(),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Swipe right on a card in Insights to press it into your archive.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.manrope(
-                fontSize: 13,
-                color: OurobionColors.onSurfaceVariant,
-                height: 1.5,
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                BiotopeGeneratedAssets.emptyArchiveSpecimen,
+                width: 132,
+                height: 132,
+                errorBuilder: (context, error, stack) => const SizedBox(width: 132, height: 132),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Nothing saved yet',
+                style: GoogleFonts.manrope(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.2,
+                  color: OurobionColors.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Swipe right on a card in Insights to press it into your archive.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  color: OurobionColors.onSurfaceVariant,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A light herbarium strip gives populated archives the same porcelain specimen
+/// treatment as the reference without replacing the real saved-card list.
+class _ArchiveCollectionArtwork extends StatelessWidget {
+  const _ArchiveCollectionArtwork();
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: SizedBox(
+        height: 94,
+        width: double.infinity,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              BiotopeGeneratedAssets.archiveHerbariumSpecimen,
+              fit: BoxFit.cover,
+              alignment: Alignment.centerRight,
+              errorBuilder: (context, error, stack) => const ColoredBox(
+                color: OurobionColors.primaryContainer,
+              ),
+            ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    OurobionColors.surfaceLowest.withValues(alpha: 0.94),
+                    OurobionColors.surfaceLowest.withValues(alpha: 0.22),
+                  ],
+                ),
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                width: 72,
+                height: 1,
+                margin: const EdgeInsets.only(left: 18),
+                color: OurobionColors.primary.withValues(alpha: 0.55),
               ),
             ),
           ],

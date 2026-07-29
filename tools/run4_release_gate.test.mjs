@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -6,6 +7,14 @@ import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import {
   RUN4_UNIT_BASE_SHA,
+  RUN4_PRODUCT_BASE_SHA,
+  RUN4_MT4_EXCLUSION_COUNT,
+  RUN4_MT4_EXCLUSION_SHA256,
+  RUN4_MT4_MERGE_SHA,
+  RUN4_NON_ACCEPTANCE_UNIT_BASE_SHA,
+  checkProductLandingDelta,
+  mt4ExclusionManifest,
+  productLandingDelta,
   RUN4_FUNCTIONS,
   RUN4_MAX_ADDED_LINES,
   RUN4_MAX_ALLOWLISTED_BINARY_BYTES,
@@ -95,7 +104,10 @@ test('actual Run 4 workflow has exact aggregate structure and executable gates',
   const workflow = readFileSync(resolve('.github/workflows/ci.yml'), 'utf8');
   assert.doesNotThrow(() => validateRun4Workflow(workflow));
   assert.throws(() => validateRun4Workflow(workflow.replace('needs: [context, ', 'needs: [')), /needs.*mismatch/);
-  assert.throws(() => validateRun4Workflow(workflow.replace(', model-training-core, model-training-lint-type]', ']')), /needs.*mismatch/);
+  assert.throws(() => validateRun4Workflow(workflow.replace(', arch-boundaries, secret-scan]', ']')), /needs.*mismatch/);
+  assert.throws(() => validateRun4Workflow(workflow.replace('node tools/check_arch_boundaries.mjs', 'echo bypass')), /arch-boundaries frozen job contract drifted/);
+  assert.throws(() => validateRun4Workflow(workflow.replace('node tools/secret_scan_guard.mjs client-surface', 'echo bypass')), /secret-scan frozen job contract drifted/);
+  assert.throws(() => validateRun4Workflow(workflow.replace('actions/checkout@11d5960a326750d5838078e36cf38b85af677262', 'actions/checkout@v4')), /approved checkout|frozen job contract/);
   assert.throws(() => validateRun4Workflow(workflow.replace('node tools/run4_release_gate.mjs aggregate', 'echo node tools/run4_release_gate.mjs aggregate')), /runtime assertion drifted/);
   assert.throws(() => validateRun4Workflow(workflow.replace('      - name: Fail unless every required dependency succeeded', '      - name: Fail unless every required dependency succeeded\n        if: ${{ 1 == 0 }}')), /cannot set if/);
   assert.throws(() => validateRun4Workflow(workflow.replace('      - name: Recompute frozen graphs and verify local-only runtime attestation', '      - name: Recompute frozen graphs and verify local-only runtime attestation\n        continue-on-error: ${{ true }}')), /cannot set continue-on-error/);
@@ -122,9 +134,9 @@ test('actual Run 4 workflow has exact aggregate structure and executable gates',
   assert.deepEqual([...RUN4_NODE_TOOL_DRIFT_PACKAGES].length, 2);
 });
 
-test('runtime aggregate requires the exact ten successful dependencies', () => {
+test('runtime aggregate requires the exact twelve successful dependencies', () => {
   const good = Object.fromEntries(RUN4_REQUIRED_JOBS.map((name) => [name, { result: 'success' }]));
-  assert.equal(Object.keys(checkAggregateNeeds(JSON.stringify(good))).length, 10);
+  assert.equal(Object.keys(checkAggregateNeeds(JSON.stringify(good))).length, 12);
   const missing = { ...good }; delete missing.context;
   assert.throws(() => checkAggregateNeeds(JSON.stringify(missing)), /runtime needs.*mismatch/);
   const collision = { ...good }; delete collision.context; delete collision['deno-check']; collision['context|deno-check'] = { result: 'success' };
@@ -132,6 +144,8 @@ test('runtime aggregate requires the exact ten successful dependencies', () => {
   assert.throws(() => checkAggregateNeeds(JSON.stringify({ ...good, context: { result: 'skipped' } })), /not successful/);
   assert.throws(() => checkAggregateNeeds(JSON.stringify({ ...good, 'model-training-core': { result: 'failure' } })), /model-training-core=failure/);
   assert.throws(() => checkAggregateNeeds(JSON.stringify({ ...good, 'model-training-lint-type': { result: 'skipped' } })), /model-training-lint-type=skipped/);
+  assert.throws(() => checkAggregateNeeds(JSON.stringify({ ...good, 'arch-boundaries': { result: 'failure' } })), /arch-boundaries=failure/);
+  assert.throws(() => checkAggregateNeeds(JSON.stringify({ ...good, 'secret-scan': { result: 'skipped' } })), /secret-scan=skipped/);
 });
 
 test('landing delta fixes accepted constants and rejects shallow, rename, binary, and overflow input', () => {
@@ -226,6 +240,120 @@ test('landing delta allowlisted-binary exception passes allowlisted paths at zer
       { [`cat-file -s ${head}:${bigPathA}`]: `${RUN4_MAX_ALLOWLISTED_BINARY_BYTES}\n`, [`cat-file -s ${head}:${bigPathB}`]: '2\n' },
     ),
     /allowlisted binary bytes/,
+  );
+});
+
+test('MT4 exclusion set is bound to its provenance and cannot be widened', () => {
+  const exclusions = mt4ExclusionManifest();
+  assert.equal(exclusions.length, RUN4_MT4_EXCLUSION_COUNT);
+  assert.equal(hashTextEvidence(JSON.stringify(exclusions)), RUN4_MT4_EXCLUSION_SHA256);
+  // Every excluded record carries a resolved blob, so an edit to an excluded path is detectable
+  // rather than forgiven by path name alone.
+  assert.ok(exclusions.every((record) => /^[0-9a-f]{40}$/i.test(record.blob) && record.path && record.status));
+  // A caller cannot smuggle an extra path into the authorized exclusion set.
+  assert.throws(
+    () => productLandingDelta({ excludedPaths: [...exclusions.map(({ path }) => path), 'unexpected'] }),
+    /requested MT4 exclusions/
+  );
+});
+
+test('product cap measures the immutable union, reports breach without throwing, and stays non-acceptance', () => {
+  // The per-unit base is preserved under an explicitly non-acceptance name (#183 scope line 3),
+  // and it is the CURRENT unit base, not the stale MT4 merge.
+  assert.equal(RUN4_NON_ACCEPTANCE_UNIT_BASE_SHA, RUN4_UNIT_BASE_SHA);
+  assert.notEqual(RUN4_NON_ACCEPTANCE_UNIT_BASE_SHA, RUN4_MT4_MERGE_SHA);
+
+  const delta = productLandingDelta();
+  assert.equal(delta.base, RUN4_PRODUCT_BASE_SHA);
+  assert.equal(delta.excludedPaths, RUN4_MT4_EXCLUSION_COUNT);
+  assert.equal(delta.allowlistedBinaryPaths, 15);
+  assert.ok(delta.allowlistedBinaryBytes > 0 && delta.allowlistedBinaryBytes <= RUN4_MAX_ALLOWLISTED_BINARY_BYTES);
+  assert.ok(Number.isSafeInteger(delta.changedPaths) && Number.isSafeInteger(delta.addedLines));
+  // Measurement reports breach as data; only the enforcement wrapper throws. This is the whole
+  // "record, don't gate" split — if these two ever agree, the measurement has become a gate.
+  assert.equal(delta.withinCap, delta.changedPaths <= RUN4_MAX_CHANGED_PATHS && delta.addedLines <= RUN4_MAX_ADDED_LINES);
+  if (!delta.withinCap) {
+    assert.throws(
+      () => checkProductLandingDelta({ base: RUN4_PRODUCT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES }),
+      /product landing delta has \d+ (paths|added lines); cap is/
+    );
+  }
+});
+
+const productGitWithSyntheticBinaryRows = (records) => (command, args, options) => {
+  if (command === 'git' && args[0] === 'cat-file' && args[1] === '-s') {
+    const ref = args[2];
+    const path = ref.slice(ref.indexOf(':') + 1);
+    const record = records.find((item) => item.path === path);
+    if (record) {
+      if (record.size instanceof Error) throw record.size;
+      return `${record.size}\n`;
+    }
+  }
+
+  const actual = execFileSync(command, args, options);
+  const productRange = typeof args.at(-1) === 'string' && args.at(-1).startsWith(`${RUN4_PRODUCT_BASE_SHA}..`);
+  if (command !== 'git' || args[0] !== 'diff' || !productRange) return actual;
+
+  let synthetic = '';
+  if (args.includes('--name-status')) synthetic = records.map(({ path, status = 'A' }) => `${status}\0${path}\0`).join('');
+  if (args.includes('--numstat')) synthetic = records.map(({ path }) => `-\t-\t${path}\0`).join('');
+  if (!synthetic) return actual;
+  return `${actual}${actual && !actual.endsWith('\0') ? '\0' : ''}${synthetic}`;
+};
+
+test('product cap rejects unexpected, unmeasurable, over-byte-cap, and over-path-cap binary rows', () => {
+  assert.throws(
+    () => productLandingDelta({
+      git: productGitWithSyntheticBinaryRows([{ path: 'unexpected/product-binary.bin', size: 1 }]),
+    }),
+    /binary\/unparsable/,
+  );
+  assert.throws(
+    () => productLandingDelta({
+      git: productGitWithSyntheticBinaryRows([{ path: 'apps/nao/public/brand/unmeasurable-product.png', size: new Error('synthetic blob size failure') }]),
+    }),
+    /synthetic blob size failure/,
+  );
+  assert.throws(
+    () => productLandingDelta({
+      git: productGitWithSyntheticBinaryRows([{ path: 'apps/nao/public/brand/oversize-product.png', size: RUN4_MAX_ALLOWLISTED_BINARY_BYTES + 1 }]),
+    }),
+    /product landing has \d+ allowlisted binary bytes; cap is/,
+  );
+
+  const tooMany = Array.from(
+    { length: RUN4_MAX_ALLOWLISTED_BINARY_PATHS + 1 },
+    (_, index) => ({ path: `apps/nao/public/brand/synthetic-product-${index}.png`, size: 1 }),
+  );
+  assert.throws(
+    () => productLandingDelta({ git: productGitWithSyntheticBinaryRows(tooMany) }),
+    /product landing has \d+ allowlisted binary paths; cap is/,
+  );
+});
+
+test('product cap enforcement rejects a moving base, a drifted cap, and shallow history', () => {
+  // The per-unit boundary can never satisfy the product gate — that is the #183 invariant.
+  assert.throws(
+    () => checkProductLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES }),
+    /base must equal immutable product SHA/
+  );
+  assert.throws(
+    () => checkProductLandingDelta({ base: 'a'.repeat(40), maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES }),
+    /base must equal immutable product SHA/
+  );
+  // No caller may raise the cap by passing a bigger number.
+  assert.throws(
+    () => checkProductLandingDelta({ base: RUN4_PRODUCT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS + 1, maxAdded: RUN4_MAX_ADDED_LINES }),
+    /maxPaths must equal accepted cap/
+  );
+  assert.throws(
+    () => checkProductLandingDelta({ base: RUN4_PRODUCT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES + 1 }),
+    /maxAdded must equal accepted cap/
+  );
+  assert.throws(
+    () => productLandingDelta({ git: (_command, args) => (args.join(' ') === 'rev-parse --is-shallow-repository' ? 'true\n' : '') }),
+    /shallow/
   );
 });
 

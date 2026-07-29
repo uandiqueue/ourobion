@@ -109,6 +109,10 @@ data/llm-router/
 # ═══════════════════════════════════════════════════════════════
 # 8. MODEL-TRAINING (Python workspace) — model-training/, see AGENTS.md §1/§4
 # ═══════════════════════════════════════════════════════════════
+# Root-level staging area for complete model bundles awaiting upload to
+# approved external object storage (for example, private Cloudflare R2).
+/model/
+
 # Every pattern below is anchored to /model-training/: it is the repo's one
 # isolated Python workspace, and anchoring keeps an ML-specific pattern (e.g.
 # *.onnx, *.bin) from ever matching an unrelated path elsewhere in the tree —

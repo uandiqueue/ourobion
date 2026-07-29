@@ -168,6 +168,62 @@ List<String> quotedListAfter(String src, String label) {
   return RegExp("['\"]([^'\"]+)['\"]").allMatches(block).map((m) => m.group(1)!).toList();
 }
 
+/// Like [quotedListAfter], but for a declaration whose TYPE ANNOTATION itself contains brackets
+/// before the array literal (e.g. TS `NAME: readonly string[] = [ ... ]`) — [quotedListAfter]
+/// would mistake the `[]` in `string[]` for the literal's brackets and read an empty array.
+/// This instead locates the `[` that follows the declaration's `=`, which is always past any
+/// such type annotation. Strips `//` line comments first so a commented-out entry is not counted.
+List<String> quotedListAfterEquals(String src, String label) {
+  final li = src.indexOf(label);
+  if (li < 0) throw StateError('label $label not found');
+  final eq = src.indexOf('=', li);
+  if (eq < 0) throw StateError('assignment after $label not found');
+  final open = src.indexOf('[', eq);
+  final close = src.indexOf(']', open);
+  if (open < 0 || close < 0) throw StateError('array after $label not found');
+  var block = src.substring(open + 1, close).replaceAll(RegExp(r'//[^\n]*'), '');
+  return RegExp("['\"]([^'\"]+)['\"]").allMatches(block).map((m) => m.group(1)!).toList();
+}
+
+/// The quoted string literals (keys AND values, in source order) inside the first BALANCED
+/// `{ ... }` block following [label] in [src]. Unlike [quotedListAfter] (flat `[...]` arrays),
+/// this tracks brace depth so it also handles a nested object (e.g. a map of maps) — the whole
+/// block is captured, not just up to the first `}`.
+/// Strips `//` line comments first so a commented-out entry is not counted.
+List<String> quotedBlockAfter(String src, String label) {
+  final li = src.indexOf(label);
+  if (li < 0) throw StateError('label $label not found');
+  final open = src.indexOf('{', li);
+  if (open < 0) throw StateError('block after $label not found');
+  var depth = 0;
+  var i = open;
+  for (; i < src.length; i++) {
+    if (src[i] == '{') depth++;
+    if (src[i] == '}') {
+      depth--;
+      if (depth == 0) break;
+    }
+  }
+  if (depth != 0) throw StateError('unbalanced braces in block after $label');
+  var block = src.substring(open + 1, i).replaceAll(RegExp(r'//[^\n]*'), '');
+  return RegExp("['\"]([^'\"]+)['\"]").allMatches(block).map((m) => m.group(1)!).toList();
+}
+
+/// The quoted string literals (in source order) in a scalar `const X = '...';` (or `+`-
+/// concatenated multi-literal) assignment following [label] in [src] — everything between the
+/// first `=` and the terminating `;`. Used for single-value constants such as disclosure
+/// sentences, as opposed to [quotedListAfter] (`[...]`) or [quotedBlockAfter] (`{...}`).
+List<String> quotedScalarAfter(String src, String label) {
+  final li = src.indexOf(label);
+  if (li < 0) throw StateError('label $label not found');
+  final eq = src.indexOf('=', li);
+  if (eq < 0) throw StateError('assignment after $label not found');
+  final semi = src.indexOf(';', eq);
+  if (semi < 0) throw StateError('terminating ; after $label not found');
+  final block = src.substring(eq + 1, semi);
+  return RegExp("['\"]([^'\"]+)['\"]").allMatches(block).map((m) => m.group(1)!).toList();
+}
+
 /// {key: dqs.weight} for registry metrics with countsTowardDailyCompleteness: true.
 Map<String, int> registryDailyCoreWeights(String registrySource) {
   final keyRe = RegExp('''key:\\s*['"]([a-z0-9_]+)['"]''');

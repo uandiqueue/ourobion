@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../core/generated_assets.dart';
 import '../../../../core/theme.dart';
 import '../../index.dart';
 
@@ -36,6 +37,24 @@ abstract final class InsightCardVisual {
         InsightCategory.vector => OurobionColors.surfaceContainer,
         InsightCategory.descriptive => OurobionColors.surfaceContainer,
         InsightCategory.relationship => OurobionColors.tertiaryFixedDim,
+      };
+
+  /// The deck's photography is deliberately selected from the card category,
+  /// never from a server field. That lets the real card model stay unchanged
+  /// while replacing the old generic icon panel with the accepted generated
+  /// botanical artwork from the HTML reference.
+  static String artwork(InsightCategory cat) => switch (cat) {
+        InsightCategory.hydration =>
+          BiotopeGeneratedAssets.insightsBranchingNodeSystem,
+        InsightCategory.gut => BiotopeGeneratedAssets.insightsBiomechHeartBloom,
+        InsightCategory.behaviour =>
+          BiotopeGeneratedAssets.insightsNeuralBotanicalCluster,
+        InsightCategory.vector =>
+          BiotopeGeneratedAssets.insightsBranchingNodeSystem,
+        InsightCategory.descriptive =>
+          BiotopeGeneratedAssets.insightsNeuralBotanicalCluster,
+        InsightCategory.relationship =>
+          BiotopeGeneratedAssets.insightsBiomechHeartBloom,
       };
 
   static String categoryLabel(InsightCategory cat) => switch (cat) {

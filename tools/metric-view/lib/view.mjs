@@ -52,10 +52,132 @@ const WIDE_TABLES = {
 const LONG_TABLES = new Set(['signals']);
 
 /** The metrics the view unpivots: active + numeric/ordinal (a superset of baselineApplicable). */
-export function viewMetrics() {
-  return metrics.METRICS.filter(
+export function viewMetrics(registry = metrics.METRICS) {
+  return registry.filter(
     (m) => m.status === 'active' && (m.type === 'numeric' || m.type === 'ordinal'),
   );
+}
+
+function eventBranch(metric) {
+  const policy = metric.dailyProjection;
+  const date = `(occurred_at at time zone 'utc')::date`;
+  // jsonb_typeof alone is insufficient: PostgreSQL accepts enormous JSON numbers and then aborts
+  // on a double cast. CASE fences evaluation; this conservative grammar is ample for registry scales.
+  const numericText = `(value #>> '{}')`;
+  const numericValue =
+    `case when jsonb_typeof(value) = 'number' and length(${numericText}) <= 512 ` +
+    `and ${numericText} ~ '^-?(0|[1-9][0-9]{0,99})(\\.[0-9]+)?$' ` +
+    `then ${numericText}::double precision end`;
+  const commonWhere = `metric_key = '${metric.key}'`;
+
+  if (policy.reducer === 'count') {
+    return [
+      `select user_id,`,
+      `       ${date} as log_date,`,
+      `       '${metric.key}'::text as metric_key,`,
+      `       count(*)::double precision as value,`,
+      `       '${policy.source}'::text as source`,
+      `  from public.events`,
+      ` where ${commonWhere}`,
+      ` group by user_id, ${date}`,
+    ].join('\n');
+  }
+
+  if (policy.reducer === 'sum' || policy.reducer === 'mean') {
+    const aggregate = policy.reducer === 'sum' ? 'sum' : 'avg';
+    return [
+      `select user_id,`,
+      `       ${date} as log_date,`,
+      `       '${metric.key}'::text as metric_key,`,
+      `       ${aggregate}(${numericValue})::double precision as value,`,
+      `       '${policy.source}'::text as source`,
+      `  from public.events`,
+      ` where ${commonWhere}`,
+      `   and (${numericValue}) is not null`,
+      ` group by user_id, ${date}`,
+    ].join('\n');
+  }
+
+  return [
+    `select user_id, log_date, '${metric.key}'::text as metric_key, value, '${policy.source}'::text as source`,
+    `  from (`,
+    `    select distinct on (user_id, ${date})`,
+    `           user_id, ${date} as log_date, ${numericValue} as value`,
+    `      from public.events`,
+    `     where ${commonWhere}`,
+    `       and (${numericValue}) is not null`,
+    `     order by user_id, ${date}, occurred_at desc, id desc`,
+    `  ) as latest_event`,
+  ].join('\n');
+}
+
+function stateBandBranch(metric) {
+  const policy = metric.dailyProjection;
+  return [
+    `select band.user_id,`,
+    `       day.log_date::date as log_date,`,
+    `       '${metric.key}'::text as metric_key,`,
+    `       1::double precision as value,`,
+    `       '${policy.source}'::text as source`,
+    `  from public.state_bands as band`,
+    ` cross join lateral generate_series(`,
+    `       (band.started_at at time zone 'utc')::date::timestamp,`,
+    `       case when band.ended_at is null`,
+    `            then (current_timestamp at time zone 'utc')::date::timestamp`,
+    `            else ((band.ended_at - interval '1 microsecond') at time zone 'utc')::date::timestamp`,
+    `       end,`,
+    `       interval '1 day'`,
+    `  ) as day(log_date)`,
+    ` where band.metric_key = '${metric.key}'`,
+    `   and (band.ended_at is null or band.ended_at > band.started_at)`,
+    ` group by band.user_id, day.log_date`,
+  ].join('\n');
+}
+
+function primitiveBranches(registry) {
+  const branches = [];
+  for (const metric of viewMetrics(registry)) {
+    const primitive = metric.table === 'events' || metric.table === 'state_bands';
+    const policy = metric.dailyProjection ?? null;
+    if (!primitive) {
+      if (policy !== null) {
+        throw new Error(
+          `gen-metric-view: ${metric.key} has dailyProjection but table ${metric.table} is not supported`,
+        );
+      }
+      continue;
+    }
+    if (policy === null) {
+      throw new Error(
+        `gen-metric-view: active ${metric.type} metric ${metric.key} (${metric.table}) requires dailyProjection`,
+      );
+    }
+    if (
+      policy.storage !== metric.table ||
+      policy.calendar !== 'utc' ||
+      !['self_report', 'wearable', 'env', 'signal'].includes(policy.source)
+    ) {
+      throw new Error(`gen-metric-view: incompatible dailyProjection for ${metric.key} (${metric.table})`);
+    }
+    if (metric.table === 'events') {
+      if (!['count', 'sum', 'mean', 'latest'].includes(policy.reducer)) {
+        throw new Error(`gen-metric-view: unsupported events reducer for ${metric.key}`);
+      }
+      if ((policy.reducer === 'count' || policy.reducer === 'sum') && metric.type !== 'numeric') {
+        throw new Error(`gen-metric-view: event ${policy.reducer} requires numeric metric ${metric.key}`);
+      }
+      branches.push(eventBranch(metric));
+    } else {
+      if (policy.reducer !== 'presence' || policy.interval !== 'half_open') {
+        throw new Error(`gen-metric-view: unsupported state_bands policy for ${metric.key}`);
+      }
+      if (metric.type !== 'numeric') {
+        throw new Error(`gen-metric-view: state presence requires numeric metric ${metric.key}`);
+      }
+      branches.push(stateBandBranch(metric));
+    }
+  }
+  return branches;
 }
 
 function wideBranch(metric, { dateColumn, source }) {
@@ -89,11 +211,17 @@ function signalsBranch() {
 }
 
 /** The full migration SQL (LF newlines, trailing newline) — deterministic for a given registry. */
-export function generateViewSql() {
+export function generateViewSql(registry = metrics.METRICS) {
   const branches = [];
 
+  for (const metric of viewMetrics(registry)) {
+    if (!/^[a-z][a-z0-9_]*$/.test(metric.key)) {
+      throw new Error(`gen-metric-view: invalid metric key: ${metric.key}`);
+    }
+  }
+
   for (const [table, config] of Object.entries(WIDE_TABLES)) {
-    const tableMetrics = viewMetrics().filter((m) => m.table === table);
+    const tableMetrics = viewMetrics(registry).filter((m) => m.table === table);
     if (tableMetrics.length === 0) continue;
     branches.push(
       `-- ── ${table} (wide legacy) — one unpivot branch per active numeric/ordinal key ──`,
@@ -101,8 +229,14 @@ export function generateViewSql() {
     branches.push(...tableMetrics.map((m) => wideBranch(m, config)));
   }
 
-  const unhandled = viewMetrics().filter(
-    (m) => !(m.table in WIDE_TABLES) && !LONG_TABLES.has(m.table),
+  branches.push(...primitiveBranches(registry));
+
+  const unhandled = viewMetrics(registry).filter(
+    (m) =>
+      !(m.table in WIDE_TABLES) &&
+      !LONG_TABLES.has(m.table) &&
+      m.table !== 'events' &&
+      m.table !== 'state_bands',
   );
   if (unhandled.length > 0) {
     const list = unhandled.map((m) => `${m.key} (${m.table})`).join(', ');

@@ -2,6 +2,7 @@
 import { createClient } from "jsr:@supabase/supabase-js@2.110.7"
 import { METRICS } from "../../../shared/metrics/registry.ts"
 import { unauthorizedResponse, verifyInternalSecretRequest } from "../_shared/internal_auth.ts"
+import { readServerKeyEnv, resolveServerKey, ServerKeyConfigurationError } from "../_shared/server_keys.ts"
 import {
   benjaminiHochberg,
   classifyDaily,
@@ -194,18 +195,24 @@ Deno.serve(async (req) => {
     return unauthorizedResponse()
   }
 
-  // ── Configuration guard — reachable only by an AUTHORIZED caller, so 500 leaks nothing.
-  // SUPABASE_SERVICE_ROLE_KEY is a DATABASE credential here, never a request credential.
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
-  if (!serviceRoleKey) {
-    console.error("SUPABASE_SERVICE_ROLE_KEY is not set — refusing to serve")
+  // Replacement secret keys are privileged DATABASE credentials only. Resolution is after the
+  // internal-secret gate so malformed configuration cannot become an unauthenticated oracle.
+  let databaseSecret: string
+  try {
+    const env = readServerKeyEnv("secret")
+    databaseSecret = resolveServerKey(env, "secret", {
+      allowLegacyLocalCli: true,
+      supabaseUrl: env.SUPABASE_URL,
+    }).value
+  } catch (error) {
+    console.error("Supabase secret-key configuration unavailable", error instanceof ServerKeyConfigurationError ? error.message : error)
     return new Response(
-      JSON.stringify({ error: "server misconfiguration: service-role key unavailable" }),
+      JSON.stringify({ error: "server misconfiguration: database credential unavailable" }),
       { status: 500 },
     )
   }
 
-  const supabase = makeClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey)
+  const supabase = makeClient(Deno.env.get("SUPABASE_URL")!, databaseSecret)
 
   // The evaluated day (UTC). The S5 window is the PAIR_WINDOW_DAYS days ending today; the
   // S4 baseline is the SIGNAL_CONFIG.windowDays days ENDING YESTERDAY (window excludes the
