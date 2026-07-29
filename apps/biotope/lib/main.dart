@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/app_preferences.dart';
+import 'core/session_refresh_retry.dart';
 import 'core/theme.dart';
 import 'modules/m1_core/impl/auth_service.dart';
 import 'modules/m1_core/impl/consent_service.dart';
@@ -74,7 +75,7 @@ Future<_OnboardStep> _checkOnboarding(String userId) async {
 /// [WakingScreen] never just flashes on a fast connection.
 Future<_OnboardStep> _checkOnboardingWithMinDisplay(String userId) async {
   final results = await Future.wait([
-    _checkOnboarding(userId),
+    retryAfterSessionRefresh(() => _checkOnboarding(userId)),
     Future.delayed(const Duration(milliseconds: 1800)),
   ]);
   return results[0] as _OnboardStep;

@@ -29,6 +29,7 @@ import { r2TextLoader } from './verify/quoteCheck.js';
 import { verify } from './verify/verifier.js';
 import { corpusTexts, loadCorpusFromFile } from './verify/corpus.js';
 import { LlmRouter } from '../../llm-router/src/index.js';
+import { runSinglePaper } from './singlePaper.js';
 
 const USAGE = `ourobion brain-ingest — open-access-first paper-corpus fetcher
 
@@ -63,6 +64,9 @@ Commands:
                                                    serve the quoteCheck for papers they cover);
                                                    WITHOUT it retrieval runs over an EMPTY corpus.
                                                    --triage-only / --dry-run make no LLM call.
+  single-paper --doi <doi> --local-dir <dir> --pair <a,b> [--terms t1,t2]
+               [--load-local-db <loopback PostgreSQL URL>] [--dry-run] [--resume]
+                                                   local-only request/response intake; no remote routing.
   venue --issn <issn> [--sjr-quartile 1-4]         b2 venue lookup: OpenAlex Source stats +
                                                    C8 impactTier band (per-ISSN cache)
 
@@ -429,6 +433,21 @@ async function runVerify(flags: Set<string>, options: Map<string, string>): Prom
   return 0;
 }
 
+async function runSinglePaperCli(flags: Set<string>, options: Map<string, string>): Promise<number> {
+  const doi = options.get('doi');
+  const localDir = options.get('local-dir');
+  const pair = parseCsv(options, 'pair');
+  if (!doi || !localDir || !pair || pair.length !== 2) {
+    process.stderr.write('single-paper: --doi <doi>, --local-dir <dir>, and --pair <a,b> are required\n');
+    return 2;
+  }
+  const terms = parseCsv(options, 'terms');
+  const db = options.get('load-local-db');
+  const receipt = await runSinglePaper({ doi, localDir, pair: [pair[0]!, pair[1]!], ...(terms ? { terms } : {}), dryRun: flags.has('dry-run'), resume: flags.has('resume'), ...(db ? { loadLocalDb: db } : {}) });
+  process.stdout.write(JSON.stringify(receipt, null, 2) + '\n');
+  return 0;
+}
+
 /** CLI main — returns the process exit code. Async: the pipeline verbs await `run`. */
 export async function main(argv: string[]): Promise<number> {
   const { command, flags, options } = parseArgs(argv);
@@ -497,6 +516,9 @@ export async function main(argv: string[]): Promise<number> {
 
       case 'verify':
         return await runVerify(flags, options);
+
+      case 'single-paper':
+        return await runSinglePaperCli(flags, options);
 
       case 'venue':
         return await runVenueLookup(options);

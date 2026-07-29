@@ -506,8 +506,9 @@ begin;
   -- Control events: a curator WRITES events it cannot READ back. That is the correct shape for an
   -- audit log, and it is where curator identity legitimately lives after the column revokes.
   select authz_probe.expect_ok('curator.insert_control_event_ok',
-    'insert into public.nao_control_events (action, target, detail)
-     values (''seeds.add'', ''harness_topic_curator'', ''{"n": 1}''::jsonb)');
+    'insert into public.nao_control_events (operation_id, phase, action, target, detail)
+     values (''10000000-0000-4000-8000-000000000001'', ''attempted'',
+             ''seeds.add'', ''harness_topic_curator'', ''{"n": 1}''::jsonb)');
   select authz_probe.expect_value('curator.read_control_events_zero',
     'select count(*) from public.nao_control_events', '0');
 
@@ -515,13 +516,17 @@ begin;
   -- (there is nothing to reject — the values are simply discarded), and section 8 asserts as the
   -- superuser that the stored row carries the CURATOR's id and role.
   select authz_probe.expect_ok('curator.spoofed_attribution_insert_accepted',
-    'insert into public.nao_control_events (actor_user_id, actor_role, action, target)
-     values (''aaaaaaaa-0000-4000-8000-000000000003'', ''admin'', ''seeds.toggle'',
-             ''spoof-probe'')');
+    'insert into public.nao_control_events
+       (operation_id, phase, actor_user_id, actor_role, action, target)
+     values (''10000000-0000-4000-8000-000000000002'', ''attempted'',
+             ''aaaaaaaa-0000-4000-8000-000000000003'', ''admin'',
+             ''seeds.toggle'', ''spoof-probe'')');
 
   -- An unrecognised action is rejected: an audit log with an open vocabulary cannot be reviewed.
   select authz_probe.expect_error('curator.unknown_control_action_rejected_23514',
-    'insert into public.nao_control_events (action) values (''arbitrary.thing'')', '23514');
+    'insert into public.nao_control_events (operation_id, phase, action)
+     values (''10000000-0000-4000-8000-000000000003'', ''attempted'', ''arbitrary.thing'')',
+    '23514');
 
   -- Append-only, from the API surface: the grant is gone, so this raises rather than silently
   -- affecting zero rows.
@@ -716,5 +721,132 @@ begin;
   set local role authenticated;
   select authz_probe.assert_denied_authenticated('live_revocation.dev2_after', 1);
 commit;
+
+-- 13 Â· TRUTHFUL CONTROL LIFECYCLE (issue #182)
+-- Real SECURITY INVOKER calls under the actor role: ordering, mutation failure, retry
+-- idempotency, attribution, and an injected terminal-write fault.
+begin;
+  set local request.jwt.claims = '{"sub": "aaaaaaaa-0000-4000-8000-000000000002", "role": "authenticated"}';
+  set local role authenticated;
+
+  -- These are executable privilege regressions, not SQL-shape checks. The RPC must succeed AS
+  -- authenticated while the raw identity columns remain unreadable to that same database role.
+  select authz_probe.expect_value('audit_lifecycle.seed_identity_select_stays_revoked',
+    'select has_column_privilege(current_user, ''public.ingestion_seeds'', ''created_by'', ''select'')::text',
+    'false');
+  select authz_probe.expect_value('audit_lifecycle.verdict_identity_select_stays_revoked',
+    'select has_column_privilege(current_user, ''public.edge_human_verdicts'', ''created_by'', ''select'')::text',
+    'false');
+
+  select authz_probe.expect_value('audit_lifecycle.transactional_success',
+    'select (public.nao_apply_control_mutation(
+      ''20000000-0000-4000-8000-000000000001'', ''seeds.add'', ''audit_lifecycle_seed'',
+      ''{"label":"Audit lifecycle"}''::jsonb,
+      ''{"label":"Audit lifecycle","queryHint":null}''::jsonb
+    )->>''ok'')', 'true');
+  select authz_probe.expect_value('audit_lifecycle.retry_is_duplicate',
+    'select (public.nao_apply_control_mutation(
+      ''20000000-0000-4000-8000-000000000001'', ''seeds.add'', ''audit_lifecycle_seed'',
+      ''{"label":"Audit lifecycle"}''::jsonb,
+      ''{"label":"Audit lifecycle","queryHint":null}''::jsonb
+    )->>''errorCode'')', 'duplicate_operation');
+  select authz_probe.expect_value('audit_lifecycle.mutation_failure_is_typed',
+    'select (public.nao_apply_control_mutation(
+      ''20000000-0000-4000-8000-000000000002'', ''seeds.toggle'', ''missing_audit_seed'',
+      ''{"enabled":false}''::jsonb, ''{"enabled":false}''::jsonb
+    )->>''errorCode'')', 'unknown_seed');
+  select authz_probe.expect_value('audit_lifecycle.seed_toggle_succeeds_without_identity_select',
+    'select (public.nao_apply_control_mutation(
+      ''20000000-0000-4000-8000-000000000005'', ''seeds.toggle'', ''audit_lifecycle_seed'',
+      ''{"enabled":false}''::jsonb, ''{"enabled":false}''::jsonb
+    )->>''ok'')', 'true');
+  select authz_probe.expect_value('audit_lifecycle.claim_reject_succeeds_without_identity_select',
+    'select (public.nao_apply_control_mutation(
+      ''20000000-0000-4000-8000-000000000006'', ''claims.reject'',
+      ''metric_alpha|increases|metric_beta'', ''{"reason":"privilege regression"}''::jsonb,
+      ''{"reason":"privilege regression"}''::jsonb
+    )->>''ok'')', 'true');
+commit;
+
+begin;
+  set local request.jwt.claims = '{"sub": "aaaaaaaa-0000-4000-8000-000000000003", "role": "authenticated"}';
+  set local role authenticated;
+  select authz_probe.expect_value('audit_lifecycle.cap_identity_select_stays_revoked',
+    'select has_column_privilege(current_user, ''public.llm_router_cap_overrides'', ''updated_by'', ''select'')::text',
+    'false');
+  select authz_probe.expect_value('audit_lifecycle.cap_upsert_succeeds_without_identity_select',
+    'select (public.nao_apply_control_mutation(
+      ''20000000-0000-4000-8000-000000000007'', ''models.cap_override'', ''extract_assist'',
+      ''{"perDayUsdCap":1.25,"perRunTokenCap":45000}''::jsonb,
+      ''{"perDayUsdCap":1.25,"perRunTokenCap":45000}''::jsonb
+    )->>''ok'')', 'true');
+commit;
+
+select authz_probe.expect_value('audit_lifecycle.retry_mutated_once',
+  'select count(*) from public.ingestion_seeds where slug = ''audit_lifecycle_seed''', '1');
+select authz_probe.expect_value('audit_lifecycle.success_has_attempt_then_succeeded',
+  'select string_agg(phase, '','' order by id) from public.nao_control_events
+    where operation_id = ''20000000-0000-4000-8000-000000000001''',
+  'attempted,succeeded');
+select authz_probe.expect_value('audit_lifecycle.failure_has_attempt_then_failed',
+  'select string_agg(phase, '','' order by id) from public.nao_control_events
+    where operation_id = ''20000000-0000-4000-8000-000000000002''',
+  'attempted,failed');
+select authz_probe.expect_value('audit_lifecycle.actor_stamped_on_every_phase',
+  'select count(*) from public.nao_control_events
+    where operation_id in (''20000000-0000-4000-8000-000000000001'',
+                           ''20000000-0000-4000-8000-000000000002'')
+      and actor_user_id = ''aaaaaaaa-0000-4000-8000-000000000002''
+      and actor_role = ''curator''', '4');
+select authz_probe.expect_value('audit_lifecycle.all_four_privilege_sensitive_branches_succeeded',
+  'select count(*) from public.nao_control_events
+    where operation_id in (''20000000-0000-4000-8000-000000000001'',
+                           ''20000000-0000-4000-8000-000000000005'',
+                           ''20000000-0000-4000-8000-000000000006'',
+                           ''20000000-0000-4000-8000-000000000007'')
+      and phase = ''succeeded''', '4');
+
+-- A failed attempt insert (viewer cannot write the log) prevents the seed mutation.
+begin;
+  set local request.jwt.claims = '{"sub": "aaaaaaaa-0000-4000-8000-000000000001", "role": "authenticated"}';
+  set local role authenticated;
+  select authz_probe.expect_error('audit_lifecycle.attempt_failure_blocks_mutation',
+    'select public.nao_apply_control_mutation(
+      ''20000000-0000-4000-8000-000000000003'', ''seeds.add'', ''attempt_must_block'',
+      ''{}''::jsonb, ''{"label":"must not exist"}''::jsonb)', '42501');
+commit;
+select authz_probe.expect_value('audit_lifecycle.attempt_failure_wrote_no_seed',
+  'select count(*) from public.ingestion_seeds where slug = ''attempt_must_block''', '0');
+
+-- Fault-inject only the succeeded event. The RPC must roll back the seed AND its attempt.
+create or replace function authz_probe.fail_control_outcome()
+returns trigger language plpgsql as $$
+begin
+  if new.target = 'outcome_fault_seed' and new.phase = 'succeeded' then
+    raise exception 'injected outcome failure' using errcode = 'P0001';
+  end if;
+  return new;
+end
+$$;
+create trigger authz_probe_fail_control_outcome
+  before insert on public.nao_control_events
+  for each row execute function authz_probe.fail_control_outcome();
+
+begin;
+  set local request.jwt.claims = '{"sub": "aaaaaaaa-0000-4000-8000-000000000002", "role": "authenticated"}';
+  set local role authenticated;
+  select authz_probe.expect_error('audit_lifecycle.outcome_failure_rolls_back_rpc',
+    'select public.nao_apply_control_mutation(
+      ''20000000-0000-4000-8000-000000000004'', ''seeds.add'', ''outcome_fault_seed'',
+      ''{}''::jsonb, ''{"label":"must roll back"}''::jsonb)', 'P0001');
+commit;
+
+drop trigger authz_probe_fail_control_outcome on public.nao_control_events;
+drop function authz_probe.fail_control_outcome();
+select authz_probe.expect_value('audit_lifecycle.outcome_failure_wrote_no_seed',
+  'select count(*) from public.ingestion_seeds where slug = ''outcome_fault_seed''', '0');
+select authz_probe.expect_value('audit_lifecycle.outcome_failure_left_no_partial_db_audit',
+  'select count(*) from public.nao_control_events
+    where operation_id = ''20000000-0000-4000-8000-000000000004''', '0');
 
 reset authz_probe.phase;

@@ -43,16 +43,56 @@ export function hashTextEvidence(value) {
 //   77c98213e23ad56ae37c86201b39ef4e7543a543  (U0 unit base — consolidated Run 3/MT3 tip)
 //   c558c04f1b661a59c8987c96770768eeea46e0cc  (U0 post-reconciliation base; ACCEPTED for U0 only)
 //   ff0546434f081cadc3e5683217d484f250c19139  (R4-U7 canonical-UI base; ACCEPTED for U7/U8 only)
+//   547280f69fe37fe1c7271ea126002f9ffaadafb9  (U9 base — tip after #191/#202; ACCEPTED for U9 only)
+//   87a6364ff34cfd7072e29e466f2f1e90d3c1e25f  (U10 candidate base — tip after #206/#205/#208/#210/
+//                                              #211; superseded before push by #176/#190/#217
+//                                              landing while this unit was blocked on Docker)
+//   2749381a405de882c6d96cdf21a57034e28204ea  (U10 base — tip after #217; ACCEPTED for U10 only)
+//   da6b11b5df057fe6b5f5f6dcb14f13343805a94b  (R4-U1 correction base — tip after #214; ACCEPTED
+//                                              for that #232 push only)
 //
-// The U7 base worked exactly as intended and is now spent. Against it the integration branch
-// measures 60 paths / 7,981 added lines — the UI unit (#191) and the design alignment (#202) both
-// landed there — leaving roughly 55 paths and 519 lines. That is not a budget any real unit fits
-// in, and the shortfall is entirely already-merged work, not the next unit's.
+// Re-advanced for the same R4-U1 correction (#232), same branch. #232's green status went stale
+// again: PR #199 (the U4 scientific-semantics/trust-labels unit) merged into the integration
+// branch after da6b11b was set, advancing the tip to 789e6a0 and, per the same mechanism recorded
+// above for #214, charging U1 for #199's lines — cumulative delta from 2749381 was measured at
+// roughly 12,500 added lines against the 8,500 cap. #232 already touches this file, ci.yml, and
+// the attestation manifest, so the base advance is folded into this PR rather than opening a
+// separate base-advance PR that would collide with it.
 //
-// Current value is the tip after #191 and #202 merged: the base for the Archive-trends (#200) and
-// Scan-motion (#201) units. Caps unchanged at 115 / 8,500 and still failing closed; only the
-// per-unit starting point moves.
-export const RUN4_UNIT_BASE_SHA = '547280f69fe37fe1c7271ea126002f9ffaadafb9';
+// Current value is the dev-phase2-run4 tip at push time (the #199 merge). Caps unchanged at
+// 115 / 8,500 and still failing closed; only the per-unit starting point moves.
+export const RUN4_UNIT_BASE_SHA = '789e6a0ff8232057402e1d34583647349c85bb89';
+
+// ---------------------------------------------------------------------------------------------
+// Immutable product cap (issue #183) — MEASURED AND RECORDED, NOT YET GATING.
+//
+// RUN4_UNIT_BASE_SHA above is a per-unit landing budget: it moves every unit, so it can never
+// answer "how big did Run 4's final product actually get?". #183's answer is one immutable union
+// from the Run 4 product base, with the MT4 model-training merge excluded through its exact
+// first-parent merge delta (path set, per-path status, and resulting blob all bound below, so the
+// exclusion cannot be widened by hand).
+//
+// Why this is not wired to CI as a gate. Measured on the dev-phase2-run4 tip (da6b11b) at the
+// time this landed, the product union is already 186 paths / 25,773 added lines against the
+// 115 / 8,500 cap — over by 71 paths and 17,273 lines before this unit contributes anything
+// (with U1 it reads 196 / 31,017). Enforcing it here would turn
+// `Run 4 release evidence` and `Run 4 Gate` permanently red for every branch in the run, which is
+// not a result any unit can fix by writing less code. #183 itself says "No cap increase", so the
+// cap is NOT raised and the numbers are NOT massaged: the enforcement path is implemented in full
+// and exercised by the negative tests in run4_release_gate.test.mjs, and the attestation records
+// `productCapAcceptanceClaimed: false` so nothing downstream can mistake measurement for
+// acceptance. Wiring checkProductLandingDelta into the workflow is a one-line change once a human
+// decides whether the run's product envelope is re-scoped or the cap is formally revised.
+//
+// The per-unit gate below is unchanged and still enforcing.
+export const RUN4_PRODUCT_BASE_SHA = '77c98213e23ad56ae37c86201b39ef4e7543a543';
+export const RUN4_MT4_PARENT_SHA = '66bfde53b0dc388e40af42ab0ff4737ffb2fd8aa';
+export const RUN4_MT4_MERGE_SHA = 'c558c04f1b661a59c8987c96770768eeea46e0cc';
+export const RUN4_MT4_EXCLUSION_COUNT = 28;
+export const RUN4_MT4_EXCLUSION_SHA256 = 'd848a20c263eae7255c532e358605f17aa07e1f17d3dd526825860d767e5bfd6';
+// Per-unit measurement, preserved under an explicitly non-acceptance name (#183 scope line 3).
+export const RUN4_NON_ACCEPTANCE_UNIT_BASE_SHA = RUN4_UNIT_BASE_SHA;
+
 export const RUN4_MAX_CHANGED_PATHS = 115;
 export const RUN4_MAX_ADDED_LINES = 8500;
 export const RUN4_FUNCTIONS = Object.freeze([
@@ -72,7 +112,18 @@ export const RUN4_REQUIRED_JOBS = Object.freeze([
   'migrations-apply',
   'model-training-core',
   'model-training-lint-type',
+  'arch-boundaries',
+  'secret-scan',
 ]);
+const U1_CHECKOUT = 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262';
+const U1_SETUP_NODE = 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020';
+const RUN4_U1_JOB_HASHES = Object.freeze({
+  'arch-boundaries': '00e6f4b5879544b3deea43a964f690a96fbc63b29a0766786e88f779944c18ec',
+  // Re-frozen when the history scan was scoped to the landing ref's ancestry and the history
+  // canary + ancestry-traversal assertions were added. Superseded:
+  //   f312ee6dd0ae2ebe4f169681cd7c0c5c78707313d8d088869c6259c30d1f53e0 (unscoped all-refs history scan)
+  [RUN4_REQUIRED_JOBS[11]]: '6ca9031d18aa318e9cb000ea8800a6b9f035c233f91135a1c0f19940f157e0b0',
+});
 export const RUN4_NODE_TOOL_PACKAGES = Object.freeze([
   'tools/brain-ingest',
   'tools/llm-router',
@@ -152,8 +203,9 @@ function exactStep(job, name, { allowedIf } = {}) {
 
 function validateCheckout(job, jobName) {
   if (!Array.isArray(job.steps)) fail(`${jobName} steps are missing`);
-  const checkouts = job.steps.filter((step) => step?.uses === 'actions/checkout@v4');
-  if (checkouts.length !== 1) fail(`${jobName} must use exactly one actions/checkout@v4 step`);
+  const expected = RUN4_U1_JOB_HASHES[jobName] ? U1_CHECKOUT : 'actions/checkout@v4';
+  const checkouts = job.steps.filter((step) => step?.uses === expected);
+  if (checkouts.length !== 1) fail(`${jobName} must use exactly one approved checkout step`);
   if (checkouts[0].with?.ref !== undefined) fail(`${jobName} checkout must not override the event SHA`);
 }
 
@@ -184,6 +236,8 @@ const REQUIRED_JOB_STEP_SETS = Object.freeze({
   'migrations-apply': ['uses:<unnamed>:actions/checkout@v4', 'run:Install pg_cron/pg_net stubs into the service container', 'run:Bootstrap supabase-shaped primitives', 'run:Apply migrations in filename order'],
   'model-training-core': ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Python:actions/setup-python@v5', 'run:Unit tests (stdlib unittest, zero installs)', 'run:Config validation (dry-run resolves the fixture job without executing it)', 'run:Offline smoke (tiny local fixture only — no network, no real data)'],
   'model-training-lint-type': ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Python:actions/setup-python@v5', 'run:Install the dev extra only (ruff + mypy)', 'run:Format check', 'run:Lint', 'run:Type check'],
+  'arch-boundaries': [`uses:Checkout:${U1_CHECKOUT}`, `uses:Set up Node:${U1_SETUP_NODE}`, 'run:Guard unit tests (positive + negative fixtures per rule)', 'run:Enforce architecture boundaries over the tracked tree'],
+  'secret-scan': [`uses:Checkout:${U1_CHECKOUT}`, `uses:Set up Node:${U1_SETUP_NODE}`, 'run:Resolve pinned scanner', 'run:Install pinned gitleaks (SHA256-verified)', 'run:Verify scanner identity', 'run:Validate scanner policy and allowlist narrowness', 'run:Guard unit tests (reachable-failure-path proof)', 'run:Prove the scanner detects (canary)', 'run:Scan working tree at HEAD', 'run:Verify the working-tree scan actually covered the tree', 'run:Prove history scanning detects an ancestry-only secret (canary)', 'run:Scan the full history of the landing ref', 'run:Verify the history scan actually walked the ref\'s ancestry', 'run:Client-surface leak assertions', 'run:Install nao dependencies for local client canary', 'run:Build and inspect local Next client canary'],
   'run4-gate': ['uses:<unnamed>:actions/checkout@v4', 'uses:Set up Node:actions/setup-node@v4', 'run:Install release-gate dependencies', 'run:Fail unless every required dependency succeeded'],
 });
 
@@ -217,6 +271,7 @@ function expectedWorkingDirectory(jobName, stepName) {
   if (jobName === 'node-tools') return stepName === 'Install shared contract dependencies' ? 'shared' : '${{ matrix.package }}';
   if (jobName === 'nao') return 'apps/nao';
   if (jobName === 'deno-check') return 'supabase/functions/${{ matrix.function }}';
+  if (jobName === 'secret-scan' && (stepName === 'Install nao dependencies for local client canary' || stepName === 'Build and inspect local Next client canary')) return 'apps/nao';
   return undefined;
 }
 
@@ -237,6 +292,7 @@ const REQUIRED_STEP_ENVS = Object.freeze({
   'run4-gate:Fail unless every required dependency succeeded': Object.freeze({ NEEDS_JSON: '${{ toJson(needs) }}' }),
   'model-training-core:Unit tests (stdlib unittest, zero installs)': Object.freeze({ PYTHONPATH: 'src' }),
   'model-training-core:Config validation (dry-run resolves the fixture job without executing it)': Object.freeze({ PYTHONPATH: 'src' }),
+  'secret-scan:Build and inspect local Next client canary': Object.freeze({ NEXT_PUBLIC_SUPABASE_URL: 'https://example.invalid', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'synthetic-public-anon', NEXT_PUBLIC_APP_ENV: 'ci', SUPABASE_SERVICE_ROLE_KEY: 'run4-u1-synthetic-server-canary-178-not-a-secret' }),
   'model-training-core:Offline smoke (tiny local fixture only — no network, no real data)': Object.freeze({ PYTHONPATH: 'src' }),
 });
 
@@ -332,7 +388,10 @@ export function validateRun4Workflow(workflowText) {
     assertNoFailOpen(job, `${jobName} job`);
     validateHostContract(job, jobName);
     validateExactEnvironment(job.env, `${jobName} job`, REQUIRED_JOB_ENVS[jobName]);
-    if (jobName !== 'run4-release' && own(job, 'if')) fail(`${jobName} job cannot set if`);
+    if (jobName === 'arch-boundaries' || jobName === 'secret-scan') {
+      if (job.if !== RUN4_EVENT_SCOPE) fail(`${jobName} is not scoped exactly to dev-phase2-run4 events`);
+      if (hashTextEvidence(JSON.stringify(job)) !== RUN4_U1_JOB_HASHES[jobName]) fail(`${jobName} frozen job contract drifted`);
+    } else if (jobName !== 'run4-release' && own(job, 'if')) fail(`${jobName} job cannot set if`);
     validateCheckout(job, jobName);
     validateRequiredJobStepGuards(job, jobName);
     validateRequiredJobSteps(job, jobName);
@@ -443,6 +502,122 @@ export function checkLandingDelta({ base, head = 'HEAD', maxPaths, maxAdded, git
   if (names.length > maxPaths) fail(`landing delta has ${names.length} paths; cap is ${maxPaths}`);
   if (added > maxAdded) fail(`landing delta has ${added} added lines; cap is ${maxAdded}`);
   return { base, head: resolvedHead, changedPaths: names.length, addedLines: added };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Immutable product cap (#183) — measurement + the enforcement path, kept unwired. See the
+// constants block at the top of this file for why this measures rather than gates.
+// ---------------------------------------------------------------------------------------------
+
+function parseNameStatus(text, label) {
+  const tokens = text.split('\0');
+  if (tokens.at(-1) === '') tokens.pop();
+  const records = [];
+  for (let index = 0; index < tokens.length;) {
+    const status = tokens[index++];
+    if (!/^[ACDMRTUXB][0-9]*$/.test(status ?? '')) fail(`unparsable ${label} name-status token: ${status ?? '<missing>'}`);
+    if (/^[RC]/.test(status)) fail(`rename/copy diff is ambiguous for ${label}`);
+    const path = tokens[index++];
+    if (!path) fail(`${label} diff contains an empty path`);
+    records.push({ status, path });
+  }
+  if (new Set(records.map((record) => record.path)).size !== records.length) fail(`${label} diff contains duplicate paths`);
+  return records;
+}
+
+function resolveBlob(git, commit, path, label) {
+  const blob = gitText(git, ['rev-parse', `${commit}:${path}`]).trim();
+  if (!/^[0-9a-f]{40}$/i.test(blob)) fail(`${label} path blob is unavailable or ambiguous: ${path}`);
+  return blob;
+}
+
+/**
+ * The one authorized MT4 exclusion set, bound to its provenance rather than to a hand-written
+ * path list: the merge must still be the exact three-parent commit with the exact first parent,
+ * both must still be rooted at the product base, and the resulting path/status/blob records must
+ * still hash to RUN4_MT4_EXCLUSION_SHA256. Any drift — a re-merge, an extra path, an edited blob
+ * — fails closed here rather than silently widening what the product cap forgives.
+ */
+export function mt4ExclusionManifest({ git = execFileSync } = {}) {
+  const clean = (...args) => gitText(git, args).trim();
+  for (const commit of [RUN4_PRODUCT_BASE_SHA, RUN4_MT4_PARENT_SHA, RUN4_MT4_MERGE_SHA]) {
+    if (clean('cat-file', '-t', commit) !== 'commit') fail(`MT4 provenance commit is unavailable: ${commit}`);
+  }
+  const parents = clean('rev-list', '--parents', '-n', '1', RUN4_MT4_MERGE_SHA).split(/\s+/);
+  if (parents.length !== 3 || parents[0] !== RUN4_MT4_MERGE_SHA || parents[1] !== RUN4_MT4_PARENT_SHA) fail('MT4 exclusion merge provenance drifted');
+  if (clean('merge-base', RUN4_PRODUCT_BASE_SHA, RUN4_MT4_PARENT_SHA) !== RUN4_PRODUCT_BASE_SHA || clean('merge-base', RUN4_MT4_PARENT_SHA, RUN4_MT4_MERGE_SHA) !== RUN4_MT4_PARENT_SHA) fail('MT4 exclusion provenance is not rooted at the product base');
+  const records = parseNameStatus(gitText(git, ['diff', '--name-status', '-z', '--find-renames', `${RUN4_MT4_PARENT_SHA}..${RUN4_MT4_MERGE_SHA}`]), 'MT4 exclusion').map(({ status, path }) => ({ status, path, blob: resolveBlob(git, RUN4_MT4_MERGE_SHA, path, 'MT4 exclusion') }));
+  if (records.length !== RUN4_MT4_EXCLUSION_COUNT || sha(JSON.stringify(records)) !== RUN4_MT4_EXCLUSION_SHA256) fail('MT4 exclusion path/count/hash drifted');
+  return records;
+}
+
+/**
+ * Measure the immutable product union. Fails closed on every provenance/parsing ambiguity #183
+ * names — moving base, shallow history, a landing that does not contain the exact MT4 merge, a
+ * requested exclusion set that differs from the authorized one, an excluded path whose status or
+ * blob drifted, rename/copy ambiguity, binary rows, mismatched name-status/numstat sets — and
+ * reports `withinCap` rather than throwing when the union merely exceeds the cap. Cap breach is a
+ * human envelope decision; everything above it is a correctness failure.
+ */
+export function productLandingDelta({ head = 'HEAD', excludedPaths, git = execFileSync } = {}) {
+  const clean = (...args) => gitText(git, args).trim();
+  if (clean('rev-parse', '--is-shallow-repository') !== 'false') fail('shallow or indeterminate Git history is not acceptable');
+  if (clean('cat-file', '-t', RUN4_PRODUCT_BASE_SHA) !== 'commit') fail(`product base ${RUN4_PRODUCT_BASE_SHA} is unavailable or not a commit`);
+  const resolvedHead = clean('rev-parse', head);
+  if (!/^[0-9a-f]{40}$/i.test(resolvedHead)) fail('head did not resolve to an immutable SHA');
+  if (clean('merge-base', RUN4_PRODUCT_BASE_SHA, resolvedHead) !== RUN4_PRODUCT_BASE_SHA) fail(`product base ${RUN4_PRODUCT_BASE_SHA} is not the merge-base of landing ${resolvedHead}`);
+  if (clean('merge-base', RUN4_MT4_MERGE_SHA, resolvedHead) !== RUN4_MT4_MERGE_SHA) fail('landing does not contain the exact MT4 exclusion merge');
+
+  const exclusions = mt4ExclusionManifest({ git });
+  const exclusionPaths = exclusions.map(({ path }) => path);
+  if (excludedPaths !== undefined) sameSet(excludedPaths, exclusionPaths, 'requested MT4 exclusions');
+
+  const names = parseNameStatus(gitText(git, ['diff', '--name-status', '-z', '--find-renames', `${RUN4_PRODUCT_BASE_SHA}..${resolvedHead}`]), 'product landing');
+  const namesByPath = new Map(names.map((record) => [record.path, record]));
+  for (const exclusion of exclusions) {
+    if (namesByPath.get(exclusion.path)?.status !== exclusion.status) fail(`MT4 excluded path status drifted: ${exclusion.path}`);
+    if (resolveBlob(git, resolvedHead, exclusion.path, 'MT4 excluded') !== exclusion.blob) fail(`MT4 excluded path content drifted: ${exclusion.path}`);
+  }
+
+  const statRows = gitText(git, ['diff', '--numstat', '-z', `${RUN4_PRODUCT_BASE_SHA}..${resolvedHead}`]).split('\0');
+  if (statRows.at(-1) === '') statRows.pop();
+  let added = 0;
+  const statPaths = [];
+  for (const row of statRows) {
+    const match = /^(\d+)\t(\d+)\t([^\0]+)$/.exec(row);
+    if (!match) fail(`binary/unparsable diff row: ${row}`);
+    const plus = Number(match[1]);
+    if (!Number.isSafeInteger(plus) || !Number.isSafeInteger(added + plus)) fail('product landing added-line count overflowed');
+    statPaths.push(match[3]);
+    if (!exclusionPaths.includes(match[3])) added += plus;
+  }
+  if (statRows.length !== names.length || new Set(statPaths).size !== statPaths.length || statPaths.some((path) => !namesByPath.has(path))) fail('name-status and numstat path sets differ');
+
+  const productPaths = names.filter(({ path }) => !exclusionPaths.includes(path));
+  return {
+    base: RUN4_PRODUCT_BASE_SHA,
+    head: resolvedHead,
+    changedPaths: productPaths.length,
+    addedLines: added,
+    excludedPaths: exclusionPaths.length,
+    withinCap: productPaths.length <= RUN4_MAX_CHANGED_PATHS && added <= RUN4_MAX_ADDED_LINES,
+  };
+}
+
+/**
+ * The enforcement path #183 asks for, implemented and tested but deliberately not wired into the
+ * workflow yet. Rejects a moving base outright so it can never be satisfied by the per-unit
+ * boundary, then throws on cap breach.
+ */
+export function checkProductLandingDelta({ base, head = 'HEAD', maxPaths, maxAdded, excludedPaths, git = execFileSync }) {
+  if (base !== RUN4_PRODUCT_BASE_SHA) fail(`base must equal immutable product SHA ${RUN4_PRODUCT_BASE_SHA}`);
+  if (!Number.isSafeInteger(maxPaths) || maxPaths < 0 || maxPaths !== RUN4_MAX_CHANGED_PATHS) fail(`maxPaths must equal accepted cap ${RUN4_MAX_CHANGED_PATHS}`);
+  if (!Number.isSafeInteger(maxAdded) || maxAdded < 0 || maxAdded !== RUN4_MAX_ADDED_LINES) fail(`maxAdded must equal accepted cap ${RUN4_MAX_ADDED_LINES}`);
+  const delta = productLandingDelta({ head, excludedPaths, git });
+  if (delta.changedPaths > maxPaths) fail(`product landing delta has ${delta.changedPaths} paths; cap is ${maxPaths}`);
+  if (delta.addedLines > maxAdded) fail(`product landing delta has ${delta.addedLines} added lines; cap is ${maxAdded}`);
+  const { withinCap, ...accepted } = delta;
+  return accepted;
 }
 
 export function checkWorkflowProvenance({ eventPath, githubSha, git = execFileSync }) {
@@ -577,13 +752,18 @@ export function buildLocalAttestation({ graphDir, supabaseCli, routes, run = exe
     routes,
   });
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     scope: 'local-only',
     hostedDeployParityClaimed: false,
+    // #183: the product union is measured against productCapBaseSha and recorded, never accepted
+    // here. This flag stays false until a human decides the run's product envelope; nothing
+    // downstream may read a recorded measurement as a passed cap.
+    productCapAcceptanceClaimed: false,
     replayBoundary: 'CI recomputes frozen graphs and validates this local evidence, but does not replay local serve or claim hosted deploy parity.',
     generator: RUN4_ATTESTATION_GENERATOR,
     provenance: {
       unitBaseSha: RUN4_UNIT_BASE_SHA,
+      productCapBaseSha: RUN4_PRODUCT_BASE_SHA,
       maxChangedPaths: RUN4_MAX_CHANGED_PATHS,
       maxAddedLines: RUN4_MAX_ADDED_LINES,
     },
@@ -602,8 +782,11 @@ export function checkDeployAttestation({ manifestPath = resolve(repo, 'supabase/
   const lockPath = resolve(repo, 'supabase/deno.lock');
   if (!existsSync(lockPath)) fail('local runtime attestation BLOCKED: shared supabase/deno.lock is absent');
   const cliOutput = checkToolVersion(supabaseCli, /^2\.81\.2$/m, 'repository-local Supabase CLI', run);
-  if (manifest.schemaVersion !== 1 || manifest.scope !== 'local-only' || manifest.hostedDeployParityClaimed !== false || manifest.replayBoundary !== 'CI recomputes frozen graphs and validates this local evidence, but does not replay local serve or claim hosted deploy parity.' || manifest.generator !== RUN4_ATTESTATION_GENERATOR) fail('local runtime attestation must explicitly deny hosted deploy parity');
-  if (!isObject(manifest.provenance) || manifest.provenance.unitBaseSha !== RUN4_UNIT_BASE_SHA || manifest.provenance.maxChangedPaths !== RUN4_MAX_CHANGED_PATHS || manifest.provenance.maxAddedLines !== RUN4_MAX_ADDED_LINES) fail('local runtime attestation provenance drifted');
+  if (manifest.schemaVersion !== 2 || manifest.scope !== 'local-only' || manifest.hostedDeployParityClaimed !== false || manifest.replayBoundary !== 'CI recomputes frozen graphs and validates this local evidence, but does not replay local serve or claim hosted deploy parity.' || manifest.generator !== RUN4_ATTESTATION_GENERATOR) fail('local runtime attestation must explicitly deny hosted deploy parity');
+  if (manifest.productCapAcceptanceClaimed !== false) fail('local runtime attestation must explicitly deny product-cap acceptance');
+  if (!isObject(manifest.provenance)) fail('local runtime attestation provenance drifted');
+  sameSet(Object.keys(manifest.provenance), ['unitBaseSha', 'productCapBaseSha', 'maxChangedPaths', 'maxAddedLines'], 'local runtime attestation provenance fields');
+  if (manifest.provenance.unitBaseSha !== RUN4_UNIT_BASE_SHA || manifest.provenance.productCapBaseSha !== RUN4_PRODUCT_BASE_SHA || manifest.provenance.maxChangedPaths !== RUN4_MAX_CHANGED_PATHS || manifest.provenance.maxAddedLines !== RUN4_MAX_ADDED_LINES) fail('local runtime attestation provenance drifted');
   if (manifest.cliVersion !== cliOutput || manifest.denoVersion !== '2.8.1') fail('local runtime attestation tool versions drifted');
   if (manifest.configSha256 !== hashTextEvidence(readFileSync(configPath)) || manifest.lockSha256 !== hashTextEvidence(readFileSync(lockPath))) fail('local runtime attestation config/lock hash mismatch');
 
@@ -663,6 +846,19 @@ function main() {
   }
   if (command === 'provenance') { console.log(JSON.stringify(checkWorkflowProvenance({ eventPath: opt.get('event-path'), githubSha: opt.get('github-sha') }))); return; }
   if (command === 'landing') { console.log(JSON.stringify(checkLandingDelta({ base: opt.get('base'), head: opt.get('head'), maxPaths: Number(opt.get('max-paths')), maxAdded: Number(opt.get('max-added')) }))); return; }
+  if (command === 'product-cap') {
+    // #183 measurement. Reports the immutable product union and whether it is within the cap;
+    // exits 0 either way BY DESIGN — this records, it does not gate (see the constants block).
+    // Every provenance/parsing failure inside still throws and exits non-zero.
+    const delta = productLandingDelta({ head: opt.get('head') ?? 'HEAD' });
+    console.log(JSON.stringify(delta));
+    console.log(
+      `run4 product cap (RECORDED, NOT GATING): ${delta.changedPaths}/${RUN4_MAX_CHANGED_PATHS} paths, ` +
+        `${delta.addedLines}/${RUN4_MAX_ADDED_LINES} added lines, ${delta.excludedPaths} MT4 paths excluded — ` +
+        `${delta.withinCap ? 'WITHIN cap' : 'OVER cap; acceptance is a human envelope decision'}`
+    );
+    return;
+  }
   if (command === 'graph-hashes') { generateGraphs(opt.get('deno'), opt.get('graph-dir')); console.log(JSON.stringify(collectCurrentFunctionEvidence(opt.get('graph-dir')), null, 2)); return; }
   if (command === 'attest') { checkDeployAttestation({ graphDir: opt.get('graph-dir'), deno: opt.get('deno'), supabaseCli: opt.get('supabase-cli') }); console.log('run4 local runtime attestation: PASS'); return; }
   if (command === 'record-attestation') {
@@ -677,7 +873,7 @@ function main() {
     return;
   }
   if (command === 'aggregate') { checkAggregateNeeds(process.env.NEEDS_JSON ?? ''); console.log('Run 4 Gate: PASS'); return; }
-  fail('usage: run4_release_gate.mjs <config|provenance|landing|graph-hashes|attest|record-attestation|aggregate>');
+  fail('usage: run4_release_gate.mjs <config|provenance|landing|product-cap|graph-hashes|attest|record-attestation|aggregate>');
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

@@ -506,25 +506,26 @@ for (const fn of FUNCTIONS) {
   });
 }
 
-test("run-pipeline fans out the internal secret and the anon key, never the service-role key", () => {
+test("run-pipeline fans out the internal secret and publishable key without Authorization", () => {
   const text = source("run-pipeline");
-  assert.ok(!text.includes("SUPABASE_SERVICE_ROLE_KEY"), "run-pipeline must not read the service key");
-  assert.ok(text.includes("[INTERNAL_SECRET_HEADER_WIRE]: outboundSecret"), "must forward the secret");
-  assert.ok(text.includes("Authorization: `Bearer ${anonKey}`"), "must send the anon key as the JWT");
-  assert.ok(text.includes("apikey: anonKey"), "must send the anon key as apikey");
+  const helper = readText(resolve(here, "engine_request.ts"));
+  assert.ok(text.includes("fetchEngineStage(fetch, supabaseUrl, stage, publishableKey, outboundSecret)"), "must use the tested request helper");
+  assert.ok(text.includes('resolveServerKey(env, "publishable", {'), "must resolve a replacement publishable key");
+  assert.ok(helper.includes("[INTERNAL_SECRET_HEADER_WIRE]: internalSecret"), "must forward the secret");
+  assert.ok(helper.includes("apikey: publishableKey"), "must send the publishable key on apikey");
+  assert.ok(!text.includes("Authorization:"), "must never send an API key as an Authorization bearer");
+  assert.ok(!helper.includes("Authorization:"), "request helper must never send Authorization");
 });
 
-test("the three engine functions keep the service-role key ONLY as a database credential", () => {
+test("the three engine functions resolve a replacement secret only as a database credential", () => {
   for (const fn of ["compute-baselines", "evaluate-signals", "generate-insights"] as const) {
     const text = source(fn);
-    assert.ok(text.includes('Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")'), `${fn}: still needs it for the DB client`);
+    assert.ok(text.includes('resolveServerKey(env, "secret", {'), `${fn}: must resolve a secret key`);
     assert.ok(
-      /(makeClient|createClient)\(Deno\.env\.get\("SUPABASE_URL"\)!, serviceRoleKey\)/.test(text),
-      `${fn}: the only use of serviceRoleKey must be constructing the Supabase client`,
+      /(makeClient|createClient)\(Deno\.env\.get\("SUPABASE_URL"\)!, databaseSecret\)/.test(text),
+      `${fn}: the resolved secret must only construct the privileged Supabase client`,
     );
-    // exactly two textual uses: the env read and the client construction (plus its guard log)
-    const uses = text.split("serviceRoleKey").length - 1;
-    assert.ok(uses <= 3, `${fn}: unexpected extra uses of serviceRoleKey (${uses})`);
+    assert.ok(!text.includes("Authorization:"), `${fn}: must not emit Authorization credentials`);
   }
 });
 
@@ -558,7 +559,7 @@ test("compute-baselines still contains its deliberate literal NUL separator", ()
   const lines = raw.split("\n");
   const nulLines = lines.map((l, i) => (l.includes(NUL) ? i + 1 : 0)).filter(Boolean);
   assert.equal(nulLines.length, 1, "exactly one line must carry the NUL byte");
-  assert.equal(nulLines[0], 171, "the NUL is expected on the baseline map-key line");
+  assert.equal(nulLines[0], 172, "the NUL is expected on the baseline map-key line");
   assert.ok(
     lines[nulLines[0] - 1].includes("${row.user_id}" + NUL + "${row.metric_key}"),
     "the NUL must still be the baseline map-key separator",

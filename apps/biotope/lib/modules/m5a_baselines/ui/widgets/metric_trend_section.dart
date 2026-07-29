@@ -271,10 +271,10 @@ class MetricTrendSectionState extends State<MetricTrendSection> {
         const SizedBox(height: 6),
         Row(
           children: [
-            Text(_dateLabel(_points.first.date), style: _axisStyle),
+            Text(shortDateLabel(_points.first.date), style: _axisStyle),
             const Spacer(),
             if (_points.length > 1)
-              Text(_dateLabel(_points.last.date), style: _axisStyle),
+              Text(shortDateLabel(_points.last.date), style: _axisStyle),
           ],
         ),
       ],
@@ -301,22 +301,6 @@ class MetricTrendSectionState extends State<MetricTrendSection> {
     color: OurobionColors.outline,
   );
 
-  static const _months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-
-  static String _dateLabel(DateTime d) => '${d.day} ${_months[d.month - 1]}';
 }
 
 // ── Chart painter ──────────────────────────────────────────────────────────────

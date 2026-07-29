@@ -52,7 +52,10 @@ param(
   [switch] $WipeFirst       = $true,
 
   # Skip the edge-function step (only inject rows + rebuild engagement_state)?
-  [switch] $SkipEdgeFunctions = $false
+  [switch] $SkipEdgeFunctions = $false,
+
+  # Dedicated Edge Function secret (not a Supabase API key). Defaults from this shell only.
+  [string] $InternalSecret = $env:OUROBION_INTERNAL_SECRET
 )
 
 $ErrorActionPreference = 'Stop'
@@ -93,10 +96,14 @@ if ($SkipEdgeFunctions) {
   Write-Step 'Reading local Supabase credentials…'
   $status  = npx --yes supabase status -o json | ConvertFrom-Json
   $apiUrl  = $status.API_URL;          if (-not $apiUrl)  { $apiUrl  = 'http://127.0.0.1:54321' }
-  $svcKey  = $status.SERVICE_ROLE_KEY; if (-not $svcKey)  { $svcKey  = $status.service_role_key }
-  if (-not $svcKey) { throw 'Could not read SERVICE_ROLE_KEY from `supabase status`.' }
+  $publishableKey = $status.ANON_KEY; if (-not $publishableKey) { $publishableKey = $status.anon_key }
+  if (-not $publishableKey) { throw 'Could not read the local publishable/anon key from `supabase status`.' }
+  if (-not $InternalSecret) {
+    throw 'OUROBION_INTERNAL_SECRET is required to invoke internal edge functions. Pass -InternalSecret or set it for this shell.'
+  }
 
-  $headers = @{ Authorization = "Bearer $svcKey"; 'Content-Type' = 'application/json' }
+  # Replacement publishable keys are opaque: never send an API key in Authorization.
+  $headers = @{ apikey = $publishableKey; 'X-Ourobion-Internal-Secret' = $InternalSecret; 'Content-Type' = 'application/json' }
 
   # Order matters: generate-insights reads baseline_snapshots, so baselines run first.
   foreach ($fn in @('compute-baselines', 'generate-insights')) {

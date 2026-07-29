@@ -3,6 +3,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2.110.7"
 import { METRICS } from "../../../shared/metrics/registry.ts"
 import { validateCopyString } from "../../../shared/constants/copy_guidelines.ts"
 import { unauthorizedResponse, verifyInternalSecretRequest } from "../_shared/internal_auth.ts"
+import { readServerKeyEnv, resolveServerKey, ServerKeyConfigurationError } from "../_shared/server_keys.ts"
 import { classifyDaily } from "../evaluate-signals/stats.ts"
 import { PAIR_GATES, SIGNAL_CONFIG } from "../evaluate-signals/config.ts"
 import {
@@ -21,12 +22,16 @@ import {
   classifyPattern,
   completenessScore,
   gapStatusFor,
+  composeClaimKind,
+  composeTrustPosture,
   insightId,
   pairKey,
   personalPassesGate,
   rendersCard,
   type Branch,
   type CandidatePattern,
+  type ComposedClaimKind,
+  type ComposedTrustPosture,
   type GapStatus,
   type PersonalSignalRow,
   type ServableEdge,
@@ -37,10 +42,34 @@ import {
   edgeRuleId,
   PERSONAL_CARD_TEMPLATE,
   personalRuleId,
+  postureDisclosure,
   RELATIONSHIP_CATEGORY,
   relationPhrase,
   renderCard,
 } from "./render.ts"
+// R4-U4/O27 · the shared, tested artifact-trust rule. Imported from trust_labels.ts — the
+// import-free shared module — for the same reason validateCopyString is imported straight from
+// copy_guidelines.ts: one definition, no vendored copy that could drift. It must be this module
+// and not provenance.ts, because Deno resolves specifiers literally and cannot follow the
+// extensionless imports the rest of shared/brain uses.
+import {
+  trustFailures,
+  type ServingEnvironment,
+} from "../../../shared/brain/trust_labels.ts"
+
+/**
+ * R4-U4/O27 · Which trust posture this serving path runs under.
+ *
+ * DEFAULTS TO `production` — the STRICTEST value — on purpose. An unset variable must not be the
+ * permissive case: a deployment that forgot to configure this has to fail closed, not silently
+ * serve fixture-derived cards as if they were real findings. Local and demo runs opt IN by
+ * setting OUROBION_SERVING_ENV=demo (or =development), which is what permits fixture artifacts —
+ * always with the fixture disclosed on the card (B-UI9), never silently.
+ */
+const SERVING_ENVIRONMENT: ServingEnvironment = ((): ServingEnvironment => {
+  const raw = Deno.env.get("OUROBION_SERVING_ENV")
+  return raw === "demo" || raw === "development" || raw === "production" ? raw : "production"
+})()
 
 // ─── S7 + S8 · generate-insights, data-driven (insight-engine-architecture §S7/§S8; ─────────
 // rules-engine-design §C) ────────────────────────────────────────────────────────────────────
@@ -202,7 +231,20 @@ interface CardRow {
   phase_generated: string
   producer: "rules" | "edge" | "personal"
   insight_id: string | null
-  edge_refs: { edgeId: string; verifiedAt: string }[]
+  /**
+   * R4-U4/O27: a cited card's edge ref carries the scientific meaning and trust posture forward
+   * alongside the edge identity, so the provenance surface reads them from the CARD rather than
+   * re-deriving them (and so it cannot disagree with what was actually rendered). The extra keys
+   * are additive and optional — the `rules` and `personal` producers still write `[]`, and the
+   * U7 biotope consumer ignores keys it does not know.
+   */
+  edge_refs: {
+    edgeId: string
+    verifiedAt: string
+    claimKind?: ComposedClaimKind
+    trust?: ComposedTrustPosture
+    studyDesignTier?: number | null
+  }[]
 }
 
 interface InsightRow {
@@ -286,18 +328,24 @@ Deno.serve(async (req) => {
     return unauthorizedResponse()
   }
 
-  // ── Configuration guard — reachable only by an AUTHORIZED caller, so 500 leaks nothing.
-  // SUPABASE_SERVICE_ROLE_KEY is a DATABASE credential here, never a request credential.
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
-  if (!serviceRoleKey) {
-    console.error("SUPABASE_SERVICE_ROLE_KEY is not set — refusing to serve")
+  // Replacement secret keys are privileged DATABASE credentials only. Resolution is after the
+  // internal-secret gate so malformed configuration cannot become an unauthenticated oracle.
+  let databaseSecret: string
+  try {
+    const env = readServerKeyEnv("secret")
+    databaseSecret = resolveServerKey(env, "secret", {
+      allowLegacyLocalCli: true,
+      supabaseUrl: env.SUPABASE_URL,
+    }).value
+  } catch (error) {
+    console.error("Supabase secret-key configuration unavailable", error instanceof ServerKeyConfigurationError ? error.message : error)
     return new Response(
-      JSON.stringify({ error: "server misconfiguration: service-role key unavailable" }),
+      JSON.stringify({ error: "server misconfiguration: database credential unavailable" }),
       { status: 500 },
     )
   }
 
-  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey)
+  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, databaseSecret)
   const day = new Date().toISOString().split("T")[0]
   const now = new Date().toISOString()
   const seriesStart = addDays(day, -SIGNAL_CONFIG.windowDays) // 28 baseline days + today
@@ -822,17 +870,71 @@ Deno.serve(async (req) => {
                 `cardEdge.subject "${cardEdge.subject}" != fired metric "${metricKey}"`,
             )
           } else {
+            // R4-U4/O27 · artifact trust gate, evaluated BEFORE any copy is produced. A cited
+            // card inherits its source's trust posture, so an edge that cannot prove where it
+            // came from must not become a card at all. `trustFailures` is the shared, tested
+            // rule (shared/brain/provenance.ts); this call site only supplies the environment.
+            const edgeClaimKind = composeClaimKind(cardEdge)
+            const edgeTrust = composeTrustPosture(cardEdge)
+            const failures = trustFailures(
+              {
+                artifact:
+                  edgeTrust.posture === null ||
+                  edgeTrust.artifactRevision === null ||
+                  edgeTrust.artifactContentHash === null
+                    ? undefined
+                    : {
+                        revision: edgeTrust.artifactRevision,
+                        contentHash: edgeTrust.artifactContentHash,
+                        posture: edgeTrust.posture as "fixture" | "live",
+                      },
+                attestation:
+                  edgeTrust.returnedModel === null ||
+                  edgeTrust.modelFamily === null ||
+                  edgeTrust.decorrelated === null ||
+                  edgeTrust.attested === null
+                    ? undefined
+                    : {
+                        returnedModel: edgeTrust.returnedModel,
+                        returnedVersion: edgeTrust.returnedVersion,
+                        family: edgeTrust.modelFamily,
+                        decorrelated: edgeTrust.decorrelated,
+                        attested: edgeTrust.attested,
+                      },
+              },
+              SERVING_ENVIRONMENT,
+            )
+            if (failures.length > 0) {
+              // BLOCK, never warn-and-serve (B-UI9 fail-closed).
+              const reason =
+                `artifact trust check failed for ${SERVING_ENVIRONMENT}: ` +
+                failures.map((f) => f.code).join(",")
+              renderDrops.push({ userId, ruleId: edgeRuleId(cardEdge.edge_id), reason })
+              console.warn(
+                `card blocked by artifact trust gate: ${userId}:${edgeRuleId(cardEdge.edge_id)}`,
+                failures,
+              )
+            } else {
             // A21: the "matching pattern" clause ships only when a gate-passing personal signal
             // backs it (classified.personal is exactly that row, or null).
-            const rendered = renderCard(edgeCardTemplate(classified.personal !== null), {
-              // The stated "shifted" subject IS the fired metric (asserted equal to
-              // cardEdge.subject above) — never the other endpoint (O16).
-              metric_a_label: label(metricKey),
-              metric_b_label: label(cardEdge.object),
-              pattern_metric_label: label(metricKey),
-              direction_phrase: directionPhrase(state ?? "up"),
-              relation_phrase: relationPhrase(cardEdge.relation),
-            })
+            const rendered = renderCard(
+              edgeCardTemplate(classified.personal !== null),
+              {
+                // The stated "shifted" subject IS the fired metric (asserted equal to
+                // cardEdge.subject above) — never the other endpoint (O16).
+                metric_a_label: label(metricKey),
+                metric_b_label: label(cardEdge.object),
+                pattern_metric_label: label(metricKey),
+                direction_phrase: directionPhrase(state ?? "up"),
+                // B-SCI1: the phrase is now chosen by the EFFECTIVE claim kind, so a
+                // correlational finding can no longer be stated as a causal one.
+                relation_phrase: relationPhrase(cardEdge.relation, edgeClaimKind.effective),
+                // B-UI9: the fixture disclosure sits at the FRONT of the body, before the claim.
+                posture_disclosure: postureDisclosure(edgeTrust.posture),
+              },
+              // B-SCI1 defence in depth: the causal-verb gate runs over the final copy.
+              { effectiveKind: edgeClaimKind.effective },
+            )
             if (!rendered.ok) {
               renderDrops.push({
                 userId,
@@ -857,8 +959,20 @@ Deno.serve(async (req) => {
                 phase_generated: COMPOSER_PHASE,
                 producer: "edge",
                 insight_id: id,
-                edge_refs: [{ edgeId: cardEdge.edge_id, verifiedAt: cardEdge.verified_at }],
+                // R4-U4: the card's edge ref carries the scientific meaning and trust posture
+                // forward, so the provenance surface reads them from the CARD rather than
+                // re-deriving them (and cannot disagree with what was rendered).
+                edge_refs: [
+                  {
+                    edgeId: cardEdge.edge_id,
+                    verifiedAt: cardEdge.verified_at,
+                    claimKind: edgeClaimKind,
+                    trust: edgeTrust,
+                    studyDesignTier: cardEdge.verification?.evidenceTier ?? null,
+                  },
+                ],
               })
+            }
             }
           }
         } else {

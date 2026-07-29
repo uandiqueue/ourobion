@@ -531,7 +531,7 @@ const MUTATING_ACTIONS: Readonly<Record<string, string>> = Object.freeze({
   'PATCH /api/seeds': 'seeds.toggle',
 });
 
-test('source-conformance: every mutating handler calls recordControlEvent with its declared action', () => {
+test('source-conformance: every non-U3 mutating handler uses a lifecycle boundary with its declared action', () => {
   const handlers = discoverHandlers();
   const mutating = handlers.filter((h) => h.method !== 'GET' && h.method !== 'HEAD' && h.method !== 'OPTIONS');
   assert.equal(mutating.length, 8, `expected 8 mutating handlers, found ${mutating.length}`);
@@ -541,9 +541,17 @@ test('source-conformance: every mutating handler calls recordControlEvent with i
     const rel = path.relative(NAO_ROOT, h.file);
     const expected = MUTATING_ACTIONS[key];
     assert.ok(expected, `${key} (${rel}): mutating handler with no declared control action`);
-    const call = /recordControlEvent\(\s*'([a-z_.]+)'/.exec(h.body);
-    assert.ok(call, `${key} (${rel}): no recordControlEvent(...) call — the audit log would stay empty`);
+    const call = /(?:action:\s*|recordControlEvent\(\s*)'([a-z_.]+)'/.exec(h.body);
+    assert.ok(call, `${key} (${rel}): no declared audit action`);
     assert.equal(call[1], expected, `${key} (${rel}): records '${call[1]}' but should record '${expected}'`);
+    if (key !== 'POST /api/loader') {
+      assert.match(
+        h.body,
+        /(?:runAuditedControlMutation|applyTransactionalControlMutation)\(/,
+        `${key} (${rel}): missing truthful lifecycle boundary`,
+      );
+      assert.match(h.body, /controlOperationId\(req\)/, `${key} (${rel}): missing stable operation id`);
+    }
   }
   // No stale entry either.
   for (const key of Object.keys(MUTATING_ACTIONS)) {
@@ -551,6 +559,25 @@ test('source-conformance: every mutating handler calls recordControlEvent with i
       mutating.some((h) => `${h.method} ${h.routePath}` === key),
       `MUTATING_ACTIONS entry "${key}" has no matching handler on disk`,
     );
+  }
+});
+
+test('source-conformance: every database mutation renders an indeterminate RPC response as outcome unknown', () => {
+  const databaseMutations = new Set([
+    'POST /api/claims/reject',
+    'POST /api/models/caps',
+    'POST /api/seeds',
+    'PATCH /api/seeds',
+  ]);
+  const handlers = discoverHandlers().filter((handler) =>
+    databaseMutations.has(`${handler.method} ${handler.routePath}`));
+  assert.equal(handlers.length, databaseMutations.size);
+  for (const handler of handlers) {
+    const key = `${handler.method} ${handler.routePath}`;
+    assert.match(handler.body, /error instanceof NaoControlOutcomeUnknownError/,
+      `${key}: response-loss ambiguity must not become a generic 500 or false not-started claim`);
+    assert.match(handler.body, /controlOutcomeUnknownErrorResponse\(error\)/,
+      `${key}: outcome-unknown must return its stable operation id`);
   }
 });
 
@@ -570,13 +597,22 @@ test("source-conformance: the recorded actions are exactly nao_control_events' C
 });
 
 test('source-conformance: recordControlEvent redacts detail and target, and never takes an actor argument', () => {
-  const server = readFileSync(path.join(NAO_ROOT, 'src', 'lib', 'authzServer.ts'), 'utf8');
+  // Line endings are NORMALISED to LF before slicing. On a Windows checkout
+  // (core.autocrlf=true) the file is CRLF, so an indexOf() of a pattern written
+  // with a literal '\n' finds nothing and returns -1 — and `slice(0, -1)` then
+  // silently widens `signature` to the WHOLE remainder of the module, which
+  // matches `userId` inside guardRole() and fails for the wrong reason. The
+  // assertion below must test the overload signatures only.
+  const server = readFileSync(path.join(NAO_ROOT, 'src', 'lib', 'authzServer.ts'), 'utf8')
+    .replace(/\r\n/g, '\n');
   const fn = server.slice(server.indexOf('export async function recordControlEvent'));
-  assert.match(fn, /redactDeep\(detail\)/, 'detail must be redacted before insert');
-  assert.match(fn, /redactText\(target\)/, 'target must be redacted before insert');
+  assert.match(fn, /redactDeep\(event\.detail\)/, 'detail must be redacted before insert');
+  assert.match(fn, /redactText\(event\.target\)/, 'target must be redacted before insert');
   // Attribution comes from the DB trigger (auth.uid()), never from a parameter —
   // there must be no actor/userId/role argument to get wrong or to lie in.
-  const signature = fn.slice(0, fn.indexOf('): Promise<void>'));
+  const implementationStart = fn.indexOf('export async function recordControlEvent(\n  eventOrAction');
+  assert.notEqual(implementationStart, -1, 'recordControlEvent lost its overload implementation signature');
+  const signature = fn.slice(0, implementationStart);
   for (const forbidden of ['actor', 'userId', 'user_id', 'role']) {
     assert.doesNotMatch(
       signature,
@@ -600,30 +636,23 @@ test('source-conformance: recordControlEvent sanitises detail and target for sto
   const fn = server.slice(server.indexOf('export async function recordControlEvent'));
   assert.match(
     fn,
-    /sanitizeStorageValue\(redactDeep\(detail\)\)/,
+    /sanitizeStorageValue\(redactDeep\(event\.detail\)\)/,
     'detail must be sanitised for storage AFTER being redacted',
   );
   assert.match(
     fn,
-    /sanitizeStorageValue\(redactText\(target\)\)/,
+    /sanitizeStorageValue\(redactText\(event\.target\)\)/,
     'target must be sanitised for storage AFTER being redacted',
   );
-  assert.match(fn, /detail:\s*safeDetail/, 'the SANITISED detail, not the raw redacted one, must be inserted');
-  assert.match(fn, /target:\s*safeTarget/, 'the SANITISED target, not the raw redacted one, must be inserted');
+  assert.match(fn, /p_detail:\s*safeDetail/, 'the SANITISED detail, not the raw redacted one, must be inserted');
+  assert.match(fn, /p_target:\s*safeTarget/, 'the SANITISED target, not the raw redacted one, must be inserted');
 });
 
-test('source-conformance: a swallowed audit-insert failure logs the action and target, not just the error', () => {
+test('source-conformance: audit persistence failures are thrown, never logged and swallowed', () => {
   const server = readFileSync(path.join(NAO_ROOT, 'src', 'lib', 'authzServer.ts'), 'utf8');
   const fn = server.slice(server.indexOf('export async function recordControlEvent'));
-  const insertFailedLog = /console\.error\(\s*`([^`]*insert failed[^`]*)`/.exec(fn);
-  assert.ok(insertFailedLog, 'no console.error for a failed insert found');
-  assert.match(insertFailedLog[1], /\$\{action\}/, 'the insert-failed log must name the action');
-  assert.match(insertFailedLog[1], /\$\{safeTarget/, 'the insert-failed log must name the target');
-
-  const insertThrewLog = /console\.error\(\s*`([^`]*insert threw[^`]*)`/.exec(fn);
-  assert.ok(insertThrewLog, 'no console.error for a thrown insert found');
-  assert.match(insertThrewLog[1], /\$\{action\}/, 'the insert-threw log must name the action');
-  assert.match(insertThrewLog[1], /\$\{target/, 'the insert-threw log must name the target');
+  assert.match(fn, /throw new Error\('control audit persistence failed'\)/);
+  assert.doesNotMatch(fn, /console\.error/);
 });
 
 // ── The relay redaction is actually wired in (R4-U2 review finding 1) ──────

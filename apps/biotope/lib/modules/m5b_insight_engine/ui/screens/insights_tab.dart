@@ -33,10 +33,15 @@ class _InsightsTabState extends State<InsightsTab> {
     _load();
   }
 
+  String get _uid =>
+      widget.userId ?? Supabase.instance.client.auth.currentUser!.id;
+
+  /// Reads both halves of this screen from Supabase: the servable deck and the
+  /// true archived-row count behind the SAVED header. Also the deck's replay
+  /// handler — see [InsightDeck.onReplay].
   Future<void> _load() async {
     try {
-      final userId =
-          widget.userId ?? Supabase.instance.client.auth.currentUser!.id;
+      final userId = _uid;
       final results = await Future.wait([
         _service.getInsights(userId),
         _service.getArchivedInsights(userId),
@@ -58,8 +63,25 @@ class _InsightsTabState extends State<InsightsTab> {
   /// migration 20260728040000).
   Future<void> _save(InsightCard card) async {
     await _service.updateStatus(card.id, InsightStatus.archived);
-    if (!mounted) return;
-    setState(() => _savedCount += 1);
+    await _refreshSavedCount();
+  }
+
+  /// Re-reads the archived rows rather than incrementing a local counter.
+  ///
+  /// `_savedCount += 1` drifted above the truth within a single session: the
+  /// status write is an idempotent UPDATE, so saving a card that already reads
+  /// `archived` changes no row — but the counter went up anyway. The header
+  /// says SAVED, so it has to mean "rows in the archive", which only
+  /// [InsightService.getArchivedInsights] knows.
+  Future<void> _refreshSavedCount() async {
+    try {
+      final archived = await _service.getArchivedInsights(_uid);
+      if (!mounted) return;
+      setState(() => _savedCount = archived.length);
+    } catch (_) {
+      // Keep the last count that came from the backend. Falling back to a
+      // local increment here would reintroduce exactly the drift this replaces.
+    }
   }
 
   Future<void> _dismiss(InsightCard card) async {
@@ -151,6 +173,9 @@ class _InsightsTabState extends State<InsightsTab> {
                         onSave: _save,
                         onDismiss: _dismiss,
                         onOpenDetail: _openProvenance,
+                        // The empty-deck action re-reads Supabase; it must not
+                        // rewind a local index over already-held cards.
+                        onReplay: _load,
                       ),
                     ),
             ),
