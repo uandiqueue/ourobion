@@ -17,9 +17,9 @@ import { join } from 'node:path';
 
 import {
   assembleSynthesisInput,
-  claimDedupeKey,
   dedupeAgainst,
   appendClaimsToDir,
+  claimDedupeKey,
   loadClaimValidator,
   loadCopyValidator,
   pairFromKeys,
@@ -29,8 +29,9 @@ import {
   synthesize,
   type ClaimValidator,
 } from '../src/synth/index.js';
-import type { SynthClaim, SynthPair } from '../src/synth/index.js';
+import type { SynthClaim, SynthPair, SynthRawRecord } from '../src/synth/index.js';
 import type { LlmRequest, LlmResponse } from '../../llm-router/src/index.js';
+import { logicalCallIdSha256 } from '../../llm-router/src/index.js';
 
 // ── fixtures ─────────────────────────────────────────────────────────────────
 
@@ -265,6 +266,17 @@ test('artifact: appendClaimsToDir is idempotent across runs', async () => {
   }
 });
 
+test('artifact: claim dedupe separators are runtime NULs without binary source bytes', async () => {
+  const validateClaim = await loadClaimValidator();
+  const claim = processSynthesisResponse(
+    JSON.stringify({ claims: [validRawClaim()] }),
+    ctxWith(validateClaim),
+  ).accepted[0]!;
+  const key = claimDedupeKey(claim);
+  assert.equal(key.charCodeAt(claim.edgeId.length), 0);
+  assert.equal(readFileSync(new URL('../src/synth/artifact.ts', import.meta.url)).includes(0), false);
+});
+
 // ── end-to-end (mocked router + fixture text, real validateClaim) ──────────────
 
 test('synthesize: end-to-end accepts the grounded claim, rejects the fabricated one, writes the artifact', async () => {
@@ -313,6 +325,180 @@ test('synthesize: end-to-end accepts the grounded claim, rejects the fabricated 
     const rec = JSON.parse(written) as SynthClaim;
     assert.equal(rec.edgeId, 'gut_comfort_score|correlates|mood_score');
     assert.equal(rec.synthesisModel, 'mock-fable');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('synthesize acceptance: schema retry reuses one logical id and retains provider identity/raw evidence', async () => {
+  const validateClaim = await loadClaimValidator();
+  const requests: LlmRequest[] = [];
+  const rawText = JSON.stringify({ provider: 'agnes-free-evidence', claims: [validRawClaim()] });
+  const router = {
+    async route(req: LlmRequest): Promise<LlmResponse> {
+      requests.push(req);
+      const text = requests.length === 1
+        ? JSON.stringify({ claims: [validRawClaim({ subject: 'not_requested' })] })
+        : JSON.stringify({ claims: [validRawClaim()] });
+      return {
+        text,
+        model: 'claude-sonnet-5-20260701',
+        modelIdentity: {
+          model: 'claude-sonnet-5-20260701',
+          source: 'provider-response',
+          providerAttested: true,
+          family: 'anthropic',
+          returnedVersion: null,
+          decorrelatedFromSynthesis: false,
+        },
+        route: 'api_worker',
+        usage: { inputTokens: 10, outputTokens: 20 },
+        rawBody: {
+          body: rawText,
+          bytes: Buffer.byteLength(rawText),
+          truncated: false,
+          capBytes: 262144,
+          sha256: `sha256:${'d'.repeat(64)}`,
+        },
+      };
+    },
+  };
+  const dir = tmp();
+  try {
+    const result = await synthesize({
+      pairs: [PAIR],
+      paperUids: [PAPER_ID],
+      edgesDir: dir,
+      router,
+      textLoader: async () => FIXTURE_TEXT,
+      validateClaim,
+      activeMetricKeys: new Set(['gut_comfort_score', 'mood_score']),
+      acceptance: { acceptanceRunId: 'acceptance-1' },
+      maxAttempts: 3,
+      now: () => Date.parse('2026-07-16T00:00:00.000Z'),
+    });
+    assert.equal(requests.length, 2);
+    assert.deepEqual(
+      new Set(requests.map((req) => req.acceptance?.logicalCallId)),
+      new Set([logicalCallIdSha256('synthesis', PAIR.id)]),
+    );
+    assert.equal(result.evidence?.written, 2);
+    const rawLines = readFileSync(join(dir, 'synthesis-raw.jsonl'), 'utf8').trim().split(/\r?\n/);
+    const raw = JSON.parse(rawLines[1]!) as SynthRawRecord;
+    assert.equal(raw.pairId, PAIR.id);
+    assert.equal(raw.synthesisRunId, 'acceptance-1');
+    assert.equal(raw.logicalCallId, logicalCallIdSha256('synthesis', PAIR.id));
+    assert.equal(raw.attempt, 2);
+    assert.equal(raw.result, 'accepted');
+    assert.equal(raw.returnedModel, 'claude-sonnet-5-20260701');
+    assert.equal(raw.family, 'anthropic');
+    assert.equal(raw.attested, true);
+    assert.equal(raw.raw.body, rawText);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('synthesize acceptance: a valid adverse empty claim set does not retry or fall back', async () => {
+  const validateClaim = await loadClaimValidator();
+  const requests: LlmRequest[] = [];
+  const dir = tmp();
+  try {
+    const rawText = '{"claims":[]}';
+    const result = await synthesize({
+      pairs: [PAIR],
+      paperUids: [PAPER_ID],
+      edgesDir: dir,
+      router: {
+        async route(req: LlmRequest): Promise<LlmResponse> {
+          requests.push(req);
+          return {
+            text: rawText,
+            model: 'claude-sonnet-5',
+            modelIdentity: {
+              model: 'claude-sonnet-5', source: 'provider-response', providerAttested: true,
+              family: 'anthropic', returnedVersion: null, decorrelatedFromSynthesis: false,
+            },
+            route: 'api_worker',
+            usage: { inputTokens: 1, outputTokens: 1 },
+            rawBody: {
+              body: rawText,
+              bytes: Buffer.byteLength(rawText),
+              truncated: false,
+              capBytes: 262144,
+              sha256: `sha256:${'e'.repeat(64)}`,
+            },
+          };
+        },
+      },
+      textLoader: async () => FIXTURE_TEXT,
+      validateClaim,
+      activeMetricKeys: new Set(['gut_comfort_score', 'mood_score']),
+      acceptance: { acceptanceRunId: 'acceptance-2' },
+      maxAttempts: 3,
+    });
+    assert.equal(requests.length, 1);
+    assert.equal(result.accepted.length, 0);
+    assert.equal(result.rejectedCount, 0);
+    assert.equal(result.evidence?.written, 1);
+    const raw = JSON.parse(readFileSync(join(dir, 'synthesis-raw.jsonl'), 'utf8').trim()) as SynthRawRecord;
+    assert.equal(raw.result, 'adverse-empty');
+    assert.equal(raw.pairId, PAIR.id);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('synthesize acceptance: terminal enforcement rejection still persists pair-scoped provider evidence', async () => {
+  const validateClaim = await loadClaimValidator();
+  const dir = tmp();
+  let requests = 0;
+  try {
+    const rawText = JSON.stringify({ claims: [validRawClaim({ subject: 'not_requested' })] });
+    const result = await synthesize({
+      pairs: [PAIR],
+      paperUids: [PAPER_ID],
+      edgesDir: dir,
+      router: {
+        async route(): Promise<LlmResponse> {
+          requests++;
+          return {
+            text: rawText,
+            model: 'claude-sonnet-5',
+            modelIdentity: {
+              model: 'claude-sonnet-5',
+              source: 'provider-response',
+              providerAttested: true,
+              family: 'anthropic',
+              returnedVersion: null,
+              decorrelatedFromSynthesis: false,
+            },
+            route: 'api_worker',
+            usage: { inputTokens: 1, outputTokens: 1 },
+            rawBody: {
+              body: rawText,
+              bytes: Buffer.byteLength(rawText),
+              truncated: false,
+              capBytes: 262144,
+              sha256: `sha256:${'f'.repeat(64)}`,
+            },
+          };
+        },
+      },
+      textLoader: async () => FIXTURE_TEXT,
+      validateClaim,
+      activeMetricKeys: new Set(['gut_comfort_score', 'mood_score']),
+      acceptance: { acceptanceRunId: 'acceptance-terminal-reject' },
+      maxAttempts: 1,
+    });
+    assert.equal(requests, 1);
+    assert.equal(result.accepted.length, 0);
+    assert.equal(result.rejectedCount, 1);
+    assert.equal(result.evidence?.written, 1);
+    const raw = JSON.parse(readFileSync(join(dir, 'synthesis-raw.jsonl'), 'utf8').trim()) as SynthRawRecord;
+    assert.equal(raw.result, 'enforcement-rejected');
+    assert.equal(raw.acceptedCount, 0);
+    assert.equal(raw.rejectedCount, 1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

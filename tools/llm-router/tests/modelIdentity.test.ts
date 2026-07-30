@@ -107,22 +107,16 @@ test('router: fills the vendor family and the decorrelation verdict for the veri
   assert.equal(res.modelIdentity.providerAttested, true);
 });
 
-test('router: a SAME-FAMILY verifier records decorrelated FALSE, attested still TRUE', async () => {
-  // R4-U3: such a config can no longer be LOADED (validateConfig hard-fails), but an
-  // injected object bypasses validation — so the router must still report the honest
-  // verdict rather than assume the invariant held.
+test('router: an injected SAME-FAMILY verifier config is validated and refused', () => {
   const config = testConfig();
   config.nodes.verifier = { ...config.nodes.verifier, model: 'claude-sonnet-5' };
-  const router = new LlmRouter({
-    config,
-    env: ENV,
-    fetchFn: onceFetch(anthropicBody('{}')),
-    ledgerPath: `${process.env.TMPDIR ?? '/tmp'}/ourobion-modelidentity-${Date.now()}-b.json`,
-  });
-  const res = await router.route(verifierReq);
-  assert.equal(res.modelIdentity.decorrelatedFromSynthesis, false);
-  // Attestation is INDEPENDENT of decorrelation: a real provider still answered for itself.
-  // Keeping the two apart is the point — collapsing them would either forgive a correlated
-  // verifier or discard a genuine attestation.
-  assert.equal(res.modelIdentity.providerAttested, true);
+  assert.throws(
+    () => new LlmRouter({
+      config,
+      env: ENV,
+      fetchFn: onceFetch(anthropicBody('{}')),
+      ledgerPath: `${process.env.TMPDIR ?? '/tmp'}/ourobion-modelidentity-${Date.now()}-b.json`,
+    }),
+    /decorrelation violated/,
+  );
 });

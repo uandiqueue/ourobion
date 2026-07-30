@@ -18,6 +18,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { logicalCallIdSha256 } from '../../llm-router/src/index.js';
 
 import {
   buildVerifierPrompt,
@@ -513,6 +514,45 @@ test('verifyClaim full end-to-end: mocked router → schema-valid supported veri
   assert.equal(res.record?.corroboration.supporting, 1);
   // The record round-trips through the REAL shared zod validator (already applied by enforce).
   assert.doesNotThrow(() => validate(res.record));
+});
+
+test('verifyClaim acceptance: valid adverse verdict returns once, without retry or uncertain fallback', async () => {
+  const validate = await loadVerificationValidator();
+  const requests: LlmRequest[] = [];
+  const res = await verifyClaim(makeClaim(), {
+    texts: texts(),
+    retrieve: { corpus: [corpusDoc()] },
+    router: {
+      async route(req: LlmRequest): Promise<LlmResponse> {
+        requests.push(req);
+        return {
+          text: reply({
+            verdict: 'unsupported',
+            sourceStances: [{ paperId: 'corpus:gut-mood-2024', stance: 'refutes' }],
+            directionMatches: false,
+            claimKindMatches: false,
+          }),
+          model: 'agnes-llama-3.3-70b',
+          modelIdentity: {
+            model: 'agnes-llama-3.3-70b', source: 'provider-response', providerAttested: true,
+            family: 'agnes', returnedVersion: null, decorrelatedFromSynthesis: true,
+          },
+          route: 'api_worker',
+          usage: { inputTokens: 10, outputTokens: 20 },
+        };
+      },
+    },
+    validateVerification: validate,
+    acceptance: { acceptanceRunId: 'acceptance-verify' },
+    maxAttempts: 3,
+  });
+  assert.equal(requests.length, 1);
+  assert.equal(
+    requests[0]!.acceptance?.logicalCallId,
+    logicalCallIdSha256('verifier', makeClaim().edgeId),
+  );
+  assert.equal(res.record?.verdict, 'unsupported');
+  assert.equal(res.fallback, undefined);
 });
 
 // ── artifact dedupe ─────────────────────────────────────────────────────────────

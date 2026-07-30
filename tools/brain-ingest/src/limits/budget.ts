@@ -136,9 +136,9 @@ function utcMidnightIso(ms: number): string {
 
 /**
  * File-backed {@link BudgetGuard}. Counters are read at construction and
- * rewritten on every `charge`. Reads tolerate a missing/corrupt file (treated
- * as empty). Writes are atomic (temp file + rename) so a crash mid-write can't
- * leave a half-written `usage.json`.
+ * rewritten on every charge. A missing file starts clean; malformed or
+ * unreadable accounting fails closed. Writes are atomic (temp file + rename)
+ * so a crash mid-write cannot leave a half-written usage file.
  */
 export class FileBudgetGuard implements BudgetGuard {
   private readonly usagePath: string;
@@ -163,14 +163,49 @@ export class FileBudgetGuard implements BudgetGuard {
   private load(): Partial<Record<SourceName, Counter>> {
     try {
       const raw = readFileSync(this.usagePath, 'utf8');
-      const parsed = JSON.parse(raw) as UsageFile;
-      if (parsed && typeof parsed === 'object' && parsed.counters) {
-        return parsed.counters;
+      const parsed = JSON.parse(raw) as Partial<UsageFile> | null;
+      if (
+        parsed === null ||
+        typeof parsed !== 'object' ||
+        parsed.version !== 1 ||
+        parsed.counters === null ||
+        typeof parsed.counters !== 'object' ||
+        Array.isArray(parsed.counters)
+      ) {
+        throw new Error('unsupported or malformed usage ledger');
       }
-    } catch {
-      // Missing or corrupt file → start clean.
+      for (const [source, counter] of Object.entries(parsed.counters)) {
+        const c = counter as Partial<Counter> | null;
+        if (
+          source.length === 0 ||
+          c === null ||
+          typeof c !== 'object' ||
+          typeof c.windowStart !== 'string' ||
+          Number.isNaN(Date.parse(c.windowStart)) ||
+          typeof c.spent !== 'number' ||
+          !Number.isFinite(c.spent) ||
+          c.spent < 0
+        ) {
+          throw new Error(`malformed usage counter '${source}'`);
+        }
+      }
+      return parsed.counters;
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 'ENOENT'
+      ) {
+        return {};
+      }
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `budget: cannot load existing usage ledger '${this.usagePath}': ${detail}. ` +
+          'Refusing to reset spend; repair or explicitly replace the ledger.',
+        { cause: error },
+      );
     }
-    return {};
   }
 
   /**

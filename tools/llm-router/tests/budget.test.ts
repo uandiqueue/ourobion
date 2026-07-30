@@ -155,7 +155,7 @@ test('UTC day rollover: day counters reset; run counters persist (per-run ≠ pe
   }
 });
 
-test('missing/corrupt ledger file → clean start (crash-tolerant load)', () => {
+test('missing ledger starts clean; corrupt historical ledger fails closed', () => {
   const { dir, ledgerPath } = freshLedgerPath();
   try {
     const config = testConfig();
@@ -163,6 +163,25 @@ test('missing/corrupt ledger file → clean start (crash-tolerant load)', () => 
     assert.equal(fresh.nodeSpendToday('seeder').calls, 0);
     assert.equal(fresh.runOutputTokens('nope'), 0);
     assert.equal(fresh.state().day, utcDayKey(DAY1_NOON));
+
+    writeFileSync(ledgerPath, '{"version":1,"days":', 'utf8');
+    assert.throws(
+      () => new BudgetLedger({ config, ledgerPath, now: () => DAY1_NOON }),
+      /cannot (?:load|parse) existing ledger.*refusing to reset spend/i,
+    );
+    writeFileSync(
+      ledgerPath,
+      JSON.stringify({
+        version: 1,
+        days: { '2026-07-15': { synthesis: { calls: -1, inputTokens: 0, outputTokens: 0, usd: 0 } } },
+        runs: {},
+      }),
+      'utf8',
+    );
+    assert.throws(
+      () => new BudgetLedger({ config, ledgerPath, now: () => DAY1_NOON }),
+      /malformed counter/,
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -227,7 +246,6 @@ test('A11: retention boundary — the day exactly retentionDays ago is KEPT, one
         runs: {
           'run-too-old': { startedAt: new Date(tooOldMs).toISOString(), outputTokens: 10 },
           'run-boundary': { startedAt: new Date(boundaryMs).toISOString(), outputTokens: 20 },
-          'run-garbage': { startedAt: 'not-a-date', outputTokens: 30 },
         },
       }),
       'utf8',
@@ -241,7 +259,8 @@ test('A11: retention boundary — the day exactly retentionDays ago is KEPT, one
       runs: Record<string, { outputTokens: number }>;
     };
     assert.deepEqual(Object.keys(onDisk.days).sort(), [utcDayKey(boundaryMs), utcDayKey(DAY1_NOON)].sort());
-    // Boundary run retained; strictly-older and unparsable-startedAt pruned.
+    // Boundary run retained; strictly-older run pruned. Malformed history is
+    // covered separately and fails closed rather than being silently erased.
     assert.deepEqual(Object.keys(onDisk.runs).sort(), ['run-boundary', 'run-new']);
     assert.equal(onDisk.runs['run-boundary']?.outputTokens, 20);
     // state() lists only retained runs (bounded report).

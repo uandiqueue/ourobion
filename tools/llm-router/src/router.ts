@@ -20,26 +20,36 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { BudgetLedger, type BudgetState } from './budget.js';
+import { AttemptJournal, providerContentSha256 } from './attemptJournal.js';
+import { BudgetLedger, costUsd, type BudgetState } from './budget.js';
 import {
   familyOf,
   loadConfig,
   providerFor,
   resolveRepoPath,
+  validateConfig,
   type RouterConfig,
 } from './config.js';
-import { RouterConfigError } from './errors.js';
+import { RouterAttemptJournalError, RouterConfigError } from './errors.js';
 import {
   effectiveCapsFor,
   fetchCapOverrides,
   type CapOverrides,
   type FetchCapOverridesOptions,
 } from './overrides.js';
-import { callApiWorker, type ApiWorkerOptions } from './routes/apiWorker.js';
+import {
+  callApiWorker,
+  canonicalizeProviderContent,
+  type ApiWorkerOptions,
+} from './routes/apiWorker.js';
 import { requestLocalAgent } from './routes/localAgent.js';
 import {
   estimateTokens,
   LLM_NODE_IDS,
+  ACCEPTANCE_MAX_INPUT_BYTES,
+  ACCEPTANCE_MAX_OUTPUT_TOKENS,
+  ACCEPTANCE_JOURNAL_REPO_PATH,
+  DEFAULT_RAW_BODY_CAP_BYTES,
   type LlmNodeId,
   type LlmRequest,
   type LlmResponse,
@@ -95,7 +105,9 @@ export class LlmRouter {
 
   constructor(opts: LlmRouterOptions = {}) {
     this.opts = opts;
-    this.config = opts.config ?? loadConfig(opts.configPath);
+    this.config = opts.config === undefined
+      ? loadConfig(opts.configPath)
+      : validateConfig(structuredClone(opts.config));
     this.runId = opts.runId ?? randomUUID();
     this.ledger = new BudgetLedger({
       config: this.config,
@@ -133,7 +145,66 @@ export class LlmRouter {
     if (node === undefined) {
       throw new RouterConfigError(`llm-router: unknown nodeId '${String(req.nodeId)}'`);
     }
-    const maxOutputTokens = req.maxOutputTokens ?? node.maxOutputTokens;
+    const acceptance = req.acceptance;
+    const family = this.familyOfNode(req.nodeId);
+    const canonicalContent = family === null ? undefined : canonicalizeProviderContent(req, family);
+    const maxOutputTokens = acceptance === undefined
+      ? (req.maxOutputTokens ?? node.maxOutputTokens)
+      : ACCEPTANCE_MAX_OUTPUT_TOKENS;
+
+    if (acceptance !== undefined) {
+      if (this.config.acceptance?.journalPath !== ACCEPTANCE_JOURNAL_REPO_PATH) {
+        throw new RouterAttemptJournalError(
+          'llm-router acceptance: config must bind the fixed router-owned journal path',
+        );
+      }
+      if ('journalPath' in (acceptance as unknown as Record<string, unknown>)) {
+        throw new RouterAttemptJournalError(
+          'llm-router acceptance: callers cannot select or override the router-owned journal path',
+        );
+      }
+      if (node.route !== 'api_worker') {
+        throw new RouterAttemptJournalError('llm-router acceptance: local_agent routes are not provider evidence');
+      }
+      if (req.maxOutputTokens !== undefined && req.maxOutputTokens !== ACCEPTANCE_MAX_OUTPUT_TOKENS) {
+        throw new RouterAttemptJournalError(
+          `llm-router acceptance: maxOutputTokens is fixed at ${ACCEPTANCE_MAX_OUTPUT_TOKENS}`,
+        );
+      }
+      if (req.expectJson !== true) {
+        throw new RouterAttemptJournalError('llm-router acceptance: expectJson must be true');
+      }
+      if (this.opts.retainRawBody === false) {
+        throw new RouterAttemptJournalError('llm-router acceptance: raw response retention cannot be disabled');
+      }
+      if (
+        this.opts.rawBodyCapBytes !== undefined &&
+        this.opts.rawBodyCapBytes !== DEFAULT_RAW_BODY_CAP_BYTES
+      ) {
+        throw new RouterAttemptJournalError(
+          `llm-router acceptance: raw body cap is fixed at ${DEFAULT_RAW_BODY_CAP_BYTES} bytes`,
+        );
+      }
+      const inputBytes = canonicalContent!.inputBytes;
+      if (inputBytes > ACCEPTANCE_MAX_INPUT_BYTES) {
+        throw new RouterAttemptJournalError(
+          `llm-router acceptance: prompt is ${inputBytes} bytes; ceiling is ${ACCEPTANCE_MAX_INPUT_BYTES}`,
+        );
+      }
+      const correctLeg =
+        (req.nodeId === 'synthesis' && family === 'anthropic') ||
+        (req.nodeId === 'verifier' && family === 'agnes');
+      if (!correctLeg) {
+        throw new RouterAttemptJournalError(
+          'llm-router acceptance: only Anthropic synthesis and Agnes verification are authorized',
+        );
+      }
+      if (this.config.prices[node.model]?.provisional !== false) {
+        throw new RouterAttemptJournalError(
+          `llm-router acceptance: model '${node.model}' lacks an authoritative non-provisional price`,
+        );
+      }
+    }
 
     // Fail-closed pre-check with a worst-case estimate: prompt-length input,
     // full output ceiling. Actuals are recorded after the call.
@@ -149,10 +220,40 @@ export class LlmRouter {
         ...(this.opts.fetchFn !== undefined ? { fetchFn: this.opts.fetchFn } : {}),
         ...(this.opts.env !== undefined ? { env: this.opts.env } : {}),
         ...(this.opts.sleep !== undefined ? { sleep: this.opts.sleep } : {}),
-        ...(this.opts.maxAttempts !== undefined ? { maxAttempts: this.opts.maxAttempts } : {}),
+        ...(acceptance !== undefined
+          ? { maxAttempts: Math.min(this.opts.maxAttempts ?? 3, 3) }
+          : this.opts.maxAttempts !== undefined ? { maxAttempts: this.opts.maxAttempts } : {}),
         ...(this.opts.baseDelayMs !== undefined ? { baseDelayMs: this.opts.baseDelayMs } : {}),
-        ...(this.opts.retainRawBody !== undefined ? { retainRawBody: this.opts.retainRawBody } : {}),
-        ...(this.opts.rawBodyCapBytes !== undefined ? { rawBodyCapBytes: this.opts.rawBodyCapBytes } : {}),
+        ...(acceptance !== undefined
+          ? { retainRawBody: true, rawBodyCapBytes: DEFAULT_RAW_BODY_CAP_BYTES }
+          : this.opts.retainRawBody !== undefined ? { retainRawBody: this.opts.retainRawBody } : {}),
+        ...(acceptance === undefined && this.opts.rawBodyCapBytes !== undefined
+          ? { rawBodyCapBytes: this.opts.rawBodyCapBytes }
+          : {}),
+        ...(acceptance !== undefined ? {
+          attemptJournal: {
+            journal: new AttemptJournal(resolveRepoPath(ACCEPTANCE_JOURNAL_REPO_PATH), {
+              ...(this.opts.now !== undefined ? { now: this.opts.now } : {}),
+              allowedRoot: resolveRepoPath('data/llm-router'),
+            }),
+            input: {
+              acceptanceRunId: acceptance.acceptanceRunId,
+              logicalCallId: acceptance.logicalCallId,
+              nodeId: req.nodeId,
+              providerFamily: this.familyOfNode(req.nodeId)!,
+              model: node.model,
+              promptHash: providerContentSha256(canonicalContent!.serialized),
+              inputByteCeiling: ACCEPTANCE_MAX_INPUT_BYTES,
+              outputTokenCeiling: ACCEPTANCE_MAX_OUTPUT_TOKENS,
+              // One token per permitted UTF-8 byte is deliberately conservative
+              // and includes far more headroom than estimateTokens' 4 chars/token.
+              reservedUsd: costUsd(this.config, node.model, {
+                inputTokens: ACCEPTANCE_MAX_INPUT_BYTES,
+                outputTokens: ACCEPTANCE_MAX_OUTPUT_TOKENS,
+              }),
+            },
+          },
+        } : {}),
       });
     } else {
       response = await requestLocalAgent(req, node.model, maxOutputTokens, {
@@ -169,7 +270,7 @@ export class LlmRouter {
     // an identity; only the ROUTER sees the whole config, so it fills the two
     // config-derived members here. Neither can promote an unattested identity —
     // `providerAttested` is decided at the route and never rewritten.
-    return {
+    const completed: LlmResponse = {
       ...response,
       modelIdentity: {
         ...response.modelIdentity,
@@ -177,6 +278,20 @@ export class LlmRouter {
         decorrelatedFromSynthesis: this.decorrelatedFromSynthesis(req.nodeId),
       },
     };
+    if (acceptance !== undefined) {
+      const returnedFamily = providerFor(this.config, completed.modelIdentity.model)?.family;
+      if (
+        !completed.modelIdentity.providerAttested ||
+        returnedFamily !== completed.modelIdentity.family ||
+        completed.rawBody === undefined ||
+        completed.rawBody.truncated
+      ) {
+        throw new RouterAttemptJournalError(
+          'llm-router acceptance: provider identity/raw response evidence is missing, mismatched, or truncated',
+        );
+      }
+    }
+    return completed;
   }
 
   /** Configured vendor family for a node, or null when the model matches no provider. */

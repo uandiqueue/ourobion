@@ -142,3 +142,16 @@ test('validateConfig rejects non-objects and wrong versions', () => {
   assert.throws(() => validateConfig(null), /must be a JSON object/);
   assert.throws(() => validateConfig({ ...baseConfigObject(), version: 2 }), /version/);
 });
+
+test('acceptance journal config is one canonical ignored runtime path', () => {
+  for (const journalPath of [
+    '../escape.jsonl',
+    'tools/llm-router/src/router.ts',
+    'data/llm-router/another.jsonl',
+    'C:\\tmp\\attempts.jsonl',
+  ]) {
+    const raw = baseConfigObject();
+    raw.acceptance = { journalPath };
+    assert.throws(() => validateConfig(raw), /must be exactly 'data\/llm-router\/acceptance-attempts\.jsonl'/);
+  }
+});

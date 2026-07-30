@@ -29,3 +29,7 @@
 # Neither attribute alters the blob's content; they only change how git presents
 # and converts it.
 supabase/functions/compute-baselines/index.ts -text diff
+
+# The before-blob has legacy NUL separators; force this transition's text diff
+# so numstat and landing caps can inspect its actual line delta.
+tools/brain-ingest/src/synth/artifact.ts -text diff

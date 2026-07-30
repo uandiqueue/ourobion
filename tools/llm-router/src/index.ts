@@ -5,6 +5,12 @@
  */
 
 export {
+  ACCEPTANCE_AGNES_MAX_POST_STARTS_PER_LEG,
+  ACCEPTANCE_GLOBAL_MAX_USD,
+  ACCEPTANCE_MAX_INPUT_BYTES,
+  ACCEPTANCE_MAX_OUTPUT_TOKENS,
+  ACCEPTANCE_ANTHROPIC_MAX_POST_STARTS_PER_LEG,
+  ACCEPTANCE_JOURNAL_REPO_PATH,
   DEFAULT_RAW_BODY_CAP_BYTES,
   estimateTokens,
   LLM_NODE_IDS,
@@ -13,6 +19,7 @@ export {
   type LlmRequest,
   type LlmResponse,
   type LlmUsage,
+  type AcceptanceCallContext,
   type ModelIdentity,
   type ModelIdentitySource,
   type RawProviderResponse,
@@ -22,11 +29,22 @@ export {
 export { captureRawBody } from './raw.js';
 export {
   RouterBudgetExceededError,
+  RouterAttemptJournalError,
   RouterConfigError,
   RouterHttpError,
   RouterKeyMissingError,
   RouterTimeoutError,
 } from './errors.js';
+export {
+  AttemptJournal,
+  logicalCallIdSha256,
+  providerContentSha256,
+  type AttemptEventKind,
+  type AttemptJournalEvent,
+  type AttemptJournalOptions,
+  type AttemptReservation,
+  type AttemptReservationInput,
+} from './attemptJournal.js';
 export {
   defaultConfigPath,
   familyOf,
@@ -65,6 +83,7 @@ export {
   callApiWorker,
   ANTHROPIC_MESSAGES_URL,
   ANTHROPIC_VERSION,
+  AGNES_CHAT_COMPLETIONS_URL,
   OPENAI_CHAT_COMPLETIONS_URL,
   type ApiWorkerOptions,
   type FetchLike,

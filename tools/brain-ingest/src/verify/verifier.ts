@@ -24,7 +24,12 @@
 
 import { readFileSync } from 'node:fs';
 
-import type { LlmRequest, LlmResponse } from '../../../llm-router/src/index.js';
+import type {
+  AcceptanceCallContext,
+  LlmRequest,
+  LlmResponse,
+} from '../../../llm-router/src/index.js';
+import { logicalCallIdSha256 } from '../../../llm-router/src/index.js';
 
 import { checkClaimQuotes, type PaperTextLoader, type QuoteCheckBlock } from './quoteCheck.js';
 import { decideTriage, DEFAULT_TRIAGE_CONFIG } from './triage.js';
@@ -104,6 +109,8 @@ export interface VerifyClaimOptions {
    * pass the serving trust gate — deliberately fail-closed, never auto-invented.
    */
   artifactRevision?: string;
+  /** Acceptance run identity; each edge derives one stable logical call id. */
+  acceptance?: Omit<AcceptanceCallContext, 'logicalCallId'>;
   /** Clock for `verifiedAt` (tests inject a fixed one). */
   now?: () => number;
   /** Only compute + return the triage decision (no retrieval, no LLM, no record). */
@@ -259,7 +266,20 @@ export async function verifyClaim(
   let lastReject: EnforceResult | { ok: false; reason: 'no-response'; detail: string } | undefined;
   let response: LlmResponse | undefined;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    response = await opts.router.route({ nodeId: 'verifier', system, prompt, expectJson: true });
+    response = await opts.router.route({
+      nodeId: 'verifier',
+      system,
+      prompt,
+      expectJson: true,
+      ...(opts.acceptance !== undefined
+        ? {
+            acceptance: {
+              ...opts.acceptance,
+              logicalCallId: logicalCallIdSha256('verifier', claim.edgeId),
+            },
+          }
+        : {}),
+    });
     let reply;
     try {
       reply = parseVerifierResponse(response.text);

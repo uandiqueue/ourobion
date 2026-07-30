@@ -60,7 +60,28 @@ export const TEST_MODE_LABEL =
   'scaffolded + unit-tested (TEST-MODE: single-provider, decorrelation OFF)' as const;
 
 /** Vendor family used for the decorrelation invariant. */
-export type VendorFamily = 'anthropic' | 'openai' | 'google';
+export type VendorFamily = 'anthropic' | 'openai' | 'google' | 'agnes';
+
+/** Fixed, non-raiseable ceilings for the owner-authorised two-leg acceptance. */
+export const ACCEPTANCE_MAX_INPUT_BYTES = 24_000;
+export const ACCEPTANCE_MAX_OUTPUT_TOKENS = 3_072;
+export const ACCEPTANCE_ANTHROPIC_MAX_POST_STARTS_PER_LEG = 3;
+export const ACCEPTANCE_AGNES_MAX_POST_STARTS_PER_LEG = 10;
+export const ACCEPTANCE_GLOBAL_MAX_USD = 5;
+/** The sole repository-relative acceptance journal location. `data/llm-router/` is gitignored. */
+export const ACCEPTANCE_JOURNAL_REPO_PATH = 'data/llm-router/acceptance-attempts.jsonl';
+
+/**
+ * Opt-in call identity for the acceptance-only provider path.
+ *
+ * Limits are deliberately not caller fields: the constants above are compiled
+ * policy, so an invocation cannot raise the prompt, output, POST, or USD ceiling.
+ * Transport and enforcement retries MUST reuse the same logicalCallId.
+ */
+export interface AcceptanceCallContext {
+  acceptanceRunId: string;
+  logicalCallId: string;
+}
 
 /**
  * R4-U4 follow-on (B-BR1) · WHERE a recorded model string came from.
@@ -189,6 +210,8 @@ export interface LlmRequest {
    * surface without structured-output schemas, which nodes don't need yet).
    */
   expectJson?: boolean;
+  /** Present only for the bounded Anthropic+Agnes acceptance run. */
+  acceptance?: AcceptanceCallContext;
 }
 
 /** Token usage for one call (as reported by the provider, or estimated). */

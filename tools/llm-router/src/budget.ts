@@ -42,7 +42,7 @@ import type { RouterConfig } from './config.js';
 import { resolveRepoPath } from './config.js';
 import { RouterBudgetExceededError, RouterConfigError } from './errors.js';
 import { effectiveCapsFor, type CapOverrides } from './overrides.js';
-import type { LlmNodeId, LlmUsage } from './types.js';
+import { LLM_NODE_IDS, type LlmNodeId, type LlmUsage } from './types.js';
 
 /** One node's accumulated spend within one UTC day. */
 export interface NodeDayCounter {
@@ -123,9 +123,9 @@ export interface BudgetState {
 }
 
 /**
- * File-backed dual-cap ledger. Read at construction, persisted on every
- * `record`. Missing/corrupt file → start clean (same tolerance as
- * brain-ingest's FileBudgetGuard).
+ * File-backed dual-cap ledger. Read at construction and persisted on every
+ * record. A missing file starts clean; malformed or unreadable accounting
+ * fails closed.
  */
 export class BudgetLedger {
   private readonly config: RouterConfig;
@@ -149,14 +149,60 @@ export class BudgetLedger {
         // Backward-compat: tolerate an older/hand-edited version-1 file
         // missing a map, then prune (A11) so stale entries never re-enter
         // memory. The format itself is unchanged.
-        const data: LedgerFile = { version: 1, days: parsed.days ?? {}, runs: parsed.runs ?? {} };
+        const days = parsed.days ?? {};
+        const runs = parsed.runs ?? {};
+        if (
+          days === null || typeof days !== 'object' || Array.isArray(days) ||
+          runs === null || typeof runs !== 'object' || Array.isArray(runs)
+        ) {
+          throw new RouterConfigError(`llm-router budget: malformed ledger maps in '${this.ledgerPath}'`);
+        }
+        for (const [dayKey, nodes] of Object.entries(days)) {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey) || Number.isNaN(Date.parse(`${dayKey}T00:00:00.000Z`))) {
+            throw new RouterConfigError(`llm-router budget: invalid UTC day '${dayKey}'`);
+          }
+          if (nodes === null || typeof nodes !== 'object' || Array.isArray(nodes)) {
+            throw new RouterConfigError(`llm-router budget: malformed counters for day '${dayKey}'`);
+          }
+          for (const [nodeId, counter] of Object.entries(nodes)) {
+            const c = counter as Partial<NodeDayCounter> | null;
+            if (
+              !(LLM_NODE_IDS as readonly string[]).includes(nodeId) ||
+              c === null || typeof c !== 'object' ||
+              !Number.isInteger(c.calls) || c.calls! < 0 ||
+              !Number.isInteger(c.inputTokens) || c.inputTokens! < 0 ||
+              !Number.isInteger(c.outputTokens) || c.outputTokens! < 0 ||
+              typeof c.usd !== 'number' || !Number.isFinite(c.usd) || c.usd < 0
+            ) {
+              throw new RouterConfigError(`llm-router budget: malformed counter for '${dayKey}/${nodeId}'`);
+            }
+          }
+        }
+        for (const [runId, counter] of Object.entries(runs)) {
+          const c = counter as Partial<RunCounter> | null;
+          if (
+            runId.length === 0 || c === null || typeof c !== 'object' ||
+            typeof c.startedAt !== 'string' || Number.isNaN(Date.parse(c.startedAt)) ||
+            !Number.isInteger(c.outputTokens) || c.outputTokens! < 0
+          ) {
+            throw new RouterConfigError(`llm-router budget: malformed run counter '${runId}'`);
+          }
+        }
+        const data: LedgerFile = { version: 1, days, runs };
         this.prune(data);
         return data;
       }
-    } catch {
-      // Missing or corrupt → clean start.
+      throw new RouterConfigError(`llm-router budget: unsupported or malformed ledger '${this.ledgerPath}'`);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return { version: 1, days: {}, runs: {} };
+      }
+      if (error instanceof RouterConfigError) throw error;
+      throw new RouterConfigError(
+        `llm-router budget: cannot parse existing ledger '${this.ledgerPath}' — refusing to reset spend: ` +
+          `${error instanceof Error ? error.message : String(error)}`,
+      );
     }
-    return { version: 1, days: {}, runs: {} };
   }
 
   /** Oldest UTC day key still retained (the boundary day itself is KEPT). */

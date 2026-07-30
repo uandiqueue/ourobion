@@ -32,7 +32,13 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, isAbsolute, resolve } from 'node:path';
-import { LLM_NODE_IDS, type LlmNodeId, type RouteKind, type VendorFamily } from './types.js';
+import {
+  ACCEPTANCE_JOURNAL_REPO_PATH,
+  LLM_NODE_IDS,
+  type LlmNodeId,
+  type RouteKind,
+  type VendorFamily,
+} from './types.js';
 import { RouterConfigError } from './errors.js';
 
 /** Per-node routing entry. */
@@ -87,6 +93,11 @@ export interface LocalAgentConfig {
   pollIntervalMs: number;
 }
 
+/** Acceptance runtime state is deliberately a singleton, not caller-selectable. */
+export interface AcceptanceConfig {
+  journalPath: typeof ACCEPTANCE_JOURNAL_REPO_PATH;
+}
+
 export interface RouterConfig {
   version: 1;
   nodes: Record<LlmNodeId, NodeConfig>;
@@ -94,10 +105,11 @@ export interface RouterConfig {
   prices: Record<string, PriceEntry>;
   budget: BudgetConfig;
   localAgent: LocalAgentConfig;
+  acceptance?: AcceptanceConfig;
 }
 
 const VALID_ROUTES: readonly RouteKind[] = ['local_agent', 'api_worker'];
-const VALID_FAMILIES: readonly VendorFamily[] = ['anthropic', 'openai', 'google'];
+const VALID_FAMILIES: readonly VendorFamily[] = ['anthropic', 'openai', 'google', 'agnes'];
 
 /** tools/llm-router/src → up 2 = tools/llm-router, up 4 = repo root. */
 export function repoRoot(): string {
@@ -242,6 +254,14 @@ export function validateConfig(raw: unknown): RouterConfig {
   if (typeof la.mailboxDir !== 'string' || la.mailboxDir.length === 0) fail('localAgent.mailboxDir must be a non-empty string');
   if (!isPositiveInt(la.timeoutMs)) fail('localAgent.timeoutMs must be a positive integer');
   if (!isPositiveInt(la.pollIntervalMs)) fail('localAgent.pollIntervalMs must be a positive integer');
+
+  // One canonical, repo-owned, gitignored journal prevents a caller from
+  // resetting the global cap with a fresh path or targeting tracked files.
+  const acceptance = c.acceptance as AcceptanceConfig | undefined;
+  if (acceptance !== undefined && typeof acceptance !== 'object') fail('acceptance must be an object');
+  if (acceptance !== undefined && acceptance.journalPath !== ACCEPTANCE_JOURNAL_REPO_PATH) {
+    fail(`acceptance.journalPath must be exactly '${ACCEPTANCE_JOURNAL_REPO_PATH}'`);
+  }
 
   // R4-U3: a `testMode` block used to downgrade the decorrelation invariant to a
   // warning. It is gone, and a config still carrying one is REFUSED rather than
