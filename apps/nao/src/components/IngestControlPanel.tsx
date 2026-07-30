@@ -17,6 +17,8 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { INGEST_SEED_TOPICS, DEFAULT_INGEST_CONTROL } from '@/lib/types';
 import type { IngestControlConfig } from '@/lib/types';
+import { buildSeedCatalog, seedRunabilityError } from '@/lib/seedsControl';
+import type { SeedCatalogEntry } from '@/lib/seedsControl';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -26,12 +28,20 @@ function fmtWhen(iso: string): string {
   return d.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
 }
 
-export function IngestControlPanel() {
+export interface IngestControlPanelProps {
+  seedCatalogRevision?: number;
+}
+
+export function IngestControlPanel({ seedCatalogRevision = 0 }: IngestControlPanelProps = {}) {
   const [state, setState] = useState<LoadState>('loading');
   const [control, setControl] = useState<IngestControlConfig>(DEFAULT_INGEST_CONTROL);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [triggerMessage, setTriggerMessage] = useState<string | null>(null);
+  const [seedCatalog, setSeedCatalog] = useState<SeedCatalogEntry[]>(() =>
+    buildSeedCatalog(INGEST_SEED_TOPICS, []),
+  );
+  const [seedCatalogWarning, setSeedCatalogWarning] = useState<string | null>(null);
 
   const [seed, setSeed] = useState<string>(INGEST_SEED_TOPICS[0]);
   const [limit, setLimit] = useState('20');
@@ -50,9 +60,33 @@ export function IngestControlPanel() {
     }
   }
 
+  async function refreshSeedCatalog(): Promise<void> {
+    try {
+      const res = await fetch('/api/seeds');
+      if (!res.ok) throw new Error(`GET failed: ${res.status}`);
+      const data = (await res.json()) as { ok: true; seeds: SeedCatalogEntry[] };
+      setSeedCatalog(data.seeds);
+      setSeedCatalogWarning(null);
+      setSeed((current) => {
+        if (seedRunabilityError(data.seeds, current) === null) return current;
+        return data.seeds.find((entry) => seedRunabilityError(data.seeds, entry.slug) === null)?.slug
+          ?? INGEST_SEED_TOPICS[0];
+      });
+    } catch {
+      const fallback = buildSeedCatalog(INGEST_SEED_TOPICS, []);
+      setSeedCatalog(fallback);
+      setSeed(INGEST_SEED_TOPICS[0]);
+      setSeedCatalogWarning('Custom seed catalog unavailable — showing built-in seeds only.');
+    }
+  }
+
   useEffect(() => {
     void refresh();
   }, []);
+
+  useEffect(() => {
+    void refreshSeedCatalog();
+  }, [seedCatalogRevision]);
 
   async function patchSettings(body: Record<string, unknown>): Promise<void> {
     setBusy(true);
@@ -150,11 +184,31 @@ export function IngestControlPanel() {
         <div className="eyebrow panel__label">Run now</div>
         <form className="ingest-form" onSubmit={submitRun}>
           <select value={seed} onChange={(e) => setSeed(e.target.value)} aria-label="Seed topic">
-            {INGEST_SEED_TOPICS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
+            <optgroup label="Built-in seeds">
+              {seedCatalog.filter((entry) => entry.builtIn).map((entry) => (
+                <option key={`built-in:${entry.slug}`} value={entry.slug}>
+                  {entry.label}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Custom seeds">
+              {seedCatalog.some((entry) => !entry.builtIn) ? (
+                seedCatalog.filter((entry) => !entry.builtIn).map((entry) => {
+                  const reason = entry.unavailableReason;
+                  return (
+                    <option
+                      key={`custom:${entry.slug}`}
+                      value={entry.slug}
+                      disabled={reason !== null}
+                    >
+                      {entry.label}{reason ? ` — unavailable: ${reason}` : ''}
+                    </option>
+                  );
+                })
+              ) : (
+                <option value="" disabled>No custom seeds available</option>
+              )}
+            </optgroup>
           </select>
           <input
             type="number"
@@ -172,6 +226,7 @@ export function IngestControlPanel() {
           Triggers a real ingestion run immediately on GitHub Actions ({' '}
           <code>.github/workflows/brain-ingest.yml</code>) with this seed/limit.
         </p>
+        {seedCatalogWarning ? <p className="fmt__cap ingest-error">{seedCatalogWarning}</p> : null}
         {triggerMessage ? <p className="fmt__cap ingest-success">{triggerMessage}</p> : null}
       </div>
 

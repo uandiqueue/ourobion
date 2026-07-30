@@ -486,6 +486,9 @@ begin;
   select authz_probe.expect_ok('curator.insert_ingestion_seeds_ok',
     'insert into public.ingestion_seeds (slug, label, created_by)
      values (''harness_topic_curator'', ''added by curator'', auth.uid())');
+  select authz_probe.expect_error('curator.insert_65_char_ingestion_seed_rejected_23514',
+    'insert into public.ingestion_seeds (slug, label, created_by)
+     values (repeat(''a'', 65), ''invalid overlength seed'', auth.uid())', '23514');
   select authz_probe.expect_rows_affected('curator.toggle_ingestion_seed_ok',
     'update public.ingestion_seeds set enabled = false where slug = ''harness_topic_alpha''', 1);
   -- The pre-existing `grant update (enabled)` column restriction is untouched and still binds.

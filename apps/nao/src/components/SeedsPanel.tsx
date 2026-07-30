@@ -12,7 +12,7 @@
 // db seeds up fail-soft on its next run (static wins on a slug collision).
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { deriveSeedSlug } from '@/lib/seedsControl';
+import { deriveSeedSlug, validateSeedSlug } from '@/lib/seedsControl';
 import type { SeedCatalogEntry } from '@/lib/seedsControl';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -30,9 +30,10 @@ export interface SeedPrefill {
 
 export interface SeedsPanelProps {
   prefill?: SeedPrefill | null;
+  onCatalogChanged?: () => void;
 }
 
-export function SeedsPanel({ prefill }: SeedsPanelProps = {}) {
+export function SeedsPanel({ prefill, onCatalogChanged }: SeedsPanelProps = {}) {
   const [state, setState] = useState<LoadState>('loading');
   const [catalog, setCatalog] = useState<SeedCatalogEntry[]>([]);
   const [busy, setBusy] = useState(false);
@@ -93,6 +94,7 @@ export function SeedsPanel({ prefill }: SeedsPanelProps = {}) {
       );
       setLabel('');
       setQueryHint('');
+      onCatalogChanged?.();
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -113,6 +115,7 @@ export function SeedsPanel({ prefill }: SeedsPanelProps = {}) {
       });
       const data = (await res.json()) as { ok: true } | { error: string };
       if (!res.ok || !('ok' in data)) throw new Error('error' in data ? data.error : `HTTP ${res.status}`);
+      onCatalogChanged?.();
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -146,7 +149,9 @@ export function SeedsPanel({ prefill }: SeedsPanelProps = {}) {
       </p>
 
       <ul className="seeds-list">
-        {catalog.map((s) => (
+        {catalog.map((s) => {
+          const invalidLegacySlug = !s.builtIn && validateSeedSlug(s.slug) !== null;
+          return (
           <li key={s.slug} className={`seeds-row${s.enabled ? '' : ' seeds-row--disabled'}`}>
             <div className="seeds-row__main">
               <code className="seeds-row__slug">{s.slug}</code>
@@ -162,25 +167,32 @@ export function SeedsPanel({ prefill }: SeedsPanelProps = {}) {
                   shadowed
                 </span>
               ) : null}
+              {invalidLegacySlug ? (
+                <span className="seeds-badge seeds-badge--off">unavailable</span>
+              ) : null}
             </div>
             {!s.builtIn ? (
               <div className="seeds-row__detail">
                 <span>{s.label}</span>
                 {s.queryHint ? <span className="fmt__cap"> · query: {s.queryHint}</span> : null}
+                {invalidLegacySlug ? (
+                  <span className="fmt__cap"> · invalid legacy slug; database remediation required</span>
+                ) : null}
               </div>
             ) : null}
             {!s.builtIn ? (
               <button
                 type="button"
                 className="ingest-btn ingest-btn--ghost seeds-row__toggle"
-                disabled={busy}
+                disabled={busy || invalidLegacySlug}
                 onClick={() => void toggle(s.slug, !s.enabled)}
               >
                 {s.enabled ? 'Disable' : 'Enable'}
               </button>
             ) : null}
           </li>
-        ))}
+          );
+        })}
       </ul>
 
       <form className="ingest-form seeds-form" onSubmit={submitAdd}>

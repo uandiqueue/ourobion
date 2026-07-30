@@ -28,8 +28,10 @@ import {
   redactText,
   runAuditedControlMutation,
 } from '@/lib/authzServer';
-import { getIngestControl, validateTriggerBody } from '@/lib/ingestControl';
+import { getIngestControl, validateTriggerBody, validateTriggerBodyShape } from '@/lib/ingestControl';
 import { dispatchIngestWorkflow } from '@/lib/githubDispatch';
+import { readSeedCatalog } from '@/lib/seedCatalogServer';
+import { INGEST_SEED_TOPICS } from '@/lib/types';
 import type { IngestTriggerBody } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -45,16 +47,26 @@ export async function POST(req: Request): Promise<Response> {
   const gate = await guardRole('curator');
   if (!gate.ok) return gate.response;
 
-  let body: IngestTriggerBody;
+  let body: unknown;
   try {
-    body = (await req.json()) as IngestTriggerBody;
+    body = await req.json();
   } catch {
     return json({ error: 'invalid JSON body' }, 400);
   }
 
-  const validationError = validateTriggerBody(body);
-  if (validationError) {
-    return json({ error: validationError }, 400);
+  const shapeError = validateTriggerBodyShape(body);
+  if (shapeError) return json({ error: shapeError }, 400);
+  const trigger = body as IngestTriggerBody;
+  if (
+    trigger.seed !== undefined &&
+    !(INGEST_SEED_TOPICS as readonly string[]).includes(trigger.seed)
+  ) {
+    // Custom selectors fail closed: prove the row is visible through the
+    // caller's cookie/RLS boundary and is both enabled and non-shadowed.
+    const catalog = await readSeedCatalog();
+    if (!catalog.ok) return json({ error: redactText(catalog.error) }, 500);
+    const validationError = validateTriggerBody(trigger, catalog.seeds);
+    if (validationError) return json({ error: validationError }, 400);
   }
 
   const control = await getIngestControl();
@@ -68,10 +80,10 @@ export async function POST(req: Request): Promise<Response> {
     await runAuditedControlMutation({
       operationId: operation.operationId,
       action: 'ingest.trigger',
-      target: body.seed ?? null,
-      detail: { limit: body.limit },
+      target: trigger.seed ?? null,
+      detail: { limit: trigger.limit },
       mutate: async () => {
-        const result = await dispatchIngestWorkflow(body);
+        const result = await dispatchIngestWorkflow(trigger);
         if (!result.ok) {
           if (result.outcome === 'unknown') throw new Error('GitHub dispatch outcome unknown');
           throw new NaoControlMutationError('github_dispatch_failed', 'dispatch failed', 502);

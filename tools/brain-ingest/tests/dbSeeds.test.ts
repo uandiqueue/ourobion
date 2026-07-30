@@ -77,6 +77,23 @@ test('dbSeeds: a malformed row is skipped individually (warned), not fatal', asy
   assert.ok(warnings.every((w) => w.includes('skipping malformed row')));
 });
 
+test('dbSeeds: a legacy 65-character slug is excluded from the CLI merged pool', async () => {
+  const tooLong = 'a'.repeat(65);
+  const { fetchFn } = okFetch([
+    { slug: tooLong, label: 'Legacy invalid seed' },
+    { slug: 'good_after_legacy', label: 'Good after legacy' },
+  ]);
+  const warnings: string[] = [];
+  const merged = await loadMergedSeeds({ env: ENV, fetchFn, warn: (m) => warnings.push(m) });
+
+  assert.equal(merged.dbAvailable, true);
+  assert.equal(merged.dbCount, 1);
+  assert.equal(merged.seeds.some((seed) => seed.topic === tooLong), false);
+  assert.equal(merged.seeds.some((seed) => seed.topic === 'good_after_legacy'), true);
+  assert.equal(warnings.length, 1);
+  assert.ok(warnings[0]!.includes('skipping malformed row'));
+});
+
 test('dbSeeds: FAIL-SOFT — absent env → undefined + one loud warning, no fetch', async () => {
   let fetched = false;
   const warnings: string[] = [];

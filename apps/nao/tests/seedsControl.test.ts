@@ -17,6 +17,9 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   SEED_SLUG_RE,
@@ -24,9 +27,13 @@ import {
   deriveSeedSlug,
   parseAddSeedBody,
   parseToggleSeedBody,
+  seedRunabilityError,
+  validateSeedSlug,
   type DbSeedRow,
 } from '../src/lib/seedsControl.ts';
 import { INGEST_SEED_TOPICS } from '../src/lib/types.ts';
+
+const NAO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 // ── slug derivation ───────────────────────────────────────────────────────────
 
@@ -133,6 +140,7 @@ test('buildSeedCatalog: built-ins first (always enabled), db rows after in order
     enabled: true,
     builtIn: false,
     shadowedByBuiltIn: false,
+    unavailableReason: null,
     createdAt: '2026-07-24T15:00:00Z',
   });
   const coffee = catalog[INGEST_SEED_TOPICS.length + 1]!;
@@ -144,6 +152,19 @@ test('buildSeedCatalog: a db row shadowing a built-in slug is flagged (static wi
   const catalog = buildSeedCatalog(INGEST_SEED_TOPICS, [row({ slug: 'hydration' })]);
   const shadowed = catalog.find((c) => !c.builtIn && c.slug === 'hydration')!;
   assert.equal(shadowed.shadowedByBuiltIn, true);
+  assert.match(shadowed.unavailableReason ?? '', /shadowed by built-in/);
+});
+
+test('buildSeedCatalog: a legacy 65-character db slug stays visible but is unavailable', () => {
+  const slug = 'a'.repeat(65);
+  const catalog = buildSeedCatalog(INGEST_SEED_TOPICS, [row({ slug })]);
+  const legacy = catalog.find((entry) => !entry.builtIn && entry.slug === slug)!;
+
+  assert.equal(legacy.slug, slug, 'the catalog does not hide legacy-invalid data');
+  assert.equal(legacy.enabled, true, 'database state remains visible');
+  assert.match(legacy.unavailableReason ?? '', /invalid legacy slug/);
+  assert.match(legacy.unavailableReason ?? '', /<= 64/);
+  assert.match(seedRunabilityError(catalog, slug) ?? '', /invalid legacy slug/);
 });
 
 // ── coupling: the built-in mirror still matches seeds.ts's six topics ────────
@@ -151,4 +172,42 @@ test('buildSeedCatalog: a db row shadowing a built-in slug is flagged (static wi
 test('INGEST_SEED_TOPICS: still the six static topics, all CHECK-valid slugs', () => {
   assert.equal(INGEST_SEED_TOPICS.length, 6);
   for (const t of INGEST_SEED_TOPICS) assert.match(t, SEED_SLUG_RE);
+});
+
+test('workflow selector validation mirrors the seed regex and 64-character cap', () => {
+  assert.equal(validateSeedSlug('magnesium_sleep'), null);
+  assert.match(validateSeedSlug('Bad-Slug') ?? '', /must match/);
+  assert.match(validateSeedSlug('a'.repeat(65)) ?? '', /<= 64/);
+  assert.match(validateSeedSlug('') ?? '', /must match/);
+});
+
+test('seed runability is static-first and rejects disabled/shadowed custom rows', () => {
+  const catalog = buildSeedCatalog(INGEST_SEED_TOPICS, [
+    row({ slug: 'magnesium_sleep', enabled: true }),
+    row({ slug: 'disabled_seed', enabled: false }),
+    row({ slug: 'hydration', enabled: true }),
+  ]);
+  assert.equal(seedRunabilityError(catalog, 'magnesium_sleep'), null);
+  assert.match(seedRunabilityError(catalog, 'disabled_seed') ?? '', /disabled/);
+  assert.equal(seedRunabilityError(catalog, 'hydration'), null, 'static hydration wins the collision');
+  assert.match(seedRunabilityError(catalog, 'unknown_seed') ?? '', /unknown/);
+
+  const shadowOnly = catalog.filter((entry) => !(entry.builtIn && entry.slug === 'hydration'));
+  assert.match(seedRunabilityError(shadowOnly, 'hydration') ?? '', /shadowed/);
+});
+
+test('Run-now renders grouped catalog states and refreshes after successful add/toggle', () => {
+  const control = readFileSync(path.join(NAO_ROOT, 'src', 'components', 'IngestControlPanel.tsx'), 'utf8');
+  assert.match(control, /<optgroup label="Built-in seeds">/);
+  assert.match(control, /<optgroup label="Custom seeds">/);
+  assert.match(control, /disabled=\{reason !== null\}/);
+  assert.match(control, /const reason = entry\.unavailableReason/);
+  assert.match(control, /Custom seed catalog unavailable .* showing built-in seeds only/);
+
+  const seeds = readFileSync(path.join(NAO_ROOT, 'src', 'components', 'SeedsPanel.tsx'), 'utf8');
+  assert.equal((seeds.match(/onCatalogChanged\?\.\(\);/g) ?? []).length, 2);
+  assert.match(seeds, /invalid legacy slug; database remediation required/);
+  const workspace = readFileSync(path.join(NAO_ROOT, 'src', 'components', 'IngestControlWorkspace.tsx'), 'utf8');
+  assert.match(workspace, /seedCatalogRevision=\{seedCatalogRevision\}/);
+  assert.match(workspace, /onSeedCatalogChanged=\{refreshRunNowSeeds\}/);
 });

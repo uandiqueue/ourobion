@@ -77,7 +77,7 @@ export const ROUTE_POLICY: Readonly<Record<string, NaoRole>> = Object.freeze({
   'POST /api/loader/run-pipeline': 'curator',
   'GET /api/models': 'viewer',
   'POST /api/models/caps': 'admin',
-  'GET /api/seeds': 'viewer',
+  'GET /api/seeds': 'curator',
   'POST /api/seeds': 'curator',
   'PATCH /api/seeds': 'curator',
 });
