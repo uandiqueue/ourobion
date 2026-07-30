@@ -4,7 +4,7 @@ summary: The single authoritative end-to-end insight-engine spec — every stage
 type: architecture
 scope: shared
 status: canonical
-updated: 2026-07-25
+updated: 2026-07-30
 ---
 
 # Insight-engine architecture — ground truth
@@ -21,6 +21,9 @@ Related docs and contracts:
 - [`../nao/brain-ingestion-design.md`](../nao/brain-ingestion-design.md) — the ingest CLI this doc's A-stages extend.
 - [`../biotope/rules-engine-design.md`](../biotope/rules-engine-design.md) — the rules-engine card producer (IED), retained as one producer among three.
 - [`../../shared/brain/`](../../shared/brain/) — the TRUTH contract types and gating functions (`relationships.ts`, `index.ts`, `relationships.schema.ts`).
+- [`decisions/0004-local-day-projection.md`](decisions/0004-local-day-projection.md) — the accepted
+  S1→S2 calendar, provenance, reducer, watermark, interval, and quiet-day policy for event/state
+  primitives; its implementation slices remain pending.
 
 Scope: data-flow, interfaces, stores, and control planes. Domain terms are opaque labels
 (metric = keyed numeric series; paper = document with tier/quote/scope provenance). The copy
@@ -57,6 +60,10 @@ These are settled and are not re-argued anywhere downstream:
    TS-native. The one-language rule is waived for exactly ONE seam: PDF structuring runs a
    GROBID-style structure/reference parser as a CLI-orchestrated sidecar (A4). Everything
    downstream of the structured artifact is TS-native.
+8. **Captured local-day provenance.** Event/state local days are derived from immutable raw
+   capture provenance under [ADR-0004](decisions/0004-local-day-projection.md), never from the
+   user's current profile timezone. One exclusive S1 watermark bounds an evaluation; primitive
+   quiet days remain absent rather than becoming synthetic zeroes.
 
 ---
 
@@ -65,7 +72,8 @@ These are settled and are not re-argued anywhere downstream:
 Two paths share one truth substrate.
 
 **Serve path (all deterministic until the last phrase):** raw day-rows (`daily_gut_rows`,
-`wearable_daily` — already retained per-day) → a registry-driven **unpivot projection**
+`wearable_daily`) plus sparse `events`/`state_bands` — with the latter's accepted local-day
+provenance work still pending — → a registry-driven **unpivot/reducer projection**
 (`metric_daily_values`) → **baselines v2** (window-parameterised) → **3-state signals** → the
 **n=1 evaluator** (D2, with N_eff + FDR) and the **composed-insight composer**, which joins a
 fired signal to 1-hop servable D1 edges and classifies the branch. The `agree` branch becomes a
@@ -103,7 +111,7 @@ metric keys · **M** needs per-key authored config (location given).
 
 | # | Stage | Compute | Gen. | Model | Store (persisted output) |
 |---|---|---|---|---|---|
-| S1 | Capture (exists) | DET | M (registry) | — | `daily_gut_rows`, `wearable_daily` |
+| S1 | Capture (exists; event/state local-day provenance pending) | DET | M (registry) | — | `daily_gut_rows`, `wearable_daily`, `events`, `state_bands` |
 | S2 | Metric joint-series projection | DET | G (registry-driven) | — | `metric_daily_values` (view) |
 | S3 | Baseline v2 | DET | G | — | `baseline_snapshots` (amended) |
 | S4 | 3-state signal + pattern firing | DET + RULES | M (deadbands in registry ext.) | — | ephemeral (recomputed) |
@@ -143,10 +151,11 @@ The consolidated per-stage model assignment is §10.
 
 ## 4 · Serve-path stages
 
-### S1 · Capture (exists — unchanged)
+### S1 · Capture (exists; event/state local-day provenance implementation pending)
 
-1. **Purpose:** persist raw per-day metric values, governed by the metric registry.
-2. **Input:** user entry / device sync (external). **Output shape:** one row per (user, day):
+1. **Purpose:** persist raw metric observations, governed by the metric registry.
+2. **Input:** user entry / device sync (external). **Current day-row output shape:** one row per
+   (user, day):
    `daily_gut_rows` unique `(user_id, log_date)`
    (`supabase/migrations/20260513_create_m2_daily_gut_rows_and_antibiotic_courses.sql:49`);
    `wearable_daily` PK `(user_id, date)`
@@ -155,15 +164,25 @@ The consolidated per-stage model assignment is §10.
 3. **Compute:** DET. 4. **Generalization:** M — per-key config IS the registry
    (`MetricDefinition`, `registry.ts:37-69`: `reliability`, `baselineApplicable`, `derivedFrom`,
    `dqs`).
-5. **Transport out:** table read by S2. 6. **Store:** the two tables above; **retained
-   indefinitely — no trim policy** (they are TRUTH-tier raw rows). If a trim policy is ever
+5. **Transport out:** table read by S2. 6. **Store:** the day-row tables above plus the existing
+   sparse `events` and `state_bands` primitives; **retained indefinitely — no trim policy** (they
+   are TRUTH-tier raw rows). If a trim policy is ever
    proposed, S5's 60-day window and the completeness windows set the floor. Idempotency:
    day-level upsert.
-7. **Failure:** a missing day is a null in S2; never blocks downstream.
+7. **Failure:** a missing legacy day is null/absent under its branch; a primitive quiet day emits no
+   row. Neither blocks downstream.
 
-Day-level history is **already retained** here; the historical evaluator break was only that it
-read `baseline_snapshots` aggregates. No new capture store is needed — S2 is the missing read
-path.
+Day-level history is **already retained** for the legacy wide tables; the historical evaluator
+break was only that it read `baseline_snapshots` aggregates. The sparse primitives also already
+exist, but their production local-day capture fields and constraints do not. ADR-0004 requires a
+forward-only S1 migration that preserves absolute timestamps and adds captured local date/timezone
+provenance. A timezone change splits an active state into adjacent half-open segments; overlaps are
+rejected. No collector may claim `local_day_v1` until that raw provenance is actually written.
+
+One S2 evaluation accepts one immutable S1 watermark `W` and treats it as an exclusive upper bound:
+events require `occurred_at < W`; bands are clipped to `[started_at, min(ended_at, W))`, with a null
+end interpreted as `W`. The same `W` applies to every projection branch. These decisions are
+accepted in ADR-0004; the migration and runtime proof remain later slices.
 
 ### S2 · Metric joint-series projection — new
 
@@ -180,6 +199,11 @@ path.
    `(user_id, metric_key, day, value numeric|null)`. The view SQL is **generated from the
    registry** (a couplings guard asserts every `baselineApplicable` key appears — same pattern as
    `apps/biotope/test/guards/`, `registry.ts:4-6`).
+   Legacy wide-table branches unpivot their recorded day. For `events` and `state_bands`, the
+   accepted but not-yet-implemented `local_day_v1` branch uses captured provenance, an explicit
+   per-metric reducer, half-open non-overlapping bands, and the single exclusive S1 watermark.
+   A primitive quiet day emits no row, never a fabricated zero. The existing `utc` calendar stays
+   available as an explicit legacy policy; no local-day metric falls back to it.
 3. **Compute:** DET (a view; zero copy). 4. **Generalization:** G — one generator for all keys.
 5. **Transport:** table read by S3, S5, S7-completeness. 6. **Store:** none — **stays a live
    view** (on-demand freshness), not a nightly materialized table. Materialisation (nightly,

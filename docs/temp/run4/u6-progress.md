@@ -4,7 +4,7 @@ summary: Live orchestration ledger for the small-PR delivery of U6a storage prim
 type: status
 scope: run4
 status: draft
-updated: 2026-07-29
+updated: 2026-07-30
 ---
 
 # R4-U6 progress ledger
@@ -17,6 +17,7 @@ or work across the release-blocker session's ownership boundary.
 - Integration branch: `dev-phase2-run4`
 - Refreshed integration tip at session start: `900459924bb45fcc883a1a4a86858887931bf7cf`
 - Current integration tip after the A5 decision-record merge PR #224: `147a67111acda858aad84e3049ce60616b43db8a`
+- Exact integration tip for the A4 local-day decision slice: `ea5fc82a8313c478f838d4d110063a405ed46c83`
 - Checked-in landing base: `789e6a0ff8232057402e1d34583647349c85bb89`
 - Caps: 115 changed paths / 8,500 added lines; unchanged
 - Measured integration delta from the accepted landing base: 25 paths / 6,383 additions
@@ -30,9 +31,10 @@ or work across the release-blocker session's ownership boundary.
 |---|---|---|---|---|---|---|---|
 | A4 inventory | `u6_a4_inventory` | `gpt-5.6-terra` low | — | — | complete, read-only | — | Found zero currently registered `events`/`state_bands` metrics and missing daily aggregation semantics. |
 | A4 semantics review | `u6_a4_semantics_review` | `gpt-5.6-sol` medium | — | — | complete, read-only | — | GO for a policy scaffold; production event/state semantics remain decision-gated. |
-| A4-S0 · projection-policy scaffold | `u6_a4_scaffold_writer` | `gpt-5.6-sol` medium | `feat/m5/u6a-projection-scaffold` | #229 | draft; all non-release CI green; release evidence blocked | feature: 10 paths / +745/-12; landing: 51 paths / 3,623 additions | `shared/metrics/registry.ts` changes the `compute-baselines` module graph, so the frozen deploy attestation must be re-recorded by the separate release owner. Jayden + Alton reviews also remain required. |
-| A4-1 · events day-series branch | unassigned | at most `gpt-5.6-sol` medium | pending | pending | policy-gated | pending | JSON payload/count aggregation and calendar policy must be recorded. |
-| A4-2 · state-bands day-series branch | unassigned | at most `gpt-5.6-sol` medium | pending | pending | blocked on semantics review | pending | Day boundaries, open bands, overlaps, and stacking order must be explicit. |
+| A4-D0 · local-day decision record | `run4_220_local_day_adr_writer` | orchestrator-selected | `docs/run4/local-day-projection-220` | pending | local complete; publication pending | docs only | Owner approval recorded on #220; ADR-0004 fixes `local_day_v1`, raw provenance, one exclusive watermark, explicit reducers, half-open non-overlapping bands, and absent quiet days. |
+| A4-S0 · projection-policy scaffold | `u6_a4_scaffold_writer` | `gpt-5.6-sol` medium | `feat/m5/u6a-projection-scaffold` | #229 | merged (`04e9b61`) | feature: 10 paths / +745/-12 | Fail-closed UTC scaffold only; it activates no production primitive metric and does not implement ADR-0004 local-day provenance. |
+| A4-1 · S1 provenance/constraints | unassigned | at most `gpt-5.6-sol` medium | pending | pending | decision recorded; implementation pending | pending | First forward slice after ADR-0004: raw local-date/timezone provenance, one exclusive watermark, timezone-split bands, and overlap rejection; no shared contract edit. |
+| A4-2 · shared/S2 local-day branch | unassigned | at most `gpt-5.6-sol` medium | pending | pending | blocked on A4-1 | pending | Additive `local_day_v1` TS/Dart/schema parity plus reducer/view generation and runtime proof; preserve `utc`, half-open bands, absent quiet days, and fail-closed provenance. |
 | A4-3 · registry/parity activation | unassigned | at most `gpt-5.6-sol` medium | pending | pending | blocked on A4-1/A4-2 and collectors | pending | `shared/` change requires Jayden + Alton on the actual PR. |
 | A5 inventory / option extraction | `u6_a5_metric_map` | `gpt-5.6-terra` low | — | — | complete, read-only | — | Confirms A5 is structural and full-row upsert safety is a central compatibility constraint. |
 | A5-0 · daily-log options brief | `u6_a5_options_writer` | `gpt-5.6-terra` low | `docs/run4-u6a/daily-log-options` | #224 | merged as `147a671` | 2 paths / 220 additions | Records option 1 for U6b: typed nullable `daily_gut_rows` columns; generalized storage remains deferred. |
@@ -61,8 +63,10 @@ The planning rows above are superseded by these locally complete slices; none ha
   the current integration baseline and #229 each have 19 active registry metrics using
   `daily_gut_rows` or `wearable_daily`; the local U6b promotion tip has 24, with five new
   `daily_gut_rows` keys. That local branch evidence is not a hosted or integrated state.
-- `events.value` and `state_bands.value` are deliberately heterogeneous JSON. The repository has not
-  yet recorded how those rows become numeric daily points, so a generic cast would be fail-open.
+- `events.value` and `state_bands.value` are deliberately heterogeneous JSON. ADR-0004 now records
+  the missing policy: explicit per-metric reducers, additive `local_day_v1`, captured raw provenance,
+  one exclusive watermark, half-open non-overlapping bands, and absent quiet days. The policy is
+  accepted; the S1 schema and shared/S2 implementation slices are not yet built.
 - The current view generator targets an already-landed migration and hard-fails unhandled active
   numeric/ordinal tables. The scaffold now refuses to overwrite that migration; a later production
   activation must use a new forward-only migration and leave landed migrations untouched.
@@ -76,7 +80,9 @@ The planning rows above are superseded by these locally complete slices; none ha
 - Jayden and Alton must each provide actual PR reviews for U6b-3; chat approval is not a substitute.
 
 - Jayden and Alton must both review every actual PR that changes `shared/metrics/**`.
-- The separate release owner must re-record #229's `compute-baselines` deployment graph attestation;
-  #229 remains that separate owner's blocker, and its release files are untouched here.
+- #229 and its release evidence have landed. ADR-0004 is documentation only and does not alter that
+  scaffold's module graph, registry contract, migration, or deploy attestation.
+- Owner approval closes the A4 policy-decision gate only. S1 provenance/constraints, shared/S2
+  parity/generation, and a real collector/metric activation remain separate gated slices.
 - Each implementation slice targets `dev-phase2-run4`; serialize publication and merge decisions,
   refresh from the live tip, rerun its own tests and landing measurement, and honor required reviews.
