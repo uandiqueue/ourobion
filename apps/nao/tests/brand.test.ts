@@ -20,6 +20,8 @@ const SRC_DIR = path.join(NAO_ROOT, 'src');
 const PUBLIC_DIR = path.join(NAO_ROOT, 'public');
 const KIT_DIR = path.join(REPO_ROOT, 'assets', 'ourobion-nao-logo');
 const LAYOUT_PATH = path.join(SRC_DIR, 'app', 'layout.tsx');
+const TOPBAR_PATH = path.join(SRC_DIR, 'components', 'TopBar.tsx');
+const SHELL_CSS_PATH = path.join(SRC_DIR, 'app', 'shell.css');
 
 function sha256(filePath: string): string {
   return createHash('sha256').update(readFileSync(filePath)).digest('hex');
@@ -73,7 +75,41 @@ for (const { served, source } of COPIED_PAIRS) {
   });
 }
 
-// ── 2. Favicon metadata (layout.tsx) resolves to real files ────────────────
+// ── 2. Top bar uses one supplied mark, with one accessible name ────────────
+
+function extractTopBarBrandButton(): string {
+  const source = readFileSync(TOPBAR_PATH, 'utf8').replace(/\r\n/g, '\n');
+  const match = source.match(/<button[\s\S]*?className="topbar__brand"[\s\S]*?<\/button>/);
+  assert.notEqual(match, null, 'TopBar.tsx lost the topbar__brand button');
+  return match![0];
+}
+
+test('top bar brand button uses only the supplied dark mark and its exact alt as the accessible name', () => {
+  const button = extractTopBarBrandButton();
+  assert.match(button, /src="\/brand\/nao-mark-dark\.svg"/);
+  assert.match(button, /alt="ourobion nao — Overview"/);
+  assert.equal((button.match(/<img\b/g) ?? []).length, 1, 'topbar brand button must contain exactly one image');
+  assert.doesNotMatch(button, /aria-label=/, 'button aria-label would compete with the image alt');
+  assert.doesNotMatch(button, /aria-hidden/, 'the image supplies the button accessible name and cannot be hidden');
+  assert.doesNotMatch(button, /<span\b/, 'do not recreate the supplied wordmark with HTML spans');
+  assert.doesNotMatch(button, />\s*(?:ourobion|nao)\s*</i, 'do not recreate the supplied wordmark as text');
+});
+
+test('top bar has no recreated wordmark selectors and keeps one nonshrinking 40x40 mark rule', () => {
+  const component = readFileSync(TOPBAR_PATH, 'utf8');
+  const css = readFileSync(SHELL_CSS_PATH, 'utf8').replace(/\r\n/g, '\n');
+  for (const staleClass of ['topbar__lockup', 'topbar__word', 'topbar__sub']) {
+    assert.equal(component.includes(staleClass), false, `${staleClass} markup returned to TopBar.tsx`);
+    assert.equal(css.includes(`.${staleClass}`), false, `${staleClass} styling returned to shell.css`);
+  }
+  const rules = [...css.matchAll(/\.topbar__mark\s*\{([^}]*)\}/g)];
+  assert.equal(rules.length, 1, 'shell.css must define exactly one topbar__mark rule');
+  assert.match(rules[0][1], /\bwidth:\s*40px\s*;/);
+  assert.match(rules[0][1], /\bheight:\s*40px\s*;/);
+  assert.match(rules[0][1], /\bflex:\s*none\s*;/);
+});
+
+// ── 3. Favicon metadata (layout.tsx) resolves to real files ────────────────
 //
 // Extracted from layout.tsx's `metadata.icons` object, not imported — see file header.
 function extractIconsBlock(): string {
@@ -113,7 +149,7 @@ test('layout.tsx metadata.icons: pins the two known-current URLs (favicon svg + 
   );
 });
 
-// ── 3. src/app/ contains no icon.* / apple-icon.* file-convention icons ────
+// ── 4. src/app/ contains no icon.* / apple-icon.* file-convention icons ────
 //
 // This is a deliberate decision, not an accident: Next 15's metadata resolver wires up
 // file-convention icons (src/app/icon.* / apple-icon.*) ONLY when `metadata.icons` is unset
@@ -135,7 +171,7 @@ test('src/app/ (recursively) has no icon.* or apple-icon.* file-convention icon 
   );
 });
 
-// ── 4. No stale generic-Ourobion brand references in nao source ────────────
+// ── 5. No stale generic-Ourobion brand references in nao source ────────────
 //
 // The pre-nao generic "ourobion-" mark/lockup files still physically exist in public/brand/
 // (they were not deleted as part of this migration) — this test is about REFERENCES from
@@ -171,7 +207,7 @@ test('no file under apps/nao/src/ references the old generic "/brand/ourobion-" 
   );
 });
 
-// ── 5. Every /brand/... URL referenced in src/ resolves to a real public/brand/ file ──
+// ── 6. Every /brand/... URL referenced in src/ resolves to a real public/brand/ file ──
 //
 // The broadest, most durable check: written generically (scan + extract + verify) instead of a
 // hardcoded list, so it also catches assets this file's author never enumerated — e.g. a typo'd

@@ -48,7 +48,6 @@
 .topbar__brand {
   display: flex;
   align-items: center;
-  gap: 12px;
   cursor: pointer;
   background: none;
   border: 0;
@@ -60,42 +59,6 @@
   height: 40px;
   flex: none;
   filter: drop-shadow(0 0 12px rgba(43, 196, 190, 0.35));
-}
-
-/* Stacked kicker-over-name, mirroring /brand/nao-lockup-dark.svg's
-   proportions as closely as a horizontal bar allows (the lockup itself is a
-   vertical asset — see login page — so here we approximate its typography
-   and stacking instead of embedding it directly). No divider pipe: the
-   two-line stack already separates "ourobion" from "nao" without one. */
-.topbar__lockup {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 2px;
-}
-
-/* Lowercase, not uppercased: the supplied artwork sets the kicker in lowercase
-   Outfit 300, and this bar is meant to read as that lockup. Both lines take
-   the kit's own wordmark colour (--nao-wordmark, #2BC4BE) because both are
-   teal in the artwork — neither is a text shade. The kicker is dimmed with
-   opacity rather than a second hue so it stays the same brand teal. */
-.topbar__word {
-  font-family: var(--font-display);
-  font-weight: 300;
-  font-size: 11px;
-  letter-spacing: 0.24em;
-  color: var(--nao-wordmark);
-  opacity: 0.72;
-}
-
-.topbar__sub {
-  font-family: var(--font-display);
-  font-weight: 200;
-  font-size: 20px;
-  line-height: 1;
-  letter-spacing: 0.04em;
-  color: var(--nao-wordmark);
 }
 
 .topbar__searchwrap {
