@@ -30,6 +30,7 @@ class BiotopeAuthScaffold extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
+        fit: StackFit.expand,
         children: [
           Positioned.fill(
             child: background,
@@ -221,23 +222,27 @@ class _BiotopeBrandLockupState extends State<_BiotopeBrandLockup>
           ),
         ),
         const SizedBox(height: 9),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const _GoldRule(reverse: true),
-            const SizedBox(width: 9),
-            Text(
-              'Your health, your ecosystem',
-              style: GoogleFonts.manrope(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0.2,
-                color: OurobionColors.outline,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const _GoldRule(reverse: true),
+              const SizedBox(width: 9),
+              Text(
+                'Your health, your ecosystem',
+                style: GoogleFonts.manrope(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.2,
+                  color: OurobionColors.outline,
+                ),
               ),
-            ),
-            const SizedBox(width: 9),
-            const _GoldRule(),
-          ],
+              const SizedBox(width: 9),
+              const _GoldRule(),
+            ],
+          ),
         ),
       ],
     );
