@@ -18,10 +18,14 @@ interface CloudflareEnv {
   CORPUS: R2Bucket;
   DB: D1Database;
   SUPABASE_URL: string;
+  /** Low-privilege API key used only by the server-to-server run-pipeline relay. */
+  SUPABASE_PUBLISHABLE_KEY: string;
+  /** Sender-side value for X-Ourobion-Internal-Secret; never client-visible. */
+  OUROBION_INTERNAL_SECRET: string;
   /** Fine-grained GitHub PAT, "Actions: Read and write" scoped to this repo only. */
   GH_ACTIONS_TOKEN: string;
   /** "owner/repo", e.g. "uandiqueue/ourobion". */
   GH_REPO: string;
-  /** Branch/ref the brain-ingest workflow dispatches against. Optional — defaults to "dev-phase2-run4". */
-  GH_ACTIONS_REF?: string;
+  /** Required ordinary var for the authorized Run 4 integration ref. */
+  GH_ACTIONS_REF: string;
 }

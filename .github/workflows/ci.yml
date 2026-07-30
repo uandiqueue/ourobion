@@ -587,9 +587,9 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://example.invalid
           NEXT_PUBLIC_SUPABASE_ANON_KEY: synthetic-public-anon
           NEXT_PUBLIC_APP_ENV: ci
-          SUPABASE_SERVICE_ROLE_KEY: run4-u1-synthetic-server-canary-178-not-a-secret
+          OUROBION_INTERNAL_SECRET: run4-ui7-synthetic-internal-canary-227-not-a-secret
         run: |
           set -euo pipefail
           npm run build
           node ../../tools/secret_scan_guard.mjs inspect-client-bundle \
-            --dir .next/static --canary "$SUPABASE_SERVICE_ROLE_KEY"
+            --dir .next/static --canary "$OUROBION_INTERNAL_SECRET"

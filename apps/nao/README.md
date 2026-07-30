@@ -57,6 +57,32 @@ npm install
 you edit. `npm run gen-env` (run automatically by `predev`/`prebuild`) projects them into the
 gitignored `.env.local` (Next.js) and `.dev.vars` (wrangler/OpenNext); never edit those by hand.
 
+## Production build and Worker runtime contract
+
+The production path has four deliberately separate configuration surfaces:
+
+| Surface | Names | Contract |
+|---|---|---|
+| Next build-time public values | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_APP_ENV` | Set before `next build`; Next may inline them into client assets. They are public by design. |
+| Worker runtime values | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `OUROBION_INTERNAL_SECRET`, `GH_ACTIONS_TOKEN` | Declared by name under `secrets.required` in `wrangler.jsonc`; values are never committed. The publishable key is low privilege, but only the server relay consumes this runtime copy. |
+| Ordinary Worker vars | `GH_REPO`, `GH_ACTIONS_REF=dev-phase2-run4` | Non-secret routing configuration committed under `vars` in `wrangler.jsonc`. |
+| Native Worker bindings | `CORPUS` (R2), `DB` (D1) | Resource bindings configured in `wrangler.jsonc`; they are not environment variables or S3 credentials. |
+
+Nao's reviewed `compatibility_date` remains `2024-12-01`. That predates Cloudflare's automatic
+`process.env` population date, so `wrangler.jsonc` explicitly pairs `nodejs_compat` with
+`nodejs_compat_populate_process_env`; otherwise the declared text bindings would not reach the
+`process.env` reads used by the server routes.
+
+`SUPABASE_SERVICE_ROLE_KEY` is not part of nao's build or runtime contract. The run-pipeline relay
+uses the publishable key only as transport metadata and `OUROBION_INTERNAL_SECRET` as its distinct
+authorization input. `apps/nao/.env.example` feeds local `.dev.vars`; in that local projection only,
+`scripts/gen-env.mjs` mirrors public `NEXT_PUBLIC_SUPABASE_URL` to the server name `SUPABASE_URL`.
+
+`next.config.mjs` pins `outputFileTracingRoot` to `apps/nao` via `import.meta.dirname`. The contract
+test guards that exact trace root and the complete Wrangler binding/name split. A successful local
+build proves local artifact construction only: dashboard value delivery, the deployed Worker, hosted
+Supabase access, and any hosted write remain unproven.
+
 ---
 
 ## Run locally
@@ -96,9 +122,15 @@ npm run etl
 ```bash
 npm run typecheck    # tsc --noEmit
 npm run lint         # next lint
-npm run build        # next build (OpenNext)
-node --test          # d1/etl fixtures
+npm run build        # next build
+npx --no-install opennextjs-cloudflare build  # fresh Next build + local Worker bundle
+npm test             # complete nao node:test suite
 ```
+
+For build evidence, inspect `.next/static` for the absence of synthetic server-only canaries and
+record `.open-next/worker.js` and full `.open-next` tree bytes plus adapter warnings exactly as
+observed. These are measurements, not a release threshold. Remove `.next`, `.open-next`, `.wrangler`,
+and generated `.env.local` / `.dev.vars` residue when the evidence run ends.
 
 ---
 
@@ -128,8 +160,12 @@ variants are bundled for white/pale surfaces and are intentionally unused by thi
 1. `npx wrangler login`.
 2. `npx wrangler d1 create ourobion-nao-index` → put the returned `database_id` in `wrangler.jsonc`.
 3. Apply schema + build the **remote** index: `... d1 execute ourobion-nao-index --remote --file=src/db/schema.sql` then `npm run etl -- --remote`.
-4. Deploy via OpenNext (`npx opennextjs-cloudflare build && npx wrangler deploy`) and bind the route
-   (`nao.ourobion.com`). Set the Worker secrets/vars (Supabase URL/anon key) in the Cloudflare dashboard.
+4. Build via OpenNext, then deploy and bind the route (`nao.ourobion.com`). Before deployment, supply
+   the four required Worker runtime values named above; `GH_REPO` / `GH_ACTIONS_REF` and `CORPUS` /
+   `DB` come from `wrangler.jsonc`.
+
+This section is an operator outline, not evidence that those hosted steps were executed. Issue #227's
+authorized verification stops at local build, bundle inspection, and config/type validation.
 
 See [`docs/nao/nao-app-design.md`](../../docs/nao/nao-app-design.md) for the full design + rationale.
 **Doc map (start here):** [`docs/INDEX.md`](../../docs/INDEX.md).
