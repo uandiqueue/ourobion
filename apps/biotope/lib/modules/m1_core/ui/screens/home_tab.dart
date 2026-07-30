@@ -8,6 +8,8 @@ import '../../../../core/theme.dart';
 import '../../../../core/widgets/gold_card.dart';
 import '../../impl/profile_service.dart';
 import '../../models/user_profile.dart';
+import '../widgets/about_biotope_card.dart';
+import 'how_ourobion_works_screen.dart';
 import '../../../m5a_baselines/index.dart';
 import '../../../m5a_baselines/ui/screens/metric_detail_screen.dart';
 import '../../../m5a_baselines/ui/widgets/metric_tile.dart';
@@ -349,6 +351,17 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                         refreshing: _refreshing,
                       ),
                     ],
+
+                    const SizedBox(height: 20),
+
+                    // ── About Biotope ───────────────────────────────────
+                    AboutBiotopeCard(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const HowOurobionWorksScreen(),
+                        ),
+                      ),
+                    ),
 
                     const SizedBox(height: 22),
 

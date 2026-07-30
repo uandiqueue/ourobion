@@ -20,7 +20,8 @@
 // access.
 //
 // Flow per request:
-//   1. Skip the allowlist (/login, Next internals, static files, favicon).
+//   1. Skip the allowlist (/login, /how-it-works, Next internals, static
+//      files, favicon).
 //   2. Use @supabase/ssr bound to the request/response cookies to read — and, if
 //      needed, REFRESH — the session. Refreshed cookies are written onto the
 //      response so the browser stays signed in.
@@ -43,6 +44,12 @@ import { verifyAccessToken } from '@/lib/auth';
 /** Paths that never require auth. */
 function isPublicPath(pathname: string): boolean {
   if (pathname === '/login' || pathname.startsWith('/login/')) {
+    return true;
+  }
+  // Public explainer (issue #260): a static, unauthenticated page describing
+  // how ourobion/nao work at a high level. It must short-circuit here, before
+  // the env/config read below, so a missing Supabase config cannot block it.
+  if (pathname === '/how-it-works' || pathname.startsWith('/how-it-works/')) {
     return true;
   }
   // Next internals + common static assets (the matcher below also excludes
