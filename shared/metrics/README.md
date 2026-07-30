@@ -30,13 +30,26 @@ See [`docs/biotope/metrics-registry-design.md`](../../docs/biotope/metrics-regis
 | `dqs` | `{ weight, countsTowardDailyCompleteness }` — only the `T1` spine counts; weights sum to 100 |
 | `signal` | S4 anomaly params ([ADR-0002](../../docs/shared/decisions/0002-anomaly-definition.md)): `{ deadbandK }`, the daily 3-state deadband in robust σ̂ (= MAD/0.6745) units — `neutral` iff \|x − median\| ≤ `deadbandK`·σ̂; set (typically `1.0`, provisional) for every `baselineApplicable` metric, else `null` |
 | `ui` | optional `{ label, inputType }` hint for M2 self-report screens |
-| `dailyProjection` | optional explicit primitive-to-day policy; absent/`null` by default. Events use UTC `count` / `sum` / `mean` / `latest`; state bands use UTC `presence` over half-open `[start,end)` only |
+| `dailyProjection` | optional explicit primitive-to-day policy; absent/`null` by default. The contract currently implements legacy `utc`; [ADR-0004](../../docs/shared/decisions/0004-local-day-projection.md) accepts additive `local_day_v1` (implementation pending). Each metric explicitly selects its calendar and event `count` / `sum` / `mean` / `latest` or state-band `presence` reducer |
 | `status` | `active` \| `deprecated` |
 | `introducedIn` / `deprecatedAt` | lifecycle stamps |
 
 Typed accessors live in `index.ts` / `index.dart` (`activeMetrics`, `metricByKey`,
 `metricsByTable`, `baselineKeys`, `activeKeys`, `isActiveMetric`, `dqsWeights`,
 `dailyCompletenessKeys`) — consumers read the list through these, never hardcoded keys.
+
+## Daily projection policy (ADR-0004; implementation pending)
+
+The merged scaffold is fail-closed and supports only the explicit legacy `calendar: 'utc'` shape.
+ADR-0004 retains that policy and accepts an additive `calendar: 'local_day_v1'`; it does **not**
+mean the schema, TS/Dart mirrors, generator, or collectors implement local-day projection yet.
+
+For `local_day_v1`, raw events and state-band endpoints must carry captured local-date/timezone
+provenance alongside their absolute timestamps. A timezone change splits an active band into adjacent
+half-open segments. One exclusive S1 watermark bounds every branch of an evaluation; open bands are
+clipped to it. Overlaps for one user/metric are rejected with no priority rule. Every metric selects
+a closed-set reducer explicitly, and a quiet primitive day produces no row—not a fabricated zero.
+Missing local provenance fails closed and never falls back to UTC.
 
 ## Storage (continuity primitives)
 
@@ -61,8 +74,10 @@ continuous spine), `antibiotic_courses` → `state_bands`, `wearable_daily` → 
 3. Baselines, DQS, and engine validation pick it up **from the registry** — no separate edits.
    A numeric/ordinal metric on `events` or `state_bands` must select `dailyProjection`; the view
    generator fails closed instead of guessing. Event payload reducers accept JSON numbers only
-   (`count` ignores payload), state presence collapses overlapping bands to one, and neither path
-   manufactures a quiet-day zero.
+   (`count` ignores payload), and neither path manufactures a quiet-day zero. The current UTC
+   scaffold defensively collapses overlap in synthetic projection evidence, but ADR-0004 requires
+   production overlaps to be rejected before activation; that collapse is not a priority rule.
+   `local_day_v1` cannot be selected until its S1 provenance and shared/S2 implementation land.
    When this changes production SQL, first update `VIEW_MIGRATION_RELPATH` to a new timestamped,
    nonexistent migration, then run `npm run view:write`. The generator refuses to overwrite a
    landed migration; `--check` continues to prove the current target has not drifted.

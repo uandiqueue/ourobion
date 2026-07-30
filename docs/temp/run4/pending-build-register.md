@@ -4,7 +4,7 @@ summary: Run 4's living gap superset with a current overlay distinguishing merge
 type: plan
 scope: shared
 status: canonical
-updated: 2026-07-28
+updated: 2026-07-30
 ---
 
 # Run 4 Pending-Build Register
@@ -19,7 +19,7 @@ PR #144 is not an accepted implementation of O24. At Run 4 entry, O24-O29 are al
 original IDs are preserved for traceability; the former Run 3 register remains available in Git
 history.
 
-## Current Run 4 overlay — 2026-07-28
+## Current Run 4 overlay — 2026-07-30
 
 The sentence above is historical entry state. Current delivery is:
 
@@ -80,12 +80,16 @@ gated by the four structural gaps below, which collapse most of the challenging 
 
 | Slice | State | Closing PR / remaining gate |
 |---|---|---|
-| A4-S0 · fail-closed daily-projection policy scaffold | built, draft PR open; **does not close A4** | #229 adds per-metric event/state reducer contracts and synthetic negative/runtime proof without activating a production metric or rewriting a landed migration; requires actual Jayden + Alton reviews |
-| A4-1/A4-2 · production event/state projection | decision-gated | Current registry contains zero `events`/`state_bands` metrics, not 17. Jayden must record calendar, reducer, interval, overlap, and open-band semantics on #220 before a metric-specific forward migration activates these paths |
+| A4-S0 · fail-closed daily-projection policy scaffold | merged in #229; **does not close A4** | UTC-only explicit reducer contracts and synthetic negative/runtime proof landed without activating a production metric or rewriting a landed migration |
+| A4-1/A4-2 · production event/state projection | policy accepted; implementation pending | ADR-0004 records additive `local_day_v1`, captured raw local-date/timezone provenance, timezone-split bands, one exclusive S1 watermark, explicit per-metric reducers, half-open overlap rejection with no priority rule, and absent quiet days. Next: S1 provenance/constraints, then shared/S2 parity and generator; current registry still has zero production `events`/`state_bands` metrics |
 | A4-3 · registry/parity activation | collector-gated | Lands only with real metric collectors and their explicit policies; U6c issue #222 owns the future family slices |
 | A5-0 · daily-log storage options | #224 merged; **generalized A5 remains deferred** | Owner selected option 1 for bounded U6b: typed nullable columns on authoritative `daily_gut_rows`, unchanged seven-field DQS, omission-preserving writes; this does not authorize a generalized table |
 | U6b · EASY self-report batches | three local slices complete; publication pending | Issue #221; `cf33a5d` schema, `5f2fb30` collector, `e0019ae` promotion. No hosted implementation PRs or reviews yet; promotion requires actual Jayden + Alton reviews |
 | U6c · MEDIUM collector families | stopped / out of current scope | Issue #222; do not resume without separate scope, A4 semantics, real collectors and device evidence; no placeholder or fake collector work |
+
+ADR-0004 is a decision record, not implementation evidence. It preserves legacy `utc` and adds
+`local_day_v1` only as an accepted future contract; no schema column, TS/Dart enum, S2 SQL branch,
+collector, production registration, hosted write, or deployment is claimed by that document.
 
 Also: CGM (glucose_cgm) needs hardware; several wearable datatypes need a real device + platform
 testing; iOS remains Mac + paid-Apple-account gated (memory 0010).
