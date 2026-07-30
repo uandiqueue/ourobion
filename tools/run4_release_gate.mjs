@@ -50,6 +50,7 @@ export function hashTextEvidence(value) {
 //   2749381a405de882c6d96cdf21a57034e28204ea  (U10 base — tip after #217; ACCEPTED for U10 only)
 //   da6b11b5df057fe6b5f5f6dcb14f13343805a94b  (R4-U1 correction base — tip after #214; ACCEPTED
 //                                              for that #232 push only)
+//   38205d2532ef528ab3752d9013d457c2ee994314  (accepted U3 base; superseded by #254 integration merge)
 //
 // Re-advanced for the same R4-U1 correction (#232), same branch. #232's green status went stale
 // again: PR #199 (the U4 scientific-semantics/trust-labels unit) merged into the integration
@@ -59,11 +60,11 @@ export function hashTextEvidence(value) {
 // the attestation manifest, so the base advance is folded into this PR rather than opening a
 // separate base-advance PR that would collide with it.
 //
-// Advanced after the accepted U3 head. This is the exact stacked U3 branch tip at branch cut.
-// Re-check that branch immediately before push; if it moved, this value and the generated
-// attestation must move again. Caps remain 115 / 8,500 and fail closed; only the per-unit
-// starting point changes.
-export const RUN4_UNIT_BASE_SHA = '38205d2532ef528ab3752d9013d457c2ee994314';
+// Advanced to 6020f444, the exact fully green #254 two-parent integration merge. Its tree equals
+// second parent d536eda (accepted U3 head); 38205d remains in the superseded-base history above.
+// Re-check the integration branch immediately before push; if it moved, this value and the
+// generated attestation must move again. Caps remain 115 / 8,500 and fail closed.
+export const RUN4_UNIT_BASE_SHA = '6020f444a104b734df42e04f262bf19e701d1975';
 
 // ---------------------------------------------------------------------------------------------
 // Immutable product cap (issue #183) — MEASURED AND RECORDED, NOT YET GATING.
