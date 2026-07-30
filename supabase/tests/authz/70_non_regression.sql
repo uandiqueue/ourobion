@@ -15,6 +15,20 @@
 
 set authz_probe.phase = 'post';
 
+-- The forward slug contract rejects new malformed rows without pretending legacy rows were
+-- cleaned up. NOT VALID is deliberate: old overlength rows remain observable for remediation.
+select authz_probe.expect_value('objects.ingestion_seed_slug_contract_is_not_valid',
+  'select (not convalidated)::text from pg_constraint
+    where conrelid = ''public.ingestion_seeds''::regclass
+      and conname = ''ingestion_seeds_slug_contract_check''', 'true');
+
+select authz_probe.expect_value('objects.ingestion_seed_slug_contract_has_regex_and_length_cap',
+  'select (pg_get_constraintdef(oid) like ''%^[a-z0-9_]+$%''
+       and pg_get_constraintdef(oid) like ''%char_length(slug) <= 64%'')::text
+     from pg_constraint
+    where conrelid = ''public.ingestion_seeds''::regclass
+      and conname = ''ingestion_seeds_slug_contract_check''', 'true');
+
 -- ═════════════════════════════════════════════════════════════════════════════════════════════
 -- 1 · THE HARD INVARIANT — zero RESTRICTIVE policies on the populate path, and on any of the 15
 -- ═════════════════════════════════════════════════════════════════════════════════════════════

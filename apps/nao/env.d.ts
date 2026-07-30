@@ -22,6 +22,6 @@ interface CloudflareEnv {
   GH_ACTIONS_TOKEN: string;
   /** "owner/repo", e.g. "uandiqueue/ourobion". */
   GH_REPO: string;
-  /** Branch/ref the brain-ingest workflow dispatches against. Optional — defaults to "dev-phase2". */
+  /** Branch/ref the brain-ingest workflow dispatches against. Optional — defaults to "dev-phase2-run4". */
   GH_ACTIONS_REF?: string;
 }

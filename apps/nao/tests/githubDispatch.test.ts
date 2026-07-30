@@ -11,8 +11,14 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { dispatchIngestWorkflow } from '../src/lib/githubDispatch.ts';
+
+const NAO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const REPO_ROOT = path.resolve(NAO_ROOT, '..', '..');
 
 function withEnv(vars: Record<string, string | undefined>, fn: () => Promise<void>): Promise<void> {
   const prior: Record<string, string | undefined> = {};
@@ -50,7 +56,7 @@ test('dispatchIngestWorkflow: missing GH_ACTIONS_TOKEN/GH_REPO fails fast, no fe
   });
 });
 
-test('dispatchIngestWorkflow: a successful dispatch (204) posts the right request and reports ok', async () => {
+test('dispatchIngestWorkflow: a successful custom-seed dispatch posts the right request and reports ok', async () => {
   await withEnv({ GH_ACTIONS_TOKEN: 'tok_123', GH_REPO: 'uandiqueue/ourobion', GH_ACTIONS_REF: 'dev-phase2' }, async () => {
     const realFetch = globalThis.fetch;
     let capturedUrl = '';
@@ -61,7 +67,7 @@ test('dispatchIngestWorkflow: a successful dispatch (204) posts the right reques
       return { status: 204, text: async () => '' } as Response;
     }) as typeof fetch;
     try {
-      const result = await dispatchIngestWorkflow({ seed: 'hydration', limit: 20 });
+      const result = await dispatchIngestWorkflow({ seed: 'magnesium_sleep', limit: 20 });
       assert.equal(result.ok, true);
       assert.equal(
         capturedUrl,
@@ -72,7 +78,7 @@ test('dispatchIngestWorkflow: a successful dispatch (204) posts the right reques
       assert.equal(headers['Authorization'], 'Bearer tok_123');
       const body = JSON.parse(String(capturedInit?.body)) as { ref: string; inputs: Record<string, string> };
       assert.equal(body.ref, 'dev-phase2');
-      assert.deepEqual(body.inputs, { seed: 'hydration', limit: '20' });
+      assert.deepEqual(body.inputs, { seed: 'magnesium_sleep', limit: '20' });
     } finally {
       globalThis.fetch = realFetch;
     }
@@ -89,7 +95,8 @@ test('dispatchIngestWorkflow: omitted seed/limit send an empty inputs object', a
     }) as typeof fetch;
     try {
       await dispatchIngestWorkflow({});
-      const body = JSON.parse(String(capturedInit?.body)) as { inputs: Record<string, string> };
+      const body = JSON.parse(String(capturedInit?.body)) as { ref: string; inputs: Record<string, string> };
+      assert.equal(body.ref, 'dev-phase2-run4');
       assert.deepEqual(body.inputs, {});
     } finally {
       globalThis.fetch = realFetch;
@@ -174,4 +181,18 @@ test('dispatchIngestWorkflow: a thrown network error is reported as outcome unkn
       globalThis.fetch = realFetch;
     }
   });
+});
+
+test('workflow accepts a string slug without shell interpolation and leaves final validation to the CLI pool', () => {
+  const workflow = readFileSync(path.join(REPO_ROOT, '.github', 'workflows', 'brain-ingest.yml'), 'utf8');
+  assert.match(workflow, /seed:\s*[\s\S]*?type:\s*string/);
+  assert.doesNotMatch(workflow, /seed:\s*[\s\S]*?type:\s*choice/);
+  assert.match(workflow, /env:\s*[\s\S]*?SEED:\s*\$\{\{ inputs\.seed \}\}/);
+  assert.match(workflow, /ARGS\+\=\(--seed "\$SEED"\)/);
+  assert.match(workflow, /npx tsx src\/cli\.ts "\$\{ARGS\[@\]\}"/);
+
+  const cli = readFileSync(path.join(REPO_ROOT, 'tools', 'brain-ingest', 'src', 'cli.ts'), 'utf8');
+  assert.match(cli, /const pool = await loadTopicPool/);
+  assert.match(cli, /seed:\s*options\.get\('seed'\)/);
+  assert.match(cli, /seedPool:\s*pool\.seeds/);
 });

@@ -6,8 +6,7 @@
 // stays a thin Server Component shell for the title/metadata, matching the
 // rest of the app's page convention.
 import type { Metadata } from 'next';
-import { IngestControlPanel } from '@/components/IngestControlPanel';
-import { GapsAndSeeds } from '@/components/GapsAndSeeds';
+import { IngestControlWorkspace } from '@/components/IngestControlWorkspace';
 
 export const metadata: Metadata = {
   title: 'Ingestion control · ourobion nao',
@@ -23,10 +22,9 @@ export default function IngestControlPage() {
         <div className="eyebrow">Steer the pipeline</div>
         <h1 className="ingest__title">Ingestion control</h1>
       </div>
-      <IngestControlPanel />
-      {/* O14 seeds-as-data (U10) + O9 gap surfacing (U11): the seeds form and the
-          A1 knowledge-gap table, bridged by the human "Add as seed" prefill. */}
-      <GapsAndSeeds />
+      {/* O14 seeds-as-data (U10) + O9 gap surfacing (U11): the workspace keeps
+          Run-now synchronized with successful seed add/toggle mutations. */}
+      <IngestControlWorkspace />
     </div>
   );
 }

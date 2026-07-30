@@ -11,18 +11,10 @@ on:
   workflow_dispatch:
     inputs:
       seed:
-        description: "Seed topic (blank = all six)"
+        description: "Seed topic slug (blank = all enabled topics)"
         required: false
-        type: choice
+        type: string
         default: ""
-        options:
-          - ""
-          - gut_microbiome
-          - hydration
-          - antibiotics
-          - sleep_hrv
-          - dengue_vector
-          - environmental_health
       limit:
         description: "Max papers to process this run (blank = no limit)"
         required: false

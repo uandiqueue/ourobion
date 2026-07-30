@@ -18,7 +18,7 @@
 // edges is unchanged. The pipeline reads this table fail-soft with
 // static-wins-on-collision (tools/brain-ingest/src/seeder/dbSeeds.ts).
 //
-// AUTH (R4-U2): GET requires nao `viewer`; POST and PATCH require `curator`
+// AUTH (R4-U2): GET, POST and PATCH require nao `curator`
 // (operating the corpus/pipeline, per the R4-U2 design §A.1) via
 // requireRole()/guardRole() (apps/nao/src/lib/authzServer.ts). `created_by` (a
 // raw curator uuid) is never selected/returned by any handler — explicit
@@ -29,7 +29,6 @@
 // GATE ORDER (R4-U2 review finding 6): `guardRole` is the FIRST statement of POST
 // and of PATCH, before `req.json()` and the body parsers — running the parse
 // first handed a non-member a 400-vs-403 schema oracle over both request shapes.
-import { createServerSupabaseClient } from '@/lib/supabase-server';
 import {
   NaoControlAuditError,
   NaoControlOutcomeUnknownError,
@@ -41,8 +40,8 @@ import {
   redactDeep,
   redactText,
 } from '@/lib/authzServer';
-import { buildSeedCatalog, parseAddSeedBody, parseToggleSeedBody } from '@/lib/seedsControl';
-import type { DbSeedRow } from '@/lib/seedsControl';
+import { parseAddSeedBody, parseToggleSeedBody } from '@/lib/seedsControl';
+import { readSeedCatalog } from '@/lib/seedCatalogServer';
 import { INGEST_SEED_TOPICS } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -50,8 +49,6 @@ export const dynamic = 'force-dynamic';
 // Explicit column list shared by every query below — never `created_by` (a
 // raw curator uuid). Layer-1 redaction over the DB-layer column revoke Agent
 // A is adding on the same table; this route does not assume that landed.
-const SEED_COLUMNS = 'id, slug, label, query_hint, enabled, created_at';
-
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -60,19 +57,13 @@ function json(body: unknown, status = 200): Response {
 }
 
 export async function GET(): Promise<Response> {
-  const gate = await guardRole('viewer');
+  const gate = await guardRole('curator');
   if (!gate.ok) return gate.response;
 
-  const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase
-    .from('ingestion_seeds')
-    .select(SEED_COLUMNS)
-    .order('created_at', { ascending: true });
-  if (error) return json({ error: redactText(error.message) }, 500);
+  const catalog = await readSeedCatalog();
+  if (!catalog.ok) return json({ error: redactText(catalog.error) }, 500);
 
-  return json(
-    redactDeep({ ok: true, seeds: buildSeedCatalog(INGEST_SEED_TOPICS, (data ?? []) as DbSeedRow[]) }),
-  );
+  return json(redactDeep({ ok: true, seeds: catalog.seeds }));
 }
 
 export async function POST(req: Request): Promise<Response> {

@@ -23,9 +23,11 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 // plain Node resolves relative specifiers but not the `@/` alias (a
 // Next.js/webpack-only path mapping). d1.ts/r2.ts get away with the alias
 // because they only `import type` from it, which Node's TS-stripping erases
-// entirely; DEFAULT_INGEST_CONTROL/INGEST_SEED_TOPICS are real runtime values.
-import { DEFAULT_INGEST_CONTROL, INGEST_SEED_TOPICS } from './types.ts';
+// entirely; DEFAULT_INGEST_CONTROL is a real runtime value.
+import { DEFAULT_INGEST_CONTROL } from './types.ts';
 import type { IngestControlConfig, IngestControlPatch, IngestTriggerBody } from './types.ts';
+import { seedRunabilityError, validateSeedSlug } from './seedsControl.ts';
+import type { SeedCatalogEntry } from './seedsControl.ts';
 
 /** R2 key for the control document (mirrors tools/brain-ingest/src/control.ts's CONTROL_KEY). */
 export const CONTROL_KEY = 'control/ingest-config.json';
@@ -122,11 +124,28 @@ export function applyIngestControlPatch(
  * Validate a `POST /api/ingest-control/trigger` body. Pure — no I/O. Returns
  * an error message, or `null` when the body is acceptable.
  */
-export function validateTriggerBody(body: IngestTriggerBody): string | null {
-  if (body.seed !== undefined && !(INGEST_SEED_TOPICS as readonly string[]).includes(body.seed)) {
-    return `unknown seed '${body.seed}'. Known: ${INGEST_SEED_TOPICS.join(', ')}`;
+export function validateTriggerBody(
+  body: unknown,
+  catalog: readonly SeedCatalogEntry[],
+): string | null {
+  const shapeError = validateTriggerBodyShape(body);
+  if (shapeError) return shapeError;
+  const trigger = body as IngestTriggerBody;
+  if (trigger.seed !== undefined) return seedRunabilityError(catalog, trigger.seed);
+  return null;
+}
+
+/** Validate only the transport shape before deciding whether a DB lookup is needed. */
+export function validateTriggerBodyShape(body: unknown): string | null {
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+    return 'body must be a JSON object';
   }
-  if (body.limit !== undefined && (!Number.isInteger(body.limit) || body.limit <= 0)) {
+  const trigger = body as IngestTriggerBody;
+  if (trigger.seed !== undefined) {
+    const slugError = validateSeedSlug(trigger.seed);
+    if (slugError) return slugError;
+  }
+  if (trigger.limit !== undefined && (!Number.isInteger(trigger.limit) || trigger.limit <= 0)) {
     return 'limit must be a positive integer';
   }
   return null;

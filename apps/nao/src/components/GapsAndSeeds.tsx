@@ -12,11 +12,15 @@ import { GapsPanel } from './GapsPanel';
 import { SeedsPanel } from './SeedsPanel';
 import type { SeedPrefill } from './SeedsPanel';
 
-export function GapsAndSeeds() {
+export interface GapsAndSeedsProps {
+  onSeedCatalogChanged?: () => void;
+}
+
+export function GapsAndSeeds({ onSeedCatalogChanged }: GapsAndSeedsProps = {}) {
   const [prefill, setPrefill] = useState<SeedPrefill | null>(null);
   return (
     <>
-      <SeedsPanel prefill={prefill} />
+      <SeedsPanel prefill={prefill} onCatalogChanged={onSeedCatalogChanged} />
       <GapsPanel
         onAddAsSeed={(label) => setPrefill((p) => ({ label, nonce: (p?.nonce ?? 0) + 1 }))}
       />

@@ -41,7 +41,7 @@ function requiredEnv(name: string): string | null {
 export async function dispatchIngestWorkflow(opts: DispatchIngestOptions): Promise<DispatchIngestResult> {
   const token = requiredEnv('GH_ACTIONS_TOKEN');
   const repo = requiredEnv('GH_REPO'); // e.g. "uandiqueue/ourobion"
-  const ref = process.env.GH_ACTIONS_REF ?? 'dev-phase2';
+  const ref = process.env.GH_ACTIONS_REF ?? 'dev-phase2-run4';
 
   if (!token || !repo) {
     return {

@@ -4,7 +4,7 @@ summary: How ourobion acquires the scientific-literature corpus edges are synthe
 type: design
 scope: nao
 status: canonical
-updated: 2026-07-26
+updated: 2026-07-30
 ---
 # The Brain — Ingestion (paper corpus) Design
 
@@ -401,7 +401,7 @@ interface IngestControlConfig {
     `dispatchIngestWorkflow` (`lib/githubDispatch.ts`), which needs a fine-grained GitHub PAT scoped to
     this repo with `Actions: Read and write`, stored as the `GH_ACTIONS_TOKEN` Worker secret (never
     committed), plus `GH_REPO` (`owner/repo`) and optionally `GH_ACTIONS_REF` (defaults to
-    `dev-phase2`).
+    `dev-phase2-run4` for the authorized Run 4 integration line).
   - `app/(app)/ingest/page.tsx` + `components/IngestControlPanel.tsx` — pause/resume, "Run now"
     (seed + limit → the trigger route), and the budget override.
   - Both sides keep independently-typed copies of `IngestControlConfig`/`IngestLimits` (same

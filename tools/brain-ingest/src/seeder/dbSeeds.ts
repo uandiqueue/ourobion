@@ -29,8 +29,9 @@
 import type { Seed } from '../types.js';
 import { SEEDS } from '../seeds.js';
 
-/** The slug shape the table CHECK enforces — re-validated here (defense in depth). */
+/** The slug contract the table CHECK enforces — re-validated here (defense in depth). */
 const SLUG_RE = /^[a-z0-9_]+$/;
+const MAX_SLUG_LENGTH = 64;
 
 export interface FetchDbSeedsOptions {
   /** Injectable env; default process.env. Needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY. */
@@ -95,7 +96,13 @@ export async function fetchDbSeeds(opts: FetchDbSeedsOptions = {}): Promise<Seed
     for (const row of rows) {
       const slug = row.slug;
       const label = row.label;
-      if (typeof slug !== 'string' || !SLUG_RE.test(slug) || typeof label !== 'string' || label.trim() === '') {
+      if (
+        typeof slug !== 'string' ||
+        slug.length > MAX_SLUG_LENGTH ||
+        !SLUG_RE.test(slug) ||
+        typeof label !== 'string' ||
+        label.trim() === ''
+      ) {
         warn(`brain-ingest db-seeds: skipping malformed row (slug=${String(slug)})`);
         continue;
       }

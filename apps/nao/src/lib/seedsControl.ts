@@ -12,10 +12,10 @@
 // STATIC-wins-on-collision merge semantics (tools/brain-ingest/src/seeder/
 // dbSeeds.ts).
 
-/** Mirrors the table CHECK `slug ~ '^[a-z0-9_]+$'` (defense in depth). */
+/** Mirrors the table CHECK: lowercase word characters only, at most 64 chars. */
 export const SEED_SLUG_RE = /^[a-z0-9_]+$/;
 
-const MAX_SLUG_LENGTH = 64;
+export const MAX_SEED_SLUG_LENGTH = 64;
 const MAX_LABEL_LENGTH = 120;
 const MAX_QUERY_HINT_LENGTH = 300;
 
@@ -46,20 +46,34 @@ export interface SeedCatalogEntry {
    * merge is STATIC-wins, so this row is ignored by real runs (shown honestly).
    */
   shadowedByBuiltIn: boolean;
+  /** Why Run now must not dispatch this entry; null means runnable. */
+  unavailableReason: string | null;
   createdAt: string | null;
+}
+
+function customSeedUnavailableReason(
+  row: DbSeedRow,
+  shadowedByBuiltIn: boolean,
+): string | null {
+  if (validateSeedSlug(row.slug) !== null) {
+    return 'invalid legacy slug (must match ^[a-z0-9_]+$ and be <= 64 characters; database remediation required)';
+  }
+  if (shadowedByBuiltIn) return 'shadowed by built-in (static wins)';
+  if (!row.enabled) return 'disabled';
+  return null;
 }
 
 /**
  * Derive a table-valid slug from a human label: lowercase, every run of
  * non-alphanumerics becomes one `_`, trimmed of leading/trailing `_`, capped
- * at {@link MAX_SLUG_LENGTH}. Returns '' when nothing survives (caller errors).
+ * at {@link MAX_SEED_SLUG_LENGTH}. Returns '' when nothing survives (caller errors).
  */
 export function deriveSeedSlug(label: string): string {
   return label
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
-    .slice(0, MAX_SLUG_LENGTH)
+    .slice(0, MAX_SEED_SLUG_LENGTH)
     .replace(/_+$/, '');
 }
 
@@ -77,17 +91,22 @@ export function buildSeedCatalog(
       enabled: true,
       builtIn: true,
       shadowedByBuiltIn: false,
+      unavailableReason: null,
       createdAt: null,
     })),
-    ...rows.map((r) => ({
-      slug: r.slug,
-      label: r.label,
-      queryHint: r.query_hint,
-      enabled: r.enabled,
-      builtIn: false,
-      shadowedByBuiltIn: builtIn.has(r.slug),
-      createdAt: r.created_at,
-    })),
+    ...rows.map((r) => {
+      const shadowedByBuiltIn = builtIn.has(r.slug);
+      return {
+        slug: r.slug,
+        label: r.label,
+        queryHint: r.query_hint,
+        enabled: r.enabled,
+        builtIn: false,
+        shadowedByBuiltIn,
+        unavailableReason: customSeedUnavailableReason(r, shadowedByBuiltIn),
+        createdAt: r.created_at,
+      };
+    }),
   ];
 }
 
@@ -130,8 +149,8 @@ export function parseAddSeedBody(body: unknown): ParseAddSeedResult {
   if (slug === '') {
     return { ok: false, error: 'label must contain at least one letter or digit (slug derivation produced nothing)' };
   }
-  if (slug.length > MAX_SLUG_LENGTH || !SEED_SLUG_RE.test(slug)) {
-    return { ok: false, error: `slug must match ^[a-z0-9_]+$ and be <= ${MAX_SLUG_LENGTH} characters` };
+  if (slug.length > MAX_SEED_SLUG_LENGTH || !SEED_SLUG_RE.test(slug)) {
+    return { ok: false, error: `slug must match ^[a-z0-9_]+$ and be <= ${MAX_SEED_SLUG_LENGTH} characters` };
   }
 
   const rawHint = b.queryHint;
@@ -163,11 +182,42 @@ export function parseToggleSeedBody(body: unknown): ParseToggleSeedResult {
   }
   const b = body as Record<string, unknown>;
   const slug = b.slug;
-  if (typeof slug !== 'string' || !SEED_SLUG_RE.test(slug) || slug.length > MAX_SLUG_LENGTH) {
+  if (typeof slug !== 'string' || !SEED_SLUG_RE.test(slug) || slug.length > MAX_SEED_SLUG_LENGTH) {
     return { ok: false, error: 'slug must be a valid seed slug (^[a-z0-9_]+$)' };
   }
   if (typeof b.enabled !== 'boolean') {
     return { ok: false, error: 'enabled must be a boolean' };
   }
   return { ok: true, value: { slug, enabled: b.enabled } };
+}
+
+/** Validate a workflow seed selector against the database slug contract. */
+export function validateSeedSlug(slug: unknown): string | null {
+  if (
+    typeof slug !== 'string' ||
+    slug.length === 0 ||
+    slug.length > MAX_SEED_SLUG_LENGTH ||
+    !SEED_SLUG_RE.test(slug)
+  ) {
+    return `seed must match ^[a-z0-9_]+$ and be <= ${MAX_SEED_SLUG_LENGTH} characters`;
+  }
+  return null;
+}
+
+/**
+ * Return why a catalog slug cannot be dispatched, or null when it is runnable.
+ * Built-ins are checked first so a colliding database row can never shadow one.
+ */
+export function seedRunabilityError(
+  catalog: readonly SeedCatalogEntry[],
+  slug: string,
+): string | null {
+  if (catalog.some((entry) => entry.builtIn && entry.slug === slug)) return null;
+
+  const custom = catalog.find((entry) => !entry.builtIn && entry.slug === slug);
+  if (custom === undefined) return `unknown seed '${slug}'`;
+  if (custom.unavailableReason !== null) {
+    return `custom seed '${slug}' is unavailable: ${custom.unavailableReason}`;
+  }
+  return null;
 }
