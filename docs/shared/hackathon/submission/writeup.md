@@ -4,7 +4,7 @@ summary: The submission-ready write-up (≤1,000 words across the five judging p
 type: reference
 scope: repo
 status: draft
-updated: 2026-07-29
+updated: 2026-07-30
 ---
 
 # Ourobion — Launchpad 2026 AI Challenge Write-up
@@ -183,6 +183,19 @@ cross-examining one model with another.
   confirmed and named in the repo's `ATTRIBUTION.md` before submission.
 - Coding assistants (Claude Code) used in development — disclosed per the rules; the team remains
   accountable for every claim above.
+
+## Appendix H — System connection map
+
+[`system-connection-map.md`](./system-connection-map.md) — how Biotope, Supabase, *nao*, the brain
+pipeline, and CI actually connect, with an explicit evidence label on every component. It is the
+companion to Appendix A: where A maps a claim to a file, H maps a *component* to the strength of the
+evidence behind it, using a fixed label set that keeps "configured target" separate from "deployed".
+
+Read it before making any infrastructure claim in a submission or demo. Its §9 lists the statements
+that are safe to make and the ones that are not — including that no component of this system is
+proven deployed, and that the adversarial verifier's real decorrelated verdict has never run. Like
+this write-up, it is a submission-facing projection, not architecture authority; the canonical docs it
+links to win any disagreement.
 
 ---
 

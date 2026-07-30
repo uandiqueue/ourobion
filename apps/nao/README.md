@@ -97,8 +97,9 @@ npm run dev          # → http://localhost:3000
 ```
 
 ### What you'll see
-- `/` redirects to **`/login`** — the app is auth-gated. Sign in with a user from your nao Supabase
-  project (**Dashboard → Authentication → Add user**; there is no public sign-up).
+- `/` redirects to **`/login`** — the app is auth-gated. The one exception is **`/how-it-works`**, a
+  public static explainer page that stays reachable even without a session. Sign in with a user from
+  your nao Supabase project (**Dashboard → Authentication → Add user**; there is no public sign-up).
 - After login: **Overview**, **Papers**, **Claims**, **Ingest**, **Loader**, and **Models** expose the
   implemented read/control surfaces. Availability depends on the matching D1, R2, Supabase schema,
   role, and server-secret setup; fixture/demo state must remain visibly distinguishable from live data.
