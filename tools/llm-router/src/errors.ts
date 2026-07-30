@@ -70,3 +70,8 @@ export class RouterTimeoutError extends Error {
     );
   }
 }
+
+/** Fail-closed reservation/journal/acceptance-policy failure. */
+export class RouterAttemptJournalError extends Error {
+  override readonly name = 'RouterAttemptJournalError';
+}

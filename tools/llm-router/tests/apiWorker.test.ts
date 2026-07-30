@@ -16,6 +16,9 @@ import {
   type FetchLike,
 } from '../src/routes/apiWorker.js';
 import { RouterConfigError, RouterHttpError, RouterKeyMissingError } from '../src/errors.js';
+import { AttemptJournal } from '../src/attemptJournal.js';
+import { resolveRepoPath } from '../src/config.js';
+import { ACCEPTANCE_JOURNAL_REPO_PATH } from '../src/types.js';
 import type { LlmRequest } from '../src/types.js';
 import { anthropicBody, jsonResponse, openaiBody, testConfig } from './helpers.js';
 
@@ -126,6 +129,137 @@ test('openai adapter: no response_format / no system message when not requested'
   assert.deepEqual(call.body.messages, [{ role: 'user', content: 'hi' }]);
 });
 
+test('Agnes adapter refuses any direct call without the router-owned journal before fetch', async () => {
+  const config = testConfig((raw) => {
+    raw.providers.push({ prefix: 'agnes-', family: 'agnes', envKey: 'AGNES_API_KEY' });
+    raw.nodes.verifier.model = 'agnes-llama-3.3-70b';
+    raw.prices['agnes-llama-3.3-70b'] = { inputUsdPerMTok: 0.5, outputUsdPerMTok: 0.5 };
+  });
+  const { fetchFn, calls } = mockFetch([]);
+  await assert.rejects(
+    callApiWorker(
+      config,
+      {
+        nodeId: 'verifier',
+        prompt: 'x',
+        expectJson: true,
+        acceptance: { acceptanceRunId: 'run', logicalCallId: 'leg' },
+      },
+      'agnes-llama-3.3-70b',
+      3_072,
+      { fetchFn, env: { AGNES_API_KEY: 'key' }, sleep: noSleep },
+    ),
+    /acceptance requires the fixed router-owned journal/,
+  );
+  assert.equal(calls.length, 0);
+});
+
+test('direct Anthropic acceptance rejects a forged cheap reservation before fetch', async () => {
+  const config = testConfig((raw) => {
+    raw.prices['claude-sonnet-5'].provisional = false;
+  });
+  const { fetchFn, calls } = mockFetch([]);
+  await assert.rejects(
+    callApiWorker(
+      config,
+      {
+        nodeId: 'synthesis',
+        prompt: 'secret prompt',
+        expectJson: true,
+        acceptance: { acceptanceRunId: 'run', logicalCallId: 'synthesis:forged' },
+      },
+      'claude-sonnet-5',
+      3_072,
+      {
+        fetchFn,
+        env: { ANTHROPIC_API_KEY: 'secret-key' },
+        sleep: noSleep,
+        attemptJournal: {
+          journal: new AttemptJournal('tracked-source-file.ts'),
+          input: {
+            acceptanceRunId: 'run',
+            logicalCallId: 'synthesis:forged',
+            nodeId: 'synthesis',
+            providerFamily: 'anthropic',
+            model: 'claude-sonnet-5',
+            promptHash: `sha256:${'0'.repeat(64)}`,
+            inputByteCeiling: 1,
+            outputTokenCeiling: 1,
+            reservedUsd: 0.000001,
+          },
+        },
+      },
+    ),
+    /safe-root binding/,
+  );
+  assert.equal(calls.length, 0);
+});
+
+test('direct acceptance rejects an exact canonical-path journal lacking the safe-root binding before fetch', async () => {
+  const config = testConfig((raw) => {
+    raw.prices['claude-sonnet-5'].provisional = false;
+  });
+  const { fetchFn, calls } = mockFetch([]);
+  await assert.rejects(
+    callApiWorker(
+      config,
+      {
+        nodeId: 'synthesis',
+        prompt: 'x',
+        expectJson: true,
+        acceptance: { acceptanceRunId: 'run', logicalCallId: 'synthesis:unbound' },
+      },
+      'claude-sonnet-5',
+      3_072,
+      {
+        fetchFn,
+        env: { ANTHROPIC_API_KEY: 'key' },
+        sleep: noSleep,
+        attemptJournal: {
+          journal: new AttemptJournal(resolveRepoPath(ACCEPTANCE_JOURNAL_REPO_PATH)),
+          input: {
+            acceptanceRunId: 'run',
+            logicalCallId: 'synthesis:unbound',
+            nodeId: 'synthesis',
+            providerFamily: 'anthropic',
+            model: 'claude-sonnet-5',
+            promptHash: `sha256:${'0'.repeat(64)}`,
+            inputByteCeiling: 24_000,
+            outputTokenCeiling: 3_072,
+            reservedUsd: 1,
+          },
+        },
+      },
+    ),
+    /lacks the router-owned safe-root binding/,
+  );
+  assert.equal(calls.length, 0);
+});
+
+test('public callApiWorker validates forged path and price configs before fetch', async () => {
+  let calls = 0;
+  const fetchFn: FetchLike = async () => { calls++; return jsonResponse(200, anthropicBody('{}')); };
+  for (const mutate of [
+    (raw: any) => { raw.acceptance.journalPath = '../fresh.jsonl'; }, // eslint-disable-line @typescript-eslint/no-explicit-any
+    (raw: any) => { raw.prices['claude-sonnet-5'].outputUsdPerMTok = -1; }, // eslint-disable-line @typescript-eslint/no-explicit-any
+  ]) {
+    const config = testConfig() as unknown as Record<string, unknown>;
+    config.acceptance = { journalPath: ACCEPTANCE_JOURNAL_REPO_PATH };
+    mutate(config);
+    await assert.rejects(
+      callApiWorker(
+        config as never,
+        { nodeId: 'synthesis', prompt: 'x' },
+        'claude-sonnet-5',
+        100,
+        { fetchFn, env: ENV, sleep: noSleep },
+      ),
+      /acceptance\.journalPath must be exactly|must carry positive inputUsdPerMTok\/outputUsdPerMTok/,
+    );
+  }
+  assert.equal(calls, 0);
+});
+
 test('429 retries with exponential backoff, then succeeds', async () => {
   const config = testConfig();
   const { fetchFn, calls } = mockFetch([
@@ -177,6 +311,33 @@ test('400 is non-retryable: fails immediately after one attempt', async () => {
     (err: unknown) => err instanceof RouterHttpError && err.status === 400 && /non-retryable/.test(err.message),
   );
   assert.equal(calls.length, 1);
+});
+
+test('provider and network diagnostics never echo prompt or key material', async () => {
+  const prompt = 'PROMPT_MUST_NOT_ESCAPE';
+  const key = 'KEY_MUST_NOT_ESCAPE';
+  const config = testConfig();
+  for (const fetchFn of [
+    async () => jsonResponse(400, { error: `${prompt} ${key}` }),
+    async () => { throw new Error(`${prompt} ${key}`); },
+  ] satisfies FetchLike[]) {
+    let caught: RouterHttpError | undefined;
+    try {
+      await callApiWorker(
+        config,
+        { nodeId: 'synthesis', prompt },
+        'claude-sonnet-5',
+        100,
+        { fetchFn, env: { ANTHROPIC_API_KEY: key }, maxAttempts: 1, sleep: noSleep },
+      );
+    } catch (error) {
+      assert.ok(error instanceof RouterHttpError);
+      caught = error;
+    }
+    assert.ok(caught !== undefined);
+    assert.doesNotMatch(caught.message, /PROMPT_MUST_NOT_ESCAPE|KEY_MUST_NOT_ESCAPE/);
+    assert.doesNotMatch(caught.body, /PROMPT_MUST_NOT_ESCAPE|KEY_MUST_NOT_ESCAPE/);
+  }
 });
 
 test('missing key: typed RouterKeyMissingError naming the env var, BEFORE any fetch', async () => {

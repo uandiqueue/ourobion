@@ -7,13 +7,21 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { checkConfig, LlmRouter } from '../src/router.js';
-import { RouterBudgetExceededError } from '../src/errors.js';
-import type { FetchLike } from '../src/routes/apiWorker.js';
+import { resolveRepoPath } from '../src/config.js';
+import { providerContentSha256 } from '../src/attemptJournal.js';
+import { costUsd } from '../src/budget.js';
+import { RouterAttemptJournalError, RouterBudgetExceededError, RouterHttpError } from '../src/errors.js';
+import {
+  AGNES_CHAT_COMPLETIONS_URL,
+  canonicalizeProviderContent,
+  type FetchLike,
+} from '../src/routes/apiWorker.js';
+import { ACCEPTANCE_JOURNAL_REPO_PATH, DEFAULT_RAW_BODY_CAP_BYTES } from '../src/types.js';
 import { anthropicBody, jsonResponse, testConfig } from './helpers.js';
 
 const ENV = { ANTHROPIC_API_KEY: 'ak', OPENAI_API_KEY: 'ok' };
@@ -21,6 +29,39 @@ const DAY1_NOON = Date.UTC(2026, 6, 15, 12, 0, 0);
 
 function freshDir(prefix: string): string {
   return mkdtempSync(join(tmpdir(), prefix));
+}
+
+const ACCEPTANCE_JOURNAL = resolveRepoPath(ACCEPTANCE_JOURNAL_REPO_PATH);
+function cleanAcceptanceJournal(): void {
+  rmSync(ACCEPTANCE_JOURNAL, { force: true });
+  rmSync(`${ACCEPTANCE_JOURNAL}.lock`, { force: true });
+}
+
+function acceptanceConfig() {
+  return testConfig((raw) => {
+    raw.providers.push({ prefix: 'agnes-', family: 'agnes', envKey: 'AGNES_API_KEY' });
+    raw.acceptance = { journalPath: ACCEPTANCE_JOURNAL_REPO_PATH };
+    raw.nodes.synthesis = { model: 'claude-sonnet-5', route: 'api_worker', maxOutputTokens: 8000 };
+    raw.nodes.verifier = { model: 'agnes-llama-3.3-70b', route: 'api_worker', maxOutputTokens: 8000 };
+    raw.prices['claude-sonnet-5'].provisional = false;
+    raw.prices['agnes-llama-3.3-70b'] = {
+      inputUsdPerMTok: 0.5,
+      outputUsdPerMTok: 0.5,
+      provisional: false,
+    };
+    raw.budget.perDayUsdPerNode = 100;
+    raw.budget.perRunOutputTokens = 1_000_000;
+  });
+}
+
+function agnesBody(text: string, promptTokens = 100, completionTokens = 50): unknown {
+  return {
+    id: 'agnes_test',
+    object: 'chat.completion',
+    model: 'agnes-llama-3.3-70b',
+    choices: [{ index: 0, message: { role: 'assistant', content: text }, finish_reason: 'stop' }],
+    usage: { prompt_tokens: promptTokens, completion_tokens: completionTokens },
+  };
 }
 
 test('api_worker dispatch: resolves node model/route from config, records usage', async () => {
@@ -77,6 +118,268 @@ test('per-request maxOutputTokens overrides the node default', async () => {
     await router.route({ nodeId: 'synthesis', prompt: 'short one', maxOutputTokens: 123 });
     assert.equal(bodies[0].max_tokens, 123);
   } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('acceptance facade: canonical messages are exactly bounded/hashed and Agnes uses its exact POST wire', async () => {
+  const dir = freshDir('llm-acceptance-');
+  cleanAcceptanceJournal();
+  try {
+    const calls: Array<{ url: string; method: string | undefined; body: any }> = []; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const fetchFn: FetchLike = async (url, init) => {
+      calls.push({ url, method: init.method, body: JSON.parse(String(init.body)) });
+      return url === AGNES_CHAT_COMPLETIONS_URL
+        ? jsonResponse(200, agnesBody('{"verdict":"unsupported"}'))
+        : jsonResponse(200, anthropicBody('{"claims":[]}'));
+    };
+    const router = new LlmRouter({
+      config: acceptanceConfig(),
+      ledgerPath: join(dir, 'ledger.json'),
+      env: { ANTHROPIC_API_KEY: 'ak', AGNES_API_KEY: 'agk' },
+      fetchFn,
+      now: () => DAY1_NOON,
+    });
+    const acceptance = { acceptanceRunId: 'acceptance-facade', logicalCallId: 'synthesis:edge-1' };
+    const baseline = canonicalizeProviderContent(
+      { nodeId: 'synthesis', prompt: '', expectJson: true },
+      'anthropic',
+    );
+    const prompt = 'x'.repeat(24_000 - baseline.inputBytes);
+    const exactReq = { nodeId: 'synthesis' as const, prompt, expectJson: true as const, acceptance };
+    const canonical = canonicalizeProviderContent(exactReq, 'anthropic');
+    assert.equal(canonical.inputBytes, 24_000);
+    await router.route(exactReq);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0]!.method, 'POST');
+    assert.equal(calls[0]!.body.max_tokens, 3_072);
+    assert.equal(calls.some((call) => /\/models(?:\?|$)/.test(call.url)), false);
+    assert.deepEqual(
+      calls[0]!.body.messages,
+      canonical.messages.filter((message) => message.role === 'user'),
+    );
+    assert.equal(calls[0]!.body.system, canonical.system);
+
+    await router.route({
+      nodeId: 'verifier',
+      system: 'Adversarially verify.',
+      prompt: 'Evidence may refute this.',
+      expectJson: true,
+      acceptance: { acceptanceRunId: 'acceptance-second-run', logicalCallId: 'verifier:edge-1' },
+    });
+    assert.equal(calls[1]!.url, AGNES_CHAT_COMPLETIONS_URL);
+    assert.equal(calls[1]!.method, 'POST');
+    assert.equal(calls[1]!.body.max_tokens, 3_072);
+    assert.equal('response_format' in calls[1]!.body, false);
+    assert.match(calls[1]!.body.messages[0].content, /single valid JSON object/);
+
+    await assert.rejects(
+      router.route({ nodeId: 'synthesis', prompt: 'x', expectJson: true, maxOutputTokens: 3_073, acceptance: { ...acceptance, logicalCallId: 'synthesis:edge-2' } }),
+      /maxOutputTokens is fixed at 3072/,
+    );
+    await assert.rejects(
+      router.route({ nodeId: 'synthesis', prompt: `${prompt}x`, expectJson: true, acceptance: { ...acceptance, logicalCallId: 'synthesis:edge-3' } }),
+      /ceiling is 24000/,
+    );
+    assert.equal(calls.length, 2, 'both ceiling violations stop before dispatch');
+    const events = readFileSync(ACCEPTANCE_JOURNAL, 'utf8')
+      .trim().split(/\r?\n/).map((line) => JSON.parse(line) as Record<string, unknown>);
+    const reservations = events.filter((event) => event.kind === 'reserved');
+    assert.equal(reservations.length, 2);
+    assert.equal(reservations[0]!.promptHash, providerContentSha256(canonical.serialized));
+    assert.equal(
+      reservations[0]!.reservedUsd,
+      costUsd(acceptanceConfig(), 'claude-sonnet-5', {
+        inputTokens: canonical.inputBytes,
+        outputTokens: 3_072,
+      }),
+      'the exact 24,000-byte canonical unit is conservatively reserved at one token per byte',
+    );
+    assert.deepEqual(
+      new Set(reservations.map((event) => event.acceptanceRunId)),
+      new Set(['acceptance-facade', 'acceptance-second-run']),
+      'distinct acceptance runs share one journal and one global exposure total',
+    );
+  } finally {
+    cleanAcceptanceJournal();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('acceptance facade: provisional pricing and provider-identity mismatch fail closed', async () => {
+  const dir = freshDir('llm-acceptance-');
+  cleanAcceptanceJournal();
+  try {
+    let calls = 0;
+    const provisional = acceptanceConfig();
+    provisional.prices['claude-sonnet-5']!.provisional = true;
+    const provisionalRouter = new LlmRouter({
+      config: provisional,
+      ledgerPath: join(dir, 'provisional-ledger.json'),
+      env: { ANTHROPIC_API_KEY: 'ak' },
+      fetchFn: async () => { calls++; return jsonResponse(200, anthropicBody('{}')); },
+    });
+    await assert.rejects(
+      provisionalRouter.route({
+        nodeId: 'synthesis',
+        prompt: 'x',
+        expectJson: true,
+        acceptance: { acceptanceRunId: 'run-p', logicalCallId: 'synthesis:p' },
+      }),
+      /lacks an authoritative non-provisional price/,
+    );
+    assert.equal(calls, 0);
+
+    const mismatchRouter = new LlmRouter({
+      config: acceptanceConfig(),
+      ledgerPath: join(dir, 'mismatch-ledger.json'),
+      env: { AGNES_API_KEY: 'agk' },
+      fetchFn: async () => {
+        calls++;
+        const body = agnesBody('{"verdict":"unsupported"}') as Record<string, unknown>;
+        return jsonResponse(200, { ...body, model: 'gpt-5' });
+      },
+    });
+    await assert.rejects(
+      mismatchRouter.route({
+        nodeId: 'verifier',
+        prompt: 'adverse is valid',
+        expectJson: true,
+        acceptance: { acceptanceRunId: 'run-m', logicalCallId: 'verifier:m' },
+      }),
+      (error: unknown) => error instanceof RouterAttemptJournalError && /mismatched/.test(error.message),
+    );
+    assert.equal(calls, 1);
+  } finally {
+    cleanAcceptanceJournal();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('acceptance facade rejects caller paths and unsafe raw retention before reservation/fetch', async () => {
+  const dir = freshDir('llm-acceptance-options-');
+  cleanAcceptanceJournal();
+  try {
+    let calls = 0;
+    const base = {
+      config: acceptanceConfig(),
+      ledgerPath: join(dir, 'ledger.json'),
+      env: { ANTHROPIC_API_KEY: 'ak' },
+      fetchFn: async () => { calls++; return jsonResponse(200, anthropicBody('{}')); },
+    };
+    for (const journalPath of ['../escape.jsonl', 'tools/llm-router/src/router.ts', join(dir, 'fresh.jsonl')]) {
+      const router = new LlmRouter(base);
+      await assert.rejects(
+        router.route({
+          nodeId: 'synthesis',
+          prompt: 'x',
+          expectJson: true,
+          acceptance: {
+            acceptanceRunId: 'run',
+            logicalCallId: 'synthesis:path',
+            journalPath,
+          } as never,
+        }),
+        /cannot select or override/,
+      );
+    }
+    for (const options of [
+      { retainRawBody: false },
+      { rawBodyCapBytes: DEFAULT_RAW_BODY_CAP_BYTES - 1 },
+    ]) {
+      const router = new LlmRouter({ ...base, ...options });
+      await assert.rejects(
+        router.route({
+          nodeId: 'synthesis',
+          prompt: 'x',
+          expectJson: true,
+          acceptance: { acceptanceRunId: 'run', logicalCallId: 'synthesis:retention' },
+        }),
+        /retention cannot be disabled|raw body cap is fixed/,
+      );
+    }
+    const unboundRouter = new LlmRouter({ ...base, config: testConfig() });
+    await assert.rejects(
+      unboundRouter.route({
+        nodeId: 'synthesis',
+        prompt: 'x',
+        expectJson: true,
+        acceptance: { acceptanceRunId: 'run', logicalCallId: 'synthesis:unbound-config' },
+      }),
+      /config must bind the fixed router-owned journal path/,
+    );
+    assert.equal(calls, 0);
+    assert.throws(() => readFileSync(ACCEPTANCE_JOURNAL), /ENOENT/);
+  } finally {
+    cleanAcceptanceJournal();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('LlmRouter validates and clones injected config before any acceptance dispatch', () => {
+  let calls = 0;
+  const baseOptions = {
+    env: { ANTHROPIC_API_KEY: 'ak' },
+    fetchFn: async () => { calls++; return jsonResponse(200, anthropicBody('{}')); },
+  };
+  const badPath = acceptanceConfig() as unknown as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  badPath.acceptance.journalPath = 'tools/llm-router/src/router.ts';
+  assert.throws(
+    () => new LlmRouter({ ...baseOptions, config: badPath as never }),
+    /acceptance\.journalPath must be exactly/,
+  );
+  const badPrice = acceptanceConfig() as unknown as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  badPrice.prices['claude-sonnet-5'].inputUsdPerMTok = -1;
+  assert.throws(
+    () => new LlmRouter({ ...baseOptions, config: badPrice as never }),
+    /must carry positive inputUsdPerMTok\/outputUsdPerMTok/,
+  );
+  assert.equal(calls, 0);
+
+  const original = acceptanceConfig();
+  const router = new LlmRouter({ ...baseOptions, config: original });
+  (original.acceptance as unknown as { journalPath: string }).journalPath = '../mutated-after-construction.jsonl';
+  assert.equal(router.config.acceptance?.journalPath, ACCEPTANCE_JOURNAL_REPO_PATH);
+});
+
+test('acceptance response-stream failure stays charged, records unknown, and redacts secrets', async () => {
+  const dir = freshDir('llm-acceptance-stream-');
+  cleanAcceptanceJournal();
+  try {
+    const secretPrompt = 'PROMPT_MUST_NOT_ESCAPE';
+    const secretKey = 'KEY_MUST_NOT_ESCAPE';
+    const router = new LlmRouter({
+      config: acceptanceConfig(),
+      ledgerPath: join(dir, 'ledger.json'),
+      env: { ANTHROPIC_API_KEY: secretKey },
+      maxAttempts: 1,
+      fetchFn: async () => ({
+        ok: true,
+        status: 200,
+        text: async () => { throw new Error(`stream failed ${secretPrompt} ${secretKey}`); },
+      } as unknown as Response),
+    });
+    let caught: RouterHttpError | undefined;
+    try {
+      await router.route({
+        nodeId: 'synthesis',
+        prompt: secretPrompt,
+        expectJson: true,
+        acceptance: { acceptanceRunId: 'stream-run', logicalCallId: 'synthesis:stream' },
+      });
+    } catch (error) {
+      assert.ok(error instanceof RouterHttpError);
+      caught = error;
+    }
+    assert.ok(caught !== undefined);
+    assert.doesNotMatch(caught.message, /PROMPT_MUST_NOT_ESCAPE|KEY_MUST_NOT_ESCAPE/);
+    assert.doesNotMatch(caught.body, /PROMPT_MUST_NOT_ESCAPE|KEY_MUST_NOT_ESCAPE/);
+    const events = readFileSync(ACCEPTANCE_JOURNAL, 'utf8')
+      .trim().split(/\r?\n/).map((line) => JSON.parse(line) as { kind: string; errorClass?: string });
+    assert.deepEqual(events.map((event) => event.kind), ['reserved', 'started', 'unknown']);
+    assert.equal(events[2]!.errorClass, 'ResponseBodyReadError');
+  } finally {
+    cleanAcceptanceJournal();
     rmSync(dir, { recursive: true, force: true });
   }
 });

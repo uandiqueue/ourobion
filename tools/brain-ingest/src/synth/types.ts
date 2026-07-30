@@ -74,6 +74,33 @@ export interface SynthClaim {
   synthesisedAt: string;
 }
 
+/** Local-only provider evidence for one pair-scoped synthesis POST result. */
+export interface SynthRawRecord {
+  synthesisRunId: string;
+  pairId: string;
+  logicalCallId: string;
+  attempt: number;
+  capturedAt: string;
+  result: 'accepted' | 'adverse-empty' | 'enforcement-rejected' | 'parse-error';
+  acceptedCount: number;
+  rejectedCount: number;
+  synthesisModel: string;
+  returnedModel: string;
+  returnedVersion: string | null;
+  family: string;
+  attested: boolean;
+  raw: SynthRawBody;
+}
+
+/** Structural mirror of the router's capped raw-provider-response evidence. */
+export interface SynthRawBody {
+  body: string;
+  bytes: number;
+  truncated: boolean;
+  capBytes: number;
+  sha256: string;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Input assembly (deterministic)
 // ─────────────────────────────────────────────────────────────────────────────

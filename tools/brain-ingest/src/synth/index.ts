@@ -19,15 +19,24 @@
  * ESM / NodeNext — imports use explicit `.js` extensions.
  */
 
-import { LlmRouter } from '../../../llm-router/src/index.js';
-import type { LlmRequest, LlmResponse } from '../../../llm-router/src/index.js';
+import { LlmRouter, logicalCallIdSha256 } from '../../../llm-router/src/index.js';
+import type {
+  AcceptanceCallContext,
+  LlmRequest,
+  LlmResponse,
+} from '../../../llm-router/src/index.js';
 
 import { loadConfig } from '../config.js';
 import { R2Store } from '../storage/r2.js';
 import { r2TextLoader, type PaperTextLoader } from '../verify/quoteCheck.js';
 import { readArtifact } from '../seeder/artifact.js';
 
-import { appendClaimsToDir, appendClaimsToR2, defaultEdgesDir } from './artifact.js';
+import {
+  appendClaimsToDir,
+  appendClaimsToR2,
+  appendRawSynthesisToDir,
+  defaultEdgesDir,
+} from './artifact.js';
 import {
   loadActiveMetricKeys,
   loadClaimValidator,
@@ -39,12 +48,14 @@ import {
 import { defaultTermsForKeys, selectPassages } from './passages.js';
 import { buildSynthesisPrompt, PROMPT_VERSION } from './prompt.js';
 import { processSynthesisResponse } from './postprocess.js';
+import { buildSynthRawRecord } from './artifact.js';
 import type {
   AssembledSynthesisInput,
   PaperPassages,
   ProcessResult,
   SynthClaim,
   SynthPair,
+  SynthRawRecord,
 } from './types.js';
 
 /** Structural minimum of the router the synthesis node needs (injectable in tests). */
@@ -158,6 +169,10 @@ export interface SynthesizeOptions {
   activeMetricKeys?: ReadonlySet<string>;
   /** Router per-run token cap identity. */
   runId?: string;
+  /** Acceptance run identity; each pair derives one stable logical call id. */
+  acceptance?: Omit<AcceptanceCallContext, 'logicalCallId'>;
+  /** Schema/enforcement retries; acceptance is additionally capped by its journal. */
+  maxAttempts?: number;
   /** Assemble + build prompts, but issue no router call and write nothing. */
   dryRun?: boolean;
   /** Also append accepted claims to R2 `edges/claims.jsonl` (opt-in). */
@@ -179,7 +194,13 @@ export interface SynthesizeResult {
   accepted: SynthClaim[];
   rejectedCount: number;
   missingPapers: string[];
-  write?: { path: string; written: number; skipped: number };
+  write?: {
+    path: string;
+    written: number;
+    skipped: number;
+    raw?: { path: string; written: number; skipped: number };
+  };
+  evidence?: { path: string; written: number; skipped: number };
   r2?: { key: string; written: number; skipped: number };
 }
 
@@ -228,6 +249,7 @@ export async function synthesize(opts: SynthesizeOptions): Promise<SynthesizeRes
 
   const outcomes: PairOutcome[] = [];
   const allAccepted: SynthClaim[] = [];
+  let evidence: { path: string; written: number; skipped: number } | undefined;
   let rejectedCount = 0;
 
   for (const pair of pairs) {
@@ -240,22 +262,87 @@ export async function synthesize(opts: SynthesizeOptions): Promise<SynthesizeRes
       continue;
     }
 
-    const response = await router.route({
-      nodeId: 'synthesis',
-      system: assembled.system,
-      prompt: assembled.prompt,
-      expectJson: true,
-    });
-    const result = processSynthesisResponse(response.text, {
-      pair,
-      allowedPaperIds: assembled.allowedPaperIds,
-      texts,
-      validateClaim,
-      validateCopy,
-      synthesisModel: response.model,
-      promptVersion: PROMPT_VERSION,
-      ...(opts.now !== undefined ? { now: opts.now } : {}),
-    });
+    const maxAttempts = Math.max(1, opts.maxAttempts ?? (opts.acceptance ? 3 : 1));
+    const logicalCallId = logicalCallIdSha256('synthesis', pair.id);
+    let response: LlmResponse | undefined;
+    let result: ProcessResult | undefined;
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      response = await router.route({
+        nodeId: 'synthesis',
+        system: assembled.system,
+        prompt: assembled.prompt,
+        expectJson: true,
+        ...(opts.acceptance !== undefined
+          ? {
+              acceptance: {
+                ...opts.acceptance,
+                logicalCallId,
+              },
+            }
+          : {}),
+      });
+      try {
+        result = processSynthesisResponse(response.text, {
+          pair,
+          allowedPaperIds: assembled.allowedPaperIds,
+          texts,
+          validateClaim,
+          validateCopy,
+          synthesisModel: response.model,
+          promptVersion: PROMPT_VERSION,
+          ...(opts.now !== undefined ? { now: opts.now } : {}),
+        });
+      } catch (error: unknown) {
+        const rawRecord = buildSynthRawRecord(pair, response, {
+          synthesisRunId: opts.acceptance?.acceptanceRunId ?? opts.runId ?? 'unscoped',
+          logicalCallId,
+          attempt,
+          capturedAt: new Date((opts.now ?? Date.now)()).toISOString(),
+          result: 'parse-error',
+          acceptedCount: 0,
+          rejectedCount: 0,
+        });
+        if (rawRecord !== undefined) {
+          const wrote = appendRawSynthesisToDir(edgesDir, [rawRecord]);
+          evidence = {
+            path: wrote.path,
+            written: (evidence?.written ?? 0) + wrote.written,
+            skipped: (evidence?.skipped ?? 0) + wrote.skipped,
+          };
+        }
+        lastError = error;
+        if (attempt < maxAttempts) continue;
+        throw error;
+      }
+      const resultKind: SynthRawRecord['result'] =
+        result.accepted.length > 0
+          ? 'accepted'
+          : result.rejected.length === 0
+            ? 'adverse-empty'
+            : 'enforcement-rejected';
+      const rawRecord = buildSynthRawRecord(pair, response, {
+        synthesisRunId: opts.acceptance?.acceptanceRunId ?? opts.runId ?? 'unscoped',
+        logicalCallId,
+        attempt,
+        capturedAt: new Date((opts.now ?? Date.now)()).toISOString(),
+        result: resultKind,
+        acceptedCount: result.accepted.length,
+        rejectedCount: result.rejected.length,
+      });
+      if (rawRecord !== undefined) {
+        const wrote = appendRawSynthesisToDir(edgesDir, [rawRecord]);
+        evidence = {
+          path: wrote.path,
+          written: (evidence?.written ?? 0) + wrote.written,
+          skipped: (evidence?.skipped ?? 0) + wrote.skipped,
+        };
+      }
+      // A valid adverse/empty answer is complete. Retry only when every proposal
+      // failed our schema/enforcement gates; never retry a valid verdict.
+      if (result.accepted.length > 0 || result.rejected.length === 0 || attempt === maxAttempts) break;
+    }
+    if (response === undefined || result === undefined) throw lastError ?? new Error('synth: no response');
     for (const r of result.rejected) log(`synth: REJECT ${r.edgeId ?? '(no edgeId)'} — ${r.reason}: ${r.detail}`);
     log(`synth: pair ${pair.id} — ${result.accepted.length} accepted, ${result.rejected.length} rejected via ${response.route} (${response.model})`);
 
@@ -269,6 +356,7 @@ export async function synthesize(opts: SynthesizeOptions): Promise<SynthesizeRes
     accepted: allAccepted,
     rejectedCount,
     missingPapers: missing,
+    ...(evidence !== undefined ? { evidence } : {}),
   };
 
   if (!opts.dryRun && allAccepted.length > 0) {
@@ -288,6 +376,7 @@ export async function synthesize(opts: SynthesizeOptions): Promise<SynthesizeRes
 export { buildSynthesisPrompt, PROMPT_VERSION, SYNTHESIS_SYSTEM } from './prompt.js';
 export { selectPassages, segmentSentences, defaultTermsForKeys } from './passages.js';
 export { processSynthesisResponse, parseClaimsResponse } from './postprocess.js';
+export { buildSynthRawRecord } from './artifact.js';
 export {
   appendClaimsToDir,
   appendClaimsToR2,
@@ -295,7 +384,10 @@ export {
   dedupeAgainst,
   defaultEdgesDir,
   claimsPath,
+  rawSynthesisPath,
+  appendRawSynthesisToDir,
   CLAIMS_BASENAME,
+  RAW_SYNTHESIS_BASENAME,
   R2_CLAIMS_KEY,
 } from './artifact.js';
 export { loadClaimValidator, loadCopyValidator, loadActiveMetricKeys } from './load.js';

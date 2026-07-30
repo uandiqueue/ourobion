@@ -27,11 +27,16 @@
  */
 
 import type { RouterConfig } from '../config.js';
-import { providerFor } from '../config.js';
+import { providerFor, resolveRepoPath, validateConfig } from '../config.js';
+import { costUsd } from '../budget.js';
 import { RouterConfigError, RouterHttpError, RouterKeyMissingError } from '../errors.js';
+import { AttemptJournal, providerContentSha256, type AttemptReservationInput } from '../attemptJournal.js';
 import { captureRawBody } from '../raw.js';
 import {
   DEFAULT_RAW_BODY_CAP_BYTES,
+  ACCEPTANCE_JOURNAL_REPO_PATH,
+  ACCEPTANCE_MAX_INPUT_BYTES,
+  ACCEPTANCE_MAX_OUTPUT_TOKENS,
   type LlmRequest,
   type LlmResponse,
   type ModelIdentity,
@@ -41,6 +46,7 @@ import {
 export const ANTHROPIC_MESSAGES_URL = 'https://api.anthropic.com/v1/messages';
 export const ANTHROPIC_VERSION = '2023-06-01';
 export const OPENAI_CHAT_COMPLETIONS_URL = 'https://api.openai.com/v1/chat/completions';
+export const AGNES_CHAT_COMPLETIONS_URL = 'https://apihub.agnes-ai.com/v1/chat/completions';
 
 /** Minimal fetch signature the adapters need (global fetch satisfies it). */
 export type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
@@ -66,6 +72,8 @@ export interface ApiWorkerOptions {
   retainRawBody?: boolean;
   /** Byte cap for a retained raw body (default {@link DEFAULT_RAW_BODY_CAP_BYTES}). */
   rawBodyCapBytes?: number;
+  /** Acceptance-only durable reservation hook, constructed by LlmRouter. */
+  attemptJournal?: { journal: AttemptJournal; input: AttemptReservationInput };
 }
 
 function realSleep(ms: number): Promise<void> {
@@ -75,6 +83,41 @@ function realSleep(ms: number): Promise<void> {
 /** Instruction appended for providers without a JSON-mode switch on this surface. */
 const JSON_INSTRUCTION = 'Respond with a single valid JSON object and nothing else — no prose, no code fences.';
 
+export interface CanonicalProviderContent {
+  system?: string;
+  messages: Array<{ role: 'system' | 'user'; content: string }>;
+  /** JSON array of role/content messages: the one byte/hash/cost acceptance unit. */
+  serialized: string;
+  /** UTF-8 bytes of {@link serialized}. */
+  inputBytes: number;
+}
+
+/**
+ * Build provider message content once. The wire body, acceptance byte ceiling,
+ * and journal hash all consume this same value, including injected JSON text.
+ */
+export function canonicalizeProviderContent(
+  req: LlmRequest,
+  family: VendorFamily,
+): CanonicalProviderContent {
+  const injectJsonInstruction = req.expectJson === true && (family === 'anthropic' || family === 'agnes');
+  const system = injectJsonInstruction
+    ? [req.system, JSON_INSTRUCTION].filter((value): value is string => value !== undefined).join('\n\n')
+    : req.system;
+  const messages: CanonicalProviderContent['messages'] = [];
+  if (system !== undefined && system.length > 0) {
+    messages.push({ role: 'system', content: system });
+  }
+  messages.push({ role: 'user', content: req.prompt });
+  const serialized = JSON.stringify(messages);
+  return {
+    ...(system !== undefined && system.length > 0 ? { system } : {}),
+    messages,
+    serialized,
+    inputBytes: Buffer.byteLength(serialized, 'utf8'),
+  };
+}
+
 interface ResolvedOptions {
   fetchFn: FetchLike;
   env: Record<string, string | undefined>;
@@ -83,6 +126,7 @@ interface ResolvedOptions {
   sleep: (ms: number) => Promise<void>;
   retainRawBody: boolean;
   rawBodyCapBytes: number;
+  attemptJournal?: { journal: AttemptJournal; input: AttemptReservationInput };
 }
 
 function resolveOptions(opts: ApiWorkerOptions): ResolvedOptions {
@@ -95,6 +139,7 @@ function resolveOptions(opts: ApiWorkerOptions): ResolvedOptions {
     // Defaulted ON — see ApiWorkerOptions.retainRawBody.
     retainRawBody: opts.retainRawBody ?? true,
     rawBodyCapBytes: opts.rawBodyCapBytes ?? DEFAULT_RAW_BODY_CAP_BYTES,
+    ...(opts.attemptJournal !== undefined ? { attemptJournal: opts.attemptJournal } : {}),
   };
 }
 
@@ -132,34 +177,98 @@ async function postWithRetry(
   let lastStatus = 0;
   let lastBody = '';
   for (let attempt = 1; attempt <= o.maxAttempts; attempt++) {
-    const res = await o.fetchFn(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', ...headers },
-      body: JSON.stringify(body),
-    });
+    const reservation = o.attemptJournal?.journal.reserveAndStart(o.attemptJournal.input);
+    let res: Response;
+    try {
+      res = await o.fetchFn(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...headers },
+        body: JSON.stringify(body),
+      });
+    } catch (error) {
+      if (reservation !== undefined) {
+        o.attemptJournal!.journal.record(reservation, 'unknown', {
+          errorClass: error instanceof Error ? error.name : 'UnknownThrownValue',
+        });
+      }
+      lastStatus = 0;
+      // Provider/network exceptions may echo request headers or prompt content.
+      // Keep only a class in the journal and a fixed redacted diagnostic.
+      lastBody = '[network failure details redacted]';
+      if (attempt < o.maxAttempts) {
+        await o.sleep(o.baseDelayMs * 2 ** (attempt - 1));
+        continue;
+      }
+      throw new RouterHttpError(
+        0,
+        lastBody.slice(0, 2000),
+        `llm-router api_worker: ${url} had an ambiguous network failure after ${o.maxAttempts} attempts`,
+      );
+    }
+    let rawText: string;
+    try {
+      rawText = await res.text();
+    } catch (error) {
+      if (reservation !== undefined) {
+        o.attemptJournal!.journal.record(reservation, 'unknown', {
+          httpStatus: res.status,
+          errorClass: 'ResponseBodyReadError',
+        });
+      }
+      lastStatus = res.status;
+      lastBody = '[response body read failure details redacted]';
+      if (attempt < o.maxAttempts) {
+        await o.sleep(o.baseDelayMs * 2 ** (attempt - 1));
+        continue;
+      }
+      throw new RouterHttpError(
+        res.status,
+        lastBody,
+        `llm-router api_worker: ${url} response body could not be read after ${o.maxAttempts} attempts`,
+      );
+    }
     if (res.ok) {
-      const rawText = await res.text();
       let json: unknown;
       try {
         json = JSON.parse(rawText) as unknown;
       } catch (err) {
+        if (reservation !== undefined) {
+          o.attemptJournal!.journal.record(reservation, 'failed', {
+            httpStatus: res.status,
+            errorClass: 'NonJsonResponse',
+          });
+        }
+        lastStatus = res.status;
+        lastBody = '[non-JSON provider body redacted]';
+        if (attempt < o.maxAttempts) {
+          await o.sleep(o.baseDelayMs * 2 ** (attempt - 1));
+          continue;
+        }
         throw new RouterHttpError(
           res.status,
-          rawText.slice(0, 2000),
-          `llm-router api_worker: ${url} returned ${res.status} with a non-JSON body: ` +
-            `${err instanceof Error ? err.message : String(err)}`,
+          lastBody,
+          `llm-router api_worker: ${url} returned ${res.status} with a non-JSON body after ${o.maxAttempts} attempts`,
         );
+      }
+      if (reservation !== undefined) {
+        o.attemptJournal!.journal.record(reservation, 'response', { httpStatus: res.status });
       }
       return { json, rawText };
     }
     lastStatus = res.status;
-    lastBody = (await res.text()).slice(0, 2000);
+    lastBody = '[provider error body redacted]';
     const retryable = res.status === 429 || res.status >= 500;
+    if (reservation !== undefined) {
+      o.attemptJournal!.journal.record(reservation, 'failed', {
+        httpStatus: res.status,
+        errorClass: retryable ? 'RetryableHttpStatus' : 'NonRetryableHttpStatus',
+      });
+    }
     if (!retryable) {
       throw new RouterHttpError(
         res.status,
         lastBody,
-        `llm-router api_worker: ${url} returned non-retryable ${res.status}: ${lastBody.slice(0, 300)}`,
+        `llm-router api_worker: ${url} returned non-retryable ${res.status}; response body redacted`,
       );
     }
     if (attempt < o.maxAttempts) {
@@ -169,7 +278,7 @@ async function postWithRetry(
   throw new RouterHttpError(
     lastStatus,
     lastBody,
-    `llm-router api_worker: ${url} still failing (${lastStatus}) after ${o.maxAttempts} attempts: ${lastBody.slice(0, 300)}`,
+    `llm-router api_worker: ${url} still failing (${lastStatus}) after ${o.maxAttempts} attempts; response body redacted`,
   );
 }
 
@@ -213,17 +322,14 @@ async function callAnthropic(
   req: LlmRequest,
   model: string,
   maxOutputTokens: number,
+  content: CanonicalProviderContent,
 ): Promise<LlmResponse> {
-  const system =
-    req.expectJson === true
-      ? [req.system, JSON_INSTRUCTION].filter((s): s is string => s !== undefined).join('\n\n')
-      : req.system;
   const body: Record<string, unknown> = {
     model,
     max_tokens: maxOutputTokens,
-    messages: [{ role: 'user', content: req.prompt }],
+    messages: content.messages.filter((message) => message.role === 'user'),
   };
-  if (system !== undefined && system.length > 0) body.system = system;
+  if (content.system !== undefined) body.system = content.system;
   if (req.temperature !== undefined) body.temperature = req.temperature;
 
   const reply = await postWithRetry(
@@ -260,22 +366,54 @@ interface OpenAiResponse {
   usage?: { prompt_tokens?: number; completion_tokens?: number };
 }
 
+/** Agnes's documented OpenAI-shaped chat/completions response subset. */
+interface AgnesResponse {
+  model?: string;
+  choices?: Array<{ message?: { content?: string | null } }>;
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
+}
+
+async function callAgnes(
+  o: ResolvedOptions,
+  apiKey: string,
+  req: LlmRequest,
+  model: string,
+  maxOutputTokens: number,
+  content: CanonicalProviderContent,
+): Promise<LlmResponse> {
+  const body: Record<string, unknown> = { model, messages: content.messages, max_tokens: maxOutputTokens };
+  if (req.temperature !== undefined) body.temperature = req.temperature;
+  const reply = await postWithRetry(
+    o,
+    AGNES_CHAT_COMPLETIONS_URL,
+    { authorization: `Bearer ${apiKey}` },
+    body,
+  );
+  const json = reply.json as AgnesResponse;
+  return {
+    text: json.choices?.[0]?.message?.content ?? '',
+    usage: {
+      inputTokens: json.usage?.prompt_tokens ?? 0,
+      outputTokens: json.usage?.completion_tokens ?? 0,
+    },
+    model: json.model ?? model,
+    modelIdentity: apiWorkerIdentity(json.model, model, 'agnes'),
+    route: 'api_worker',
+    ...rawBodyField(o, reply.rawText),
+  };
+}
+
 async function callOpenAi(
   o: ResolvedOptions,
   apiKey: string,
   req: LlmRequest,
   model: string,
   maxOutputTokens: number,
+  content: CanonicalProviderContent,
 ): Promise<LlmResponse> {
-  const messages: Array<{ role: string; content: string }> = [];
-  if (req.system !== undefined && req.system.length > 0) {
-    messages.push({ role: 'system', content: req.system });
-  }
-  messages.push({ role: 'user', content: req.prompt });
-
   const body: Record<string, unknown> = {
     model,
-    messages,
+    messages: content.messages,
     // `max_completion_tokens` is the current parameter (plain `max_tokens` is
     // rejected by newer OpenAI models, gpt-5 family included).
     max_completion_tokens: maxOutputTokens,
@@ -319,10 +457,57 @@ export async function callApiWorker(
   maxOutputTokens: number,
   opts: ApiWorkerOptions = {},
 ): Promise<LlmResponse> {
+  const validatedConfig = validateConfig(structuredClone(config));
   const o = resolveOptions(opts);
-  const provider = providerFor(config, model);
+  const provider = providerFor(validatedConfig, model);
   if (provider === undefined) {
     throw new RouterConfigError(`llm-router api_worker: model '${model}' matches no provider prefix`);
+  }
+  const content = canonicalizeProviderContent(req, provider.family);
+  const acceptance = req.acceptance;
+  if (provider.family === 'agnes' && acceptance === undefined) {
+    throw new RouterConfigError('llm-router api_worker: Agnes is acceptance-only');
+  }
+  if (acceptance !== undefined || o.attemptJournal !== undefined) {
+    const hook = o.attemptJournal;
+    if (hook !== undefined) {
+      hook.journal.assertRouterOwnedRoot(resolveRepoPath('data/llm-router'));
+    }
+    const expectedNode =
+      (req.nodeId === 'synthesis' && provider.family === 'anthropic') ||
+      (req.nodeId === 'verifier' && provider.family === 'agnes');
+    const expectedCost = costUsd(validatedConfig, model, {
+      inputTokens: ACCEPTANCE_MAX_INPUT_BYTES,
+      outputTokens: ACCEPTANCE_MAX_OUTPUT_TOKENS,
+    });
+    if (
+      acceptance === undefined ||
+      hook === undefined ||
+      !expectedNode ||
+      req.expectJson !== true ||
+      (req.maxOutputTokens !== undefined && req.maxOutputTokens !== ACCEPTANCE_MAX_OUTPUT_TOKENS) ||
+      maxOutputTokens !== ACCEPTANCE_MAX_OUTPUT_TOKENS ||
+      o.maxAttempts < 1 ||
+      o.maxAttempts > 3 ||
+      o.retainRawBody !== true ||
+      o.rawBodyCapBytes !== DEFAULT_RAW_BODY_CAP_BYTES ||
+      content.inputBytes > ACCEPTANCE_MAX_INPUT_BYTES ||
+      hook.journal.path !== resolveRepoPath(ACCEPTANCE_JOURNAL_REPO_PATH) ||
+      hook.input.acceptanceRunId !== acceptance.acceptanceRunId ||
+      hook.input.logicalCallId !== acceptance.logicalCallId ||
+      hook.input.nodeId !== req.nodeId ||
+      hook.input.providerFamily !== provider.family ||
+      hook.input.model !== model ||
+      hook.input.promptHash !== providerContentSha256(content.serialized) ||
+      hook.input.inputByteCeiling !== ACCEPTANCE_MAX_INPUT_BYTES ||
+      hook.input.outputTokenCeiling !== ACCEPTANCE_MAX_OUTPUT_TOKENS ||
+      validatedConfig.prices[model]?.provisional !== false ||
+      Math.abs(hook.input.reservedUsd - expectedCost) > Number.EPSILON
+    ) {
+      throw new RouterConfigError(
+        'llm-router api_worker: acceptance requires the fixed router-owned journal, ceilings, retention, price, identity, and canonical message hash',
+      );
+    }
   }
   const key = o.env[provider.envKey];
   if (key === undefined || key.length === 0) {
@@ -330,9 +515,11 @@ export async function callApiWorker(
   }
   switch (provider.family) {
     case 'anthropic':
-      return callAnthropic(o, key, req, model, maxOutputTokens);
+      return callAnthropic(o, key, req, model, maxOutputTokens, content);
     case 'openai':
-      return callOpenAi(o, key, req, model, maxOutputTokens);
+      return callOpenAi(o, key, req, model, maxOutputTokens, content);
+    case 'agnes':
+      return callAgnes(o, key, req, model, maxOutputTokens, content);
     case 'google':
       throw new RouterConfigError(
         `llm-router api_worker: no Google adapter is implemented yet (the shipped posture is ` +

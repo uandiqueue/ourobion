@@ -165,6 +165,36 @@ test('a windowStart in a previous UTC day resets the counter', () => {
   }
 });
 
+test('missing usage ledger initializes clean, but corrupt or unsupported history fails closed', () => {
+  const { dir, usagePath } = freshUsagePath();
+  try {
+    assert.doesNotThrow(() => new FileBudgetGuard({ usagePath, now: () => DAY1_NOON }));
+
+    writeFileSync(usagePath, '{"version":1,"counters":', 'utf8');
+    assert.throws(
+      () => new FileBudgetGuard({ usagePath, now: () => DAY1_NOON }),
+      /cannot load existing usage ledger.*Refusing to reset spend/,
+    );
+
+    writeFileSync(usagePath, JSON.stringify({ version: 2, counters: {} }), 'utf8');
+    assert.throws(
+      () => new FileBudgetGuard({ usagePath, now: () => DAY1_NOON }),
+      /unsupported or malformed usage ledger/,
+    );
+    writeFileSync(
+      usagePath,
+      JSON.stringify({ version: 1, counters: { openalex: { windowStart: 'not-a-date', spent: -1 } } }),
+      'utf8',
+    );
+    assert.throws(
+      () => new FileBudgetGuard({ usagePath, now: () => DAY1_NOON }),
+      /malformed usage counter 'openalex'/,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('same-UTC-day at a different time keeps the counter (no spurious reset)', () => {
   const { dir, usagePath } = freshUsagePath();
   try {
