@@ -64,12 +64,19 @@ declare
   v_abx     bool    := current_setting('seed.with_antibiotics')::int = 1;
   v_region  text    := current_setting('seed.region');
   v_wipe    bool    := current_setting('seed.wipe_first')::int = 1;
+  v_origin  constant text := 'seed:local-test-data';
 
   v_uid     uuid;
   v_today   date := current_date;
+  v_range_start date;
   v_day     date;
   i         int;
   v_dqs     numeric;
+  v_written int;
+  v_conflict_table  text;
+  v_conflict_date   date;
+  v_conflict_origin text;
+  v_conflict_reason text;
 
   -- engagement_state outputs (mirrors m6_engagement/engagement_service.dart)
   v_streak  int := 0;
@@ -85,6 +92,85 @@ begin
     raise exception
       'No auth user with email "%". Sign in once in the app with this account, then re-run.',
       v_email;
+  end if;
+
+  if v_days < 1 then
+    raise exception 'Days must be at least 1 (received %).', v_days;
+  end if;
+  v_range_start := v_today - (v_days - 1);
+
+  -- The forward migration is a prerequisite even for destructive runs: fail before
+  -- deleting anything if the marker is absent, revoked, misclassified, or no longer
+  -- owned by this script. loader_writable=false is intentional; only the Nao loader
+  -- consumes that authority bit, while this local SQL seeder writes directly.
+  if not exists (
+    select 1
+      from public.nao_simulation_origins o
+     where o.origin = v_origin
+       and o.is_simulated
+       and not o.loader_writable
+       and o.revoked_at is null
+       and o.owner = 'scripts/seed-test-data.sql'
+  ) then
+    raise exception using
+      errcode = '23514',
+      message = 'Local seed provenance is unavailable or revoked; apply current migrations first.';
+  end if;
+
+  -- Non-wipe is an all-or-nothing replay. Scan BOTH truth tables over the entire
+  -- requested range before the first write. Only this script's exact effective marker
+  -- is replayable; NULL/real, unregistered, revoked, registered-real, and another
+  -- writer's simulated provenance all fail closed.
+  if not v_wipe then
+    select c.table_name, c.row_date, c.row_origin, c.reason
+      into v_conflict_table, v_conflict_date, v_conflict_origin, v_conflict_reason
+      from (
+        select 'daily_gut_rows'::text as table_name,
+               g.log_date as row_date,
+               g.data_origin as row_origin,
+               case
+                 when g.data_origin is null then 'real-or-null'
+                 when o.origin is null then 'unregistered'
+                 when o.revoked_at is not null then 'revoked'
+                 when not o.is_simulated then 'registered-real'
+                 else 'foreign'
+               end as reason
+          from public.daily_gut_rows g
+          left join public.nao_simulation_origins o on o.origin = g.data_origin
+         where g.user_id = v_uid
+           and g.log_date between v_range_start and v_today
+           and g.data_origin is distinct from v_origin
+        union all
+        select 'wearable_daily'::text,
+               w.date,
+               w.source,
+               case
+                 when w.source is null then 'real-or-null'
+                 when o.origin is null then 'unregistered'
+                 when o.revoked_at is not null then 'revoked'
+                 when not o.is_simulated then 'registered-real'
+                 else 'foreign'
+               end
+          from public.wearable_daily w
+          left join public.nao_simulation_origins o on o.origin = w.source
+         where w.user_id = v_uid
+           and w.date between v_range_start and v_today
+           and w.source is distinct from v_origin
+      ) c
+     order by c.row_date, c.table_name
+     limit 1;
+
+    if found then
+      raise exception using
+        errcode = '23514',
+        message = format(
+          'Non-wipe seed refused: %s on %s has %s provenance (%s).',
+          v_conflict_table,
+          v_conflict_date,
+          v_conflict_reason,
+          coalesce(v_conflict_origin, '<null>')
+        );
+    end if;
   end if;
 
   -- Deterministic pseudo-randomness so repeated runs are reproducible.
@@ -114,7 +200,7 @@ begin
       outside_meals, mosquito_bites,
       energy_score, mood_score, gut_comfort_score,
       symptom_flags, notes, standing_water_present,
-      on_antibiotics, gut_watch_active, log_completeness
+      on_antibiotics, gut_watch_active, log_completeness, data_origin
     ) values (
       v_uid, v_day, v_region,
       1 + floor(random() * 4)::int,    -- urine_colour 1–4 (well hydrated)
@@ -130,11 +216,35 @@ begin
       'seeded test row',
       case when random() < 0.15 then true else false end,
       false, false,
-      v_dqs
+      v_dqs, v_origin
     )
     on conflict (user_id, log_date) do update
-      set log_completeness = excluded.log_completeness,
-          updated_at       = now();
+      set region                 = excluded.region,
+          urine_colour           = excluded.urine_colour,
+          stool_form             = excluded.stool_form,
+          stool_count            = excluded.stool_count,
+          stool_variability      = excluded.stool_variability,
+          outside_meals          = excluded.outside_meals,
+          mosquito_bites         = excluded.mosquito_bites,
+          energy_score           = excluded.energy_score,
+          mood_score             = excluded.mood_score,
+          gut_comfort_score      = excluded.gut_comfort_score,
+          symptom_flags          = excluded.symptom_flags,
+          notes                  = excluded.notes,
+          standing_water_present = excluded.standing_water_present,
+          on_antibiotics         = excluded.on_antibiotics,
+          gut_watch_active       = excluded.gut_watch_active,
+          log_completeness       = excluded.log_completeness,
+          data_origin           = excluded.data_origin,
+          updated_at            = now()
+    where daily_gut_rows.data_origin = v_origin;
+
+    get diagnostics v_written = row_count;
+    if v_written <> 1 then
+      raise exception using
+        errcode = '23514',
+        message = format('Seed write refused: daily_gut_rows on %s changed provenance.', v_day);
+    end if;
 
     -- Wearable signals (M3). hrv_sdnn_ms is iOS-only in reality, but harmless here.
     if v_wear then
@@ -150,11 +260,25 @@ begin
         round((96 + random() * 3)::numeric, 0),    -- SpO2 96–99 %
         round((36.4 + random() * 0.6)::numeric, 1),-- body temp 36.4–37.0 °C
         (4000 + random() * 8000)::int,             -- steps 4k–12k
-        'seed'
+        v_origin
       )
       on conflict (user_id, date) do update
-        set step_count = excluded.step_count,
-            synced_at  = now();
+        set resting_hr_bpm     = excluded.resting_hr_bpm,
+            hrv_sdnn_ms        = excluded.hrv_sdnn_ms,
+            sleep_duration_min = excluded.sleep_duration_min,
+            spo2_pct            = excluded.spo2_pct,
+            body_temp_c         = excluded.body_temp_c,
+            step_count          = excluded.step_count,
+            source              = excluded.source,
+            synced_at           = now()
+      where wearable_daily.source = v_origin;
+
+      get diagnostics v_written = row_count;
+      if v_written <> 1 then
+        raise exception using
+          errcode = '23514',
+          message = format('Seed write refused: wearable_daily on %s changed provenance.', v_day);
+      end if;
     end if;
   end loop;
 
@@ -163,12 +287,22 @@ begin
     insert into antibiotic_courses (
       user_id, drug_name, start_date, duration_days, end_date,
       completed, reminder_enabled
-    ) values (
-      v_uid, 'Amoxicillin (seed)', v_today - 4, 5, v_today, false, false
+    )
+    select v_uid, 'Amoxicillin (seed)', v_today - 4, 5, v_today, false, false
+    where not exists (
+      select 1
+        from public.antibiotic_courses a
+       where a.user_id = v_uid
+         and a.drug_name = 'Amoxicillin (seed)'
+         and a.start_date = v_today - 4
+         and a.duration_days = 5
+         and a.end_date = v_today
     );
     update daily_gut_rows
        set on_antibiotics = true, gut_watch_active = true
-     where user_id = v_uid and log_date >= v_today - 4;
+     where user_id = v_uid
+       and log_date between v_today - 4 and v_today
+       and data_origin = v_origin;
   end if;
 
   -- ── 5. Rebuild engagement_state — mirrors engagement_service.dart ──────────

@@ -5,7 +5,7 @@ summary: Inject backdated rows keyed on log_date via scripts/seed-test-data.ps1 
 type: memory
 status: accepted
 decided: 2026-07-13
-updated: 2026-07-13
+updated: 2026-07-30
 ---
 
 # Local test data seeding (don't log for a week by hand)
@@ -33,3 +33,12 @@ are served by `npx supabase start` (the `edgeRuntime` container) — no separate
 (3) The app fetches on screen init, so pull-to-refresh after seeding. Confidence tiers: ≥3 days leaves
 "insufficient", ≥7 "medium", ≥14 "high" (and a 7-day streak unlocks insights + the "Committed" title).
 The SQL's engagement rebuild **mirrors** `engagement_service.dart` — if M6's rules change, update both.
+
+**Provenance and destructive-mode safety.** Seeded truth uses the exact registered simulated marker
+`seed:local-test-data` in both `daily_gut_rows.data_origin` and `wearable_daily.source`; registry
+revocation is durable and survives reapplying its forward migration. `WipeFirst = true` remains the
+default and is destructive: it clears the selected user's raw rows and rebuildable projections, so
+use it only for a dedicated, disposable local test user. With `WipeFirst = false`, the seeder scans
+both truth tables over the complete requested date range before writing and refuses NULL/real,
+unregistered, revoked, registered-real, or foreign provenance. Non-wipe replay is allowed only for
+this script's exact marker.

@@ -18,7 +18,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,6 +26,7 @@ import {
   DIP_DAYS,
   LOADER_REQUEST_KEY_RE,
   LOADER_TARGET_RE,
+  LOCAL_TEST_DATA_ORIGIN,
   MAX_LOAD_DAYS,
   SIMULATED_DATA_ORIGIN,
   SIMULATED_DATA_ORIGIN_RUN4,
@@ -42,12 +43,12 @@ import {
 } from '../src/lib/simulatedHealth.ts';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
-const PROVENANCE_MIGRATION = path.join(
+const MIGRATIONS_DIR = path.join(
   REPO_ROOT,
   'supabase',
   'migrations',
-  '20260729010000_nao_simulation_provenance.sql',
 );
+const PROVENANCE_MIGRATION = '20260729010000_nao_simulation_provenance.sql';
 
 const TODAY = '2026-07-24';
 
@@ -233,33 +234,47 @@ interface SeededOrigin {
 }
 
 function migrationSeededOrigins(): SeededOrigin[] {
-  const sql = readFileSync(PROVENANCE_MIGRATION, 'utf8');
-  const start = sql.indexOf('insert into public.nao_simulation_origins');
-  assert.ok(start > -1, 'the migration must seed public.nao_simulation_origins');
-  const end = sql.indexOf('on conflict', start);
-  assert.ok(end > start, 'the seed statement must end in an on-conflict clause');
-  // `--` prose inside the VALUES list must not be mistaken for a row.
-  const block = sql.slice(start, end).replace(/--.*$/gm, '');
-  // The column list `(origin, label, is_simulated, loader_writable, owner)` carries no
-  // quoted literals, so it cannot match this tuple shape.
-  const rows = [
-    ...block.matchAll(
-      /\(\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*(true|false)\s*,\s*(true|false)\s*,\s*'([^']+)'\s*\)/g,
-    ),
-  ].map((m) => ({
-    origin: m[1],
-    label: m[2],
-    isSimulated: m[3] === 'true',
-    loaderWritable: m[4] === 'true',
-    owner: m[5],
-  }));
+  const migrations = readdirSync(MIGRATIONS_DIR)
+    .filter((name) => name.endsWith('.sql') && name >= PROVENANCE_MIGRATION)
+    .sort();
+  const byOrigin = new Map<string, SeededOrigin>();
+  let statements = 0;
+
+  for (const migration of migrations) {
+    const sql = readFileSync(path.join(MIGRATIONS_DIR, migration), 'utf8');
+    let cursor = 0;
+    while (true) {
+      const start = sql.indexOf('insert into public.nao_simulation_origins', cursor);
+      if (start === -1) break;
+      const end = sql.indexOf('on conflict', start);
+      assert.ok(end > start, `${migration}: registry seed statement must end in an on-conflict clause`);
+      statements += 1;
+      // `--` prose inside a VALUES list must not be mistaken for a row.
+      const block = sql.slice(start, end).replace(/--.*$/gm, '');
+      // The column list carries no quoted literals, so it cannot match this tuple shape.
+      for (const m of block.matchAll(
+        /\(\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*(true|false)\s*,\s*(true|false)\s*,\s*'([^']+)'\s*\)/g,
+      )) {
+        byOrigin.set(m[1], {
+          origin: m[1],
+          label: m[2],
+          isSimulated: m[3] === 'true',
+          loaderWritable: m[4] === 'true',
+          owner: m[5],
+        });
+      }
+      cursor = end + 'on conflict'.length;
+    }
+  }
+  const rows = [...byOrigin.values()];
   // A floor, never an equality: the parser must not be able to pass by finding nothing,
   // and the number can only ever grow.
-  assert.ok(rows.length >= 4, `parsed only ${rows.length} seed row(s) — the parser has drifted`);
+  assert.ok(statements >= 2, `parsed only ${statements} registry seed statement(s)`);
+  assert.ok(rows.length >= 5, `parsed only ${rows.length} seed row(s) — the parser has drifted`);
   return rows;
 }
 
-test('origin registry: the TS mirror is EXACTLY the migration’s seed rows, read from the migration itself', () => {
+test('origin registry: the TS mirror is EXACTLY the forward migrations’ effective seed rows', () => {
   const seeded = migrationSeededOrigins();
   const mirrored: SeededOrigin[] = SIMULATION_ORIGIN_REGISTRY.map((entry) => ({
     origin: entry.origin,
@@ -296,6 +311,12 @@ test('origin registry: is_simulated and loader_writable answer DIFFERENT questio
   // loader — it belongs to another harness.
   assert.equal(isRegisteredSimulatedOrigin('seed:baseline'), true);
   assert.equal(isLoaderWritableOrigin('seed:baseline'), false, 'seed:baseline belongs to 30_pre_u2_seed.sql');
+  assert.equal(isRegisteredSimulatedOrigin(LOCAL_TEST_DATA_ORIGIN), true);
+  assert.equal(
+    isLoaderWritableOrigin(LOCAL_TEST_DATA_ORIGIN),
+    false,
+    'the local SQL seeder owns its marker; the Nao loader must not stamp it',
+  );
   // The release marker is recognised so the run ledger can reference it, and is neither.
   assert.equal(isRegisteredSimulatedOrigin('release:run4-demo'), false);
   assert.equal(isLoaderWritableOrigin('release:run4-demo'), false);

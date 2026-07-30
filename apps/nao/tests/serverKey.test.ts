@@ -107,7 +107,7 @@ test('the local staff operator is pinned to the local Supabase DB container', ()
 });
 
 test('the changed PowerShell operator scripts parse without executing', { skip: process.platform !== 'win32' }, () => {
-  const scripts = ['nao-local-staff.ps1', 'demo-dryrun-run2.ps1']
+  const scripts = ['nao-local-staff.ps1', 'demo-dryrun-run2.ps1', 'seed-test-data.ps1']
     .map((name) => path.join(repoRoot, 'scripts', name).replaceAll("'", "''"));
   const command = scripts
     .map((script) => `[void][scriptblock]::Create((Get-Content -Raw -LiteralPath '${script}'))`)
