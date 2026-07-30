@@ -136,6 +136,51 @@ python -m ourobion_model_lab.cli build-release --model NAME --config path.json
   its `python_version` check re-evaluated in strict mode, so a `JobSpec` that builds its report without
   the flag still cannot report a passing check under `--strict-python`.
 
+### `predict` — offline research inference (issue #266)
+
+```sh
+python -m ourobion_model_lab.cli predict --list-releases
+python -m ourobion_model_lab.cli predict \
+  --model zebra-v1 \
+  --input-manifest inference-manifests/zebra-smoke-v1.jsonl \
+  [--output predictions.jsonl]
+```
+
+`predict` is the one subcommand that does **not** route through
+`JobSpec.execute()`: it trains nothing, reads no dataset and needs no
+licence-approval artifact. Its fail-closed gates are the pinned release
+registry and artifact verification instead.
+
+It loads a frozen release from the private `ourobion-model-artifacts` R2
+bucket through a **bucket-scoped, read-only** credential, verifies all six
+files against a frozen SHA-256 manifest before importing Torch, scores a
+checked-in public manifest, and deletes the model bytes on every exit path.
+
+**This is research-only.** Nothing it produces may reach `RelationshipClaim`,
+`EdgeVerification`, `verified_edges`, edge scores/bands, cards, Supabase, nao,
+or biotope. Both checkpoints remain `validated=false`, `serving_ready=false`
+and `public_weights_cleared=false`.
+
+Credentials come from `model-training/.env` locally (see `.env.example`), or
+from the GitHub `model-inference` environment in the manual
+`model-inference.yml` workflow. Predictions carry each model's **native**
+labels and are never mapped onto a product verdict:
+
+| Model | Native labels |
+|---|---|
+| `zebra-v1` | `supported`, `contradicted`, `insufficient_evidence` |
+| `viceroy-v0` | `no_relationship`, `direct_causal`, `conditional_causal`, `correlational` |
+
+Both label spaces were read from the shipped checkpoints' own `id2label`. Note
+that Viceroy v0 has **no `mechanistic` class**, despite issue #266 describing
+one; the runner resolves class order by name and fails closed rather than
+assuming positional order, which is what surfaced the discrepancy.
+
+Release identity is content-addressed: each `release_id` is the SHA-256 of that
+model's `evidence/<model>/local-bundle-sha256sums.txt`, and `releases.py`
+re-derives it before any download. Editing a pinned digest changes the manifest
+hash, which no longer matches the release id, which is a hard stop.
+
 Release-manifest construction (`release.py`) writes atomically (temp file + `os.replace`) so an
 interrupted build can never be mistaken for a complete release, and hashes its own canonicalized body so
 repeated builds from identical inputs are deterministic. It refuses to build when either:
@@ -175,14 +220,23 @@ model-training/
     gmi_preflight.py                  # validates expected GMI runtime; never provisions/mutates
     job.py                              # JobSpec contract + registry (preflight/dry-run/smoke/...)
     self_check.py                        # reference JobSpec proving the contract; not a real model
+    inference/                            # issue #266 -- offline research inference, research-only
+      releases.py                          # pinned, content-addressed release registry
+      r2.py                                 # stdlib SigV4 read-only S3/R2 client (GET + LIST only)
+      acquire.py                             # fail-closed download + full-manifest verification
+      schemas.py                              # strict JSONL row schemas; model-native labels only
+      predict.py                               # orchestration; network-free checks run first
+      runners/                                  # Torch/Transformers imported INSIDE functions only
     models/
       leafcutter_sentence_role/           # MT1 -- placeholder, see the training plan
       giraffe_study_design/                # MT2 -- placeholder
       zebra_nli_shadow/                     # MT3 -- placeholder
       salmon_relation_direction/             # MT4 -- placeholder
       viceroy_claim_kind/                     # MT5 -- placeholder
+  inference-manifests/                         # frozen public JSONL inputs; individually un-ignored
   tests/                                       # stdlib `unittest` suite (zero installs required)
     fixtures/                                    # tiny JSON fixtures only; never a real dataset
+  .env.example                                 # the four MODEL_R2_* names; never a filled copy
 ```
 
 ## Where the authoritative specs live

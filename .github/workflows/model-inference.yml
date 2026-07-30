@@ -1,0 +1,177 @@
+# Private, manually-triggered, read-only offline research inference (issue #266).
+#
+# This workflow deliberately has NO trigger other than workflow_dispatch. It must
+# never run on push, pull_request, schedule, or from a fork: it is the one place
+# in this repository that holds a credential able to read the private model
+# bucket, and a pull_request trigger would expose that to anyone who can open a
+# PR. Adding a trigger here is a security change, not a convenience change.
+#
+# It also writes nothing, anywhere. No R2 write, no Supabase, no database, no
+# deployment, no commit back to the repository. The models it loads are
+# validated=false and serving_ready=false, and nothing it produces may reach
+# verified_edges, cards, nao, or biotope.
+name: Model inference (private, manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Which frozen release to run
+        required: true
+        type: choice
+        options:
+          - zebra-v1
+          - viceroy-v0
+      input_manifest:
+        description: Which checked-in frozen manifest to score
+        required: true
+        type: choice
+        # A closed choice list, not a free-text path or URL. A free-text input
+        # would let a dispatcher point the runner at arbitrary content while
+        # holding a credential for the private bucket.
+        options:
+          - model-training/inference-manifests/zebra-smoke-v1.jsonl
+          - model-training/inference-manifests/viceroy-smoke-v0.jsonl
+      emit_predictions:
+        description: >-
+          Upload row-level predictions as a private Actions artifact. Leave false
+          to report aggregate counts only.
+        required: false
+        default: false
+        type: boolean
+
+# Read-only. The job needs the repository contents and nothing else; it has no
+# reason to write checks, packages, deployments, or the repo itself.
+permissions:
+  contents: read
+
+concurrency:
+  group: model-inference-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  predict:
+    name: ${{ inputs.model }} — offline research inference
+    runs-on: ubuntu-latest
+    # Gates the credential behind the environment's own protection rules, so a
+    # manual approval can be required before any secret is exposed to the job.
+    environment: model-inference
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # Matches model-training-core's pin (see ci.yml) so the runner is
+          # exercised on the same interpreter its offline tests run on.
+          python-version: '3.10'
+          # No pip cache: a cache key collision is a way for one run's bytes to
+          # reach another, and the install is small enough not to need it.
+          cache: ''
+
+      - name: Guard — refuse a model/manifest mismatch
+        env:
+          MODEL: ${{ inputs.model }}
+          MANIFEST: ${{ inputs.input_manifest }}
+        run: |
+          set -euo pipefail
+          case "$MODEL" in
+            zebra-v1)   expected="model-training/inference-manifests/zebra-smoke-v1.jsonl" ;;
+            viceroy-v0) expected="model-training/inference-manifests/viceroy-smoke-v0.jsonl" ;;
+            *) echo "unknown model: $MODEL" >&2; exit 1 ;;
+          esac
+          if [ "$MANIFEST" != "$expected" ]; then
+            echo "manifest '$MANIFEST' is not the frozen manifest for '$MODEL' ('$expected')" >&2
+            echo "the two choice lists are independent, so this pairing is checked explicitly" >&2
+            exit 1
+          fi
+
+      - name: Offline guards (no credential in scope yet)
+        working-directory: model-training
+        env:
+          PYTHONPATH: src
+        run: |
+          set -euo pipefail
+          # Runs before the R2 secrets are read, so a broken guard cannot be
+          # discovered only after the credential is already in the environment.
+          python -m unittest discover -s tests -v
+
+      - name: Install inference dependencies
+        working-directory: model-training
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          # Exact pins from constraints.txt (D4). CPU wheels only — no GPU
+          # runtime is provisioned and none is needed for a smoke manifest.
+          python -m pip install --constraint constraints.txt \
+            --extra-index-url https://download.pytorch.org/whl/cpu \
+            torch transformers
+
+      - name: Run inference
+        working-directory: model-training
+        env:
+          MODEL_R2_ACCESS_KEY_ID: ${{ secrets.MODEL_R2_ACCESS_KEY_ID }}
+          MODEL_R2_SECRET_ACCESS_KEY: ${{ secrets.MODEL_R2_SECRET_ACCESS_KEY }}
+          MODEL_R2_ENDPOINT: ${{ vars.MODEL_R2_ENDPOINT }}
+          MODEL_R2_BUCKET: ${{ vars.MODEL_R2_BUCKET }}
+          PYTHONPATH: src
+          # No HF_TOKEN, and the Hub is disabled outright: a local_files_only
+          # miss must fail loudly rather than quietly fetch a different
+          # checkpoint from the internet.
+          HF_HUB_OFFLINE: '1'
+          TRANSFORMERS_OFFLINE: '1'
+          MODEL: ${{ inputs.model }}
+          MANIFEST: ${{ inputs.input_manifest }}
+          EMIT: ${{ inputs.emit_predictions }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/predictions"
+          args=(--model "$MODEL" --input-manifest "../$MANIFEST")
+          if [ "$EMIT" = "true" ]; then
+            args+=(--output "$RUNNER_TEMP/predictions/$MODEL.jsonl")
+          fi
+          # The summary document on stdout carries counts and model identity
+          # only — never row text. Structured logs go to stderr.
+          python -m ourobion_model_lab.cli predict "${args[@]}" | tee "$RUNNER_TEMP/summary.json"
+
+      - name: Aggregate evidence (no row text)
+        run: |
+          set -euo pipefail
+          {
+            echo '### Offline research inference'
+            echo
+            echo '```json'
+            cat "$RUNNER_TEMP/summary.json"
+            echo '```'
+            echo
+            echo '`validated=false`, `serving_ready=false`, `public_weights_cleared=false` — unchanged.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload predictions (only when explicitly requested)
+        if: ${{ inputs.emit_predictions }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: predictions-${{ inputs.model }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/predictions/
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Scrub run-local material
+        if: always()
+        run: |
+          set -euo pipefail
+          # The model bytes are already removed by acquire.py's finally block;
+          # this clears the prediction/summary scratch too, on every exit path.
+          rm -rf "$RUNNER_TEMP/predictions" "$RUNNER_TEMP/summary.json" || true
+          # Fail loudly if any weights survived anywhere under the workspace.
+          if find "$GITHUB_WORKSPACE" "$RUNNER_TEMP" \
+               \( -name '*.bin' -o -name '*.safetensors' -o -name '*.pt' \) \
+               -print -quit 2>/dev/null | grep -q .; then
+            echo "model weights survived the run; failing so this is never silent" >&2
+            exit 1
+          fi

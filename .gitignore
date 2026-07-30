@@ -158,6 +158,18 @@ data/llm-router/
 !/model-training/constraints.txt
 !/model-training/**/requirements*.txt
 
+# Frozen public inference-input manifests (issue #266). These are named ONE BY
+# ONE, not as a `inference-manifests/*.jsonl` glob, and that is deliberate: a
+# directory-wide negation would mean anyone who dropped a downloaded corpus in
+# that folder would commit it, which is precisely the accident the extension
+# rules above exist to prevent. A named negation costs one line per reviewed
+# fixture and cannot be triggered by accident.
+#
+# Anything added here must be public/frozen, contain no corpus text under a
+# restrictive licence, and no product or user data.
+!/model-training/inference-manifests/zebra-smoke-v1.jsonl
+!/model-training/inference-manifests/viceroy-smoke-v0.jsonl
+
 # Checkpoints, exported weights, and predictions. No training or export has
 # been run in this code-build (see docs/temp/model-training/human-gates.md);
 # this also fails closed against ever committing one later.
