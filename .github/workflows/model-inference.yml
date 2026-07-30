@@ -65,7 +65,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           # Matches model-training-core's pin (see ci.yml) so the runner is
           # exercised on the same interpreter its offline tests run on.
@@ -154,7 +154,7 @@ jobs:
 
       - name: Upload predictions (only when explicitly requested)
         if: ${{ inputs.emit_predictions }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: predictions-${{ inputs.model }}-${{ github.run_id }}
           path: ${{ runner.temp }}/predictions/

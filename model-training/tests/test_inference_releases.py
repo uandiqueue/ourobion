@@ -22,7 +22,12 @@ from ourobion_model_lab.manifests import sha256_file
 def _write_manifest(directory: Path, lines: list[str]) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / "local-bundle-sha256sums.txt"
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    # write_bytes, NOT write_text: Path.write_text() applies universal-newline
+    # translation, so on Windows "\n" lands on disk as "\r\n" and the file's
+    # SHA-256 stops matching the digest computed from the same string in memory.
+    # These manifests are content-addressed, so that difference is the whole ball
+    # game. See .gitattributes for the tracked-file half of this fix.
+    path.write_bytes(("\n".join(lines) + "\n").encode("utf-8"))
     return path
 
 
@@ -76,13 +81,13 @@ class TestManifestAuthentication(unittest.TestCase):
             root = Path(d)
             pin = RELEASE_PINS["zebra-v1"]
             real = evidence_root() / pin.evidence_dirname / "local-bundle-sha256sums.txt"
-            text = real.read_text(encoding="utf-8")
+            text = real.read_bytes().decode("utf-8")
             # Change one character of one digest.
             tampered = text.replace("bc2d7a79", "bc2d7a78", 1)
             self.assertNotEqual(text, tampered)
             target = root / pin.evidence_dirname
             target.mkdir(parents=True)
-            (target / "local-bundle-sha256sums.txt").write_text(tampered, encoding="utf-8")
+            (target / "local-bundle-sha256sums.txt").write_bytes(tampered.encode("utf-8"))
 
             with self.assertRaises(HashMismatchError) as ctx:
                 load_release("zebra-v1", evidence_dir=root)

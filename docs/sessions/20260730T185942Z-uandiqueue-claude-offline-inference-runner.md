@@ -113,12 +113,50 @@ Live, against the real private bucket (read-only credential, no weights loaded):
 - `config.json` downloaded for both models (883 and 941 bytes) and **hash-matched** the frozen
   manifest, exercising the real download-and-verify path against real bytes.
 
+## Review round — four blocking findings on PR #270, all fixed
+
+Review at head `f2f81b0` returned changes-required. All four were real; none were disputed.
+
+1. **A completely failed forward pass reported success.** `run_inference` hardcoded `ok=True`, so a
+   run whose every batch raised — the runner catches batch exceptions and emits `status=error` rows,
+   so this is reachable — still exited 0. A green acceptance run proving nothing is the worst
+   possible outcome for this job. `ok` is now `rows_error == 0`; error rows are still written so the
+   evidence survives, and the completion log drops to WARNING when not ok.
+
+2. **The bucket and endpoint were documented but not enforced.** `credentials_from_env` accepted any
+   non-empty bucket, and `MODEL_ARTIFACT_BUCKET` was only used to build release identity. A
+   `MODEL_R2_BUCKET` typo pointing at the corpus bucket would have been accepted silently. Added
+   `assert_allowed_target()`: exact bucket, `https` scheme, `.r2.cloudflarestorage.com` host suffix,
+   no userinfo, no path/query/fragment. Called from both `credentials_from_env` and the client
+   constructor, because credentials can be built directly.
+
+3. **CRLF checkout broke the content-addressed manifests on Windows.** This one I had the evidence
+   for and failed to connect: I computed the CRLF digests (`e3806b3b…`, `45cbf55c…`) while verifying
+   the release ids, observed they did not match, and treated that as confirmation of the LF form
+   rather than as a hazard on the repo's Windows-native dev machine, where `core.autocrlf=true` makes
+   CRLF the *checked-out* form. Every inference run and the tracked-pin tests would fail there while
+   passing on Linux CI. Fixed with `text eol=lf` in `.gitattributes` for both manifest globs, plus
+   test writes switched from `write_text` to `write_bytes` (universal-newline translation had the
+   same effect in synthesized fixtures), plus assertions that no tracked manifest contains a CR byte.
+
+4. **Floating action tags in a credentialed workflow.** `setup-python@v5` and `upload-artifact@v4`
+   were tags, and setup steps run in the same job that later receives the R2 secrets. Both pinned to
+   commit SHAs; a test now requires every `uses:` in the workflow to be a 40-character SHA.
+
+Added `tests/test_inference_review_regressions.py` (19 tests). Suite: 281 → **300**.
+
 ## Left
 
 - **The full live acceptance run in #266 §5 has not been performed.** It needs a `workflow_dispatch`
   of `model-inference.yml` after the GitHub `model-inference` environment has its two secrets and two
   variables set. No forward pass has run against real weights, so the runners' tokenisation and
   batching are proven by construction and unit tests, not by a completed inference.
+  **#266 stays open after this PR merges**, per review, until both private live runs and the
+  remaining external evidence (run URLs, tool versions, input/output hashes, timing, credential-scope
+  confirmation, upload-token revocation) exist.
+- **A Windows run of the suite has not been performed from this session** — this device is WSL/Linux.
+  Finding 3's fix is asserted by a CR-byte invariant that runs on every platform, but the first real
+  Windows execution is still owed.
 - The temporary read/write upload credential from #250 should be revoked now that the read-only path
   is proven.
 - Per-file byte sizes are pinned only for the weights file and the bundle total; the other five were

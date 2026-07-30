@@ -31,6 +31,23 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from ..errors import ModelLabError
+from .releases import MODEL_ARTIFACT_BUCKET
+
+# --------------------------------------------------------------------------
+# Target pinning.
+#
+# The credential is expected to be bucket-scoped and read-only, but credential
+# scoping is an external fact this code cannot observe: a token that was
+# over-provisioned, or a `MODEL_R2_BUCKET` typo pointing at the corpus bucket,
+# would both be accepted silently and produce a confident "no objects found"
+# (or worse, read something this runner has no business reading).
+#
+# So the target is also pinned HERE, where it is reviewable in the diff. These
+# checks do not replace credential scoping; they are the half of the guarantee
+# that lives in the repository.
+# --------------------------------------------------------------------------
+ALLOWED_BUCKET = MODEL_ARTIFACT_BUCKET
+ALLOWED_ENDPOINT_HOST_SUFFIX = ".r2.cloudflarestorage.com"
 
 # R2 ignores region but SigV4 requires one in the credential scope; Cloudflare's
 # documented value is "auto".
@@ -95,12 +112,49 @@ def credentials_from_env(env: dict[str, str] | None = None) -> R2Credentials:
             "'model-inference' environment (the two key variables as secrets, endpoint and "
             "bucket as plain variables) for a workflow run."
         )
-    return R2Credentials(
+    creds = R2Credentials(
         access_key_id=source["MODEL_R2_ACCESS_KEY_ID"].strip(),
         secret_access_key=source["MODEL_R2_SECRET_ACCESS_KEY"].strip(),
         endpoint=source["MODEL_R2_ENDPOINT"].strip().rstrip("/"),
         bucket=source["MODEL_R2_BUCKET"].strip(),
     )
+    assert_allowed_target(creds)
+    return creds
+
+
+def assert_allowed_target(creds: R2Credentials) -> None:
+    """Refuse any bucket or endpoint other than the pinned private model target.
+
+    Raises R2Error before signing or requesting anything. The message names the
+    offending bucket/host — both non-secret — but never a key.
+    """
+    if creds.bucket != ALLOWED_BUCKET:
+        raise R2Error(
+            f"refusing to use bucket {creds.bucket!r}: this runner may only read "
+            f"{ALLOWED_BUCKET!r}. Credential scoping is an external fact this code cannot "
+            "observe, so the target is pinned here as well."
+        )
+
+    parsed = urllib.parse.urlparse(creds.endpoint)
+    if parsed.scheme != "https":
+        raise R2Error(
+            f"refusing endpoint scheme {parsed.scheme!r}: the object-storage endpoint must be "
+            "https, so the credential is never sent over an unencrypted transport."
+        )
+    host = parsed.netloc
+    if not host or not host.endswith(ALLOWED_ENDPOINT_HOST_SUFFIX):
+        raise R2Error(
+            f"refusing endpoint host {host!r}: it must be a Cloudflare R2 endpoint ending in "
+            f"{ALLOWED_ENDPOINT_HOST_SUFFIX!r}. A mistyped or redirected endpoint would send a "
+            "signed request to an unintended host."
+        )
+    if "@" in host or parsed.username or parsed.password:
+        raise R2Error("refusing an endpoint containing embedded credentials or a userinfo section")
+    if parsed.path.strip("/") or parsed.query or parsed.fragment:
+        raise R2Error(
+            f"refusing endpoint {creds.endpoint!r}: it must be a bare scheme://host origin, "
+            "because a path or query would silently change the canonical request that is signed."
+        )
 
 
 def _sign(key: bytes, message: str) -> bytes:
@@ -198,6 +252,10 @@ class ReadOnlyR2Client:
     """GET and LIST against one bucket. No write method exists."""
 
     def __init__(self, creds: R2Credentials, *, timeout_seconds: int = 300) -> None:
+        # Re-checked here, not only in credentials_from_env: an R2Credentials can
+        # be constructed directly, and the target pin must hold on every path
+        # that could reach the network, not just the environment-variable one.
+        assert_allowed_target(creds)
         self._creds = creds
         self._timeout = timeout_seconds
 

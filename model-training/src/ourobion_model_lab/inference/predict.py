@@ -155,21 +155,30 @@ def run_inference(
         written = str(output_path)
 
     rows_ok = sum(1 for r in predictions if r.status == "ok")
+    rows_error = len(predictions) - rows_ok
     result = InferenceResult(
-        ok=True,
+        # FAIL CLOSED. `ok` was previously hardcoded True, so a run in which the
+        # forward pass raised on every batch still reported success and exited 0
+        # — the runner catches batch exceptions and emits `status=error` rows, so
+        # that path is reachable, and a green acceptance run proving nothing is
+        # the worst possible outcome for this job. Any error row now fails the
+        # run; the rows themselves are still written, so the evidence survives.
+        ok=rows_error == 0,
         model=model,
         release_id=release.release_id,
         input_manifest=str(input_manifest),
         rows_in=len(rows),
         rows_ok=rows_ok,
-        rows_error=len(predictions) - rows_ok,
+        rows_error=rows_error,
         label_counts=summarise(predictions, model=model),
         output_path=written,
         verified_bytes=verified_bytes,
     )
-    _log.info(
-        "inference complete model=%s rows_ok=%d rows_error=%d",
+    log = _log.info if result.ok else _log.warning
+    log(
+        "inference complete model=%s ok=%s rows_ok=%d rows_error=%d",
         model,
+        result.ok,
         result.rows_ok,
         result.rows_error,
     )

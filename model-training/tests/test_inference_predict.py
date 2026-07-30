@@ -80,7 +80,9 @@ class _Harness(unittest.TestCase):
         manifest_text = "\n".join(manifest_lines) + "\n"
         evidence = self.root / "evidence" / "zebra-v1"
         evidence.mkdir(parents=True)
-        (evidence / "local-bundle-sha256sums.txt").write_text(manifest_text, encoding="utf-8")
+        # write_bytes: see the note in test_inference_releases.py — universal
+        # newline translation would break the content-addressed digest on Windows.
+        (evidence / "local-bundle-sha256sums.txt").write_bytes(manifest_text.encode("utf-8"))
 
         # The release id IS the manifest digest, so the synthetic pin must carry
         # the synthetic manifest's own hash — the same binding production uses.
@@ -113,6 +115,7 @@ class _Harness(unittest.TestCase):
                 for i in range(4)
             ),
             encoding="utf-8",
+            newline="\n",
         )
 
     def _run(self, **kwargs):
@@ -173,7 +176,7 @@ class TestOfflineSmoke(_Harness):
 class TestOrchestrationOrdering(_Harness):
     def test_bad_input_manifest_fails_before_any_download(self):
         """A fixture typo must not cost a 400 MB download."""
-        self.manifest.write_text('{"row_id": "r1"}\n', encoding="utf-8")
+        self.manifest.write_text('{"row_id": "r1"}\n', encoding="utf-8", newline="\n")
         downloaded: list[str] = []
         original = self.client.download
 
