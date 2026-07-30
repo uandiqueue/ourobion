@@ -14,6 +14,10 @@
   This is LOCAL-ONLY. It relies on `npx supabase start` already running (Docker), which
   also serves the edge functions. See AGENTS.md §4 and docs/memory/0009-local-test-data-seeding.md.
 
+.PARAMETER WipeFirst
+  Destructive and true by default. Clears the selected user's raw rows and rebuildable projections
+  before seeding. Use only with a dedicated, disposable local test user.
+
 .NOTES
   RLS keys on auth.uid() = user_id, so the user must already exist: sign in once in the
   app with $TestEmail BEFORE running this. Run from the repo root in an activated shell
@@ -48,7 +52,8 @@ param(
   # Add a 5-day antibiotic course over the most recent days (sets on_antibiotics / gut_watch)?
   [switch] $WithAntibiotics = $false,
 
-  # Wipe this user's existing rows + projections first (recommended for clean runs)?
+  # DESTRUCTIVE and true by default: clears this selected user's raw rows + projections.
+  # Use only with a dedicated, disposable local test user.
   [switch] $WipeFirst       = $true,
 
   # Skip the edge-function step (only inject rows + rebuild engagement_state)?
@@ -62,10 +67,10 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $sqlPath  = Join-Path $PSScriptRoot 'seed-test-data.sql'
 
-function Write-Step($msg) { Write-Host "›› $msg" -ForegroundColor Cyan }
+function Write-Step($msg) { Write-Host ">> $msg" -ForegroundColor Cyan }
 
 # ── 1. Locate the running local Postgres container ────────────────────────────
-Write-Step 'Locating local Supabase database container…'
+Write-Step 'Locating local Supabase database container...'
 $dbContainer = docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | Select-Object -First 1
 if (-not $dbContainer) {
   throw "No 'supabase_db_*' container running. Start the stack first:  npx supabase start"
@@ -73,10 +78,11 @@ if (-not $dbContainer) {
 Write-Host "   db container: $dbContainer"
 
 # ── 2. Inject rows + rebuild engagement_state (psql inside the container) ──────
-Write-Step "Seeding $Days day(s) for $TestEmail…"
+Write-Step "Seeding $Days day(s) for $TestEmail..."
 $psqlArgs = @(
   'exec', '-i', $dbContainer,
   'psql', '-U', 'postgres', '-d', 'postgres',
+  '-v', 'ON_ERROR_STOP=1',
   '-v', "email=$TestEmail",
   '-v', "days=$Days",
   '-v', "base_dqs=$BaseDqs",
@@ -93,7 +99,7 @@ if ($LASTEXITCODE -ne 0) { throw "psql seed failed (exit $LASTEXITCODE)." }
 if ($SkipEdgeFunctions) {
   Write-Step 'Skipping edge functions (baseline/insight projections not rebuilt).'
 } else {
-  Write-Step 'Reading local Supabase credentials…'
+  Write-Step 'Reading local Supabase credentials...'
   $status  = npx --yes supabase status -o json | ConvertFrom-Json
   $apiUrl  = $status.API_URL;          if (-not $apiUrl)  { $apiUrl  = 'http://127.0.0.1:54321' }
   $publishableKey = $status.ANON_KEY; if (-not $publishableKey) { $publishableKey = $status.anon_key }
@@ -120,4 +126,4 @@ if ($SkipEdgeFunctions) {
 }
 
 Write-Host ''
-Write-Host "✓ Done. Pull-to-refresh / re-open the app (signed in as $TestEmail) to see the data." -ForegroundColor Green
+Write-Host "[OK] Done. Pull-to-refresh / re-open the app (signed in as $TestEmail) to see the data." -ForegroundColor Green

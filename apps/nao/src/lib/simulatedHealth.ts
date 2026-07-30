@@ -51,6 +51,9 @@ export const SIMULATED_DATA_ORIGIN = 'simulated:run2-demo';
  */
 export const SIMULATED_DATA_ORIGIN_RUN4 = 'simulated:run4-demo';
 
+/** Local-only provenance stamped by scripts/seed-test-data.sql. */
+export const LOCAL_TEST_DATA_ORIGIN = 'seed:local-test-data';
+
 /** Shape of one row of the `public.nao_simulation_origins` registry. */
 export interface SimulationOrigin {
   origin: string;
@@ -70,7 +73,8 @@ export interface SimulationOrigin {
 }
 
 /**
- * Mirror of the seed rows in `20260729010000_nao_simulation_provenance.sql`.
+ * Mirror of the seed rows accumulated from `20260729010000_nao_simulation_provenance.sql`
+ * and its forward provenance migrations.
  *
  * DESCRIPTIVE for rows that already exist, PRESCRIPTIVE for what this loader may
  * write: an unregistered marker (a typo such as `simulated:run4-demoo`, or a real
@@ -114,6 +118,14 @@ export const SIMULATION_ORIGIN_REGISTRY: readonly SimulationOrigin[] = Object.fr
     isSimulated: false,
     loaderWritable: false,
     owner: 'public.nao_loader_release_simulated_days',
+  }),
+  Object.freeze({
+    origin: LOCAL_TEST_DATA_ORIGIN,
+    label: 'Local test-data seeder',
+    isSimulated: true,
+    // The local SQL script writes this marker directly. The Nao loader must never stamp it.
+    loaderWritable: false,
+    owner: 'scripts/seed-test-data.sql',
   }),
 ]) as readonly SimulationOrigin[];
 
