@@ -9,7 +9,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { defaultConfigPath, familyOf, loadConfig, providerFor, validateConfig } from '../src/config.js';
+import { billingModeOf, defaultConfigPath, familyOf, loadConfig, providerFor, validateConfig } from '../src/config.js';
 import { RouterConfigError } from '../src/errors.js';
 import { baseConfigObject, testConfig } from './helpers.js';
 
@@ -32,13 +32,72 @@ test('the shipped router.config.json loads: run-4 OpenAI + Anthropic-verifier po
   assert.equal(config.budget.perRunOutputTokens, 60000);
   assert.equal(config.budget.perDayUsdPerNode, 1.0);
   assert.equal(config.budget.hardStopFraction, 0.95);
-  // Shipped prices are all explicitly provisional.
-  for (const price of Object.values(config.prices)) {
+  const agnesPrice = config.prices['agnes-2.5-flash']!;
+  assert.equal(billingModeOf(agnesPrice), 'free');
+  assert.equal(agnesPrice.inputUsdPerMTok, 0);
+  assert.equal(agnesPrice.outputUsdPerMTok, 0);
+  assert.equal(agnesPrice.provisional, false);
+  assert.match(agnesPrice.pricingProvenance ?? '', /owner-confirmed free Agnes API plan/);
+  assert.ok(Object.values(config.nodes).every((node) => !node.model.startsWith('agnes-')));
+  for (const [model, price] of Object.entries(config.prices)) {
+    if (model === 'agnes-2.5-flash') continue;
+    assert.equal(billingModeOf(price), 'metered');
     assert.equal(price.provisional, true);
   }
   // Every node model has a price row (budget accounting is never blind).
   for (const node of Object.values(config.nodes)) {
     assert.ok(config.prices[node.model] !== undefined, `${node.model} needs a prices[] entry`);
+  }
+});
+
+test('free billing is explicit exact-zero non-provisional pricing with provenance', () => {
+  const valid = testConfig((raw) => {
+    raw.prices['agnes-2.5-flash'] = {
+      inputUsdPerMTok: 0,
+      outputUsdPerMTok: 0,
+      billingMode: 'free',
+      pricingProvenance: 'owner-confirmed free plan',
+      provisional: false,
+    };
+  });
+  assert.equal(billingModeOf(valid.prices['agnes-2.5-flash']!), 'free');
+
+  const invalidMutations: Array<(raw: ReturnType<typeof baseConfigObject>) => void> = [
+    (raw) => { raw.prices['gpt-5'] = null; },
+    (raw) => { raw.prices['gpt-5'].inputUsdPerMTok = 0; },
+    (raw) => { raw.prices['gpt-5'].billingMode = 'unknown'; },
+    (raw) => {
+      raw.prices['agnes-2.5-flash'] = {
+        inputUsdPerMTok: 1,
+        outputUsdPerMTok: 0,
+        billingMode: 'free',
+        pricingProvenance: 'owner-confirmed',
+        provisional: false,
+      };
+    },
+    (raw) => {
+      raw.prices['agnes-2.5-flash'] = {
+        inputUsdPerMTok: 0,
+        outputUsdPerMTok: 0,
+        billingMode: 'free',
+        pricingProvenance: '   ',
+        provisional: false,
+      };
+    },
+    (raw) => {
+      raw.prices['agnes-2.5-flash'] = {
+        inputUsdPerMTok: 0,
+        outputUsdPerMTok: 0,
+        billingMode: 'free',
+        pricingProvenance: 'owner-confirmed',
+        provisional: true,
+      };
+    },
+  ];
+  for (const mutate of invalidMutations) {
+    const raw = baseConfigObject();
+    mutate(raw);
+    assert.throws(() => validateConfig(raw), /must be an object|billingMode|metered billing|free billing|pricingProvenance/);
   }
 });
 

@@ -62,8 +62,11 @@ evidence when applicable. Errors are typed: `RouterConfigError`, `RouterKeyMissi
 ## Config reference
 
 All six node entries are required. Provider prefixes map models to families and key environment
-variables; every assigned model needs a positive price row. Injected config objects are cloned and
-validated exactly like the checked-in file.
+variables; every assigned model needs a validated price row. Metered rows require strictly positive
+input/output rates. An exact-zero row is valid only with `billingMode: "free"`,
+`provisional: false`, and non-empty `pricingProvenance`; this keeps zero from becoming an
+unexplained sentinel or a fake epsilon price. Injected config objects are cloned and validated
+exactly like the checked-in file.
 
 ```jsonc
 {
@@ -83,6 +86,13 @@ validated exactly like the checked-in file.
       "inputUsdPerMTok": 3,
       "outputUsdPerMTok": 15,
       "provisional": true
+    },
+    "agnes-2.5-flash": {
+      "inputUsdPerMTok": 0,
+      "outputUsdPerMTok": 0,
+      "billingMode": "free",
+      "pricingProvenance": "Ourobion owner-confirmed free Agnes API plan, 2026-07-30",
+      "provisional": false
     }
   },
   "budget": {
@@ -131,11 +141,15 @@ The owner-authorised acceptance seam is compiled policy, not a general provider 
 - Anthropic permits at most three POST starts per logical call; Agnes permits ten. Both caps span run ids;
 - one journal has a global US$5 reservation ceiling, which a new run id cannot reset;
 - prices must be authoritative (`provisional: false`) before an acceptance call can start;
+- every reservation hash-binds the complete validated price metadata; zero-dollar reservations are
+  accepted only for explicit free rows with matching provenance;
 - missing/mismatched identity, missing/truncated raw evidence, unknown outcomes, corrupt/unreadable
   journals, and malformed/future/live locks all fail closed.
 
 A reservation counts in full after a crash. The journal provides conservative append-and-fsync
 accounting; it does not claim stronger filesystem power-loss atomicity.
+Operator-specific testing limits are tracked by the orchestrator/runbook and are not encoded as
+model pricing or a new global runtime policy.
 
 Every synthesis provider attempt retains pair-scoped returned identity and raw evidence in the
 local-only `edges/synthesis-raw.jsonl` sidecar, including valid adverse/empty, parse-error, and

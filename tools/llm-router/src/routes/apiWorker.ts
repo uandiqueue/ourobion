@@ -27,7 +27,7 @@
  */
 
 import type { RouterConfig } from '../config.js';
-import { providerFor, resolveRepoPath, validateConfig } from '../config.js';
+import { billingModeOf, providerFor, resolveRepoPath, validateConfig } from '../config.js';
 import { costUsd } from '../budget.js';
 import { RouterConfigError, RouterHttpError, RouterKeyMissingError } from '../errors.js';
 import { AttemptJournal, providerContentSha256, type AttemptReservationInput } from '../attemptJournal.js';
@@ -480,6 +480,7 @@ export async function callApiWorker(
       inputTokens: ACCEPTANCE_MAX_INPUT_BYTES,
       outputTokens: ACCEPTANCE_MAX_OUTPUT_TOKENS,
     });
+    const expectedPrice = validatedConfig.prices[model]!;
     if (
       acceptance === undefined ||
       hook === undefined ||
@@ -502,6 +503,11 @@ export async function callApiWorker(
       hook.input.inputByteCeiling !== ACCEPTANCE_MAX_INPUT_BYTES ||
       hook.input.outputTokenCeiling !== ACCEPTANCE_MAX_OUTPUT_TOKENS ||
       validatedConfig.prices[model]?.provisional !== false ||
+      hook.input.price?.billingMode !== billingModeOf(expectedPrice) ||
+      hook.input.price?.inputUsdPerMTok !== expectedPrice.inputUsdPerMTok ||
+      hook.input.price?.outputUsdPerMTok !== expectedPrice.outputUsdPerMTok ||
+      hook.input.price?.provisional !== false ||
+      hook.input.price?.pricingProvenance !== (expectedPrice.pricingProvenance ?? null) ||
       Math.abs(hook.input.reservedUsd - expectedCost) > Number.EPSILON
     ) {
       throw new RouterConfigError(

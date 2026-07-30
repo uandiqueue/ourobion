@@ -7,18 +7,24 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdirSync, rmSync } from 'node:fs';
 
 import {
   ANTHROPIC_MESSAGES_URL,
   ANTHROPIC_VERSION,
   callApiWorker,
+  canonicalizeProviderContent,
   OPENAI_CHAT_COMPLETIONS_URL,
   type FetchLike,
 } from '../src/routes/apiWorker.js';
 import { RouterConfigError, RouterHttpError, RouterKeyMissingError } from '../src/errors.js';
-import { AttemptJournal } from '../src/attemptJournal.js';
+import { AttemptJournal, providerContentSha256 } from '../src/attemptJournal.js';
 import { resolveRepoPath } from '../src/config.js';
-import { ACCEPTANCE_JOURNAL_REPO_PATH } from '../src/types.js';
+import {
+  ACCEPTANCE_JOURNAL_REPO_PATH,
+  ACCEPTANCE_MAX_INPUT_BYTES,
+  ACCEPTANCE_MAX_OUTPUT_TOKENS,
+} from '../src/types.js';
 import type { LlmRequest } from '../src/types.js';
 import { anthropicBody, jsonResponse, openaiBody, testConfig } from './helpers.js';
 
@@ -186,6 +192,13 @@ test('direct Anthropic acceptance rejects a forged cheap reservation before fetc
             inputByteCeiling: 1,
             outputTokenCeiling: 1,
             reservedUsd: 0.000001,
+            price: {
+              billingMode: 'metered',
+              inputUsdPerMTok: 3,
+              outputUsdPerMTok: 15,
+              provisional: false,
+              pricingProvenance: null,
+            },
           },
         },
       },
@@ -227,6 +240,13 @@ test('direct acceptance rejects an exact canonical-path journal lacking the safe
             inputByteCeiling: 24_000,
             outputTokenCeiling: 3_072,
             reservedUsd: 1,
+            price: {
+              billingMode: 'metered',
+              inputUsdPerMTok: 3,
+              outputUsdPerMTok: 15,
+              provisional: false,
+              pricingProvenance: null,
+            },
           },
         },
       },
@@ -234,6 +254,71 @@ test('direct acceptance rejects an exact canonical-path journal lacking the safe
     /lacks the router-owned safe-root binding/,
   );
   assert.equal(calls.length, 0);
+});
+
+test('direct free acceptance rejects forged price provenance before fetch', async () => {
+  const config = testConfig((raw) => {
+    raw.providers.push({ prefix: 'agnes-', family: 'agnes', envKey: 'AGNES_API_KEY' });
+    raw.acceptance = { journalPath: ACCEPTANCE_JOURNAL_REPO_PATH };
+    raw.nodes.synthesis.model = 'claude-sonnet-5';
+    raw.nodes.verifier.model = 'agnes-2.5-flash';
+    raw.prices['claude-sonnet-5'].provisional = false;
+    raw.prices['agnes-2.5-flash'] = {
+      inputUsdPerMTok: 0,
+      outputUsdPerMTok: 0,
+      billingMode: 'free',
+      pricingProvenance: 'owner-confirmed free plan',
+      provisional: false,
+    };
+  });
+  const root = resolveRepoPath('data/llm-router');
+  const journalPath = resolveRepoPath(ACCEPTANCE_JOURNAL_REPO_PATH);
+  mkdirSync(root, { recursive: true });
+  rmSync(journalPath, { force: true });
+  rmSync(`${journalPath}.lock`, { force: true });
+  const request = {
+    nodeId: 'verifier' as const,
+    prompt: 'x',
+    expectJson: true as const,
+    acceptance: { acceptanceRunId: 'run', logicalCallId: 'verifier:forged-free' },
+  };
+  const canonical = canonicalizeProviderContent(request, 'agnes');
+  const { fetchFn, calls } = mockFetch([]);
+  try {
+    await assert.rejects(
+      callApiWorker(config, request, 'agnes-2.5-flash', ACCEPTANCE_MAX_OUTPUT_TOKENS, {
+        fetchFn,
+        env: { AGNES_API_KEY: 'key' },
+        sleep: noSleep,
+        attemptJournal: {
+          journal: new AttemptJournal(journalPath, { allowedRoot: root }),
+          input: {
+            acceptanceRunId: request.acceptance.acceptanceRunId,
+            logicalCallId: request.acceptance.logicalCallId,
+            nodeId: 'verifier',
+            providerFamily: 'agnes',
+            model: 'agnes-2.5-flash',
+            promptHash: providerContentSha256(canonical.serialized),
+            inputByteCeiling: ACCEPTANCE_MAX_INPUT_BYTES,
+            outputTokenCeiling: ACCEPTANCE_MAX_OUTPUT_TOKENS,
+            reservedUsd: 0,
+            price: {
+              billingMode: 'free',
+              inputUsdPerMTok: 0,
+              outputUsdPerMTok: 0,
+              provisional: false,
+              pricingProvenance: 'forged source',
+            },
+          },
+        },
+      }),
+      /acceptance requires the fixed router-owned journal, ceilings, retention, price, identity, and canonical message hash/,
+    );
+    assert.equal(calls.length, 0);
+  } finally {
+    rmSync(journalPath, { force: true });
+    rmSync(`${journalPath}.lock`, { force: true });
+  }
 });
 
 test('public callApiWorker validates forged path and price configs before fetch', async () => {

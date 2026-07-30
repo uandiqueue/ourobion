@@ -42,11 +42,13 @@ function acceptanceConfig() {
     raw.providers.push({ prefix: 'agnes-', family: 'agnes', envKey: 'AGNES_API_KEY' });
     raw.acceptance = { journalPath: ACCEPTANCE_JOURNAL_REPO_PATH };
     raw.nodes.synthesis = { model: 'claude-sonnet-5', route: 'api_worker', maxOutputTokens: 8000 };
-    raw.nodes.verifier = { model: 'agnes-llama-3.3-70b', route: 'api_worker', maxOutputTokens: 8000 };
+    raw.nodes.verifier = { model: 'agnes-2.5-flash', route: 'api_worker', maxOutputTokens: 8000 };
     raw.prices['claude-sonnet-5'].provisional = false;
-    raw.prices['agnes-llama-3.3-70b'] = {
-      inputUsdPerMTok: 0.5,
-      outputUsdPerMTok: 0.5,
+    raw.prices['agnes-2.5-flash'] = {
+      inputUsdPerMTok: 0,
+      outputUsdPerMTok: 0,
+      billingMode: 'free',
+      pricingProvenance: 'owner-confirmed free plan',
       provisional: false,
     };
     raw.budget.perDayUsdPerNode = 100;
@@ -58,7 +60,7 @@ function agnesBody(text: string, promptTokens = 100, completionTokens = 50): unk
   return {
     id: 'agnes_test',
     object: 'chat.completion',
-    model: 'agnes-llama-3.3-70b',
+    model: 'agnes-2.5-flash',
     choices: [{ index: 0, message: { role: 'assistant', content: text }, finish_reason: 'stop' }],
     usage: { prompt_tokens: promptTokens, completion_tokens: completionTokens },
   };
@@ -200,6 +202,14 @@ test('acceptance facade: canonical messages are exactly bounded/hashed and Agnes
       new Set(['acceptance-facade', 'acceptance-second-run']),
       'distinct acceptance runs share one journal and one global exposure total',
     );
+    assert.equal(reservations[1]!.reservedUsd, 0);
+    assert.deepEqual(reservations[1]!.price, {
+      billingMode: 'free',
+      inputUsdPerMTok: 0,
+      outputUsdPerMTok: 0,
+      provisional: false,
+      pricingProvenance: 'owner-confirmed free plan',
+    });
   } finally {
     cleanAcceptanceJournal();
     rmSync(dir, { recursive: true, force: true });

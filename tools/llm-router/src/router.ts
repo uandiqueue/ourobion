@@ -23,6 +23,7 @@ import { randomUUID } from 'node:crypto';
 import { AttemptJournal, providerContentSha256 } from './attemptJournal.js';
 import { BudgetLedger, costUsd, type BudgetState } from './budget.js';
 import {
+  billingModeOf,
   familyOf,
   loadConfig,
   providerFor,
@@ -251,6 +252,13 @@ export class LlmRouter {
                 inputTokens: ACCEPTANCE_MAX_INPUT_BYTES,
                 outputTokens: ACCEPTANCE_MAX_OUTPUT_TOKENS,
               }),
+              price: {
+                billingMode: billingModeOf(this.config.prices[node.model]!),
+                inputUsdPerMTok: this.config.prices[node.model]!.inputUsdPerMTok,
+                outputUsdPerMTok: this.config.prices[node.model]!.outputUsdPerMTok,
+                provisional: false,
+                pricingProvenance: this.config.prices[node.model]!.pricingProvenance ?? null,
+              },
             },
           },
         } : {}),

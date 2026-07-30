@@ -58,12 +58,22 @@ export interface ProviderEntry {
   envKey: string;
 }
 
+export type BillingMode = 'metered' | 'free';
+
 /** Per-model price row (C7; provisional until real runs calibrate). */
 export interface PriceEntry {
   inputUsdPerMTok: number;
   outputUsdPerMTok: number;
-  /** All shipped prices are provisional — kept explicit so reports can say so. */
+  /** Missing remains backward-compatible metered billing. */
+  billingMode?: BillingMode;
+  /** Required for free billing so an exact-zero price is never an unexplained sentinel. */
+  pricingProvenance?: string;
+  /** Acceptance requires this to be explicitly false. */
   provisional?: boolean;
+}
+
+export function billingModeOf(price: PriceEntry): BillingMode {
+  return price.billingMode ?? 'metered';
 }
 
 /** Budget caps (C7). */
@@ -211,8 +221,29 @@ export function validateConfig(raw: unknown): RouterConfig {
   // prices
   if (c.prices === null || typeof c.prices !== 'object') fail('prices must be an object');
   for (const [model, price] of Object.entries(c.prices as Record<string, PriceEntry>)) {
-    if (!isPositiveNumber(price?.inputUsdPerMTok) || !isPositiveNumber(price?.outputUsdPerMTok)) {
-      fail(`prices['${model}'] must carry positive inputUsdPerMTok/outputUsdPerMTok`);
+    if (price === null || typeof price !== 'object') {
+      fail(`prices['${model}'] must be an object`);
+    }
+    const billingMode = price?.billingMode ?? 'metered';
+    if (billingMode !== 'metered' && billingMode !== 'free') {
+      fail(`prices['${model}'].billingMode must be metered|free`);
+    }
+    if (price.pricingProvenance !== undefined &&
+        (typeof price.pricingProvenance !== 'string' || price.pricingProvenance.trim().length === 0)) {
+      fail(`prices['${model}'].pricingProvenance must be a non-empty string when present`);
+    }
+    if (billingMode === 'free') {
+      if (price.inputUsdPerMTok !== 0 || price.outputUsdPerMTok !== 0) {
+        fail(`prices['${model}'] free billing requires exact-zero inputUsdPerMTok/outputUsdPerMTok`);
+      }
+      if (price.provisional !== false) {
+        fail(`prices['${model}'] free billing must be explicitly non-provisional`);
+      }
+      if (typeof price.pricingProvenance !== 'string' || price.pricingProvenance.trim().length === 0) {
+        fail(`prices['${model}'] free billing requires non-empty pricingProvenance`);
+      }
+    } else if (!isPositiveNumber(price?.inputUsdPerMTok) || !isPositiveNumber(price?.outputUsdPerMTok)) {
+      fail(`prices['${model}'] metered billing must carry positive inputUsdPerMTok/outputUsdPerMTok`);
     }
   }
 

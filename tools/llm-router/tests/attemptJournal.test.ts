@@ -41,7 +41,9 @@ while (!existsSync(barrierPath)) await delay(2);
 const journal = new AttemptJournal(journalPath);
 const input = { acceptanceRunId: 'process-run', logicalCallId, nodeId: 'synthesis',
   providerFamily: 'anthropic', model: 'claude-test-model', promptHash: 'sha256:' + 'a'.repeat(64),
-  inputByteCeiling: 24_000, outputTokenCeiling: 3_072, reservedUsd: Number(reserved) };
+  inputByteCeiling: 24_000, outputTokenCeiling: 3_072, reservedUsd: Number(reserved),
+  price: { billingMode: 'metered', inputUsdPerMTok: 1, outputUsdPerMTok: 1,
+    provisional: false, pricingProvenance: null } };
 
 for (let retry = 0; retry < 1_000; retry++) {
   try {
@@ -68,8 +70,15 @@ function input(overrides: Partial<AttemptReservationInput> = {}): AttemptReserva
     promptHash: `sha256:${'b'.repeat(64)}`,
     inputByteCeiling: 24_000,
     outputTokenCeiling: 3_072,
-    reservedUsd: 1.5,
     ...overrides,
+    reservedUsd: overrides.reservedUsd ?? 1.5,
+    price: overrides.price ?? {
+      billingMode: 'metered',
+      inputUsdPerMTok: 1,
+      outputUsdPerMTok: 1,
+      provisional: false,
+      pricingProvenance: null,
+    },
   };
 }
 
@@ -173,6 +182,55 @@ test('global US$5 cap spans acceptance run ids and prompt/identity are frozen pe
     assert.throws(
       () => journal.reserveAndStart(input({ promptHash: `sha256:${'c'.repeat(64)}` })),
       /changed identity, prompt, or ceilings/,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('zero-dollar reservations require complete immutable free-price metadata', () => {
+  const { dir, path } = tempJournal();
+  try {
+    const journal = new AttemptJournal(path);
+    const freePrice = {
+      billingMode: 'free' as const,
+      inputUsdPerMTok: 0,
+      outputUsdPerMTok: 0,
+      provisional: false as const,
+      pricingProvenance: 'owner-confirmed free plan',
+    };
+    const reservation = journal.reserveAndStart(input({ reservedUsd: 0, price: freePrice }));
+    assert.equal(reservation.reservedUsd, 0);
+    assert.deepEqual(journal.readEvents().map((event) => event.price), [freePrice, freePrice]);
+    assert.throws(
+      () => journal.reserveAndStart(input({
+        logicalCallId: 'verifier:metered-zero',
+        reservedUsd: 0,
+      })),
+      /price metadata or reservedUsd is invalid/,
+    );
+    assert.throws(
+      () => journal.reserveAndStart(input({
+        logicalCallId: 'verifier:free-positive',
+        reservedUsd: 0.01,
+        price: freePrice,
+      })),
+      /price metadata or reservedUsd is invalid/,
+    );
+    assert.throws(
+      () => journal.reserveAndStart(input({
+        logicalCallId: 'verifier:free-no-source',
+        reservedUsd: 0,
+        price: { ...freePrice, pricingProvenance: '   ' },
+      })),
+      /price metadata or reservedUsd is invalid/,
+    );
+    assert.throws(
+      () => journal.reserveAndStart({
+        ...input({ logicalCallId: 'verifier:null-price', reservedUsd: 0 }),
+        price: null,
+      } as unknown as AttemptReservationInput),
+      /price metadata or reservedUsd is invalid/,
     );
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -371,6 +429,10 @@ test('terminal outcomes cannot mutate any immutable reservation field', () => {
       ['inputByteCeiling', { ...reservation, inputByteCeiling: 23_999 }],
       ['outputTokenCeiling', { ...reservation, outputTokenCeiling: 3_071 }],
       ['reservedUsd', { ...reservation, reservedUsd: 0.01 }],
+      ['price mode', { ...reservation, price: { ...reservation.price, billingMode: 'free' } }],
+      ['price input', { ...reservation, price: { ...reservation.price, inputUsdPerMTok: 2 } }],
+      ['price output', { ...reservation, price: { ...reservation.price, outputUsdPerMTok: 2 } }],
+      ['price source', { ...reservation, price: { ...reservation.price, pricingProvenance: 'changed' } }],
     ];
     for (const [field, mutated] of mutations) {
       assert.throws(
@@ -382,6 +444,46 @@ test('terminal outcomes cannot mutate any immutable reservation field', () => {
     assert.doesNotThrow(() => journal.record(reservation, 'response'));
   } finally {
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('legacy positive-price journals replay, while legacy zero-price lines fail closed', () => {
+  const canonical = (value: unknown): string => {
+    if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+    if (value !== null && typeof value === 'object') {
+      const object = value as Record<string, unknown>;
+      return `{${Object.keys(object).sort().map((key) => `${JSON.stringify(key)}:${canonical(object[key])}`).join(',')}}`;
+    }
+    return JSON.stringify(value);
+  };
+  const rewriteAsLegacy = (path: string, reservedUsd?: number): void => {
+    const lines = readFileSync(path, 'utf8').trim().split(/\r?\n/).map((line) => JSON.parse(line) as Record<string, unknown>);
+    let previousHash: string | null = null;
+    for (const line of lines) {
+      delete line.price;
+      if (reservedUsd !== undefined) line.reservedUsd = reservedUsd;
+      line.previousHash = previousHash;
+      const withoutHash = { ...line };
+      delete withoutHash.eventHash;
+      line.eventHash = `sha256:${createHash('sha256').update(canonical(withoutHash)).digest('hex')}`;
+      previousHash = line.eventHash as string;
+    }
+    writeFileSync(path, `${lines.map((line) => JSON.stringify(line)).join('\n')}\n`, 'utf8');
+  };
+
+  const positive = tempJournal();
+  const zero = tempJournal();
+  try {
+    new AttemptJournal(positive.path).reserveAndStart(input());
+    rewriteAsLegacy(positive.path);
+    assert.equal(new AttemptJournal(positive.path).readEvents().length, 2);
+
+    new AttemptJournal(zero.path).reserveAndStart(input());
+    rewriteAsLegacy(zero.path, 0);
+    assert.throws(() => new AttemptJournal(zero.path).readEvents(), /invalid shape or chain position/);
+  } finally {
+    rmSync(positive.dir, { recursive: true, force: true });
+    rmSync(zero.dir, { recursive: true, force: true });
   }
 });
 
