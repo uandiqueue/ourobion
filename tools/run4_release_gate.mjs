@@ -170,7 +170,10 @@ const RUN4_U1_JOB_HASHES = Object.freeze({
   // Re-frozen when the history scan was scoped to the landing ref's ancestry and the history
   // canary + ancestry-traversal assertions were added. Superseded:
   //   f312ee6dd0ae2ebe4f169681cd7c0c5c78707313d8d088869c6259c30d1f53e0 (unscoped all-refs history scan)
-  [RUN4_REQUIRED_JOBS[11]]: '6ca9031d18aa318e9cb000ea8800a6b9f035c233f91135a1c0f19940f157e0b0',
+  // Re-frozen when the local client canary moved from the forbidden nao service-role name to
+  // OUROBION_INTERNAL_SECRET. Superseded:
+  //   6ca9031d18aa318e9cb000ea8800a6b9f035c233f91135a1c0f19940f157e0b0 (service-role canary env)
+  [RUN4_REQUIRED_JOBS[11]]: 'e8dcf02e4afaca966b50b0e9cfb487599b81dc0c3c5efb32c2dcb986a03b0569',
 });
 export const RUN4_NODE_TOOL_PACKAGES = Object.freeze([
   'tools/brain-ingest',
@@ -340,7 +343,7 @@ const REQUIRED_STEP_ENVS = Object.freeze({
   'run4-gate:Fail unless every required dependency succeeded': Object.freeze({ NEEDS_JSON: '${{ toJson(needs) }}' }),
   'model-training-core:Unit tests (stdlib unittest, zero installs)': Object.freeze({ PYTHONPATH: 'src' }),
   'model-training-core:Config validation (dry-run resolves the fixture job without executing it)': Object.freeze({ PYTHONPATH: 'src' }),
-  'secret-scan:Build and inspect local Next client canary': Object.freeze({ NEXT_PUBLIC_SUPABASE_URL: 'https://example.invalid', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'synthetic-public-anon', NEXT_PUBLIC_APP_ENV: 'ci', SUPABASE_SERVICE_ROLE_KEY: 'run4-u1-synthetic-server-canary-178-not-a-secret' }),
+  'secret-scan:Build and inspect local Next client canary': Object.freeze({ NEXT_PUBLIC_SUPABASE_URL: 'https://example.invalid', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'synthetic-public-anon', NEXT_PUBLIC_APP_ENV: 'ci', OUROBION_INTERNAL_SECRET: 'run4-ui7-synthetic-internal-canary-227-not-a-secret' }),
   'model-training-core:Offline smoke (tiny local fixture only — no network, no real data)': Object.freeze({ PYTHONPATH: 'src' }),
 });
 

@@ -1323,6 +1323,10 @@ test('inspectClientBundle: requires non-empty output and rejects the synthetic c
   });
 });
 
+test('SERVER_ONLY_NAMES protects the nao internal-secret sender value', () => {
+  assert.ok(guard.SERVER_ONLY_NAMES.includes('OUROBION_INTERNAL_SECRET'));
+});
+
 // --- the CLI-facing wrapper actually throws (non-zero node exit) on a hard violation ---
 test('clientSurface: the throwing CLI wrapper fails closed (non-zero exit path) when a hard violation exists', () => {
   withTmpDir((dir) => {
