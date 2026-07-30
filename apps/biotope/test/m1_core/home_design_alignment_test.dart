@@ -71,10 +71,10 @@ void main() {
     test('uses the 390px reference gutters and measured hero frame', () {
       expect(source.contains('EdgeInsets.symmetric(horizontal: 22)'), isTrue);
       expect(
-        source.contains('height: 202'),
+        source.contains('height: 242'),
         isTrue,
         reason:
-            '22px + 20px vertical card padding makes the 244px reference card',
+            'the 242px inner frame plus GoldCard border makes the 244px reference card',
       );
       expect(source.contains('width: 214'), isTrue);
       expect(source.contains('height: 262'), isTrue);

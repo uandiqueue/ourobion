@@ -332,7 +332,7 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                     const SizedBox(height: 20),
 
                     // ── System status hero ─────────────────────────────
-                    _SystemStatusHero(
+                    SystemStatusHero(
                       statusWord: _statusWord,
                       index: (_engagement.dqs7DayAvg ?? _todayDqs)?.round(),
                       streak: _engagement.currentStreakDays,
@@ -375,7 +375,7 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                     const SizedBox(height: 13),
 
                     // ── Coverage / Scan CTA ─────────────────────────────
-                    _CoverageCard(dqs: _todayDqs, onTap: widget.onScanTap),
+                    CoverageCard(dqs: _todayDqs, onTap: widget.onScanTap),
 
                     const SizedBox(height: 20),
 
@@ -570,12 +570,17 @@ class _DeltaPill extends StatelessWidget {
   }
 }
 
-class _SystemStatusHero extends StatelessWidget {
+/// Full-width Home status card with its visual treatment kept behind live data.
+///
+/// This stays independently pumpable because HomeTab itself reads Supabase
+/// directly during initialization.
+class SystemStatusHero extends StatelessWidget {
   final String statusWord;
   final int? index;
   final int streak;
   final int? indexDelta;
-  const _SystemStatusHero({
+  const SystemStatusHero({
+    super.key,
     required this.statusWord,
     required this.index,
     required this.streak,
@@ -584,35 +589,42 @@ class _SystemStatusHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The Home scroll view retains its 22px gutters. Explicitly filling the
+    // remaining constraint keeps this card 316dp wide at 360dp and 368dp wide
+    // at 412dp, instead of allowing its fractional text column to shrink-wrap.
     return GoldCard(
+      key: const ValueKey('system-status-hero'),
       emphasized: true,
       radius: 24,
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
-      // The design card is 244px tall at its 390px reference width. Its
-      // porcelain padding accounts for 42px of that height, leaving a stable
-      // 202px layout area for the truthful status values below. A fixed inner
-      // height preserves the artwork/text relationship without constraining
-      // the card's width on other devices.
-      child: SizedBox(
-        height: 202,
-        child: Stack(
-          children: [
-            // home_hero_robot_hand_main.png is RGB with NO alpha channel — an
-            // opaque near-white rectangle, not a cutout. Dropped in raw it showed
-            // a hard rectangular seam against the porcelain card and escaped the
-            // card's rounded corner. (Nobody saw this until the asset actually
-            // shipped: the whole generated set was missing from the bundle, and
-            // this Image.asset's errorBuilder is an INVISIBLE SizedBox.)
-            //
-            // So: clip to the card's radius, and feather the two inner edges with
-            // a ShaderMask so the rectangle dissolves into the surface instead of
-            // ending in a line. Replace this with a transparent-background asset
-            // and the mask becomes a no-op rather than a problem.
-            Positioned.fill(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(kCardRadius),
+      padding: EdgeInsets.zero,
+      child: ClipRRect(
+        key: const ValueKey('system-status-hero-clip'),
+        // GoldCard's border is 1dp wide, so this inner content clip follows
+        // the visible outer 24dp curve without clipping the card's shadow.
+        borderRadius: BorderRadius.circular(23),
+        child: SizedBox(
+          width: double.infinity,
+          // GoldCard's 1dp border sits outside this child on every edge, so a
+          // 242dp inner frame produces the specified 244dp outer card.
+          height: 242,
+          child: Stack(
+            children: [
+              // The inset clip follows the outer radius-24 card and contains
+              // the entire artwork layer, not just the padded status column.
+              Positioned.fill(
                 child: Stack(
                   children: [
+                    // home_hero_robot_hand_main.png is RGB with NO alpha channel — an
+                    // opaque near-white rectangle, not a cutout. Dropped in raw it showed
+                    // a hard rectangular seam against the porcelain card and escaped the
+                    // card's rounded corner. (Nobody saw this until the asset actually
+                    // shipped: the whole generated set was missing from the bundle, and
+                    // this Image.asset's errorBuilder is an INVISIBLE SizedBox.)
+                    //
+                    // So: clip to the card's radius, and feather the two inner edges with
+                    // a ShaderMask so the rectangle dissolves into the surface instead of
+                    // ending in a line. Replace this with a transparent-background asset
+                    // and the mask becomes a no-op rather than a problem.
                     Positioned(
                       right: -30,
                       bottom: -18,
@@ -632,7 +644,9 @@ class _SystemStatusHero extends StatelessWidget {
                           child: Opacity(
                             opacity: 0.96,
                             child: Image.asset(
+                              key: const ValueKey('system-status-hero-artwork'),
                               BiotopeGeneratedAssets.homeHeroRobotHandMain,
+                              excludeFromSemantics: true,
                               width: 214,
                               height: 262,
                               fit: BoxFit.contain,
@@ -646,114 +660,129 @@ class _SystemStatusHero extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
-            // Design keeps status text to ~58% so it never runs under the
-            // artwork; the card holds a min height so the two never collide.
-            FractionallySizedBox(
-              widthFactor: 0.58,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'SYSTEM STATUS',
-                    style: GoogleFonts.manrope(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.6,
-                      color: OurobionColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 11),
-                  Text(
-                    statusWord,
-                    style: GoogleFonts.manrope(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -1,
-                      color: OurobionColors.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  // Design's gold hairline fading to nothing, rather than a hard
-                  // 60px rule.
-                  Container(
-                    height: 1,
-                    margin: const EdgeInsets.only(right: 8),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          OurobionColors.brandGold,
-                          OurobionColors.brandGold.withValues(alpha: 0),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (index != null)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
+              // Live content has its own padding above the artwork layer. The
+              // 200dp available height is the 244dp outer card less its border
+              // and 22/20dp content padding.
+              Positioned.fill(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.topLeft,
+                    widthFactor: 0.58,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '$index',
+                          'SYSTEM STATUS',
                           style: GoogleFonts.manrope(
-                            fontSize: 24,
+                            fontSize: 10,
                             fontWeight: FontWeight.w700,
-                            letterSpacing: -0.6,
+                            letterSpacing: 1.6,
                             color: OurobionColors.primary,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '/100 coverage',
-                          style: GoogleFonts.manrope(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: OurobionColors.onSurfaceVariant,
+                        const SizedBox(height: 11),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            statusWord,
+                            style: GoogleFonts.manrope(
+                              fontSize: 30,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -1,
+                              color: OurobionColors.onSurface,
+                            ),
                           ),
                         ),
+                        const SizedBox(height: 14),
+                        // Design's gold hairline fading to nothing, rather than a hard
+                        // 60px rule.
+                        Container(
+                          height: 1,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                OurobionColors.brandGold,
+                                OurobionColors.brandGold.withValues(alpha: 0),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (index != null)
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                '$index',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.6,
+                                  color: OurobionColors.primary,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  '/100 coverage',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: OurobionColors.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        // Real movement against the 7-day average. Rendered only when
+                        // both numbers exist, so an absent baseline shows no pill
+                        // rather than a fabricated "▲ 0".
+                        if (indexDelta != null) ...[
+                          const SizedBox(height: 10),
+                          _DeltaPill(points: indexDelta!),
+                        ],
+                        if (streak > 0) ...[
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: OurobionColors.deltaPositive.withValues(
+                                alpha: 0.08,
+                              ),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: OurobionColors.deltaPositive.withValues(
+                                  alpha: 0.18,
+                                ),
+                              ),
+                            ),
+                            child: Text(
+                              '$streak DAY STREAK',
+                              style: GoogleFonts.manrope(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1,
+                                color: OurobionColors.deltaPositive,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
-                  // Real movement against the 7-day average. Rendered only when
-                  // both numbers exist, so an absent baseline shows no pill
-                  // rather than a fabricated "▲ 0".
-                  if (indexDelta != null) ...[
-                    const SizedBox(height: 10),
-                    _DeltaPill(points: indexDelta!),
-                  ],
-                  if (streak > 0) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: OurobionColors.deltaPositive.withValues(
-                          alpha: 0.08,
-                        ),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: OurobionColors.deltaPositive.withValues(
-                            alpha: 0.18,
-                          ),
-                        ),
-                      ),
-                      child: Text(
-                        '$streak DAY STREAK',
-                        style: GoogleFonts.manrope(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1,
-                          color: OurobionColors.deltaPositive,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1028,10 +1057,11 @@ class _SignalsGrid extends StatelessWidget {
   }
 }
 
-class _CoverageCard extends StatelessWidget {
+/// Home coverage CTA with an intentionally cropped decorative flower accent.
+class CoverageCard extends StatelessWidget {
   final double? dqs;
   final VoidCallback onTap;
-  const _CoverageCard({required this.dqs, required this.onTap});
+  const CoverageCard({super.key, required this.dqs, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1039,120 +1069,153 @@ class _CoverageCard extends StatelessWidget {
     final streakWorthy = (dqs ?? 0) >= 60;
 
     return GoldCard(
+      key: const ValueKey('coverage-card'),
       onTap: streakWorthy ? null : onTap,
       emphasized: !streakWorthy,
-      child: logged
-          ? Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: streakWorthy
-                        ? OurobionColors.primaryFixed
-                        : OurobionColors.surfaceContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    streakWorthy
-                        ? Icons.check_circle_rounded
-                        : Icons.radar_rounded,
-                    color: streakWorthy
-                        ? OurobionColors.primary
-                        : OurobionColors.outline,
-                    size: 22,
+      padding: EdgeInsets.zero,
+      child: ClipRRect(
+        key: const ValueKey('coverage-card-clip'),
+        borderRadius: BorderRadius.circular(kCardRadius - 1),
+        child: Stack(
+          clipBehavior: Clip.hardEdge,
+          children: [
+            Positioned(
+              right: -28,
+              top: -42,
+              child: IgnorePointer(
+                child: Opacity(
+                  opacity: 0.34,
+                  child: Image.asset(
+                    key: const ValueKey('coverage-flower-artwork'),
+                    BiotopeGeneratedAssets.homeFlowerClusterCard,
+                    excludeFromSemantics: true,
+                    width: 142,
+                    height: 142,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stack) =>
+                        const SizedBox(width: 142, height: 142),
                   ),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        streakWorthy
-                            ? 'Every channel captured today'
-                            : 'Coverage in progress',
-                        style: GoogleFonts.manrope(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: OurobionColors.onSurface,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: logged
+                  ? Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: streakWorthy
+                                ? OurobionColors.primaryFixed
+                                : OurobionColors.surfaceContainer,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            streakWorthy
+                                ? Icons.check_circle_rounded
+                                : Icons.radar_rounded,
+                            color: streakWorthy
+                                ? OurobionColors.primary
+                                : OurobionColors.outline,
+                            size: 22,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        streakWorthy
-                            ? '${dqs!.toInt()} pts — great work today'
-                            : '${dqs!.toInt()} / 100 pts — run a sweep to close the gap',
-                        style: GoogleFonts.manrope(
-                          fontSize: 12,
-                          color: OurobionColors.outline,
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                streakWorthy
+                                    ? 'Every channel captured today'
+                                    : 'Coverage in progress',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: OurobionColors.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                streakWorthy
+                                    ? '${dqs!.toInt()} pts — great work today'
+                                    : '${dqs!.toInt()} / 100 pts — run a sweep to close the gap',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 12,
+                                  color: OurobionColors.outline,
+                                ),
+                              ),
+                              if (!streakWorthy) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Run sweep →',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: OurobionColors.primary,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
-                      ),
-                      if (!streakWorthy) ...[
-                        const SizedBox(height: 4),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: OurobionColors.primaryFixed,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.radar_rounded,
+                            color: OurobionColors.primary,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "You haven't swept today",
+                                style: GoogleFonts.manrope(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: OurobionColors.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Takes under 30 seconds',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 12,
+                                  color: OurobionColors.outline,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         Text(
                           'Run sweep →',
                           style: GoogleFonts.manrope(
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: OurobionColors.primary,
                           ),
                         ),
                       ],
-                    ],
-                  ),
-                ),
-              ],
-            )
-          : Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: OurobionColors.primaryFixed,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.radar_rounded,
-                    color: OurobionColors.primary,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "You haven't swept today",
-                        style: GoogleFonts.manrope(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: OurobionColors.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Takes under 30 seconds',
-                        style: GoogleFonts.manrope(
-                          fontSize: 12,
-                          color: OurobionColors.outline,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Text(
-                  'Run sweep →',
-                  style: GoogleFonts.manrope(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: OurobionColors.primary,
-                  ),
-                ),
-              ],
+                    ),
             ),
+          ],
+        ),
+      ),
     );
   }
 }
