@@ -66,4 +66,4 @@ Branch: `docs/run4/local-day-projection-220`
 - None. The graphify query latency affected only semantic navigation and did not block the direct,
   source-grounded documentation review.
 
-memory: none
+memory: added 0004
