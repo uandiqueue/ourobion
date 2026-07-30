@@ -21,6 +21,7 @@ import {
 } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 
+import type { BillingMode } from './config.js';
 import { RouterAttemptJournalError } from './errors.js';
 import {
   ACCEPTANCE_AGNES_MAX_POST_STARTS_PER_LEG,
@@ -32,6 +33,14 @@ import {
 } from './types.js';
 
 export type AttemptEventKind = 'reserved' | 'started' | 'response' | 'failed' | 'unknown';
+
+export interface AttemptPriceMetadata {
+  billingMode: BillingMode;
+  inputUsdPerMTok: number;
+  outputUsdPerMTok: number;
+  provisional: false;
+  pricingProvenance: string | null;
+}
 
 export interface AttemptJournalEvent {
   version: 1;
@@ -48,6 +57,8 @@ export interface AttemptJournalEvent {
   inputByteCeiling: number;
   outputTokenCeiling: number;
   reservedUsd: number;
+  /** Missing only on legacy positive-cost journal lines written before free billing existed. */
+  price?: AttemptPriceMetadata;
   kind: AttemptEventKind;
   at: string;
   httpStatus?: number;
@@ -64,6 +75,7 @@ export interface AttemptReservationInput {
   inputByteCeiling: number;
   outputTokenCeiling: number;
   reservedUsd: number;
+  price: AttemptPriceMetadata;
 }
 
 export interface AttemptReservation extends AttemptReservationInput {
@@ -71,8 +83,8 @@ export interface AttemptReservation extends AttemptReservationInput {
 }
 
 function sameReservationIdentity(
-  left: AttemptReservationInput & { attempt: number },
-  right: AttemptReservationInput & { attempt: number },
+  left: Omit<AttemptReservationInput, 'price'> & { attempt: number; price?: AttemptPriceMetadata },
+  right: Omit<AttemptReservationInput, 'price'> & { attempt: number; price?: AttemptPriceMetadata },
 ): boolean {
   return (
     left.acceptanceRunId === right.acceptanceRunId &&
@@ -84,7 +96,22 @@ function sameReservationIdentity(
     left.promptHash === right.promptHash &&
     left.inputByteCeiling === right.inputByteCeiling &&
     left.outputTokenCeiling === right.outputTokenCeiling &&
-    left.reservedUsd === right.reservedUsd
+    left.reservedUsd === right.reservedUsd &&
+    samePriceMetadata(left.price, right.price)
+  );
+}
+
+function samePriceMetadata(
+  left: AttemptPriceMetadata | undefined,
+  right: AttemptPriceMetadata | undefined,
+): boolean {
+  if (left === undefined || right === undefined) return left === right;
+  return (
+    left.billingMode === right.billingMode &&
+    left.inputUsdPerMTok === right.inputUsdPerMTok &&
+    left.outputUsdPerMTok === right.outputUsdPerMTok &&
+    left.provisional === right.provisional &&
+    left.pricingProvenance === right.pricingProvenance
   );
 }
 
@@ -150,6 +177,38 @@ function maxPostStartsFor(providerFamily: VendorFamily, model: string): number {
 
 function validateId(label: string, value: string): void {
   if (!ID_RE.test(value)) fail(`${label} must match ${ID_RE.source}`);
+}
+
+function validPriceMetadata(price: AttemptPriceMetadata | undefined): boolean {
+  if (price === undefined || price === null || typeof price !== 'object' || price.provisional !== false) return false;
+  const provenanceIsValid =
+    price.pricingProvenance === null ||
+    (typeof price.pricingProvenance === 'string' && price.pricingProvenance.trim().length > 0);
+  if (!provenanceIsValid) return false;
+  if (price.billingMode === 'free') {
+    return (
+      price.inputUsdPerMTok === 0 &&
+      price.outputUsdPerMTok === 0 &&
+      typeof price.pricingProvenance === 'string'
+    );
+  }
+  return (
+    price.billingMode === 'metered' &&
+    Number.isFinite(price.inputUsdPerMTok) &&
+    price.inputUsdPerMTok > 0 &&
+    Number.isFinite(price.outputUsdPerMTok) &&
+    price.outputUsdPerMTok > 0
+  );
+}
+
+function validReservationBilling(
+  reservedUsd: number,
+  price: AttemptPriceMetadata | undefined,
+  allowLegacy: boolean,
+): boolean {
+  if (price === undefined) return allowLegacy && Number.isFinite(reservedUsd) && reservedUsd > 0;
+  if (!validPriceMetadata(price) || !Number.isFinite(reservedUsd)) return false;
+  return price.billingMode === 'free' ? reservedUsd === 0 : reservedUsd > 0;
 }
 
 function parseLock(text: string, path: string): LockRecord {
@@ -234,7 +293,7 @@ export class AttemptJournal {
         !HASH_RE.test(event.eventHash ?? '') ||
         !['reserved', 'started', 'response', 'failed', 'unknown'].includes(event.kind) ||
         !Number.isInteger(event.attempt) || event.attempt < 1 ||
-        !Number.isFinite(event.reservedUsd) || event.reservedUsd <= 0 ||
+        !validReservationBilling(event.reservedUsd, event.price, true) ||
         !Number.isInteger(event.inputByteCeiling) || event.inputByteCeiling <= 0 ||
         !Number.isInteger(event.outputTokenCeiling) || event.outputTokenCeiling <= 0 ||
         !HASH_RE.test(event.promptHash ?? '') ||
@@ -282,7 +341,9 @@ export class AttemptJournal {
     validateId('acceptanceRunId', input.acceptanceRunId);
     validateId('logicalCallId', input.logicalCallId);
     if (!HASH_RE.test(input.promptHash)) fail('promptHash must be sha256:<64 lowercase hex>');
-    if (!Number.isFinite(input.reservedUsd) || input.reservedUsd <= 0) fail('reservedUsd must be positive and finite');
+    if (!validReservationBilling(input.reservedUsd, input.price, false)) {
+      fail('reservation price metadata or reservedUsd is invalid for its billing mode');
+    }
     const maxPostStarts = maxPostStartsFor(input.providerFamily, input.model);
 
     return this.withLock(() => {
@@ -299,9 +360,10 @@ export class AttemptJournal {
         first.model !== input.model ||
         first.promptHash !== input.promptHash ||
         first.inputByteCeiling !== input.inputByteCeiling ||
-        first.outputTokenCeiling !== input.outputTokenCeiling
+        first.outputTokenCeiling !== input.outputTokenCeiling ||
+        !samePriceMetadata(first.price, input.price)
       )) {
-        fail(`logical call '${input.logicalCallId}' changed identity, prompt, or ceilings between retries`);
+        fail(`logical call '${input.logicalCallId}' changed identity, prompt, or ceilings/price between retries`);
       }
 
       if (legReservations.length >= maxPostStarts) {

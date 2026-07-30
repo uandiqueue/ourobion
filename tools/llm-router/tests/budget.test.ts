@@ -33,6 +33,19 @@ test('costUsd follows the config price table', () => {
   assert.ok(
     Math.abs(costUsd(config, 'gpt-5', { inputTokens: 100_000, outputTokens: 10_000 }) - 0.225) < 1e-9,
   );
+  const freeConfig = testConfig((raw) => {
+    raw.prices['agnes-2.5-flash'] = {
+      inputUsdPerMTok: 0,
+      outputUsdPerMTok: 0,
+      billingMode: 'free',
+      pricingProvenance: 'owner-confirmed free plan',
+      provisional: false,
+    };
+  });
+  assert.equal(
+    costUsd(freeConfig, 'agnes-2.5-flash', { inputTokens: 1_000_000, outputTokens: 1_000_000 }),
+    0,
+  );
   assert.throws(() => costUsd(config, 'unknown-model', { inputTokens: 1, outputTokens: 1 }), /no prices/);
 });
 

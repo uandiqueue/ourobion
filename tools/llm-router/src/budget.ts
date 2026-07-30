@@ -5,7 +5,8 @@
  * Two caps, both hard-stopped at `hardStopFraction` (0.95 shipped):
  *  - **per-day, per-node USD** — each pipeline node/stage may spend at most
  *    `perDayUsdPerNode` per UTC day ($5 shipped). Cost is computed from the
- *    config price table (all prices PROVISIONAL — see router.config.json).
+ *    validated config price table (metered rows may be provisional; explicit
+ *    free rows are authoritative exact zero — see router.config.json).
  *  - **per-run output tokens** — one run (identified by the router's `runId`)
  *    may emit at most `perRunOutputTokens` output tokens (200k shipped).
  *

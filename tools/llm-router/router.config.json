@@ -20,7 +20,14 @@
     "claude-sonnet-5": { "inputUsdPerMTok": 3.0, "outputUsdPerMTok": 15.0, "provisional": true },
     "claude-haiku-4-5": { "inputUsdPerMTok": 1.0, "outputUsdPerMTok": 5.0, "provisional": true },
     "gpt-5": { "inputUsdPerMTok": 1.25, "outputUsdPerMTok": 10.0, "provisional": true },
-    "gpt-5-mini": { "inputUsdPerMTok": 0.25, "outputUsdPerMTok": 2.0, "provisional": true }
+    "gpt-5-mini": { "inputUsdPerMTok": 0.25, "outputUsdPerMTok": 2.0, "provisional": true },
+    "agnes-2.5-flash": {
+      "inputUsdPerMTok": 0,
+      "outputUsdPerMTok": 0,
+      "billingMode": "free",
+      "pricingProvenance": "Ourobion owner-confirmed free Agnes API plan, 2026-07-30",
+      "provisional": false
+    }
   },
   "budget": {
     "perRunOutputTokens": 60000,
