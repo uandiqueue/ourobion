@@ -145,6 +145,70 @@ Review at head `f2f81b0` returned changes-required. All four were real; none wer
 
 Added `tests/test_inference_review_regressions.py` (19 tests). Suite: 281 → **300**.
 
+## Local live run — both models, real weights, full pipeline
+
+Run on this device (WSL2/Linux) after the review fixes, at branch head `2128ae3`. Owner-authorised.
+Conda env `ourobion-inference`, Python 3.12.13, `torch 2.4.1+cpu`, `transformers 4.44.2` — the exact
+`constraints.txt` pins.
+
+| | Zebra v1 | Viceroy v0 |
+|---|---|---|
+| Release | `sha256-e1d09fbd…` | `sha256-751fbf1f…` |
+| Verified bytes | 438,938,903 (6/6 files) | 438,942,033 (6/6 files) |
+| Download + verify | 75.0 s | 30.8 s |
+| Inference | 3.1 s | 2.8 s |
+| Rows | 5 ok, 0 error | 6 ok, 0 error |
+| Input manifest sha256 | `ef3c9a38…` | `c4a0e745…` |
+| Output sha256 | `abb0a621…` | `152762c8…` |
+
+Both exited 0. No `ourobion-zebra-v1-*` / `ourobion-viceroy-v0-*` temp directory survived either run,
+so the `finally` cleanup holds against real 419 MB bundles, not just fixtures.
+
+### Viceroy's output corroborates the `id2label` finding
+
+Every prediction landed at ~0.997 on the semantically right class:
+
+- "…was **associated with** shorter transit times" → `correlational`
+- "These results **demonstrate that** increased fibre **shortens** transit" → `direct_causal`
+- methods sentence about recruitment window → `no_relationship`
+- "**correlated with** next-day mood" → `correlational`
+- "**Reducing** screen exposure **advanced** sleep onset" → `direct_causal`
+
+That alignment is independent evidence that the checkpoint's four classes really are the ones read
+from `config.json`, and that resolving the permutation by name produced the right mapping. A
+scrambled mapping could not have produced this pattern.
+
+One row I wrote intending `conditional_causal` ("Among participants with low baseline intake…
+whereas no effect in those already meeting the recommendation") came back `direct_causal`. Arguable
+rather than wrong — the sentence does assert a direct effect within a subgroup. `conditional_causal`
+drew zero predictions across the six rows, so that class is unexercised.
+
+### Zebra shows a `contradicted` bias worth flagging
+
+3 of 5 rows match my expectation; `supported` was never the argmax; confidences are far lower
+(0.60–0.80 versus Viceroy's 0.997). The two misses are both rows whose evidence plainly supports the
+claim.
+
+The mapping is very unlikely to be the cause: the unambiguous `contradicted` rows (evidence reporting
+no significant difference; a "no relationship" claim contradicted by its evidence) and the
+`insufficient_evidence` row (irrelevant methods text, 0.82) are all confidently correct. Swapping
+`supported`/`contradicted` would break those three to fix two.
+
+**Five hand-written rows are a smoke test, not an evaluation.** This says the pipeline runs and the
+labels are wired correctly; it says nothing rigorous about model quality, and `validated=false`
+remains exactly right for both checkpoints.
+
+### This is not §5 acceptance evidence
+
+It is a local run. There is no Actions run URL, no runner image, no GitHub-recorded tool versions.
+
+**§5 as written cannot currently be executed at all**: GitHub only dispatches a `workflow_dispatch`
+workflow that exists on the *default* branch, and `model-inference.yml` lives on this feature branch
+targeting `dev-phase2-run4`. A dispatch attempt returns
+`HTTP 404: workflow model-inference.yml not found on the default branch`. `main` is off-limits, so
+the workflow becomes dispatchable only after the owner-gated `dev-phase2-run4` → `dev-phase2` → `main`
+promotion. That is a sequencing constraint #266 did not anticipate.
+
 ## Left
 
 - **The full live acceptance run in #266 §5 has not been performed.** It needs a `workflow_dispatch`
