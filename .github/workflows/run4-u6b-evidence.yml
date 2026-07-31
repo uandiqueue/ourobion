@@ -61,9 +61,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '26'
           cache: npm
-          cache-dependency-path: tools/metric-view/package-lock.json
+          cache-dependency-path: |
+            tools/metric-view/package-lock.json
+            shared/package-lock.json
+      - name: Install shared contract dependencies
+        working-directory: shared
+        run: npm ci
       - name: Install metric-view fixture dependencies
         working-directory: tools/metric-view
         run: npm ci

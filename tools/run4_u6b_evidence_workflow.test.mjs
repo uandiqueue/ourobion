@@ -24,9 +24,11 @@ test('rollback evidence pins the existing fixture container contract and migrati
   const rollback = workflow.slice(rollbackStart, rollbackEnd);
   assert.ok(rollbackStart >= 0 && rollbackEnd > rollbackStart);
   assert.ok(rollback.includes('actions/setup-node@v4'));
-  assert.match(rollback, /node-version: '20'/);
-  assert.ok(rollback.includes('cache-dependency-path: tools/metric-view/package-lock.json'));
+  assert.match(rollback, /node-version: '26'/);
+  assert.ok(rollback.includes('cache-dependency-path: |\n            tools/metric-view/package-lock.json\n            shared/package-lock.json'));
+  assert.ok(rollback.includes('Install shared contract dependencies\n        working-directory: shared\n        run: npm ci'));
   assert.ok(rollback.includes('Install metric-view fixture dependencies\n        working-directory: tools/metric-view\n        run: npm ci'));
+  assert.ok(rollback.indexOf('Install shared contract dependencies') < rollback.indexOf('Install metric-view fixture dependencies'));
   assert.ok(rollback.indexOf('run: npm ci') < rollback.indexOf('node supabase/tests/wellbeing-foundation/local_schema_fixture.mjs'));
   assert.ok(rollback.indexOf('run: npm ci') < rollback.indexOf('node supabase/tests/metric-view/local_projection_fixture.mjs'));
   assert.match(workflow, /docker rename "\$\{\{ job\.services\.postgres\.id \}\}" supabase_db_ourobion/);

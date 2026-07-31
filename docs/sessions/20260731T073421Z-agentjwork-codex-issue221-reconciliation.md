@@ -262,3 +262,36 @@ memory: none
 - None locally. Package installation remains deliberately hosted-only for this disposable runner.
 
 memory: none
+
+## Continuation — metric-view runtime contract alignment
+
+### Attempted
+
+- Reviewed the next hosted rollback log after the package-local install: dependency installation and
+  the wellbeing fixture passed, but the metric fixture hit Node 20 `ERR_REQUIRE_CYCLE_MODULE` while
+  `tsx` imported the shared metrics registry.
+- Compared that route with the existing passing node-tools metric-view CI job.
+
+### Changed
+
+- Aligned the disposable rollback runner with the existing metric-view runtime contract: Node 26,
+  npm caching for both `shared` and `tools/metric-view` lockfiles, then `npm ci` in `shared` before
+  the package-local metric-view install.
+- Extended the static contract to pin Node version, both lockfiles, and the shared-before-metric
+  installation ordering.
+
+### Decided
+
+- Keep the existing fixture and loader code unchanged. The shared TypeScript registry import is
+  already covered by the passing node-tools contract; this runner must reproduce that environment.
+
+### Left
+
+- Re-run the hosted rollback evidence, then regenerate derived attestation evidence after fresh
+  graphs and route probes.
+
+### Blockers
+
+- None locally. These package installs intentionally remain hosted-only for the disposable runner.
+
+memory: none
