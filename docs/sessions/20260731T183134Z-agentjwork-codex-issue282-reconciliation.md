@@ -81,4 +81,16 @@ Issue: #282 ? PR: #289 ? branch: `test/ui/run4-268-coverage-282` ? target:
     PASS, 76 paths / 8,289 added lines / 0 binary paths.
   - `git diff --check`: PASS.
 
+## Accepted unit-base resumption
+
+- Issue #308 directed this session to leave #289 untouched until Session A advanced the accepted unit base.
+- Session A landed PR #312 and advanced the integration line to
+  `aef9bc1c6b534d784f229fef06010f79a1ff6a22`, including regenerated attestation evidence.
+- Merged that exact tip without rebasing in `ff5c0b3c54067993b451c434114aa791d69b0356`.
+- The new per-unit landing gate against base `abcba95f8386d31c49f62f20f4b623de180e29c0`
+  passes at 26 paths / 3,700 added lines / 0 binary paths.
+- The cumulative product-snapshot test correctly detected its stale record: expected 545 paths /
+  79,288 additions; measured 558 / 82,314 before this log update. The record will be remeasured and
+  refreshed only after this log commit so the self-referential count reaches a fixed point.
+
 memory: none
