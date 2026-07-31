@@ -33,3 +33,28 @@ supabase/functions/compute-baselines/index.ts -text diff
 # The before-blob has legacy NUL separators; force this transition's text diff
 # so numstat and landing caps can inspect its actual line delta.
 tools/brain-ingest/src/synth/artifact.ts -text diff
+
+# ─── model-training/evidence/*/local-bundle-sha256sums.txt ────────────────────
+# These two files are CONTENT-ADDRESSED: each private R2 release is named
+# `sha256-<hex>` where the hex is the SHA-256 of the file itself
+# (model-training/src/ourobion_model_lab/inference/releases.py re-derives it and
+# fails closed on a mismatch). Their bytes are therefore load-bearing, not just
+# their lines.
+#
+# On the repo's Windows-native dev machine `core.autocrlf=true` checks them out
+# as CRLF, which changes the digest:
+#
+#   zebra-v1    LF e1d09fbd…  ->  CRLF e3806b3b…
+#   viceroy-v0  LF 751fbf1f…  ->  CRLF 45cbf55c…
+#
+# Neither CRLF digest matches the pinned release id, so every inference run and
+# the tracked-pin tests fail on Windows while passing on Linux CI. `text eol=lf`
+# forces the working-tree bytes to LF on every platform, which is what the
+# release ids were taken over.
+model-training/evidence/*/local-bundle-sha256sums.txt text eol=lf
+
+# ─── model-training/inference-manifests/*.jsonl ───────────────────────────────
+# Frozen research inputs. Not currently hashed, but they must be byte-identical
+# across platforms so a prediction file is reproducible from the same manifest
+# on any machine — and so they stay hashable if a pin is added later.
+model-training/inference-manifests/*.jsonl text eol=lf
