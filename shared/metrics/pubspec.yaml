@@ -1,0 +1,7 @@
+name: ourobion_metrics
+description: Shared Ourobion metric registry contract for Dart consumers.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.11.1
