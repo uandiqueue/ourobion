@@ -19,6 +19,15 @@ test('U6b evidence workflow remains path-scoped and supplemental', () => {
 });
 
 test('rollback evidence pins the existing fixture container contract and migration boundary', () => {
+  const rollbackStart = workflow.indexOf('  rollback-fixtures:');
+  const rollbackEnd = workflow.indexOf('  local-four-function-attestation:');
+  const rollback = workflow.slice(rollbackStart, rollbackEnd);
+  assert.ok(rollbackStart >= 0 && rollbackEnd > rollbackStart);
+  assert.ok(rollback.includes('actions/setup-node@v4'));
+  assert.match(rollback, /node-version: '20'/);
+  assert.ok(rollback.includes('Install repository-local tools\n        run: npm ci'));
+  assert.ok(rollback.indexOf('run: npm ci') < rollback.indexOf('node supabase/tests/wellbeing-foundation/local_schema_fixture.mjs'));
+  assert.ok(rollback.indexOf('run: npm ci') < rollback.indexOf('node supabase/tests/metric-view/local_projection_fixture.mjs'));
   assert.match(workflow, /docker rename "\$\{\{ job\.services\.postgres\.id \}\}" supabase_db_ourobion/);
   assert.match(workflow, /ci\/migrations-bootstrap\.sql/);
   assert.match(workflow, /filename" > "20260730020000"/);

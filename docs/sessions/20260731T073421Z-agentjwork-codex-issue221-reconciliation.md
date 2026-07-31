@@ -199,3 +199,34 @@ memory: none
   validate the new provenance.
 
 memory: none
+
+## Continuation — metric fixture dependency remediation
+
+### Attempted
+
+- Reviewed the completed hosted rollback job: the wellbeing fixture passed with the runner-only RLS
+  grants, while the metric projection fixture failed before SQL execution because
+  `tools/metric-view/lib/view.mjs` could not resolve its `tsx` package.
+
+### Changed
+
+- Added pinned Node 20 setup with npm cache and a repository-root `npm ci` before either rollback
+  fixture. This supplies the lockfile-pinned `tsx` dependency in the isolated GitHub runner only.
+- Extended the static workflow contract to require that setup and installation precede both fixture
+  commands.
+
+### Decided
+
+- Do not add database grants or alter product schema/policies: the hosted wellbeing pass confirms
+  the prior RLS remediation. The remaining failure is solely a missing repository-local Node tool.
+
+### Left
+
+- Re-run the hosted rollback evidence and then regenerate derived attestation evidence after fresh
+  graphs and route probes.
+
+### Blockers
+
+- None locally. Dependency installation is deliberately hosted-only for this disposable runner.
+
+memory: none

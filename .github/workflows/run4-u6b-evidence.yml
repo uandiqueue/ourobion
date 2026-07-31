@@ -59,6 +59,12 @@ jobs:
       PGPASSWORD: postgres
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install repository-local tools
+        run: npm ci
       - name: Alias service container for unchanged local fixtures
         run: docker rename "${{ job.services.postgres.id }}" supabase_db_ourobion
       - name: Install pg_cron/pg_net stubs into the fixture container
