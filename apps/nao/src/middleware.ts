@@ -20,7 +20,7 @@
 // access.
 //
 // Flow per request:
-//   1. Skip the allowlist (/login, /how-it-works, Next internals, static
+//   1. Skip the allowlist (/, /login, legacy /how-it-works, Next internals, static
 //      files, favicon).
 //   2. Use @supabase/ssr bound to the request/response cookies to read — and, if
 //      needed, REFRESH — the session. Refreshed cookies are written onto the
@@ -43,12 +43,16 @@ import { verifyAccessToken } from '@/lib/auth';
 
 /** Paths that never require auth. */
 function isPublicPath(pathname: string): boolean {
+  // The canonical Ourobion explainer is the exact root pathname. Do not use
+  // startsWith here: every operation route must continue through the gate.
+  if (pathname === '/') {
+    return true;
+  }
   if (pathname === '/login' || pathname.startsWith('/login/')) {
     return true;
   }
-  // Public explainer (issue #260): a static, unauthenticated page describing
-  // how ourobion/nao work at a high level. It must short-circuit here, before
-  // the env/config read below, so a missing Supabase config cannot block it.
+  // Preserve old public explainer links; the route permanently redirects to
+  // `/`. It must also short-circuit before the env/config read below.
   if (pathname === '/how-it-works' || pathname.startsWith('/how-it-works/')) {
     return true;
   }

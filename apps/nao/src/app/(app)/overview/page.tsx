@@ -1,6 +1,6 @@
 // ourobion nao — Overview dashboard (v1). "What the pipeline did."
 //
-// Server component. Reads corpus-wide aggregates from the D1 index (corpusStats)
+// Protected server component. Reads corpus-wide aggregates from the D1 index (corpusStats)
 // — NEVER R2 per request, NEVER full text. Every number here mirrors the
 // ingestion pipeline's own work: discovery, retrievability, fetch, format
 // conversion. No nao-derived facts, no quality/rating (v1 scope).

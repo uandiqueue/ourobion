@@ -1,7 +1,7 @@
-// ourobion nao — public explainer page tests (issue #260, source-conformance).
+// ourobion nao — public explainer route tests (issues #260 and #226).
 //
 // Same idiom as authz.test.ts / productionBuildContract.test.ts: neither
-// src/middleware.ts nor src/app/how-it-works/page.tsx can be imported under
+// src/middleware.ts nor the Next route/components can be imported under
 // plain `node --test` (the `@/*` path alias is unresolvable and
 // `next/server` / `next/headers` have no ESM `exports` entry plain Node can
 // resolve), so both are read as text and their SHAPE is asserted instead.
@@ -15,15 +15,27 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const NAO_ROOT = path.resolve(__dirname, '..');
 
 const MIDDLEWARE_PATH = path.join(NAO_ROOT, 'src', 'middleware.ts');
-const PAGE_PATH = path.join(NAO_ROOT, 'src', 'app', 'how-it-works', 'page.tsx');
-const APP_GROUP_PAGE_PATH = path.join(NAO_ROOT, 'src', 'app', '(app)', 'page.tsx');
+const ROOT_PAGE_PATH = path.join(NAO_ROOT, 'src', 'app', 'page.tsx');
+const LEGACY_PAGE_PATH = path.join(NAO_ROOT, 'src', 'app', 'how-it-works', 'page.tsx');
+const EXPLAINER_PATH = path.join(NAO_ROOT, 'src', 'components', 'OurobionExplainer.tsx');
+const OVERVIEW_PAGE_PATH = path.join(
+  NAO_ROOT,
+  'src',
+  'app',
+  '(app)',
+  'overview',
+  'page.tsx',
+);
+const LOGIN_PAGE_PATH = path.join(NAO_ROOT, 'src', 'app', 'login', 'page.tsx');
+const TOPBAR_PATH = path.join(NAO_ROOT, 'src', 'components', 'TopBar.tsx');
+const SUBNAV_PATH = path.join(NAO_ROOT, 'src', 'components', 'SubNav.tsx');
 
 function readMiddleware(): string {
   return readFileSync(MIDDLEWARE_PATH, 'utf8');
 }
 
-function readPage(): string {
-  return readFileSync(PAGE_PATH, 'utf8');
+function readExplainer(): string {
+  return readFileSync(EXPLAINER_PATH, 'utf8');
 }
 
 // Same convention as authz.test.ts: this file's own doc comments legitimately
@@ -35,8 +47,8 @@ function stripComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 }
 
-// ── 1. /how-it-works short-circuits before any config/session/role read ────
-test('isPublicPath() allow-lists /how-it-works, and the short-circuit precedes every auth-gate read', () => {
+// ── 1. / and the legacy URL short-circuit before auth-gate reads ─────────
+test('isPublicPath() allow-lists exact / and legacy /how-it-works before every auth-gate read', () => {
   const content = readMiddleware();
 
   const isPublicPathStart = content.indexOf('function isPublicPath');
@@ -46,6 +58,11 @@ test('isPublicPath() allow-lists /how-it-works, and the short-circuit precedes e
   assert.ok(isPublicPathStart < middlewareStart, 'isPublicPath() must be declared before middleware()');
 
   const isPublicPathBody = content.slice(isPublicPathStart, middlewareStart);
+  assert.match(
+    isPublicPathBody,
+    /pathname === '\/'/,
+    'isPublicPath() must allow the exact root pathname',
+  );
   assert.match(
     isPublicPathBody,
     /pathname === '\/how-it-works' \|\| pathname\.startsWith\('\/how-it-works\/'\)/,
@@ -88,7 +105,15 @@ test('middleware still gates every protected surface, and config.matcher is unch
   const middlewareStart = content.indexOf('export async function middleware');
   const isPublicPathBody = content.slice(isPublicPathStart, middlewareStart);
 
-  for (const protectedPath of ['/papers', '/ingest', '/loader', '/claims', '/models', '/api']) {
+  for (const protectedPath of [
+    '/overview',
+    '/papers',
+    '/ingest',
+    '/loader',
+    '/claims',
+    '/models',
+    '/api',
+  ]) {
     assert.doesNotMatch(
       isPublicPathBody,
       new RegExp(protectedPath.replace('/', '\\/')),
@@ -141,7 +166,7 @@ const FORBIDDEN_SPECIFIERS: readonly string[] = [
 
 // ── 3. The page itself: no client directive, no privileged import ──────────
 test('how-it-works/page.tsx has no "use client" and imports none of the forbidden privileged modules', () => {
-  const content = stripComments(readPage());
+  const content = stripComments(readExplainer());
 
   assert.doesNotMatch(content, /^\s*['"]use client['"]/m, 'the page must be a Server Component');
   assert.doesNotMatch(content, /dynamic\s*=\s*['"]force-dynamic['"]/, 'the page must be static');
@@ -154,6 +179,15 @@ test('how-it-works/page.tsx has no "use client" and imports none of the forbidde
   // Prefer zero @/lib/ imports outright, rather than allow-listing individual
   // ones — the page has no legitimate reason to reach into src/lib at all.
   assert.doesNotMatch(content, /from\s+['"]@\/lib\//, 'the page must not import anything from @/lib/');
+});
+
+test('canonical root imports only the reusable explainer, never privileged server modules', () => {
+  const content = stripComments(readFileSync(ROOT_PAGE_PATH, 'utf8'));
+  assert.ok(content.includes('@/components/OurobionExplainer'));
+  for (const specifier of FORBIDDEN_SPECIFIERS) {
+    assert.ok(!content.includes(specifier), `canonical root must not import ${specifier}`);
+  }
+  assert.ok(!content.includes('@/lib/'), 'canonical root must not import anything from @/lib/');
 });
 
 // ── 4. Approved copy is present verbatim, including the /login CTA ─────────
@@ -185,8 +219,8 @@ function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/g, ' ');
 }
 
-test('how-it-works/page.tsx contains every approved copy string verbatim', () => {
-  const content = normalizeWhitespace(readPage());
+test('OurobionExplainer contains every approved copy string verbatim', () => {
+  const content = normalizeWhitespace(readExplainer());
   for (const approved of APPROVED_STRINGS) {
     assert.ok(
       content.includes(normalizeWhitespace(approved)),
@@ -195,8 +229,8 @@ test('how-it-works/page.tsx contains every approved copy string verbatim', () =>
   }
 });
 
-test('how-it-works/page.tsx CTA links to /login', () => {
-  const content = readPage();
+test('OurobionExplainer CTA links to /login', () => {
+  const content = readExplainer();
   assert.match(content, /href="\/login"/, 'the "Sign in to nao" CTA must link to /login');
 });
 
@@ -221,7 +255,7 @@ const FORBIDDEN_WORDS: readonly string[] = [
 ];
 
 test("how-it-works/page.tsx copy has no digit-bearing metric claim (%) or disallowed vocabulary", () => {
-  const content = stripComments(readPage());
+  const content = stripComments(readExplainer());
   const stylesStart = content.indexOf('const styles: Record<string, CSSProperties>');
   assert.ok(stylesStart !== -1, 'expected a trailing styles object (login/page.tsx convention)');
   const copy = content.slice(0, stylesStart);
@@ -233,16 +267,37 @@ test("how-it-works/page.tsx copy has no digit-bearing metric claim (%) or disall
   }
 });
 
-// ── 6. The page lives outside (app), and / was NOT made public ─────────────
-test('how-it-works/page.tsx lives outside the (app) route group, and / is still gated behind D1', () => {
-  const relative = path.relative(NAO_ROOT, PAGE_PATH).split(path.sep).join('/');
-  assert.equal(relative, 'src/app/how-it-works/page.tsx');
+// ── 6. Canonical public root and protected operations topology ─────────────
+test('root is the explainer while Overview and post-login navigation stay protected', () => {
+  const relative = path.relative(NAO_ROOT, ROOT_PAGE_PATH).split(path.sep).join('/');
+  assert.equal(relative, 'src/app/page.tsx');
   assert.ok(!relative.includes('(app)'), 'the public page must not live inside the (app) route group');
 
-  const rootPageContent = readFileSync(APP_GROUP_PAGE_PATH, 'utf8');
-  assert.match(
-    rootPageContent,
-    /from ['"]@\/lib\/d1['"]/,
-    '/ (src/app/(app)/page.tsx) must still import @/lib/d1 — it must remain gated, not made public',
+  const rootPageContent = readFileSync(ROOT_PAGE_PATH, 'utf8');
+  assert.ok(
+    rootPageContent.includes('OurobionExplainer'),
+    'the canonical root must render the shared explainer component',
   );
+
+  const legacyPageContent = readFileSync(LEGACY_PAGE_PATH, 'utf8');
+  assert.match(
+    legacyPageContent,
+    /permanentRedirect\('\/'\)/,
+    'the legacy explainer URL must permanently redirect to the canonical root',
+  );
+
+  const overviewPageContent = readFileSync(OVERVIEW_PAGE_PATH, 'utf8');
+  assert.match(
+    overviewPageContent,
+    /from ['"]@\/lib\/d1['"]/,
+    '/overview must still import @/lib/d1 and remain inside the gated app group',
+  );
+
+  const loginPageContent = readFileSync(LOGIN_PAGE_PATH, 'utf8');
+  const topBarContent = readFileSync(TOPBAR_PATH, 'utf8');
+  const subNavContent = readFileSync(SUBNAV_PATH, 'utf8');
+  assert.match(loginPageContent, /\?\? '\/overview'/, 'login must default to protected Overview');
+  assert.match(topBarContent, /router\.push\('\/overview'\)/, 'brand must open Overview');
+  assert.match(subNavContent, /href: '\/overview'/, 'Overview tab must target /overview');
+  assert.match(subNavContent, /\?\? '\/overview'/, 'Overview fallback must stay protected');
 });
