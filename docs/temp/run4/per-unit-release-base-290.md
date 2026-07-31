@@ -42,6 +42,8 @@ node tools/run4_release_gate.mjs product-cap --head <head>
 | #290/#296 merge | `f8cb75251f0602395bdf88285e18d00525b88db4` | 512 | 71,841 | `withinCap: false` |
 | Audit-session base | `253e0ad6db31bb2a134e47546ddaba84bf284639` | 533 | 75,645 | `withinCap: false` |
 | Session A / PR #292 integration merge | `dea055c8155c1e9c6851931f4de9816a88d66b2d` | 536 | 76,360 | `withinCap: false` |
+| #300 / PR #306 integration merge | `abcba95f8386d31c49f62f20f4b623de180e29c0` | 544 | 79,125 | `withinCap: false` |
+| PR #305 rebased head before landing | `46c7e873727a75aa9a0321cee48ec0d5309476cb` | 549 | 79,554 | `withinCap: false` |
 
 Both use the fixed product base. They are moving-head measurements, not new caps. The original
 115-path / 8,500-line whole-product envelope remains exceeded under the owner-approved issue #264
