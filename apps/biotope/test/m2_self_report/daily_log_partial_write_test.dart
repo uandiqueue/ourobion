@@ -1,4 +1,6 @@
-// UI gap 5 — the data-loss guard for the Scan tab's inline chip answers.
+// UI gap 5 — the data-loss guard for the Scan tab's inline chip answers,
+// and #268 acceptance item 7: EVERY one of the seven daily-core metrics is
+// proven to produce a single-column patch, at BOTH ends of its accepted range.
 //
 // THE RISK: `DailyLogService.saveDailyLog` upserts the WHOLE row. It names every
 // column explicitly, including the ones the caller left null. That is correct
@@ -313,6 +315,163 @@ void main() {
           reason: 'the safe path must have kept "$column"',
         );
       }
+    });
+  });
+
+  group('every one of the seven metrics, at BOTH ends of its range', () {
+    // #268 acceptance item 7. The bounds come from kInlineAnswerableOptions
+    // rather than being retyped here; inline_control_range_test.dart is what
+    // ties those option lists to shared/metrics/registry.dart, so a range that
+    // drifts from the registry fails there and the bounds used here follow it.
+    //
+    // Both ends matter for two different reasons. The TOP end is the value a
+    // truncated control would fail to offer. The BOTTOM end is where 0 is a
+    // real answer for outside_meals and mosquito_bites — a completeness check
+    // written as `if (value)` rather than `!= null` would silently drop 20
+    // points for "no meals out today".
+    for (final metricKey in kDailyCoreDqsWeights.keys) {
+      final options = kInlineAnswerableOptions[metricKey]!;
+      for (final entry in {'lowest': options.first, 'highest': options.last}.entries) {
+        final bound = entry.key;
+        final value = entry.value;
+
+        test('$metricKey at its $bound value ($value) patches only three '
+            'columns', () {
+          final patch = DailyLogService.buildFieldPatch(
+            existingRow: _fullyPopulatedRow()..[metricKey] = null,
+            metricKey: metricKey,
+            value: value,
+            now: _now,
+          );
+
+          expect(
+            patch.keys.toSet(),
+            equals({metricKey, 'log_completeness', 'updated_at'}),
+            reason: 'any extra key here is a column the UPDATE overwrites',
+          );
+          expect(
+            patch[metricKey],
+            value,
+            reason: 'the stored value must be the answer, unclamped',
+          );
+        });
+
+        test('$metricKey at its $bound value ($value) names none of the other '
+            'columns of an existing row', () {
+          final before = _fullyPopulatedRow()..[metricKey] = null;
+          final patch = DailyLogService.buildFieldPatch(
+            existingRow: before,
+            metricKey: metricKey,
+            value: value,
+            now: _now,
+          );
+
+          // ABSENCE is the guard: a column the patch never names is a column
+          // PostgREST leaves exactly as it was.
+          for (final column in before.keys) {
+            if (_permittedChanges(metricKey).contains(column)) continue;
+            expect(
+              patch.containsKey(column),
+              isFalse,
+              reason:
+                  'answering "$metricKey" would write "$column" as well — '
+                  'that column belongs to whatever else the user logged today',
+            );
+          }
+        });
+
+        test('$metricKey at its $bound value ($value) leaves the stored row '
+            'byte-identical everywhere else', () {
+          final before = _fullyPopulatedRow()..[metricKey] = null;
+          final after = _applyWrite(
+            before,
+            DailyLogService.buildFieldPatch(
+              existingRow: before,
+              metricKey: metricKey,
+              value: value,
+              now: _now,
+            ),
+          );
+
+          expect(after.keys.toSet(), equals(before.keys.toSet()));
+          for (final column in before.keys) {
+            if (_permittedChanges(metricKey).contains(column)) continue;
+            expect(
+              jsonEncode(after[column]),
+              equals(jsonEncode(before[column])),
+              reason: 'column "$column" changed while answering "$metricKey" '
+                  'with its $bound value',
+            );
+          }
+          expect(after[metricKey], value);
+        });
+
+        test('$metricKey at its $bound value ($value) counts toward '
+            'completeness', () {
+          // The row starts with only this metric missing, so answering it must
+          // take completeness to 100 — including when the answer is 0.
+          final before = _fullyPopulatedRow()
+            ..['mood_score'] = 3
+            ..[metricKey] = null;
+          final patch = DailyLogService.buildFieldPatch(
+            existingRow: before,
+            metricKey: metricKey,
+            value: value,
+            now: _now,
+          );
+
+          expect(
+            patch['log_completeness'],
+            100.0,
+            reason: value == 0
+                ? '0 is a real answer for "$metricKey"; a falsy check here '
+                    'would drop ${kDailyCoreDqsWeights[metricKey]} points'
+                : 'every other daily-core column is already logged',
+          );
+        });
+
+        test('$metricKey at its $bound value ($value) is the same patch with '
+            'no row yet today', () {
+          final patch = DailyLogService.buildFieldPatch(
+            existingRow: null,
+            metricKey: metricKey,
+            value: value,
+            now: _now,
+          );
+
+          expect(
+            patch.keys.toSet(),
+            equals({metricKey, 'log_completeness', 'updated_at'}),
+          );
+          expect(patch[metricKey], value);
+          expect(
+            patch['log_completeness'],
+            kDailyCoreDqsWeights[metricKey]!.toDouble(),
+            reason: 'completeness comes from the single answer alone',
+          );
+        });
+      }
+    }
+
+    test('the seven metrics covered above are the seven daily-core keys', () {
+      expect(kDailyCoreDqsWeights.length, 7);
+      expect(
+        kInlineAnswerableOptions.keys.toSet(),
+        equals(kDailyCoreDqsWeights.keys.toSet()),
+        reason: 'a metric answerable inline but not looped here would be '
+            'untested at its bounds',
+      );
+    });
+
+    test('updated_at is stamped, and is the only clock the patch touches', () {
+      final patch = DailyLogService.buildFieldPatch(
+        existingRow: _fullyPopulatedRow(),
+        metricKey: 'energy_score',
+        value: 5,
+        now: _now,
+      );
+      expect(patch['updated_at'], _now.toIso8601String());
+      expect(patch.containsKey('created_at'), isFalse);
     });
   });
 
