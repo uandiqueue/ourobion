@@ -26,6 +26,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:src/modules/m2_self_report/impl/logging_controller.dart';
 import 'package:src/modules/m2_self_report/impl/normaliser.dart';
 import 'package:src/modules/m2_self_report/ui/screens/scan_tab.dart';
+import 'package:src/modules/m3_passive_health/index.dart';
 import 'package:src/modules/m5a_baselines/index.dart' show metricDisplayLabel;
 
 import 'scan_test_support.dart';
@@ -63,7 +64,150 @@ class _AnsweringListState extends State<_AnsweringList> {
   );
 }
 
+/// State behind the real [ScanTab] injection seam. It mirrors the normal
+/// server result only at its boundary; the tab's own private state machine,
+/// gap list, save/reload sequence, SnackBar and navigation behavior all run.
+class _ScanRuntime {
+  _ScanRuntime({required this.row, this.failSave = false});
+
+  final Map<String, dynamic> row;
+  final bool failSave;
+  final List<(String, int)> saves = [];
+  final List<double> engagementUpdates = [];
+
+  Future<Map<String, dynamic>?> loadToday() async => {...row};
+  Future<WearableReading?> syncWearable() async => null;
+
+  Future<double> saveFieldAnswer(String key, int value) async {
+    saves.add((key, value));
+    if (failSave) throw StateError('simulated save failure');
+    row[key] = value;
+    final total = kDailyCoreDqsWeights.entries
+        .where((entry) => row[entry.key] != null)
+        .fold<int>(0, (sum, entry) => sum + entry.value);
+    row['log_completeness'] = total.toDouble();
+    return total.toDouble();
+  }
+
+  Future<void> updateEngagement(double completeness) async {
+    engagementUpdates.add(completeness);
+  }
+}
+
+Map<String, dynamic> _scanRowWithGaps(Iterable<String> gaps) => {
+  for (final key in kDailyCoreDqsWeights.keys)
+    key: gaps.contains(key) ? null : 3,
+  'log_completeness': kDailyCoreDqsWeights.entries
+      .where((entry) => !gaps.contains(entry.key))
+      .fold<int>(0, (sum, entry) => sum + entry.value)
+      .toDouble(),
+};
+
+Widget _realScanHarness(_ScanRuntime runtime, {_RouteLog? routes}) =>
+    MaterialApp(
+      navigatorObservers: routes == null ? const [] : [routes],
+      home: MediaQuery(
+        data: const MediaQueryData(size: Size(390, 844)),
+        child: ScanTab(
+          loadToday: runtime.loadToday,
+          syncWearable: runtime.syncWearable,
+          saveFieldAnswer: runtime.saveFieldAnswer,
+          updateEngagement: runtime.updateEngagement,
+          sweepFloor: Duration.zero,
+        ),
+      ),
+    );
+
 void main() {
+  group('the real ScanTab state machine', () {
+    testWidgets(
+      'keeps one card open, saves inline, reloads, and never navigates',
+      (tester) async {
+        final runtime = _ScanRuntime(
+          row: _scanRowWithGaps(const ['mood_score', 'energy_score']),
+        );
+        final routes = _RouteLog();
+        await tester.pumpWidget(_realScanHarness(runtime, routes: routes));
+        // Idle has the intentional perpetual globe-breathe animation, so it can
+        // never settle. Two frames are enough for the injected initial read.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 1));
+        final routeCount = routes.pushed.length;
+
+        final runSweep = find.text('Run sweep');
+        await tester.ensureVisible(runSweep);
+        await tester.tap(runSweep);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(find.textContaining('NEEDS YOU'), findsOneWidget);
+
+        await tester.ensureVisible(findGapCard('mood_score'));
+        await tapGapCard(tester, 'mood_score');
+        expect(findExpandedArea('mood_score'), findsOneWidget);
+        await tester.ensureVisible(findGapCard('energy_score'));
+        await tapGapCard(tester, 'energy_score');
+        expect(findExpandedArea('mood_score'), findsNothing);
+        expect(findExpandedArea('energy_score'), findsOneWidget);
+
+        await tester.ensureVisible(findChip('energy_score', 5));
+        await tester.tap(findChip('energy_score', 5));
+        await tester.pumpAndSettle();
+        expect(runtime.saves, [('energy_score', 5)]);
+        expect(runtime.engagementUpdates, [93.0]);
+        expect(
+          findExpandedArea('energy_score'),
+          findsNothing,
+          reason: 'only a landed save followed by reload closes the card',
+        );
+        expect(
+          find.text(ScanTabCopy.answerLabel('energy_score', 5)),
+          findsOneWidget,
+        );
+        expect(
+          routes.pushed.length,
+          routeCount,
+          reason: 'the primary inline action must not open DailyLogScreen',
+        );
+      },
+    );
+
+    testWidgets(
+      'a failed save leaves the actual card open and reports the error',
+      (tester) async {
+        final runtime = _ScanRuntime(
+          row: _scanRowWithGaps(const ['mood_score']),
+          failSave: true,
+        );
+        await tester.pumpWidget(_realScanHarness(runtime));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 1));
+        final runSweep = find.text('Run sweep');
+        await tester.ensureVisible(runSweep);
+        await tester.tap(runSweep);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.ensureVisible(findGapCard('mood_score'));
+        await tapGapCard(tester, 'mood_score');
+        await tester.ensureVisible(findChip('mood_score', 4));
+        await tester.tap(findChip('mood_score', 4));
+        await tester.pumpAndSettle();
+
+        expect(runtime.saves, [('mood_score', 4)]);
+        expect(
+          runtime.engagementUpdates,
+          isEmpty,
+          reason: 'bookkeeping follows a successful persistence only',
+        );
+        expect(
+          findExpandedArea('mood_score'),
+          findsOneWidget,
+          reason: 'a failed write must not pretend the answer was saved',
+        );
+        expect(find.text(ScanTabCopy.gapSaveFailed), findsOneWidget);
+      },
+    );
+  });
+
   group('item 8 · the environment row stays truthfully "Not built"', () {
     testWidgets('it names the absence instead of promising a delivery', (
       tester,
@@ -151,7 +295,8 @@ void main() {
         expect(
           body.contains(token),
           isFalse,
-          reason: 'EnvironmentRow exposes "$token" — an unbuilt channel must '
+          reason:
+              'EnvironmentRow exposes "$token" — an unbuilt channel must '
               'not be one argument away from looking operable',
         );
       }
@@ -198,7 +343,9 @@ void main() {
 
     testWidgets('an answered card collapses into a logged state naming the '
         'saved value', (tester) async {
-      await tester.pumpWidget(scanHarness(const _AnsweringList(['stool_form'])));
+      await tester.pumpWidget(
+        scanHarness(const _AnsweringList(['stool_form'])),
+      );
 
       await tapGapCard(tester, 'stool_form');
       expect(findExpandedArea('stool_form'), findsOneWidget);
@@ -209,13 +356,15 @@ void main() {
       expect(
         findExpandedArea('stool_form'),
         findsNothing,
-        reason: 'the card must settle itself once the write lands — no extra tap',
+        reason:
+            'the card must settle itself once the write lands — no extra tap',
       );
       expect(find.text(ScanTabCopy.gapLogged), findsOneWidget);
       expect(
         find.text(ScanTabCopy.answerLabel('stool_form', 4)),
         findsOneWidget,
-        reason: 'a logged card must say WHAT was logged, not just that '
+        reason:
+            'a logged card must say WHAT was logged, not just that '
             'something was',
       );
       expect(find.text(ScanTabCopy.gapSaved), findsOneWidget);
@@ -229,7 +378,9 @@ void main() {
     testWidgets('the logged state offers a way back in, and it works', (
       tester,
     ) async {
-      await tester.pumpWidget(scanHarness(const _AnsweringList(['mood_score'])));
+      await tester.pumpWidget(
+        scanHarness(const _AnsweringList(['mood_score'])),
+      );
       await tapGapCard(tester, 'mood_score');
       await tester.tap(findChip('mood_score', 5));
       await tester.pump();
@@ -245,7 +396,10 @@ void main() {
       // Re-answering writes the new value.
       await tester.tap(findChip('mood_score', 2));
       await tester.pump();
-      expect(find.text(ScanTabCopy.answerLabel('mood_score', 2)), findsOneWidget);
+      expect(
+        find.text(ScanTabCopy.answerLabel('mood_score', 2)),
+        findsOneWidget,
+      );
     });
 
     testWidgets('a write in flight makes the card inert and says so', (
@@ -342,7 +496,9 @@ void main() {
       for (final key in [...keys, ...keys.reversed]) {
         await tester.ensureVisible(findGapCard(key));
         await tapGapCard(tester, key);
-        final open = keys.where((k) => findExpandedArea(k).evaluate().isNotEmpty);
+        final open = keys.where(
+          (k) => findExpandedArea(k).evaluate().isNotEmpty,
+        );
         expect(
           open.length,
           lessThanOrEqualTo(1),
@@ -369,7 +525,8 @@ void main() {
       expect(
         findExpandedArea('mood_score'),
         findsOneWidget,
-        reason: 'the open card is inert to its own tap; answering or opening '
+        reason:
+            'the open card is inert to its own tap; answering or opening '
             'another card is what closes it',
       );
       expect(
@@ -379,7 +536,9 @@ void main() {
     });
 
     testWidgets('answering is what closes the last open card', (tester) async {
-      await tester.pumpWidget(scanHarness(const _AnsweringList(['mood_score'])));
+      await tester.pumpWidget(
+        scanHarness(const _AnsweringList(['mood_score'])),
+      );
 
       await tapGapCard(tester, 'mood_score');
       expect(findExpandedArea('mood_score'), findsOneWidget);
@@ -390,209 +549,225 @@ void main() {
     });
   });
 
-  group('item 5 · the primary inline action never opens the full Daily Log', () {
-    for (final metricKey in kDailyCoreDqsWeights.keys) {
-      testWidgets('$metricKey expands in place and pushes no route', (
+  group(
+    'item 5 · the primary inline action never opens the full Daily Log',
+    () {
+      for (final metricKey in kDailyCoreDqsWeights.keys) {
+        testWidgets('$metricKey expands in place and pushes no route', (
+          tester,
+        ) async {
+          final routes = _RouteLog();
+          final answers = <String, int>{};
+          await tester.pumpWidget(
+            scanHarness(
+              ScanGapListHost(
+                metricKeys: [metricKey],
+                onAnswer: (k, v) => answers[k] = v,
+              ),
+              navigatorObservers: [routes],
+            ),
+          );
+          final afterMount = routes.pushed.length;
+
+          await tapGapCard(tester, metricKey);
+          expect(
+            findExpandedArea(metricKey),
+            findsOneWidget,
+            reason: '$metricKey must be answerable without leaving the tab',
+          );
+
+          final first = kInlineAnswerableOptions[metricKey]!.first;
+          await tester.tap(findChip(metricKey, first));
+          await tester.pumpAndSettle();
+
+          expect(answers, {metricKey: first});
+          expect(
+            routes.pushed.length,
+            afterMount,
+            reason:
+                'answering $metricKey pushed a route — the card\'s main '
+                'interaction must not open DailyLogScreen',
+          );
+        });
+      }
+
+      testWidgets('no card offers the full log as an escape hatch either', (
         tester,
       ) async {
-        final routes = _RouteLog();
+        for (final key in dailyCoreKeys) {
+          await tester.pumpWidget(scanHarness(gapCard(key, expanded: true)));
+          expect(find.textContaining('Daily Log'), findsNothing);
+          expect(find.textContaining('full log'), findsNothing);
+          expect(find.textContaining('Open the'), findsNothing);
+        }
+      });
+
+      test('the gap card cannot navigate: it holds no route and no screen', () {
+        final body = declarationBody(scanTabSource(), 'GapCard');
+        for (final token in [
+          'Navigator',
+          'MaterialPageRoute',
+          'DailyLogScreen',
+          'onOpenFullLog',
+        ]) {
+          expect(
+            body.contains(token),
+            isFalse,
+            reason: 'GapCard mentions "$token"',
+          );
+        }
+      });
+
+      test('the whole tab never pushes a route for an inline answer', () {
+        final source = scanTabSource();
+        expect(source.contains('Navigator.'), isFalse);
+        expect(source.contains('MaterialPageRoute'), isFalse);
+        expect(
+          source.contains("import '../screens/daily_log_screen.dart'"),
+          isFalse,
+        );
+        expect(
+          RegExp(
+            r'''import\s+['"][^'"]*daily_log_screen\.dart['"]''',
+          ).hasMatch(source),
+          isFalse,
+          reason: 'the Scan tab does not depend on the full Daily Log at all',
+        );
+      });
+    },
+  );
+
+  group(
+    'item 9 · every inline option is a labelled button for assistive tech',
+    () {
+      for (final metricKey in kDailyCoreDqsWeights.keys) {
+        testWidgets(
+          '$metricKey exposes one labelled button per accepted value',
+          (tester) async {
+            final handle = tester.ensureSemantics();
+            await tester.pumpWidget(
+              scanHarness(gapCard(metricKey, expanded: true)),
+            );
+
+            for (final option in kInlineAnswerableOptions[metricKey]!) {
+              final label = chipSemanticLabel(metricKey, option);
+              expect(
+                find.bySemanticsLabel(label),
+                findsOneWidget,
+                reason:
+                    '"$label" must be announced — a bare "$option" says '
+                    'nothing about which scale it belongs to',
+              );
+              expect(
+                tester.getSemantics(find.bySemanticsLabel(label)),
+                matchesSemantics(
+                  label: label,
+                  isButton: true,
+                  hasEnabledState: true,
+                  isEnabled: true,
+                  hasTapAction: true,
+                ),
+              );
+            }
+            handle.dispose();
+          },
+        );
+      }
+
+      testWidgets('the semantics tap action answers, not just the pointer', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
         final answers = <String, int>{};
         await tester.pumpWidget(
           scanHarness(
             ScanGapListHost(
-              metricKeys: [metricKey],
+              metricKeys: const ['mood_score'],
               onAnswer: (k, v) => answers[k] = v,
             ),
-            navigatorObservers: [routes],
           ),
         );
-        final afterMount = routes.pushed.length;
+        await tapGapCard(tester, 'mood_score');
 
-        await tapGapCard(tester, metricKey);
-        expect(
-          findExpandedArea(metricKey),
-          findsOneWidget,
-          reason: '$metricKey must be answerable without leaving the tab',
+        tester.semantics.performAction(
+          find.semantics.byLabel(chipSemanticLabel('mood_score', 5)),
+          SemanticsAction.tap,
         );
+        await tester.pump();
 
-        final first = kInlineAnswerableOptions[metricKey]!.first;
-        await tester.tap(findChip(metricKey, first));
-        await tester.pumpAndSettle();
-
-        expect(answers, {metricKey: first});
-        expect(
-          routes.pushed.length,
-          afterMount,
-          reason: 'answering $metricKey pushed a route — the card\'s main '
-              'interaction must not open DailyLogScreen',
-        );
+        expect(answers, {'mood_score': 5});
+        handle.dispose();
       });
-    }
 
-    testWidgets('no card offers the full log as an escape hatch either', (
-      tester,
-    ) async {
-      for (final key in dailyCoreKeys) {
-        await tester.pumpWidget(scanHarness(gapCard(key, expanded: true)));
-        expect(find.textContaining('Daily Log'), findsNothing);
-        expect(find.textContaining('full log'), findsNothing);
-        expect(find.textContaining('Open the'), findsNothing);
-      }
-    });
-
-    test('the gap card cannot navigate: it holds no route and no screen', () {
-      final body = declarationBody(scanTabSource(), 'GapCard');
-      for (final token in [
-        'Navigator',
-        'MaterialPageRoute',
-        'DailyLogScreen',
-        'onOpenFullLog',
-      ]) {
-        expect(
-          body.contains(token),
-          isFalse,
-          reason: 'GapCard mentions "$token"',
-        );
-      }
-    });
-
-    test('the whole tab never pushes a route for an inline answer', () {
-      final source = scanTabSource();
-      expect(source.contains('Navigator.'), isFalse);
-      expect(source.contains('MaterialPageRoute'), isFalse);
-      expect(
-        source.contains("import '../screens/daily_log_screen.dart'"),
-        isFalse,
-      );
-      expect(
-        RegExp(r'''import\s+['"][^'"]*daily_log_screen\.dart['"]''')
-            .hasMatch(source),
-        isFalse,
-        reason: 'the Scan tab does not depend on the full Daily Log at all',
-      );
-    });
-  });
-
-  group('item 9 · every inline option is a labelled button for assistive tech', () {
-    for (final metricKey in kDailyCoreDqsWeights.keys) {
-      testWidgets('$metricKey exposes one labelled button per accepted value', (
+      testWidgets('a saving card announces its options as disabled', (
         tester,
       ) async {
         final handle = tester.ensureSemantics();
-        await tester.pumpWidget(scanHarness(gapCard(metricKey, expanded: true)));
+        await tester.pumpWidget(
+          scanHarness(gapCard('energy_score', expanded: true, saving: true)),
+        );
 
-        for (final option in kInlineAnswerableOptions[metricKey]!) {
-          final label = chipSemanticLabel(metricKey, option);
-          expect(
-            find.bySemanticsLabel(label),
-            findsOneWidget,
-            reason: '"$label" must be announced — a bare "$option" says '
-                'nothing about which scale it belongs to',
-          );
-          expect(
-            tester.getSemantics(find.bySemanticsLabel(label)),
-            matchesSemantics(
-              label: label,
-              isButton: true,
-              hasEnabledState: true,
-              isEnabled: true,
-              hasTapAction: true,
-            ),
-          );
+        final label = chipSemanticLabel('energy_score', 3);
+        expect(
+          tester.getSemantics(find.bySemanticsLabel(label)),
+          matchesSemantics(
+            label: label,
+            isButton: true,
+            hasEnabledState: true,
+            isEnabled: false,
+          ),
+        );
+        handle.dispose();
+      });
+
+      testWidgets('the option label reads back the metric, not just a digit', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          scanHarness(gapCard('gut_comfort_score', expanded: true)),
+        );
+        final label = chipSemanticLabel('gut_comfort_score', 1);
+        expect(label, 'Gut comfort score 1');
+        expect(
+          label.startsWith(metricDisplayLabel('gut_comfort_score')),
+          isTrue,
+        );
+        expect(find.bySemanticsLabel(label), findsOneWidget);
+        handle.dispose();
+      });
+
+      testWidgets('the merged tab has no stepper, so there is no unlabelled '
+          'increment or decrement to find', (tester) async {
+        // #268 requires "any stepper exposes labelled increment/decrement".
+        // The merged implementation answers mosquito_bites (0..20) with 21 chips
+        // rather than a stepper, so the clause is satisfied by absence — and this
+        // fails the day a stepper is introduced without labelled controls.
+        final handle = tester.ensureSemantics();
+        for (final key in dailyCoreKeys) {
+          await tester.pumpWidget(scanHarness(gapCard(key, expanded: true)));
+          for (final icon in [
+            Icons.add,
+            Icons.add_rounded,
+            Icons.remove,
+            Icons.remove_rounded,
+          ]) {
+            expect(
+              find.byIcon(icon),
+              findsNothing,
+              reason:
+                  '$key grew a stepper control; assert its increment and '
+                  'decrement carry labels',
+            );
+          }
+          expect(find.byType(Slider), findsNothing);
+          expect(find.bySemanticsLabel(RegExp('^Increase')), findsNothing);
+          expect(find.bySemanticsLabel(RegExp('^Decrease')), findsNothing);
         }
         handle.dispose();
       });
-    }
-
-    testWidgets('the semantics tap action answers, not just the pointer', (
-      tester,
-    ) async {
-      final handle = tester.ensureSemantics();
-      final answers = <String, int>{};
-      await tester.pumpWidget(
-        scanHarness(
-          ScanGapListHost(
-            metricKeys: const ['mood_score'],
-            onAnswer: (k, v) => answers[k] = v,
-          ),
-        ),
-      );
-      await tapGapCard(tester, 'mood_score');
-
-      tester.semantics.performAction(
-        find.semantics.byLabel(chipSemanticLabel('mood_score', 5)),
-        SemanticsAction.tap,
-      );
-      await tester.pump();
-
-      expect(answers, {'mood_score': 5});
-      handle.dispose();
-    });
-
-    testWidgets('a saving card announces its options as disabled', (
-      tester,
-    ) async {
-      final handle = tester.ensureSemantics();
-      await tester.pumpWidget(
-        scanHarness(gapCard('energy_score', expanded: true, saving: true)),
-      );
-
-      final label = chipSemanticLabel('energy_score', 3);
-      expect(
-        tester.getSemantics(find.bySemanticsLabel(label)),
-        matchesSemantics(
-          label: label,
-          isButton: true,
-          hasEnabledState: true,
-          isEnabled: false,
-        ),
-      );
-      handle.dispose();
-    });
-
-    testWidgets('the option label reads back the metric, not just a digit', (
-      tester,
-    ) async {
-      final handle = tester.ensureSemantics();
-      await tester.pumpWidget(
-        scanHarness(gapCard('gut_comfort_score', expanded: true)),
-      );
-      final label = chipSemanticLabel('gut_comfort_score', 1);
-      expect(label, 'Gut comfort score 1');
-      expect(label.startsWith(metricDisplayLabel('gut_comfort_score')), isTrue);
-      expect(find.bySemanticsLabel(label), findsOneWidget);
-      handle.dispose();
-    });
-
-    testWidgets('the merged tab has no stepper, so there is no unlabelled '
-        'increment or decrement to find', (tester) async {
-      // #268 requires "any stepper exposes labelled increment/decrement".
-      // The merged implementation answers mosquito_bites (0..20) with 21 chips
-      // rather than a stepper, so the clause is satisfied by absence — and this
-      // fails the day a stepper is introduced without labelled controls.
-      final handle = tester.ensureSemantics();
-      for (final key in dailyCoreKeys) {
-        await tester.pumpWidget(scanHarness(gapCard(key, expanded: true)));
-        for (final icon in [
-          Icons.add,
-          Icons.add_rounded,
-          Icons.remove,
-          Icons.remove_rounded,
-        ]) {
-          expect(
-            find.byIcon(icon),
-            findsNothing,
-            reason: '$key grew a stepper control; assert its increment and '
-                'decrement carry labels',
-          );
-        }
-        expect(find.byType(Slider), findsNothing);
-        expect(find.bySemanticsLabel(RegExp('^Increase')), findsNothing);
-        expect(find.bySemanticsLabel(RegExp('^Decrease')), findsNothing);
-      }
-      handle.dispose();
-    });
-  });
+    },
+  );
 
   group('the harness above is the screen\'s own wiring, not an invention', () {
     // ScanGapListHost stands in for `_ScanTabState`, which cannot be pumped.
@@ -634,13 +809,17 @@ void main() {
       expect(
         answerInline.contains('setState(() => _openGapKey = null);'),
         isTrue,
-        reason: 'without this the answered card would stay expanded over its '
+        reason:
+            'without this the answered card would stay expanded over its '
             'own logged state',
       );
     });
 
     test('each card gets its stored value and its full option list', () {
-      expect(tabState.contains('options: kInlineAnswerableOptions[key]!,'), isTrue);
+      expect(
+        tabState.contains('options: kInlineAnswerableOptions[key]!,'),
+        isTrue,
+      );
       expect(
         tabState.contains('currentValue: (_todayRow?[key] as num?)?.toInt(),'),
         isTrue,
@@ -649,15 +828,18 @@ void main() {
     });
 
     test('an inline answer goes through the single-column write', () {
-      expect(tabState.contains('onAnswer: (value) => _answerInline(key, value),'),
-          isTrue);
+      expect(
+        tabState.contains('onAnswer: (value) => _answerInline(key, value),'),
+        isTrue,
+      );
       final answerInline = source.substring(
         source.indexOf('Future<void> _answerInline'),
       );
       expect(
         answerInline.contains('.saveFieldAnswer('),
         isTrue,
-        reason: 'saveDailyLog would upsert the whole row and null out '
+        reason:
+            'saveDailyLog would upsert the whole row and null out '
             'everything else logged today',
       );
       expect(answerInline.contains('saveDailyLog('), isFalse);

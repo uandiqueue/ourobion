@@ -23,8 +23,10 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:src/modules/m2_self_report/impl/logging_controller.dart';
 import 'package:src/modules/m2_self_report/impl/normaliser.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _userId = '8f14e45f-ceea-467f-a1d2-91a2b3c4d5e6';
 const _logDate = '2026-07-28';
@@ -80,6 +82,76 @@ Set<String> _permittedChanges(String metricKey) => {
   'log_completeness',
   'updated_at',
 };
+
+/// An offline, request-level PostgREST recorder. It is deliberately below the
+/// service rather than a fake [DailyLogService]: the assertions therefore
+/// exercise `saveFieldAnswer`'s real get/update/insert decision and the exact
+/// HTTP operation the Supabase/PostgREST client receives.
+class _RecordedRequest {
+  final String method;
+  final Uri uri;
+  final String body;
+
+  const _RecordedRequest(this.method, this.uri, this.body);
+
+  Map<String, dynamic> get json => body.isEmpty
+      ? const <String, dynamic>{}
+      : jsonDecode(body) as Map<String, dynamic>;
+}
+
+class _OfflinePostgrestClient extends http.BaseClient {
+  final List<_RecordedRequest> requests = [];
+  final Map<String, dynamic>? existingRow;
+
+  _OfflinePostgrestClient({this.existingRow});
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final body = utf8.decode(await request.finalize().toBytes());
+    final recorded = _RecordedRequest(request.method, request.url, body);
+    requests.add(recorded);
+
+    Object response = const <Object>[];
+    if (request.method == 'GET' &&
+        request.url.path.endsWith('daily_gut_rows')) {
+      response = existingRow == null ? const <Object>[] : [existingRow];
+    } else if (request.method == 'GET' &&
+        request.url.path.endsWith('profiles')) {
+      response = const {'region': 'Singapore'};
+    } else if (request.method == 'GET' &&
+        request.url.path.endsWith('antibiotic_courses')) {
+      response = const <Object>[];
+    }
+    final bytes = utf8.encode(jsonEncode(response));
+    return http.StreamedResponse(
+      Stream<List<int>>.value(bytes),
+      200,
+      headers: {
+        'content-type': 'application/json',
+        'content-length': bytes.length.toString(),
+      },
+      request: request,
+    );
+  }
+}
+
+SupabaseClient _offlineSupabase(_OfflinePostgrestClient client) =>
+    SupabaseClient(
+      'http://offline.test',
+      'test-key',
+      httpClient: client,
+      authOptions: const AuthClientOptions(autoRefreshToken: false),
+    );
+
+_RecordedRequest _onlyWrite(_OfflinePostgrestClient client) =>
+    client.requests.singleWhere(
+      (request) =>
+          request.uri.path.endsWith('daily_gut_rows') &&
+          request.method != 'GET',
+    );
+
+_RecordedRequest _dailyRead(_OfflinePostgrestClient client) => client.requests
+    .firstWhere((request) => request.uri.path.endsWith('daily_gut_rows'));
 
 void main() {
   group(
@@ -331,7 +403,10 @@ void main() {
     // points for "no meals out today".
     for (final metricKey in kDailyCoreDqsWeights.keys) {
       final options = kInlineAnswerableOptions[metricKey]!;
-      for (final entry in {'lowest': options.first, 'highest': options.last}.entries) {
+      for (final entry in {
+        'lowest': options.first,
+        'highest': options.last,
+      }.entries) {
         final bound = entry.key;
         final value = entry.value;
 
@@ -399,7 +474,8 @@ void main() {
             expect(
               jsonEncode(after[column]),
               equals(jsonEncode(before[column])),
-              reason: 'column "$column" changed while answering "$metricKey" '
+              reason:
+                  'column "$column" changed while answering "$metricKey" '
                   'with its $bound value',
             );
           }
@@ -425,7 +501,7 @@ void main() {
             100.0,
             reason: value == 0
                 ? '0 is a real answer for "$metricKey"; a falsy check here '
-                    'would drop ${kDailyCoreDqsWeights[metricKey]} points'
+                      'would drop ${kDailyCoreDqsWeights[metricKey]} points'
                 : 'every other daily-core column is already logged',
           );
         });
@@ -458,7 +534,8 @@ void main() {
       expect(
         kInlineAnswerableOptions.keys.toSet(),
         equals(kDailyCoreDqsWeights.keys.toSet()),
-        reason: 'a metric answerable inline but not looped here would be '
+        reason:
+            'a metric answerable inline but not looped here would be '
             'untested at its bounds',
       );
     });
@@ -526,6 +603,104 @@ void main() {
           5,
         ], reason: '$key is CHECKed between 1 and 5');
       }
+    });
+  });
+
+  group('saveFieldAnswer â€” real offline PostgREST persistence path', () {
+    for (final metricKey in kDailyCoreDqsWeights.keys) {
+      final options = kInlineAnswerableOptions[metricKey]!;
+      for (final value in [options.first, options.last]) {
+        test(
+          '$metricKey=$value PATCHes only its column on an existing row',
+          () async {
+            final stored = _fullyPopulatedRow()
+              ..['mood_score'] = 3
+              ..[metricKey] = null;
+            final recorder = _OfflinePostgrestClient(existingRow: stored);
+            final service = DailyLogService(_offlineSupabase(recorder));
+
+            final completeness = await service.saveFieldAnswer(
+              _userId,
+              _logDate,
+              metricKey,
+              value,
+            );
+
+            final read = _dailyRead(recorder);
+            expect(read.method, 'GET');
+            expect(read.uri.queryParameters['user_id'], 'eq.$_userId');
+            expect(read.uri.queryParameters['log_date'], 'eq.$_logDate');
+
+            final write = _onlyWrite(recorder);
+            expect(
+              write.method,
+              'PATCH',
+              reason:
+                  'an existing row must not be inserted or whole-row upserted',
+            );
+            expect(write.uri.queryParameters['user_id'], 'eq.$_userId');
+            expect(write.uri.queryParameters['log_date'], 'eq.$_logDate');
+            final patch = write.json;
+            expect(
+              patch.keys.toSet(),
+              equals({metricKey, 'log_completeness', 'updated_at'}),
+              reason: 'the actual HTTP PATCH must not name unrelated columns',
+            );
+            expect(patch[metricKey], value);
+            expect(completeness, 100.0);
+
+            final after = _applyWrite(stored, patch);
+            for (final column in stored.keys) {
+              if (_permittedChanges(metricKey).contains(column)) continue;
+              expect(
+                jsonEncode(after[column]),
+                jsonEncode(stored[column]),
+                reason: '$column changed in the persisted $metricKey write',
+              );
+            }
+          },
+        );
+      }
+    }
+
+    test(
+      'zero is persisted and counted rather than dropped as false',
+      () async {
+        for (final metricKey in ['outside_meals', 'mosquito_bites']) {
+          final stored = _fullyPopulatedRow()
+            ..['mood_score'] = 3
+            ..[metricKey] = null;
+          final recorder = _OfflinePostgrestClient(existingRow: stored);
+          final completeness = await DailyLogService(
+            _offlineSupabase(recorder),
+          ).saveFieldAnswer(_userId, _logDate, metricKey, 0);
+          expect(_onlyWrite(recorder).json[metricKey], 0);
+          expect(completeness, 100.0);
+        }
+      },
+    );
+
+    test('inserts only when the initial daily-row lookup is empty', () async {
+      final recorder = _OfflinePostgrestClient();
+      final completeness = await DailyLogService(
+        _offlineSupabase(recorder),
+      ).saveFieldAnswer(_userId, _logDate, 'energy_score', 5);
+
+      final write = _onlyWrite(recorder);
+      expect(write.method, 'POST');
+      expect(write.json['user_id'], _userId);
+      expect(write.json['log_date'], _logDate);
+      expect(write.json['energy_score'], 5);
+      expect(
+        write.json['log_completeness'],
+        kDailyCoreDqsWeights['energy_score']!.toDouble(),
+      );
+      expect(completeness, kDailyCoreDqsWeights['energy_score']!.toDouble());
+      expect(
+        recorder.requests.where((request) => request.method == 'PATCH'),
+        isEmpty,
+        reason: 'the absent-row path must not pretend an update succeeded',
+      );
     });
   });
 }

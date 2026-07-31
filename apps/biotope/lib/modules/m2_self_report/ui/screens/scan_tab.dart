@@ -124,7 +124,24 @@ abstract final class ScanTabCopy {
 ///    the one answered column. It must never go through `saveDailyLog`, whose
 ///    whole-row upsert would null out every other field logged today.
 class ScanTab extends StatefulWidget {
-  const ScanTab({super.key});
+  /// The optional callbacks make the stateful tab testable without a global
+  /// Supabase singleton. Production supplies none and retains the normal
+  /// service-backed paths below; tests inject only deterministic equivalents
+  /// for those same reads/writes.
+  final Future<Map<String, dynamic>?> Function()? loadToday;
+  final Future<WearableReading?> Function()? syncWearable;
+  final Future<double> Function(String metricKey, int value)? saveFieldAnswer;
+  final Future<void> Function(double completeness)? updateEngagement;
+  final Duration sweepFloor;
+
+  const ScanTab({
+    super.key,
+    this.loadToday,
+    this.syncWearable,
+    this.saveFieldAnswer,
+    this.updateEngagement,
+    this.sweepFloor = const Duration(milliseconds: 2400),
+  });
 
   @override
   State<ScanTab> createState() => _ScanTabState();
@@ -170,13 +187,27 @@ class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
     return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
   }
 
+  Future<Map<String, dynamic>?> _readToday() {
+    final injected = widget.loadToday;
+    if (injected != null) return injected();
+    final client = Supabase.instance.client;
+    return DailyLogService(
+      client,
+    ).getTodayLog(client.auth.currentUser!.id, _today);
+  }
+
+  Future<WearableReading?> _syncToday() {
+    final injected = widget.syncWearable;
+    if (injected != null) return injected();
+    final client = Supabase.instance.client;
+    return WearableService(client).syncToday(client.auth.currentUser!.id);
+  }
+
   /// Passive re-fetch of today's self-report row only — never triggers the
   /// wearable OS permission prompt. Used on first render and after returning
   /// from DailyLogScreen.
   Future<void> _loadQuiet() async {
-    final client = Supabase.instance.client;
-    final userId = client.auth.currentUser!.id;
-    final row = await DailyLogService(client).getTodayLog(userId, _today);
+    final row = await _readToday();
     if (!mounted) return;
     setState(() => _todayRow = row);
   }
@@ -205,13 +236,10 @@ class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
     setState(() => _state = _SweepState.scanning);
     if (!reduced) _sweepAnim.repeat();
 
-    final client = Supabase.instance.client;
-    final userId = client.auth.currentUser!.id;
-
     final results = await Future.wait<dynamic>([
-      DailyLogService(client).getTodayLog(userId, _today),
-      WearableService(client).syncToday(userId),
-      Future.delayed(const Duration(milliseconds: 2400)),
+      _readToday(),
+      _syncToday(),
+      Future.delayed(widget.sweepFloor),
     ]);
 
     if (!mounted) return;
@@ -239,16 +267,29 @@ class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
     setState(() => _savingKeys.add(key));
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final client = Supabase.instance.client;
-      final userId = client.auth.currentUser!.id;
-      final completeness = await DailyLogService(
-        client,
-      ).saveFieldAnswer(userId, _today, key, value);
+      final save = widget.saveFieldAnswer;
+      final completeness = save != null
+          ? await save(key, value)
+          : await (() {
+              final client = Supabase.instance.client;
+              return DailyLogService(client).saveFieldAnswer(
+                client.auth.currentUser!.id,
+                _today,
+                key,
+                value,
+              );
+            })();
       // Same streak/DQS bookkeeping DailyLogScreen does on save, so a coverage
       // change made here is not invisible to M6.
-      await EngagementService(
-        client,
-      ).updateOnLogWrite(userId, _today, completeness);
+      final update = widget.updateEngagement;
+      if (update != null) {
+        await update(completeness);
+      } else {
+        final client = Supabase.instance.client;
+        await EngagementService(
+          client,
+        ).updateOnLogWrite(client.auth.currentUser!.id, _today, completeness);
+      }
       await _loadQuiet();
       if (mounted) setState(() => _openGapKey = null);
     } catch (_) {

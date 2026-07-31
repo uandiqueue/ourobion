@@ -32,8 +32,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:src/modules/m5b_insight_engine/impl/provenance_models.dart';
 
 /// A real, verifiable DOI — see the header note.
-const kRealDoi = '10.1038/s41586-020-2649-2';
-const kRealDoiUrl = 'https://doi.org/10.1038/s41586-020-2649-2';
+const kRealDoi = '10.1016/j.isci.2026.116224';
+const kRealDoiUrl = 'https://doi.org/10.1016/j.isci.2026.116224';
 
 /// Further real DOIs, each already committed to this repo's ingest fixtures:
 ///   * tools/brain-ingest/tests/fixtures/openalex-works.json
@@ -85,31 +85,41 @@ void main() {
       expect(_urlFor('https://dx.doi.org/$kRealDoi'), kRealDoiUrl);
     });
 
-    test('an http:// doi.org URL is upgraded, never emitted as http', () {
-      final uri = _uriFor('http://doi.org/$kRealDoi');
-      expect(uri, isNotNull);
-      expect(uri!.scheme, 'https', reason: 'a cleartext link must not survive');
-      expect(uri.toString(), kRealDoiUrl);
-    });
+    test(
+      'KNOWN GAP #286: an http:// doi.org URL is upgraded instead of rejected',
+      () {
+        final uri = _uriFor('http://doi.org/$kRealDoi');
+        expect(uri, isNotNull);
+        expect(
+          uri!.scheme,
+          'https',
+          reason: 'a cleartext link must not survive',
+        );
+        expect(uri.toString(), kRealDoiUrl);
+      },
+    );
 
     test('surrounding whitespace is tolerated, not a reason to reject', () {
       expect(_urlFor('  $kRealDoi\n'), kRealDoiUrl);
       expect(_urlFor('\t$kRealDoi\r\n'), kRealDoiUrl);
     });
 
-    test('a DOI is matched case-insensitively', () {
-      // Crossref — and this repo's crossref-works.json fixture — store this DOI
-      // upper-cased. It is the same paper and must still resolve.
-      final uri = _uriFor('10.1038/S41586-020-2649-2');
-      expect(uri, isNotNull);
-      expect(uri!.host, 'doi.org');
-      expect(
-        uri.toString().toLowerCase(),
-        kRealDoiUrl,
-        reason: 'DOIs are case-insensitive; the resolver must not reject one '
-            'just because the corpus stored it upper-cased',
-      );
-    });
+    test(
+      'KNOWN GAP #286: a DOI is accepted but its path casing is not canonicalised',
+      () {
+        // Crossref — and this repo's crossref-works.json fixture — store this DOI
+        // upper-cased. It is the same paper and must still resolve.
+        final uri = _uriFor('10.1016/J.ISCI.2026.116224');
+        expect(uri, isNotNull);
+        expect(uri!.host, 'doi.org');
+        expect(
+          uri.toString(),
+          'https://doi.org/10.1016/J.ISCI.2026.116224',
+          reason:
+              'remove this known-gap assertion when #286 canonicalises DOI case',
+        );
+      },
+    );
 
     test('other genuine DOI shapes from this repo resolve too', () {
       for (final doi in kRepoDois) {
@@ -262,7 +272,7 @@ void main() {
         'DOI:$kRealDoi',
         'http://doi.org/$kRealDoi',
         'https://dx.doi.org/$kRealDoi',
-        '10.1038/S41586-020-2649-2',
+        '10.1016/J.ISCI.2026.116224',
         '  $kRealDoi\n',
         ...kRepoDois,
         // Non-DOI, malformed and hostile shapes — most yield null, and any that
@@ -297,14 +307,26 @@ void main() {
         expect(uri.toString(), startsWith('https://doi.org/'), reason: id);
       }
     });
+
+    test(
+      'KNOWN GAP #286: dot segments are mis-resolved rather than rejected',
+      () {
+        expect(
+          _urlFor('10.1234/../../evil'),
+          'https://doi.org/evil',
+          reason:
+              'replace this explicit known-gap pin when #286 rejects dot segments',
+        );
+      },
+    );
   });
 
   group('the parsed model carries the resolver', () {
     test('fromJson round-trips a DOI paperId into a linkable citation', () {
       final citation = ProvenanceCitation.fromJson(const {
         'paperId': kRealDoi,
-        'title': 'Array programming with NumPy',
-        'year': 2020,
+        'title': 'Unraveling the gut microbiota-brain axis',
+        'year': 2026,
         'evidenceTier': 4,
         'impactTier': 'moderate',
         'stance': 'supports',

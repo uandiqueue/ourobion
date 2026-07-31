@@ -64,31 +64,39 @@ void main() {
     // exactly 80 is at most urine+stool+meals+mosquito (25+25+20+10), with
     // energy, mood AND gut comfort still unlogged — so the top band must not
     // read as "everything logged". Only a genuine 100 sums every weight.
-    test(
-      'only a genuine 100 could mean every channel was logged — no bucket '
-      'label below it claims that',
-      () {
-        for (final v in [0.0, 20.0, 39.9, 40.0, 59.9, 60.0, 79.9, 80.0, 85.0, 99.9]) {
-          final label = HomeCoverageCopy.bucket(v).toLowerCase();
-          expect(
-            label,
-            isNot(contains('every channel')),
-            reason: '"$label" at $v must not claim every channel was logged',
-          );
-          expect(label, isNot(contains('all logged')));
-          expect(label, isNot(contains('fully logged')));
-          expect(
-            label,
-            isNot(contains('complete')),
-            reason:
-                'HomeCoverageCopy.bucket(80) == "High coverage": true and '
-                'truthful, but a label reading "complete" at 80 would '
-                'overclaim — energy(7)+mood(7)+gut comfort(6) = 20 points are '
-                'still missing at exactly 80',
-          );
-        }
-      },
-    );
+    test('only a genuine 100 could mean every channel was logged — no bucket '
+        'label below it claims that', () {
+      for (final v in [
+        0.0,
+        20.0,
+        39.9,
+        40.0,
+        59.9,
+        60.0,
+        79.9,
+        80.0,
+        85.0,
+        99.9,
+      ]) {
+        final label = HomeCoverageCopy.bucket(v).toLowerCase();
+        expect(
+          label,
+          isNot(contains('every channel')),
+          reason: '"$label" at $v must not claim every channel was logged',
+        );
+        expect(label, isNot(contains('all logged')));
+        expect(label, isNot(contains('fully logged')));
+        expect(
+          label,
+          isNot(contains('complete')),
+          reason:
+              'HomeCoverageCopy.bucket(80) == "High coverage": true and '
+              'truthful, but a label reading "complete" at 80 would '
+              'overclaim — energy(7)+mood(7)+gut comfort(6) = 20 points are '
+              'still missing at exactly 80',
+        );
+      }
+    });
 
     test(
       'the label at 80 is truthful ("High coverage", not a completeness claim)',
@@ -100,7 +108,10 @@ void main() {
         // bucket is a range, not a per-score claim — but neither wording
         // asserts every channel was captured.)
         expect(HomeCoverageCopy.bucket(80), 'High coverage');
-        expect(HomeCoverageCopy.bucket(80).toLowerCase(), isNot(contains('every')));
+        expect(
+          HomeCoverageCopy.bucket(80).toLowerCase(),
+          isNot(contains('every')),
+        );
       },
     );
   });
@@ -121,6 +132,48 @@ void main() {
   });
 
   group('no health-sounding word ever reaches the score/status area', () {
+    testWidgets('the real hero renders the score basis and bucket explainer', (
+      tester,
+    ) async {
+      for (final v in _sampleScores) {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 22),
+                child: SystemStatusHero(
+                  key: ValueKey('hero-$v'),
+                  statusWord: HomeCoverageCopy.bucket(v),
+                  index: v?.round(),
+                  scoreBasis: HomeCoverageCopy.sevenDayBasis,
+                  bucketRange: HomeCoverageCopy.bucketRange(v),
+                  streak: 0,
+                  indexDelta: null,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text(HomeCoverageCopy.bucket(v)), findsOneWidget);
+        if (v == null) {
+          expect(find.text('/100 weighted points'), findsNothing);
+          expect(find.text(HomeCoverageCopy.sevenDayBasis), findsNothing);
+        } else {
+          expect(find.text('${v.round()}'), findsOneWidget);
+          expect(find.text('/100 weighted points'), findsOneWidget);
+          expect(
+            find.textContaining(HomeCoverageCopy.sevenDayBasis),
+            findsOneWidget,
+          );
+          expect(
+            find.textContaining(HomeCoverageCopy.bucketRange(v)),
+            findsOneWidget,
+          );
+        }
+      }
+    });
+
     test('no HomeCoverageCopy.bucket output contains a banned word', () {
       for (final v in _sampleScores) {
         final lower = HomeCoverageCopy.bucket(v).toLowerCase();

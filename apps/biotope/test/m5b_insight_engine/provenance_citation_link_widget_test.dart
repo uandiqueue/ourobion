@@ -30,12 +30,12 @@ import 'package:src/modules/m5b_insight_engine/impl/provenance_service.dart';
 import 'package:src/modules/m5b_insight_engine/ui/screens/insight_provenance_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-const kRealDoi = '10.1038/s41586-020-2649-2';
-const kRealDoiUrl = 'https://doi.org/10.1038/s41586-020-2649-2';
+const kRealDoi = '10.1016/j.isci.2026.116224';
+const kRealDoiUrl = 'https://doi.org/10.1016/j.isci.2026.116224';
 
 /// The genuine title and year of the paper that DOI resolves to.
-const kRealDoiTitle = 'Array programming with NumPy';
-const kRealDoiYear = 2020;
+const kRealDoiTitle = 'Unraveling the gut microbiota-brain axis';
+const kRealDoiYear = 2026;
 
 /// A stable internal corpus id — the other half of the `Citation.paperId`
 /// contract, and deliberately NOT resolvable to any page.
@@ -105,10 +105,10 @@ InsightProvenance _withCitations(List<ProvenanceCitation> citations) {
     card: _cardInfo(),
     edges: [
       ProvenanceEdge(
-        edgeId: 'sleep_duration_min->gut_comfort_score',
-        subject: 'sleep_duration_min',
-        object: 'gut_comfort_score',
-        relation: 'increases',
+        edgeId: 'gut_microbiota->brain_axis',
+        subject: 'gut_microbiota',
+        object: 'brain_axis',
+        relation: 'describes',
         citations: citations,
       ),
     ],
@@ -133,10 +133,10 @@ InsightProvenance _fullyCitedProvenance() => const InsightProvenance(
   branch: 'agree',
   edges: [
     ProvenanceEdge(
-      edgeId: 'sleep_duration_min->gut_comfort_score',
-      subject: 'sleep_duration_min',
-      object: 'gut_comfort_score',
-      relation: 'increases',
+      edgeId: 'gut_microbiota->brain_axis',
+      subject: 'gut_microbiota',
+      object: 'brain_axis',
+      relation: 'describes',
       direction: 'consistent',
       servingBand: 'core',
       edgeScore: 0.82,
@@ -167,7 +167,8 @@ InsightProvenance _fullyCitedProvenance() => const InsightProvenance(
   ],
 );
 
-Finder _linkFor(String paperId) => find.byKey(ValueKey('citation-link-$paperId'));
+Finder _linkFor(String paperId) =>
+    find.byKey(ValueKey('citation-link-$paperId'));
 
 /// Bumped on every pump so a screen pumped twice inside one test really is a
 /// FRESH screen. Without a distinct key Flutter reuses the existing State — and
@@ -242,6 +243,26 @@ void main() {
       expect(launcher.opened.single.host, 'doi.org');
     });
 
+    testWidgets(
+      'KNOWN GAP #286: the rendered external-paper control is not exposed as a semantic link',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        await _pump(
+          tester,
+          _withCitations(const [
+            ProvenanceCitation(paperId: kRealDoi, title: kRealDoiTitle),
+          ]),
+        );
+        expect(
+          tester.getSemantics(_linkFor(kRealDoi)).flagsCollection.isLink,
+          isFalse,
+          reason:
+              'replace this known-gap pin when #286 adds explicit link semantics',
+        );
+        semantics.dispose();
+      },
+    );
+
     testWidgets('a doi:-prefixed stored id still opens the canonical URL', (
       tester,
     ) async {
@@ -266,7 +287,7 @@ void main() {
     ) async {
       // Crossref — and this repo's crossref-works.json fixture — store this DOI
       // upper-cased. DOIs are case-insensitive, so it is the same paper.
-      const stored = '10.1038/S41586-020-2649-2';
+      const stored = '10.1016/J.ISCI.2026.116224';
       final launcher = await _pump(
         tester,
         _withCitations(const [ProvenanceCitation(paperId: stored)]),
