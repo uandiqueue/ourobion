@@ -118,6 +118,13 @@ test('--no-prune refuses missing, malformed, or mismatched expected hashes befor
   }
 });
 
+test('--no-prune requires exact hashes for the R2 path before any R2 client can be constructed', () => {
+  const out = runCli(['--from-r2', '--no-prune']);
+  assert.equal(out.status, 1);
+  assert.match(out.stderr, /expected artifact hashes/);
+  assert.doesNotMatch(out.stderr, /--from-r2 needs env vars/);
+});
+
 function loadedFixture() {
   const claims = readFileSync(path.join(FIXTURES, 'claims.jsonl'), 'utf8');
   const verifications = readFileSync(path.join(FIXTURES, 'verifications.jsonl'), 'utf8');

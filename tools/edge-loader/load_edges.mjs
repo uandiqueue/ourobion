@@ -128,7 +128,7 @@ function readFromDir(dir, expected) {
   return { claimsText, verificationsText, sourceLabel: `dir ${dir}` };
 }
 
-async function readFromR2() {
+async function readFromR2(expected) {
   const required = ['R2_ENDPOINT', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET'];
   const missing = required.filter((k) => !process.env[k]?.trim());
   if (missing.length > 0) {
@@ -162,6 +162,12 @@ async function readFromR2() {
   };
   const claimsText = await getText(R2_CLAIMS_KEY);
   const verificationsText = await getText(R2_VERIFICATIONS_KEY, { optional: true });
+  if (expected) {
+    if (!verificationsText) throw new Error(`expected artifact ${VERIFICATIONS_BASENAME} is missing`);
+    if (sha256(Buffer.from(claimsText, 'utf8')) !== expected.claims || sha256(Buffer.from(verificationsText, 'utf8')) !== expected.verifications) {
+      throw new Error('R2 edge artifact SHA-256 mismatch; nothing loaded');
+    }
+  }
   return { claimsText, verificationsText, sourceLabel: `r2 ${bucket}` };
 }
 
@@ -370,10 +376,12 @@ async function main() {
     process.exit(2);
   }
 
-  const expected = expectedArtifactHashes(Boolean(args.noPrune && args.fromDir));
+  // Incremental projection must always be bound to both exact artifact bytes,
+  // regardless of whether those bytes were staged locally or read from R2.
+  const expected = expectedArtifactHashes(Boolean(args.noPrune));
   const { claimsText, verificationsText, sourceLabel } = args.fromDir
     ? readFromDir(args.fromDir, expected)
-    : await readFromR2();
+    : await readFromR2(expected);
 
   const { claimRows, verificationRows, errors } = buildLoad(claimsText, verificationsText);
 
