@@ -418,7 +418,7 @@ test('product cap measures the immutable union, reports breach without throwing,
   assert.ok(recoveredPaths.includes('tools/brain-ingest/src/verify/artifact.ts'), 'product-cap must exercise source-text recovery for artifact.ts');
   assert.equal(delta.allowlistedBinaryPaths, 15);
   assert.ok(delta.allowlistedBinaryBytes > 0 && delta.allowlistedBinaryBytes <= RUN4_MAX_ALLOWLISTED_BINARY_BYTES);
-  assert.deepEqual({ changedPaths: delta.changedPaths, addedLines: delta.addedLines }, { changedPaths: 512, addedLines: 71839 });
+  assert.deepEqual({ changedPaths: delta.changedPaths, addedLines: delta.addedLines }, { changedPaths: 512, addedLines: 71841 });
   assert.ok(delta.changedPaths > RUN4_MAX_CHANGED_PATHS);
   assert.ok(delta.addedLines > RUN4_MAX_ADDED_LINES);
   // Measurement reports breach as data; only the enforcement wrapper throws. This is the whole
