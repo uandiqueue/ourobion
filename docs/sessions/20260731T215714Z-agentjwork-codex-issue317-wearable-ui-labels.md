@@ -40,3 +40,38 @@ memory: none
 
 - The required patch helper could not launch because `codex-windows-sandbox-setup.exe` is absent;
   explicit `git apply` unified diffs were used as the bounded fallback.
+
+## Continuation ? generated deployment attestation
+
+### Attempted
+
+- Followed the owner's refined #317 guard after the first regeneration correctly stopped on two
+  additional module-graph changes.
+- Reused the already fresh Deno 2.8.1 graph set, then independently regenerated a second graph set
+  for manifest verification.
+
+### Changed
+
+- Re-recorded only `supabase/deploy-attestation.json` with Supabase CLI 2.81.2.
+- Updated the module-graph hashes for the three functions that import `shared/metrics`:
+  `compute-baselines`, `generate-insights`, and `evaluate-signals`.
+
+### Decided
+
+- Carried the existing four 401 route probes forward byte-equivalently without re-probing. The
+  registry change affects labels and nullable display metadata, not handler authorization behavior.
+- `run-pipeline` stayed unchanged and does not import the registry. Config, lock, every entrypoint
+  hash, every import-map hash, local-only scope, hosted-parity false, product-cap acceptance false,
+  and the 115 / 8,500 caps also stayed unchanged.
+
+### Verification
+
+- `record-attestation` changed exactly the three authorized module graphs.
+- `attest` against a second fresh Deno 2.8.1 graph directory: PASS.
+- `git diff --check`: PASS.
+
+### Left
+
+- The earlier #222 next-task note is superseded by the owner's stop direction on #308; no #222
+  source or migration remains.
+- Commit and push the derived manifest, then require exact-head CI before merging PR #318.
