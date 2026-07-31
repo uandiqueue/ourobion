@@ -50,7 +50,7 @@ Issue: #319 ? branch: `feat/m5b/evidence-chain-rendering` ? base:
 - `flutter analyze --no-pub`: no issues.
 - Full serial `flutter test --no-pub --concurrency=1`: 744 passed, 26 skipped, 0 failed.
 - `git diff --check`: passed.
-- Committed-head Run 4 product union: 565 paths / 83,385 added lines; recorded, non-gating, and
+- Committed-head Run 4 product union: 566 paths / 83,528 added lines; recorded, non-gating, and
   over the unchanged 115-path / 8,500-line cap with acceptance still false.
 
 ## Left
