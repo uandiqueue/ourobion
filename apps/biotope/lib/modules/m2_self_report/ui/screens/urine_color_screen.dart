@@ -1,29 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../../core/theme.dart';
-
-// Armstrong Urine Color Scale — 1 (very pale) → 8 (dark brown)
-const List<Color> _kColors = [
-  Color(0xFFF5F0B8), // 1 — very pale
-  Color(0xFFEEE060), // 2 — pale yellow
-  Color(0xFFE8CE25), // 3 — yellow
-  Color(0xFFD4A018), // 4 — dark yellow
-  Color(0xFFC07818), // 5 — amber
-  Color(0xFFA05010), // 6 — dark amber
-  Color(0xFF7E3210), // 7 — orange-brown
-  Color(0xFF501808), // 8 — dark brown
-];
-
-const List<String> _kLabels = [
-  'Very pale',
-  'Pale yellow',
-  'Yellow',
-  'Dark yellow',
-  'Amber',
-  'Dark amber',
-  'Orange-brown',
-  'Dark brown',
-];
+import '../widgets/daily_scale_visuals.dart';
 
 const List<String> _kDescriptions = [
   'Very light colour — typical for high fluid intake',
@@ -114,7 +93,9 @@ class _UrineColorScreenState extends State<UrineColorScreen>
                           height: 40,
                           decoration: BoxDecoration(
                             color: OurobionColors.surfaceLowest,
-                            border: Border.all(color: OurobionColors.outlineVariant),
+                            border: Border.all(
+                              color: OurobionColors.outlineVariant,
+                            ),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
@@ -233,21 +214,27 @@ class _UrineColorScreenState extends State<UrineColorScreen>
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 180),
                                   curve: Curves.easeOut,
-                                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 2,
+                                  ),
                                   height: isSelected ? 60 : 44,
                                   decoration: BoxDecoration(
-                                    color: _kColors[i],
+                                    color: kArmstrongColors[i],
                                     borderRadius: BorderRadius.circular(10),
                                     border: isSelected
-                                        ? Border.all(color: Colors.white, width: 2.5)
+                                        ? Border.all(
+                                            color: Colors.white,
+                                            width: 2.5,
+                                          )
                                         : null,
                                     boxShadow: isSelected
                                         ? [
                                             BoxShadow(
-                                              color: _kColors[i].withValues(alpha: 0.55),
+                                              color: kArmstrongColors[i]
+                                                  .withValues(alpha: 0.55),
                                               blurRadius: 14,
                                               spreadRadius: 2,
-                                            )
+                                            ),
                                           ]
                                         : null,
                                   ),
@@ -283,14 +270,16 @@ class _UrineColorScreenState extends State<UrineColorScreen>
                               vertical: 12,
                             ),
                             decoration: BoxDecoration(
-                              color: OurobionColors.primaryFixed.withValues(alpha: 0.28),
+                              color: OurobionColors.primaryFixed.withValues(
+                                alpha: 0.28,
+                              ),
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  _kLabels[_selected! - 1],
+                                  kArmstrongNames[_selected! - 1],
                                   style: GoogleFonts.manrope(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
