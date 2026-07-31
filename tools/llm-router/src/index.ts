@@ -5,12 +5,10 @@
  */
 
 export {
-  ACCEPTANCE_AGNES_MAX_POST_STARTS_PER_LEG,
-  ACCEPTANCE_GLOBAL_MAX_USD,
   ACCEPTANCE_MAX_INPUT_BYTES,
   ACCEPTANCE_MAX_OUTPUT_TOKENS,
-  ACCEPTANCE_ANTHROPIC_MAX_POST_STARTS_PER_LEG,
-  ACCEPTANCE_JOURNAL_REPO_PATH,
+  ACCEPTANCE_MAX_POST_STARTS_PER_LOGICAL_CALL,
+  ACCEPTANCE_RUNTIME_REPO_ROOT,
   DEFAULT_RAW_BODY_CAP_BYTES,
   estimateTokens,
   LLM_NODE_IDS,
@@ -20,6 +18,8 @@ export {
   type LlmResponse,
   type LlmUsage,
   type AcceptanceCallContext,
+  type AcceptanceAuthorization,
+  type AcceptanceProviderAuthorization,
   type ModelIdentity,
   type ModelIdentitySource,
   type RawProviderResponse,
@@ -37,6 +37,9 @@ export {
 } from './errors.js';
 export {
   AttemptJournal,
+  acceptanceAuthorizationHash,
+  acceptanceJournalRepoPath,
+  validateAcceptanceAuthorization,
   logicalCallIdSha256,
   providerContentSha256,
   type AttemptEventKind,
@@ -48,6 +51,7 @@ export {
 } from './attemptJournal.js';
 export {
   billingModeOf,
+  priceIsAuthoritativeAt,
   defaultConfigPath,
   familyOf,
   loadConfig,

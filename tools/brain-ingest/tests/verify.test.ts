@@ -14,6 +14,7 @@
  */
 
 import { test } from 'node:test';
+import { testAcceptanceAuthorization } from './acceptanceHelpers.js';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -543,7 +544,7 @@ test('verifyClaim acceptance: valid adverse verdict returns once, without retry 
       },
     },
     validateVerification: validate,
-    acceptance: { acceptanceRunId: 'acceptance-verify' },
+    acceptance: { acceptanceRunId: 'acceptance-verify', authorization: testAcceptanceAuthorization() },
     maxAttempts: 3,
   });
   assert.equal(requests.length, 1);

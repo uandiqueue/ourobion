@@ -52,6 +52,18 @@ export interface WorkMeta {
   concepts: string[];
 }
 
+/** Source-retained PubMed/MEDLINE indexing evidence used by deterministic A5 rules. */
+export interface PublicationTypeInfo {
+  ui: string | null;
+  name: string;
+}
+
+export interface MeshHeadingInfo {
+  ui: string | null;
+  name: string;
+  majorTopic: boolean;
+}
+
 /** Retrievability classification (design §3 step 4, §8). */
 export type Retrievability = 'pdf' | 'html' | 'paywalled' | 'unknown';
 
@@ -111,6 +123,16 @@ export interface PaperRecord {
   journal?: { issn: string[]; publisher: string | null; type: string | null };
   /** 'article' | 'preprint' | 'review' | ... */
   workType?: string | null;
+  /** Exact source-supplied publication types (for example PubMed PT values). */
+  publicationTypes?: PublicationTypeInfo[];
+  /** PubMed MeSH descriptors, including Animals/Humans check tags. */
+  meshHeadings?: MeshHeadingInfo[];
+  /** Optional human-attested design for tiers that publication types cannot express. */
+  evidenceDesign?: {
+    design: 'cohort' | 'longitudinal' | 'cross-sectional' | 'mechanistic';
+    source: 'curator';
+    attestedAt: string;
+  };
   /** subject/topic display names (for dashboard facets) */
   concepts?: string[];
   retrievability: Retrievability;
@@ -133,6 +155,10 @@ export interface Candidate {
   year: number | null;
   venue: string | null;
   abstract: string | null;
+  /** Exact source-supplied publication types; absent when the source has none. */
+  publicationTypes?: PublicationTypeInfo[];
+  /** Exact PubMed MeSH descriptors; absent for sources that do not supply them. */
+  meshHeadings?: MeshHeadingInfo[];
   /** which discovery API surfaced it — becomes PaperRecord.discoveredVia */
   discoveredVia: string;
 }
