@@ -6,7 +6,7 @@
   "replayBoundary": "CI recomputes frozen graphs and validates this local evidence, but does not replay local serve or claim hosted deploy parity.",
   "generator": "node tools/run4_release_gate.mjs record-attestation",
   "provenance": {
-    "unitBaseSha": "6020f444a104b734df42e04f262bf19e701d1975",
+    "unitBaseSha": "42ae771c4809fe8f314fbf38dca89d60a809dedb",
     "productCapBaseSha": "77c98213e23ad56ae37c86201b39ef4e7543a543",
     "maxChangedPaths": 115,
     "maxAddedLines": 8500
@@ -22,7 +22,7 @@
       "importMap": "./functions/compute-baselines/deno.json",
       "entrypointSha256": "ee7a0675e5d556814de3c2e1e861cfd33901081768e1d36cd7ff895881a17546",
       "importMapSha256": "559f0671914e7e20a5396b944a780be2bdb0208c6a23da9d3ed1e62aedd63bae",
-      "moduleGraphSha256": "51d60015ec000d5c8266751b9c01ac7ee83d90d613f906c941ba66c486b005a0"
+      "moduleGraphSha256": "8609f7abb5b1acc7aa95627fcc3d09eb36e0e20cab6d28a6e56636f839d7c850"
     },
     {
       "name": "generate-insights",
@@ -30,7 +30,7 @@
       "importMap": "./functions/generate-insights/deno.json",
       "entrypointSha256": "76bcad727d32ba09eee1d7b12cd0f44b3b0849cd436836b0e7252fb366e5d91c",
       "importMapSha256": "559f0671914e7e20a5396b944a780be2bdb0208c6a23da9d3ed1e62aedd63bae",
-      "moduleGraphSha256": "e6439c8d9019499978eb3bf348b63ebfe27ab4e4af201ea930125d9739d5d92c"
+      "moduleGraphSha256": "7fbf6e8e91e579de4f23685f49c07325555724fd9d060a7b08fd8cc10afe0892"
     },
     {
       "name": "evaluate-signals",
@@ -38,7 +38,7 @@
       "importMap": "./functions/evaluate-signals/deno.json",
       "entrypointSha256": "e3f8ebd990b9334a5d1810615d3df53ce79fefa99928498529daaec521d7eb6a",
       "importMapSha256": "559f0671914e7e20a5396b944a780be2bdb0208c6a23da9d3ed1e62aedd63bae",
-      "moduleGraphSha256": "ac8a0e2336d29a0ef3bdad4ece7dc62cbb33c229ba6a691ed7c09ce52f9a969a"
+      "moduleGraphSha256": "2bfbc441ab418c64decd2e5439ee8ec0306c816f5227ffa040e03c04fbdcde8e"
     },
     {
       "name": "run-pipeline",

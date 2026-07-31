@@ -295,3 +295,41 @@ memory: none
 - None locally. These package installs intentionally remain hosted-only for the disposable runner.
 
 memory: none
+
+## Continuation — final hosted evidence and generated attestation
+
+### Attempted
+
+- Ran the supplemental workflow at the exact synthetic merge of integration parent `42ae771c` and
+  branch head `4fdec599` (`f547ccdc`). Both transactional fixtures passed and rolled back; the four
+  configured handlers each reached the local function runtime and returned the expected normalized
+  unauthenticated denial.
+- Downloaded the one-day evidence artifact and independently recomputed every SHA-256 sidecar.
+- Generated two distinct frozen Deno 2.8.1 graph sets on Windows from the same source and lockfile.
+
+### Changed
+
+- Re-recorded `supabase/deploy-attestation.json` with the repository generator, the first independent
+  Windows graph set, the pinned Supabase CLI 2.81.2, and checksum-verified route evidence.
+- Recorded the exact whole-product snapshot as `461` paths / `64,536` additions; the release-gate
+  test keeps that over-cap measurement explicit and non-gating.
+
+### Decided
+
+- The Windows-generated manifest is byte-for-byte identical to the hosted generator output
+  (`d2daa2c7b1aa4d19bd37a6c8178784959d5a09814da5c49af80c406f40c25b30`). The second fresh
+  Windows graph directory passed `run4_release_gate.mjs attest`.
+- Keep `productCapAcceptanceClaimed: false` and `hostedDeployParityClaimed: false`. The owner-approved
+  Run 4 product-envelope deviation is recorded honestly; it does not change the strict 115-path /
+  8,500-addition per-unit gate or claim hosted deploy parity.
+
+### Left
+
+- Let exact-head CI recompute the final product snapshot, attestation graphs, full code suites, and
+  aggregate Run 4 gate before merge.
+
+### Blockers
+
+- None.
+
+memory: none

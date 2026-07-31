@@ -418,7 +418,7 @@ test('product cap measures the immutable union, reports breach without throwing,
   assert.ok(recoveredPaths.includes('tools/brain-ingest/src/verify/artifact.ts'), 'product-cap must exercise source-text recovery for artifact.ts');
   assert.equal(delta.allowlistedBinaryPaths, 15);
   assert.ok(delta.allowlistedBinaryBytes > 0 && delta.allowlistedBinaryBytes <= RUN4_MAX_ALLOWLISTED_BINARY_BYTES);
-  assert.deepEqual({ changedPaths: delta.changedPaths, addedLines: delta.addedLines }, { changedPaths: 447, addedLines: 62701 });
+  assert.deepEqual({ changedPaths: delta.changedPaths, addedLines: delta.addedLines }, { changedPaths: 461, addedLines: 64536 });
   assert.ok(delta.changedPaths > RUN4_MAX_CHANGED_PATHS);
   assert.ok(delta.addedLines > RUN4_MAX_ADDED_LINES);
   // Measurement reports breach as data; only the enforcement wrapper throws. This is the whole
@@ -426,7 +426,7 @@ test('product cap measures the immutable union, reports breach without throwing,
   assert.equal(delta.withinCap, false);
   assert.throws(
     () => checkProductLandingDelta({ base: RUN4_PRODUCT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES }),
-    /product landing delta has 447 paths; cap is 115/
+    /product landing delta has 461 paths; cap is 115/
   );
 });
 
