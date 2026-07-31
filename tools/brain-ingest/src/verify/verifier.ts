@@ -42,7 +42,9 @@ import {
   type EnforceResult,
 } from './enforce.js';
 import { loadVerificationValidator } from './load.js';
-import { appendVerificationsToDir, type WriteResult } from './artifact.js';
+import { appendVerificationsToDir, appendVerificationsToR2, type WriteResult } from './artifact.js';
+import { loadConfig } from '../config.js';
+import { R2Store } from '../storage/r2.js';
 import { buildArtifactRef, buildAttestation, buildRawRecord, posturefor } from './attest.js';
 import type {
   RetrievalResult,
@@ -372,6 +374,19 @@ export interface VerifyRunOptions extends VerifyClaimOptions {
   edgeId?: string;
   /** Where verifications.jsonl is written (append-safe). */
   edgesDir?: string;
+  /**
+   * Also append the accepted verifications to R2 `edges/verifications.jsonl` —
+   * the shared truth-tier object `edge-loader --from-r2` reads.
+   *
+   * Opt-in and deliberately symmetric with synthesis's `--push-r2`: without it
+   * the cloud pipeline can publish claims but never their verifications, so the
+   * loader would project claims with no verdict attached. Never implied by a
+   * plain run; the local mirror is always written first, so an R2 failure cannot
+   * lose the evidence.
+   */
+  pushR2?: boolean;
+  /** Test seam: inject the R2 store instead of constructing one from config. */
+  r2Store?: R2Store;
 }
 
 export interface VerifyRunResult {
@@ -379,6 +394,8 @@ export interface VerifyRunResult {
   records: VerifyRecord[];
   rejectedCount: number;
   write?: WriteResult;
+  /** Present only when `pushR2` was requested and records were written. */
+  r2?: { key: string; written: number; skipped: number };
 }
 
 /**
@@ -428,6 +445,14 @@ export async function verify(opts: VerifyRunOptions): Promise<VerifyRunResult> {
         `verify: retained ${out.write.raw.written} raw provider body/bodies ` +
           `(${out.write.raw.skipped} dup) → ${out.write.raw.path}`,
       );
+    }
+    // R2 last, and only after the local mirror landed: the local write is the
+    // durable copy, so a network failure here degrades to "not yet published"
+    // rather than "verdict lost".
+    if (opts.pushR2) {
+      const store = opts.r2Store ?? new R2Store(loadConfig());
+      out.r2 = await appendVerificationsToR2(store, records);
+      log(`verify: pushed ${out.r2.written} verification(s) (${out.r2.skipped} dup skipped) → r2 ${out.r2.key}`);
     }
   }
   return out;
