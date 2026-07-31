@@ -102,90 +102,114 @@ ProvenanceCardInfo _cardInfo({String producer = 'edge'}) => ProvenanceCardInfo(
   generatedAt: '2026-07-24T09:37:53.975+00:00',
 );
 
-InsightProvenance _withCitations(List<ProvenanceCitation> citations) {
-  return InsightProvenance(
-    card: _cardInfo(),
-    edges: [
-      ProvenanceEdge(
-        edgeId: 'gut_microbiota->brain_axis',
-        subject: 'gut_microbiota',
-        object: 'brain_axis',
-        relation: 'describes',
-        citations: citations,
-      ),
-    ],
-  );
-}
-
 /// The accepted A8 artifact for the real DOI. Its claim, scope, citation tier,
 /// impact tier, and quote spans are recorded in the session log; no invented
 /// population, edge score, verification, or second citation is added here.
-InsightProvenance _fullyCitedProvenance() => const InsightProvenance(
-  card: ProvenanceCardInfo(
-    id: 2,
-    ruleId: 'gut_comfort_trending_down',
-    title: 'Gut comfort trending down',
-    body: 'Your gut comfort scores have drifted lower this week.',
-    producer: 'edge',
-    category: 'gut',
-    severity: 'info',
-    generatedAt: '2026-07-24T09:37:53.975+00:00',
-  ),
-  edges: [
-    ProvenanceEdge(
-      edgeId: 'gut_comfort_score|correlates|mood_score',
-      subject: 'gut_comfort_score',
-      object: 'mood_score',
-      relation: 'correlates',
-      derivation:
-          'The review states the bidirectional gut-brain nature of IBS (Q1) '
-          'and reports a parallel RCT in which an FMT intervention reduced '
-          'both IBS severity scores and anxiety/depression scores together '
-          '(Q2), asserted as a correlation rather than a directed causal '
-          'claim between the two subjective metrics. Strongest supporting '
-          'evidence described is an RCT (tier 4), reported within a narrative '
-          'review; scope kept narrow to the studied IBS population.',
+ProvenanceEdge _acceptedDoiEdge({
+  String citationPaperId = kRealDoi,
+}) => ProvenanceEdge(
+  edgeId: 'gut_comfort_score|correlates|mood_score',
+  subject: 'gut_comfort_score',
+  object: 'mood_score',
+  relation: 'correlates',
+  derivation:
+      'The review states the bidirectional gut-brain nature of IBS (Q1) '
+      'and reports a parallel RCT in which an FMT intervention reduced '
+      'both IBS severity scores and anxiety/depression scores together '
+      '(Q2), asserted as a correlation rather than a directed causal '
+      'claim between the two subjective metrics. Strongest supporting '
+      'evidence described is an RCT (tier 4), reported within a narrative '
+      'review; scope kept narrow to the studied IBS population.',
+  population: 'IBS patients comorbid with anxiety and depression',
+  quoteSpans: [
+    ProvenanceQuoteSpan(
+      paperId: kRealDoi,
+      quote:
+          'In IBS, psychological stress activates the HPA axis, releasing '
+          'CORT which affects gut motility and sensitivity, while dysbiotic '
+          'microbiota independently generates neuroactive metabolites '
+          'acting on the ENS, illustrating the bidirectional gut-brain '
+          'nature of IBS pathophysiology.',
+      locator: 'gut-brain axis / IBS pathophysiology',
+      charStart: 52301,
+      charEnd: 52578,
+    ),
+    ProvenanceQuoteSpan(
+      paperId: kRealDoi,
+      quote:
+          'A parallel RCT in IBS patients comorbid with anxiety and '
+          'depression demonstrated that 12 weeks of oral FMT capsules '
+          'significantly reduced both IBS severity scores and '
+          'anxiety/depression scores compared to empty capsule controls, '
+          'reinforcing the gut-brain-behavior connection in this population.',
+      locator: 'therapeutic opportunities / FMT RCT',
+      charStart: 53297,
+      charEnd: 53591,
+    ),
+  ],
+  citations: [
+    ProvenanceCitation(
+      paperId: citationPaperId,
+      title: kRealDoiTitle,
+      year: kRealDoiYear,
+      evidenceTier: 4,
+      impactTier: 'high',
+      stance: 'supports',
       population: 'IBS patients comorbid with anxiety and depression',
-      quoteSpans: [
-        ProvenanceQuoteSpan(
-          paperId: kRealDoi,
-          quote:
-              'In IBS, psychological stress activates the HPA axis, releasing '
-              'CORT which affects gut motility and sensitivity, while dysbiotic '
-              'microbiota independently generates neuroactive metabolites '
-              'acting on the ENS, illustrating the bidirectional gut-brain '
-              'nature of IBS pathophysiology.',
-          locator: 'gut-brain axis / IBS pathophysiology',
-          charStart: 52301,
-          charEnd: 52578,
-        ),
-        ProvenanceQuoteSpan(
-          paperId: kRealDoi,
-          quote:
-              'A parallel RCT in IBS patients comorbid with anxiety and '
-              'depression demonstrated that 12 weeks of oral FMT capsules '
-              'significantly reduced both IBS severity scores and '
-              'anxiety/depression scores compared to empty capsule controls, '
-              'reinforcing the gut-brain-behavior connection in this population.',
-          locator: 'therapeutic opportunities / FMT RCT',
-          charStart: 53297,
-          charEnd: 53591,
-        ),
-      ],
-      citations: [
-        ProvenanceCitation(
-          paperId: kRealDoi,
-          title: kRealDoiTitle,
-          year: kRealDoiYear,
-          evidenceTier: 4,
-          impactTier: 'high',
-          stance: 'supports',
-          population: 'IBS patients comorbid with anxiety and depression',
-        ),
-      ],
     ),
   ],
 );
+
+/// The exact committed verification fixture for the internal corpus record.
+const _committedCorpusEdge = ProvenanceEdge(
+  edgeId: 'gut_comfort_score|correlates|mood_score',
+  subject: 'gut_comfort_score',
+  object: 'mood_score',
+  relation: 'correlates',
+  derivation:
+      'The cohort sentence associates gut comfort with mood, so the two correlate.',
+  population: 'IBS patients comorbid with anxiety and depression',
+  quoteSpans: [
+    ProvenanceQuoteSpan(
+      paperId: kCorpusId,
+      quote:
+          'Higher self-reported gut comfort was associated with better mood on validated scales.',
+    ),
+  ],
+  citations: [
+    ProvenanceCitation(
+      paperId: kCorpusId,
+      title: kCorpusTitle,
+      year: kCorpusYear,
+      population: 'adults with digestive symptoms',
+      evidenceTier: 3,
+      impactTier: 'high',
+      stance: 'supports',
+    ),
+  ],
+);
+
+InsightProvenance _withEdges(List<ProvenanceEdge> edges) =>
+    InsightProvenance(card: _cardInfo(), edges: edges);
+
+InsightProvenance _doiProvenance([String paperId = kRealDoi]) =>
+    _withEdges([_acceptedDoiEdge(citationPaperId: paperId)]);
+
+InsightProvenance _corpusProvenance() => _withEdges([_committedCorpusEdge]);
+
+InsightProvenance _mixedAccurateProvenance() =>
+    _withEdges([_acceptedDoiEdge(), _committedCorpusEdge]);
+
+/// Clearly synthetic scaffolding for malformed/hostile paperId cases only.
+/// No genuine DOI or committed corpus citation is ever routed through it.
+InsightProvenance _negativeInputProvenance(String paperId) => _withEdges([
+  ProvenanceEdge(
+    edgeId: 'test-only-negative-paper-id',
+    citations: [ProvenanceCitation(paperId: paperId)],
+  ),
+]);
+
+InsightProvenance _fullyCitedProvenance() => _doiProvenance();
 
 Finder _linkFor(String paperId) =>
     find.byKey(ValueKey('citation-link-$paperId'));
@@ -219,16 +243,7 @@ Future<_RecordingLauncher> _pump(
 void main() {
   group('a citation with a REAL DOI renders a working external link', () {
     testWidgets('the link is present and names the action', (tester) async {
-      await _pump(
-        tester,
-        _withCitations(const [
-          ProvenanceCitation(
-            paperId: kRealDoi,
-            title: kRealDoiTitle,
-            year: kRealDoiYear,
-          ),
-        ]),
-      );
+      await _pump(tester, _doiProvenance());
 
       expect(_linkFor(kRealDoi), findsOneWidget);
       expect(find.text(ProvenanceCopy.openPaper), findsOneWidget);
@@ -245,12 +260,7 @@ void main() {
     testWidgets('tapping it opens the canonical doi.org URL externally', (
       tester,
     ) async {
-      final launcher = await _pump(
-        tester,
-        _withCitations(const [
-          ProvenanceCitation(paperId: kRealDoi, title: kRealDoiTitle),
-        ]),
-      );
+      final launcher = await _pump(tester, _doiProvenance());
 
       await tester.ensureVisible(_linkFor(kRealDoi));
       await tester.pumpAndSettle();
@@ -267,12 +277,7 @@ void main() {
       'KNOWN GAP #286: the rendered external-paper control is not exposed as a semantic link',
       (tester) async {
         final semantics = tester.ensureSemantics();
-        await _pump(
-          tester,
-          _withCitations(const [
-            ProvenanceCitation(paperId: kRealDoi, title: kRealDoiTitle),
-          ]),
-        );
+        await _pump(tester, _doiProvenance());
         expect(
           tester.getSemantics(_linkFor(kRealDoi)).flagsCollection.isLink,
           isFalse,
@@ -287,12 +292,7 @@ void main() {
       tester,
     ) async {
       const stored = 'doi:$kRealDoi';
-      final launcher = await _pump(
-        tester,
-        _withCitations(const [
-          ProvenanceCitation(paperId: stored, title: kRealDoiTitle),
-        ]),
-      );
+      final launcher = await _pump(tester, _doiProvenance(stored));
 
       await tester.ensureVisible(_linkFor(stored));
       await tester.pumpAndSettle();
@@ -308,10 +308,7 @@ void main() {
       // Crossref — and this repo's crossref-works.json fixture — store this DOI
       // upper-cased. DOIs are case-insensitive, so it is the same paper.
       const stored = '10.1016/J.ISCI.2026.116224';
-      final launcher = await _pump(
-        tester,
-        _withCitations(const [ProvenanceCitation(paperId: stored)]),
-      );
+      final launcher = await _pump(tester, _doiProvenance(stored));
 
       await tester.ensureVisible(_linkFor(stored));
       await tester.pumpAndSettle();
@@ -327,11 +324,7 @@ void main() {
     testWidgets('a failed launch says so rather than doing nothing', (
       tester,
     ) async {
-      await _pump(
-        tester,
-        _withCitations(const [ProvenanceCitation(paperId: kRealDoi)]),
-        launchSucceeds: false,
-      );
+      await _pump(tester, _doiProvenance(), launchSucceeds: false);
 
       await tester.ensureVisible(_linkFor(kRealDoi));
       await tester.pumpAndSettle();
@@ -346,10 +339,7 @@ void main() {
     });
 
     testWidgets('a successful launch shows no failure notice', (tester) async {
-      await _pump(
-        tester,
-        _withCitations(const [ProvenanceCitation(paperId: kRealDoi)]),
-      );
+      await _pump(tester, _doiProvenance());
 
       await tester.ensureVisible(_linkFor(kRealDoi));
       await tester.pumpAndSettle();
@@ -364,16 +354,7 @@ void main() {
     testWidgets('an internal corpus id gets a sentence, never a link', (
       tester,
     ) async {
-      final launcher = await _pump(
-        tester,
-        _withCitations(const [
-          ProvenanceCitation(
-            paperId: kCorpusId,
-            title: kCorpusTitle,
-            year: kCorpusYear,
-          ),
-        ]),
-      );
+      final launcher = await _pump(tester, _corpusProvenance());
 
       expect(find.text(ProvenanceCopy.paperLinkUnavailable), findsOneWidget);
       expect(_linkFor(kCorpusId), findsNothing);
@@ -381,10 +362,7 @@ void main() {
       expect(find.byIcon(Icons.open_in_new_rounded), findsNothing);
       expect(launcher.opened, isEmpty);
       // The citation itself is still shown — unlinkable is not invisible.
-      expect(
-        find.textContaining('An unindexed record held only in the corpus'),
-        findsOneWidget,
-      );
+      expect(find.textContaining(kCorpusTitle), findsOneWidget);
     });
 
     testWidgets('hostile and malformed paperIds never render a link', (
@@ -402,15 +380,11 @@ void main() {
         '',
         '   ',
         'paper-1',
-        kCorpusId,
         String.fromCharCode(0x00),
         '10.1038/s41586${String.fromCharCode(0x0d)}020',
       ];
       for (final paperId in hostile) {
-        final launcher = await _pump(
-          tester,
-          _withCitations([ProvenanceCitation(paperId: paperId)]),
-        );
+        final launcher = await _pump(tester, _negativeInputProvenance(paperId));
         expect(
           _linkFor(paperId),
           findsNothing,
@@ -426,27 +400,22 @@ void main() {
       }
     });
 
-    testWidgets('a mixed edge links only the DOI, never the corpus id', (
+    testWidgets('mixed artifacts link only the DOI, never the corpus id', (
       tester,
     ) async {
-      final launcher = await _pump(
-        tester,
-        _withCitations(const [
-          ProvenanceCitation(paperId: kRealDoi, title: kRealDoiTitle),
-          ProvenanceCitation(
-            paperId: kCorpusId,
-            title: kCorpusTitle,
-            year: kCorpusYear,
-          ),
-        ]),
-      );
+      final launcher = await _pump(tester, _mixedAccurateProvenance());
 
       expect(_linkFor(kRealDoi), findsOneWidget);
       expect(_linkFor(kCorpusId), findsNothing);
       expect(find.text(ProvenanceCopy.openPaper), findsOneWidget);
+
+      // The screen is a lazy ListView; scroll until the second accurate edge
+      // is built before asserting its unavailable-link state.
+      await tester.scrollUntilVisible(find.textContaining(kCorpusTitle), 300);
+      await tester.pumpAndSettle();
       expect(find.text(ProvenanceCopy.paperLinkUnavailable), findsOneWidget);
 
-      await tester.ensureVisible(_linkFor(kRealDoi));
+      await tester.scrollUntilVisible(_linkFor(kRealDoi), -300);
       await tester.pumpAndSettle();
       await tester.tap(_linkFor(kRealDoi));
       await tester.pumpAndSettle();

@@ -101,7 +101,11 @@ supersedes any earlier statement here that it changed tests only.
   its recorded quote spans/locators. It does not invent verification, serving,
   score, direction, or a second citation. The unavailable-link fixture uses
   the committed internal record `corpus:gut-mood-cohort-2024`, *Gut comfort and
-  mood in a longitudinal cohort* (2024), never a fabricated corpus record.
+  mood in a longitudinal cohort* (2024), attached only to its exact
+  `verify-claims.jsonl` relationship, citation fields, derivation, and quote.
+  Mixed link coverage renders that corpus artifact and the accepted DOI
+  artifact as two separate edges; genuine citations never pass through the
+  clearly named hostile-input scaffold.
 - False-pass repairs are explicit: widget loops use distinct keys so Flutter
   cannot reuse the first fixture's State; real tab/service tests complement
   source mirrors and pure payload models; DOI/title metadata is paired only
