@@ -42,6 +42,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectedFrom = searchParams.get('redirectedFrom') ?? '/overview';
+  const accessDenied = searchParams.get('denied') === 'nao';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -84,6 +85,13 @@ function LoginForm() {
           A window into the brain. Access is limited to authorized accounts.
         </p>
 
+        {accessDenied ? (
+          <p role="alert" style={styles.notice}>
+            This signed-in account does not currently have access to nao. Ask a workspace
+            administrator to confirm its membership.
+          </p>
+        ) : null}
+
         <form onSubmit={handleSubmit} style={styles.form} noValidate>
           <label style={styles.label}>
             <span style={styles.labelText}>Email</span>
@@ -95,6 +103,7 @@ function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               style={styles.input}
+              className="nao-login-input"
               placeholder="you@example.com"
             />
           </label>
@@ -103,6 +112,7 @@ function LoginForm() {
             <span style={styles.labelText}>Password</span>
             <input
               type="password"
+              className="nao-login-input"
               name="password"
               autoComplete="current-password"
               required
@@ -200,7 +210,15 @@ const styles: Record<string, CSSProperties> = {
     color: 'var(--text-primary)',
     font: 'inherit',
     fontSize: '0.95rem',
-    outline: 'none',
+  },
+  notice: {
+    margin: '0 0 1rem',
+    padding: '0.75rem 0.85rem',
+    border: '1px solid var(--state-mid)',
+    borderRadius: 'var(--radius-sm)',
+    color: 'var(--text-primary)',
+    fontSize: '0.85rem',
+    lineHeight: 1.5,
   },
   error: {
     margin: 0,
