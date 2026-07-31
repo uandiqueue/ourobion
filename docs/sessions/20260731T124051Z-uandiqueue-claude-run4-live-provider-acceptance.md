@@ -144,3 +144,74 @@ merge commit); device: `uandiqueue-wsl`.
   independent blockers). No substitute was run and no acceptance was claimed.
 
 memory: none
+
+## Continuation — §D local validation, three defects, and the zero-claim diagnosis
+
+This entry supersedes the "§D is implemented but never executed" bullet above only in detail; §D
+still has never run as a workflow.
+
+### Attempted
+
+- Dispatch the §D pipeline as a CI dry run. **Refused by GitHub:** `HTTP 404: workflow
+  brain-pipeline.yml not found on the default branch`. A `workflow_dispatch` trigger is only
+  registered once the file exists on the default branch (`main`), so it cannot be dispatched
+  against a feature branch first. `main` is out of scope, so no CI run was performed.
+- Validated the pipeline's stages locally against real R2 instead.
+
+### Changed — three defects found by that local validation, all fixed
+
+1. **The dry run could never have gone green.** Stage 5 ran `load_edges --from-r2 --check`, but a
+   dry run deliberately never pushes and the demo bucket holds **zero `edges/` objects**, so the
+   check failed on a technicality every time. The absent-artifact case is now reported as the
+   expected empty state while still proving R2 credentials and connectivity; every other loader
+   failure still fails.
+2. **Stage 1 would have failed on every runner.** `synthesize` resolves citation metadata through
+   `Manifest.open(corpusDir)` — the **local** cache — while ingestion populates **R2** from a
+   separate workflow on a different runner. Exported the pre-existing but never-invoked
+   `hydrateManifestFromR2`, exposed it as a `hydrate-manifest` verb, and added it as a workflow
+   step before synthesis.
+3. **Provider keys must be in `process.env`, not only `.env`.** `LlmRouter` resolves keys from
+   `opts.env ?? process.env` (`router.ts:415`) and the synthesize/verify paths construct it without
+   an explicit env, so they never read `tools/brain-ingest/.env` — only `live-acceptance` merges it
+   via `loadProtectedEnv`. Writing `.env` in CI, as #233 §E prescribes, would have failed with
+   `requires env var OPENAI_API_KEY`. The workflow now passes keys via step-level `env:`.
+
+### Decided — two corrections to this session's own earlier findings
+
+- **`METRIC_TERMS` does not exist.** It appears only in two comments in `synth/passages.ts`
+  describing deferred A6 work. What runs is `defaultTermsForKeys()`, which splits the snake_case
+  metric key and drops a stoplist: `gut_comfort_score → ["gut","comfort"]`, `mood_score → ["mood"]`.
+  The metric registry has a `ui.label` but no alias field.
+- **The zero-claim result was mis-attributed to the corpus alone.** Measured on
+  `doi:10.3390/nu18091412`: `comfort` occurs **0** times and `mood` 13, while `depress` occurs
+  **45** and `anxi` **30**. The prefilter never showed the model the ~75 sentences that mattered.
+  The corpus gap is real for the *gut* side (`abdominal`/`bloat`/`discomfort`/`bowel` all 0) but not
+  for the *mood* side. Both causes are genuine; the prefilter is the cheaper one and was ranked
+  second in error.
+- **The paper's own mechanism is never captured.** `claimKind` can be `'mechanistic'`, but no field
+  holds the mechanism; `derivation` is our extraction justification, not the paper's biology.
+
+### Verification
+
+- Two live `gpt-5` synthesis runs over two well-matched papers each returned
+  **`0 accepted, 0 rejected`** — zero claims emitted, so nothing was filtered.
+- `hydrate-manifest` against real R2: **0 → 1,298** records; `synthesize --dry-run` then assembles
+  its prompt and exits 0.
+- brain-ingest **430/430** (426 pre-existing + 4 new `--push-r2` tests), llm-router **121/121**,
+  both typechecks clean. Both workflow YAMLs parse. The gate's six-case decision table was
+  exercised directly and is fail-closed in every row.
+- Session provider total: **8 calls, US$0.044** (synthesis US$0.0437 / verifier US$0.0008), against
+  SGD 2 / SGD 20 / 20-call ceilings. `SUPABASE_DB_URL` was set as a repository secret (pooler,
+  transaction mode). The hosted Postgres is unreachable from this WSL2 host — TCP connects, the
+  handshake times out, and there is no IPv6 route — so stage 5's write remains unverified locally.
+
+### Left
+
+- #233 §D still needs: PR #292 merged, the workflow on `main`, then a `dry_run: true` dispatch,
+  then a live dispatch. The pooler is transaction-mode (port 6543); if the loader misbehaves on
+  prepared statements, session mode (5432) is the fix. Only a live run will surface that.
+- Issues **#297** (seed coverage) and **#300** (synthesis revamp, incl. the two hackathon MVP goals
+  and scope G) were opened from these findings. #240, #179 and #246 are all blocked on #300 —
+  they are one problem with three trackers: synthesis emits no claims at all.
+
+memory: none
