@@ -1,44 +1,10 @@
-// Safe citation links — the pure resolver `ProvenanceCitation.paperUri`
-// (impl/provenance_models.dart).
-//
-// `Citation.paperId` is "DOI when available, else a stable internal corpus id"
-// (shared/brain/relationships.ts). Two obligations follow, and both are
-// falsifiable here without pumping a widget:
-//
-//   1. HONESTY — a paperId that is not a DOI must yield null, so the screen can
-//      say there is nothing to open. Manufacturing a URL out of a corpus id
-//      would be a fabricated citation with extra steps.
-//   2. SAFETY — the only URL this may ever produce is https on doi.org. Not
-//      http. Not doi.org.evil.example. Not javascript:. A paperId is
-//      attacker-influenced data (it arrives from the corpus pipeline), so the
-//      host is pinned rather than trusted.
-//
-// THE FIXTURE DOI IS REAL. 10.1016/j.isci.2026.116224 resolves to
-// "Unraveling the gut microbiota-brain axis" (iScience, 2026). It is the
-// project-relevant citation fixture used by the provenance screen tests; where
-// a title is needed, this suite uses that paper's genuine title and year.
-//
-// Every other DOI string used below is likewise taken verbatim from a fixture
-// already committed to this repository (paths named at each use). No DOI, URL,
-// paper or title is invented anywhere in this file.
-//
-// Control-character fixtures are built with String.fromCharCode rather than
-// pasted, so no raw NUL/ESC byte ever lands in this source file.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:src/modules/m5b_insight_engine/impl/provenance_models.dart';
 
-/// A real, verifiable DOI — see the header note.
 const kRealDoi = '10.1016/j.isci.2026.116224';
 const kRealDoiUrl = 'https://doi.org/10.1016/j.isci.2026.116224';
 
-/// Further real DOIs, each already committed to this repo's ingest fixtures:
-///   * tools/brain-ingest/tests/fixtures/openalex-works.json
-///   * tools/brain-ingest/tests/fixtures/identity-candidates.json
-///   * tools/brain-ingest/tests/fixtures/idconv.json
-///   * tools/brain-ingest/tests/fixtures/s2-search.json
-/// They are used only to exercise DOI *shapes* (dotted suffixes, mixed case,
-/// a non-numeric registrant); no title or claim is attached to any of them.
 const kRepoDois = <String>[
   '10.1371/journal.pone.0211200',
   '10.1099/mic.0.001234',
@@ -47,20 +13,14 @@ const kRepoDois = <String>[
   '10.48550/arXiv.2103.00020',
 ];
 
-/// A stable internal corpus id — the other half of the `paperId` contract, and
-/// deliberately NOT resolvable to any page.
 const kCorpusId = 'corpus:gut-mood-cohort-2024';
 const kCorpusTitle = 'Gut comfort and mood in a longitudinal cohort';
 const kCorpusYear = 2024;
 
-/// NUL, BEL, TAB, LF, CR, ESC, DEL and a C1 control.
 const kControlCodePoints = [0x00, 0x07, 0x09, 0x0a, 0x0d, 0x1b, 0x7f, 0x9f];
 
 Uri? _uriFor(String paperId) => ProvenanceCitation(paperId: paperId).paperUri;
 
-/// The resolved URL, or null when the paperId is not linkable. Kept separate
-/// from [_uriFor] so an unexpected null compares as `null`, never as the string
-/// `'null'`.
 String? _urlFor(String paperId) => _uriFor(paperId)?.toString();
 
 String _u(int code) => 'U+${code.toRadixString(16).padLeft(4, '0')}';
@@ -85,10 +45,6 @@ void main() {
     });
 
     test('a cleartext http:// doi.org URL is rejected outright (#286)', () {
-      // This was pinned as a known gap while the resolver silently upgraded the
-      // scheme. #286 chose rejection instead, which is the stricter of the two
-      // ways to honour "a cleartext link must not survive": a stored http://
-      // paperId is malformed data, and quietly repairing it hides that.
       expect(_uriFor('http://doi.org/$kRealDoi'), isNull);
       expect(_uriFor('http://dx.doi.org/$kRealDoi'), isNull);
     });
@@ -104,10 +60,6 @@ void main() {
     });
 
     test('DOI case is canonicalised, so one paper has one URL (#286)', () {
-      // Crossref — and this repo's crossref-works.json fixture — store this DOI
-      // upper-cased. A DOI is case-insensitive, so it is the same paper: it must
-      // resolve, and it must resolve to the SAME link as the lower-cased
-      // spelling rather than to a second URL for one document.
       final upper = _uriFor('10.1016/J.ISCI.2026.116224');
       expect(upper, isNotNull);
       expect(upper!.host, 'doi.org');
@@ -121,8 +73,6 @@ void main() {
         expect(uri, isNotNull, reason: doi);
         expect(uri!.scheme, 'https', reason: doi);
         expect(uri.host, 'doi.org', reason: doi);
-        // Canonical case (#286), so an upper-cased stored spelling and its
-        // lower-cased twin cannot become two links to one paper.
         expect(uri.path, '/${doi.toLowerCase()}', reason: doi);
       }
     });
@@ -153,7 +103,6 @@ void main() {
     });
 
     test('near-miss DOI shapes', () {
-      // The registrant must be 4–9 digits after "10.", and a suffix must exist.
       expect(_uriFor('10.103/s41586'), isNull);
       expect(_uriFor('10.1234567890/x'), isNull);
       expect(_uriFor('10.1038'), isNull);
@@ -223,14 +172,11 @@ void main() {
     test('a control character INSIDE the identifier is rejected', () {
       for (final code in kControlCodePoints) {
         final c = String.fromCharCode(code);
-        // Splicing a control character into an otherwise real DOI must not
-        // yield a link to that real DOI.
         expect(
           _uriFor('10.1038/s41586${c}020-2649-2'),
           isNull,
           reason: '${_u(code)} in the suffix',
         );
-        // The classic response-splitting / label-spoofing shape.
         expect(
           _uriFor('$kRealDoi${c}Location: https://evil.example'),
           isNull,
@@ -245,9 +191,6 @@ void main() {
     });
 
     test('a NON-whitespace trailing control character is rejected', () {
-      // TAB / LF / CR are ordinary trailing whitespace and are trimmed (see the
-      // whitespace test above). NUL, BEL, ESC, DEL and C1 controls are not
-      // whitespace and must not be quietly accepted at the end either.
       for (final code in [0x00, 0x07, 0x1b, 0x7f, 0x9f]) {
         expect(
           _uriFor('$kRealDoi${String.fromCharCode(code)}'),
@@ -258,9 +201,6 @@ void main() {
     });
 
     test('whenever a Uri IS produced it is https on exactly doi.org', () {
-      // The invariant that matters most: for ANY input — real, malformed or
-      // hostile — a non-null result is always an https doi.org URL with no
-      // port, no credentials, no query and no fragment.
       final everyInput = <String>[
         kRealDoi,
         kRealDoiUrl,
@@ -271,8 +211,6 @@ void main() {
         '10.1016/J.ISCI.2026.116224',
         '  $kRealDoi\n',
         ...kRepoDois,
-        // Non-DOI, malformed and hostile shapes — most yield null, and any that
-        // does not must still satisfy the invariant.
         kCorpusId,
         '',
         '   ',
@@ -305,10 +243,6 @@ void main() {
     });
 
     test('dot segments are rejected, not resolved away (#286)', () {
-      // Pinned as a known gap while `Uri.parse` collapsed these into a
-      // different path than the stored identifier named — 10.1234/../../evil
-      // became https://doi.org/evil, a link to somewhere the citation never
-      // pointed. #286 rejects them instead.
       for (final id in [
         '10.1234/../../evil',
         '10.1234/../evil',

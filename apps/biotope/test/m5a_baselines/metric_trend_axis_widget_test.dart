@@ -1,18 +1,3 @@
-// The metric-aware axis, as actually wired up by the surfaces that draw it.
-//
-// metric_trend_axis_test.dart pins the axis POLICY against the registry; this
-// pins that the widgets hand the SELECTED metric key to the painter, so a
-// Bristol series really is drawn on the ordinal axis on screen and never on the
-// metric-agnostic ladder that would put a gridline at 2.5.
-//
-// Readback note: TrendChartPainter draws its tick labels straight onto the
-// canvas (TextPainter), not as Text widgets, and exposes no tick getter — so
-// the ticks cannot be read back out of the render tree. What IS observable is
-// the `metricKey` the painter was constructed with, which is the single input
-// that selects the axis; the labels it will therefore draw are derived here
-// through the same public `trendAxisTicks` / `trendAxisLabel` functions
-// `paint()` calls. A painter handed the wrong key is caught; a painter that
-// ignored its own key would not be, which is why the policy suite exists too.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,8 +8,6 @@ import 'package:src/modules/m5a_baselines/ui/screens/metric_detail_screen.dart';
 import 'package:src/modules/m5a_baselines/ui/widgets/metric_trend_section.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// autoRefreshToken off: the default GoTrue auto-refresh timer trips the test
-// binding's pending-timers invariant.
 SupabaseClient _inertClient() => SupabaseClient(
   'http://localhost',
   'test-key',
@@ -65,9 +48,6 @@ List<MetricDailyPoint> _points(List<(int, double)> days, String source) => [
     MetricDailyPoint(date: DateTime.utc(2026, 7, d), value: v, source: source),
 ];
 
-/// A real-shaped ordinal series: whole Bristol types, one per day, with a
-/// missing day so the x axis keeps its honest gap. The 3..5 span is exactly the
-/// window that would otherwise produce a half-step gridline.
 List<MetricDailyPoint> _bristolSeries() => _points(const [
   (4, 4.0),
   (5, 3.0),
@@ -76,8 +56,6 @@ List<MetricDailyPoint> _bristolSeries() => _points(const [
   (9, 3.0),
 ], 'self_report');
 
-/// An Armstrong shade series confined to two adjacent shades — the narrow
-/// window a metric-agnostic ladder would split in half.
 List<MetricDailyPoint> _armstrongSeries() =>
     _points(const [(4, 2.0), (5, 3.0), (6, 2.0)], 'self_report');
 
@@ -94,8 +72,6 @@ TrendChartPainter _painter(WidgetTester tester) {
   return paint.painter! as TrendChartPainter;
 }
 
-/// The labels the painter will draw for the series it holds — derived through
-/// the same public functions `paint()` uses.
 List<String> _axisLabels(TrendChartPainter painter) {
   final values = [for (final p in painter.points) p.value];
   return [
@@ -155,7 +131,6 @@ void main() {
               'the user never logged',
         );
       }
-      // The scale's own vocabulary, at both ends of the declared Bristol range.
       expect(_axisLabels(painter), ['1 firm', '4 smooth', '7 watery']);
     });
 
@@ -209,7 +184,6 @@ void main() {
           reason: 'a continuous axis must carry the metric unit',
         );
       }
-      // HRV is a real continuous quantity — nothing forces it onto integers.
       expect(labels, isNot(contains('1 firm')));
     });
 
@@ -291,10 +265,6 @@ void main() {
         points: _hrvSeries(),
       );
 
-      // The stored-value unit line the detail screen owns. Since #285 the
-      // wording comes from the registry rather than a per-metric literal, so
-      // what is asserted is that it NAMES the registry unit — not one
-      // hand-written phrase that would have to be re-typed per metric.
       final axisUnit = MetricDetailCopy.axisUnit('hrv_sdnn_ms');
       expect(find.text(axisUnit), findsOneWidget);
       expect(
@@ -304,7 +274,6 @@ void main() {
             'the chart plots stored values, so the line above it has to say '
             'which unit those numbers are in',
       );
-      // …and the same unit on every gridline the painter will draw.
       for (final label in _axisLabels(_painter(tester))) {
         expect(label, endsWith(' ms'));
       }

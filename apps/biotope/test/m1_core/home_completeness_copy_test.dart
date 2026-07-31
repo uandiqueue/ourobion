@@ -1,18 +1,3 @@
-// Home's number is `engagement_state.dqs_7day_avg` (falling back to today's
-// row) — a weighted LOGGING-COMPLETENESS score built from kDailyCoreDqsWeights
-// (25/25/20/10/7/7/6 across urine_colour, stool_form, outside_meals,
-// mosquito_bites, energy_score, mood_score, gut_comfort_score). It is not a
-// health, wellness or "thriving" verdict. This pins, against the MERGED
-// surface (`HomeCoverageCopy.bucket`/`bucketRange`, `SystemStatusHero`):
-//   * the bucket-label and bucket-range mapping at and around the real
-//     80/60/40 thresholds,
-//   * that a score of exactly 80 (25+25+20+10, with energy/mood/gut comfort
-//     still missing) never reads as "everything logged" — only a genuine 100
-//     may claim that,
-//   * that none of the banned health-sounding words ever appear in the
-//     rendered score/status area, at any of the required sample scores,
-//   * that every string this screen can show for the score/status area
-//     passes the shared non-diagnostic copy gate.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,12 +5,8 @@ import 'package:src/modules/m1_core/ui/screens/home_tab.dart';
 
 import '../../../../shared/constants/copy_guidelines.dart';
 
-/// Health/wellness-sounding words that must never appear in the score's
-/// bucket labels or the surrounding hero text.
 const _bannedWords = ['thriving', 'balanced', 'healthy', 'wellness'];
 
-/// The exact sample scores the acceptance criteria call out, plus null
-/// (nothing logged yet).
 const _sampleScores = <double?>[100, 85, 80, 70, 50, 20, null];
 
 void main() {
@@ -59,11 +40,6 @@ void main() {
       expect(HomeCoverageCopy.bucket(null), 'No coverage yet');
     });
 
-    // Weights are 25/25/20/10/7/7/6 (urine_colour, stool_form, outside_meals,
-    // mosquito_bites, energy_score, mood_score, gut_comfort_score). A score of
-    // exactly 80 is at most urine+stool+meals+mosquito (25+25+20+10), with
-    // energy, mood AND gut comfort still unlogged — so the top band must not
-    // read as "everything logged". Only a genuine 100 sums every weight.
     test('only a genuine 100 could mean every channel was logged — no bucket '
         'label below it claims that', () {
       for (final v in [
@@ -101,12 +77,6 @@ void main() {
     test(
       'the label at 80 is truthful ("High coverage", not a completeness claim)',
       () {
-        // This is the exact contract from the acceptance criteria: 80 must
-        // read as high but not as "done". The merged implementation passes —
-        // "High coverage" claims neither completeness nor a health verdict.
-        // (80 and 100 do share the same top bucket label by design — the
-        // bucket is a range, not a per-score claim — but neither wording
-        // asserts every channel was captured.)
         expect(HomeCoverageCopy.bucket(80), 'High coverage');
         expect(
           HomeCoverageCopy.bucket(80).toLowerCase(),

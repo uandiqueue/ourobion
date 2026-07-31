@@ -1,19 +1,3 @@
-// Reference-driven state coverage for the Scan dial (#268 acceptance item 1).
-//
-// The design reference ("Biotope Biomech Botanical.dc.html" §SCAN) gives the
-// globe four states, and this file pins the geometry and the presence rules of
-// each one:
-//
-//   idle         262 logical px · no sweep band · no result overlay
-//   scanning     262 logical px · sweep band    · no result overlay
-//   completed    190 logical px · no sweep band · result overlay
-//   expanded-gap the completed dial, unchanged, with one gap card open
-//
-// and the transition between them: 420 ms on Cubic(.2, 0, 0, 1).
-//
-// `ScanTab` itself reads `Supabase.instance.client` in `initState`, so it
-// cannot be pumped here; [ScanGlobe] is public precisely so the dial can be
-// driven directly. See scan_test_support.dart.
 
 import 'dart:io';
 
@@ -27,7 +11,6 @@ final _globe = find.byKey(ScanGlobe.globeKey);
 final _band = find.byKey(ScanGlobe.sweepBandKey);
 final _overlay = find.byKey(ScanGlobe.completionOverlayKey);
 
-/// The `Opacity` the completion reveal drives.
 double _overlayOpacity(WidgetTester tester) => tester
     .widgetList<Opacity>(find.ancestor(of: _overlay, matching: find.byType(Opacity)))
     .first
@@ -127,9 +110,6 @@ void main() {
 
       expect(_overlay, findsOneWidget);
 
-      // inset:0 — the wash backs the whole reading, not just the text bounding
-      // box. It sits inside the dial's 1px rim, so it is the dial's interior:
-      // the same box every other layer of the globe is laid out in.
       final interior = tester
           .getSize(find.descendant(of: _globe, matching: find.byType(Stack)).first);
       expect(tester.getSize(_overlay), interior);
@@ -253,23 +233,17 @@ void main() {
         ),
       );
 
-      // The dial does not move or re-open when a card expands beneath it.
       expect(tester.getSize(_globe), const Size.square(ScanGlobe.completedSize));
       expect(_overlay, findsOneWidget);
       expect(_band, findsNothing);
       expect(find.text('68%'), findsOneWidget);
 
-      // …and exactly one card is open.
       expect(findExpandedArea('mood_score'), findsOneWidget);
       expect(findExpandedArea('energy_score'), findsNothing);
     });
   });
 
   group('the tab drives the dial with the dial\'s own constants', () {
-    // The screen and the widget are in the same file, so a drift here is only
-    // ever a copy-paste slip — and both controllers now name the ScanGlobe
-    // constant instead of re-typing its milliseconds, so there is no second
-    // copy left to drift.
     final source = File(
       'lib/modules/m2_self_report/ui/screens/scan_tab.dart',
     ).readAsStringSync();

@@ -1,23 +1,3 @@
-// The Scan tab's inline controls may never narrow what a column accepts
-// (#268 acceptance items 5 and 6).
-//
-// A gap card answers EVERY daily-core metric in place. That is only safe if the
-// control offers the metric's full accepted range: a 1..5 chip row for a 1..8
-// scale would silently make the top three values unreachable from Scan, and the
-// user would have no way to tell a missing value from an unofferable one.
-//
-// `lib/` cannot import `shared/` — the registry is a cross-language parity
-// mirror living outside the Flutter package, which is why kDailyCoreDqsWeights
-// mirrors its DQS weights rather than reading them. So the ranges are held to
-// shared/metrics/lib/src/registry.dart HERE, by parsing the registry source
-// exactly as the guards in test/guards/ do. Nothing below hardcodes a range: if
-// the registry moves and kInlineAnswerableOptions does not, these fail.
-//
-// "Offers the value" is control-shaped, not chip-shaped: the Armstrong and
-// Bristol controls have one tap target per accepted value, while the 0-20
-// mosquito stepper reaches a value by stepping to it. Both are held to the same
-// contract — every value the column accepts must be reachable, and nothing
-// outside the range may be.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,7 +8,6 @@ import 'package:src/modules/m2_self_report/ui/screens/scan_tab.dart';
 import '../guards/guard_support.dart';
 import 'scan_test_support.dart';
 
-/// `{key: (min, max)}` for every registry entry that declares a numeric scale.
 Map<String, ({int min, int max})> _registryScales(String source) {
   final keyRe = RegExp('''key:\\s*['"]([a-z0-9_]+)['"]''');
   final matches = keyRe.allMatches(source).toList();
@@ -48,7 +27,6 @@ Map<String, ({int min, int max})> _registryScales(String source) {
   return out;
 }
 
-/// `{key: ui.inputType}` for every registry entry that declares one.
 Map<String, String> _registryInputTypes(String source) {
   final keyRe = RegExp('''key:\\s*['"]([a-z0-9_]+)['"]''');
   final matches = keyRe.allMatches(source).toList();
@@ -123,9 +101,6 @@ void main() {
     });
 
     test('the ranges the acceptance criteria name are the ranges in force', () {
-      // Spelled out once, as a readable cross-check on the parser above: if the
-      // parse silently returned nothing these would be the assertions that
-      // noticed. The loop above is what actually guards against drift.
       expect(scales['urine_colour'], (min: 1, max: 8));
       expect(scales['stool_form'], (min: 1, max: 7));
       expect(scales['outside_meals'], (min: 0, max: 3));
@@ -150,12 +125,6 @@ void main() {
     });
 
     test('every declared affordance still fits a compact inline control', () {
-      // The Scan tab answers each metric with the control its inputType asks
-      // for: chips, Armstrong swatches, Bristol rows, or a stepper. That is
-      // only honest while every daily-core inputType is a small, discrete
-      // scale — a free-text or multi-select inputType appearing here would mean
-      // no compact inline control can represent it and the gap card would have
-      // to route away from the tab.
       const wrappable = {
         'armstrong_1_8',
         'bristol_1_7',
@@ -185,15 +154,11 @@ void main() {
         final answers = <int>[];
 
         if (controlFor(key) == ScanControl.stepper) {
-          // No per-value target exists, so reachability is proved by actually
-          // stepping the whole range — stepStepperTo throws the moment a bound
-          // stops it short.
           await tester.pumpWidget(scanHarness(gapCard(key, expanded: true)));
           for (final value in range) {
             await stepStepperTo(tester, value);
             expect(stepperValue(tester), value);
           }
-          // Then that committing any of them writes that exact value.
           for (final value in range) {
             await tester.pumpWidget(
               scanHarness(
@@ -265,13 +230,6 @@ void main() {
     testWidgets('the long scales are not abbreviated behind a "more" link', (
       tester,
     ) async {
-      // urine_colour (8) and stool_form (7) are the ones a per-value control is
-      // tempted to truncate: every accepted value must have its own target.
-      //
-      // Counted by the controls' own option keys rather than by GestureDetector
-      // — since #287 the card header is itself a tap target, so a type count
-      // would be one too many and would say nothing about which values it
-      // covered.
       for (final key in ['urine_colour', 'stool_form']) {
         await tester.pumpWidget(scanHarness(gapCard(key, expanded: true)));
         final options = kInlineAnswerableOptions[key]!;
@@ -301,8 +259,6 @@ void main() {
         );
       }
 
-      // mosquito_bites (21) is truncation-proof differently: the stepper's
-      // bounds are the column's bounds, which the range tests above walk.
       await tester.pumpWidget(
         scanHarness(gapCard('mosquito_bites', expanded: true)),
       );

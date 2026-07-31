@@ -1,34 +1,3 @@
-// The Scan tab's gap cards and channel rows (#268 acceptance items 4, 5, 8, 9).
-//
-//  · item 4 — exactly ONE Needs-You card is expanded at a time, an expanded
-//    card can be tapped shut, and a saved card collapses into a logged state
-//    that can be re-opened;
-//  · item 5 — the primary inline action never routes to the full Daily Log,
-//    for any of the seven daily-core metrics;
-//  · item 8 — the environment row stays truthfully "Not built": inert, and the
-//    word "Synced" never appears in it;
-//  · item 9 — every inline option is a real button node for assistive tech
-//    with a meaningful label, and the one stepper labels its increment,
-//    decrement and live value readout.
-//
-// (Item 6, the full accepted range per metric, is in
-// inline_control_range_test.dart; items 1-3, the dial and the sweep, are in
-// scan_globe_states_test.dart and scan_sweep_test.dart.)
-//
-// Not every metric answers with a chip row: `_InlineAnswerControl` honours the
-// registry's declared affordance, so urine_colour gets named Armstrong
-// swatches, stool_form gets named Bristol rows, and the 0-20 mosquito_bites
-// range gets a stepper that commits on Save. Loops over the seven keys branch
-// on `controlFor` in scan_test_support.dart rather than assuming chips, and the
-// last group here covers each specialised control on its own terms.
-//
-// The default production `ScanTab` reads `Supabase.instance.client` in
-// `initState`. This file now also pumps the actual tab through deterministic
-// service callbacks. The mirror still covers the one piece of behaviour that lives in
-// `_ScanTabState` rather than in a public widget — the single `_openGapKey`
-// that makes the list one-open-at-a-time — is mirrored by [ScanGapListHost] in
-// scan_test_support.dart, and the last group here holds that mirror to the
-// screen's actual source line by line.
 
 import 'dart:ui' as ui;
 
@@ -44,8 +13,6 @@ import 'package:src/modules/m5a_baselines/index.dart' show metricDisplayLabel;
 
 import 'scan_test_support.dart';
 
-/// Records every route the app pushes, so "does this open the Daily Log?" is a
-/// measurement rather than an absence of a callback nobody wired.
 class _RouteLog extends NavigatorObserver {
   final pushed = <Route<dynamic>>[];
 
@@ -56,8 +23,6 @@ class _RouteLog extends NavigatorObserver {
   }
 }
 
-/// A gap list whose answers land in its own row, the way `_answerInline` →
-/// `_loadQuiet` puts a saved value back into `_todayRow`.
 class _AnsweringList extends StatefulWidget {
   final List<String> metricKeys;
   const _AnsweringList(this.metricKeys);
@@ -77,9 +42,6 @@ class _AnsweringListState extends State<_AnsweringList> {
   );
 }
 
-/// State behind the real [ScanTab] injection seam. It mirrors the normal
-/// server result only at its boundary; the tab's own private state machine,
-/// gap list, save/reload sequence, SnackBar and navigation behavior all run.
 class _ScanRuntime {
   _ScanRuntime({required this.row, this.failSave = false});
 
@@ -131,17 +93,11 @@ Widget _realScanHarness(_ScanRuntime runtime, {_RouteLog? routes}) =>
       ),
     );
 
-/// The rasterised pixels behind [boundaryFinder], so "these seven shapes are
-/// actually different" is a measurement rather than a claim about the painter's
-/// arguments.
 Future<String> _renderSignature(
   WidgetTester tester,
   Finder boundaryFinder,
 ) async {
   final boundary = tester.renderObject<RenderRepaintBoundary>(boundaryFinder);
-  // Layer rasterisation and byte encoding are completed by the engine, not by
-  // the test's fake-async zone, so awaiting them inside `pump` time deadlocks.
-  // `runAsync` is the only place these futures can complete.
   final signature = await tester.runAsync(() async {
     final image = await boundary.toImage(pixelRatio: 1);
     final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
@@ -161,8 +117,6 @@ void main() {
         );
         final routes = _RouteLog();
         await tester.pumpWidget(_realScanHarness(runtime, routes: routes));
-        // Idle has the intentional perpetual globe-breathe animation, so it can
-        // never settle. Two frames are enough for the injected initial read.
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 1));
         final routeCount = routes.pushed.length;
@@ -247,7 +201,6 @@ void main() {
 
       expect(find.text(ScanTabCopy.environmentLabel), findsOneWidget);
       expect(find.text(ScanTabCopy.environmentDetail), findsOneWidget);
-      // BadgeChip uppercases its label.
       expect(
         find.text(ScanTabCopy.environmentStatus.toUpperCase()),
         findsOneWidget,
@@ -259,9 +212,6 @@ void main() {
     testWidgets('the word "Synced" never appears in it', (tester) async {
       await tester.pumpWidget(scanHarness(const EnvironmentRow()));
 
-      // The design reference shows "Synced 1h ago" on this row. Nothing syncs:
-      // m4_environmental is a comment-only stub with no service, table or API,
-      // so this is the one place the reference is deliberately not followed.
       expect(
         find.textContaining('Synced'),
         findsNothing,
@@ -421,7 +371,6 @@ void main() {
         findsOneWidget,
         reason: 'a logged answer must stay correctable from the same card',
       );
-      // Re-answering writes the new value.
       await answerWith(tester, 'mood_score', 2);
       expect(
         find.text(ScanTabCopy.answerLabel('mood_score', 2)),
@@ -535,11 +484,6 @@ void main() {
 
     testWidgets('an expanded card can be tapped shut, so a lone open card is '
         'not a trap', (tester) async {
-      // Issue #287: `GapCard` used to pass
-      // `onTap: expanded || saving ? null : onToggle`, which made the toggle's
-      // own `_openGapKey == key ? null : key` branch unreachable — a single
-      // open card could only be closed by answering it. The header is a tap
-      // target whether or not the card is open.
       final answers = <String, int>{};
       await tester.pumpWidget(
         scanHarness(
@@ -735,11 +679,6 @@ void main() {
 
       testWidgets('mosquito_bites is the one stepper, and its increment, '
           'decrement and pending value are all announced', (tester) async {
-        // #268 requires "any stepper exposes labelled increment/decrement".
-        // Issue #287 adds the readout: with `container: false` its label had no
-        // descendant node to attach to (the visual subtree is excluded) and
-        // merged upward into the card, so someone stepping the count never
-        // heard the value they were about to save.
         final handle = tester.ensureSemantics();
         await tester.pumpWidget(
           scanHarness(gapCard('mosquito_bites', expanded: true)),
@@ -874,8 +813,6 @@ void main() {
       testWidgets('the descriptive scales say what the number looks like', (
         tester,
       ) async {
-        // "Urine colour 6" and "Stool form Type 6" are unusable on their own:
-        // the scale is the picture, so the name travels with the number.
         final handle = tester.ensureSemantics();
         for (final key in ['urine_colour', 'stool_form']) {
           await tester.pumpWidget(scanHarness(gapCard(key, expanded: true)));
@@ -1111,9 +1048,6 @@ void main() {
   });
 
   group('the harness above is the screen\'s own wiring, not an invention', () {
-    // ScanGapListHost stands in for `_ScanTabState`, which cannot be pumped.
-    // These assert the screen still composes its cards the way the harness
-    // does, so the behaviour proved above is the behaviour that ships.
     late final String source;
     late final String tabState;
 

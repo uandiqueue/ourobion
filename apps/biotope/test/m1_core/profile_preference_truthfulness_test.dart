@@ -1,26 +1,3 @@
-// Every Profile preference row must state its actual effect — not what it
-// looks like it should do.
-//
-// Verified against the code before writing any assertion (background facts
-// for #282, re-confirmed against the merged ProfileTab):
-//   * profiles.wearable_owned is written by ProfileTab._toggleWearableOwned
-//     and read back only to render its own switch. It gates nothing —
-//     WearableService.syncToday is called unconditionally by every Scan
-//     sweep. The migration comment says "toggle only, no integration in
-//     MVP". So the flag records ownership only; it does not enable, control
-//     or gate syncing in any way.
-//   * AppPreferences.backdropEnabled is a device-local ValueNotifier (no
-//     network write) that only toggles a decorative animation on supported
-//     hero screens.
-//   * The daily-digest preference persists server-side
-//     (profile_notification_prefs, via ProfileService.setDailyDigestEnabled)
-//     but nothing in this repo composes or delivers a digest or notification.
-//
-// These tests assert the shipped ProfileTabCopy strings actually say all of
-// that, rather than trusting a reviewer to notice a subtly false claim. Most
-// of this contract is already pinned incidentally by profile_digest_test.dart
-// (which exists to cover the toggle's optimistic-revert behaviour); this file
-// is the dedicated, exhaustive pass over the three preference rows' copy.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -209,8 +186,6 @@ void main() {
         contains('drifting orbs'),
         reason: 'the described effect is decorative animation, not data',
       );
-      // The subtitle must not claim any effect on logged data, syncing or
-      // account state — it is a rendering preference only.
       expect(s, isNot(contains('data')));
       expect(s, isNot(contains('sync')));
       expect(s, isNot(contains('account')));

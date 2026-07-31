@@ -1,23 +1,3 @@
-// Archive artwork — which specimen image belongs to which archive state.
-//
-// The design reference renders the EMPTY archive as one card holding exactly
-// one breathing specimen image, a title and a body line. A second botanical
-// composite in an empty archive is not merely off-reference, it is dishonest:
-// a herbarium plate on a screen whose entire message is "you have saved
-// nothing yet" reads as a preserved specimen the user already has.
-//
-// The herbarium plate belongs to the POPULATED archive's strip
-// (_ArchiveCollectionArtwork), which must keep rendering when real saved cards
-// exist — removing it would be the opposite regression. Both halves are pinned
-// here.
-//
-// archive_status_widget_test.dart pins the archive QUERY behaviour (which rows
-// are read and rendered); this suite pins only the artwork/empty-state seam, so
-// a change to either cannot silently pass on the strength of the other.
-//
-// No archive row is invented: the single populated fixture is the same
-// hydration card the other archive suites use, and the empty case has no rows
-// at all.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,13 +7,10 @@ import 'package:src/modules/m5b_insight_engine/impl/insight_service.dart';
 import 'package:src/modules/m5b_insight_engine/ui/screens/archive_tab.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// The empty archive's own copy, as the screen renders it verbatim.
 const kEmptyArchiveTitle = 'Nothing saved yet';
 const kEmptyArchiveBody =
     'Swipe right on a card in Insights to press it into your archive.';
 
-// autoRefreshToken off: the default GoTrue auto-refresh timer trips the test
-// binding's pending-timers invariant.
 SupabaseClient _inertClient() => SupabaseClient(
   'http://localhost',
   'test-key',
@@ -52,9 +29,6 @@ class _FakeInsightService extends InsightService {
       List.of(archived);
 }
 
-/// Inert trends section — this suite is about the archive's own artwork, and
-/// the trend section carries no images. Series fixtures live in
-/// archive_trends_widget_test.dart instead.
 class _FakeSeriesService extends MetricSeriesService {
   _FakeSeriesService() : super(_inertClient());
 
@@ -88,7 +62,6 @@ InsightCard _card() => InsightCard(
   phaseGenerated: 'p2s9',
 );
 
-/// Every asset path rendered by an Image.asset currently in the tree.
 Set<String> _renderedAssetPaths(WidgetTester tester) {
   return {
     for (final image in tester.widgetList<Image>(find.byType(Image)))
@@ -96,9 +69,6 @@ Set<String> _renderedAssetPaths(WidgetTester tester) {
   };
 }
 
-/// Pumps a FRESH ArchiveTab. The key is mandatory-by-construction: without a
-/// distinct one, a second pump in the same test reuses the existing State and
-/// its `late final` service, so the newly injected rows are never read.
 Future<void> _pumpArchive(
   WidgetTester tester, {
   List<InsightCard> archived = const [],

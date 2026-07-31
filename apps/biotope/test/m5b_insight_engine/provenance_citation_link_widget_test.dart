@@ -1,24 +1,3 @@
-// Citation links on the provenance screen, end to end.
-//
-// citation_link_test.dart pins the pure resolver (ProvenanceCitation.paperUri);
-// this pins that the SCREEN uses it honestly:
-//   * a citation whose paperId is a real DOI renders a real, tappable control
-//     that opens exactly https://doi.org/<doi> externally;
-//   * a citation whose paperId is an internal corpus id renders the plain
-//     "Paper link unavailable" sentence and NO link at all;
-//   * a failed launch says so instead of appearing inert;
-//   * and none of this displaces the existing provenance / trust labels —
-//     evidence tier, impact tier, stance, verdict, serving band, the TEST-MODE
-//     stamp, the uncited personal state and the plain-rules no-citation note.
-//     Those were the whole point of the screen and must survive.
-//
-// THE FIXTURE DOI IS REAL: 10.1016/j.isci.2026.116224 resolves to
-// "Unraveling the gut microbiota-brain axis" (iScience, 2026). The fixture is
-// project-relevant, and its genuine title and year are used here. No paper,
-// title, DOI or URL is invented in this file.
-//
-// The screen exposes each link as ValueKey('citation-link-<paperId>'), so a
-// link can be located per-citation rather than by its shared label.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -31,14 +10,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 const kRealDoi = '10.1016/j.isci.2026.116224';
 const kRealDoiUrl = 'https://doi.org/10.1016/j.isci.2026.116224';
 
-/// The genuine title and year of the paper that DOI resolves to.
 const kRealDoiTitle =
     'Unraveling the gut microbiota-brain axis: Mechanisms, pathophysiology, '
     'and therapeutic opportunities.';
 const kRealDoiYear = 2026;
 
-/// A stable internal corpus id — the other half of the `Citation.paperId`
-/// contract, and deliberately NOT resolvable to any page.
 const kCorpusId = 'corpus:gut-mood-cohort-2024';
 const kCorpusTitle = 'Gut comfort and mood in a longitudinal cohort';
 const kCorpusYear = 2024;
@@ -46,9 +22,6 @@ const kCorpusYear = 2024;
 class _FakeProvenanceService extends ProvenanceService {
   final InsightProvenance? result;
 
-  // autoRefreshToken off: the default GoTrue auto-refresh timer trips the test
-  // binding's pending-timers invariant (same seam as
-  // provenance_screen_widget_test.dart).
   _FakeProvenanceService(this.result)
     : super(
         SupabaseClient(
@@ -62,7 +35,6 @@ class _FakeProvenanceService extends ProvenanceService {
   Future<InsightProvenance?> getProvenance(int cardId) async => result;
 }
 
-/// Records what would be opened, and can simulate a launch that fails.
 class _RecordingLauncher {
   _RecordingLauncher({this.succeeds = true});
   final bool succeeds;
@@ -102,9 +74,6 @@ ProvenanceCardInfo _cardInfo({String producer = 'edge'}) => ProvenanceCardInfo(
   generatedAt: '2026-07-24T09:37:53.975+00:00',
 );
 
-/// The accepted A8 artifact for the real DOI. Its claim, scope, citation tier,
-/// impact tier, and quote spans are recorded in the session log; no invented
-/// population, edge score, verification, or second citation is added here.
 ProvenanceEdge _acceptedDoiEdge({
   String citationPaperId = kRealDoi,
 }) => ProvenanceEdge(
@@ -160,7 +129,6 @@ ProvenanceEdge _acceptedDoiEdge({
   ],
 );
 
-/// The exact committed verification fixture for the internal corpus record.
 const _committedCorpusEdge = ProvenanceEdge(
   edgeId: 'gut_comfort_score|correlates|mood_score',
   subject: 'gut_comfort_score',
@@ -200,8 +168,6 @@ InsightProvenance _corpusProvenance() => _withEdges([_committedCorpusEdge]);
 InsightProvenance _mixedAccurateProvenance() =>
     _withEdges([_acceptedDoiEdge(), _committedCorpusEdge]);
 
-/// Clearly synthetic scaffolding for malformed/hostile paperId cases only.
-/// No genuine DOI or committed corpus citation is ever routed through it.
 InsightProvenance _negativeInputProvenance(String paperId) => _withEdges([
   ProvenanceEdge(
     edgeId: 'test-only-negative-paper-id',
@@ -214,10 +180,6 @@ InsightProvenance _fullyCitedProvenance() => _doiProvenance();
 Finder _linkFor(String paperId) =>
     find.byKey(ValueKey('citation-link-$paperId'));
 
-/// Bumped on every pump so a screen pumped twice inside one test really is a
-/// FRESH screen. Without a distinct key Flutter reuses the existing State — and
-/// `InsightProvenanceScreen` reads its injected service once, in initState — so
-/// a loop over fixtures would silently re-assert the first one.
 int _pumpSeq = 0;
 
 Future<_RecordingLauncher> _pump(
@@ -248,9 +210,7 @@ void main() {
       expect(_linkFor(kRealDoi), findsOneWidget);
       expect(find.text(ProvenanceCopy.openPaper), findsOneWidget);
       expect(find.byIcon(Icons.open_in_new_rounded), findsOneWidget);
-      // The honest-unavailable state must NOT also be shown.
       expect(find.text(ProvenanceCopy.paperLinkUnavailable), findsNothing);
-      // The real paper, by its genuine title and year.
       expect(
         find.textContaining('$kRealDoiTitle ($kRealDoiYear)'),
         findsOneWidget,
@@ -276,9 +236,6 @@ void main() {
     testWidgets('the external-paper control is a semantic link (#286)', (
       tester,
     ) async {
-      // Pinned as a known gap while this rendered as an unlabelled button: a
-      // screen-reader user had no way to know the control leaves the app for a
-      // web page. #286 added the link semantics.
       final semantics = tester.ensureSemantics();
       await _pump(tester, _doiProvenance());
       expect(
@@ -308,8 +265,6 @@ void main() {
     testWidgets('an upper-cased stored DOI opens the same paper on doi.org', (
       tester,
     ) async {
-      // Crossref — and this repo's crossref-works.json fixture — store this DOI
-      // upper-cased. DOIs are case-insensitive, so it is the same paper.
       const stored = '10.1016/J.ISCI.2026.116224';
       final launcher = await _pump(tester, _doiProvenance(stored));
 
@@ -336,8 +291,6 @@ void main() {
 
       expect(find.text(ProvenanceCopy.paperLinkFailed), findsOneWidget);
 
-      // Let the SnackBar's own display timer expire so no pending timer
-      // outlives the widget tree.
       await tester.pumpAndSettle(const Duration(seconds: 5));
     });
 
@@ -364,7 +317,6 @@ void main() {
       expect(find.text(ProvenanceCopy.openPaper), findsNothing);
       expect(find.byIcon(Icons.open_in_new_rounded), findsNothing);
       expect(launcher.opened, isEmpty);
-      // The citation itself is still shown — unlinkable is not invisible.
       expect(find.textContaining(kCorpusTitle), findsOneWidget);
     });
 
@@ -412,8 +364,6 @@ void main() {
       expect(_linkFor(kCorpusId), findsNothing);
       expect(find.text(ProvenanceCopy.openPaper), findsOneWidget);
 
-      // The screen is a lazy ListView; scroll until the second accurate edge
-      // is built before asserting its unavailable-link state.
       await tester.scrollUntilVisible(find.textContaining(kCorpusTitle), 300);
       await tester.pumpAndSettle();
       expect(find.text(ProvenanceCopy.paperLinkUnavailable), findsOneWidget);
@@ -432,16 +382,13 @@ void main() {
     ) async {
       final launcher = await _pump(tester, _fullyCitedProvenance());
 
-      // The accepted artifact has one DOI-backed citation, and it is linkable.
       expect(_linkFor(kRealDoi), findsOneWidget);
       expect(find.text(ProvenanceCopy.openPaper), findsOneWidget);
       expect(find.text(ProvenanceCopy.paperLinkUnavailable), findsNothing);
 
-      // The real paper, by its genuine title and year.
       expect(find.textContaining(kRealDoiTitle), findsOneWidget);
       expect(find.textContaining('($kRealDoiYear)'), findsOneWidget);
 
-      // The trust fields actually recorded on the accepted artifact.
       expect(find.text(ProvenanceCopy.citationsLabel), findsOneWidget);
       expect(
         find.textContaining('${ProvenanceCopy.evidenceTierPrefix}4'),
@@ -455,11 +402,9 @@ void main() {
       );
       expect(find.text(ProvenanceCopy.derivationLabel), findsOneWidget);
       expect(find.text(ProvenanceCopy.researchLinksLabel), findsOneWidget);
-      // Edges exist, so neither honest no-citation note may appear.
       expect(find.text(ProvenanceCopy.noEdgesRules), findsNothing);
       expect(find.text(ProvenanceCopy.noEdgesPersonal), findsNothing);
 
-      // And the one link that does exist goes exactly where it says.
       await tester.ensureVisible(_linkFor(kRealDoi));
       await tester.pumpAndSettle();
       await tester.tap(_linkFor(kRealDoi));
@@ -477,7 +422,6 @@ void main() {
 
       expect(find.text(ProvenanceCopy.noEdgesRules), findsOneWidget);
       expect(find.text(ProvenanceCopy.researchLinksLabel), findsOneWidget);
-      // No research decoration and no link anywhere.
       expect(find.text(ProvenanceCopy.openPaper), findsNothing);
       expect(find.text(ProvenanceCopy.paperLinkUnavailable), findsNothing);
       expect(find.textContaining(ProvenanceCopy.verdictPrefix), findsNothing);
@@ -506,7 +450,6 @@ void main() {
       expect(find.text(ProvenanceCopy.noEdgesPersonal), findsOneWidget);
       expect(find.text(ProvenanceCopy.yourDataLabel), findsOneWidget);
       expect(find.textContaining('ρ 0.95'), findsOneWidget);
-      // Never decorated as research.
       expect(find.text(ProvenanceCopy.openPaper), findsNothing);
       expect(find.text(ProvenanceCopy.paperLinkUnavailable), findsNothing);
       expect(find.textContaining(ProvenanceCopy.verdictPrefix), findsNothing);
