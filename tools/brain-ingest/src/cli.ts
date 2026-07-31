@@ -30,6 +30,7 @@ import { verify } from './verify/verifier.js';
 import { corpusTexts, loadCorpusFromFile } from './verify/corpus.js';
 import { LlmRouter } from '../../llm-router/src/index.js';
 import { runSinglePaper } from './singlePaper.js';
+import { runOfflineAcceptance } from './offlineAcceptance.js';
 
 const USAGE = `ourobion brain-ingest — open-access-first paper-corpus fetcher
 
@@ -69,6 +70,8 @@ Commands:
   single-paper --doi <doi> --local-dir <dir> --pair <a,b> [--terms t1,t2]
                [--load-local-db <loopback PostgreSQL URL>] [--dry-run] [--resume]
                                                    local-only request/response intake; no remote routing.
+  offline-acceptance --bundle <file> --dry-run
+                                                   frozen A8 → A9 → A10 preflight; no provider, R2, or DB.
   venue --issn <issn> [--sjr-quartile 1-4]         b2 venue lookup: OpenAlex Source stats +
                                                    C8 impactTier band (per-ISSN cache)
 
@@ -477,6 +480,17 @@ async function runSinglePaperCli(flags: Set<string>, options: Map<string, string
   return 0;
 }
 
+async function runOfflineAcceptanceCli(flags: Set<string>, options: Map<string, string>): Promise<number> {
+  const bundle = options.get('bundle');
+  if (!bundle || !flags.has('dry-run')) {
+    process.stderr.write('offline-acceptance: --bundle <file> and --dry-run are required; this command never dispatches providers\n');
+    return 2;
+  }
+  const manifest = await runOfflineAcceptance(bundle, true);
+  process.stdout.write(JSON.stringify(manifest, null, 2) + '\n');
+  return 0;
+}
+
 /** CLI main — returns the process exit code. Async: the pipeline verbs await `run`. */
 export async function main(argv: string[]): Promise<number> {
   const { command, flags, options } = parseArgs(argv);
@@ -489,6 +503,7 @@ export async function main(argv: string[]): Promise<number> {
   if (flags.has('check-config') || command === 'check-config') {
     return runCheckConfig();
   }
+  if (command === 'offline-acceptance') return runOfflineAcceptanceCli(flags, options);
 
   try {
     switch (command) {
