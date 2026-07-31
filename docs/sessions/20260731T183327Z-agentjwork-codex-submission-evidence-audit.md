@@ -37,8 +37,8 @@ updated: 2026-08-01
   audit facts, and kept this PR's comparison diff docs-only.
 - Resumed under issue #309, rebased first onto post-#300 head `abcba95` and again after PR #312 landed
   at `aef9bc1`, refreshed the audit for the new whole-paper/mechanism/blueprint path, expanded #297
-  into a 22-topic execution handoff, and remeasured the product snapshot at 550 paths / 79,784
-  additions before the final record refresh.
+  into a 22-topic execution handoff, and remeasured the final docs head at 550 paths / 79,788
+  additions before the mechanical snapshot refresh.
 
 ## Decided
 
@@ -85,7 +85,7 @@ updated: 2026-08-01
 - Rebased through `aef9bc1`; `seed-queries --candidates-only` reproduced 6 static topics + 16 total
   candidates (8 derived, 2 rule, 6 topic); active registry load reproduced 24 keys.
 - `node --test tools/run4_release_gate.test.mjs` — 18/18 with the locally refreshed candidate
-  snapshot; `product-cap --head b53a0eaf6725302949c1645ee1778d54cd66411c` — 550 paths / 79,784
+  snapshot; `product-cap --head aa2595e7cbb3774f07f64c405550da85b1adbc7e` — 550 paths / 79,788
   additions, `withinCap: false`.
 
 memory: none
