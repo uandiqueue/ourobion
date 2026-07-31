@@ -88,6 +88,8 @@ class RegistryEntry {
     this.scaleMin,
     this.scaleMax,
     this.valueStep,
+    this.uiLabel,
+    this.inputType,
   );
   final String key;
   final String table;
@@ -97,6 +99,8 @@ class RegistryEntry {
   final num? scaleMin;
   final num? scaleMax;
   final num? valueStep;
+  final String? uiLabel;
+  final String? inputType;
 }
 
 /// Parse metric entries (in declaration order) from a registry source (TS or Dart). Both files
@@ -188,6 +192,8 @@ List<RegistryEntry> parseRegistry(String source) {
       r'valueStep:\s*(-?\d+(?:\.\d+)?)',
     ).firstMatch(block);
     final valueStep = stepMatch == null ? null : num.parse(stepMatch.group(1)!);
+    final uiLabel = _quotedField(block, 'label');
+    final inputType = _quotedField(block, 'inputType');
     entries.add(
       RegistryEntry(
         key,
@@ -198,6 +204,8 @@ List<RegistryEntry> parseRegistry(String source) {
         scaleMin,
         scaleMax,
         valueStep,
+        uiLabel,
+        inputType,
       ),
     );
   }

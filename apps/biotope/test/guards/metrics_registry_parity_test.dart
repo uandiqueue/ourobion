@@ -3,7 +3,7 @@
 // the registry is the single source of truth for every metric, duplicated across the language seam.
 //
 // status: active — asserts both files declare the same metric keys, in the same order, with the same
-// runtime axis fields per key. A metric added to one side but not the other fails here.
+// runtime axis and UI fields per key. A metric added to one side but not the other fails here.
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -35,6 +35,7 @@ void main() {
           type: 'numeric',
           scale: { min: -0.25, max: 9.5 },
           valueStep: 0.25,
+          ui: { label: 'Fixture label', inputType: null },
           baselineApplicable: true,
           status: 'active',
         }
@@ -47,6 +48,7 @@ void main() {
           type: <q>numeric<q>,
           scale: MetricScale(min: -0.25, max: 9.5),
           valueStep: 0.25,
+          ui: MetricUi(label: <q>Fixture label<q>, inputType: null),
           baselineApplicable: true,
           status: <q>active<q>,
         )
@@ -61,6 +63,8 @@ void main() {
           expect(entry.scaleMin, -0.25);
           expect(entry.scaleMax, 9.5);
           expect(entry.valueStep, 0.25);
+          expect(entry.uiLabel, 'Fixture label');
+          expect(entry.inputType, isNull);
         }
       },
     );
@@ -81,8 +85,49 @@ void main() {
         expect(d.scaleMin, t.scaleMin, reason: '${d.key}: scale.min drift');
         expect(d.scaleMax, t.scaleMax, reason: '${d.key}: scale.max drift');
         expect(d.valueStep, t.valueStep, reason: '${d.key}: valueStep drift');
+        expect(d.uiLabel, t.uiLabel, reason: '${d.key}: ui.label drift');
+        expect(
+          d.inputType,
+          t.inputType,
+          reason: '${d.key}: ui.inputType drift',
+        );
       }
     });
+
+    test(
+      'wearable display labels are parity-locked without input controls',
+      () {
+        const expected = {
+          'resting_hr_bpm': 'Resting heart rate',
+          'hrv_sdnn_ms': 'Heart-rate variability (SDNN)',
+          'sleep_duration_min': 'Sleep duration',
+          'spo2_pct': 'Blood oxygen',
+          'body_temp_c': 'Body temperature',
+          'step_count': 'Steps',
+        };
+        final tsByKey = {for (final entry in tsEntries) entry.key: entry};
+        final dartByKey = {for (final entry in dartEntries) entry.key: entry};
+
+        for (final MapEntry(key: key, value: label) in expected.entries) {
+          expect(tsByKey[key]!.uiLabel, label, reason: '$key: TS label drift');
+          expect(
+            dartByKey[key]!.uiLabel,
+            label,
+            reason: '$key: Dart label drift',
+          );
+          expect(
+            tsByKey[key]!.inputType,
+            isNull,
+            reason: '$key: TS input control invented',
+          );
+          expect(
+            dartByKey[key]!.inputType,
+            isNull,
+            reason: '$key: Dart input control invented',
+          );
+        }
+      },
+    );
 
     test('parser exposes mutations in every runtime axis field', () {
       final dart = readRepoFile('shared/metrics/lib/src/registry.dart');
