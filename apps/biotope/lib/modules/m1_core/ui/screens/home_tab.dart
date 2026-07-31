@@ -1111,6 +1111,7 @@ class CoverageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final logged = dqs != null;
     final streakWorthy = (dqs ?? 0) >= 60;
+    final fullyCaptured = dqs == 100;
 
     return GoldCard(
       key: const ValueKey('coverage-card'),
@@ -1172,8 +1173,10 @@ class CoverageCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                streakWorthy
+                                fullyCaptured
                                     ? 'Every channel captured today'
+                                    : streakWorthy
+                                    ? 'Coverage recorded today'
                                     : 'Coverage in progress',
                                 style: GoogleFonts.manrope(
                                   fontSize: 14,
@@ -1183,8 +1186,10 @@ class CoverageCard extends StatelessWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                streakWorthy
-                                    ? '${dqs!.toInt()} pts — great work today'
+                                fullyCaptured
+                                    ? '100 pts — every channel captured'
+                                    : streakWorthy
+                                    ? '${dqs!.toInt()} / 100 pts — run a sweep to capture more today'
                                     : '${dqs!.toInt()} / 100 pts — run a sweep to close the gap',
                                 style: GoogleFonts.manrope(
                                   fontSize: 12,
