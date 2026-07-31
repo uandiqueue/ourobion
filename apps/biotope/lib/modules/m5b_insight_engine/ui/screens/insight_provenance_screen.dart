@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/theme.dart';
 import '../../index.dart';
@@ -67,6 +68,9 @@ abstract final class ProvenanceCopy {
   static const quotesLabel = 'SOURCE QUOTES';
   static const citationsLabel = 'CITATIONS';
   static const evidenceLabel = 'Evidence passages';
+  static const openPaper = 'Open paper';
+  static const paperLinkUnavailable = 'Paper link unavailable';
+  static const paperLinkFailed = 'Paper link could not be opened.';
 
   static const notVisibleBody =
       'There is no provenance to show for this card on this account.';
@@ -103,6 +107,9 @@ abstract final class ProvenanceCopy {
     quotesLabel,
     citationsLabel,
     evidenceLabel,
+    openPaper,
+    paperLinkUnavailable,
+    paperLinkFailed,
     notVisibleBody,
     loadErrorBody,
   ];
@@ -118,8 +125,14 @@ class InsightProvenanceScreen extends StatefulWidget {
   /// Injectable for widget tests (the default touches Supabase.instance,
   /// which tests cannot initialize).
   final ProvenanceService? service;
+  final Future<bool> Function(Uri uri)? openExternalLink;
 
-  const InsightProvenanceScreen({super.key, required this.card, this.service});
+  const InsightProvenanceScreen({
+    super.key,
+    required this.card,
+    this.service,
+    this.openExternalLink,
+  });
 
   @override
   State<InsightProvenanceScreen> createState() =>
@@ -154,6 +167,16 @@ class _InsightProvenanceScreenState extends State<InsightProvenanceScreen> {
         _error = true;
       });
     }
+  }
+
+  Future<void> _openPaper(Uri uri) async {
+    final opened =
+        await (widget.openExternalLink?.call(uri) ??
+            launchUrl(uri, mode: LaunchMode.externalApplication));
+    if (opened || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text(ProvenanceCopy.paperLinkFailed)),
+    );
   }
 
   @override
@@ -235,7 +258,7 @@ class _InsightProvenanceScreenState extends State<InsightProvenanceScreen> {
           )
         else
           for (final edge in provenance.edges) ...[
-            _EdgeCard(edge: edge),
+            _EdgeCard(edge: edge, onOpenPaper: _openPaper),
             const SizedBox(height: 12),
           ],
       ],
@@ -542,7 +565,8 @@ class _PersonalSection extends StatelessWidget {
 
 class _EdgeCard extends StatelessWidget {
   final ProvenanceEdge edge;
-  const _EdgeCard({required this.edge});
+  final ValueChanged<Uri> onOpenPaper;
+  const _EdgeCard({required this.edge, required this.onOpenPaper});
 
   String get _title {
     if (edge.subject != null && edge.object != null) {
@@ -654,7 +678,7 @@ class _EdgeCard extends StatelessWidget {
             _eyebrow(ProvenanceCopy.citationsLabel),
             for (final citation in edge.citations) ...[
               const SizedBox(height: 6),
-              _CitationTile(citation: citation),
+              _CitationTile(citation: citation, onOpenPaper: onOpenPaper),
             ],
           ],
         ],
@@ -704,7 +728,8 @@ class _QuoteSpanTile extends StatelessWidget {
 
 class _CitationTile extends StatelessWidget {
   final ProvenanceCitation citation;
-  const _CitationTile({required this.citation});
+  final ValueChanged<Uri> onOpenPaper;
+  const _CitationTile({required this.citation, required this.onOpenPaper});
 
   @override
   Widget build(BuildContext context) {
@@ -748,6 +773,30 @@ class _CitationTile extends StatelessWidget {
               ),
             ),
           ],
+          const SizedBox(height: 4),
+          if (citation.paperUri case final uri?)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: ValueKey('citation-link-${citation.paperId}'),
+                onPressed: () => onOpenPaper(uri),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  minimumSize: const Size(0, 32),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: const Icon(Icons.open_in_new_rounded, size: 14),
+                label: Text(ProvenanceCopy.openPaper),
+              ),
+            )
+          else
+            Text(
+              ProvenanceCopy.paperLinkUnavailable,
+              style: GoogleFonts.manrope(
+                fontSize: 10,
+                color: OurobionColors.outline,
+              ),
+            ),
           if (citation.evidence.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(

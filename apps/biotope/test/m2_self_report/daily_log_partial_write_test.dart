@@ -40,29 +40,29 @@ const _context = DailyLogRowContext(
 /// supabase/migrations/20260513_create_m2_daily_gut_rows_and_antibiotic_courses.sql
 /// plus the additive `data_origin` column (20260724120000).
 Map<String, dynamic> _fullyPopulatedRow() => {
-      'id': 42,
-      'user_id': _userId,
-      'log_date': _logDate,
-      'region': 'Singapore',
-      'urine_colour': 3,
-      'stool_form': 4,
-      'stool_count': 2,
-      'stool_variability': 1,
-      'outside_meals': 2,
-      'mosquito_bites': 5,
-      'energy_score': 4,
-      'mood_score': null, // ← the gap being answered
-      'gut_comfort_score': 5,
-      'symptom_flags': ['bloating', 'cramping'],
-      'notes': 'long walk after lunch',
-      'standing_water_present': true,
-      'on_antibiotics': true,
-      'gut_watch_active': false,
-      'log_completeness': 93.0,
-      'data_origin': 'simulated:run2-demo',
-      'created_at': '2026-07-28T00:00:00.000Z',
-      'updated_at': '2026-07-28T01:00:00.000Z',
-    };
+  'id': 42,
+  'user_id': _userId,
+  'log_date': _logDate,
+  'region': 'Singapore',
+  'urine_colour': 3,
+  'stool_form': 4,
+  'stool_count': 2,
+  'stool_variability': 1,
+  'outside_meals': 2,
+  'mosquito_bites': 5,
+  'energy_score': 4,
+  'mood_score': null, // ← the gap being answered
+  'gut_comfort_score': 5,
+  'symptom_flags': ['bloating', 'cramping'],
+  'notes': 'long walk after lunch',
+  'standing_water_present': true,
+  'on_antibiotics': true,
+  'gut_watch_active': false,
+  'log_completeness': 93.0,
+  'data_origin': 'simulated:run2-demo',
+  'created_at': '2026-07-28T00:00:00.000Z',
+  'updated_at': '2026-07-28T01:00:00.000Z',
+};
 
 /// Models a PostgREST write against an existing row: every key present in the
 /// payload is assigned (a key mapped to null IS assigned null); keys absent from
@@ -70,143 +70,160 @@ Map<String, dynamic> _fullyPopulatedRow() => {
 Map<String, dynamic> _applyWrite(
   Map<String, dynamic> stored,
   Map<String, dynamic> payload,
-) =>
-    {...stored, ...payload};
+) => {...stored, ...payload};
 
 /// Columns an inline answer to [metricKey] is ALLOWED to change.
-Set<String> _permittedChanges(String metricKey) =>
-    {metricKey, 'log_completeness', 'updated_at'};
+Set<String> _permittedChanges(String metricKey) => {
+  metricKey,
+  'log_completeness',
+  'updated_at',
+};
 
 void main() {
-  group('buildFieldPatch — an inline chip answer never nulls an unrelated field',
-      () {
-    test('every other column is byte-identical after the write', () {
-      final before = _fullyPopulatedRow();
+  group(
+    'buildFieldPatch — an inline chip answer never nulls an unrelated field',
+    () {
+      test('every other column is byte-identical after the write', () {
+        final before = _fullyPopulatedRow();
 
-      final patch = DailyLogService.buildFieldPatch(
-        existingRow: before,
-        metricKey: 'mood_score',
-        value: 4,
-        now: _now,
-      );
-      final after = _applyWrite(before, patch);
-
-      // Nothing appears or disappears.
-      expect(after.keys.toSet(), equals(before.keys.toSet()));
-
-      final permitted = _permittedChanges('mood_score');
-      for (final column in before.keys) {
-        if (permitted.contains(column)) continue;
-        expect(
-          jsonEncode(after[column]),
-          equals(jsonEncode(before[column])),
-          reason: 'column "$column" changed during a mood_score chip answer. '
-              'An inline answer must touch only the answered column '
-              '(+ log_completeness, updated_at).',
+        final patch = DailyLogService.buildFieldPatch(
+          existingRow: before,
+          metricKey: 'mood_score',
+          value: 4,
+          now: _now,
         );
-      }
+        final after = _applyWrite(before, patch);
 
-      // And the answer itself did land.
-      expect(after['mood_score'], 4);
-      expect(after['log_completeness'], 100.0,
-          reason: '93 + mood_score weight (7) = 100');
-    });
+        // Nothing appears or disappears.
+        expect(after.keys.toSet(), equals(before.keys.toSet()));
 
-    test('the same holds for every inline-answerable metric', () {
-      for (final entry in kInlineAnswerableOptions.entries) {
-        final metricKey = entry.key;
-        // Blank out just this metric so it reads as the day's open gap.
-        final before = _fullyPopulatedRow()
-          ..['mood_score'] = 3
-          ..[metricKey] = null;
-
-        final after = _applyWrite(
-          before,
-          DailyLogService.buildFieldPatch(
-            existingRow: before,
-            metricKey: metricKey,
-            value: entry.value.last,
-            now: _now,
-          ),
-        );
-
-        final permitted = _permittedChanges(metricKey);
+        final permitted = _permittedChanges('mood_score');
         for (final column in before.keys) {
           if (permitted.contains(column)) continue;
           expect(
             jsonEncode(after[column]),
             equals(jsonEncode(before[column])),
-            reason: 'column "$column" changed while answering "$metricKey"',
+            reason:
+                'column "$column" changed during a mood_score chip answer. '
+                'An inline answer must touch only the answered column '
+                '(+ log_completeness, updated_at).',
           );
         }
-        expect(after[metricKey], entry.value.last);
-      }
-    });
 
-    test('the patch names only three columns — the absence IS the guard', () {
-      final patch = DailyLogService.buildFieldPatch(
-        existingRow: _fullyPopulatedRow(),
-        metricKey: 'mood_score',
-        value: 4,
-        now: _now,
-      );
+        // And the answer itself did land.
+        expect(after['mood_score'], 4);
+        expect(
+          after['log_completeness'],
+          100.0,
+          reason: '93 + mood_score weight (7) = 100',
+        );
+      });
 
-      expect(
-        patch.keys.toSet(),
-        equals({'mood_score', 'log_completeness', 'updated_at'}),
-        reason: 'any extra column here becomes a column the UPDATE overwrites',
-      );
-    });
+      test('the same holds for every inline-answerable metric', () {
+        for (final entry in kInlineAnswerableOptions.entries) {
+          final metricKey = entry.key;
+          // Blank out just this metric so it reads as the day's open gap.
+          final before = _fullyPopulatedRow()
+            ..['mood_score'] = 3
+            ..[metricKey] = null;
 
-    test('completeness is recomputed from the merged row, not the answer alone',
-        () {
-      // Only urine_colour (25) already logged; answering mood (7) gives 32.
-      final sparse = {
-        'urine_colour': 3,
-        'stool_form': null,
-        'outside_meals': null,
-        'mosquito_bites': null,
-        'energy_score': null,
-        'mood_score': null,
-        'gut_comfort_score': null,
-      };
+          final after = _applyWrite(
+            before,
+            DailyLogService.buildFieldPatch(
+              existingRow: before,
+              metricKey: metricKey,
+              value: entry.value.last,
+              now: _now,
+            ),
+          );
 
-      final patch = DailyLogService.buildFieldPatch(
-        existingRow: sparse,
-        metricKey: 'mood_score',
-        value: 4,
-        now: _now,
-      );
+          final permitted = _permittedChanges(metricKey);
+          for (final column in before.keys) {
+            if (permitted.contains(column)) continue;
+            expect(
+              jsonEncode(after[column]),
+              equals(jsonEncode(before[column])),
+              reason: 'column "$column" changed while answering "$metricKey"',
+            );
+          }
+          expect(after[metricKey], entry.value.last);
+        }
+      });
 
-      expect(patch['log_completeness'],
-          (kDailyCoreDqsWeights['urine_colour']! + kDailyCoreDqsWeights['mood_score']!).toDouble());
-    });
-
-    test('no row yet today: completeness comes from the single answer', () {
-      final patch = DailyLogService.buildFieldPatch(
-        existingRow: null,
-        metricKey: 'energy_score',
-        value: 5,
-        now: _now,
-      );
-
-      expect(patch['energy_score'], 5);
-      expect(patch['log_completeness'],
-          kDailyCoreDqsWeights['energy_score']!.toDouble());
-    });
-
-    test('refuses a column that is not a daily-core DQS key', () {
-      expect(
-        () => DailyLogService.buildFieldPatch(
+      test('the patch names only three columns — the absence IS the guard', () {
+        final patch = DailyLogService.buildFieldPatch(
           existingRow: _fullyPopulatedRow(),
-          metricKey: 'notes',
-          value: 'nope',
+          metricKey: 'mood_score',
+          value: 4,
           now: _now,
-        ),
-        throwsArgumentError,
+        );
+
+        expect(
+          patch.keys.toSet(),
+          equals({'mood_score', 'log_completeness', 'updated_at'}),
+          reason:
+              'any extra column here becomes a column the UPDATE overwrites',
+        );
+      });
+
+      test(
+        'completeness is recomputed from the merged row, not the answer alone',
+        () {
+          // Only urine_colour (25) already logged; answering mood (7) gives 32.
+          final sparse = {
+            'urine_colour': 3,
+            'stool_form': null,
+            'outside_meals': null,
+            'mosquito_bites': null,
+            'energy_score': null,
+            'mood_score': null,
+            'gut_comfort_score': null,
+          };
+
+          final patch = DailyLogService.buildFieldPatch(
+            existingRow: sparse,
+            metricKey: 'mood_score',
+            value: 4,
+            now: _now,
+          );
+
+          expect(
+            patch['log_completeness'],
+            (kDailyCoreDqsWeights['urine_colour']! +
+                    kDailyCoreDqsWeights['mood_score']!)
+                .toDouble(),
+          );
+        },
       );
-    });
-  });
+
+      test('no row yet today: completeness comes from the single answer', () {
+        final patch = DailyLogService.buildFieldPatch(
+          existingRow: null,
+          metricKey: 'energy_score',
+          value: 5,
+          now: _now,
+        );
+
+        expect(patch['energy_score'], 5);
+        expect(
+          patch['log_completeness'],
+          kDailyCoreDqsWeights['energy_score']!.toDouble(),
+        );
+      });
+
+      test('refuses a column that is not a daily-core DQS key', () {
+        expect(
+          () => DailyLogService.buildFieldPatch(
+            existingRow: _fullyPopulatedRow(),
+            metricKey: 'notes',
+            value: 'nope',
+            now: _now,
+          ),
+          throwsArgumentError,
+        );
+      });
+    },
+  );
 
   group('proof the naive approach fails: the whole-row upsert DOES null out '
       'unrelated fields', () {
@@ -244,8 +261,11 @@ void main() {
           .where((c) => !_permittedChanges('mood_score').contains(c))
           .where((c) => jsonEncode(after[c]) != jsonEncode(before[c]))
           .toList();
-      expect(clobbered.length, greaterThanOrEqualTo(9),
-          reason: 'expected widespread clobbering, got: $clobbered');
+      expect(
+        clobbered.length,
+        greaterThanOrEqualTo(9),
+        reason: 'expected widespread clobbering, got: $clobbered',
+      );
     });
 
     test('the safe patch leaves every column the naive payload destroyed', () {
@@ -276,11 +296,22 @@ void main() {
       expect(safe['mood_score'], 4);
 
       // ...but only one of them still has the rest of the day's log.
-      for (final column in ['urine_colour', 'stool_form', 'notes', 'symptom_flags']) {
-        expect(naive[column], anyOf(isNull, isEmpty),
-            reason: 'sanity: the naive path is expected to have lost "$column"');
-        expect(jsonEncode(safe[column]), jsonEncode(before[column]),
-            reason: 'the safe path must have kept "$column"');
+      for (final column in [
+        'urine_colour',
+        'stool_form',
+        'notes',
+        'symptom_flags',
+      ]) {
+        expect(
+          naive[column],
+          anyOf(isNull, isEmpty),
+          reason: 'sanity: the naive path is expected to have lost "$column"',
+        );
+        expect(
+          jsonEncode(safe[column]),
+          jsonEncode(before[column]),
+          reason: 'the safe path must have kept "$column"',
+        );
       }
     });
   });
@@ -288,29 +319,53 @@ void main() {
   group('kInlineAnswerableOptions', () {
     test('every inline key is a daily-core DQS key', () {
       for (final key in kInlineAnswerableOptions.keys) {
-        expect(kDailyCoreDqsWeights.containsKey(key), isTrue,
-            reason: '"$key" is offered inline but does not count toward '
-                'log_completeness, so buildFieldPatch would reject it');
+        expect(
+          kDailyCoreDqsWeights.containsKey(key),
+          isTrue,
+          reason:
+              '"$key" is offered inline but does not count toward '
+              'log_completeness, so buildFieldPatch would reject it',
+        );
       }
     });
 
-    test('lossy metrics stay off the inline path and keep routing to the form',
-        () {
-      // urine_colour: 8 swatches; stool_form: 7 Bristol types with descriptions;
-      // mosquito_bites: 0..20. None can be expressed by a short chip row without
-      // narrowing the answer, so they must remain full-form only.
+    test('longer scalar ranges stay on the complete inline path', () {
+      // Compact wrapped controls cover every accepted scalar value without
+      // narrowing the stored domain or routing through a whole-row save.
       for (final key in ['urine_colour', 'stool_form', 'mosquito_bites']) {
-        expect(kInlineAnswerableOptions.containsKey(key), isFalse,
-            reason: '"$key" cannot be answered losslessly by chips');
+        expect(
+          kInlineAnswerableOptions.containsKey(key),
+          isTrue,
+          reason: '"$key" must expose its complete accepted inline range',
+        );
       }
     });
 
     test('chip options cover the column CHECK range exactly', () {
       // Ranges from the daily_gut_rows migration.
+      expect(kInlineAnswerableOptions['urine_colour'], [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+      ]);
+      expect(kInlineAnswerableOptions['stool_form'], [1, 2, 3, 4, 5, 6, 7]);
       expect(kInlineAnswerableOptions['outside_meals'], [0, 1, 2, 3]);
+      expect(kInlineAnswerableOptions['mosquito_bites'], [
+        for (var value = 0; value <= 20; value++) value,
+      ]);
       for (final key in ['energy_score', 'mood_score', 'gut_comfort_score']) {
-        expect(kInlineAnswerableOptions[key], [1, 2, 3, 4, 5],
-            reason: '$key is CHECKed between 1 and 5');
+        expect(kInlineAnswerableOptions[key], [
+          1,
+          2,
+          3,
+          4,
+          5,
+        ], reason: '$key is CHECKed between 1 and 5');
       }
     });
   });

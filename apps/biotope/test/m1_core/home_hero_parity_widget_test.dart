@@ -8,8 +8,10 @@ void main() {
   Future<void> pumpHero(
     WidgetTester tester,
     double width, {
-    String statusWord = 'Steady',
+    String statusWord = 'Steady coverage',
     int? index = 76,
+    String scoreBasis = HomeCoverageCopy.sevenDayBasis,
+    String bucketRange = '60–79 weighted points',
     int streak = 0,
     int? indexDelta,
   }) async {
@@ -23,6 +25,8 @@ void main() {
             child: SystemStatusHero(
               statusWord: statusWord,
               index: index,
+              scoreBasis: scoreBasis,
+              bucketRange: bucketRange,
               streak: streak,
               indexDelta: indexDelta,
             ),
@@ -67,13 +71,34 @@ void main() {
     await pumpHero(
       tester,
       360,
-      statusWord: 'Getting started',
+      statusWord: 'High coverage',
       index: 100,
       streak: 999,
       indexDelta: 99,
     );
 
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('score states its exact weighted basis and bucket', (
+    tester,
+  ) async {
+    await pumpHero(
+      tester,
+      390,
+      statusWord: 'High coverage',
+      index: 82,
+      scoreBasis: HomeCoverageCopy.sevenDayBasis,
+      bucketRange: '80–100 weighted points',
+    );
+
+    expect(find.text('82'), findsOneWidget);
+    expect(find.text('/100 weighted points'), findsOneWidget);
+    expect(
+      find.text('${HomeCoverageCopy.sevenDayBasis}\n80–100 weighted points'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Thriving'), findsNothing);
   });
 
   Future<void> pumpCoverage(WidgetTester tester, double width) async {

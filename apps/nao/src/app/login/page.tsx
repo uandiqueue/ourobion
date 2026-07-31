@@ -5,7 +5,7 @@
 // Minimal Supabase email + password sign-in using the browser client from
 // @supabase/ssr. On success the session is persisted in cookies (by the SSR
 // client) and we navigate to the originally-requested path (?redirectedFrom)
-// or the dashboard root. Styled inline against the dark theme tokens — no
+// or the protected Overview route. Styled inline against the dark theme tokens — no
 // hardcoded hex, all `var(--token)`.
 //
 // v1 keeps this deliberately small: one email/password form. (Magic-link/OTP
@@ -41,7 +41,7 @@ export default function LoginPage() {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectedFrom = searchParams.get('redirectedFrom') ?? '/';
+  const redirectedFrom = searchParams.get('redirectedFrom') ?? '/overview';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

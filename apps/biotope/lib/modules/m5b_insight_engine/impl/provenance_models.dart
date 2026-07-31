@@ -158,6 +158,29 @@ class ProvenanceCitation {
     this.evidence = const [],
   });
 
+  /// Safe canonical resolver for DOI-backed citations only.
+  ///
+  /// `paperId` is "DOI when available, else a stable internal corpus id" in
+  /// the shared contract. Internal IDs and malformed/active-content strings
+  /// therefore remain plain text rather than becoming guessed links.
+  Uri? get paperUri {
+    var candidate = paperId.trim();
+    candidate = candidate.replaceFirst(
+      RegExp(r'^https?://(?:dx\.)?doi\.org/', caseSensitive: false),
+      '',
+    );
+    candidate = candidate.replaceFirst(
+      RegExp(r'^doi:', caseSensitive: false),
+      '',
+    );
+    final valid = RegExp(
+      r'^10\.\d{4,9}/[-._;()/:A-Z0-9]+$',
+      caseSensitive: false,
+    ).hasMatch(candidate);
+    if (!valid) return null;
+    return Uri.parse('https://doi.org/$candidate');
+  }
+
   factory ProvenanceCitation.fromJson(Map<String, dynamic> json) {
     return ProvenanceCitation(
       paperId: json['paperId'] as String,

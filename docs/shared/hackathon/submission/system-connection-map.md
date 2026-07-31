@@ -4,7 +4,7 @@ summary: A submission-facing projection of how Biotope, Supabase, nao, the brain
 type: reference
 scope: repo
 status: draft
-updated: 2026-07-30
+updated: 2026-07-31
 ---
 
 # Ourobion — system connection map
@@ -53,7 +53,7 @@ Five zones, separated by what can read personal data and what can be reached wit
 | **Z1 — the user's device** | Flutter app `apps/biotope/`; on-device preferences; OS permission grants | Yes — the user's own entries, entered here | n/a (local) | Connected now — local config observed 2026-07-30 |
 | **Z2 — the account-bound backend** | Supabase Postgres: raw rows, projections, RLS on `auth.uid()`; 4 Deno edge functions | Yes — isolated per account by RLS | No | Implemented and locally proven (local stack); hosted state: Unknown live external state |
 | **Z3 — the brain corpus + pipeline** | `tools/brain-ingest/`, R2 corpus, D1 index, `verified_edges` | **No.** Papers and claims only | No | Implemented and locally proven (pipeline); Configured target; deployment unproven (R2/D1) |
-| **Z4 — the nao operator console** | `apps/nao/` (Next.js), role-gated control surfaces | **No** — reads corpus/claims state, never user health rows | Only `/how-it-works` (static explainer). Everything else is gated | Implemented and locally proven |
+| **Z4 — the nao operator console** | `apps/nao/` (Next.js), role-gated control surfaces | **No** — reads corpus/claims state, never user health rows | `/` is the static explainer; `/how-it-works` redirects there. Operations remain gated | Implemented and locally proven |
 | **Z5 — cloud CI** | `.github/workflows/ci.yml`, `brain-ingest.yml` | No | n/a | Defined in cloud CI; latest execution unverified |
 
 **The boundary that matters.** Z1/Z2 (personal) and Z3/Z4 (evidence) do not call each other at
@@ -106,7 +106,7 @@ output — inside Z2. There is no direct Biotope→nao navigation or request pat
 | Authentication gate (edge JWT verification) | Implemented and locally proven | `src/middleware.ts` — `verifyAccessToken` against project JWKS |
 | Authorization: tiered `viewer`/`curator`/`admin` | Implemented and locally proven | `src/lib/authz.ts` closed ranked enum + a `ROUTE_POLICY` matrix over all 14 API method+path pairs; `src/lib/authzServer.ts` `requireRole()` is the first statement of every API handler and re-reads the role from `nao_role()` — never from a JWT claim — enforced by a source-conformance test that fails CI on drift |
 | Page-level membership check | Implemented and locally proven | `src/middleware.ts` calls `rpc('nao_role')` for non-`/api/` paths; a Biotope-only account is redirected to `/login?denied=nao` |
-| Public `/how-it-works` explainer | Implemented and locally proven | Static server component outside the `(app)` group, allow-listed in `isPublicPath()` before any config/session/role read; zero privileged imports, asserted by source-conformance test |
+| Public `/` explainer | Implemented and locally proven | Static server component outside the `(app)` group, allow-listed in `isPublicPath()` before any config/session/role read; legacy `/how-it-works` redirects to it; zero privileged imports, asserted by source-conformance test |
 | Cloudflare Workers deployment + `nao.ourobion.com` route | Configured target; deployment unproven | `wrangler.jsonc:6-55`. There is **no deploy workflow and no `deploy` script anywhere in `apps/nao`**. `apps/nao/README.md:5-6` says it outright: *"a production deployment ... **not yet proven**; do not read the presence of routes as deployment evidence"* |
 | Worker secret delivery (`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `OUROBION_INTERNAL_SECRET`, `GH_ACTIONS_TOKEN`) | Unknown live external state | Declared **by name only** in `wrangler.jsonc:34-41`; no values committed. `README.md:82-84` states local build proves artifact construction only |
 
@@ -197,13 +197,13 @@ Planned/research-only; not serving.
 ```
 request
   │
-  ├─ /how-it-works ──────────────────────────────► PUBLIC static page. Short-circuits in
+  ├─ / (legacy /how-it-works redirects here) ────► PUBLIC static page. Short-circuits in
   │                                                isPublicPath() BEFORE the env/config read,
   │                                                so a missing config cannot block it.
   │                                                Exposes no corpus state, counts, provider
   │                                                names, role names, controls, or API links.
   │
-  └─ everything else
+  └─ protected operations (/overview, /papers, …, /api/*)
        │  1. env/config present?            no ──► /login  (fail closed)
        │  2. session via @supabase/ssr, refreshed onto the response
        │  3. verifyAccessToken() against project JWKS (edge)   no claims ──► /login
@@ -322,7 +322,7 @@ Statements below are supported by the evidence in this document. Use these; do n
 | Support models are non-serving | `docs/temp/model-training/README.md:13-20`; `model-roster.md` §8; `tools/check_arch_boundaries.mjs` |
 | Insight path (tables + functions) | `supabase/functions/evaluate-signals/index.ts`, `generate-insights/index.ts`; [`insight-engine-architecture.md`](../../insight-engine-architecture.md) |
 | nao tiered authorization | `apps/nao/src/lib/authz.ts`, `authzServer.ts`; `apps/nao/tests/authz.test.ts` |
-| Public explainer leaks nothing | `apps/nao/src/app/how-it-works/page.tsx`; `apps/nao/tests/howItWorks.test.ts` |
+| Public explainer leaks nothing | `apps/nao/src/app/page.tsx`; `apps/nao/src/components/OurobionExplainer.tsx`; `apps/nao/tests/howItWorks.test.ts` |
 | Local-only deploy posture | `supabase/deploy-attestation.json`; `apps/nao/README.md:5-6,82-84,159-169` |
 | CI gate definitions | `.github/workflows/ci.yml`, `brain-ingest.yml` |
 | pg_cron manual prerequisites | [memory 0005](../../../memory/0005-pgcron-config-prereqs.md); migrations `20260515100001`, `20260728020000`, `20260728060000` |
