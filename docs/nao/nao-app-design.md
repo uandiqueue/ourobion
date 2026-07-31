@@ -222,7 +222,7 @@ construction derives from; the sibling system is
 **Implemented foundation:**
 
 - The repo-root package boundary and `apps/nao/` Next.js application.
-- R2/D1 corpus reads, Supabase auth, corpus/claims/operations surfaces, and the shared design tokens.
+- R2/D1 corpus reads, Supabase-backed sign-in, corpus/claims/operations surfaces, and the shared UI variables.
 - R2 edge artifacts plus the deterministic `tools/edge-loader/` projection into
   `relationship_claims`, `edge_verifications`, and the relational `verified_edges` view.
 

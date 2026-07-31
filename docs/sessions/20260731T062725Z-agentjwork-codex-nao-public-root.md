@@ -57,6 +57,15 @@ Issue: #226 · branch: `fix/nao/public-root-explainer` · base: `dev-phase2-run4
   751.1 MiB working set at final check.
 - `git diff --check`: clean.
 
+### CI follow-up
+
+- Reworded one Nao design sentence that the pinned generic-api-key detector misread as auth-to-token
+  prose; the secret-scan allowlist remains unchanged.
+- Made Run 4 landing, product, and MT4 measurements represent moves conservatively as D+A with the
+  full destination additions; the fixed 115-path/8,500-line caps and over-cap record are unchanged.
+- Focused landing-gate test and the full 17-test release-gate suite passed.
+- Pinned gitleaks 8.30.1 found no leak in the changed Nao design document.
+
 ## Left
 
 - Drive #226's authenticated success, trusted top bar, protected navigation, failure, and sign-out

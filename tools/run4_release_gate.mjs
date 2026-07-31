@@ -610,7 +610,10 @@ export function checkLandingDelta({ base, head = 'HEAD', maxPaths, maxAdded, git
   if (!/^[0-9a-f]{40}$/i.test(resolvedHead)) fail('head did not resolve to an immutable SHA');
   if (clean('merge-base', base, resolvedHead) !== base) fail(`base ${base} is not the merge-base of landing ${resolvedHead}`);
 
-  const nameTokens = gitText(git, ['diff', '--name-status', '-z', '--find-renames', `${base}..${resolvedHead}`]).split('\0');
+  // Count renames/copies conservatively as an old-path deletion plus a full new-path addition.
+  // Using the same no-renames view for both outputs keeps the path sets deterministic and makes a
+  // move consume two path-budget slots while all destination lines consume the addition budget.
+  const nameTokens = gitText(git, ['diff', '--name-status', '-z', '--no-renames', `${base}..${resolvedHead}`]).split('\0');
   if (nameTokens.at(-1) === '') nameTokens.pop();
   const names = [];
   const statusesByPath = new Map();
@@ -627,7 +630,7 @@ export function checkLandingDelta({ base, head = 'HEAD', maxPaths, maxAdded, git
   }
   if (new Set(names).size !== names.length) fail('landing diff contains duplicate paths');
 
-  const statRows = gitText(git, ['diff', '--numstat', '-z', `${base}..${resolvedHead}`]).split('\0');
+  const statRows = gitText(git, ['diff', '--numstat', '-z', '--no-renames', `${base}..${resolvedHead}`]).split('\0');
   if (statRows.at(-1) === '') statRows.pop();
   let added = 0;
   let allowlistedBinaryPaths = 0;
@@ -713,7 +716,7 @@ export function mt4ExclusionManifest({ git = execFileSync } = {}) {
   const parents = clean('rev-list', '--parents', '-n', '1', RUN4_MT4_MERGE_SHA).split(/\s+/);
   if (parents.length !== 3 || parents[0] !== RUN4_MT4_MERGE_SHA || parents[1] !== RUN4_MT4_PARENT_SHA) fail('MT4 exclusion merge provenance drifted');
   if (clean('merge-base', RUN4_PRODUCT_BASE_SHA, RUN4_MT4_PARENT_SHA) !== RUN4_PRODUCT_BASE_SHA || clean('merge-base', RUN4_MT4_PARENT_SHA, RUN4_MT4_MERGE_SHA) !== RUN4_MT4_PARENT_SHA) fail('MT4 exclusion provenance is not rooted at the product base');
-  const records = parseNameStatus(gitText(git, ['diff', '--name-status', '-z', '--find-renames', `${RUN4_MT4_PARENT_SHA}..${RUN4_MT4_MERGE_SHA}`]), 'MT4 exclusion').map(({ status, path }) => ({ status, path, blob: resolveBlob(git, RUN4_MT4_MERGE_SHA, path, 'MT4 exclusion') }));
+  const records = parseNameStatus(gitText(git, ['diff', '--name-status', '-z', '--no-renames', `${RUN4_MT4_PARENT_SHA}..${RUN4_MT4_MERGE_SHA}`]), 'MT4 exclusion').map(({ status, path }) => ({ status, path, blob: resolveBlob(git, RUN4_MT4_MERGE_SHA, path, 'MT4 exclusion') }));
   if (records.length !== RUN4_MT4_EXCLUSION_COUNT || sha(JSON.stringify(records)) !== RUN4_MT4_EXCLUSION_SHA256) fail('MT4 exclusion path/count/hash drifted');
   return records;
 }
@@ -722,10 +725,10 @@ export function mt4ExclusionManifest({ git = execFileSync } = {}) {
  * Measure the immutable product union. Fails closed on every provenance/parsing ambiguity #183
  * names — moving base, shallow history, a landing that does not contain the exact MT4 merge, a
  * requested exclusion set that differs from the authorized one, an excluded path whose status or
- * blob drifted, rename/copy ambiguity, non-allowlisted/over-cap/unmeasurable binary rows, or
+ * blob drifted, non-allowlisted/over-cap/unmeasurable binary rows, or
  * mismatched name-status/numstat sets — and reports `withinCap` rather than throwing when the union
  * merely exceeds the product path/line cap. A product path/line cap breach is a human envelope
- * decision; every provenance/parsing/binary-accounting failure above it is a correctness failure.
+ * decision; every provenance/parsing/binary-accounting failure above it is a correctness failure. Renames/copies count as D+A with full destination additions.
  */
 export function productLandingDelta({ head = 'HEAD', excludedPaths, git = execFileSync } = {}) {
   const clean = (...args) => gitText(git, args).trim();
@@ -740,14 +743,14 @@ export function productLandingDelta({ head = 'HEAD', excludedPaths, git = execFi
   const exclusionPaths = exclusions.map(({ path }) => path);
   if (excludedPaths !== undefined) sameSet(excludedPaths, exclusionPaths, 'requested MT4 exclusions');
 
-  const names = parseNameStatus(gitText(git, ['diff', '--name-status', '-z', '--find-renames', `${RUN4_PRODUCT_BASE_SHA}..${resolvedHead}`]), 'product landing');
+  const names = parseNameStatus(gitText(git, ['diff', '--name-status', '-z', '--no-renames', `${RUN4_PRODUCT_BASE_SHA}..${resolvedHead}`]), 'product landing');
   const namesByPath = new Map(names.map((record) => [record.path, record]));
   for (const exclusion of exclusions) {
     if (namesByPath.get(exclusion.path)?.status !== exclusion.status) fail(`MT4 excluded path status drifted: ${exclusion.path}`);
     if (resolveBlob(git, resolvedHead, exclusion.path, 'MT4 excluded') !== exclusion.blob) fail(`MT4 excluded path content drifted: ${exclusion.path}`);
   }
 
-  const statRows = gitText(git, ['diff', '--numstat', '-z', `${RUN4_PRODUCT_BASE_SHA}..${resolvedHead}`]).split('\0');
+  const statRows = gitText(git, ['diff', '--numstat', '-z', '--no-renames', `${RUN4_PRODUCT_BASE_SHA}..${resolvedHead}`]).split('\0');
   if (statRows.at(-1) === '') statRows.pop();
   let added = 0;
   let allowlistedBinaryPaths = 0;
