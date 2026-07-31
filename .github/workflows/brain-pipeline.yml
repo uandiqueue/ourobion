@@ -135,6 +135,15 @@ jobs:
         working-directory: tools/brain-ingest
         run: npx tsx src/cli.ts --check-config
 
+      # `synthesize` resolves each paper's citation metadata (title / year / evidence
+      # tier) from the LOCAL corpus manifest, not from R2. Ingestion runs in a separate
+      # workflow on a different runner, so this runner's cache is always empty and
+      # synthesis would fail with "manifest/corpus metadata missing" even though the
+      # paper text loads from R2 fine. Hydrate first. No-op if already populated.
+      - name: Hydrate local corpus manifest from R2
+        working-directory: tools/brain-ingest
+        run: npx tsx src/cli.ts hydrate-manifest
+
       # ── 1 + 2 · synthesis, quoteCheck-gated ────────────────────────────────────
       - name: Synthesis
         working-directory: tools/brain-ingest

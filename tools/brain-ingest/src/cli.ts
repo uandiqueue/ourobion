@@ -10,7 +10,8 @@ import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { inspectConfig, loadConfig, sourceEnablement, REQUIRED_VARS } from './config.js';
-import { run, statusReport, type RunResult } from './run.js';
+import { run, statusReport, hydrateManifestFromR2, defaultCorpusDir, type RunResult } from './run.js';
+import { Manifest } from './manifest.js';
 import { SEED_TOPICS } from './seeds.js';
 import { VenueCache, lookupVenueCached } from './venue/cache.js';
 import { bandImpactTier, type SjrQuartile } from './venue/banding.js';
@@ -44,6 +45,12 @@ Commands:
   ingest [--seed <topic>] [--limit N] [--dry-run] [--remote-control]
                                                     discover → resolve → retrieve → extract → store
   status                                           manifest + budget summary
+  hydrate-manifest                                 populate the LOCAL corpus manifest cache from R2's
+                                                   canonical manifest/papers.jsonl. Required before
+                                                   synthesize on a machine that has never run ingest
+                                                   (e.g. a fresh CI runner), which otherwise fails
+                                                   with "manifest/corpus metadata missing".
+                                                   No-op when the cache is already populated.
   resume [--remote-control]                        continue an interrupted multi-day run (skip 'fetched')
   seed-queries [--dry-run|--candidates-only] [--cap N]
                                                    agentic seeder: registry derivedFrom[] + rule-blueprint
@@ -56,17 +63,13 @@ Commands:
                                                    appends data/corpus/edges/claims.jsonl (edge-loader reads it)
   verify [--from-claims <path>] [--corpus <path>] [--edge <edgeId>]
          [--edges-dir <dir>] [--artifact-revision <id>] [--dry-run] [--triage-only]
-         [--push-r2]
                                                    A10 adversarial verification: A9 quoteCheck →
                                                    budget triage (C7) → verifier-owned retrieval →
                                                    refute-first LLM (router node 'verifier', in a
                                                    different vendor family than synthesis) →
                                                    schema-enforced EdgeVerification; appends
                                                    <edges-dir>/verifications.jsonl + the raw provider
-                                                   body to <edges-dir>/verification-raw.jsonl;
-                                                   --push-r2 also publishes the verdicts to R2
-                                                   edges/verifications.jsonl (edge-loader --from-r2
-                                                   reads it), mirroring synthesize --push-r2.
+                                                   body to <edges-dir>/verification-raw.jsonl.
                                                    --corpus <path>: JSONL of CorpusDoc lines the
                                                    verifier retrieves over (O15; corpus texts also
                                                    serve the quoteCheck for papers they cover);
@@ -395,10 +398,6 @@ async function runVerify(flags: Set<string>, options: Map<string, string>): Prom
     triageOnly,
     dryRun,
     log,
-    // Symmetric with `synthesize --push-r2`. Publishing the verdicts is what lets
-    // `edge-loader --from-r2` see a verification beside each claim; without it the
-    // cloud pipeline would project claims carrying no verdict at all.
-    pushR2: flags.has('push-r2'),
   };
   const edge = options.get('edge');
   if (edge !== undefined) runOpts.edgeId = edge;
@@ -492,6 +491,30 @@ async function runSinglePaperCli(flags: Set<string>, options: Map<string, string
   return 0;
 }
 
+/**
+ * Populate the LOCAL corpus manifest cache from R2's canonical index.
+ *
+ * `synthesize` resolves each paper's citation metadata (title / year / evidence
+ * tier) from the local manifest, not from R2. On a machine that has never run
+ * `ingest` — every fresh CI runner — that cache is empty, so synthesis fails with
+ * "manifest/corpus metadata missing" even though the paper's text loads from R2
+ * fine. `ingest` hydrates as a side effect; the cloud pipeline needs it as a step
+ * of its own, because ingestion runs in a different workflow on a different runner.
+ *
+ * No-op when the local cache is already populated, and best-effort when R2 has no
+ * index yet — so it is safe to run unconditionally before synthesis.
+ */
+async function runHydrateManifestCli(): Promise<number> {
+  const log = (line: string) => process.stdout.write(line + '\n');
+  const corpusDir = defaultCorpusDir();
+  const manifest = Manifest.open(corpusDir);
+  const before = manifest.all().length;
+  await hydrateManifestFromR2(manifest, new R2Store(loadConfig()), log);
+  const after = manifest.all().length;
+  log(`hydrate-manifest: ${before} → ${after} local record(s) in ${corpusDir}`);
+  return 0;
+}
+
 async function runOfflineAcceptanceCli(flags: Set<string>, options: Map<string, string>): Promise<number> {
   const bundle = options.get('bundle');
   if (!bundle || !flags.has('dry-run')) {
@@ -528,6 +551,7 @@ export async function main(argv: string[]): Promise<number> {
   if (flags.has('check-config') || command === 'check-config') {
     return runCheckConfig();
   }
+  if (command === 'hydrate-manifest') return runHydrateManifestCli();
   if (command === 'offline-acceptance') return runOfflineAcceptanceCli(flags, options);
   if (command === 'live-acceptance') return runLiveAcceptanceCli(flags, options);
 

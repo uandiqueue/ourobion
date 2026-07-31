@@ -666,7 +666,7 @@ async function syncMetadata(
  * what makes resume work on a machine that has never run before — without it, a
  * fresh clone re-discovers and re-downloads everything it already has on R2.
  */
-async function hydrateManifestFromR2(
+export async function hydrateManifestFromR2(
   manifest: Manifest,
   store: R2Store,
   log: (line: string) => void,
