@@ -206,3 +206,17 @@ data/llm-router/
 /model-training/**/.neptune/
 /model-training/**/runs/
 /model-training/**/outputs/
+
+# Test credentials handed to agent sessions (owner-supplied, disposable test account).
+# NOT covered by the .env* rules above: a credentials file at the repo root would otherwise
+# be untracked-but-committable, which with self-merging sessions is a live leak path.
+/test_credential.md
+/test_credentials.md
+
+# Working records of model experiments: scripts, sampled inputs, raw model outputs and
+# adjudication sheets. Untracked on purpose. #277 is hard-gated behind full issue
+# reconciliation, and the outputs are raw model predictions over third-party paper text
+# whose licence terms do not clearly permit redistributing derived examples (SciFact is
+# CC BY-NC 2.0). Promote a finding by writing it into a tracked doc with its provenance,
+# never by un-ignoring this directory.
+/model-training/experiments/
