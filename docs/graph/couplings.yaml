@@ -71,7 +71,7 @@ couplings:
 
   - id: metrics-registry-ts-dart-parity
     from: shared/metrics/registry.ts
-    to: shared/metrics/registry.dart
+    to: shared/metrics/lib/src/registry.dart (public barrel: lib/ourobion_metrics.dart)
     why: >
       The metrics registry is the single source of truth for every metric, duplicated across the
       TS (backend) and Dart (app) seam with no import linking them. If one side adds/removes/retypes
@@ -116,6 +116,17 @@ couplings:
       rather than the wide tables. The original wearable-key drift was exactly a hardcoded
       WEARABLE_METRIC_KEYS array drifting from the contract; this guard makes that impossible.
     guard: apps/biotope/test/guards/metrics_registry_baselines_test.dart
+    status: active
+    phase: P2
+
+  - id: metrics-registry-to-trend-axis
+    from: shared/metrics/lib/ourobion_metrics.dart
+    to: apps/biotope/lib/modules/m5a_baselines/ui/widgets/metric_trend_section.dart
+    why: >
+      M5a trend axes and detail headers must derive placement, units, and category wording from the
+      shared metric registry. Local metric-key switches silently emit fractional ticks or stale
+      labels for new metrics; valueStep, scale, unit, and minimal UI metadata keep policy additive.
+    guard: apps/biotope/test/m5a_baselines/metric_trend_section_widget_test.dart
     status: active
     phase: P2
 
