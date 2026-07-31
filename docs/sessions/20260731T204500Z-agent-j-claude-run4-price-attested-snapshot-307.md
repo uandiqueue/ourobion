@@ -95,6 +95,53 @@ snake_case keys with no human-readable gloss.
 
 Neither is fixed by loosening a threshold, exactly as #300 said.
 
+### CORRECTION — the shape-mismatch hypothesis was WRONG, and the real cause was mine
+
+Screening the corpus for papers whose title+abstract name **two or more** active-metric concepts
+returned **165 of 739** — so candidates were never scarce, and **neither of my two test papers was
+in that set**: I had picked them by topic keyword, not by this signal.
+
+Running one paper from the ranked set (`doi:10.2196/73812`, *Association Between Digital Biomarkers
+of Health and Anxiety*) emitted a claim immediately — and it was rejected with:
+
+```
+REJECT sleep_duration_min (min)|no_effect|anxiety_score — inactive-metric-key:
+  endpoint(s) not an active shared/metrics registry key: sleep_duration_min (min)
+```
+
+**The model had appended the unit to the key**, because `metricsBlock()` rendered
+`${key}${label}${unit}` — so a metric with a unit and NO `ui.label` collapsed to
+`sleep_duration_min (min)`, with nothing but a space and a paren between key and unit. **A real
+claim was lost to my own prompt formatting**, and it hit exactly the six unlabelled wearable metrics.
+
+Fixed: the key is now emitted alone and QUOTED before any gloss, with annotations explicitly named
+(`"sleep_duration_min"  — unit: min`), plus an instruction never to append a unit or parentheses.
+Regression test pins that the corrupted form is unrenderable.
+
+**Re-running the same paper then produced the first accepted claim in the project's history:**
+
+| Field | Value |
+|---|---|
+| edgeId | `sleep_duration_min\|no_effect\|anxiety_score` |
+| claimKind | `correlational`, evidenceTier **3** (corpus classifier, not the model) |
+| quote | *"No association between TST and anxiety symptoms was observed"* — verbatim at chars **31460–31520** |
+| locator | `Results` (past the 15% intro zone) |
+| mechanism span | **absent — correctly** |
+
+Three things worth noting about that result:
+- It is a **negative** finding (`no_effect`). The pipeline is not merely confirming what we hoped
+  for, and `no_effect` is valuable in its own right — it stops a dead edge being re-proposed.
+- The model **omitted the mechanism span rather than inventing one**, which is precisely what §B's
+  "omitting is correct and expected; inventing is the worst thing you can do" instruction is for.
+  A `no_effect` correlational finding has no pathway to state.
+- The gate did its job in both directions: it rejected the malformed endpoint and accepted the clean
+  one, with no threshold changed.
+
+**So the corrected diagnosis: the pipeline works. The zero results were (1) paper selection and
+(2) a prompt-formatting defect I introduced in #300 — not a shape mismatch, and not a threshold.**
+The owner decision I asked for on #307 (options A/B/C/D) is therefore **no longer needed as posed**;
+option (C) is simply the right screening signal and it is already viable at 165 candidates.
+
 | Gate | Result |
 |---|---|
 | `tools/brain-ingest` typecheck / tests | clean / **458/458** |

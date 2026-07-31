@@ -145,14 +145,33 @@ const BLUEPRINT_CONTRACT = [
   '- The pipeline stamps provenance (tier `extracted` plus the paper citation) — omit it.',
 ].join('\n');
 
-/** Render the ACTIVE metric vocabulary the model may use as claim endpoints. */
+/**
+ * Render the ACTIVE metric vocabulary the model may use as claim endpoints.
+ *
+ * THE KEY MUST BE UNAMBIGUOUSLY DELIMITED. The first version rendered
+ * `${key}${label}${unit}`, which for a metric with a unit but NO `ui.label` collapsed to
+ * `sleep_duration_min (min)` — key and unit separated by nothing but a space and a paren. A live
+ * run then returned the endpoint `sleep_duration_min (min)`, which the gate correctly rejected as
+ * `inactive-metric-key`. **A real claim was lost to prompt formatting**, and it hit exactly the six
+ * unlabelled wearable metrics (`resting_hr_bpm`, `hrv_sdnn_ms`, `sleep_duration_min`, `spo2_pct`,
+ * `body_temp_c`, `step_count`) — the ones most likely to appear in physiology papers.
+ *
+ * So the key is now emitted alone and QUOTED before any gloss, with annotations explicitly named.
+ * The quotes are what make the boundary unmistakable even when a gloss is absent.
+ */
 function metricsBlock(metrics: readonly ActiveMetricDescriptor[]): string {
   const lines = metrics.map((m) => {
-    const label = m.label ? ` — ${m.label}` : '';
-    const unit = m.unit ? ` (${m.unit})` : '';
-    return `  ${m.key}${label}${unit}`;
+    const notes: string[] = [];
+    if (m.label) notes.push(`means "${m.label}"`);
+    if (m.unit) notes.push(`unit: ${m.unit}`);
+    const gloss = notes.length > 0 ? `  — ${notes.join('; ')}` : '';
+    return `  "${m.key}"${gloss}`;
   });
-  return `ACTIVE METRICS (subject/object MUST be one of these keys):\n${lines.join('\n')}`;
+  return [
+    'ACTIVE METRICS. `subject` and `object` MUST each be one of these keys, copied EXACTLY as',
+    'written inside the quotes. Never append a unit, a label, or parentheses to a key.',
+    ...lines,
+  ].join('\n');
 }
 
 /**

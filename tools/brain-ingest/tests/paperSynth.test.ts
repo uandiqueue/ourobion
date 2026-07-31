@@ -194,6 +194,35 @@ test('#300 G2: a malformed budget ceiling is REFUSED, never silently treated as 
   }
 });
 
+test('#300 §A: an UNLABELLED metric key stays unambiguous next to its unit', () => {
+  // Regression. The first metricsBlock rendered `${key}${label}${unit}`, so a metric with a unit
+  // and NO ui.label collapsed to `sleep_duration_min (min)`. A live gpt-5 run then returned the
+  // endpoint "sleep_duration_min (min)" and the gate rejected it as inactive-metric-key — a REAL
+  // claim lost to prompt formatting, hitting exactly the six unlabelled wearable metrics.
+  const unlabelled: ActiveMetricDescriptor[] = [
+    { key: 'sleep_duration_min', label: null, unit: 'min' },
+    { key: 'hrv_sdnn_ms', label: null, unit: 'ms' },
+    { key: 'mood_score', label: 'Mood', unit: null },
+  ];
+  const { prompt } = buildPaperSynthesisPrompt(
+    { paperUid: 'p', title: null, text: 'x' },
+    unlabelled,
+  );
+
+  // The key appears quoted and whole, so its boundary cannot be misread.
+  assert.ok(prompt.includes('"sleep_duration_min"'), 'the key must appear quoted and intact');
+  assert.ok(prompt.includes('"hrv_sdnn_ms"'), 'the key must appear quoted and intact');
+  // The exact corrupted form the live run produced must NOT be renderable.
+  assert.equal(
+    prompt.includes('sleep_duration_min (min)'),
+    false,
+    'key and unit must never be adjacent with no delimiter',
+  );
+  // The unit is still conveyed, just unmistakably separated from the key.
+  assert.ok(/unit: min/.test(prompt), 'the unit is still available to the model');
+  assert.ok(prompt.includes('means "Mood"'), 'a label is still conveyed when present');
+});
+
 // ─── §B · mechanism as a second verbatim quote ───────────────────────────────
 
 test('#300 §B: the mechanism rides quoteSpans as a SECOND VERBATIM quote, marked via locator', () => {
