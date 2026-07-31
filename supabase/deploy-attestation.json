@@ -20,9 +20,9 @@
       "name": "compute-baselines",
       "entrypoint": "./functions/compute-baselines/index.ts",
       "importMap": "./functions/compute-baselines/deno.json",
-      "entrypointSha256": "21d1b63541686a961c71be8a9f6e13b47cb573703cdb1d1235d6f6f4b12a256f",
+      "entrypointSha256": "ee7a0675e5d556814de3c2e1e861cfd33901081768e1d36cd7ff895881a17546",
       "importMapSha256": "559f0671914e7e20a5396b944a780be2bdb0208c6a23da9d3ed1e62aedd63bae",
-      "moduleGraphSha256": "946f4710444d74631299092ae9628e0f3c3b360af5c15a0a36cbb0f8050a36a9"
+      "moduleGraphSha256": "51d60015ec000d5c8266751b9c01ac7ee83d90d613f906c941ba66c486b005a0"
     },
     {
       "name": "generate-insights",

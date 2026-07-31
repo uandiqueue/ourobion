@@ -1,0 +1,35 @@
+{
+  "model_name": "viceroy-v0",
+  "model_version": "v0",
+  "intended_use": "demo",
+  "status": "private_upload_verified",
+  "storage_provider": "cloudflare-r2",
+  "bucket": "ourobion-model-artifacts",
+  "object_prefix": "models/viceroy-v0/releases/sha256-751fbf1fb1a680b39b50c91f7dd4d7a0caba404417effde724564615d9849ec2/model/",
+  "access": "private",
+  "release_id": "sha256-751fbf1fb1a680b39b50c91f7dd4d7a0caba404417effde724564615d9849ec2",
+  "release_id_derivation": "sha256 of local-bundle-sha256sums.txt (LF line endings, trailing newline included)",
+  "local_staging_path": "model/viceroy-v0/v0/",
+  "bundle_size_bytes": 438942033,
+  "file_count": 6,
+  "weights": {
+    "file": "pytorch_model.bin",
+    "size_bytes": 438007278,
+    "sha256": "4ea5915825cfe213cef62abe6231d5d92d55f980003fbfbd0c1c7f10a4ee16cc"
+  },
+  "verification": {
+    "verified_on": "2026-07-30",
+    "method": "independent round-trip: the exact private release was downloaded into a fresh ignored directory and every file re-hashed against local-bundle-sha256sums.txt",
+    "source_bundle_manifest_passed": true,
+    "downloaded_bundle_manifest_passed": true,
+    "remote_listing_file_count": 6,
+    "interim_prefix_removed": "models/viceroy-v0/releases/sha256-/ was created in error and deleted only after the correct content-addressed release passed round-trip verification",
+    "issue": "https://github.com/uandiqueue/ourobion/issues/250"
+  },
+  "acceptance_status": {
+    "validated": false,
+    "serving_ready": false,
+    "public_weights_cleared": false,
+    "note": "Private storage and byte-for-byte retrievability are not model acceptance. These three flags are governed by their own criteria and are unchanged by the transfer."
+  }
+}
