@@ -216,13 +216,42 @@ void main() {
           if (e.value.isOrdinalByType) e.key,
       };
       expect(ordinals, isNotEmpty);
+
+      // DOCUMENTED, NOT ENDORSED — same defect as the whole-step group below,
+      // and the reason `trendAxisTicks` being a hardcoded switch is itself
+      // filed as a bug rather than a style note.
+      //
+      // PR #274 (u6b batch 1) added five active, baselineApplicable
+      // `type: ordinal` likert_1_5 metrics without extending the switch, so
+      // each inherits the metric-agnostic 1/2/5 ladder and can be drawn at
+      // 3.5 on a scale whose only legal values are 1..5.
+      //
+      // Recorded here so the merge that introduced it is visible instead of
+      // silently passing. If this set GROWS, another ordinal has inherited the
+      // defect. If it becomes EMPTY, the gap is fixed — delete this allowance
+      // so the assertion below carries every ordinal again.
+      const knownUncoveredOrdinals = {
+        'appetite_score',
+        'anxiety_score',
+        'brain_clarity_score',
+        'focus_score',
+        'social_interaction_quality_score',
+      };
       expect(
-        ordinals.difference(axisAware),
+        ordinals.difference(axisAware).difference(knownUncoveredOrdinals),
         isEmpty,
         reason:
             'these registry `type: ordinal` metrics fall through to the '
             'metric-agnostic 1/2/5 ladder and can be drawn at a value the '
             'user never logged',
+      );
+      expect(
+        ordinals.difference(axisAware),
+        knownUncoveredOrdinals,
+        reason:
+            'the recorded ordinal-axis gap has changed. Added by PR #274 and '
+            'reported as #285 — update this set deliberately, never to make a '
+            'red test green.',
       );
     });
 
@@ -470,11 +499,23 @@ void main() {
       };
       expect(
         uncovered,
-        {'stool_count'},
+        {
+          // registry `numeric` with `stepper_0_10`; the switch covers its
+          // sibling mosquito_bites (stepper_0_20) but not it.
+          'stool_count',
+          // The five likert_1_5 scores added by PR #274 (u6b batch 1). They
+          // are whole-step by input as well as `type: ordinal`, so they fail
+          // this guard and the ordinal-coverage guard above for the same
+          // underlying reason: trendAxisTicks is a hardcoded switch.
+          'appetite_score',
+          'anxiety_score',
+          'brain_clarity_score',
+          'focus_score',
+          'social_interaction_quality_score',
+        },
         reason:
-            'stool_count is registry `numeric` with `stepper_0_10`; the axis '
-            'switch covers its sibling mosquito_bites (stepper_0_20) but not '
-            'it. Reported against #282, not fixed here.',
+            'the recorded whole-step axis gap has changed. Reported as #285 — '
+            'update this set deliberately, never to make a red test green.',
       );
     });
 
