@@ -1175,7 +1175,9 @@ class CoverageCard extends StatelessWidget {
                               Text(
                                 fullyCaptured
                                     ? 'Every channel captured today'
-                                    : 'Coverage recorded today',
+                                    : streakWorthy
+                                    ? 'Coverage recorded today'
+                                    : 'Coverage in progress',
                                 style: GoogleFonts.manrope(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
@@ -1186,7 +1188,9 @@ class CoverageCard extends StatelessWidget {
                               Text(
                                 fullyCaptured
                                     ? '100 pts — every channel captured'
-                                    : '${dqs!.toInt()} / 100 pts — run a sweep to capture more today',
+                                    : streakWorthy
+                                    ? '${dqs!.toInt()} / 100 pts — run a sweep to capture more today'
+                                    : '${dqs!.toInt()} / 100 pts — run a sweep to close the gap',
                                 style: GoogleFonts.manrope(
                                   fontSize: 12,
                                   color: OurobionColors.outline,

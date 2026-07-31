@@ -21,7 +21,8 @@ Issue: #284 · branch: `fix/m1/coverage-card-truth-284` · base: `dev-phase2-run
 - Kept the existing `dqs >= 60` visual high-coverage state and disabled-card behavior.
 - Made `Every channel captured today` and its matching detail render only when canonical `dqs == 100`.
 - Rendered the factual 60–99 state as `Coverage recorded today` with its score out of 100 and a prompt to run a sweep.
-- Added an independent CoverageCard widget test for 60, 70, 80, 85, and 99 as non-completion states and 100 as completion, plus replacement-copy validation through the shared non-diagnostic gate.
+- Preserved the established below-60 `Coverage in progress` and null/not-swept states exactly.
+- Added independent CoverageCard widget tests for 0, 59, 60, 70, 80, 85, 99, 100, and null, including lower-state tap behavior, plus replacement-copy validation through the shared non-diagnostic gate.
 
 ## Decided
 
@@ -29,7 +30,8 @@ Issue: #284 · branch: `fix/m1/coverage-card-truth-284` · base: `dev-phase2-run
 
 ## Verification
 
-- Focused widget test: 7 passed.
+- Initial focused widget test before the review-driven lower/null guards: 7 passed.
+- The expanded focused suite requires a fresh run once the device memory constraint clears.
 - `flutter analyze --no-pub`: clean.
 - Copy-guideline parity guard: 4 passed.
 - `node tools/context_sync.mjs --check`: passed.
