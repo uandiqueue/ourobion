@@ -31,16 +31,19 @@ identity-kit binary allowlist and caps used for per-unit landings (D-231-PRODUCT
 | Measurement point | Head | Changed paths | Added lines | Over the 115/8,500 cap by |
 |---|---|---|---|---|
 | PR #270 merge (integration head at time of this record) | `d880ed04091f8aa920294eb70db4a20263ddae4e` | 511 | 71,762 | 396 paths / 63,262 lines |
-| #290 base-advance commit ([issue/PR #290](https://github.com/uandiqueue/ourobion/issues/290)) | (per-unit base-advance target, `c6a2ca64298998205a09451f78a6bfc63afa1a03`) | 512 | 71,839 | 397 paths / 63,339 lines |
+| #290/#296 merge ([issue #290](https://github.com/uandiqueue/ourobion/issues/290)) | `f8cb75251f0602395bdf88285e18d00525b88db4` (advanced per-unit base to `d880ed04091f8aa920294eb70db4a20263ddae4e`) | 512 | 71,841 | 397 paths / 63,341 lines |
+| Submission-audit base | `253e0ad6db31bb2a134e47546ddaba84bf284639` | 533 | 75,645 | 418 paths / 67,145 lines |
 
-At the PR #270 merge measurement: 28 MT4 paths excluded, 15 allowlisted binary paths, 837,194
-allowlisted binary bytes. Those exclusion/allowlist figures are not independently re-derived for the
-#290 row here — the generated attestation at that exact head is the source for it; do not assume the
-per-path binary detail is unchanged without checking that attestation.
+At each listed measurement the release-gate command reported 28 MT4 paths excluded, 15 allowlisted
+binary paths, and 837,194 allowlisted binary bytes. Those are reproducible outputs of
+`node tools/run4_release_gate.mjs product-cap --head <head>`; do not assume they remain unchanged at a
+later integration head.
 
-**These two figures are point-in-time measurements of a moving integration head, not two different
+**These figures are point-in-time measurements of a moving integration head, not different
 policies.** The product base and the cap are fixed; only the head being measured advances as more
-units land. Re-measure at whatever head is current before treating either number as live.
+units land. Re-measure at whatever head is current before treating any number as live. The exact
+#290 base-advance posture and command are recorded in
+[`per-unit-release-base-290.md`](./per-unit-release-base-290.md).
 
 ## Required posture (do not drift from this)
 

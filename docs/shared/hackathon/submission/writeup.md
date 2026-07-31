@@ -1,13 +1,20 @@
 ---
 title: Ourobion — Launchpad 2026 AI Challenge Write-up
-summary: The submission-ready write-up (≤1,000 words across the five judging pillars, appendices free) — built from the evidence ledger, not the strategy doc's aspirations; states plainly what is measured (one end-to-end run, one held edge, the verifier's refusal) vs. absent (the baseline-vs-verifier eval, the pre-hackathon-baseline tag).
+summary: A blocked submission draft undergoing evidence verification; it is not the final narrative and must not be submitted until the Run 4 provider, synthesis, lineage, and model-claim defects are resolved.
 type: reference
 scope: repo
 status: draft
-updated: 2026-07-30
+updated: 2026-08-01
 ---
 
 # Ourobion — Launchpad 2026 AI Challenge Write-up
+
+> **DO NOT SUBMIT THIS DRAFT.** The 2026-08-01 audit found material stale, overclaimed, and
+> now-wrong statements. This file deliberately remains unrevised until the synthesis revamp in issue
+> #300 and the parallel brain/rules work are integrated and re-verified. Model-training and
+> evaluation claims are quarantined behind issue #277. Use
+> [`submission-verification-audit.md`](../../../temp/run4/submission-verification-audit.md) as the
+> current defect ledger; it is an audit, not replacement submission prose.
 
 *Track: Agentic Systems*
 
