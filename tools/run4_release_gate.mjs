@@ -51,6 +51,8 @@ export function hashTextEvidence(value) {
 //   da6b11b5df057fe6b5f5f6dcb14f13343805a94b  (R4-U1 correction base — tip after #214; ACCEPTED
 //                                              for that #232 push only)
 //   38205d2532ef528ab3752d9013d457c2ee994314  (accepted U3 base; superseded by #254 integration merge)
+//   42ae771c4809fe8f314fbf38dca89d60a809dedb  (#221 evidence base; ACCEPTED for that push only,
+//                                              superseded by the #288/#291/#270 integration merges)
 //
 // Re-advanced for the same R4-U1 correction (#232), same branch. #232's green status went stale
 // again: PR #199 (the U4 scientific-semantics/trust-labels unit) merged into the integration
@@ -60,11 +62,22 @@ export function hashTextEvidence(value) {
 // the attestation manifest, so the base advance is folded into this PR rather than opening a
 // separate base-advance PR that would collide with it.
 //
-// Advanced to 42ae771c, the exact current dev-phase2-run4 integration parent for #221 evidence.
-// 6020f444 remains historical only: retaining it would charge this unit for already accepted
-// integration history. Re-check the integration branch immediately before push; if it moved, this
-// value and the generated attestation must move again. Caps remain 115 / 8,500 and fail closed.
-export const RUN4_UNIT_BASE_SHA = '42ae771c4809fe8f314fbf38dca89d60a809dedb';
+// Advanced to d880ed04 (issue #290), the accepted PR #270 integration merge and the exact current
+// dev-phase2-run4 tip. 42ae771c became stale the same way every predecessor did: PRs #288, #291 and
+// #270 all landed after it, so the 42ae771c..HEAD delta carried already-accepted integration history
+// before any new unit contributed a line. That is what turned the #282 coverage branch red with
+// `landing delta has 8945 added lines; cap is 8500` — a cap failure no unit could fix by writing
+// less code.
+//
+// #290 named c6a2ca64 (the #291 merge) as the target. PR #270 landed while this advance was being
+// prepared, so per the standing instruction below the value moved again to the current tip rather
+// than to a SHA that was already one merge stale on arrival.
+//
+// This advance moves ONLY the mutable per-unit base. The immutable product base, the 28 MT4
+// exclusions, the binary allowances, and the explicit non-acceptance posture below are unchanged,
+// and the caps remain 115 / 8,500 and still fail closed. Re-check the integration branch
+// immediately before push; if it moved, this value and the generated attestation must move again.
+export const RUN4_UNIT_BASE_SHA = 'd880ed04091f8aa920294eb70db4a20263ddae4e';
 
 // ---------------------------------------------------------------------------------------------
 // Immutable product cap (issue #183) — MEASURED AND RECORDED, NOT YET GATING.

@@ -164,21 +164,32 @@ class ProvenanceCitation {
   /// the shared contract. Internal IDs and malformed/active-content strings
   /// therefore remain plain text rather than becoming guessed links.
   Uri? get paperUri {
-    var candidate = paperId.trim();
-    candidate = candidate.replaceFirst(
-      RegExp(r'^https?://(?:dx\.)?doi\.org/', caseSensitive: false),
-      '',
-    );
-    candidate = candidate.replaceFirst(
-      RegExp(r'^doi:', caseSensitive: false),
-      '',
-    );
+    if (RegExp(r'[\u0000-\u001F\u007F-\u009F]').hasMatch(paperId)) {
+      return null;
+    }
+    final source = paperId.trim();
+    if (source.isEmpty) {
+      return null;
+    }
+    final doiPrefix = RegExp(r'^doi:', caseSensitive: false);
+    final wrappedDoi = RegExp(
+      r'^https://(?:dx\.)?doi\.org/(.+)$',
+      caseSensitive: false,
+    ).firstMatch(source);
+    final candidate = doiPrefix.hasMatch(source)
+        ? source.substring(4)
+        : wrappedDoi?.group(1) ?? source;
     final valid = RegExp(
       r'^10\.\d{4,9}/[-._;()/:A-Z0-9]+$',
       caseSensitive: false,
     ).hasMatch(candidate);
-    if (!valid) return null;
-    return Uri.parse('https://doi.org/$candidate');
+    if (!valid ||
+        candidate
+            .split('/')
+            .any((segment) => segment == '.' || segment == '..')) {
+      return null;
+    }
+    return Uri.parse('https://doi.org/${candidate.toLowerCase()}');
   }
 
   factory ProvenanceCitation.fromJson(Map<String, dynamic> json) {
