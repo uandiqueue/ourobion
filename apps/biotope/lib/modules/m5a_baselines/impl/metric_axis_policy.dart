@@ -83,12 +83,12 @@ String _armstrongTickLabel(double tick) => switch (tick.round()) {
   1 => '1 pale',
   4 => '4 yellow',
   8 => '8 dark',
-  _ => compactValueLabel(tick),
+  _ => compactValueLabel(tick.roundToDouble()),
 };
 
 String _bristolTickLabel(double tick) => switch (tick.round()) {
   1 => '1 firm',
   4 => '4 smooth',
   7 => '7 watery',
-  _ => compactValueLabel(tick),
+  _ => compactValueLabel(tick.roundToDouble()),
 };
