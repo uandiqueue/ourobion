@@ -70,6 +70,60 @@ a:hover {
   color: var(--eyebrow);
 }
 
+.nao-login-input:focus-visible {
+  border-color: var(--accent-1) !important;
+  outline: 3px solid var(--accent-1);
+  outline-offset: 2px;
+}
+
+@media (max-width: 30rem) {
+  .ourobion-explainer {
+    padding: 1.25rem 1rem !important;
+  }
+
+  .ourobion-explainer__heading {
+    margin: 0.35rem 0 0.5rem !important;
+  }
+
+  .ourobion-explainer__intro {
+    margin-bottom: 0.75rem !important;
+    line-height: 1.4 !important;
+  }
+
+  .ourobion-explainer__cards {
+    gap: 0.5rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .ourobion-explainer__card {
+    padding: 0.75rem !important;
+  }
+
+  .ourobion-explainer__card-body {
+    font-size: 0.85rem !important;
+    line-height: 1.35 !important;
+  }
+
+  .ourobion-explainer__flow-section {
+    margin-bottom: 0.75rem !important;
+  }
+
+  .ourobion-explainer__flow,
+  .ourobion-explainer__flow-item {
+    gap: 0.35rem !important;
+  }
+
+  .ourobion-explainer__flow-stage {
+    padding: 0.3rem 0.55rem !important;
+  }
+
+  .ourobion-explainer__unlock {
+    margin-bottom: 0.75rem !important;
+    font-size: 0.85rem !important;
+    line-height: 1.4 !important;
+  }
+}
+
 /* Ambient bioluminescent glows behind the brain (NAO-DESIGN §7). */
 @keyframes ouroGlow {
   0%,
