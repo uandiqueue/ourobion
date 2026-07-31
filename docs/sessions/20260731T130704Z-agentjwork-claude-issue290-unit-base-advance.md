@@ -62,3 +62,5 @@ Issue: #290 - branch: `ci/run4/post288-unit-base` - base: `dev-phase2-run4` @ `d
 - Landing delta from the new base measured for every pending branch; all within 115 / 8,500.
 - No provider calls, cloud writes, deployment, promotion, or device operations. `main` and
   `dev-phase2` untouched.
+
+memory: none
