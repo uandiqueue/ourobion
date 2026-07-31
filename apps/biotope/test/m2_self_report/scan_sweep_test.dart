@@ -105,4 +105,13 @@ void main() {
     expect(source.contains('class ChannelScanSweep'), isFalse);
     expect(source.contains('channel-scan-sweep-band'), isFalse);
   });
+
+  test('reduce-motion removes only the artificial scan floor', () {
+    expect(
+      ScanGlobe.sweepFloorFor(reducedMotion: false),
+      ScanGlobe.sweepFloorDuration,
+    );
+    expect(ScanGlobe.sweepFloorDuration, const Duration(milliseconds: 2400));
+    expect(ScanGlobe.sweepFloorFor(reducedMotion: true), Duration.zero);
+  });
 }
