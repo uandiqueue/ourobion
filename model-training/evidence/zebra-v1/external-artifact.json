@@ -1,0 +1,34 @@
+{
+  "model_name": "zebra-v1",
+  "model_version": "v1",
+  "intended_use": "demo",
+  "status": "private_upload_verified",
+  "storage_provider": "cloudflare-r2",
+  "bucket": "ourobion-model-artifacts",
+  "object_prefix": "models/zebra-v1/releases/sha256-e1d09fbdf442303bf9c5c3aefbe201a0e8509674d5401eacad84321443589169/model/",
+  "access": "private",
+  "release_id": "sha256-e1d09fbdf442303bf9c5c3aefbe201a0e8509674d5401eacad84321443589169",
+  "release_id_derivation": "sha256 of local-bundle-sha256sums.txt (LF line endings, trailing newline included)",
+  "local_staging_path": "model/zebra-v1/v1/",
+  "bundle_size_bytes": 438938903,
+  "file_count": 6,
+  "weights": {
+    "file": "pytorch_model.bin",
+    "size_bytes": 438004206,
+    "sha256": "bc2d7a79e76b4626e90e3792902a018adb179859a86358a18cf844620e7061f7"
+  },
+  "verification": {
+    "verified_on": "2026-07-30",
+    "method": "independent round-trip: the exact private release was downloaded into a fresh ignored directory and every file re-hashed against local-bundle-sha256sums.txt",
+    "source_bundle_manifest_passed": true,
+    "downloaded_bundle_manifest_passed": true,
+    "remote_listing_file_count": 6,
+    "issue": "https://github.com/uandiqueue/ourobion/issues/250"
+  },
+  "acceptance_status": {
+    "validated": false,
+    "serving_ready": false,
+    "public_weights_cleared": false,
+    "note": "Private storage and byte-for-byte retrievability are not model acceptance. These three flags are governed by their own criteria and are unchanged by the transfer."
+  }
+}

@@ -16,10 +16,24 @@ For each promoted release, add a release-specific directory containing:
 - aggregate evaluation results
 - the promotion decision
 
-`local-bundle-sha256sums.txt` records the expected v0 demo-bundle hashes. The bundle is unavailable
-on this device: the owner deferred its transfer, private R2 upload, round-trip verification, and
-pending-pointer replacement to [#250](https://github.com/uandiqueue/ourobion/issues/250). The pending
-storage pointer remains unchanged until that follow-up completes its verified private-artifact workflow.
+`local-bundle-sha256sums.txt` records the expected v0 demo-bundle hashes.
+
+The transfer deferred in [#250](https://github.com/uandiqueue/ourobion/issues/250) is complete. The
+bundle was uploaded to the owner-authorized private R2 bucket, independently re-downloaded into a
+fresh ignored directory, and re-hashed against the manifest above; all six files matched.
+[`external-artifact.json`](./external-artifact.json) now carries the verified private prefix in place
+of the former pending pointer.
+
+The release id is content-addressed: it is the SHA-256 of `local-bundle-sha256sums.txt` itself, so
+the prefix in `external-artifact.json` is reproducible from tracked repository content alone:
+
+```bash
+sha256sum model-training/evidence/viceroy-v0/local-bundle-sha256sums.txt
+# 751fbf1fb1a680b39b50c91f7dd4d7a0caba404417effde724564615d9849ec2
+```
+
+Private storage is **not** model acceptance. `validated=false`, `serving_ready=false`, and
+`public_weights_cleared=false` are unchanged and remain governed by their own criteria.
 
 The current training and evaluation verdict is documented in the
 [Viceroy v0 results report](../publication-results/viceroy-v0-results.md).
