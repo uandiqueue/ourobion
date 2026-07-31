@@ -56,13 +56,17 @@ Commands:
                                                    appends data/corpus/edges/claims.jsonl (edge-loader reads it)
   verify [--from-claims <path>] [--corpus <path>] [--edge <edgeId>]
          [--edges-dir <dir>] [--artifact-revision <id>] [--dry-run] [--triage-only]
+         [--push-r2]
                                                    A10 adversarial verification: A9 quoteCheck →
                                                    budget triage (C7) → verifier-owned retrieval →
                                                    refute-first LLM (router node 'verifier', in a
                                                    different vendor family than synthesis) →
                                                    schema-enforced EdgeVerification; appends
                                                    <edges-dir>/verifications.jsonl + the raw provider
-                                                   body to <edges-dir>/verification-raw.jsonl.
+                                                   body to <edges-dir>/verification-raw.jsonl;
+                                                   --push-r2 also publishes the verdicts to R2
+                                                   edges/verifications.jsonl (edge-loader --from-r2
+                                                   reads it), mirroring synthesize --push-r2.
                                                    --corpus <path>: JSONL of CorpusDoc lines the
                                                    verifier retrieves over (O15; corpus texts also
                                                    serve the quoteCheck for papers they cover);
@@ -391,6 +395,10 @@ async function runVerify(flags: Set<string>, options: Map<string, string>): Prom
     triageOnly,
     dryRun,
     log,
+    // Symmetric with `synthesize --push-r2`. Publishing the verdicts is what lets
+    // `edge-loader --from-r2` see a verification beside each claim; without it the
+    // cloud pipeline would project claims carrying no verdict at all.
+    pushR2: flags.has('push-r2'),
   };
   const edge = options.get('edge');
   if (edge !== undefined) runOpts.edgeId = edge;

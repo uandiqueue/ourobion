@@ -1,6 +1,6 @@
 ---
 title: Run 4 live provider acceptance and 226 backend membership unblock
-summary: Executed the ordered Anthropic/OpenAI/Agnes live acceptance at exact head, granted the bounded nao curator membership that unblocked 226, and recorded honest blocked results for 246, 240 and 179.
+summary: Executed the ordered Anthropic/OpenAI/Agnes live acceptance at exact head, implemented the 233 cloud pipeline, granted the bounded nao curator membership that unblocked 226, and recorded honest results for 246, 240 and 179.
 type: session
 scope: shared
 status: canonical
@@ -30,7 +30,17 @@ merge commit); device: `uandiqueue-wsl`.
   applied `2026-07-31T12:18:44.188938+00`. Guarded by `where exists` on `auth.users`, `on conflict do
   nothing`, and an explicit literal id. The table held **0** rows beforehand, so no existing member was
   displaced. This is row-level test data and correctly produces **no** migration diff.
-- **No source change was made in this session.** The only repository artifact is this session log.
+- **#233 §D (added after the owner authorized it mid-session):**
+  - `tools/brain-ingest/src/verify/verifier.ts` — `verify()` gained `pushR2` (+ an injectable
+    `r2Store` test seam) and returns `r2: { key, written, skipped }`. It calls the **already
+    existing but never-invoked** `appendVerificationsToR2`. The push happens **after** the local
+    mirror write, so an R2 failure degrades to "not yet published", never "verdict lost".
+  - `tools/brain-ingest/src/cli.ts` — `verify --push-r2`, symmetric with `synthesize --push-r2`,
+    plus usage text.
+  - `.github/workflows/brain-pipeline.yml` — **new** `workflow_dispatch` pipeline running
+    synthesis → quoteCheck → decorrelated verification → R2 artifact write → `edge-loader
+    --from-r2` projection. nao's role is unchanged: it dispatches, it never holds a provider key.
+  - `tools/brain-ingest/tests/verify.test.ts` — 4 new regression tests.
 - Live-acceptance runtime artifacts were written to the gitignored
   `data/brain-ingest/live-acceptance/run4-233-live-2026-07-31/` inside the isolated worktree only.
 
@@ -49,14 +59,25 @@ merge commit); device: `uandiqueue-wsl`.
   divisor buys fewer USD per SGD ceiling, so the USD caps cannot exceed the owner's SGD ceilings.
   Prior #189 use was **declared and counted** in aggregate (Anthropic 3 starts / US$0.103893; OpenAI
   2 starts / US$0.05023125).
-- Did **not** land #233 §D (the cloud pipeline workflow). Its first execution would also be its first
-  validation, plus a hosted mutation and real cloud spend; it needs its own authorized session.
 - Did **not** port the Windows 14+7 runner to Linux. A port is a different artifact and could not serve
-  as acceptance evidence for the merged runner.
+  as acceptance evidence for the merged runner. **#246 ownership was transferred to the Windows session
+  by the owner mid-session** and handed over on the issue.
+- **#233 §D was authorized by the owner mid-session and is implemented, but deliberately not executed.**
+  The workflow is `workflow_dispatch`-only and fail-closed: `dry_run: true` by default, a live run
+  additionally requires `confirm_spend: RUN`, and a live run with no `--corpus` is refused outright
+  because it would spend verifier tokens for a structurally forced `uncertain`. A `concurrency` group
+  serialises runs, since stages 1/3 read-modify-write the same shared R2 objects and stage 5 rebuilds a
+  projection from them.
+- **`SUPABASE_SECRET_KEYS` cannot drive the projection.** `load_edges.mjs` connects with `pg` and needs
+  a PostgreSQL connection string (`SUPABASE_DB_URL` / `--db-url`); it uses no Supabase API key. #233 §E
+  asserts otherwise and is wrong on this point. The workflow therefore validates the artifacts and then
+  **fails loudly** rather than reporting a projection that never happened. One new repository secret,
+  `SUPABASE_DB_URL`, is the last thing standing between §D and a complete run — an owner action.
 
 ## Verification
 
-- Both typechecks clean; **brain-ingest 426/426**, **llm-router 121/121** at exact head on Node 26.5.0.
+- Both typechecks clean; **brain-ingest 426/426**, **llm-router 121/121** at exact head on Node 26.5.0
+  — this is the pre-§D baseline taken before the live legs ran; §D later takes brain-ingest to 430.
 - Offline preflight passed twice (checked-in fixture, then runtime bundle): quote gate 1/1,
   independent second-paper retrieval, `families.separated: true`, exit 0.
 - **All three live legs PASS**, each from an isolated worktree at exact head with
@@ -86,13 +107,29 @@ merge commit); device: `uandiqueue-wsl`.
   **5.1.26100.8875**) for `demo-dryrun-run2.ps1`, `native-process.ps1`, `native-process.tests.ps1`.
 - #179: PR #184 confirmed **merged**; the original dual-upsert defect is fixed — the route now issues a
   single `nao_loader_apply_simulated_days` RPC.
+- **§D gates:** brain-ingest typecheck clean and **430/430** (426 pre-existing + 4 new `--push-r2`
+  tests: publishes under the exact `edges/verifications.jsonl` basename; opt-in so a plain run never
+  writes the shared truth tier; a second push dedupes instead of duplicating; and an R2 outage leaves
+  the local verdict intact). llm-router **121/121**, typecheck clean. Both workflow YAMLs parse.
+  The gate's decision table was exercised directly — all six cases behave fail-closed:
+
+  | dry_run | confirm_spend | corpus | result |
+  |---|---|---|---|
+  | true | — | — | dry run, no call |
+  | false | *(empty)* | present | REFUSE |
+  | false | `yes` | present | REFUSE |
+  | false | `RUN` | *(empty)* | REFUSE |
+  | false | `RUN` | missing file | REFUSE |
+  | false | `RUN` | present | authorised |
 
 ## Left
 
-- **#233** open on §D only (cloud pipeline in GitHub Actions). §A/§B/§C are done and §E is satisfied —
-  `gh secret list` confirms all required secrets exist, so §D is now genuinely unblocked.
-- **#246** BLOCKED on environment; needs the Windows device with a Windows-filesystem checkout,
-  `..\biotope-toolchain`, an owned isolated `ourobion` Supabase stack, and deno 2.8.1.
+- **#233** §D is implemented but **never executed**. To complete it: add the `SUPABASE_DB_URL`
+  repository secret, dispatch once with `dry_run: true` to validate the wiring with no spend, then
+  dispatch with `dry_run: false` + `confirm_spend: RUN` + a real corpus. §A/§B/§C/§E are done.
+- **#246** transferred to the Windows session. Handover posted; nothing in flight, no branch, no
+  partial run. It still needs a Windows-filesystem checkout, `..\biotope-toolchain`, an owned isolated
+  `ourobion` Supabase stack, and deno 2.8.1.
 - **#240** requirements 1–3 done; 4 needs a corpus with a genuinely *supporting* independent source
   (the frozen two-paper control cannot produce one by construction); 5 waits on #246.
 - **#179** implementation merged; open on acceptance evidence alone, gated by #246 and #240 req 4.
