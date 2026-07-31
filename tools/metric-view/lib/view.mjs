@@ -30,7 +30,7 @@ export const REPO_ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 
 /** The committed home of the generated SQL — the file `--check` guards against drift. */
 export const VIEW_MIGRATION_RELPATH =
-  'supabase/migrations/20260715154000_create_m5a_metric_daily_values_view.sql';
+  'supabase/migrations/20260730020002_replace_m5a_metric_daily_values_view.sql';
 
 // shared/ compiles as CommonJS, so import the registry module directly (not via a barrel).
 const metrics = await import(

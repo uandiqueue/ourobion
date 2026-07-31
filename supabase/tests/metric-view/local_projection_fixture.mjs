@@ -2,8 +2,14 @@
 // Local-only transactional proof for synthetic events/state_bands policies. Requires local
 // Supabase Docker; every view, row, and auth-user change is rolled back.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { generateViewSql } from '../../../tools/metric-view/lib/view.mjs';
+import { fileURLToPath } from 'node:url';
+import { generateViewSql, metricsRegistry } from '../../../tools/metric-view/lib/view.mjs';
+
+const wellbeingMigration = readFileSync(fileURLToPath(new URL(
+  '../../migrations/20260730020001_add_u6b_wellbeing_metrics.sql', import.meta.url,
+)), 'utf8');
 
 const base = { source: 'manual', tier: 'T3', continuity: 'episodic', type: 'numeric', status: 'active' };
 const event = (key, reducer) => ({
@@ -36,6 +42,13 @@ begin;
 insert into auth.users (id, aud, role, email, created_at, updated_at) values
  ('${userA}', 'authenticated', 'authenticated', 'metric-view-a@local.invalid', now(), now()),
  ('${userB}', 'authenticated', 'authenticated', 'metric-view-b@local.invalid', now(), now());
+${wellbeingMigration}
+insert into public.daily_gut_rows (
+  user_id, log_date, region, appetite_score, anxiety_score, brain_clarity_score, focus_score,
+  social_interaction_quality_score, log_completeness
+) values
+ ('${userA}', '2026-01-01', 'SG', 1, 2, 3, 4, 5, 0),
+ ('${userA}', '2026-01-02', 'SG', null, null, null, null, null, 0);
 insert into public.events (id, user_id, metric_key, occurred_at, value) values
  ('20000000-0000-0000-0000-000000000001','${userA}','fixture_count','2026-01-01T01:00Z',null),
  ('20000000-0000-0000-0000-000000000002','${userA}','fixture_count','2026-01-01T02:00Z','"ignored"'),
@@ -60,7 +73,7 @@ insert into public.state_bands (id, user_id, metric_key, started_at, ended_at) v
  ('30000000-0000-0000-0000-000000000002','${userA}','fixture_state','2026-01-02T06:00Z','2026-01-04T12:00Z'),
  ('30000000-0000-0000-0000-000000000003','${userA}','fixture_state',(current_timestamp at time zone 'utc')::date,null),
  ('30000000-0000-0000-0000-000000000004','${userA}','fixture_boundary','2026-01-01T12:00Z','2026-01-03T00:00Z');
-${generateViewSql(registry)}
+${generateViewSql([...metricsRegistry.METRICS, ...registry])}
 select 'count='||value from public.metric_daily_values where user_id='${userA}' and metric_key='fixture_count' and log_date='2026-01-01';
 select 'sum='||value from public.metric_daily_values where user_id='${userA}' and metric_key='fixture_sum';
 select 'mean='||value from public.metric_daily_values where user_id='${userA}' and metric_key='fixture_mean';
@@ -71,6 +84,12 @@ select 'boundary_days='||count(*) from public.metric_daily_values where user_id=
 select 'malformed_rows='||count(*) from public.metric_daily_values where metric_key='fixture_malformed';
 select 'unregistered_rows='||count(*) from public.metric_daily_values where metric_key='not_registered';
 select 'quiet_day_rows='||count(*) from public.metric_daily_values where user_id='${userA}' and metric_key='fixture_count' and log_date='2026-01-02';
+select 'wellbeing_rows='||count(*) from public.metric_daily_values
+ where user_id='${userA}' and log_date='2026-01-01'
+   and metric_key in ('appetite_score','anxiety_score','brain_clarity_score','focus_score','social_interaction_quality_score');
+select 'wellbeing_null_rows='||count(*) from public.metric_daily_values
+ where user_id='${userA}' and log_date='2026-01-02'
+   and metric_key in ('appetite_score','anxiety_score','brain_clarity_score','focus_score','social_interaction_quality_score');
 set local role authenticated;
 set local request.jwt.claim.sub = '${userA}';
 select 'rls_visible_users='||count(distinct user_id) from public.metric_daily_values;
@@ -89,6 +108,7 @@ const output = new Set(result.stdout.trim().split(/\r?\n/));
 for (const expected of [
   'count=2', 'sum=5', 'mean=3', 'latest=9', 'state_days=4', 'open_state_today=1',
   'boundary_days=2', 'malformed_rows=0',
-  'unregistered_rows=0', 'quiet_day_rows=0', 'rls_visible_users=1', 'rls_other_user_rows=0',
+  'unregistered_rows=0', 'quiet_day_rows=0', 'wellbeing_rows=5', 'wellbeing_null_rows=0',
+  'rls_visible_users=1', 'rls_other_user_rows=0',
 ]) assert.ok(output.has(expected), `missing ${expected}; got:\n${result.stdout}`);
 console.log('local metric projection fixture: PASS (transaction rolled back)');
