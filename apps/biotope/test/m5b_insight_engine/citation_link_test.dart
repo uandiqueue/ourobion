@@ -13,13 +13,10 @@
 //      attacker-influenced data (it arrives from the corpus pipeline), so the
 //      host is pinned rather than trusted.
 //
-// THE FIXTURE DOI IS REAL. 10.1038/s41586-020-2649-2 is Harris et al.,
-// "Array programming with NumPy", Nature 585, 357–362 (2020). It is not
-// invented for this test: it already appears in this repository at
-// tools/brain-ingest/tests/fixtures/crossref-works.json. NOTE that the repo
-// fixture pairs that DOI with a PLACEHOLDER title ("Gut microbiome composition
-// shapes host metabolism"); this suite never reproduces that pairing — where a
-// title is needed the paper's genuine title is used, in the widget suite.
+// THE FIXTURE DOI IS REAL. 10.1016/j.isci.2026.116224 resolves to
+// "Unraveling the gut microbiota-brain axis" (iScience, 2026). It is the
+// project-relevant citation fixture used by the provenance screen tests; where
+// a title is needed, this suite uses that paper's genuine title and year.
 //
 // Every other DOI string used below is likewise taken verbatim from a fixture
 // already committed to this repository (paths named at each use). No DOI, URL,

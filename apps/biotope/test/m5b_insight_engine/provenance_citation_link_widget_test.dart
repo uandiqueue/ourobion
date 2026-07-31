@@ -12,12 +12,10 @@
 //     stamp, the uncited personal state and the plain-rules no-citation note.
 //     Those were the whole point of the screen and must survive.
 //
-// THE FIXTURE DOI IS REAL: 10.1038/s41586-020-2649-2 is Harris et al.,
-// "Array programming with NumPy", Nature 585, 357–362 (2020). It already
-// appears in this repository at tools/brain-ingest/tests/fixtures/
-// crossref-works.json — where it is paired with a PLACEHOLDER title. That
-// pairing is deliberately NOT reused: the paper's genuine title and year are
-// used here instead. No paper, title, DOI or URL is invented in this file.
+// THE FIXTURE DOI IS REAL: 10.1016/j.isci.2026.116224 resolves to
+// "Unraveling the gut microbiota-brain axis" (iScience, 2026). The fixture is
+// project-relevant, and its genuine title and year are used here. No paper,
+// title, DOI or URL is invented in this file.
 //
 // The screen exposes each link as ValueKey('citation-link-<paperId>'), so a
 // link can be located per-citation rather than by its shared label.
