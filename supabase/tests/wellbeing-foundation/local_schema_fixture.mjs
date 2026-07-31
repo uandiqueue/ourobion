@@ -66,6 +66,32 @@ insert into public.daily_gut_rows (user_id, log_date, region, appetite_score, an
  values ('${userA}', '2026-07-03', 'SG', 1, 2, 3, 4, 5, 0);
 select 'boundary_insert=' || count(*) from public.daily_gut_rows
  where user_id = '${userA}' and log_date = '2026-07-03';
+
+-- Every metric must reject both values outside its documented 1..5 ordinal range.
+do $$
+declare
+  metric_key text;
+  rejected_value smallint;
+  test_day date := date '2026-07-04';
+begin
+  foreach metric_key in array array[${sqlArray(keys)}]
+  loop
+    foreach rejected_value in array array[0::smallint, 6::smallint]
+    loop
+      begin
+        execute format(
+          'insert into public.daily_gut_rows (user_id, log_date, region, %I, log_completeness) values ($1, $2, $3, $4, $5)',
+          metric_key
+        ) using '${userA}'::uuid, test_day, 'SG', rejected_value, 0;
+        raise exception 'out-of-range value % unexpectedly accepted for %', rejected_value, metric_key;
+      exception when check_violation then null;
+      end;
+      test_day := test_day + 1;
+    end loop;
+  end loop;
+end $$;
+select 'rejected_rows=' || count(*) from public.daily_gut_rows
+ where user_id = '${userA}' and log_date >= '2026-07-04';
 reset role;
 
 select 'policy_drift=' || count(*) from (
@@ -86,7 +112,7 @@ const result = spawnSync('docker', [
 if (result.error) throw result.error;
 assert.equal(result.status, 0, result.stderr);
 const output = new Set(result.stdout.trim().split(/\r?\n/));
-for (const expected of ['columns_exact=5', 'named_checks=5', 'legacy_insert_nulls=1', 'boundary_insert=1', 'policy_drift=0']) {
+for (const expected of ['columns_exact=5', 'named_checks=5', 'legacy_insert_nulls=1', 'boundary_insert=1', 'rejected_rows=0', 'policy_drift=0']) {
   assert.ok(output.has(expected), `missing ${expected}; got:\n${result.stdout}`);
 }
 console.log('local U6b wellbeing schema fixture: PASS (transaction rolled back)');
