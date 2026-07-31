@@ -22,8 +22,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:src/core/generated_assets.dart';
-import 'package:src/modules/m5a_baselines/impl/metric_series_models.dart';
-import 'package:src/modules/m5a_baselines/impl/metric_series_service.dart';
+import 'package:src/modules/m5a_baselines/index.dart';
 import 'package:src/modules/m5b_insight_engine/impl/insight_service.dart';
 import 'package:src/modules/m5b_insight_engine/ui/screens/archive_tab.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
