@@ -7,15 +7,18 @@
  * verification. It never imports a provider adapter, R2 store, or DB loader.
  */
 import { createHash } from 'node:crypto';
-import { lstatSync, readFileSync, realpathSync } from 'node:fs';
+import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync, realpathSync } from 'node:fs';
+import type { Stats } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 
 import { familyOf, loadConfig as loadRouterConfig } from '../../llm-router/src/config.js';
 import { loadActiveMetricKeys, loadClaimValidator, loadCopyValidator, repoRoot } from './synth/load.js';
 import { assembleSynthesisInput, pairFromKeys } from './synth/index.js';
+import { toJsonl as claimsToJsonl } from './synth/artifact.js';
 import { processSynthesisResponse } from './synth/postprocess.js';
 import { PROMPT_VERSION } from './synth/prompt.js';
-import { corpusTexts, loadCorpusFromFile } from './verify/corpus.js';
+import type { SynthClaim } from './synth/types.js';
+import { corpusTexts, loadCorpusFromText } from './verify/corpus.js';
 import { verify } from './verify/verifier.js';
 
 const sha256 = (value: string | Buffer): string => createHash('sha256').update(value).digest('hex');
@@ -38,9 +41,9 @@ function requireString(value: unknown, name: string): string {
   return value;
 }
 
-function readBundle(path: string): OfflineAcceptanceBundle {
+function readBundle(bytes: Buffer): OfflineAcceptanceBundle {
   let parsed: unknown;
-  try { parsed = JSON.parse(readFileSync(path, 'utf8')); } catch { throw new Error('offline-acceptance: bundle must be valid JSON'); }
+  try { parsed = JSON.parse(bytes.toString('utf8')); } catch { throw new Error('offline-acceptance: bundle must be valid JSON'); }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('offline-acceptance: bundle must be a JSON object');
   const raw = parsed as Record<string, unknown>;
   const pair = raw.pair;
@@ -65,18 +68,79 @@ function readBundle(path: string): OfflineAcceptanceBundle {
   };
 }
 
-/** Resolve a regular, non-symlink file beneath the bundle directory. */
-function bundleFile(bundlePath: string, value: string): string {
+interface FrozenFile {
+  path: string;
+  bytes: Buffer;
+}
+
+function sameIdentity(a: Stats, b: Stats): boolean {
+  return a.dev === b.dev && a.ino === b.ino;
+}
+
+function sameSnapshot(a: Stats, b: Stats): boolean {
+  return sameIdentity(a, b) && a.size === b.size && a.mtimeMs === b.mtimeMs && a.ctimeMs === b.ctimeMs;
+}
+
+/**
+ * Read once from one no-follow descriptor and bind every parse/hash to those
+ * bytes. The hook is an injectable race seam used only by regression tests.
+ */
+export function readFrozenFile(path: string, label: string, onOpened?: () => void): FrozenFile {
+  const direct = resolve(path);
+  const before = lstatSync(direct);
+  if (!before.isFile() || before.isSymbolicLink()) {
+    throw new Error(`offline-acceptance: ${label} must be a regular non-symlink file`);
+  }
+  let descriptor: number;
+  try {
+    descriptor = openSync(direct, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  } catch {
+    throw new Error(`offline-acceptance: ${label} could not be opened safely`);
+  }
+  try {
+    const opened = fstatSync(descriptor);
+    if (!opened.isFile() || !sameIdentity(before, opened)) {
+      throw new Error(`offline-acceptance: ${label} changed before it was opened`);
+    }
+    onOpened?.();
+    const current = lstatSync(direct);
+    if (current.isSymbolicLink() || !sameIdentity(current, opened)) {
+      throw new Error(`offline-acceptance: ${label} path was replaced during read`);
+    }
+    const canonical = realpathSync(direct);
+    const bytes = readFileSync(descriptor);
+    const after = fstatSync(descriptor);
+    if (!sameSnapshot(opened, after)) {
+      throw new Error(`offline-acceptance: ${label} changed during read`);
+    }
+    const finalPath = lstatSync(direct);
+    if (finalPath.isSymbolicLink() || !sameIdentity(finalPath, after)) {
+      throw new Error(`offline-acceptance: ${label} path was replaced during read`);
+    }
+    return { path: canonical, bytes };
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
+/** Resolve and freeze one regular file beneath the bundle directory. */
+function readBundleFile(root: string, value: string, label: string): FrozenFile {
   if (isAbsolute(value) || value.includes('\0')) throw new Error('offline-acceptance: bundle file path must be relative and NUL-free');
-  const root = realpathSync(dirname(bundlePath));
   const candidate = resolve(root, value);
   const rel = relative(root, candidate);
   if (rel.startsWith('..') || isAbsolute(rel)) throw new Error('offline-acceptance: bundle file escapes its directory');
-  const stat = lstatSync(candidate);
-  if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('offline-acceptance: bundle file must be a regular non-symlink file');
-  const real = realpathSync(candidate);
-  if (relative(root, real).startsWith('..')) throw new Error('offline-acceptance: bundle file resolves outside its directory');
-  return real;
+  const frozen = readFrozenFile(candidate, label);
+  const canonicalRel = relative(root, frozen.path);
+  if (canonicalRel.startsWith('..') || isAbsolute(canonicalRel)) {
+    throw new Error('offline-acceptance: bundle file resolves outside its directory');
+  }
+  return frozen;
+}
+
+/** Exact bytes that would be staged as claims.jsonl. */
+export function encodeClaimsJsonl(claims: readonly SynthClaim[]): Buffer {
+  const jsonl = claimsToJsonl(claims);
+  return Buffer.from(jsonl.length === 0 ? '' : `${jsonl}\n`, 'utf8');
 }
 
 /**
@@ -85,15 +149,12 @@ function bundleFile(bundlePath: string, value: string): string {
  */
 export async function runOfflineAcceptance(bundlePath: string, dryRun: boolean): Promise<Record<string, unknown>> {
   if (!dryRun) throw new Error('offline-acceptance: --dry-run is required; this command never dispatches providers');
-  const directBundle = resolve(bundlePath);
-  if (lstatSync(directBundle).isSymbolicLink()) throw new Error('offline-acceptance: bundle itself must not be a symlink');
-  const canonicalBundle = realpathSync(directBundle);
-  const bundle = readBundle(canonicalBundle);
-  const corpusPath = bundleFile(canonicalBundle, bundle.corpus);
-  const responsePath = bundleFile(canonicalBundle, bundle.synthesisResponse);
-  const corpusBytes = readFileSync(corpusPath);
-  const responseBytes = readFileSync(responsePath);
-  const corpus = loadCorpusFromFile(corpusPath);
+  const bundleInput = readFrozenFile(bundlePath, 'bundle');
+  const bundle = readBundle(bundleInput.bytes);
+  const bundleRoot = realpathSync(dirname(bundleInput.path));
+  const corpusInput = readBundleFile(bundleRoot, bundle.corpus, 'corpus');
+  const responseInput = readBundleFile(bundleRoot, bundle.synthesisResponse, 'synthesis response');
+  const corpus = loadCorpusFromText(corpusInput.bytes.toString('utf8'), corpusInput.path);
   const texts = corpusTexts(corpus);
   for (const paperUid of bundle.paperUids) {
     if (!texts.has(paperUid)) throw new Error(`offline-acceptance: corpus lacks frozen paper '${paperUid}'`);
@@ -114,7 +175,7 @@ export async function runOfflineAcceptance(bundlePath: string, dryRun: boolean):
   if (bundle.pair[0] === bundle.pair[1]) throw new Error('offline-acceptance: pair endpoints must differ');
   const pair = pairFromKeys(bundle.pair[0], bundle.pair[1]);
   const assembled = assembleSynthesisInput(pair, new Map(bundle.paperUids.map((id) => [id, texts.get(id)!])));
-  const processed = processSynthesisResponse(responseBytes.toString('utf8'), {
+  const processed = processSynthesisResponse(responseInput.bytes.toString('utf8'), {
     pair,
     allowedPaperIds: bundle.paperUids,
     texts,
@@ -134,8 +195,16 @@ export async function runOfflineAcceptance(bundlePath: string, dryRun: boolean):
     retrieve: { corpus },
     artifactRevision: bundle.artifactRevision,
   });
-  const failed = verification.results.filter((result) => !result.quoteCheck.allPresent || result.rejected !== undefined);
-  if (failed.length > 0) throw new Error('offline-acceptance: quoteCheck rejected a claim; provider dispatch remains blocked');
+  const quoteFailed = verification.results.filter((result) => !result.quoteCheck.allPresent || result.rejected !== undefined);
+  if (quoteFailed.length > 0) throw new Error('offline-acceptance: quoteCheck rejected a claim; provider dispatch remains blocked');
+  const retrievalFailed = verification.results.filter(
+    (result) => result.triage.mode !== 'full' || result.retrieval?.performed !== true || result.retrieval.sources.length === 0,
+  );
+  if (retrievalFailed.length > 0) {
+    throw new Error('offline-acceptance: full-mode A10 retrieval with at least one independent source is required; quoteCheck-only/empty retrieval is non-acceptance');
+  }
+
+  const claimsBytes = encodeClaimsJsonl(processed.accepted);
 
   // The manifest intentionally has hashes and non-secret configuration identity
   // only. Attempts, tokens, costs and latency are literal zero because no route
@@ -146,9 +215,9 @@ export async function runOfflineAcceptance(bundlePath: string, dryRun: boolean):
     acceptanceRunId: bundle.acceptanceRunId,
     artifactRevision: bundle.artifactRevision,
     inputs: {
-      bundleSha256: sha256(readFileSync(canonicalBundle)),
-      corpusSha256: sha256(corpusBytes),
-      synthesisResponseSha256: sha256(responseBytes),
+      bundleSha256: sha256(bundleInput.bytes),
+      corpusSha256: sha256(corpusInput.bytes),
+      synthesisResponseSha256: sha256(responseInput.bytes),
       pair: bundle.pair,
       paperUids: bundle.paperUids,
     },
@@ -163,11 +232,15 @@ export async function runOfflineAcceptance(bundlePath: string, dryRun: boolean):
         configuredModel: routerConfig.nodes.verifier.model,
         identitySource: 'router-config', attempts: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, latencyMs: 0,
         quoteCheck: verification.results.map((result) => ({ edgeId: result.claim.edgeId, ...result.quoteCheck })),
-        retrievalSources: verification.results.map((result) => result.retrieval?.sources.length ?? 0),
+        fullMode: verification.results.every((result) => result.triage.mode === 'full'),
+        retrievalPerformed: verification.results.every((result) => result.retrieval?.performed === true),
+        retrievalSources: verification.results.map((result) => result.retrieval!.sources.length),
       },
     },
     artifacts: {
-      claimsSha256: sha256(JSON.stringify(processed.accepted)),
+      claimsSha256: sha256(claimsBytes),
+      claimsBytes: claimsBytes.length,
+      claimsEncoding: 'jsonl-utf8-trailing-newline',
       verificationsSha256: null,
       rawEvidenceStaged: false,
     },

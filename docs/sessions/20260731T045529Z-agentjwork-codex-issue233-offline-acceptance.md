@@ -1,6 +1,6 @@
 ---
 title: Issue 233 offline acceptance reconciliation
-summary: Added a provider-free frozen acceptance preflight, extended exact hash pinning to R2 no-prune loads, and pinned workflow actions to immutable revisions.
+summary: Added a provider-free full-mode acceptance preflight and extended exact-byte hash pinning to R2 no-prune loads.
 type: session
 scope: brain
 status: canonical
@@ -17,7 +17,7 @@ Issue: #233 · branch: `feat/brain/issue233-offline-acceptance` · base: exact R
 - Reconcile the bounded offline-first part of #233 against the exact requested Run 4 head after
   reading #233, #240, #246, the current handoff comments, provider evidence, and the semantic graph.
 - Add the smallest tracked acceptance command that can prove frozen input identity, A8 post-processing,
-  built-in A9 quote checking, A10 dry-run retrieval, family separation, and redacted accounting without
+  built-in A9 quote checking, mandatory A10 full-mode dry-run retrieval, family separation, and redacted accounting without
   importing a provider transport, R2 store, or database loader.
 - Harden incremental R2 projection so `--from-r2 --no-prune` cannot load unpinned mutable bytes.
 - Run all affected package checks. No provider, R2, Supabase, Docker, deployment, or hosted write was
@@ -32,13 +32,15 @@ Issue: #233 · branch: `feat/brain/issue233-offline-acceptance` · base: exact R
   assembles A8 input, gates the frozen A8 response through the real schema/copy/quote post-processor,
   and passes accepted claims through the real A9/A10 verifier in mandatory dry-run mode.
 - Its redacted manifest records only hashes, configured model identity source, attempt/token/cost/latency
-  zeros, quote-check results, retrieval counts, and artifact staging posture. It stores no prompt text,
+  zeros, quote-check results, non-empty full-mode retrieval counts, exact frozen-input hashes, the exact
+  staged claims JSONL hash, and artifact staging posture. It stores no prompt text,
   key, endpoint, raw body, or database target.
-- Added negative coverage for fabricated quotes, attempts to leave dry-run, and a CLI-level fetch trap
-  proving no provider/network path is reached.
+- Added negative coverage for fabricated quotes, quoteCheck-only triage, attempts to leave dry-run,
+  descriptor mutation/replacement races, symlink inputs, exact claims JSONL bytes, and a CLI-level fetch
+  trap proving no provider/network path is reached.
 - Extended the edge loader's mandatory dual SHA-256 pin from local `--from-dir --no-prune` to
   `--from-r2 --no-prune`, before R2 client construction or database handling.
-- Pinned every GitHub Action in both tracked workflows to its resolved full commit SHA.
+- Kept workflow Action pinning out of this slice after review; those unrelated workflow edits were reverted.
 
 ## Decided
 
@@ -54,12 +56,13 @@ Issue: #233 · branch: `feat/brain/issue233-offline-acceptance` · base: exact R
 
 ## Verification
 
-- `tools/brain-ingest` TypeScript check: clean.
-- `tools/brain-ingest` complete offline suite: 397 passed, 0 failed.
-- `tools/edge-loader` TypeScript check: clean.
-- `tools/edge-loader` complete offline suite: 68 passed, 0 failed.
-- Focused acceptance runner: 3 passed, including mandatory dry-run and fetch trap.
-- Focused loader suites: 44 passed, including the R2 no-prune pre-client hash guard.
+- Brain-ingest TypeScript check: clean; complete offline suite: 401 passed, 0 failed.
+- Edge-loader TypeScript check: clean; complete offline suite: 69 passed, 0 failed.
+- Regression coverage proves mandatory non-empty A10 full mode, quoteCheck-only rejection,
+  descriptor-bound mutation/replacement detection, symlink rejection, exact staged claims JSONL hashing,
+  and R2 hashing of exact downloaded bytes before decoding.
+- Repository context check and diff whitespace check passed; the net diff against the exact Run 4 base
+  contains no workflow changes.
 - No provider call, cloud/R2 write, database mutation, Docker start, or secret output occurred.
 
 ## Left
@@ -74,8 +77,8 @@ Issue: #233 · branch: `feat/brain/issue233-offline-acceptance` · base: exact R
 
 ## Blockers
 
-- None for the offline first PR. The Windows sandbox helper disappeared after testing; final local
-  validation resumed through the approved elevated command path. Source edits were made only through
+- None for the reviewed offline-first slice. The Windows sandbox helper disappeared after baseline
+  testing; final local validation used the approved elevated command path. Source edits were made only through
   the dedicated Codex apply-patch engine; no shell or Python source-write workaround was used.
 
 memory: none

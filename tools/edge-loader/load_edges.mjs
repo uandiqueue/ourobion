@@ -146,29 +146,39 @@ async function readFromR2(expected) {
     },
   });
   const bucket = process.env.R2_BUCKET;
-  const getText = async (key, { optional = false } = {}) => {
+  const getBytes = async (key, { optional = false } = {}) => {
     try {
       const out = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
-      return await out.Body.transformToString('utf-8');
+      return Buffer.from(await out.Body.transformToByteArray());
     } catch (err) {
       const notFound =
         err?.name === 'NoSuchKey' || err?.name === 'NotFound' || err?.$metadata?.httpStatusCode === 404;
       if (notFound && optional) {
         console.warn(`! r2: no ${key} — loading claims only (nothing servable)`);
-        return '';
+        return null;
       }
       throw err;
     }
   };
-  const claimsText = await getText(R2_CLAIMS_KEY);
-  const verificationsText = await getText(R2_VERIFICATIONS_KEY, { optional: true });
+  const claimsBytes = await getBytes(R2_CLAIMS_KEY);
+  const verificationsBytes = await getBytes(R2_VERIFICATIONS_KEY, { optional: true });
+  const { claimsText, verificationsText } = decodePinnedR2Artifacts(claimsBytes, verificationsBytes, expected);
+  return { claimsText, verificationsText, sourceLabel: `r2 ${bucket}` };
+}
+
+/** Hash the exact downloaded bytes, then decode those same Buffers once. */
+export function decodePinnedR2Artifacts(claimsBytes, verificationsBytes, expected) {
+  if (!Buffer.isBuffer(claimsBytes)) throw new Error(`expected artifact ${CLAIMS_BASENAME} is missing`);
   if (expected) {
-    if (!verificationsText) throw new Error(`expected artifact ${VERIFICATIONS_BASENAME} is missing`);
-    if (sha256(Buffer.from(claimsText, 'utf8')) !== expected.claims || sha256(Buffer.from(verificationsText, 'utf8')) !== expected.verifications) {
+    if (!Buffer.isBuffer(verificationsBytes)) throw new Error(`expected artifact ${VERIFICATIONS_BASENAME} is missing`);
+    if (sha256(claimsBytes) !== expected.claims || sha256(verificationsBytes) !== expected.verifications) {
       throw new Error('R2 edge artifact SHA-256 mismatch; nothing loaded');
     }
   }
-  return { claimsText, verificationsText, sourceLabel: `r2 ${bucket}` };
+  return {
+    claimsText: claimsBytes.toString('utf8'),
+    verificationsText: verificationsBytes === null ? '' : verificationsBytes.toString('utf8'),
+  };
 }
 
 // ── database projection ──────────────────────────────────────────────────────────────────────────
