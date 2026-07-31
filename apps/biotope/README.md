@@ -140,6 +140,29 @@ SUPABASE_ANON_KEY=<anon key from supabase start>
 > `10.0.2.2` is the Android emulator's alias for the host's `localhost`. **On a physical phone**, set
 > it to your PC's LAN IP (`ipconfig` → Wi-Fi → IPv4) and make sure phone + PC share a network.
 
+### Windows build-memory envelope (16 GB host)
+
+Android builds are deliberately serialized for the documented 16 GB Windows setup. The committed
+`android/gradle.properties` limits the single Gradle process to a 1.5 GB heap, 768 MB metaspace, and
+256 MB code cache; Kotlin compiles in that process and Gradle uses one worker. These are build-tool
+limits only — they do not change the compiled app or skip any build stage.
+
+Before a full Android build, stop restartable heavyweight workloads such as a local Nao server or
+local Supabase/Docker stack when they are not needed. Run Flutter tests with one task at a time, then
+run one Android build; do not overlap a build with another Flutter/Gradle command, an emulator boot,
+or a second agent's package install. CI remains independent and runs its normal checks.
+
+For a reproducible debug evidence run on Windows:
+
+```powershell
+cd apps\biotope
+flutter test --no-pub --concurrency=1
+flutter build apk --debug --target-platform android-arm64 --no-pub
+```
+
+Record the build result and available-memory observation with the issue/PR; do not replace the
+committed limits with ad-hoc larger JVM flags.
+
 ---
 
 ## Running on Android
@@ -180,6 +203,7 @@ cd apps\biotope; flutter run
 | Connection refused on a physical phone | Set `SUPABASE_URL` to your PC's LAN IP (not `10.0.2.2`); phone + PC on same Wi-Fi |
 | `flutter pub get` fails | Ensure the toolchain is active (Windows: `. .\scripts\biotope-env.ps1`) and `apps/biotope/pubspec.yaml` exists |
 | Docker not running | Start Docker Desktop before `npx supabase start` |
+| Android build exhausts memory | Stop restartable local workloads, keep only one Flutter/Gradle command active, then use the committed 16 GB envelope above; do not raise JVM limits without measured review |
 
 ---
 
