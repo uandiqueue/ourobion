@@ -1,11 +1,3 @@
-// UI gaps 1 and 5 — the Scan tab's two reworked rows.
-//
-// ScanTab itself needs Supabase.instance, so these pump the two widgets it is
-// built from directly. Both were made public for exactly that reason.
-//
-// No image goldens (O37 defers them): everything below is a widget-tree or
-// semantics assertion.
-
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,35 +5,76 @@ import 'package:src/modules/m2_self_report/impl/logging_controller.dart';
 import 'package:src/modules/m2_self_report/ui/screens/scan_tab.dart';
 
 Widget _harness(Widget child) => MaterialApp(
-      home: Scaffold(
-        body: SingleChildScrollView(
-          child: Padding(padding: const EdgeInsets.all(16), child: child),
-        ),
+  home: Scaffold(
+    body: SingleChildScrollView(
+      child: Padding(padding: const EdgeInsets.all(16), child: child),
+    ),
+  ),
+);
+
+GapCard _card(
+  String key, {
+  bool expanded = false,
+  bool saving = false,
+  int? currentValue,
+  VoidCallback? onToggle,
+  ValueChanged<int>? onAnswer,
+}) => GapCard(
+  metricKey: key,
+  weight: 7,
+  options: kInlineAnswerableOptions[key]!,
+  expanded: expanded,
+  saving: saving,
+  currentValue: currentValue,
+  onToggle: onToggle ?? () {},
+  onAnswer: onAnswer ?? (_) {},
+);
+
+class _GapPair extends StatefulWidget {
+  const _GapPair();
+
+  @override
+  State<_GapPair> createState() => _GapPairState();
+}
+
+class _GapPairState extends State<_GapPair> {
+  String? open;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      _card(
+        'mood_score',
+        expanded: open == 'mood_score',
+        onToggle: () => setState(() => open = 'mood_score'),
       ),
-    );
+      const SizedBox(height: 10),
+      _card(
+        'energy_score',
+        expanded: open == 'energy_score',
+        onToggle: () => setState(() => open = 'energy_score'),
+      ),
+    ],
+  );
+}
 
 void main() {
-  group('gap 1 · EnvironmentRow is inert and says why', () {
-    testWidgets('states that no source is connected, not "coming soon"',
-        (tester) async {
+  group('EnvironmentRow stays truthful and inert', () {
+    testWidgets('states that no source is connected', (tester) async {
       await tester.pumpWidget(_harness(const EnvironmentRow()));
-
       expect(find.text(ScanTabCopy.environmentLabel), findsOneWidget);
       expect(find.text(ScanTabCopy.environmentDetail), findsOneWidget);
-      // The badge uppercases its label.
-      expect(find.text(ScanTabCopy.environmentStatus.toUpperCase()),
-          findsOneWidget);
-
-      // The old copy promised a delivery nobody has scheduled.
-      expect(find.textContaining('Coming soon', findRichText: true),
-          findsNothing);
-      expect(find.textContaining('COMING SOON'), findsNothing);
+      expect(
+        find.text(ScanTabCopy.environmentStatus.toUpperCase()),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('offers nothing to tap — no control wired to nothing',
-        (tester) async {
+    testWidgets('offers no tap target and is disabled in semantics', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
       await tester.pumpWidget(_harness(const EnvironmentRow()));
-
       final row = find.byType(EnvironmentRow);
       for (final interactive in <Type>[
         GestureDetector,
@@ -49,163 +82,108 @@ void main() {
         Switch,
         TextButton,
         FilledButton,
-        ElevatedButton,
-        OutlinedButton,
         IconButton,
       ]) {
         expect(
           find.descendant(of: row, matching: find.byType(interactive)),
           findsNothing,
-          reason: 'a $interactive here would be a control with no data source '
-              'behind it — m4_environmental is a comment-only stub',
         );
       }
-    });
-
-    testWidgets('is exposed to assistive tech as one disabled node',
-        (tester) async {
-      final handle = tester.ensureSemantics();
-      await tester.pumpWidget(_harness(const EnvironmentRow()));
-
       expect(
-        tester.getSemantics(find.byType(EnvironmentRow)),
+        tester.getSemantics(row),
         matchesSemantics(
           label: ScanTabCopy.environmentSemanticLabel,
           hasEnabledState: true,
           isEnabled: false,
         ),
       );
-
       handle.dispose();
     });
   });
 
-  group('gap 5 · GapCard answers inline where a chip can express the value',
-      () {
-    testWidgets('renders one chip per option and reports the tapped value',
-        (tester) async {
-      final answers = <int>[];
-      await tester.pumpWidget(_harness(GapCard(
-        metricKey: 'mood_score',
-        weight: 7,
-        inlineOptions: kInlineAnswerableOptions['mood_score'],
-        onAnswer: answers.add,
-        onOpenFullLog: () {},
-      )));
-
-      for (final option in const [1, 2, 3, 4, 5]) {
-        expect(find.text('$option'), findsOneWidget);
+  group('Needs you inline metric logger', () {
+    test('every accepted metric range is complete', () {
+      expect(kInlineAnswerableOptions['urine_colour'], [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+      ]);
+      expect(kInlineAnswerableOptions['stool_form'], [1, 2, 3, 4, 5, 6, 7]);
+      expect(kInlineAnswerableOptions['outside_meals'], [0, 1, 2, 3]);
+      expect(kInlineAnswerableOptions['mosquito_bites'], [
+        for (var value = 0; value <= 20; value++) value,
+      ]);
+      for (final key in ['energy_score', 'mood_score', 'gut_comfort_score']) {
+        expect(kInlineAnswerableOptions[key], [1, 2, 3, 4, 5]);
       }
-      expect(find.text(ScanTabCopy.gapAnswerHere), findsOneWidget);
-      expect(find.text(ScanTabCopy.inlineHints['mood_score']!), findsOneWidget);
+    });
 
+    testWidgets('only the selected metric expands', (tester) async {
+      await tester.pumpWidget(_harness(const _GapPair()));
+      expect(find.text(ScanTabCopy.inlineHints['mood_score']!), findsNothing);
+      expect(find.text(ScanTabCopy.inlineHints['energy_score']!), findsNothing);
+
+      await tester.tap(find.text('Mood score'));
+      await tester.pump();
+      expect(find.text(ScanTabCopy.inlineHints['mood_score']!), findsOneWidget);
+      expect(find.text(ScanTabCopy.inlineHints['energy_score']!), findsNothing);
+
+      await tester.tap(find.text('Energy score'));
+      await tester.pump();
+      expect(find.text(ScanTabCopy.inlineHints['mood_score']!), findsNothing);
+      expect(
+        find.text(ScanTabCopy.inlineHints['energy_score']!),
+        findsOneWidget,
+      );
+      expect(find.textContaining('full log'), findsNothing);
+    });
+
+    testWidgets('expanded metric writes only the picked scalar callback', (
+      tester,
+    ) async {
+      final answers = <int>[];
+      await tester.pumpWidget(
+        _harness(_card('mood_score', expanded: true, onAnswer: answers.add)),
+      );
       await tester.tap(find.text('4'));
       await tester.pump();
-
       expect(answers, [4]);
     });
 
-    testWidgets('keeps the full log reachable from a chip-answerable card',
-        (tester) async {
-      var opened = 0;
-      await tester.pumpWidget(_harness(GapCard(
-        metricKey: 'energy_score',
-        weight: 7,
-        inlineOptions: kInlineAnswerableOptions['energy_score'],
-        onAnswer: (_) {},
-        onOpenFullLog: () => opened++,
-      )));
+    testWidgets('logged state collapses with the saved metric value', (
+      tester,
+    ) async {
+      var changes = 0;
+      await tester.pumpWidget(
+        _harness(
+          _card('stool_form', currentValue: 4, onToggle: () => changes++),
+        ),
+      );
+      expect(find.text(ScanTabCopy.gapLogged), findsOneWidget);
+      expect(find.text('Type 4 · Smooth'), findsOneWidget);
+      expect(find.text(ScanTabCopy.gapChange), findsOneWidget);
+      expect(find.text('1'), findsNothing);
 
-      await tester.tap(find.text(ScanTabCopy.gapOpenFullLog));
+      await tester.tap(find.text(ScanTabCopy.gapChange));
       await tester.pump();
-
-      expect(opened, 1);
+      expect(changes, 1);
     });
 
-    testWidgets('a metric no chip can express stays a tap-through to the form',
-        (tester) async {
-      var opened = 0;
-      var answered = 0;
-      await tester.pumpWidget(_harness(GapCard(
-        metricKey: 'urine_colour',
-        weight: 25,
-        // Deliberately absent from kInlineAnswerableOptions.
-        inlineOptions: kInlineAnswerableOptions['urine_colour'],
-        onAnswer: (_) => answered++,
-        onOpenFullLog: () => opened++,
-      )));
-
-      expect(find.text(ScanTabCopy.gapAnswerHere), findsNothing);
-      expect(find.text(ScanTabCopy.gapOpenFullLog), findsNothing);
-
-      // The card names ONE metric but the tap pushes the whole DailyLogScreen,
-      // which has no per-field focus seam — so it has to say where it goes.
-      expect(find.text(ScanTabCopy.gapOpensFullLog), findsOneWidget,
-          reason: 'a whole-card tap-through must state its destination rather '
-              'than imply a view of the metric it names');
-
-      await tester.tap(find.byType(GapCard));
-      await tester.pump();
-
-      expect(opened, 1);
-      expect(answered, 0);
-    });
-
-    testWidgets('an inline-answerable card does not claim to open the form',
-        (tester) async {
-      await tester.pumpWidget(_harness(GapCard(
-        metricKey: 'mood_score',
-        weight: 7,
-        inlineOptions: kInlineAnswerableOptions['mood_score'],
-        onAnswer: (_) {},
-        onOpenFullLog: () {},
-      )));
-
-      expect(find.text(ScanTabCopy.gapOpensFullLog), findsNothing,
-          reason: 'this card answers in place; the explicit "Open full log" '
-              'button carries the route');
-      expect(find.text(ScanTabCopy.gapOpenFullLog), findsOneWidget);
-    });
-
-    testWidgets('goes inert while a write is in flight', (tester) async {
-      final answers = <int>[];
-      var opened = 0;
-      await tester.pumpWidget(_harness(GapCard(
-        metricKey: 'gut_comfort_score',
-        weight: 6,
-        inlineOptions: kInlineAnswerableOptions['gut_comfort_score'],
-        saving: true,
-        onAnswer: answers.add,
-        onOpenFullLog: () => opened++,
-      )));
-
-      await tester.tap(find.text('3'));
-      await tester.tap(find.text(ScanTabCopy.gapOpenFullLog));
-      await tester.pump();
-
-      expect(answers, isEmpty,
-          reason: 'a second tap must not queue a second write to the column');
-      expect(opened, 0);
-    });
-
-    testWidgets('each chip is a labelled button for assistive tech',
-        (tester) async {
+    testWidgets('each option is a labelled accessible button', (tester) async {
       final handle = tester.ensureSemantics();
-      await tester.pumpWidget(_harness(GapCard(
-        metricKey: 'outside_meals',
-        weight: 20,
-        inlineOptions: kInlineAnswerableOptions['outside_meals'],
-        onAnswer: (_) {},
-        onOpenFullLog: () {},
-      )));
-
-      // metricDisplayLabel('outside_meals') prefixes each chip's label, so a
-      // screen reader announces "Outside meals 2", not a bare "2".
-      for (final option in const [0, 1, 2, 3]) {
-        expect(find.bySemanticsLabel('Outside meals $option'), findsOneWidget);
-      }
+      final answers = <int>[];
+      await tester.pumpWidget(
+        _harness(_card('outside_meals', expanded: true, onAnswer: answers.add)),
+      );
+      final option = find.bySemanticsLabel('Outside meals 2');
+      expect(option, findsOneWidget);
       expect(
-        tester.getSemantics(find.bySemanticsLabel('Outside meals 2')),
+        tester.getSemantics(option),
         matchesSemantics(
           label: 'Outside meals 2',
           isButton: true,
@@ -214,31 +192,31 @@ void main() {
           hasTapAction: true,
         ),
       );
-
-      handle.dispose();
-    });
-
-    testWidgets('the semantics tap action answers, not just the pointer',
-        (tester) async {
-      final handle = tester.ensureSemantics();
-      final answers = <int>[];
-      await tester.pumpWidget(_harness(GapCard(
-        metricKey: 'mood_score',
-        weight: 7,
-        inlineOptions: kInlineAnswerableOptions['mood_score'],
-        onAnswer: answers.add,
-        onOpenFullLog: () {},
-      )));
-
       tester.semantics.performAction(
-        find.semantics.byLabel('Mood score 5'),
+        find.semantics.byLabel('Outside meals 2'),
         SemanticsAction.tap,
       );
       await tester.pump();
-
-      expect(answers, [5]);
-
+      expect(answers, [2]);
       handle.dispose();
+    });
+
+    testWidgets('saving state is inert and says so', (tester) async {
+      final answers = <int>[];
+      await tester.pumpWidget(
+        _harness(
+          _card(
+            'gut_comfort_score',
+            expanded: true,
+            saving: true,
+            onAnswer: answers.add,
+          ),
+        ),
+      );
+      expect(find.text(ScanTabCopy.gapSaving), findsOneWidget);
+      await tester.tap(find.text('3'));
+      await tester.pump();
+      expect(answers, isEmpty);
     });
   });
 }

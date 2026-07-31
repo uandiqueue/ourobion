@@ -19,11 +19,13 @@ class _FakeProvenanceService extends ProvenanceService {
   _FakeProvenanceService(this.result)
     // autoRefreshToken off: the default GoTrue auto-refresh timer trips the
     // test binding's pending-timers invariant.
-    : super(SupabaseClient(
-        'http://localhost',
-        'test-key',
-        authOptions: const AuthClientOptions(autoRefreshToken: false),
-      ));
+    : super(
+        SupabaseClient(
+          'http://localhost',
+          'test-key',
+          authOptions: const AuthClientOptions(autoRefreshToken: false),
+        ),
+      );
 
   @override
   Future<InsightProvenance?> getProvenance(int cardId) async => result;
@@ -67,12 +69,14 @@ Future<void> _pump(
   WidgetTester tester,
   InsightProvenance? provenance, {
   String producer = 'rules',
+  Future<bool> Function(Uri uri)? openExternalLink,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
       home: InsightProvenanceScreen(
         card: _card(producer: producer),
         service: _FakeProvenanceService(provenance),
+        openExternalLink: openExternalLink,
       ),
     ),
   );
@@ -136,6 +140,7 @@ void main() {
   testWidgets('edge card renders citation chain + TEST-MODE verdict stamp', (
     tester,
   ) async {
+    final opened = <Uri>[];
     await _pump(
       tester,
       InsightProvenance(
@@ -164,9 +169,9 @@ void main() {
             ],
             citations: [
               ProvenanceCitation(
-                paperId: 'paper-1',
-                title: 'Sleep and gut comfort: a cohort study',
-                year: 2023,
+                paperId: 'doi:10.1016/j.isci.2026.116224',
+                title: 'Unraveling the gut microbiota-brain axis',
+                year: 2026,
                 evidenceTier: 4,
                 impactTier: 'moderate',
                 stance: 'supports',
@@ -177,11 +182,20 @@ void main() {
                   ),
                 ],
               ),
+              ProvenanceCitation(
+                paperId: 'corpus:legacy-without-doi',
+                title: 'Legacy corpus record',
+                year: 2024,
+              ),
             ],
           ),
         ],
       ),
       producer: 'rules',
+      openExternalLink: (uri) async {
+        opened.add(uri);
+        return true;
+      },
     );
 
     expect(
@@ -195,7 +209,10 @@ void main() {
     // D15 honesty: the verdict carries the TEST-MODE stamp, verbatim.
     expect(find.text(ProvenanceCopy.testModeVerdictLabel), findsOneWidget);
     expect(find.textContaining('Shorter sleep was associated'), findsOneWidget);
-    expect(find.textContaining('Sleep and gut comfort'), findsOneWidget);
+    expect(
+      find.textContaining('Unraveling the gut microbiota-brain axis'),
+      findsOneWidget,
+    );
     expect(find.textContaining('Comfort declined 0.4 points'), findsOneWidget);
     expect(
       find.textContaining(ProvenanceCopy.populationPrefix),
@@ -203,6 +220,17 @@ void main() {
     );
     // The honest empty-state note must NOT appear when edges exist.
     expect(find.text(ProvenanceCopy.noEdgesRules), findsNothing);
+
+    final paperButton = find.widgetWithText(
+      TextButton,
+      ProvenanceCopy.openPaper,
+    );
+    await tester.scrollUntilVisible(paperButton, 200);
+    await tester.pumpAndSettle();
+    await tester.tap(paperButton);
+    await tester.pump();
+    expect(opened, [Uri.parse('https://doi.org/10.1016/j.isci.2026.116224')]);
+    expect(find.text(ProvenanceCopy.paperLinkUnavailable), findsOneWidget);
   });
 
   testWidgets('null provenance (not visible) renders the plain note', (
