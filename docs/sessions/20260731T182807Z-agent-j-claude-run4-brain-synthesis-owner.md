@@ -26,10 +26,19 @@ migration it adds itself.
 ## Changed
 
 - `tools/run4_release_gate.test.mjs` — refreshed the Run 4 product snapshot from
-  **533 paths / 75,645 added lines** to **535 / 76,255**. Recorded measurement only: the caps
+  **533 paths / 75,645 added lines** to **536 / 76,351**. Recorded measurement only: the caps
   (`RUN4_MAX_CHANGED_PATHS` 115, `RUN4_MAX_ADDED_LINES` 8,500) are untouched, and the assertions
   that the measured delta *exceeds* them are still in place, so the deliberate "record, don't gate"
   split is unchanged and the enforcement wrapper still throws.
+  **It took two passes, for a reason worth recording:** the snapshot measures the whole landing
+  delta including the very commits that refresh it. The first pass (533 → 535) was measured
+  correctly and then invalidated by *this session log itself* — a new file (+1 path, +96 lines)
+  — pushing the true figure to 536 / 76,351. Refreshing this snapshot is therefore inherently
+  self-referential and must be the **last** content change before the push.
+  It does converge: re-editing the *same two already-differing lines* changes their content but
+  not the added-line count measured against the immutable product base, so 536 / 76,351 is a
+  genuine fixed point — verified by measuring with the edit in the working tree and getting the
+  identical numbers back.
 - Merged the current `dev-phase2-run4` tip (`253e0ad`) into `feat/brain/run4-233-live-legs`. Clean
   merge, **no conflicts**.
 - **Nothing else.** The session-log entry recording #292's three CI defect fixes was written
