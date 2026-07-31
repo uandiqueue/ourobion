@@ -1,0 +1,33 @@
+{
+  "claims": [
+    {
+      "subject": "gut_comfort_score",
+      "object": "mood_score",
+      "relation": "correlates",
+      "claimKind": "correlational",
+      "effect": { "size": null, "unit": null, "ci": null },
+      "population": "adults",
+      "citations": [
+        {
+          "paperId": "fixture:run4-cited",
+          "title": "UNTRUSTED MODEL TITLE",
+          "year": 1900,
+          "population": "adults",
+          "evidenceTier": 3,
+          "impactTier": "moderate",
+          "stance": "supports"
+        }
+      ],
+      "quoteSpans": [
+        {
+          "paperId": "fixture:run4-cited",
+          "quote": "Higher self-reported gut comfort was associated with better mood in the observed adult cohort.",
+          "locator": null,
+          "charStart": null,
+          "charEnd": null
+        }
+      ],
+      "derivation": "The observed association describes a correlation between gut comfort and mood."
+    }
+  ]
+}

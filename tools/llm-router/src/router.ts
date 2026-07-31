@@ -20,10 +20,17 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { AttemptJournal, providerContentSha256 } from './attemptJournal.js';
+import {
+  AttemptJournal,
+  acceptanceAuthorizationHash,
+  acceptanceJournalRepoPath,
+  providerContentSha256,
+  validateAcceptanceAuthorization,
+} from './attemptJournal.js';
 import { BudgetLedger, costUsd, type BudgetState } from './budget.js';
 import {
   billingModeOf,
+  priceIsAuthoritativeAt,
   familyOf,
   loadConfig,
   providerFor,
@@ -49,11 +56,12 @@ import {
   LLM_NODE_IDS,
   ACCEPTANCE_MAX_INPUT_BYTES,
   ACCEPTANCE_MAX_OUTPUT_TOKENS,
-  ACCEPTANCE_JOURNAL_REPO_PATH,
+  ACCEPTANCE_RUNTIME_REPO_ROOT,
   DEFAULT_RAW_BODY_CAP_BYTES,
   type LlmNodeId,
   type LlmRequest,
   type LlmResponse,
+  type AcceptanceAuthorization,
   type VendorFamily,
 } from './types.js';
 
@@ -147,6 +155,15 @@ export class LlmRouter {
       throw new RouterConfigError(`llm-router: unknown nodeId '${String(req.nodeId)}'`);
     }
     const acceptance = req.acceptance;
+    const nowMs = (this.opts.now ?? Date.now)();
+    let authorization: AcceptanceAuthorization | undefined;
+    let authorizationHash: string | undefined;
+    let journalRepoPath: string | undefined;
+    if (acceptance !== undefined) {
+      authorization = validateAcceptanceAuthorization(acceptance.authorization, nowMs);
+      authorizationHash = acceptanceAuthorizationHash(authorization);
+      journalRepoPath = acceptanceJournalRepoPath(authorization.authorizationId);
+    }
     const family = this.familyOfNode(req.nodeId);
     const canonicalContent = family === null ? undefined : canonicalizeProviderContent(req, family);
     const maxOutputTokens = acceptance === undefined
@@ -154,9 +171,9 @@ export class LlmRouter {
       : ACCEPTANCE_MAX_OUTPUT_TOKENS;
 
     if (acceptance !== undefined) {
-      if (this.config.acceptance?.journalPath !== ACCEPTANCE_JOURNAL_REPO_PATH) {
+      if (this.config.acceptance?.runtimeRoot !== ACCEPTANCE_RUNTIME_REPO_ROOT) {
         throw new RouterAttemptJournalError(
-          'llm-router acceptance: config must bind the fixed router-owned journal path',
+          'llm-router acceptance: config must bind the fixed router-owned runtime root',
         );
       }
       if ('journalPath' in (acceptance as unknown as Record<string, unknown>)) {
@@ -194,13 +211,14 @@ export class LlmRouter {
       }
       const correctLeg =
         (req.nodeId === 'synthesis' && family === 'anthropic') ||
+        (req.nodeId === 'synthesis' && family === 'openai') ||
         (req.nodeId === 'verifier' && family === 'agnes');
       if (!correctLeg) {
         throw new RouterAttemptJournalError(
-          'llm-router acceptance: only Anthropic synthesis and Agnes verification are authorized',
+          'llm-router acceptance: only Anthropic/OpenAI synthesis and Agnes verification are authorized',
         );
       }
-      if (this.config.prices[node.model]?.provisional !== false) {
+      if (!priceIsAuthoritativeAt(this.config.prices[node.model], nowMs)) {
         throw new RouterAttemptJournalError(
           `llm-router acceptance: model '${node.model}' lacks an authoritative non-provisional price`,
         );
@@ -221,6 +239,7 @@ export class LlmRouter {
         ...(this.opts.fetchFn !== undefined ? { fetchFn: this.opts.fetchFn } : {}),
         ...(this.opts.env !== undefined ? { env: this.opts.env } : {}),
         ...(this.opts.sleep !== undefined ? { sleep: this.opts.sleep } : {}),
+        ...(this.opts.now !== undefined ? { now: this.opts.now } : {}),
         ...(acceptance !== undefined
           ? { maxAttempts: Math.min(this.opts.maxAttempts ?? 3, 3) }
           : this.opts.maxAttempts !== undefined ? { maxAttempts: this.opts.maxAttempts } : {}),
@@ -233,11 +252,15 @@ export class LlmRouter {
           : {}),
         ...(acceptance !== undefined ? {
           attemptJournal: {
-            journal: new AttemptJournal(resolveRepoPath(ACCEPTANCE_JOURNAL_REPO_PATH), {
+            journal: new AttemptJournal(resolveRepoPath(journalRepoPath!), {
               ...(this.opts.now !== undefined ? { now: this.opts.now } : {}),
-              allowedRoot: resolveRepoPath('data/llm-router'),
+              allowedRoot: resolveRepoPath(ACCEPTANCE_RUNTIME_REPO_ROOT),
             }),
             input: {
+              authorization: authorization!,
+              authorizationId: authorization!.authorizationId,
+              authorizationHash: authorizationHash!,
+              authorizationBasis: authorization!.authorizationBasis,
               acceptanceRunId: acceptance.acceptanceRunId,
               logicalCallId: acceptance.logicalCallId,
               nodeId: req.nodeId,
@@ -258,6 +281,8 @@ export class LlmRouter {
                 outputUsdPerMTok: this.config.prices[node.model]!.outputUsdPerMTok,
                 provisional: false,
                 pricingProvenance: this.config.prices[node.model]!.pricingProvenance ?? null,
+                effectiveFrom: this.config.prices[node.model]!.effectiveFrom ?? null,
+                expiresAt: this.config.prices[node.model]!.expiresAt ?? null,
               },
             },
           },

@@ -13,7 +13,7 @@ import { join } from 'node:path';
 
 import { checkConfig, LlmRouter } from '../src/router.js';
 import { resolveRepoPath } from '../src/config.js';
-import { providerContentSha256 } from '../src/attemptJournal.js';
+import { acceptanceJournalRepoPath, providerContentSha256 } from '../src/attemptJournal.js';
 import { costUsd } from '../src/budget.js';
 import { RouterAttemptJournalError, RouterBudgetExceededError, RouterHttpError } from '../src/errors.js';
 import {
@@ -21,8 +21,8 @@ import {
   canonicalizeProviderContent,
   type FetchLike,
 } from '../src/routes/apiWorker.js';
-import { ACCEPTANCE_JOURNAL_REPO_PATH, DEFAULT_RAW_BODY_CAP_BYTES } from '../src/types.js';
-import { anthropicBody, jsonResponse, testConfig } from './helpers.js';
+import { ACCEPTANCE_RUNTIME_REPO_ROOT, DEFAULT_RAW_BODY_CAP_BYTES } from '../src/types.js';
+import { acceptanceContext, anthropicBody, jsonResponse, openaiBody, testAuthorization, testConfig } from './helpers.js';
 
 const ENV = { ANTHROPIC_API_KEY: 'ak', OPENAI_API_KEY: 'ok' };
 const DAY1_NOON = Date.UTC(2026, 6, 15, 12, 0, 0);
@@ -31,7 +31,10 @@ function freshDir(prefix: string): string {
   return mkdtempSync(join(tmpdir(), prefix));
 }
 
-const ACCEPTANCE_JOURNAL = resolveRepoPath(ACCEPTANCE_JOURNAL_REPO_PATH);
+const AUTHORIZATION = testAuthorization();
+const ACCEPTANCE_JOURNAL = resolveRepoPath(acceptanceJournalRepoPath(AUTHORIZATION.authorizationId));
+const acceptance = (runId: string, logicalCallId: string) =>
+  acceptanceContext(runId, logicalCallId, AUTHORIZATION);
 function cleanAcceptanceJournal(): void {
   rmSync(ACCEPTANCE_JOURNAL, { force: true });
   rmSync(`${ACCEPTANCE_JOURNAL}.lock`, { force: true });
@@ -40,7 +43,7 @@ function cleanAcceptanceJournal(): void {
 function acceptanceConfig() {
   return testConfig((raw) => {
     raw.providers.push({ prefix: 'agnes-', family: 'agnes', envKey: 'AGNES_API_KEY' });
-    raw.acceptance = { journalPath: ACCEPTANCE_JOURNAL_REPO_PATH };
+    raw.acceptance = { runtimeRoot: ACCEPTANCE_RUNTIME_REPO_ROOT };
     raw.nodes.synthesis = { model: 'claude-sonnet-5', route: 'api_worker', maxOutputTokens: 8000 };
     raw.nodes.verifier = { model: 'agnes-2.5-flash', route: 'api_worker', maxOutputTokens: 8000 };
     raw.prices['claude-sonnet-5'].provisional = false;
@@ -49,6 +52,8 @@ function acceptanceConfig() {
       outputUsdPerMTok: 0,
       billingMode: 'free',
       pricingProvenance: 'owner-confirmed free plan',
+      effectiveFrom: '2026-01-01T00:00:00.000Z',
+      expiresAt: '2027-01-01T00:00:00.000Z',
       provisional: false,
     };
     raw.budget.perDayUsdPerNode = 100;
@@ -142,13 +147,13 @@ test('acceptance facade: canonical messages are exactly bounded/hashed and Agnes
       fetchFn,
       now: () => DAY1_NOON,
     });
-    const acceptance = { acceptanceRunId: 'acceptance-facade', logicalCallId: 'synthesis:edge-1' };
+    const acceptanceCall = acceptance('acceptance-facade', 'synthesis:edge-1');
     const baseline = canonicalizeProviderContent(
       { nodeId: 'synthesis', prompt: '', expectJson: true },
       'anthropic',
     );
     const prompt = 'x'.repeat(24_000 - baseline.inputBytes);
-    const exactReq = { nodeId: 'synthesis' as const, prompt, expectJson: true as const, acceptance };
+    const exactReq = { nodeId: 'synthesis' as const, prompt, expectJson: true as const, acceptance: acceptanceCall };
     const canonical = canonicalizeProviderContent(exactReq, 'anthropic');
     assert.equal(canonical.inputBytes, 24_000);
     await router.route(exactReq);
@@ -167,7 +172,7 @@ test('acceptance facade: canonical messages are exactly bounded/hashed and Agnes
       system: 'Adversarially verify.',
       prompt: 'Evidence may refute this.',
       expectJson: true,
-      acceptance: { acceptanceRunId: 'acceptance-second-run', logicalCallId: 'verifier:edge-1' },
+      acceptance: acceptance('acceptance-second-run', 'verifier:edge-1'),
     });
     assert.equal(calls[1]!.url, AGNES_CHAT_COMPLETIONS_URL);
     assert.equal(calls[1]!.method, 'POST');
@@ -176,11 +181,11 @@ test('acceptance facade: canonical messages are exactly bounded/hashed and Agnes
     assert.match(calls[1]!.body.messages[0].content, /single valid JSON object/);
 
     await assert.rejects(
-      router.route({ nodeId: 'synthesis', prompt: 'x', expectJson: true, maxOutputTokens: 3_073, acceptance: { ...acceptance, logicalCallId: 'synthesis:edge-2' } }),
+      router.route({ nodeId: 'synthesis', prompt: 'x', expectJson: true, maxOutputTokens: 3_073, acceptance: acceptance('acceptance-facade', 'synthesis:edge-2') }),
       /maxOutputTokens is fixed at 3072/,
     );
     await assert.rejects(
-      router.route({ nodeId: 'synthesis', prompt: `${prompt}x`, expectJson: true, acceptance: { ...acceptance, logicalCallId: 'synthesis:edge-3' } }),
+      router.route({ nodeId: 'synthesis', prompt: `${prompt}x`, expectJson: true, acceptance: acceptance('acceptance-facade', 'synthesis:edge-3') }),
       /ceiling is 24000/,
     );
     assert.equal(calls.length, 2, 'both ceiling violations stop before dispatch');
@@ -209,6 +214,8 @@ test('acceptance facade: canonical messages are exactly bounded/hashed and Agnes
       outputUsdPerMTok: 0,
       provisional: false,
       pricingProvenance: 'owner-confirmed free plan',
+      effectiveFrom: '2026-01-01T00:00:00.000Z',
+      expiresAt: '2027-01-01T00:00:00.000Z',
     });
   } finally {
     cleanAcceptanceJournal();
@@ -234,7 +241,29 @@ test('acceptance facade: provisional pricing and provider-identity mismatch fail
         nodeId: 'synthesis',
         prompt: 'x',
         expectJson: true,
-        acceptance: { acceptanceRunId: 'run-p', logicalCallId: 'synthesis:p' },
+        acceptance: acceptance('run-p', 'synthesis:p'),
+      }),
+      /lacks an authoritative non-provisional price/,
+    );
+    assert.equal(calls, 0);
+
+    const expiredRouter = new LlmRouter({
+      config: acceptanceConfig(),
+      ledgerPath: join(dir, 'expired-ledger.json'),
+      env: { ANTHROPIC_API_KEY: 'ak' },
+      now: () => Date.parse('2027-01-01T00:00:00.000Z'),
+      fetchFn: async () => { calls++; return jsonResponse(200, anthropicBody('{}')); },
+    });
+    await assert.rejects(
+      expiredRouter.route({
+        nodeId: 'synthesis',
+        prompt: 'x',
+        expectJson: true,
+        acceptance: acceptanceContext(
+          'run-expired',
+          'synthesis:expired',
+          testAuthorization((value) => { value.expiresAt = '2028-01-01T00:00:00.000Z'; }),
+        ),
       }),
       /lacks an authoritative non-provisional price/,
     );
@@ -255,11 +284,54 @@ test('acceptance facade: provisional pricing and provider-identity mismatch fail
         nodeId: 'verifier',
         prompt: 'adverse is valid',
         expectJson: true,
-        acceptance: { acceptanceRunId: 'run-m', logicalCallId: 'verifier:m' },
+        acceptance: acceptance('run-m', 'verifier:m'),
       }),
       (error: unknown) => error instanceof RouterAttemptJournalError && /mismatched/.test(error.message),
     );
     assert.equal(calls, 1);
+  } finally {
+    cleanAcceptanceJournal();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('acceptance facade: OpenAI synthesis is provider-attested and hash-journaled', async () => {
+  const dir = freshDir('llm-openai-acceptance-');
+  cleanAcceptanceJournal();
+  try {
+    const config = testConfig((raw) => {
+      raw.acceptance = { runtimeRoot: ACCEPTANCE_RUNTIME_REPO_ROOT };
+      raw.nodes.synthesis = { model: 'gpt-5', route: 'api_worker', maxOutputTokens: 8000 };
+      raw.nodes.verifier = { model: 'claude-sonnet-5', route: 'api_worker', maxOutputTokens: 8000 };
+      raw.prices['gpt-5'].provisional = false;
+      raw.budget.perDayUsdPerNode = 100;
+      raw.budget.perRunOutputTokens = 1_000_000;
+    });
+    let calls = 0;
+    const router = new LlmRouter({
+      config,
+      ledgerPath: join(dir, 'ledger.json'),
+      env: { OPENAI_API_KEY: 'ok' },
+      now: () => Date.parse('2026-07-31T12:00:00.000Z'),
+      fetchFn: async () => {
+        calls++;
+        return jsonResponse(200, openaiBody('{"claims":[]}'));
+      },
+    });
+    const response = await router.route({
+      nodeId: 'synthesis',
+      prompt: 'adverse-empty is valid',
+      expectJson: true,
+      acceptance: acceptance('run-openai', 'openai-synthesis:edge'),
+    });
+    assert.equal(calls, 1);
+    assert.equal(response.modelIdentity.family, 'openai');
+    assert.equal(response.modelIdentity.providerAttested, true);
+    assert.ok(response.rawBody && !response.rawBody.truncated);
+    const events = readFileSync(ACCEPTANCE_JOURNAL, 'utf8')
+      .trim().split(/\r?\n/).map((line) => JSON.parse(line) as Record<string, unknown>);
+    assert.ok(events.some((event) => event.kind === 'reserved' && event.providerFamily === 'openai'));
+    assert.ok(events.some((event) => event.kind === 'response'));
   } finally {
     cleanAcceptanceJournal();
     rmSync(dir, { recursive: true, force: true });
@@ -285,6 +357,7 @@ test('acceptance facade rejects caller paths and unsafe raw retention before res
           prompt: 'x',
           expectJson: true,
           acceptance: {
+            ...acceptance('run', 'synthesis:path'),
             acceptanceRunId: 'run',
             logicalCallId: 'synthesis:path',
             journalPath,
@@ -303,7 +376,7 @@ test('acceptance facade rejects caller paths and unsafe raw retention before res
           nodeId: 'synthesis',
           prompt: 'x',
           expectJson: true,
-          acceptance: { acceptanceRunId: 'run', logicalCallId: 'synthesis:retention' },
+          acceptance: acceptance('run', 'synthesis:retention'),
         }),
         /retention cannot be disabled|raw body cap is fixed/,
       );
@@ -314,9 +387,9 @@ test('acceptance facade rejects caller paths and unsafe raw retention before res
         nodeId: 'synthesis',
         prompt: 'x',
         expectJson: true,
-        acceptance: { acceptanceRunId: 'run', logicalCallId: 'synthesis:unbound-config' },
+        acceptance: acceptance('run', 'synthesis:unbound-config'),
       }),
-      /config must bind the fixed router-owned journal path/,
+      /config must bind the fixed router-owned runtime root/,
     );
     assert.equal(calls, 0);
     assert.throws(() => readFileSync(ACCEPTANCE_JOURNAL), /ENOENT/);
@@ -333,10 +406,10 @@ test('LlmRouter validates and clones injected config before any acceptance dispa
     fetchFn: async () => { calls++; return jsonResponse(200, anthropicBody('{}')); },
   };
   const badPath = acceptanceConfig() as unknown as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
-  badPath.acceptance.journalPath = 'tools/llm-router/src/router.ts';
+  badPath.acceptance.runtimeRoot = 'tools/llm-router/src/router.ts';
   assert.throws(
     () => new LlmRouter({ ...baseOptions, config: badPath as never }),
-    /acceptance\.journalPath must be exactly/,
+    /acceptance\.runtimeRoot must be exactly/,
   );
   const badPrice = acceptanceConfig() as unknown as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
   badPrice.prices['claude-sonnet-5'].inputUsdPerMTok = -1;
@@ -348,8 +421,8 @@ test('LlmRouter validates and clones injected config before any acceptance dispa
 
   const original = acceptanceConfig();
   const router = new LlmRouter({ ...baseOptions, config: original });
-  (original.acceptance as unknown as { journalPath: string }).journalPath = '../mutated-after-construction.jsonl';
-  assert.equal(router.config.acceptance?.journalPath, ACCEPTANCE_JOURNAL_REPO_PATH);
+  (original.acceptance as unknown as { runtimeRoot: string }).runtimeRoot = '../mutated-after-construction';
+  assert.equal(router.config.acceptance?.runtimeRoot, ACCEPTANCE_RUNTIME_REPO_ROOT);
 });
 
 test('acceptance response-stream failure stays charged, records unknown, and redacts secrets', async () => {
@@ -375,7 +448,7 @@ test('acceptance response-stream failure stays charged, records unknown, and red
         nodeId: 'synthesis',
         prompt: secretPrompt,
         expectJson: true,
-        acceptance: { acceptanceRunId: 'stream-run', logicalCallId: 'synthesis:stream' },
+        acceptance: acceptance('stream-run', 'synthesis:stream'),
       });
     } catch (error) {
       assert.ok(error instanceof RouterHttpError);

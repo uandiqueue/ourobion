@@ -22,7 +22,7 @@
  */
 
 import { XMLParser } from 'fast-xml-parser';
-import type { Candidate, DiscoverFn, Identifiers, SourceCtx, Seed } from '../../types.js';
+import type { Candidate, DiscoverFn, Identifiers, MeshHeadingInfo, PublicationTypeInfo, SourceCtx, Seed } from '../../types.js';
 import { normalizeIdentifiers } from '../../identity.js';
 
 /** NCBI E-utilities base (https; all endpoints share it). */
@@ -77,16 +77,38 @@ interface ArticleNode {
   Abstract?: { AbstractText?: AbstractTextNode | AbstractTextNode[] | TextNode };
   AuthorList?: { Author?: AuthorNode | AuthorNode[] };
   Journal?: JournalNode;
+  PublicationTypeList?: { PublicationType?: TextNode | TextNode[] };
 }
 
 interface PubmedArticleNode {
   MedlineCitation?: {
     PMID?: TextNode;
     Article?: ArticleNode;
+    MeshHeadingList?: { MeshHeading?: { DescriptorName?: TextNode } | Array<{ DescriptorName?: TextNode }> };
   };
   PubmedData?: {
     ArticleIdList?: { ArticleId?: ArticleId | ArticleId[] };
   };
+}
+
+function publicationTypeOf(node: TextNode): PublicationTypeInfo | null {
+  const name = textOf(node);
+  if (name === '') return null;
+  const ui = typeof node === 'object' && node !== null && typeof node['@_UI'] === 'string'
+    ? node['@_UI'].trim() || null
+    : null;
+  return { ui, name };
+}
+
+function meshHeadingOf(node: { DescriptorName?: TextNode }): MeshHeadingInfo | null {
+  const descriptor = node.DescriptorName;
+  const name = textOf(descriptor);
+  if (name === '') return null;
+  const ui = typeof descriptor === 'object' && descriptor !== null && typeof descriptor['@_UI'] === 'string'
+    ? descriptor['@_UI'].trim() || null
+    : null;
+  const majorTopic = typeof descriptor === 'object' && descriptor !== null && descriptor['@_MajorTopicYN'] === 'Y';
+  return { ui, name, majorTopic };
 }
 
 interface EFetchResponse {
@@ -210,6 +232,12 @@ function articleToCandidate(node: PubmedArticleNode): Candidate | null {
   const year = parseYear(textOf(pubDate?.Year), textOf(pubDate?.MedlineDate));
 
   const title = textOf(article?.ArticleTitle) || '';
+  const publicationTypes = asArray(article?.PublicationTypeList?.PublicationType)
+    .map(publicationTypeOf)
+    .filter((value): value is PublicationTypeInfo => value !== null);
+  const meshHeadings = asArray(citation?.MeshHeadingList?.MeshHeading)
+    .map(meshHeadingOf)
+    .filter((value): value is MeshHeadingInfo => value !== null);
 
   return {
     identifiers,
@@ -218,6 +246,8 @@ function articleToCandidate(node: PubmedArticleNode): Candidate | null {
     year,
     venue: venue || null,
     abstract: abstractText(article?.Abstract),
+    ...(publicationTypes.length > 0 ? { publicationTypes } : {}),
+    ...(meshHeadings.length > 0 ? { meshHeadings } : {}),
     discoveredVia: 'pubmed',
   };
 }

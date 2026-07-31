@@ -16,15 +16,17 @@ import { fileURLToPath } from 'node:url';
 
 import {
   AttemptJournal,
+  acceptanceAuthorizationHash,
   logicalCallIdSha256,
   type AttemptReservationInput,
 } from '../src/attemptJournal.js';
 import { RouterAttemptJournalError } from '../src/errors.js';
+import { authorizationBinding, testAuthorization } from './helpers.js';
 
 const CHILD_SOURCE = String.raw`
 const { existsSync, writeFileSync } = await import('node:fs');
 const { setTimeout: delay } = await import('node:timers/promises');
-const { AttemptJournal } = await import('./src/attemptJournal.ts');
+const { AttemptJournal, acceptanceAuthorizationHash } = await import('./src/attemptJournal.ts');
 const { AJ_JOURNAL_PATH: journalPath, AJ_BARRIER_PATH: barrierPath } = process.env;
 const mode = process.env.AJ_MODE ?? 'reserve';
 const logicalCallId = process.env.AJ_LOGICAL_CALL_ID ?? 'verifier:shared-edge';
@@ -38,12 +40,23 @@ if (mode === 'crash-lock') {
 }
 
 while (!existsSync(barrierPath)) await delay(2);
+const authorization = { version: 1, authorizationId: 'child-authorization',
+  authorizationBasis: 'Child-process finite test authorization; no currency conversion.',
+  issuedAt: '2026-01-01T00:00:00.000Z', expiresAt: '2027-01-01T00:00:00.000Z',
+  providers: {
+    anthropic: { maxPostStarts: 100, maxReservedUsd: 5, priorPostStarts: 0, priorReservedUsd: 0 },
+    openai: { maxPostStarts: 3, maxReservedUsd: 5, priorPostStarts: 0, priorReservedUsd: 0 },
+    agnes: { maxPostStarts: 3, maxReservedUsd: 0, priorPostStarts: 0, priorReservedUsd: 0 } } };
 const journal = new AttemptJournal(journalPath);
-const input = { acceptanceRunId: 'process-run', logicalCallId, nodeId: 'synthesis',
+const input = { authorization, authorizationId: authorization.authorizationId,
+  authorizationHash: acceptanceAuthorizationHash(authorization),
+  authorizationBasis: authorization.authorizationBasis,
+  acceptanceRunId: 'process-run', logicalCallId, nodeId: 'synthesis',
   providerFamily: 'anthropic', model: 'claude-test-model', promptHash: 'sha256:' + 'a'.repeat(64),
   inputByteCeiling: 24_000, outputTokenCeiling: 3_072, reservedUsd: Number(reserved),
   price: { billingMode: 'metered', inputUsdPerMTok: 1, outputUsdPerMTok: 1,
-    provisional: false, pricingProvenance: null } };
+    provisional: false, pricingProvenance: 'child test fixture',
+    effectiveFrom: '2026-01-01T00:00:00.000Z', expiresAt: '2027-01-01T00:00:00.000Z' } };
 
 for (let retry = 0; retry < 1_000; retry++) {
   try {
@@ -62,6 +75,7 @@ const NOW = Date.UTC(2026, 6, 30, 12, 0, 0);
 
 function input(overrides: Partial<AttemptReservationInput> = {}): AttemptReservationInput {
   return {
+    ...authorizationBinding(),
     acceptanceRunId: 'run-1',
     logicalCallId: 'verifier:edge-1',
     nodeId: 'verifier',
@@ -77,7 +91,9 @@ function input(overrides: Partial<AttemptReservationInput> = {}): AttemptReserva
       inputUsdPerMTok: 1,
       outputUsdPerMTok: 1,
       provisional: false,
-      pricingProvenance: null,
+      pricingProvenance: 'test fixture',
+      effectiveFrom: '2026-01-01T00:00:00.000Z',
+      expiresAt: '2027-01-01T00:00:00.000Z',
     },
   };
 }
@@ -133,7 +149,7 @@ test('real child-process barrier: exactly three starts survive contention with a
     const successes = values.filter((value) => value.ok);
     assert.equal(successes.length, 3);
     assert.deepEqual(new Set(successes.map((value) => value.attempt)), new Set([1, 2, 3]));
-    assert.equal(values.filter((value) => /exhausted its 3 POST starts/.test(value.message ?? '')).length, 6);
+    assert.equal(values.filter((value) => /exhausted its 3 retry-safety POST starts/.test(value.message ?? '')).length, 6);
 
     const events = new AttemptJournal(path).readEvents();
     assert.equal(events.length, 6);
@@ -145,7 +161,7 @@ test('real child-process barrier: exactly three starts survive contention with a
   }
 });
 
-test('concurrent distinct logical ids cannot race the journal-wide US$5 ceiling', async () => {
+test('concurrent distinct logical ids cannot race a runtime provider US$5 ceiling', async () => {
   const { dir, path } = tempJournal();
   try {
     const barrier = join(dir, 'go');
@@ -160,7 +176,7 @@ test('concurrent distinct logical ids cannot race the journal-wide US$5 ceiling'
       return JSON.parse(result.stdout) as { ok: boolean; message?: string };
     });
     assert.equal(values.filter((value) => value.ok).length, 5);
-    assert.equal(values.filter((value) => /global US\$5 ceiling/.test(value.message ?? '')).length, 1);
+    assert.equal(values.filter((value) => /would exceed anthropic reserved USD/.test(value.message ?? '')).length, 1);
     const reserved = new AttemptJournal(path).readEvents()
       .filter((event) => event.kind === 'reserved')
       .reduce((sum, event) => sum + event.reservedUsd, 0);
@@ -170,21 +186,77 @@ test('concurrent distinct logical ids cannot race the journal-wide US$5 ceiling'
   }
 });
 
-test('global US$5 cap spans acceptance run ids and prompt/identity are frozen per logical call', () => {
+test('runtime provider cap spans acceptance run ids and prompt/identity are frozen per logical call', () => {
   const { dir, path } = tempJournal();
   try {
     const journal = new AttemptJournal(path);
-    journal.reserveAndStart(input({ reservedUsd: 2.6 }));
+    const authorization = testAuthorization((value) => { value.providers.agnes.maxReservedUsd = 5; });
+    journal.reserveAndStart(input({ ...authorizationBinding(authorization), reservedUsd: 2.6 }));
     assert.throws(
-      () => journal.reserveAndStart(input({ acceptanceRunId: 'run-2', logicalCallId: 'synthesis:edge-2', reservedUsd: 2.6 })),
-      /global US\$5 ceiling/,
+      () => journal.reserveAndStart(input({ ...authorizationBinding(authorization), acceptanceRunId: 'run-2', logicalCallId: 'synthesis:edge-2', reservedUsd: 2.6 })),
+      /would exceed agnes reserved USD/,
     );
     assert.throws(
-      () => journal.reserveAndStart(input({ promptHash: `sha256:${'c'.repeat(64)}` })),
+      () => journal.reserveAndStart(input({ ...authorizationBinding(authorization), promptHash: `sha256:${'c'.repeat(64)}` })),
       /changed identity, prompt, or ceilings/,
     );
   } finally {
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('runtime authorization requires non-empty provenance, is finite, and hashes provenance changes', () => {
+  const { dir, path } = tempJournal();
+  try {
+    const journal = new AttemptJournal(path, { now: () => NOW });
+    const valid = testAuthorization();
+    const changed = testAuthorization((value) => { value.authorizationBasis = 'Different owner directive and conversion rationale.'; });
+    assert.notEqual(acceptanceAuthorizationHash(valid), acceptanceAuthorizationHash(changed));
+
+    const blank = testAuthorization((value) => { value.authorizationBasis = '   '; });
+    assert.throws(
+      () => journal.reserveAndStart(input({ ...authorizationBinding(blank) })),
+      /authorization version\/id is invalid/,
+    );
+    const expired = testAuthorization((value) => { value.expiresAt = '2026-07-30T00:00:00.000Z'; });
+    assert.throws(
+      () => journal.reserveAndStart(input({ ...authorizationBinding(expired) })),
+      /authorization is not effective/,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('runtime provider accounting includes declared prior starts and prior spend', () => {
+  const starts = tempJournal();
+  const spend = tempJournal();
+  try {
+    const startAuthorization = testAuthorization((value) => {
+      value.providers.agnes = { maxPostStarts: 2, maxReservedUsd: 3, priorPostStarts: 1, priorReservedUsd: 2.5 };
+    });
+    const startJournal = new AttemptJournal(starts.path);
+    const first = startJournal.reserveAndStart(input({ ...authorizationBinding(startAuthorization), reservedUsd: 0.4 }));
+    assert.equal(first.authorizationBasis, startAuthorization.authorizationBasis);
+    assert.throws(
+      () => startJournal.reserveAndStart(input({
+        ...authorizationBinding(startAuthorization), logicalCallId: 'verifier:second', reservedUsd: 0.05,
+      })),
+      /would exceed agnes POST starts.*including prior starts/,
+    );
+
+    const spendAuthorization = testAuthorization((value) => {
+      value.providers.agnes = { maxPostStarts: 100, maxReservedUsd: 5, priorPostStarts: 0, priorReservedUsd: 4.9 };
+    });
+    assert.throws(
+      () => new AttemptJournal(spend.path).reserveAndStart(input({
+        ...authorizationBinding(spendAuthorization), reservedUsd: 0.2,
+      })),
+      /would exceed agnes reserved USD.*including prior spend/,
+    );
+  } finally {
+    rmSync(starts.dir, { recursive: true, force: true });
+    rmSync(spend.dir, { recursive: true, force: true });
   }
 });
 
@@ -198,6 +270,8 @@ test('zero-dollar reservations require complete immutable free-price metadata', 
       outputUsdPerMTok: 0,
       provisional: false as const,
       pricingProvenance: 'owner-confirmed free plan',
+      effectiveFrom: '2026-01-01T00:00:00.000Z',
+      expiresAt: '2027-01-01T00:00:00.000Z',
     };
     const reservation = journal.reserveAndStart(input({ reservedUsd: 0, price: freePrice }));
     assert.equal(reservation.reservedUsd, 0);
@@ -237,28 +311,47 @@ test('zero-dollar reservations require complete immutable free-price metadata', 
   }
 });
 
-test('family-specific caps span run ids and frozen family/model cannot widen them', () => {
+test('runtime family caps include prior starts and frozen family/model cannot widen them', () => {
   const { dir, path } = tempJournal();
   try {
     const journal = new AttemptJournal(path);
+    const authorization = testAuthorization((value) => {
+      value.providers.agnes = { maxPostStarts: 10, maxReservedUsd: 100, priorPostStarts: 0, priorReservedUsd: 0 };
+      value.providers.anthropic = { maxPostStarts: 3, maxReservedUsd: 100, priorPostStarts: 0, priorReservedUsd: 0 };
+    });
     let tenth;
-    for (let index = 1; index <= 10; index++) tenth = journal.reserveAndStart(input({ acceptanceRunId: `agnes-run-${index}`, reservedUsd: 0.1 }));
-    assert.equal(tenth!.attempt, 10);
-    assert.throws(() => journal.reserveAndStart(input({ acceptanceRunId: 'agnes-run-11', reservedUsd: 0.1 })),
-      /exhausted its 10 POST starts/);
+    for (let index = 1; index <= 10; index++) tenth = journal.reserveAndStart(input({
+      ...authorizationBinding(authorization), acceptanceRunId: `agnes-run-${index}`,
+      logicalCallId: `verifier:agnes-${index}`, reservedUsd: 0.1,
+    }));
+    assert.equal(tenth!.attempt, 1);
+    assert.throws(() => journal.reserveAndStart(input({
+      ...authorizationBinding(authorization), acceptanceRunId: 'agnes-run-11',
+      logicalCallId: 'verifier:agnes-11', reservedUsd: 0.1,
+    })), /would exceed agnes POST starts/);
     const anthropic = {
       logicalCallId: 'synthesis:stable', nodeId: 'synthesis' as const,
       providerFamily: 'anthropic' as const, model: 'claude-test-model', reservedUsd: 0.1,
     };
     let third;
-    for (let index = 1; index <= 3; index++) third = journal.reserveAndStart(input({ ...anthropic, acceptanceRunId: `anthropic-run-${index}` }));
-    assert.equal(third!.attempt, 3);
-    assert.throws(() => journal.reserveAndStart(input({ ...anthropic, acceptanceRunId: 'anthropic-run-4' })),
-      /exhausted its 3 POST starts/);
-    assert.throws(() => journal.reserveAndStart(input({ ...anthropic, providerFamily: 'agnes', model: 'agnes-forged' })),
+    for (let index = 1; index <= 3; index++) third = journal.reserveAndStart(input({
+      ...authorizationBinding(authorization), ...anthropic, logicalCallId: `synthesis:stable-${index}`,
+      acceptanceRunId: `anthropic-run-${index}`,
+    }));
+    assert.equal(third!.attempt, 1);
+    assert.throws(() => journal.reserveAndStart(input({
+      ...authorizationBinding(authorization), ...anthropic, logicalCallId: 'synthesis:stable-4', acceptanceRunId: 'anthropic-run-4',
+    })), /would exceed anthropic POST starts/);
+
+    const frozen = tempJournal();
+    const frozenJournal = new AttemptJournal(frozen.path);
+    const stable = input({ ...authorizationBinding(authorization), ...anthropic });
+    frozenJournal.reserveAndStart(stable);
+    assert.throws(() => frozenJournal.reserveAndStart(input({ ...authorizationBinding(authorization), ...anthropic, providerFamily: 'agnes', model: 'agnes-forged' })),
       /changed identity, prompt, or ceilings/);
-    assert.throws(() => journal.reserveAndStart(input({ ...anthropic, model: 'claude-forged' })),
+    assert.throws(() => frozenJournal.reserveAndStart(input({ ...authorizationBinding(authorization), ...anthropic, model: 'claude-forged' })),
       /changed identity, prompt, or ceilings/);
+    rmSync(frozen.dir, { recursive: true, force: true });
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -420,6 +513,7 @@ test('terminal outcomes cannot mutate any immutable reservation field', () => {
     const reservation = journal.reserveAndStart(input());
     const mutations: Array<[string, typeof reservation]> = [
       ['acceptanceRunId', { ...reservation, acceptanceRunId: 'run-other' }],
+      ['authorizationBasis', { ...reservation, authorizationBasis: 'changed basis' }],
       ['logicalCallId', { ...reservation, logicalCallId: 'verifier:other' }],
       ['nodeId', { ...reservation, nodeId: 'synthesis' }],
       ['providerFamily', { ...reservation, providerFamily: 'anthropic' }],

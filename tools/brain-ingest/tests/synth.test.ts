@@ -32,6 +32,7 @@ import {
 import type { SynthClaim, SynthPair, SynthRawRecord } from '../src/synth/index.js';
 import type { LlmRequest, LlmResponse } from '../../llm-router/src/index.js';
 import { logicalCallIdSha256 } from '../../llm-router/src/index.js';
+import { testAcceptanceAuthorization } from './acceptanceHelpers.js';
 
 // ── fixtures ─────────────────────────────────────────────────────────────────
 
@@ -42,6 +43,8 @@ const FIXTURE_TEXT =
   'Higher gut comfort was associated with better mood in the studied cohort of healthy adults. ' +
   'A closing sentence about methods and limitations.';
 const QUOTE = 'Higher gut comfort was associated with better mood in the studied cohort of healthy adults.';
+const PAPER_METADATA = new Map([[PAPER_ID, { title: 'Fixture paper', year: 2026, evidenceTier: 3 as const }]]);
+const AUTHORIZATION = testAcceptanceAuthorization();
 
 const PAIR: SynthPair = pairFromKeys('gut_comfort_score', 'mood_score', [
   'gut',
@@ -89,6 +92,7 @@ function ctxWith(validateClaim: ClaimValidator, over: Record<string, unknown> = 
     pair: PAIR,
     allowedPaperIds: [PAPER_ID],
     texts: texts(),
+    paperMetadata: PAPER_METADATA,
     validateClaim,
     validateCopy,
     synthesisModel: 'test-model',
@@ -152,6 +156,25 @@ test('postprocess: a valid claim passes; edgeId normalized; offsets backfilled',
   // provenance stamped by the pipeline
   assert.equal(claim.synthesisModel, 'test-model');
   assert.equal(claim.promptVersion, 'synthesis-test.1');
+});
+
+test('postprocess: citation title/year/evidenceTier are overwritten from corpus metadata', async () => {
+  const validateClaim = await loadClaimValidator();
+  const raw = validRawClaim({
+    citations: [{
+      paperId: PAPER_ID,
+      title: 'MODEL HALLUCINATION',
+      year: 1900,
+      population: 'healthy adults',
+      evidenceTier: 2,
+      impactTier: 'moderate',
+      stance: 'supports',
+    }],
+  });
+  const result = processSynthesisResponse(JSON.stringify({ claims: [raw] }), ctxWith(validateClaim));
+  assert.equal(result.accepted[0]?.citations[0]?.title, 'Fixture paper');
+  assert.equal(result.accepted[0]?.citations[0]?.year, 2026);
+  assert.equal(result.accepted[0]?.citations[0]?.evidenceTier, 3);
 });
 
 test('postprocess: a fabricated quote is rejected by A9 quoteCheck', async () => {
@@ -311,6 +334,7 @@ test('synthesize: end-to-end accepts the grounded claim, rejects the fabricated 
     const result = await synthesize({
       pairs: [PAIR],
       paperUids: [PAPER_ID],
+      paperMetadata: PAPER_METADATA,
       edgesDir: dir,
       router,
       textLoader: async (id) => (id === PAPER_ID ? FIXTURE_TEXT : null),
@@ -368,12 +392,13 @@ test('synthesize acceptance: schema retry reuses one logical id and retains prov
     const result = await synthesize({
       pairs: [PAIR],
       paperUids: [PAPER_ID],
+      paperMetadata: PAPER_METADATA,
       edgesDir: dir,
       router,
       textLoader: async () => FIXTURE_TEXT,
       validateClaim,
       activeMetricKeys: new Set(['gut_comfort_score', 'mood_score']),
-      acceptance: { acceptanceRunId: 'acceptance-1' },
+      acceptance: { acceptanceRunId: 'acceptance-1', authorization: AUTHORIZATION },
       maxAttempts: 3,
       now: () => Date.parse('2026-07-16T00:00:00.000Z'),
     });
@@ -408,6 +433,7 @@ test('synthesize acceptance: a valid adverse empty claim set does not retry or f
     const result = await synthesize({
       pairs: [PAIR],
       paperUids: [PAPER_ID],
+      paperMetadata: PAPER_METADATA,
       edgesDir: dir,
       router: {
         async route(req: LlmRequest): Promise<LlmResponse> {
@@ -434,7 +460,7 @@ test('synthesize acceptance: a valid adverse empty claim set does not retry or f
       textLoader: async () => FIXTURE_TEXT,
       validateClaim,
       activeMetricKeys: new Set(['gut_comfort_score', 'mood_score']),
-      acceptance: { acceptanceRunId: 'acceptance-2' },
+      acceptance: { acceptanceRunId: 'acceptance-2', authorization: AUTHORIZATION },
       maxAttempts: 3,
     });
     assert.equal(requests.length, 1);
@@ -458,6 +484,7 @@ test('synthesize acceptance: terminal enforcement rejection still persists pair-
     const result = await synthesize({
       pairs: [PAIR],
       paperUids: [PAPER_ID],
+      paperMetadata: PAPER_METADATA,
       edgesDir: dir,
       router: {
         async route(): Promise<LlmResponse> {
@@ -488,7 +515,7 @@ test('synthesize acceptance: terminal enforcement rejection still persists pair-
       textLoader: async () => FIXTURE_TEXT,
       validateClaim,
       activeMetricKeys: new Set(['gut_comfort_score', 'mood_score']),
-      acceptance: { acceptanceRunId: 'acceptance-terminal-reject' },
+      acceptance: { acceptanceRunId: 'acceptance-terminal-reject', authorization: AUTHORIZATION },
       maxAttempts: 1,
     });
     assert.equal(requests, 1);
@@ -510,6 +537,7 @@ test('synthesize: rejects an explicit pair whose endpoint is not an active metri
     synthesize({
       pairs: [pairFromKeys('gut_comfort_score', 'not_a_metric')],
       paperUids: [PAPER_ID],
+      paperMetadata: PAPER_METADATA,
       router: { async route() { throw new Error('should not be called'); } },
       textLoader: async () => FIXTURE_TEXT,
       validateClaim,

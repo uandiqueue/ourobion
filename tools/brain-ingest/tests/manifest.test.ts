@@ -125,6 +125,33 @@ test('re-opening the manifest (restart) sees the latest record per uid', () => {
   }
 });
 
+test('manifest reconstruction round-trips exact PubMed publication types and MeSH headings', () => {
+  const dir = tmpCorpus();
+  try {
+    Manifest.open(dir).upsert(rec('doi:10.1/indexed', {
+      publicationTypes: [
+        { ui: 'D016449', name: 'Randomized Controlled Trial' },
+        { ui: 'D017418', name: 'Meta-Analysis' },
+      ],
+      meshHeadings: [
+        { ui: 'D000818', name: 'Animals', majorTopic: false },
+        { ui: 'D006801', name: 'Humans', majorTopic: true },
+      ],
+    }));
+    const reconstructed = Manifest.open(dir).get('doi:10.1/indexed')!;
+    assert.deepEqual(reconstructed.publicationTypes, [
+      { ui: 'D016449', name: 'Randomized Controlled Trial' },
+      { ui: 'D017418', name: 'Meta-Analysis' },
+    ]);
+    assert.deepEqual(reconstructed.meshHeadings, [
+      { ui: 'D000818', name: 'Animals', majorTopic: false },
+      { ui: 'D006801', name: 'Humans', majorTopic: true },
+    ]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('parseJsonl tolerates a torn trailing line (hard crash mid-append)', () => {
   const dir = tmpCorpus();
   const path = join(dir, MANIFEST_FILENAME);

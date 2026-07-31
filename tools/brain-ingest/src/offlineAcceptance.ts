@@ -12,12 +12,15 @@ import type { Stats } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 
 import { familyOf, loadConfig as loadRouterConfig } from '../../llm-router/src/config.js';
+import type { AcceptanceAuthorization } from '../../llm-router/src/types.js';
 import { loadActiveMetricKeys, loadClaimValidator, loadCopyValidator, repoRoot } from './synth/load.js';
 import { assembleSynthesisInput, pairFromKeys } from './synth/index.js';
 import { toJsonl as claimsToJsonl } from './synth/artifact.js';
 import { processSynthesisResponse } from './synth/postprocess.js';
 import { PROMPT_VERSION } from './synth/prompt.js';
 import type { SynthClaim } from './synth/types.js';
+import type { PaperCitationMetadata, SynthPair, AssembledSynthesisInput } from './synth/types.js';
+import type { CorpusDoc } from './verify/types.js';
 import { corpusTexts, loadCorpusFromText } from './verify/corpus.js';
 import { verify } from './verify/verifier.js';
 
@@ -34,6 +37,22 @@ export interface OfflineAcceptanceBundle {
   corpus: string;
   /** Relative-to-bundle frozen A8 response; no provider is contacted. */
   synthesisResponse: string;
+  /** Required by live acceptance; omitted by portable fixture-only bundles. */
+  sourceRevision?: string;
+  /** Required and validated by live acceptance; portable offline fixtures omit it. */
+  acceptanceAuthorization?: AcceptanceAuthorization;
+}
+
+export interface PreparedOfflineAcceptance {
+  bundle: OfflineAcceptanceBundle;
+  bundlePath: string;
+  corpus: CorpusDoc[];
+  texts: ReadonlyMap<string, string>;
+  paperMetadata: ReadonlyMap<string, PaperCitationMetadata>;
+  pair: SynthPair;
+  assembled: AssembledSynthesisInput;
+  acceptedClaims: SynthClaim[];
+  manifest: Record<string, unknown>;
 }
 
 function requireString(value: unknown, name: string): string {
@@ -65,6 +84,12 @@ function readBundle(bytes: Buffer): OfflineAcceptanceBundle {
     paperUids: paperUids as string[],
     corpus: requireString(raw.corpus, 'corpus'),
     synthesisResponse: requireString(raw.synthesisResponse, 'synthesisResponse'),
+    ...(raw.sourceRevision !== undefined
+      ? { sourceRevision: requireString(raw.sourceRevision, 'sourceRevision') }
+      : {}),
+    ...(raw.acceptanceAuthorization !== undefined
+      ? { acceptanceAuthorization: structuredClone(raw.acceptanceAuthorization) as AcceptanceAuthorization }
+      : {}),
   };
 }
 
@@ -147,15 +172,29 @@ export function encodeClaimsJsonl(claims: readonly SynthClaim[]): Buffer {
  * Run only the deterministic acceptance contract. `dryRun` is intentionally
  * mandatory: a future provider leg must be a distinct reviewed command.
  */
-export async function runOfflineAcceptance(bundlePath: string, dryRun: boolean): Promise<Record<string, unknown>> {
-  if (!dryRun) throw new Error('offline-acceptance: --dry-run is required; this command never dispatches providers');
+export async function prepareOfflineAcceptance(bundlePath: string): Promise<PreparedOfflineAcceptance> {
   const bundleInput = readFrozenFile(bundlePath, 'bundle');
   const bundle = readBundle(bundleInput.bytes);
   const bundleRoot = realpathSync(dirname(bundleInput.path));
   const corpusInput = readBundleFile(bundleRoot, bundle.corpus, 'corpus');
   const responseInput = readBundleFile(bundleRoot, bundle.synthesisResponse, 'synthesis response');
   const corpus = loadCorpusFromText(corpusInput.bytes.toString('utf8'), corpusInput.path);
+  for (const doc of corpus) {
+    if (
+      doc.evidenceInputs === undefined ||
+      doc.evidenceClassification?.status !== 'classified' ||
+      doc.evidenceClassification.tier !== doc.evidenceTier ||
+      doc.evidenceClassification.assignedTier !== doc.evidenceTier ||
+      doc.evidenceClassification.reviewRequired
+    ) {
+      throw new Error(`offline-acceptance: paper '${doc.paperId}' lacks a matching classified evidence-tier posture`);
+    }
+  }
   const texts = corpusTexts(corpus);
+  const paperMetadata = new Map(corpus.map((doc) => [
+    doc.paperId,
+    { title: doc.title, year: doc.year, evidenceTier: doc.evidenceTier },
+  ]));
   for (const paperUid of bundle.paperUids) {
     if (!texts.has(paperUid)) throw new Error(`offline-acceptance: corpus lacks frozen paper '${paperUid}'`);
   }
@@ -174,11 +213,16 @@ export async function runOfflineAcceptance(bundlePath: string, dryRun: boolean):
   }
   if (bundle.pair[0] === bundle.pair[1]) throw new Error('offline-acceptance: pair endpoints must differ');
   const pair = pairFromKeys(bundle.pair[0], bundle.pair[1]);
-  const assembled = assembleSynthesisInput(pair, new Map(bundle.paperUids.map((id) => [id, texts.get(id)!])));
+  const assembled = assembleSynthesisInput(
+    pair,
+    new Map(bundle.paperUids.map((id) => [id, texts.get(id)!])),
+    { paperMetadata },
+  );
   const processed = processSynthesisResponse(responseInput.bytes.toString('utf8'), {
     pair,
     allowedPaperIds: bundle.paperUids,
     texts,
+    paperMetadata,
     validateClaim: await loadClaimValidator(root),
     validateCopy: await loadCopyValidator(root),
     synthesisModel: `config:${routerConfig.nodes.synthesis.model}`,
@@ -209,7 +253,7 @@ export async function runOfflineAcceptance(bundlePath: string, dryRun: boolean):
   // The manifest intentionally has hashes and non-secret configuration identity
   // only. Attempts, tokens, costs and latency are literal zero because no route
   // or network capability is available in this command.
-  return {
+  const manifest = {
     schema: 'ourobion.offline-acceptance.v1',
     mode: 'dry-run',
     acceptanceRunId: bundle.acceptanceRunId,
@@ -235,6 +279,8 @@ export async function runOfflineAcceptance(bundlePath: string, dryRun: boolean):
         fullMode: verification.results.every((result) => result.triage.mode === 'full'),
         retrievalPerformed: verification.results.every((result) => result.retrieval?.performed === true),
         retrievalSources: verification.results.map((result) => result.retrieval!.sources.length),
+        retrievalPaperIds: verification.results.map((result) =>
+          result.retrieval!.sources.map((source) => source.paperId)),
       },
     },
     artifacts: {
@@ -248,4 +294,20 @@ export async function runOfflineAcceptance(bundlePath: string, dryRun: boolean):
     // contain paper passages, so retain only its hash/size in the manifest.
     synthesisPrompt: { sha256: sha256(assembled.prompt), bytes: Buffer.byteLength(assembled.prompt, 'utf8') },
   };
+  return {
+    bundle,
+    bundlePath: bundleInput.path,
+    corpus,
+    texts,
+    paperMetadata,
+    pair,
+    assembled,
+    acceptedClaims: processed.accepted,
+    manifest,
+  };
+}
+
+export async function runOfflineAcceptance(bundlePath: string, dryRun: boolean): Promise<Record<string, unknown>> {
+  if (!dryRun) throw new Error('offline-acceptance: --dry-run is required; this command never dispatches providers');
+  return (await prepareOfflineAcceptance(bundlePath)).manifest;
 }

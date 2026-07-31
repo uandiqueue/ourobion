@@ -31,6 +31,7 @@ import { corpusTexts, loadCorpusFromFile } from './verify/corpus.js';
 import { LlmRouter } from '../../llm-router/src/index.js';
 import { runSinglePaper } from './singlePaper.js';
 import { runOfflineAcceptance } from './offlineAcceptance.js';
+import { runLiveAcceptance, type LiveAcceptanceLeg } from './liveAcceptance.js';
 
 const USAGE = `ourobion brain-ingest — open-access-first paper-corpus fetcher
 
@@ -72,6 +73,9 @@ Commands:
                                                    local-only request/response intake; no remote routing.
   offline-acceptance --bundle <file> --dry-run
                                                    frozen A8 → A9 → A10 preflight; no provider, R2, or DB.
+  live-acceptance --bundle <file> --leg <anthropic-synthesis|openai-synthesis|agnes-verification> --execute
+                                                   one ordered provider leg after offline preflight;
+                                                   fixed journal/state, no R2 or DB.
   venue --issn <issn> [--sjr-quartile 1-4]         b2 venue lookup: OpenAlex Source stats +
                                                    C8 impactTier band (per-ISSN cache)
 
@@ -491,6 +495,19 @@ async function runOfflineAcceptanceCli(flags: Set<string>, options: Map<string, 
   return 0;
 }
 
+async function runLiveAcceptanceCli(flags: Set<string>, options: Map<string, string>): Promise<number> {
+  const bundle = options.get('bundle');
+  const leg = options.get('leg');
+  const allowed: readonly string[] = ['anthropic-synthesis', 'openai-synthesis', 'agnes-verification'];
+  if (!bundle || !flags.has('execute') || leg === undefined || !allowed.includes(leg)) {
+    process.stderr.write('live-acceptance: --bundle <file>, a valid --leg, and explicit --execute are required\n');
+    return 2;
+  }
+  const manifest = await runLiveAcceptance(bundle, leg as LiveAcceptanceLeg);
+  process.stdout.write(JSON.stringify(manifest, null, 2) + '\n');
+  return 0;
+}
+
 /** CLI main — returns the process exit code. Async: the pipeline verbs await `run`. */
 export async function main(argv: string[]): Promise<number> {
   const { command, flags, options } = parseArgs(argv);
@@ -504,6 +521,7 @@ export async function main(argv: string[]): Promise<number> {
     return runCheckConfig();
   }
   if (command === 'offline-acceptance') return runOfflineAcceptanceCli(flags, options);
+  if (command === 'live-acceptance') return runLiveAcceptanceCli(flags, options);
 
   try {
     switch (command) {
