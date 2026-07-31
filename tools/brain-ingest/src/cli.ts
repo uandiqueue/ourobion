@@ -519,6 +519,17 @@ async function runSynthesizePapersCli(
   }
 
   const numeric = (key: string): number | null | undefined => {
+    // FAIL CLOSED on a malformed ceiling. `parseArgs` files `--max-usd -5` (and a bare
+    // `--max-usd` with no value at all) under `flags`, not `options`, because the next token
+    // starts with '-'. Reading only `options` would silently mean "no ceiling" — a spend guard
+    // that vanishes when you typo it is worse than no guard, so refuse instead of defaulting.
+    if (flags.has(key)) {
+      process.stderr.write(
+        `synthesize-papers: --${key} needs a non-negative value (use --${key}=<n>; ` +
+          'a negative or missing value is refused rather than treated as "no ceiling")\n',
+      );
+      return null;
+    }
     const raw = options.get(key);
     if (raw === undefined) return undefined;
     const value = Number(raw);

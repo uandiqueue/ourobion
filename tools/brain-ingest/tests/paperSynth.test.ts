@@ -170,6 +170,30 @@ test('#300: the new synth sources carry NO literal NUL byte (runtime NUL separat
   assert.ok(blueprintDedupeKey(BLUEPRINT).includes('\0'), 'the runtime separator is still a NUL');
 });
 
+test('#300 G2: a malformed budget ceiling is REFUSED, never silently treated as no ceiling', async () => {
+  const { main } = await import('../src/cli.js');
+  const errors: string[] = [];
+  const write = process.stderr.write.bind(process.stderr);
+  (process.stderr as unknown as { write: (s: string) => boolean }).write = (s: string) => {
+    errors.push(s);
+    return true;
+  };
+  try {
+    // `parseArgs` files `--max-usd -5` under flags (the next token starts with '-'), so reading
+    // only `options` would mean "uncapped". A spend guard must never fail open.
+    for (const argv of [
+      ['synthesize-papers', '--paper', 'p1', '--max-usd', '-5'],
+      ['synthesize-papers', '--paper', 'p1', '--max-calls'],
+    ]) {
+      errors.length = 0;
+      assert.equal(await main(argv), 2, `${argv.join(' ')} must exit 2, not run uncapped`);
+      assert.match(errors.join(''), /needs a non-negative value|must be a non-negative number/);
+    }
+  } finally {
+    (process.stderr as unknown as { write: typeof write }).write = write;
+  }
+});
+
 // ─── §B · mechanism as a second verbatim quote ───────────────────────────────
 
 test('#300 §B: the mechanism rides quoteSpans as a SECOND VERBATIM quote, marked via locator', () => {

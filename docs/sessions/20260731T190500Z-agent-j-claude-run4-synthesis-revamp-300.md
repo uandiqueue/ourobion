@@ -160,6 +160,13 @@ All at exact head on the toolchain Node (`v26.3.0`, satisfies the `>=26` pin):
 - The §A fixture reproduces the measured defect: `comfort` occurs **0** times in it while
   `depressive` does, so a `defaultTermsForKeys(['gut_comfort_score'])` window provably could not
   have surfaced the evidence sentence, and the test asserts whole-paper input does.
+- **A fail-open on the budget guard, found by driving the CLI rather than only unit-testing it.**
+  `parseArgs` files `--max-usd -5` (and a bare `--max-usd` with no value) under `flags`, not
+  `options`, because the next token starts with `-`. Reading only `options` therefore meant a
+  malformed ceiling silently became **"no ceiling"** — a spend guard that vanishes when mistyped is
+  worse than no guard. Both now **exit 2** with a message naming the `--max-usd=<n>` form, with a
+  test driving `main()` for both shapes. The shared `parseArgs` was deliberately **not** changed:
+  other verbs and their tests depend on its current behaviour, so the refusal is scoped to this verb.
 - One `tools/rules` run showed `A14 empty blueprint set` failing at **1619 ms**; it passes at
   **238 ms** on re-run and **172/172** on the merged base. Cold-start flake, **not** caused by this
   change — recorded rather than quietly re-run.
