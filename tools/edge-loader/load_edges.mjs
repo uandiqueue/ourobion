@@ -128,7 +128,7 @@ function readFromDir(dir, expected) {
   return { claimsText, verificationsText, sourceLabel: `dir ${dir}` };
 }
 
-async function readFromR2() {
+async function readFromR2(expected) {
   const required = ['R2_ENDPOINT', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET'];
   const missing = required.filter((k) => !process.env[k]?.trim());
   if (missing.length > 0) {
@@ -146,23 +146,39 @@ async function readFromR2() {
     },
   });
   const bucket = process.env.R2_BUCKET;
-  const getText = async (key, { optional = false } = {}) => {
+  const getBytes = async (key, { optional = false } = {}) => {
     try {
       const out = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
-      return await out.Body.transformToString('utf-8');
+      return Buffer.from(await out.Body.transformToByteArray());
     } catch (err) {
       const notFound =
         err?.name === 'NoSuchKey' || err?.name === 'NotFound' || err?.$metadata?.httpStatusCode === 404;
       if (notFound && optional) {
         console.warn(`! r2: no ${key} — loading claims only (nothing servable)`);
-        return '';
+        return null;
       }
       throw err;
     }
   };
-  const claimsText = await getText(R2_CLAIMS_KEY);
-  const verificationsText = await getText(R2_VERIFICATIONS_KEY, { optional: true });
+  const claimsBytes = await getBytes(R2_CLAIMS_KEY);
+  const verificationsBytes = await getBytes(R2_VERIFICATIONS_KEY, { optional: true });
+  const { claimsText, verificationsText } = decodePinnedR2Artifacts(claimsBytes, verificationsBytes, expected);
   return { claimsText, verificationsText, sourceLabel: `r2 ${bucket}` };
+}
+
+/** Hash the exact downloaded bytes, then decode those same Buffers once. */
+export function decodePinnedR2Artifacts(claimsBytes, verificationsBytes, expected) {
+  if (!Buffer.isBuffer(claimsBytes)) throw new Error(`expected artifact ${CLAIMS_BASENAME} is missing`);
+  if (expected) {
+    if (!Buffer.isBuffer(verificationsBytes)) throw new Error(`expected artifact ${VERIFICATIONS_BASENAME} is missing`);
+    if (sha256(claimsBytes) !== expected.claims || sha256(verificationsBytes) !== expected.verifications) {
+      throw new Error('R2 edge artifact SHA-256 mismatch; nothing loaded');
+    }
+  }
+  return {
+    claimsText: claimsBytes.toString('utf8'),
+    verificationsText: verificationsBytes === null ? '' : verificationsBytes.toString('utf8'),
+  };
 }
 
 // ── database projection ──────────────────────────────────────────────────────────────────────────
@@ -370,10 +386,12 @@ async function main() {
     process.exit(2);
   }
 
-  const expected = expectedArtifactHashes(Boolean(args.noPrune && args.fromDir));
+  // Incremental projection must always be bound to both exact artifact bytes,
+  // regardless of whether those bytes were staged locally or read from R2.
+  const expected = expectedArtifactHashes(Boolean(args.noPrune));
   const { claimsText, verificationsText, sourceLabel } = args.fromDir
     ? readFromDir(args.fromDir, expected)
-    : await readFromR2();
+    : await readFromR2(expected);
 
   const { claimRows, verificationRows, errors } = buildLoad(claimsText, verificationsText);
 

@@ -56,7 +56,7 @@ export function TopBar() {
       <button
         type="button"
         className="topbar__brand"
-        onClick={() => router.push('/')}
+        onClick={() => router.push('/overview')}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img className="topbar__mark" src="/brand/nao-mark-dark.svg" alt="ourobion nao — Overview" />

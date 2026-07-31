@@ -135,6 +135,31 @@ const _rulesCardJson = '''
 ''';
 
 void main() {
+  group('citation paper links', () {
+    test('real DOI metadata becomes the canonical HTTPS resolver', () {
+      const citation = ProvenanceCitation(
+        paperId: 'doi:10.1016/j.isci.2026.116224',
+        title: 'Unraveling the gut microbiota-brain axis',
+        year: 2026,
+      );
+      expect(
+        citation.paperUri,
+        Uri.parse('https://doi.org/10.1016/j.isci.2026.116224'),
+      );
+    });
+
+    test('internal IDs and active-content strings never become links', () {
+      for (final paperId in [
+        'corpus:01TEST',
+        'paper-1',
+        'javascript:alert(1)',
+        'https://example.com/not-a-doi',
+      ]) {
+        expect(ProvenanceCitation(paperId: paperId).paperUri, isNull);
+      }
+    });
+  });
+
   group('InsightProvenance.fromJson — edge card (fully cited)', () {
     final p = InsightProvenance.fromJson(_json(_edgeCardJson));
 
