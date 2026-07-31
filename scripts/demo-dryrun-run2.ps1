@@ -83,6 +83,8 @@ $UsdToSgd = 1.29  # assumed conversion rate for the budget report (state it, don
 
 # ---------------------------------------------------------------- helpers
 
+. (Join-Path $PSScriptRoot 'lib\native-process.ps1')
+
 function Add-Result([string]$Name, [string]$Status, [string]$Evidence) {
   [void]$script:Results.Add([pscustomobject]@{ Step = $Name; Status = $Status; Evidence = $Evidence })
   $color = 'Green'
@@ -121,20 +123,19 @@ function Assert-LocalSupabaseApiUrl([string]$Url) {
   Assert $isLocal 'this dry-run accepts only the exact local Supabase CLI API origin (http://127.0.0.1:54321 or localhost)'
 }
 
-# Run a native command, merging stderr (stderr lines are informational for most CLIs here).
+# Run a native command through the PS 5.1-safe Process wrapper. Stderr is
+# diagnostic output, not a failure signal; Process.ExitCode is authoritative.
 function Invoke-Native([string]$Exe, [string[]]$Arguments, [string]$WorkDir) {
-  Push-Location $WorkDir
-  try {
-    $out = & $Exe @Arguments 2>&1 | ForEach-Object { "$_" }
-    $code = $LASTEXITCODE
-  } finally { Pop-Location }
-  return @{ Output = ($out -join "`n"); ExitCode = $code }
+  if ($Exe -eq 'npm' -or $Exe -eq 'npx') {
+    return Invoke-NodePackageCli -Cli $Exe -Arguments $Arguments -WorkDir $WorkDir
+  }
+  return Invoke-NativeProcess -Exe $Exe -Arguments $Arguments -WorkDir $WorkDir
 }
 
 function Invoke-Sql([string]$Sql) {
-  $out = $Sql | & docker exec -i supabase_db_ourobion psql -U postgres -d postgres -v ON_ERROR_STOP=1 -tA 2>&1 | ForEach-Object { "$_" }
-  if ($LASTEXITCODE -ne 0) { throw "psql failed (exit $LASTEXITCODE): $($out -join ' | ') -- SQL: $Sql" }
-  return ($out -join "`n").Trim()
+  $result = Invoke-NativeProcess -Exe 'docker' -Arguments @('exec', '-i', 'supabase_db_ourobion', 'psql', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-tA') -WorkDir $script:RepoRoot -StandardInput $Sql
+  if ($result.ExitCode -ne 0) { throw "psql failed (exit $($result.ExitCode)): $($result.Output -replace "`r?`n", ' | ') -- SQL: $Sql" }
+  return $result.Output.Trim()
 }
 
 function Invoke-Api {
@@ -536,9 +537,10 @@ Invoke-Step 'S8 start nao dev server' -Critical {
   $naoDir = Join-Path $script:RepoRoot 'apps\nao'
   $log = Join-Path $env:TEMP 'nao-dev-dryrun.log'
   $errLog = Join-Path $env:TEMP 'nao-dev-dryrun.err.log'
-  $script:NaoProc = Start-Process -FilePath 'cmd.exe' `
-    -ArgumentList '/c', "npm run dev -- -p $NaoPort" -WorkingDirectory $naoDir `
-    -RedirectStandardOutput $log -RedirectStandardError $errLog -PassThru -WindowStyle Hidden
+  $npm = Resolve-NodePackageCli 'npm'
+  $script:NaoProc = Start-NativeBackgroundProcess -Exe $npm.NodePath `
+    -Arguments @($npm.CliPath, 'run', 'dev', '--', '-p', $NaoPort) -WorkDir $naoDir `
+    -StandardOutputPath $log -StandardErrorPath $errLog
   $up = $false
   foreach ($i in 1..90) {
     Start-Sleep -Seconds 2
@@ -1182,8 +1184,15 @@ Invoke-Step 'S9 LLM spend report (exact ledger numbers, both providers)' {
 # ---------------------------------------------------------------- teardown + summary
 
 if ($null -ne $script:NaoProc -and -not $KeepNao) {
-  & taskkill /PID $script:NaoProc.Id /T /F 2>&1 | Out-Null
-  Write-Host "`nnao dev server (pid $($script:NaoProc.Id)) stopped." -ForegroundColor DarkGray
+  $naoTeardown = Complete-NativeProcessTeardown -ProcessId $script:NaoProc.Id -OnFailure {
+    param([string]$Error)
+    Add-Result 'Final teardown nao dev server' 'FAIL' "pid $($script:NaoProc.Id): $Error"
+  }
+  if ($naoTeardown.Succeeded) {
+    Write-Host "`nnao dev server (pid $($script:NaoProc.Id)) stopped." -ForegroundColor DarkGray
+  } else {
+    Write-Host "`nnao dev server (pid $($script:NaoProc.Id)) teardown FAILED: $($naoTeardown.Error)" -ForegroundColor Red
+  }
 } elseif ($null -ne $script:NaoProc) {
   Write-Host "`nnao dev server left RUNNING on :$NaoPort (pid $($script:NaoProc.Id)) -- demo user $DemoEmail / password as passed." -ForegroundColor Yellow
 }
