@@ -64,4 +64,68 @@ export async function loadActiveMetricKeys(root = repoRoot()): Promise<Set<strin
   return new Set(metrics.filter((m) => m.status === 'active').map((m) => m.key));
 }
 
+/**
+ * One active metric as the whole-paper prompt names it (#300 §A).
+ *
+ * Whole-paper synthesis no longer hands the model keyword terms — it hands it the
+ * VOCABULARY OF METRICS and the entire paper, and lets the model decide which
+ * relationships the paper actually supports. The human-readable `label` is included
+ * because `gut_comfort_score` alone under-describes the metric, and the model has to
+ * recognise the concept in prose that never uses the key.
+ *
+ * This is NOT a synonym map. Nothing here is a hand-maintained alias list a human must
+ * extend before a new pair can be researched — it is the registry's own `ui.label`,
+ * which already exists for every metric and is maintained for the app UI regardless.
+ */
+export interface ActiveMetricDescriptor {
+  key: string;
+  label: string | null;
+  unit: string | null;
+}
+
+/**
+ * Load the ACTIVE metric catalogue (key + registry `ui.label` + unit) for the whole-paper
+ * prompt. Same runtime dynamic-import pattern as the other loaders, so `shared/` stays out
+ * of this package's `tsc` include.
+ */
+export async function loadActiveMetricCatalogue(
+  root = repoRoot(),
+): Promise<ActiveMetricDescriptor[]> {
+  const registryUrl = pathToFileURL(join(root, 'shared', 'metrics', 'registry.ts')).href;
+  const mod = (await import(registryUrl)) as {
+    METRICS?: ReadonlyArray<{
+      key: string;
+      status: string;
+      unit: string | null;
+      ui: { label: string } | null;
+    }>;
+  };
+  if (!mod.METRICS) {
+    throw new Error(`synth: shared/metrics/registry.ts exported no METRICS (${registryUrl})`);
+  }
+  return mod.METRICS.filter((m) => m.status === 'active').map((m) => ({
+    key: m.key,
+    label: m.ui?.label ?? null,
+    unit: m.unit ?? null,
+  }));
+}
+
+/** The shared blueprint zod gate, kept structurally opaque in this package (#300 §D). */
+export type BlueprintValidator = (blueprint: unknown) => Record<string, unknown>;
+
+/**
+ * Load `validateBlueprint` from shared/rules/rule.schema.ts (#300 §D). It throws a ZodError on
+ * any contract violation — including the non-diagnostic copy gate over `template.title` /
+ * `template.body`, which the schema already enforces via `validateCopyString`. So an extracted
+ * blueprint carrying diagnostic copy can never reach the artifact.
+ */
+export async function loadBlueprintValidator(root = repoRoot()): Promise<BlueprintValidator> {
+  const url = pathToFileURL(join(root, 'shared', 'rules', 'rule.schema.ts')).href;
+  const mod = (await import(url)) as { validateBlueprint?: (b: unknown) => unknown };
+  if (typeof mod.validateBlueprint !== 'function') {
+    throw new Error(`synth: shared/rules/rule.schema.ts exported no validateBlueprint (${url})`);
+  }
+  return mod.validateBlueprint as BlueprintValidator;
+}
+
 export { repoRoot } from '../seeder/load.js';

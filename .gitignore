@@ -11,6 +11,16 @@
 .dev.vars.*
 .claude/settings.local.json
 
+# Test credentials handed to agent sessions (owner-supplied, disposable test account).
+# NOT covered by the .env* rules above — verified with `git check-ignore`, which returned
+# NOT IGNORED at abcba95, so this file was untracked AND committable on this line. With sessions
+# self-merging and no human review, gitleaks in CI would only catch it after the secret was
+# already in a pushed commit's history.
+# Deliberately UNANCHORED (no leading `/`) so a copy in any subdirectory is covered too; an
+# anchored rule would protect only the repo root.
+test_credential.md
+test_credentials.md
+
 # Multi-agent task-claim coordination state (machine-local; see tools/shared_memory.mjs).
 .agents/
 

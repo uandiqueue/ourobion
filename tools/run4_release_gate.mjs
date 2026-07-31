@@ -77,7 +77,32 @@ export function hashTextEvidence(value) {
 // exclusions, the binary allowances, and the explicit non-acceptance posture below are unchanged,
 // and the caps remain 115 / 8,500 and still fail closed. Re-check the integration branch
 // immediately before push; if it moved, this value and the generated attestation must move again.
-export const RUN4_UNIT_BASE_SHA = 'd880ed04091f8aa920294eb70db4a20263ddae4e';
+//
+// Advanced to abcba95f (issue #307 task 1), the accepted PR #306 integration merge and the exact
+// current dev-phase2-run4 tip. d880ed04 went stale by the same mechanism as every predecessor:
+// PR #292 (#233 §D, the CI edge pipeline) and PR #306 (#300, the synthesis revamp) both landed
+// after it, so the d880ed04..HEAD delta was measured at 73 paths / 7,720 added lines of
+// already-accepted integration history before any new unit contributed a line — leaving only
+// 42 paths / 780 lines of the 115 / 8,500 budget. That is what turned PR #289 (the #268 UI
+// coverage unit) red with `landing delta has 9581 added lines; cap is 8500`: 1,861 lines of its
+// own against 780 remaining. A cap failure no unit can fix by writing less code.
+//
+// The regenerated attestation for THIS advance recomputed all four frozen module graphs with
+// deno 2.8.1 but CARRIED FORWARD the previous run's serve-probe route evidence unre-probed,
+// because Docker Desktop was unavailable on the recording device so no local `functions serve`
+// could be started. That reuse is disclosed here, in the session log, and on the PR rather than
+// passed off as a fresh probe.
+//
+// What makes the reuse sound here is stronger than "authorisation behaviour probably did not
+// change": the recomputation came back BYTE-IDENTICAL to the evidence already committed at
+// abcba95 — all four moduleGraphSha256, all four entrypointSha256, all four importMapSha256, plus
+// configSha256 and lockSha256. The attestation at abcba95 already reflected the post-#306 graphs
+// (an earlier PR in this line regenerated it), so #306's `shared/brain` change had already been
+// absorbed and this advance moves EXACTLY ONE field: provenance.unitBaseSha. With the entire
+// code-identity surface unchanged, there is no mechanism by which the four handlers' 401
+// unauthenticated behaviour could have moved since it was probed. Had any graph hash differed,
+// reusing the routes would have needed a real re-probe instead.
+export const RUN4_UNIT_BASE_SHA = 'abcba95f8386d31c49f62f20f4b623de180e29c0';
 
 // ---------------------------------------------------------------------------------------------
 // Immutable product cap (issue #183) — MEASURED AND RECORDED, NOT YET GATING.
