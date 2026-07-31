@@ -63,4 +63,22 @@ Issue: #282 ? PR: #289 ? branch: `test/ui/run4-268-coverage-282` ? target:
 - Post-merge `node tools/context_sync.mjs --check`: PASS.
 - Post-merge `git diff --check` and exact-base ancestry: PASS.
 
+## Integration-head landing cap
+
+- Hosted CI on `a101d6bf73d5558d18d60f990b49afa3bc042489` passed every functional job but
+  failed the Run 4 landing cap at 9,581 added lines against
+  `d880ed04091f8aa920294eb70db4a20263ddae4e`.
+- Compacted only test presentation: comment-only and blank-only lines were removed, then
+  semicolon-delimited statements were joined with a 200-character line bound. Production code,
+  executable tokens, test cases, expected citation text, and exact offsets were unchanged.
+- Fetched and verified current `origin/dev-phase2-run4` at
+  `dea055c8155c1e9c6851931f4de9816a88d66b2d`, then merged it without rebasing in
+  `90657c23eafd4d4de723e9f282c1557adfb7f850`.
+- Exact head `77fcffb09f2c0311a0d06e27b5f07983467d2748`:
+  - `flutter analyze --no-pub`: PASS, no issues.
+  - `flutter test --no-pub -j 2`: PASS, 738 passed / 26 skipped / 0 failed.
+  - `node tools/run4_release_gate.mjs landing --base d880ed04091f8aa920294eb70db4a20263ddae4e --head HEAD --max-paths 115 --max-added 8500`:
+    PASS, 76 paths / 8,289 added lines / 0 binary paths.
+  - `git diff --check`: PASS.
+
 memory: none
