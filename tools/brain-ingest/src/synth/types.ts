@@ -48,6 +48,13 @@ export interface SynthCitation {
   stance: 'supports' | 'refutes' | 'mixed' | 'mentions';
 }
 
+/** Manifest/corpus-owned citation identity fields; model-supplied copies are never trusted. */
+export interface PaperCitationMetadata {
+  title: string;
+  year: number | null;
+  evidenceTier: SynthEvidenceTier;
+}
+
 /** Mirror of `QuoteSpan` (relationships.ts:94-109). */
 export interface SynthQuoteSpan {
   paperId: string;
@@ -157,6 +164,7 @@ export type RejectionReason =
   | 'missing-endpoints' // subject/object absent or non-string
   | 'unrequested-pair' // endpoints are not the pair we asked about (C9)
   | 'foreign-paper' // cites a paperId outside the provided set
+  | 'citation-metadata' // no authoritative title/year exists for a cited paper
   | 'schema-invalid' // failed the shared zod validateClaim gate
   | 'quote-not-found' // A9 quoteCheck: a span is not literally in the text
   | 'copy-gate'; // O20: derivation fails the shared validateCopyString gate (diagnostic language)

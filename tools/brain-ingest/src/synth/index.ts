@@ -30,6 +30,8 @@ import { loadConfig } from '../config.js';
 import { R2Store } from '../storage/r2.js';
 import { r2TextLoader, type PaperTextLoader } from '../verify/quoteCheck.js';
 import { readArtifact } from '../seeder/artifact.js';
+import { Manifest } from '../manifest.js';
+import { classifyEvidenceTier } from '../evidenceTier.js';
 
 import {
   appendClaimsToDir,
@@ -54,6 +56,7 @@ import type {
   PaperPassages,
   ProcessResult,
   SynthClaim,
+  PaperCitationMetadata,
   SynthPair,
   SynthRawRecord,
 } from './types.js';
@@ -128,11 +131,11 @@ export async function loadPaperTexts(
 export function assembleSynthesisInput(
   pair: SynthPair,
   texts: ReadonlyMap<string, string>,
-  opts: { maxPassages?: number } = {},
+  opts: { maxPassages?: number; paperMetadata?: ReadonlyMap<string, PaperCitationMetadata> } = {},
 ): AssembledSynthesisInput {
   const papers: PaperPassages[] = [...texts.entries()].map(([paperUid, text]) => ({
     paperUid,
-    title: null,
+    title: opts.paperMetadata?.get(paperUid)?.title ?? null,
     charCount: text.length,
     passages: selectPassages(text, pair.terms, { maxPassages: opts.maxPassages ?? 12 }),
   }));
@@ -161,6 +164,8 @@ export interface SynthesizeOptions {
   router?: SynthesisRouter;
   /** Injected text loader (tests); default `r2TextLoader` over the configured bucket. */
   textLoader?: PaperTextLoader;
+  /** Manifest/corpus-owned citation title/year (tests and frozen bundles inject this). */
+  paperMetadata?: ReadonlyMap<string, PaperCitationMetadata>;
   /** Injected zod gate (tests); default loaded from shared/brain. */
   validateClaim?: ClaimValidator;
   /** Injected copy gate over `derivation` (tests); default loaded from shared/constants (O20). */
@@ -171,6 +176,8 @@ export interface SynthesizeOptions {
   runId?: string;
   /** Acceptance run identity; each pair derives one stable logical call id. */
   acceptance?: Omit<AcceptanceCallContext, 'logicalCallId'>;
+  /** Acceptance-only provider leg scope; keeps Anthropic/OpenAI reservations distinct. */
+  logicalCallScope?: 'anthropic-synthesis' | 'openai-synthesis';
   /** Schema/enforcement retries; acceptance is additionally capped by its journal. */
   maxAttempts?: number;
   /** Assemble + build prompts, but issue no router call and write nothing. */
@@ -237,6 +244,20 @@ export async function synthesize(opts: SynthesizeOptions): Promise<SynthesizeRes
   const { texts, missing } = await loadPaperTexts(loader, opts.paperUids);
   if (missing.length > 0) log(`synth: no canonical text for ${missing.length} paper(s): ${missing.join(', ')}`);
   if (texts.size === 0) throw new Error('synth: no canonical text loaded for any requested paper');
+  const paperMetadata = opts.paperMetadata ?? new Map(
+    Manifest.open(corpusDir).all().map((paper) => [
+      paper.paperUid,
+      {
+        title: paper.title,
+        year: paper.year,
+        evidenceTier: classifyEvidenceTier(paper).assignedTier,
+      },
+    ]),
+  );
+  const metadataMissing = [...texts.keys()].filter((paperUid) => !paperMetadata.has(paperUid));
+  if (metadataMissing.length > 0) {
+    throw new Error(`synth: manifest/corpus metadata missing for ${metadataMissing.join(', ')}`);
+  }
 
   // U8/D13 carry-forward: construct via the async factory so nao-edited cap
   // overrides (llm_router_cap_overrides) bind this real pipeline call.
@@ -253,7 +274,10 @@ export async function synthesize(opts: SynthesizeOptions): Promise<SynthesizeRes
   let rejectedCount = 0;
 
   for (const pair of pairs) {
-    const assembled = assembleSynthesisInput(pair, texts, { maxPassages: opts.maxPassages ?? 12 });
+    const assembled = assembleSynthesisInput(pair, texts, {
+      maxPassages: opts.maxPassages ?? 12,
+      paperMetadata,
+    });
     const passageCount = assembled.papers.reduce((n, p) => n + p.passages.length, 0);
     log(`synth: pair ${pair.id} — ${assembled.papers.length} paper(s), ${passageCount} passage(s)`);
 
@@ -263,7 +287,7 @@ export async function synthesize(opts: SynthesizeOptions): Promise<SynthesizeRes
     }
 
     const maxAttempts = Math.max(1, opts.maxAttempts ?? (opts.acceptance ? 3 : 1));
-    const logicalCallId = logicalCallIdSha256('synthesis', pair.id);
+    const logicalCallId = logicalCallIdSha256(opts.logicalCallScope ?? 'synthesis', pair.id);
     let response: LlmResponse | undefined;
     let result: ProcessResult | undefined;
     let lastError: unknown;
@@ -287,6 +311,7 @@ export async function synthesize(opts: SynthesizeOptions): Promise<SynthesizeRes
           pair,
           allowedPaperIds: assembled.allowedPaperIds,
           texts,
+          paperMetadata,
           validateClaim,
           validateCopy,
           synthesisModel: response.model,

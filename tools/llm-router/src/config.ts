@@ -33,7 +33,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import {
-  ACCEPTANCE_JOURNAL_REPO_PATH,
+  ACCEPTANCE_RUNTIME_REPO_ROOT,
   LLM_NODE_IDS,
   type LlmNodeId,
   type RouteKind,
@@ -68,12 +68,24 @@ export interface PriceEntry {
   billingMode?: BillingMode;
   /** Required for free billing so an exact-zero price is never an unexplained sentinel. */
   pricingProvenance?: string;
+  /** Acceptance authorization window; ISO instants, expiry is exclusive. */
+  effectiveFrom?: string;
+  expiresAt?: string;
   /** Acceptance requires this to be explicitly false. */
   provisional?: boolean;
 }
 
 export function billingModeOf(price: PriceEntry): BillingMode {
   return price.billingMode ?? 'metered';
+}
+
+export function priceIsAuthoritativeAt(price: PriceEntry | undefined, nowMs: number): boolean {
+  if (price === undefined || price.provisional !== false) return false;
+  if (typeof price.pricingProvenance !== 'string' || price.pricingProvenance.trim() === '') return false;
+  if (price.effectiveFrom === undefined || price.expiresAt === undefined) return false;
+  const from = Date.parse(price.effectiveFrom);
+  const expires = Date.parse(price.expiresAt);
+  return Number.isFinite(from) && Number.isFinite(expires) && from <= nowMs && nowMs < expires;
 }
 
 /** Budget caps (C7). */
@@ -103,9 +115,9 @@ export interface LocalAgentConfig {
   pollIntervalMs: number;
 }
 
-/** Acceptance runtime state is deliberately a singleton, not caller-selectable. */
+/** Acceptance root is fixed; bounded authorization ids derive task-scoped paths. */
 export interface AcceptanceConfig {
-  journalPath: typeof ACCEPTANCE_JOURNAL_REPO_PATH;
+  runtimeRoot: typeof ACCEPTANCE_RUNTIME_REPO_ROOT;
 }
 
 export interface RouterConfig {
@@ -232,6 +244,20 @@ export function validateConfig(raw: unknown): RouterConfig {
         (typeof price.pricingProvenance !== 'string' || price.pricingProvenance.trim().length === 0)) {
       fail(`prices['${model}'].pricingProvenance must be a non-empty string when present`);
     }
+    for (const field of ['effectiveFrom', 'expiresAt'] as const) {
+      const value = price[field];
+      if (value !== undefined && (typeof value !== 'string' || Number.isNaN(Date.parse(value)))) {
+        fail(`prices['${model}'].${field} must be a valid ISO date-time when present`);
+      }
+    }
+    if (price.effectiveFrom !== undefined && price.expiresAt !== undefined &&
+        Date.parse(price.effectiveFrom) >= Date.parse(price.expiresAt)) {
+      fail(`prices['${model}'] effectiveFrom must precede expiresAt`);
+    }
+    if (price.provisional === false &&
+        (typeof price.pricingProvenance !== 'string' || price.effectiveFrom === undefined || price.expiresAt === undefined)) {
+      fail(`prices['${model}'] non-provisional billing requires provenance and an effectiveFrom/expiresAt window`);
+    }
     if (billingMode === 'free') {
       if (price.inputUsdPerMTok !== 0 || price.outputUsdPerMTok !== 0) {
         fail(`prices['${model}'] free billing requires exact-zero inputUsdPerMTok/outputUsdPerMTok`);
@@ -242,8 +268,10 @@ export function validateConfig(raw: unknown): RouterConfig {
       if (typeof price.pricingProvenance !== 'string' || price.pricingProvenance.trim().length === 0) {
         fail(`prices['${model}'] free billing requires non-empty pricingProvenance`);
       }
-    } else if (!isPositiveNumber(price?.inputUsdPerMTok) || !isPositiveNumber(price?.outputUsdPerMTok)) {
-      fail(`prices['${model}'] metered billing must carry positive inputUsdPerMTok/outputUsdPerMTok`);
+    } else {
+      if (!isPositiveNumber(price?.inputUsdPerMTok) || !isPositiveNumber(price?.outputUsdPerMTok)) {
+        fail(`prices['${model}'] metered billing must carry positive inputUsdPerMTok/outputUsdPerMTok`);
+      }
     }
   }
 
@@ -286,12 +314,11 @@ export function validateConfig(raw: unknown): RouterConfig {
   if (!isPositiveInt(la.timeoutMs)) fail('localAgent.timeoutMs must be a positive integer');
   if (!isPositiveInt(la.pollIntervalMs)) fail('localAgent.pollIntervalMs must be a positive integer');
 
-  // One canonical, repo-owned, gitignored journal prevents a caller from
-  // resetting the global cap with a fresh path or targeting tracked files.
+  // One canonical repo-owned ignored root; bounded authorization ids derive paths.
   const acceptance = c.acceptance as AcceptanceConfig | undefined;
   if (acceptance !== undefined && typeof acceptance !== 'object') fail('acceptance must be an object');
-  if (acceptance !== undefined && acceptance.journalPath !== ACCEPTANCE_JOURNAL_REPO_PATH) {
-    fail(`acceptance.journalPath must be exactly '${ACCEPTANCE_JOURNAL_REPO_PATH}'`);
+  if (acceptance !== undefined && acceptance.runtimeRoot !== ACCEPTANCE_RUNTIME_REPO_ROOT) {
+    fail(`acceptance.runtimeRoot must be exactly '${ACCEPTANCE_RUNTIME_REPO_ROOT}'`);
   }
 
   // R4-U3: a `testMode` block used to downgrade the decorrelation invariant to a

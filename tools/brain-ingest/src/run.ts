@@ -302,6 +302,12 @@ function newRecord(
     year: candidate.year,
     venue: candidate.venue,
     abstract: candidate.abstract,
+    ...(candidate.publicationTypes !== undefined
+      ? { publicationTypes: [...candidate.publicationTypes] }
+      : {}),
+    ...(candidate.meshHeadings !== undefined
+      ? { meshHeadings: [...candidate.meshHeadings] }
+      : {}),
     discoveredVia: discoveredVia.join(','),
     topicTags,
     oa: { isOa: false, status: 'unknown', bestOaUrl: null, license: null, version: null },

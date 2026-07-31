@@ -18,9 +18,69 @@
 import { readFileSync } from 'node:fs';
 
 import type { CorpusDoc, VerifyEvidenceTier, VerifyImpactTier } from './types.js';
+import type { EvidenceTierClassification, EvidenceTierInput } from '../evidenceTier.js';
+import { classifyEvidenceTier } from '../evidenceTier.js';
+import type { PaperRecord } from '../types.js';
 
 const EVIDENCE_TIERS: readonly number[] = [1, 2, 3, 4, 5];
 const IMPACT_TIERS: readonly string[] = ['high', 'moderate', 'low', 'preprint'];
+
+function classifierInputs(
+  raw: unknown,
+  paperId: string,
+  title: string,
+  fail: (detail: string) => never,
+): EvidenceTierInput | undefined {
+  if (raw === undefined) return undefined;
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    fail('evidenceInputs must be an object when present');
+  }
+  const value = raw as Record<string, unknown>;
+  if (!(value.abstract === null || typeof value.abstract === 'string')) {
+    fail('evidenceInputs.abstract must be a string or null');
+  }
+  if (!(value.workType === null || typeof value.workType === 'string')) {
+    fail('evidenceInputs.workType must be a string or null');
+  }
+  const publicationTypes = value.publicationTypes;
+  if (publicationTypes !== undefined && (
+    !Array.isArray(publicationTypes) ||
+    publicationTypes.some((item) =>
+      typeof item !== 'object' || item === null ||
+      !(typeof (item as Record<string, unknown>).name === 'string') ||
+      !((item as Record<string, unknown>).ui === null || typeof (item as Record<string, unknown>).ui === 'string'))
+  )) fail('evidenceInputs.publicationTypes is invalid');
+  const meshHeadings = value.meshHeadings;
+  if (meshHeadings !== undefined && (
+    !Array.isArray(meshHeadings) ||
+    meshHeadings.some((item) =>
+      typeof item !== 'object' || item === null ||
+      !(typeof (item as Record<string, unknown>).name === 'string') ||
+      !((item as Record<string, unknown>).ui === null || typeof (item as Record<string, unknown>).ui === 'string') ||
+      typeof (item as Record<string, unknown>).majorTopic !== 'boolean')
+  )) fail('evidenceInputs.meshHeadings is invalid');
+  const evidenceDesign = value.evidenceDesign;
+  if (evidenceDesign !== undefined) {
+    if (typeof evidenceDesign !== 'object' || evidenceDesign === null || Array.isArray(evidenceDesign)) {
+      fail('evidenceInputs.evidenceDesign is invalid');
+    }
+    const design = evidenceDesign as Record<string, unknown>;
+    if (
+      !['cohort', 'longitudinal', 'cross-sectional', 'mechanistic'].includes(String(design.design)) ||
+      design.source !== 'curator' ||
+      typeof design.attestedAt !== 'string' || Number.isNaN(Date.parse(design.attestedAt))
+    ) fail('evidenceInputs.evidenceDesign is invalid');
+  }
+  return {
+    paperUid: paperId,
+    title,
+    abstract: value.abstract as string | null,
+    workType: value.workType as string | null,
+    ...(publicationTypes !== undefined ? { publicationTypes: structuredClone(publicationTypes) as NonNullable<EvidenceTierInput['publicationTypes']> } : {}),
+    ...(meshHeadings !== undefined ? { meshHeadings: structuredClone(meshHeadings) as NonNullable<EvidenceTierInput['meshHeadings']> } : {}),
+    ...(evidenceDesign !== undefined ? { evidenceDesign: structuredClone(evidenceDesign) as NonNullable<EvidenceTierInput['evidenceDesign']> } : {}),
+  };
+}
 
 /** Validate one parsed JSONL record as a CorpusDoc; throws naming `where` on violation. */
 export function parseCorpusDoc(raw: unknown, where: string): CorpusDoc {
@@ -45,13 +105,78 @@ export function parseCorpusDoc(raw: unknown, where: string): CorpusDoc {
   if (typeof o.impactTier !== 'string' || !IMPACT_TIERS.includes(o.impactTier)) {
     fail(`impactTier must be one of ${IMPACT_TIERS.join('|')}`);
   }
+  const evidenceInputs = classifierInputs(o.evidenceInputs, o.paperId as string, o.title as string, fail);
+  let evidenceClassification: EvidenceTierClassification | undefined;
+  if (evidenceInputs !== undefined) {
+    evidenceClassification = classifyEvidenceTier(evidenceInputs);
+    if (evidenceClassification.assignedTier !== o.evidenceTier) {
+      fail('evidenceTier does not match the recomputed classifier result');
+    }
+  } else if (o.evidenceClassification !== undefined) {
+    const c = o.evidenceClassification as Record<string, unknown>;
+    if (
+      typeof c !== 'object' || c === null ||
+      !['classified', 'unknown', 'conflicted'].includes(String(c.status)) ||
+      !(c.tier === null || (typeof c.tier === 'number' && EVIDENCE_TIERS.includes(c.tier))) ||
+      typeof c.assignedTier !== 'number' || !EVIDENCE_TIERS.includes(c.assignedTier) ||
+      !['publication-type', 'mesh', 'curator', 'keyword', 'floor', 'conflict'].includes(String(c.supervision)) ||
+      typeof c.reviewRequired !== 'boolean' ||
+      !Array.isArray(c.basis) || c.basis.some((value) => typeof value !== 'string') ||
+      typeof c.inputsHash !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(c.inputsHash)
+    ) {
+      fail('evidenceClassification has an invalid uncertainty/provenance shape');
+    }
+    const classifiedMatches = c.status === 'classified' && c.tier === o.evidenceTier && c.assignedTier === o.evidenceTier;
+    const floorMatches = c.status !== 'classified' && c.tier === null && c.assignedTier === 2 && o.evidenceTier === 2 && c.reviewRequired === true;
+    if (!classifiedMatches && !floorMatches) {
+      fail('classification must match evidenceTier, or use the explicit unknown/conflicted tier-2 review floor');
+    }
+    evidenceClassification = c as unknown as EvidenceTierClassification;
+  }
   return {
     paperId: o.paperId as string,
     title: o.title as string,
     year: o.year as number | null,
     text: o.text as string,
     evidenceTier: o.evidenceTier as VerifyEvidenceTier,
+    ...(evidenceInputs !== undefined ? {
+      evidenceInputs: {
+        abstract: evidenceInputs.abstract,
+        workType: evidenceInputs.workType,
+        ...(evidenceInputs.publicationTypes !== undefined ? { publicationTypes: evidenceInputs.publicationTypes } : {}),
+        ...(evidenceInputs.meshHeadings !== undefined ? { meshHeadings: evidenceInputs.meshHeadings } : {}),
+        ...(evidenceInputs.evidenceDesign !== undefined ? { evidenceDesign: evidenceInputs.evidenceDesign } : {}),
+      },
+    } : {}),
+    ...(evidenceClassification !== undefined ? { evidenceClassification } : {}),
     impactTier: o.impactTier as VerifyImpactTier,
+  };
+}
+
+/** Build the derived verifier corpus projection from truth-tier paper metadata + canonical text. */
+export function buildCorpusDoc(
+  paper: PaperRecord,
+  text: string,
+  impactTier: VerifyImpactTier,
+): CorpusDoc {
+  if (text.trim() === '') throw new Error(`verify corpus: paper '${paper.paperUid}' canonical text is empty`);
+  const evidenceClassification = classifyEvidenceTier(paper);
+  const evidenceInputs: NonNullable<CorpusDoc['evidenceInputs']> = {
+    abstract: paper.abstract,
+    workType: paper.workType ?? null,
+    ...(paper.publicationTypes !== undefined ? { publicationTypes: structuredClone(paper.publicationTypes) } : {}),
+    ...(paper.meshHeadings !== undefined ? { meshHeadings: structuredClone(paper.meshHeadings) } : {}),
+    ...(paper.evidenceDesign !== undefined ? { evidenceDesign: structuredClone(paper.evidenceDesign) } : {}),
+  };
+  return {
+    paperId: paper.paperUid,
+    title: paper.title,
+    year: paper.year,
+    text,
+    evidenceTier: evidenceClassification.assignedTier,
+    evidenceInputs,
+    evidenceClassification,
+    impactTier,
   };
 }
 

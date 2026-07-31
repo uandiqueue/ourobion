@@ -18,15 +18,23 @@ import {
   type FetchLike,
 } from '../src/routes/apiWorker.js';
 import { RouterConfigError, RouterHttpError, RouterKeyMissingError } from '../src/errors.js';
-import { AttemptJournal, providerContentSha256 } from '../src/attemptJournal.js';
+import { AttemptJournal, acceptanceJournalRepoPath, providerContentSha256 } from '../src/attemptJournal.js';
 import { resolveRepoPath } from '../src/config.js';
 import {
-  ACCEPTANCE_JOURNAL_REPO_PATH,
+  ACCEPTANCE_RUNTIME_REPO_ROOT,
   ACCEPTANCE_MAX_INPUT_BYTES,
   ACCEPTANCE_MAX_OUTPUT_TOKENS,
 } from '../src/types.js';
 import type { LlmRequest } from '../src/types.js';
-import { anthropicBody, jsonResponse, openaiBody, testConfig } from './helpers.js';
+import {
+  acceptanceContext,
+  anthropicBody,
+  authorizationBinding,
+  jsonResponse,
+  openaiBody,
+  testAuthorization,
+  testConfig,
+} from './helpers.js';
 
 interface RecordedCall {
   url: string;
@@ -53,6 +61,9 @@ function mockFetch(responses: Response[]): { fetchFn: FetchLike; calls: Recorded
 
 const ENV = { ANTHROPIC_API_KEY: 'test-anthropic-key', OPENAI_API_KEY: 'test-openai-key' };
 const noSleep = async (): Promise<void> => {};
+const AUTHORIZATION = testAuthorization();
+const acceptance = (runId: string, logicalCallId: string) =>
+  acceptanceContext(runId, logicalCallId, AUTHORIZATION);
 
 const synthesisReq: LlmRequest = {
   nodeId: 'synthesis',
@@ -149,7 +160,7 @@ test('Agnes adapter refuses any direct call without the router-owned journal bef
         nodeId: 'verifier',
         prompt: 'x',
         expectJson: true,
-        acceptance: { acceptanceRunId: 'run', logicalCallId: 'leg' },
+        acceptance: acceptance('run', 'leg'),
       },
       'agnes-llama-3.3-70b',
       3_072,
@@ -172,7 +183,7 @@ test('direct Anthropic acceptance rejects a forged cheap reservation before fetc
         nodeId: 'synthesis',
         prompt: 'secret prompt',
         expectJson: true,
-        acceptance: { acceptanceRunId: 'run', logicalCallId: 'synthesis:forged' },
+        acceptance: acceptance('run', 'synthesis:forged'),
       },
       'claude-sonnet-5',
       3_072,
@@ -183,6 +194,7 @@ test('direct Anthropic acceptance rejects a forged cheap reservation before fetc
         attemptJournal: {
           journal: new AttemptJournal('tracked-source-file.ts'),
           input: {
+            ...authorizationBinding(AUTHORIZATION),
             acceptanceRunId: 'run',
             logicalCallId: 'synthesis:forged',
             nodeId: 'synthesis',
@@ -220,7 +232,7 @@ test('direct acceptance rejects an exact canonical-path journal lacking the safe
         nodeId: 'synthesis',
         prompt: 'x',
         expectJson: true,
-        acceptance: { acceptanceRunId: 'run', logicalCallId: 'synthesis:unbound' },
+        acceptance: acceptance('run', 'synthesis:unbound'),
       },
       'claude-sonnet-5',
       3_072,
@@ -229,8 +241,9 @@ test('direct acceptance rejects an exact canonical-path journal lacking the safe
         env: { ANTHROPIC_API_KEY: 'key' },
         sleep: noSleep,
         attemptJournal: {
-          journal: new AttemptJournal(resolveRepoPath(ACCEPTANCE_JOURNAL_REPO_PATH)),
+          journal: new AttemptJournal(resolveRepoPath(acceptanceJournalRepoPath(AUTHORIZATION.authorizationId))),
           input: {
+            ...authorizationBinding(AUTHORIZATION),
             acceptanceRunId: 'run',
             logicalCallId: 'synthesis:unbound',
             nodeId: 'synthesis',
@@ -259,7 +272,7 @@ test('direct acceptance rejects an exact canonical-path journal lacking the safe
 test('direct free acceptance rejects forged price provenance before fetch', async () => {
   const config = testConfig((raw) => {
     raw.providers.push({ prefix: 'agnes-', family: 'agnes', envKey: 'AGNES_API_KEY' });
-    raw.acceptance = { journalPath: ACCEPTANCE_JOURNAL_REPO_PATH };
+    raw.acceptance = { runtimeRoot: ACCEPTANCE_RUNTIME_REPO_ROOT };
     raw.nodes.synthesis.model = 'claude-sonnet-5';
     raw.nodes.verifier.model = 'agnes-2.5-flash';
     raw.prices['claude-sonnet-5'].provisional = false;
@@ -268,11 +281,13 @@ test('direct free acceptance rejects forged price provenance before fetch', asyn
       outputUsdPerMTok: 0,
       billingMode: 'free',
       pricingProvenance: 'owner-confirmed free plan',
+      effectiveFrom: '2026-01-01T00:00:00.000Z',
+      expiresAt: '2027-01-01T00:00:00.000Z',
       provisional: false,
     };
   });
-  const root = resolveRepoPath('data/llm-router');
-  const journalPath = resolveRepoPath(ACCEPTANCE_JOURNAL_REPO_PATH);
+  const root = resolveRepoPath(ACCEPTANCE_RUNTIME_REPO_ROOT);
+  const journalPath = resolveRepoPath(acceptanceJournalRepoPath(AUTHORIZATION.authorizationId));
   mkdirSync(root, { recursive: true });
   rmSync(journalPath, { force: true });
   rmSync(`${journalPath}.lock`, { force: true });
@@ -280,7 +295,7 @@ test('direct free acceptance rejects forged price provenance before fetch', asyn
     nodeId: 'verifier' as const,
     prompt: 'x',
     expectJson: true as const,
-    acceptance: { acceptanceRunId: 'run', logicalCallId: 'verifier:forged-free' },
+    acceptance: acceptance('run', 'verifier:forged-free'),
   };
   const canonical = canonicalizeProviderContent(request, 'agnes');
   const { fetchFn, calls } = mockFetch([]);
@@ -293,6 +308,7 @@ test('direct free acceptance rejects forged price provenance before fetch', asyn
         attemptJournal: {
           journal: new AttemptJournal(journalPath, { allowedRoot: root }),
           input: {
+            ...authorizationBinding(AUTHORIZATION),
             acceptanceRunId: request.acceptance.acceptanceRunId,
             logicalCallId: request.acceptance.logicalCallId,
             nodeId: 'verifier',
@@ -308,6 +324,8 @@ test('direct free acceptance rejects forged price provenance before fetch', asyn
               outputUsdPerMTok: 0,
               provisional: false,
               pricingProvenance: 'forged source',
+              effectiveFrom: '2026-01-01T00:00:00.000Z',
+              expiresAt: '2027-01-01T00:00:00.000Z',
             },
           },
         },
@@ -325,11 +343,11 @@ test('public callApiWorker validates forged path and price configs before fetch'
   let calls = 0;
   const fetchFn: FetchLike = async () => { calls++; return jsonResponse(200, anthropicBody('{}')); };
   for (const mutate of [
-    (raw: any) => { raw.acceptance.journalPath = '../fresh.jsonl'; }, // eslint-disable-line @typescript-eslint/no-explicit-any
+    (raw: any) => { raw.acceptance.runtimeRoot = '../fresh'; }, // eslint-disable-line @typescript-eslint/no-explicit-any
     (raw: any) => { raw.prices['claude-sonnet-5'].outputUsdPerMTok = -1; }, // eslint-disable-line @typescript-eslint/no-explicit-any
   ]) {
     const config = testConfig() as unknown as Record<string, unknown>;
-    config.acceptance = { journalPath: ACCEPTANCE_JOURNAL_REPO_PATH };
+    config.acceptance = { runtimeRoot: ACCEPTANCE_RUNTIME_REPO_ROOT };
     mutate(config);
     await assert.rejects(
       callApiWorker(
@@ -339,7 +357,7 @@ test('public callApiWorker validates forged path and price configs before fetch'
         100,
         { fetchFn, env: ENV, sleep: noSleep },
       ),
-      /acceptance\.journalPath must be exactly|must carry positive inputUsdPerMTok\/outputUsdPerMTok/,
+      /acceptance\.runtimeRoot must be exactly|must carry positive inputUsdPerMTok\/outputUsdPerMTok/,
     );
   }
   assert.equal(calls, 0);

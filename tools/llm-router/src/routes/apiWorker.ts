@@ -27,14 +27,21 @@
  */
 
 import type { RouterConfig } from '../config.js';
-import { billingModeOf, providerFor, resolveRepoPath, validateConfig } from '../config.js';
+import { billingModeOf, priceIsAuthoritativeAt, providerFor, resolveRepoPath, validateConfig } from '../config.js';
 import { costUsd } from '../budget.js';
 import { RouterConfigError, RouterHttpError, RouterKeyMissingError } from '../errors.js';
-import { AttemptJournal, providerContentSha256, type AttemptReservationInput } from '../attemptJournal.js';
+import {
+  AttemptJournal,
+  acceptanceAuthorizationHash,
+  acceptanceJournalRepoPath,
+  providerContentSha256,
+  validateAcceptanceAuthorization,
+  type AttemptReservationInput,
+} from '../attemptJournal.js';
 import { captureRawBody } from '../raw.js';
 import {
   DEFAULT_RAW_BODY_CAP_BYTES,
-  ACCEPTANCE_JOURNAL_REPO_PATH,
+  ACCEPTANCE_RUNTIME_REPO_ROOT,
   ACCEPTANCE_MAX_INPUT_BYTES,
   ACCEPTANCE_MAX_OUTPUT_TOKENS,
   type LlmRequest,
@@ -62,6 +69,8 @@ export interface ApiWorkerOptions {
   baseDelayMs?: number;
   /** Injectable sleep for deterministic tests. */
   sleep?: (ms: number) => Promise<void>;
+  /** Injectable clock for price-window acceptance checks. */
+  now?: () => number;
   /**
    * R4-U3 · Retain the provider's raw response body on the LlmResponse.
    * DEFAULT TRUE. Retention is opt-OUT rather than opt-in on purpose: the whole
@@ -124,6 +133,7 @@ interface ResolvedOptions {
   maxAttempts: number;
   baseDelayMs: number;
   sleep: (ms: number) => Promise<void>;
+  now: () => number;
   retainRawBody: boolean;
   rawBodyCapBytes: number;
   attemptJournal?: { journal: AttemptJournal; input: AttemptReservationInput };
@@ -136,6 +146,7 @@ function resolveOptions(opts: ApiWorkerOptions): ResolvedOptions {
     maxAttempts: opts.maxAttempts ?? 3,
     baseDelayMs: opts.baseDelayMs ?? 500,
     sleep: opts.sleep ?? realSleep,
+    now: opts.now ?? Date.now,
     // Defaulted ON — see ApiWorkerOptions.retainRawBody.
     retainRawBody: opts.retainRawBody ?? true,
     rawBodyCapBytes: opts.rawBodyCapBytes ?? DEFAULT_RAW_BODY_CAP_BYTES,
@@ -470,11 +481,21 @@ export async function callApiWorker(
   }
   if (acceptance !== undefined || o.attemptJournal !== undefined) {
     const hook = o.attemptJournal;
+    const authorization = acceptance === undefined
+      ? undefined
+      : validateAcceptanceAuthorization(acceptance.authorization, o.now());
+    const authorizationHash = authorization === undefined
+      ? undefined
+      : acceptanceAuthorizationHash(authorization);
+    const expectedJournalPath = authorization === undefined
+      ? undefined
+      : resolveRepoPath(acceptanceJournalRepoPath(authorization.authorizationId));
     if (hook !== undefined) {
-      hook.journal.assertRouterOwnedRoot(resolveRepoPath('data/llm-router'));
+      hook.journal.assertRouterOwnedRoot(resolveRepoPath(ACCEPTANCE_RUNTIME_REPO_ROOT));
     }
     const expectedNode =
       (req.nodeId === 'synthesis' && provider.family === 'anthropic') ||
+      (req.nodeId === 'synthesis' && provider.family === 'openai') ||
       (req.nodeId === 'verifier' && provider.family === 'agnes');
     const expectedCost = costUsd(validatedConfig, model, {
       inputTokens: ACCEPTANCE_MAX_INPUT_BYTES,
@@ -493,7 +514,11 @@ export async function callApiWorker(
       o.retainRawBody !== true ||
       o.rawBodyCapBytes !== DEFAULT_RAW_BODY_CAP_BYTES ||
       content.inputBytes > ACCEPTANCE_MAX_INPUT_BYTES ||
-      hook.journal.path !== resolveRepoPath(ACCEPTANCE_JOURNAL_REPO_PATH) ||
+      hook.journal.path !== expectedJournalPath ||
+      acceptanceAuthorizationHash(validateAcceptanceAuthorization(hook.input.authorization, o.now())) !== authorizationHash ||
+      hook.input.authorizationId !== authorization?.authorizationId ||
+      hook.input.authorizationHash !== authorizationHash ||
+      hook.input.authorizationBasis !== authorization?.authorizationBasis ||
       hook.input.acceptanceRunId !== acceptance.acceptanceRunId ||
       hook.input.logicalCallId !== acceptance.logicalCallId ||
       hook.input.nodeId !== req.nodeId ||
@@ -502,12 +527,14 @@ export async function callApiWorker(
       hook.input.promptHash !== providerContentSha256(content.serialized) ||
       hook.input.inputByteCeiling !== ACCEPTANCE_MAX_INPUT_BYTES ||
       hook.input.outputTokenCeiling !== ACCEPTANCE_MAX_OUTPUT_TOKENS ||
-      validatedConfig.prices[model]?.provisional !== false ||
+      !priceIsAuthoritativeAt(validatedConfig.prices[model], o.now()) ||
       hook.input.price?.billingMode !== billingModeOf(expectedPrice) ||
       hook.input.price?.inputUsdPerMTok !== expectedPrice.inputUsdPerMTok ||
       hook.input.price?.outputUsdPerMTok !== expectedPrice.outputUsdPerMTok ||
       hook.input.price?.provisional !== false ||
       hook.input.price?.pricingProvenance !== (expectedPrice.pricingProvenance ?? null) ||
+      hook.input.price?.effectiveFrom !== (expectedPrice.effectiveFrom ?? null) ||
+      hook.input.price?.expiresAt !== (expectedPrice.expiresAt ?? null) ||
       Math.abs(hook.input.reservedUsd - expectedCost) > Number.EPSILON
     ) {
       throw new RouterConfigError(

@@ -39,6 +39,8 @@ test('costUsd follows the config price table', () => {
       outputUsdPerMTok: 0,
       billingMode: 'free',
       pricingProvenance: 'owner-confirmed free plan',
+      effectiveFrom: '2026-01-01T00:00:00.000Z',
+      expiresAt: '2027-01-01T00:00:00.000Z',
       provisional: false,
     };
   });
