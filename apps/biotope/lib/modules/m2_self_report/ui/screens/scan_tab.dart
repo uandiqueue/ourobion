@@ -12,7 +12,6 @@ import '../../../m5a_baselines/index.dart' show metricDisplayLabel;
 import '../../../m6_engagement/index.dart';
 import '../../impl/logging_controller.dart';
 import '../../impl/normaliser.dart';
-import 'daily_log_screen.dart';
 
 enum _SweepState { idle, scanning, done }
 
@@ -38,23 +37,51 @@ abstract final class ScanTabCopy {
 
   // ── Gap cards ──────────────────────────────────────────────────────────
   static const gapEyebrow = 'SELF-REPORT';
-  static const gapAnswerHere = 'Answer here, or open the full log for more.';
-  static const gapOpenFullLog = 'Open full log';
+  static const gapAnswerHere = 'Choose the closest value for today.';
   static const gapSaveFailed = 'Could not save that answer. Please try again.';
-
-  /// Shown on a card that CANNOT be answered in place (urine colour, stool
-  /// form, mosquito bites). Tapping it pushes the whole [DailyLogScreen], not a
-  /// view of the one metric the card names, so the card says where it goes.
-  /// Deliberately a different string from [gapOpenFullLog]: that one labels the
-  /// inline card's explicit button, this one is a destination note.
-  static const gapOpensFullLog = 'Tap to open the full log';
+  static const gapLogged = 'LOGGED';
+  static const gapChange = 'Change';
+  static const gapSaving = 'Saving…';
+  static const gapSaved = 'Saved to today’s self-report.';
 
   /// One-line hint above an inline chip row, per answerable metric.
   static const Map<String, String> inlineHints = {
+    'urine_colour': 'Armstrong scale · 1 = very pale · 8 = dark brown',
+    'stool_form': 'Bristol scale · 1 = firm pieces · 7 = watery',
     'outside_meals': 'Meals eaten out today',
+    'mosquito_bites': 'Number of bites noticed today',
     'energy_score': '1 = drained · 5 = energised',
     'mood_score': '1 = low · 5 = great',
     'gut_comfort_score': '1 = uncomfortable · 5 = comfortable',
+  };
+
+  static const _urineLabels = [
+    'Very pale',
+    'Pale yellow',
+    'Yellow',
+    'Dark yellow',
+    'Amber',
+    'Dark amber',
+    'Orange-brown',
+    'Dark brown',
+  ];
+
+  static const _stoolLabels = [
+    'Separate firm pieces',
+    'Lumpy',
+    'Cracked',
+    'Smooth',
+    'Soft blobs',
+    'Fluffy pieces',
+    'Watery',
+  ];
+
+  static String answerLabel(String metricKey, int value) => switch (metricKey) {
+    'urine_colour' => '$value · ${_urineLabels[value - 1]}',
+    'stool_form' => 'Type $value · ${_stoolLabels[value - 1]}',
+    'outside_meals' => '$value meal${value == 1 ? '' : 's'} out',
+    'mosquito_bites' => '$value bite${value == 1 ? '' : 's'}',
+    _ => '$value / 5',
   };
 
   static String gapWeight(int weight) =>
@@ -67,10 +94,14 @@ abstract final class ScanTabCopy {
     environmentSemanticLabel,
     gapEyebrow,
     gapAnswerHere,
-    gapOpenFullLog,
-    gapOpensFullLog,
+    gapLogged,
+    gapChange,
+    gapSaving,
+    gapSaved,
     gapSaveFailed,
     ...inlineHints.values,
+    ..._urineLabels,
+    ..._stoolLabels,
     // The weight sentence is templated, so gate a representative rendering
     // rather than the format string.
     gapWeight(25),
@@ -87,7 +118,8 @@ abstract final class ScanTabCopy {
 ///  - [EnvironmentRow] is inert and says so. `m4_environmental` is a
 ///    comment-only stub with no service, table or API behind it, so the row
 ///    labels the absence rather than rendering a control that does nothing.
-///  - [GapCard] answers inline only for [kInlineAnswerableOptions] keys, and
+///  - [GapCard] answers every daily-core scalar inline from the complete
+///    [kInlineAnswerableOptions] domain, and
 ///    writes through [DailyLogService.saveFieldAnswer] — a targeted UPDATE of
 ///    the one answered column. It must never go through `saveDailyLog`, whose
 ///    whole-row upsert would null out every other field logged today.
@@ -105,6 +137,8 @@ class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
   Map<String, dynamic>? _todayRow;
   WearableReading? _wearableReading;
   bool _hasSweptThisSession = false;
+  List<String> _gapKeys = const [];
+  String? _openGapKey;
 
   /// Metric keys with an inline write in flight — one card can be saving while
   /// the others stay tappable.
@@ -113,12 +147,9 @@ class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    // Mirrors the reference's 1.5 s `scanSweep` keyframe.  It is deliberately
-    // a one-shot rather than a perpetual spinner: a completed sweep means the
-    // highlight reaches the final channel before the result is shown.
     _sweepAnim = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: ScanGlobe.sweepDuration,
     );
     _completionAnim = AnimationController(
       vsync: this,
@@ -151,9 +182,13 @@ class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
   }
 
   List<String> get _missingKeys {
-    final row = _todayRow;
-    return kDailyCoreDqsWeights.keys.where((k) => row == null || row[k] == null).toList();
+    return _missingKeysFor(_todayRow);
   }
+
+  List<String> _missingKeysFor(Map<String, dynamic>? row) =>
+      kDailyCoreDqsWeights.keys
+          .where((key) => row == null || row[key] == null)
+          .toList();
 
   int get _coverage {
     final v = (_todayRow?['log_completeness'] as num?)?.round();
@@ -164,11 +199,11 @@ class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
     // Read before the first await: reduce-motion is an OS setting, not
     // something that can flip mid-sweep, and MediaQuery.of needs a still-live
     // context. A perpetual `.repeat()` is exactly what that setting exists to
-    // suppress — see ChannelScanSweep and _Breathe (home_tab.dart) for the
-    // same gate applied elsewhere in this app.
+    // suppress. The reference's 1.5 second sweep repeats only inside the globe
+    // while the real reads finish.
     final reduced = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     setState(() => _state = _SweepState.scanning);
-    if (!reduced) _sweepAnim.forward(from: 0);
+    if (!reduced) _sweepAnim.repeat();
 
     final client = Supabase.instance.client;
     final userId = client.auth.currentUser!.id;
@@ -180,32 +215,24 @@ class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
     ]);
 
     if (!mounted) return;
+    final row = results[0] as Map<String, dynamic>?;
+    if (_sweepAnim.isAnimating) {
+      _sweepAnim
+        ..stop()
+        ..reset();
+    }
     setState(() {
-      _todayRow = results[0] as Map<String, dynamic>?;
+      _todayRow = row;
       _wearableReading = results[1] as WearableReading?;
       _hasSweptThisSession = true;
+      _gapKeys = _missingKeysFor(row);
+      _openGapKey = null;
       _state = _SweepState.done;
     });
     if (!reduced) _completionAnim.forward(from: 0);
   }
 
-  /// Full-form route. Still the only path for anything a chip cannot express
-  /// (urine colour, stool form, mosquito bites) and always available as an
-  /// escape hatch from a chip-answerable card.
-  ///
-  /// It takes no metric key: [DailyLogScreen] has no deep-link or focus seam, so
-  /// a key passed here would be silently discarded — as it was. Rather than
-  /// accept an argument it cannot honour, the destination is stated on the card
-  /// instead ([ScanTabCopy.gapOpensFullLog]). Add the parameter back only
-  /// alongside a real focus target on the form.
-  Future<void> _openGap() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const DailyLogScreen()),
-    );
-    await _loadQuiet();
-  }
-
-  /// Inline chip answer — a targeted single-column UPDATE, never the whole-row
+  /// Inline scalar answer — a targeted single-column UPDATE, never the whole-row
   /// upsert (see [DailyLogService.saveFieldAnswer]).
   Future<void> _answerInline(String key, int value) async {
     if (_savingKeys.contains(key)) return;
@@ -214,13 +241,16 @@ class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
     try {
       final client = Supabase.instance.client;
       final userId = client.auth.currentUser!.id;
-      final completeness =
-          await DailyLogService(client).saveFieldAnswer(userId, _today, key, value);
+      final completeness = await DailyLogService(
+        client,
+      ).saveFieldAnswer(userId, _today, key, value);
       // Same streak/DQS bookkeeping DailyLogScreen does on save, so a coverage
       // change made here is not invisible to M6.
-      await EngagementService(client)
-          .updateOnLogWrite(userId, _today, completeness);
+      await EngagementService(
+        client,
+      ).updateOnLogWrite(userId, _today, completeness);
       await _loadQuiet();
+      if (mounted) setState(() => _openGapKey = null);
     } catch (_) {
       if (!mounted) return;
       messenger.showSnackBar(
@@ -242,9 +272,6 @@ class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final missing = _missingKeys;
-    final dialSize = _state == _SweepState.done ? 190.0 : 262.0;
-    final reduced = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    final orbSweeping = _state == _SweepState.scanning && !reduced;
 
     return Scaffold(
       backgroundColor: OurobionColors.background,
@@ -278,120 +305,13 @@ class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
               Center(
                 child: _ScanDialBreathe(
                   active: _state != _SweepState.done,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 420),
-                    curve: const Cubic(0.2, 0, 0, 1),
-                    width: dialSize,
-                    height: dialSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [Colors.white, OurobionColors.primaryContainer.withValues(alpha: 0.6)],
-                      ),
-                      border: Border.all(color: OurobionColors.primary.withValues(alpha: 0.6)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: OurobionColors.primary.withValues(alpha: 0.28),
-                          blurRadius: 56,
-                          offset: const Offset(0, 28),
-                        ),
-                      ],
-                    ),
-                    child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      ClipOval(
-                        child: Image.asset(
-                          BiotopeGeneratedAssets.scanCircularBloom,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                          errorBuilder: (context, error, stack) => const SizedBox.shrink(),
-                        ),
-                      ),
-                      if (orbSweeping)
-                        AnimatedBuilder(
-                          animation: _sweepAnim,
-                          builder: (context, child) {
-                            final sweep = const Cubic(0.4, 0, 0.6, 1)
-                                .transform(_sweepAnim.value);
-                            return Align(
-                              alignment: Alignment(0, -1.2 + sweep * 3.4),
-                              child: Container(
-                                height: dialSize * 0.34,
-                                width: dialSize,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      OurobionColors.primary.withValues(alpha: 0),
-                                      OurobionColors.primary.withValues(alpha: 0.4),
-                                      OurobionColors.primary.withValues(alpha: 0),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      if (_state == _SweepState.done)
-                        AnimatedBuilder(
-                          animation: _completionAnim,
-                          builder: (context, child) {
-                            final progress = reduced ? 1.0 : _completionAnim.value;
-                            return Opacity(
-                              opacity: progress,
-                              child: Transform.scale(
-                                scale: 0.94 + (0.06 * progress),
-                                child: child,
-                              ),
-                            );
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withValues(alpha: 0.9),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                              Text(
-                                'COVERAGE',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1.5,
-                                  color: OurobionColors.brandGoldLight,
-                                ),
-                              ),
-                              const SizedBox(height: 7),
-                              Text(
-                                '$_coverage%',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 34,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: -1.2,
-                                  color: OurobionColors.brandGoldDark,
-                                ),
-                              ),
-                              const SizedBox(height: 7),
-                              Text(
-                                missing.isEmpty
-                                    ? 'All channels in'
-                                    : '${missing.length} channel${missing.length == 1 ? '' : 's'} open',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: OurobionColors.onSurfaceVariant,
-                                ),
-                              ),
-                              ],
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                  child: ScanGlobe(
+                    scanning: _state == _SweepState.scanning,
+                    completed: _state == _SweepState.done,
+                    coverage: _coverage,
+                    missingCount: missing.length,
+                    sweepAnimation: _sweepAnim,
+                    completionAnimation: _completionAnim,
                   ),
                 ),
               ),
@@ -419,9 +339,10 @@ class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
                       switch (_state) {
                         _SweepState.scanning =>
                           'Comparing wearable and self-report streams against today’s expected set.',
-                        _SweepState.done => missing.isEmpty
-                            ? 'Every expected channel has reported in for today.'
-                            : 'These self-report channels are still open — log them and your coverage updates immediately.',
+                        _SweepState.done =>
+                          missing.isEmpty
+                              ? 'Every expected channel has reported in for today.'
+                              : 'These self-report channels are still open — log them and your coverage updates immediately.',
                         _SweepState.idle =>
                           'Checks which channels are missing today, then surfaces only what’s worth filling in.',
                       },
@@ -436,24 +357,15 @@ class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
                 ),
               ),
 
-              if (_state == _SweepState.idle || _state == _SweepState.scanning) ...[
+              if (_state == _SweepState.idle ||
+                  _state == _SweepState.scanning) ...[
                 const SizedBox(height: 20),
-                // Only the channels that can actually report travel through
-                // the sweep. EnvironmentRow sits outside it, on purpose — see
-                // ChannelScanSweep's doc comment.
-                ChannelScanSweep(
-                  active: _state == _SweepState.scanning,
-                  child: Column(
-                    children: [
-                      WearableSyncRow(
-                        reading: _wearableReading,
-                        hasSyncedThisSession: _hasSweptThisSession,
-                      ),
-                      const SizedBox(height: 9),
-                      _SelfReportRow(logged: _todayRow != null),
-                    ],
-                  ),
+                WearableSyncRow(
+                  reading: _wearableReading,
+                  hasSyncedThisSession: _hasSweptThisSession,
                 ),
+                const SizedBox(height: 9),
+                _SelfReportRow(logged: _todayRow != null),
                 const SizedBox(height: 9),
                 const EnvironmentRow(),
               ],
@@ -465,14 +377,14 @@ class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
                   _state == _SweepState.scanning
                       ? 'Sweeping…'
                       : _state == _SweepState.done
-                          ? 'Run sweep again'
-                          : 'Run sweep',
+                      ? 'Run sweep again'
+                      : 'Run sweep',
                 ),
               ),
 
               if (_state == _SweepState.done) ...[
                 const SizedBox(height: 26),
-                if (missing.isEmpty)
+                if (missing.isEmpty) ...[
                   Center(
                     child: Column(
                       children: [
@@ -480,7 +392,8 @@ class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
                           BiotopeGeneratedAssets.emptyScanBloom,
                           width: 120,
                           height: 120,
-                          errorBuilder: (context, error, stack) => const SizedBox(width: 120, height: 120),
+                          errorBuilder: (context, error, stack) =>
+                              const SizedBox(width: 120, height: 120),
                         ),
                         const SizedBox(height: 14),
                         Text(
@@ -493,12 +406,16 @@ class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
                         ),
                       ],
                     ),
-                  )
-                else ...[
+                  ),
+                  if (_gapKeys.isNotEmpty) const SizedBox(height: 24),
+                ],
+                if (_gapKeys.isNotEmpty) ...[
                   Row(
                     children: [
                       Text(
-                        'NEEDS YOU · ${missing.length}',
+                        missing.isEmpty
+                            ? 'LOGGED TODAY'
+                            : 'NEEDS YOU · ${missing.length}',
                         style: GoogleFonts.manrope(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
@@ -506,19 +423,41 @@ class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
                           color: OurobionColors.primary,
                         ),
                       ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          height: 1,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                OurobionColors.brandGoldLight.withValues(
+                                  alpha: 0.7,
+                                ),
+                                OurobionColors.brandGoldLight.withValues(
+                                  alpha: 0,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 13),
-                  for (final key in missing) ...[
+                  for (final key in _gapKeys) ...[
                     _GapReveal(
-                      delay: Duration(milliseconds: 55 * missing.indexOf(key)),
+                      delay: Duration(milliseconds: 55 * _gapKeys.indexOf(key)),
                       child: GapCard(
                         metricKey: key,
                         weight: kDailyCoreDqsWeights[key]!,
-                        inlineOptions: kInlineAnswerableOptions[key],
+                        options: kInlineAnswerableOptions[key]!,
+                        currentValue: (_todayRow?[key] as num?)?.toInt(),
+                        expanded: _openGapKey == key,
                         saving: _savingKeys.contains(key),
+                        onToggle: () => setState(
+                          () => _openGapKey = _openGapKey == key ? null : key,
+                        ),
                         onAnswer: (value) => _answerInline(key, value),
-                        onOpenFullLog: _openGap,
                       ),
                     ),
                     const SizedBox(height: 11),
@@ -528,6 +467,197 @@ class _ScanTabState extends State<ScanTab> with TickerProviderStateMixin {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Reference-driven Scan globe, independently pumpable without Supabase.
+///
+/// Idle and scanning remain 262dp. Completion shrinks to 190dp over 420ms,
+/// the 1.5s cubic sweep is clipped by the circular globe itself, and the result
+/// uses the reference's 380ms opacity/scale reveal over an opaque radial-white
+/// reading surface.
+class ScanGlobe extends StatelessWidget {
+  static const idleSize = 262.0;
+  static const completedSize = 190.0;
+  static const shrinkDuration = Duration(milliseconds: 420);
+  static const sweepDuration = Duration(milliseconds: 1500);
+  static const resultDuration = Duration(milliseconds: 380);
+  static const globeKey = ValueKey('scan-globe');
+  static const sweepBandKey = ValueKey('scan-globe-sweep-band');
+  static const completionOverlayKey = ValueKey('scan-globe-completion-overlay');
+
+  final bool scanning;
+  final bool completed;
+  final int coverage;
+  final int missingCount;
+  final Animation<double> sweepAnimation;
+  final Animation<double> completionAnimation;
+
+  const ScanGlobe({
+    super.key,
+    required this.scanning,
+    required this.completed,
+    required this.coverage,
+    required this.missingCount,
+    required this.sweepAnimation,
+    required this.completionAnimation,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final reduced = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final size = completed ? completedSize : idleSize;
+    return AnimatedContainer(
+      key: globeKey,
+      duration: shrinkDuration,
+      curve: const Cubic(0.2, 0, 0, 1),
+      width: size,
+      height: size,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          center: const Alignment(0, -0.24),
+          colors: [
+            Colors.white,
+            OurobionColors.primaryContainer.withValues(alpha: 0.6),
+          ],
+        ),
+        border: Border.all(
+          color: OurobionColors.primary.withValues(alpha: 0.6),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: OurobionColors.primary.withValues(alpha: 0.28),
+            blurRadius: 56,
+            offset: const Offset(0, 28),
+          ),
+        ],
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              BiotopeGeneratedAssets.scanCircularBloom,
+              fit: BoxFit.cover,
+              excludeFromSemantics: true,
+              errorBuilder: (context, error, stack) => const SizedBox.shrink(),
+            ),
+          ),
+          if (scanning && !reduced)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: sweepAnimation,
+                  builder: (context, child) {
+                    final sweep = const Cubic(
+                      0.4,
+                      0,
+                      0.6,
+                      1,
+                    ).transform(sweepAnimation.value);
+                    return Align(
+                      alignment: Alignment(0, -1.2 + sweep * 3.4),
+                      child: child,
+                    );
+                  },
+                  child: Container(
+                    key: sweepBandKey,
+                    width: size,
+                    height: size * 0.34,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          OurobionColors.primary.withValues(alpha: 0),
+                          OurobionColors.primary.withValues(alpha: 0.42),
+                          OurobionColors.primary.withValues(alpha: 0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: OurobionColors.primary.withValues(alpha: 0.45),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (completed)
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: completionAnimation,
+                builder: (context, child) {
+                  final progress = reduced ? 1.0 : completionAnimation.value;
+                  return Opacity(
+                    opacity: progress,
+                    child: Transform.scale(
+                      scale: 0.94 + (0.06 * progress),
+                      child: child,
+                    ),
+                  );
+                },
+                child: DecoratedBox(
+                  key: completionOverlayKey,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [Color(0xFFFFFFFF), Color(0xF2FFFFFF)],
+                      stops: [0.42, 1],
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'COVERAGE',
+                        style: GoogleFonts.manrope(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.5,
+                          color: OurobionColors.brandGoldLight,
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        '$coverage%',
+                        style: GoogleFonts.manrope(
+                          fontSize: 34,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -1.2,
+                          color: OurobionColors.brandGoldDark,
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        missingCount == 0
+                            ? 'All channels in'
+                            : '$missingCount channel${missingCount == 1 ? '' : 's'} open',
+                        style: GoogleFonts.manrope(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                          color: OurobionColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -563,17 +693,17 @@ class _ScanDialBreatheState extends State<_ScanDialBreathe>
   Widget build(BuildContext context) {
     final reduced = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     final shouldMove = widget.active && !reduced;
-    if (shouldMove && !_controller.isAnimating) _controller.repeat(reverse: true);
+    if (shouldMove && !_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    }
     if (!shouldMove && _controller.isAnimating) _controller.stop();
 
     if (!shouldMove) return widget.child;
     return AnimatedBuilder(
       animation: CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
       child: widget.child,
-      builder: (context, child) => Transform.scale(
-        scale: 1 + (_controller.value * 0.035),
-        child: child,
-      ),
+      builder: (context, child) =>
+          Transform.scale(scale: 1 + (_controller.value * 0.035), child: child),
     );
   }
 }
@@ -612,112 +742,6 @@ class _GapReveal extends StatelessWidget {
   }
 }
 
-/// Animated highlight band that sweeps down through the channel rows while a
-/// scan is in progress — the Claude Design `scanSweep` keyframe
-/// (`translateY(-120%)` → `translateY(220%)`) reimplemented as a Flutter
-/// [AnimationController] driving a translucent gradient band.
-///
-/// [child] must be limited to channels that can actually report in — today
-/// that's [WearableSyncRow] and [_SelfReportRow]. [EnvironmentRow] is
-/// deliberately kept OUTSIDE this widget by its caller: that channel has no
-/// data source behind it (see its own doc comment), so a highlight band
-/// passing over it would visually claim it is being polled when it cannot
-/// respond. Excluding it structurally — rather than trying to mask around it
-/// — is what makes that guarantee checkable in a widget test.
-///
-/// Reduce-motion gating follows the exact pattern `_Breathe` uses in
-/// `modules/m1_core/ui/screens/home_tab.dart`: read
-/// `MediaQuery.maybeDisableAnimationsOf(context)` on every build and drive
-/// `repeat()`/`stop()` from that read, rather than starting the loop once in
-/// `initState` and forgetting about it. [active] additionally gates the sweep
-/// on scan state — it must not run while idle or done, motion setting aside.
-class ChannelScanSweep extends StatefulWidget {
-  /// Key on the animated band `Container`, exposed so tests can assert its
-  /// presence (motion enabled) or absence (reduce-motion / inactive) without
-  /// reaching into private state.
-  static const bandKey = ValueKey('channel-scan-sweep-band');
-
-  final bool active;
-  final Widget child;
-
-  const ChannelScanSweep({super.key, required this.active, required this.child});
-
-  @override
-  State<ChannelScanSweep> createState() => _ChannelScanSweepState();
-}
-
-class _ChannelScanSweepState extends State<ChannelScanSweep>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final reduced = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    final animating = widget.active && !reduced;
-
-    if (!animating) {
-      if (_c.isAnimating) _c.stop();
-      return ClipRect(child: widget.child);
-    }
-
-    if (!_c.isAnimating) _c.repeat();
-
-    return ClipRect(
-      child: LayoutBuilder(
-        // The band has no intrinsic width of its own (unlike the bloom orb's
-        // sweep, which sweeps a fixed-size circle) — it must span whatever
-        // width the channel rows below it are given.
-        builder: (context, constraints) => Stack(
-          children: [
-            widget.child,
-            Positioned.fill(
-              child: IgnorePointer(
-                child: AnimatedBuilder(
-                  animation: _c,
-                  builder: (context, _) => Align(
-                    // scanSweep keyframe: translateY(-120%) → translateY(220%),
-                    // i.e. alignment.y sweeping from -1.2 to 2.2.
-                    alignment: Alignment(
-                      0,
-                      -1.2 + const Cubic(0.4, 0, 0.6, 1).transform(_c.value) * 3.4,
-                    ),
-                    child: Container(
-                      key: ChannelScanSweep.bandKey,
-                      width: constraints.maxWidth,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            OurobionColors.primary.withValues(alpha: 0),
-                            OurobionColors.primary.withValues(alpha: 0.22),
-                            OurobionColors.brandGoldLight.withValues(alpha: 0.22),
-                            OurobionColors.primary.withValues(alpha: 0),
-                          ],
-                          stops: const [0, 0.4, 0.6, 1],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _SelfReportRow extends StatelessWidget {
   final bool logged;
   const _SelfReportRow({required this.logged});
@@ -728,7 +752,9 @@ class _SelfReportRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
       decoration: BoxDecoration(
         color: OurobionColors.surfaceLowest.withValues(alpha: 0.8),
-        border: Border.all(color: OurobionColors.primary.withValues(alpha: 0.4)),
+        border: Border.all(
+          color: OurobionColors.primary.withValues(alpha: 0.4),
+        ),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -737,7 +763,9 @@ class _SelfReportRow extends StatelessWidget {
             width: 7,
             height: 7,
             decoration: BoxDecoration(
-              color: logged ? OurobionColors.deltaPositive : OurobionColors.brandGold,
+              color: logged
+                  ? OurobionColors.deltaPositive
+                  : OurobionColors.brandGold,
               shape: BoxShape.circle,
             ),
           ),
@@ -801,8 +829,11 @@ class EnvironmentRow extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.public_outlined,
-                        size: 16, color: OurobionColors.outline),
+                    const Icon(
+                      Icons.public_outlined,
+                      size: 16,
+                      color: OurobionColors.outline,
+                    ),
                     const SizedBox(width: 11),
                     Expanded(
                       child: Text(
@@ -839,41 +870,35 @@ class EnvironmentRow extends StatelessWidget {
 
 /// One missing daily-core channel.
 ///
-/// When [inlineOptions] is non-null the card answers in place: each chip calls
-/// [onAnswer], which the tab routes to [DailyLogService.saveFieldAnswer] — a
-/// targeted UPDATE of that one column. When it is null (urine colour, stool
-/// form, mosquito bites: values a chip row cannot express without narrowing
-/// them) the card is a plain tap-through to the full log. Either way
-/// [onOpenFullLog] stays reachable.
+/// Collapsed one-metric logger matching the reference interaction. Only the
+/// selected card expands; choosing a value calls [onAnswer], which the tab
+/// routes to [DailyLogService.saveFieldAnswer] for a one-column update.
 class GapCard extends StatelessWidget {
   final String metricKey;
   final int weight;
-
-  /// Chip values this card can answer in place, or null if the metric must be
-  /// answered on the full form. Sourced from [kInlineAnswerableOptions].
-  final List<int>? inlineOptions;
+  final List<int> options;
+  final int? currentValue;
+  final bool expanded;
   final ValueChanged<int> onAnswer;
-  final VoidCallback onOpenFullLog;
+  final VoidCallback onToggle;
   final bool saving;
 
   const GapCard({
     super.key,
     required this.metricKey,
     required this.weight,
+    required this.options,
     required this.onAnswer,
-    required this.onOpenFullLog,
-    this.inlineOptions,
+    required this.onToggle,
+    this.currentValue,
+    this.expanded = false,
     this.saving = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final options = inlineOptions;
     return GoldCard(
-      // With chips present the card must not swallow their taps behind a
-      // whole-card gesture; the explicit "Open full log" button carries the
-      // route instead.
-      onTap: options == null ? onOpenFullLog : null,
+      onTap: expanded || saving ? null : onToggle,
       padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
       radius: 20,
       child: Row(
@@ -885,7 +910,9 @@ class GapCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: OurobionColors.surfaceContainer,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: OurobionColors.primary.withValues(alpha: 0.6)),
+              border: Border.all(
+                color: OurobionColors.primary.withValues(alpha: 0.6),
+              ),
             ),
             child: const Center(
               child: SizedBox(
@@ -925,30 +952,61 @@ class GapCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  ScanTabCopy.gapWeight(weight),
+                  currentValue == null
+                      ? ScanTabCopy.gapWeight(weight)
+                      : ScanTabCopy.gapSaved,
                   style: GoogleFonts.manrope(
                     fontSize: 11.5,
                     height: 1.5,
                     color: OurobionColors.onSurfaceVariant,
                   ),
                 ),
-                if (options == null) ...[
-                  // The card names ONE metric but the tap opens the whole form
-                  // — [DailyLogScreen] cannot be focused on a single field. Say
-                  // where the tap goes rather than implying a metric-specific
-                  // destination.
+                if (currentValue != null && !expanded) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Text(
+                        ScanTabCopy.gapLogged,
+                        style: GoogleFonts.manrope(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.4,
+                          color: OurobionColors.deltaPositive,
+                        ),
+                      ),
+                      const SizedBox(width: 9),
+                      Expanded(
+                        child: Text(
+                          ScanTabCopy.answerLabel(metricKey, currentValue!),
+                          style: GoogleFonts.manrope(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: OurobionColors.onSurface,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        ScanTabCopy.gapChange,
+                        style: GoogleFonts.manrope(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: OurobionColors.outline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else if (!expanded) ...[
                   const SizedBox(height: 6),
                   Text(
-                    ScanTabCopy.gapOpensFullLog,
+                    ScanTabCopy.gapAnswerHere,
                     style: GoogleFonts.manrope(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w600,
-                      height: 1.5,
                       color: OurobionColors.primary,
                     ),
                   ),
                 ],
-                if (options != null) ...[
+                if (expanded) ...[
                   const SizedBox(height: 4),
                   Text(
                     ScanTabCopy.gapAnswerHere,
@@ -974,27 +1032,17 @@ class GapCard extends StatelessWidget {
                     saving: saving,
                     onAnswer: onAnswer,
                   ),
-                  const SizedBox(height: 4),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(
-                      onPressed: saving ? null : onOpenFullLog,
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 4, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: Text(
-                        ScanTabCopy.gapOpenFullLog,
-                        style: GoogleFonts.manrope(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: OurobionColors.primary,
-                        ),
+                  if (saving) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      ScanTabCopy.gapSaving,
+                      style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: OurobionColors.outline,
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ],
             ),
@@ -1023,45 +1071,39 @@ class _InlineChipRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Wrap(
+      spacing: 7,
+      runSpacing: 7,
       children: [
-        for (var i = 0; i < options.length; i++)
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(right: i < options.length - 1 ? 6 : 0),
-              child: Semantics(
-                container: true,
-                button: true,
-                enabled: !saving,
-                label: '${metricDisplayLabel(metricKey)} ${options[i]}',
-                // Routed explicitly rather than inherited: the visual subtree
-                // is semantically excluded so the node reads as "Mood score 4"
-                // instead of a bare "4", and excluding it would otherwise take
-                // the GestureDetector's tap action with it.
-                onTap: saving ? null : () => onAnswer(options[i]),
-                child: ExcludeSemantics(
-                  child: GestureDetector(
-                    onTap: saving ? null : () => onAnswer(options[i]),
-                    child: Container(
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: OurobionColors.surfaceContainer,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: OurobionColors.primary.withValues(alpha: 0.35),
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${options[i]}',
-                          style: GoogleFonts.manrope(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: saving
-                                ? OurobionColors.outlineVariant
-                                : OurobionColors.onSurface,
-                          ),
-                        ),
+        for (final option in options)
+          Semantics(
+            container: true,
+            button: true,
+            enabled: !saving,
+            label: '${metricDisplayLabel(metricKey)} $option',
+            onTap: saving ? null : () => onAnswer(option),
+            child: ExcludeSemantics(
+              child: GestureDetector(
+                onTap: saving ? null : () => onAnswer(option),
+                child: Container(
+                  width: 43,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: OurobionColors.surfaceContainer,
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(
+                      color: OurobionColors.primary.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$option',
+                      style: GoogleFonts.manrope(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: saving
+                            ? OurobionColors.outlineVariant
+                            : OurobionColors.onSurface,
                       ),
                     ),
                   ),

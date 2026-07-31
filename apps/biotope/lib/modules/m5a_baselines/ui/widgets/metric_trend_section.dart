@@ -264,7 +264,7 @@ class MetricTrendSectionState extends State<MetricTrendSection> {
       children: [
         Expanded(
           child: CustomPaint(
-            painter: TrendChartPainter(points: _points),
+            painter: TrendChartPainter(metricKey: _selected!, points: _points),
             child: const SizedBox.expand(),
           ),
         ),
@@ -300,31 +300,78 @@ class MetricTrendSectionState extends State<MetricTrendSection> {
     fontWeight: FontWeight.w600,
     color: OurobionColors.outline,
   );
-
 }
 
 // ── Chart painter ──────────────────────────────────────────────────────────────
+
+/// Metric-aware y-axis ticks. Ordinal scales stay on valid integer categories;
+/// continuous metrics retain nice numeric ticks.
+List<double> trendAxisTicks(String metricKey, List<double> values) =>
+    switch (metricKey) {
+      'urine_colour' => const [1, 4, 8],
+      'stool_form' => const [1, 4, 7],
+      'outside_meals' => const [0, 1, 2, 3],
+      'mosquito_bites' => const [0, 5, 10, 15, 20],
+      'energy_score' || 'mood_score' || 'gut_comfort_score' => const [1, 3, 5],
+      _ => niceTicks(valueBounds(values)),
+    };
+
+ValueBounds trendAxisBounds(
+  String metricKey,
+  List<double> values,
+  List<double> ticks,
+) => switch (metricKey) {
+  'urine_colour' => const ValueBounds(1, 8),
+  'stool_form' => const ValueBounds(1, 7),
+  'outside_meals' => const ValueBounds(0, 3),
+  'mosquito_bites' => const ValueBounds(0, 20),
+  'energy_score' ||
+  'mood_score' ||
+  'gut_comfort_score' => const ValueBounds(1, 5),
+  _ => ValueBounds(
+    math.min(valueBounds(values).min, ticks.first),
+    math.max(valueBounds(values).max, ticks.last),
+  ),
+};
+
+String trendAxisLabel(String metricKey, double tick) => switch (metricKey) {
+  'urine_colour' => switch (tick.round()) {
+    1 => '1 pale',
+    4 => '4 yellow',
+    8 => '8 dark',
+    _ => tick.round().toString(),
+  },
+  'stool_form' => switch (tick.round()) {
+    1 => '1 firm',
+    4 => '4 smooth',
+    7 => '7 watery',
+    _ => tick.round().toString(),
+  },
+  'sleep_duration_min' => '${compactValueLabel(tick)} min',
+  'resting_hr_bpm' => '${compactValueLabel(tick)} bpm',
+  'hrv_sdnn_ms' => '${compactValueLabel(tick)} ms',
+  'step_count' => '${compactValueLabel(tick)} steps',
+  'spo2_pct' => '${compactValueLabel(tick)} %',
+  'body_temp_c' => '${compactValueLabel(tick)} °C',
+  _ => compactValueLabel(tick),
+};
 
 /// Hand-rolled daily-series chart: nice-tick gridlines with value labels, a
 /// date-proportional polyline, and a dot per day. All math lives in
 /// impl/chart_math.dart (pure, unit-tested); this painter only draws.
 class TrendChartPainter extends CustomPainter {
+  final String metricKey;
   final List<MetricDailyPoint> points;
 
-  TrendChartPainter({required this.points});
+  TrendChartPainter({required this.metricKey, required this.points});
 
   @override
   void paint(Canvas canvas, Size size) {
     if (points.isEmpty) return;
 
     final values = [for (final p in points) p.value];
-    final bounds = valueBounds(values);
-    final ticks = niceTicks(bounds);
-    // Expand to the tick hull so gridlines and data share one scale.
-    final scale = ValueBounds(
-      math.min(bounds.min, ticks.first),
-      math.max(bounds.max, ticks.last),
-    );
+    final ticks = trendAxisTicks(metricKey, values);
+    final scale = trendAxisBounds(metricKey, values, ticks);
 
     // Tick labels first — their width fixes the plot area's left edge.
     final labels = <TextPainter>[];
@@ -332,7 +379,7 @@ class TrendChartPainter extends CustomPainter {
     for (final t in ticks) {
       final tp = TextPainter(
         text: TextSpan(
-          text: compactValueLabel(t),
+          text: trendAxisLabel(metricKey, t),
           style: GoogleFonts.manrope(
             fontSize: 9,
             fontWeight: FontWeight.w600,
@@ -392,5 +439,6 @@ class TrendChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(TrendChartPainter oldDelegate) =>
+      oldDelegate.metricKey != metricKey ||
       !identical(oldDelegate.points, points);
 }
