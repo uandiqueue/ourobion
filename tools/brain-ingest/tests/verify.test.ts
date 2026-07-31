@@ -38,6 +38,7 @@ import {
   supportingCitationCount,
   topImpactTier,
   verifyClaim,
+  verify,
   loadVerificationValidator,
   appendVerificationsToDir,
 } from '../src/verify/verifier.js';
@@ -586,6 +587,105 @@ test('artifact: appendVerificationsToDir dedupes on (edgeId, verifiedAt)', async
     assert.equal(w2.skipped, 1);
     const lines = readFileSync(w1.path, 'utf8').trim().split(/\r?\n/);
     assert.equal(lines.length, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ── --push-r2: publish the verdicts to the shared truth-tier object ──────────
+//
+// The cloud pipeline (#233 §D) is the reason this exists: synthesis could already
+// publish claims.jsonl to R2, but verifications could not be published at all, so
+// `edge-loader --from-r2` would project claims carrying no verdict.
+
+/** Minimal in-memory stand-in for the R2 object the loader reads. */
+function fakeR2() {
+  const store = {
+    objects: new Map<string, string>(),
+    puts: [] as string[],
+    failPut: false,
+    async getObjectText(key: string): Promise<string> {
+      const v = store.objects.get(key);
+      if (v === undefined) throw new Error(`no such key: ${key}`);
+      return v;
+    },
+    async putObject(key: string, body: Uint8Array): Promise<void> {
+      if (store.failPut) throw new Error('simulated R2 outage');
+      store.puts.push(key);
+      store.objects.set(key, new TextDecoder().decode(body));
+    },
+  };
+  return store;
+}
+
+async function runVerifyWith(dir: string, extra: Record<string, unknown>) {
+  const validate = await loadVerificationValidator();
+  const router = {
+    async route(): Promise<LlmResponse> {
+      return { text: reply({ sourceStances: [{ paperId: 'corpus:gut-mood-2024', stance: 'supports' }] }), model: 'MOCK', modelIdentity: mockIdentity('MOCK'), route: 'api_worker', usage: { inputTokens: 1, outputTokens: 1 } };
+    },
+  };
+  return verify({
+    claims: [makeClaim()], edgesDir: dir,
+    texts: texts(), retrieve: { corpus: [corpusDoc()] }, router, validateVerification: validate,
+    now: () => Date.parse('2026-07-16T00:00:00.000Z'),
+    ...extra,
+  } as Parameters<typeof verify>[0]);
+}
+
+test('verify --push-r2: publishes verdicts to edges/verifications.jsonl', async () => {
+  const dir = tmp();
+  const r2 = fakeR2();
+  try {
+    const res = await runVerifyWith(dir, { pushR2: true, r2Store: r2 });
+    assert.equal(res.records.length, 1);
+    assert.equal(res.r2?.key, 'edges/verifications.jsonl', 'must use the exact basename edge-loader reads');
+    assert.equal(res.r2?.written, 1);
+    // The published bytes are the verdict itself, not a placeholder.
+    const published = r2.objects.get('edges/verifications.jsonl') ?? '';
+    assert.match(published, /"edgeId":"gut_comfort_score\|correlates\|mood_score"/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('verify without --push-r2: nothing is published (publishing stays opt-in)', async () => {
+  const dir = tmp();
+  const r2 = fakeR2();
+  try {
+    const res = await runVerifyWith(dir, { r2Store: r2 });
+    assert.equal(res.records.length, 1);
+    assert.equal(res.r2, undefined);
+    assert.equal(r2.puts.length, 0, 'a plain verify run must never write to the shared truth tier');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('verify --push-r2: a second push dedupes rather than duplicating the verdict', async () => {
+  const dir = tmp();
+  const r2 = fakeR2();
+  try {
+    await runVerifyWith(dir, { pushR2: true, r2Store: r2 });
+    const second = await runVerifyWith(tmp(), { pushR2: true, r2Store: r2 });
+    assert.equal(second.r2?.written, 0);
+    assert.equal(second.r2?.skipped, 1);
+    const lines = (r2.objects.get('edges/verifications.jsonl') ?? '').trim().split(/\r?\n/);
+    assert.equal(lines.length, 1, 'the shared object must not accumulate duplicate verdicts');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('verify --push-r2: an R2 failure does NOT lose the local verdict', async () => {
+  const dir = tmp();
+  const r2 = fakeR2();
+  r2.failPut = true;
+  try {
+    await assert.rejects(() => runVerifyWith(dir, { pushR2: true, r2Store: r2 }), /simulated R2 outage/);
+    // The local mirror is written BEFORE the push, so the evidence survives.
+    const local = readFileSync(join(dir, 'verifications.jsonl'), 'utf8').trim().split(/\r?\n/);
+    assert.equal(local.length, 1, 'local verifications.jsonl must already hold the verdict');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

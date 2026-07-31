@@ -1,0 +1,234 @@
+name: Brain pipeline (synthesis → verification → edge load)
+
+# R4 / issue #233 §D — the stages AFTER ingestion, run on the cloud compute plane.
+#
+# `brain-ingest.yml` stops at ingestion, so R2 has never held an `edges/` object and
+# hosted `verified_edges` has stayed empty. This workflow closes that gap:
+#
+#   1. synthesis        paper text → RelationshipClaim + quote spans   (--push-r2)
+#   2. quoteCheck       deterministic, BEFORE any verifier token is spent
+#   3. verification     decorrelated adversarial verifier, refute-first, independent
+#                       retrieval, defaults to `uncertain`               (--push-r2)
+#   4. artifact write   edges/claims.jsonl + edges/verifications.jsonl to R2, under the
+#                       exact basenames tools/edge-loader expects
+#   5. projection       tools/edge-loader/load_edges.mjs --from-r2 → verified_edges
+#
+# nao's role is unchanged: it dispatches and reports. It never calls a provider and
+# never holds a provider key — the router runs HERE, which is why the LLM keys are
+# repository secrets rather than nao env (see docs/nao/brain-ingestion-design.md §8.1).
+#
+# SPENDS REAL MONEY. Defaults are fail-closed: `dry_run: true` makes no provider call,
+# and a live run additionally requires `confirm_spend: RUN`. The router's own C7 per-node
+# USD/day ceiling and the decorrelation invariant still apply and are never raised here.
+on:
+  workflow_dispatch:
+    inputs:
+      pair:
+        description: "Metric pair to synthesise, comma-separated (e.g. gut_comfort_score,mood_score)"
+        required: true
+        type: string
+      papers:
+        description: "Paper uid(s) to synthesise over, comma-separated"
+        required: true
+        type: string
+      artifact_revision:
+        description: "Artifact bundle revision stamped on every record. Operator knowledge — never invented."
+        required: true
+        type: string
+      corpus:
+        description: "Repo-relative JSONL corpus the verifier retrieves over (blank = EMPTY corpus ⇒ every verdict is uncertain)"
+        required: false
+        type: string
+        default: ""
+      dry_run:
+        description: "No provider call, no R2 write, no DB write (default)"
+        required: false
+        type: boolean
+        default: true
+      confirm_spend:
+        description: "Type RUN to authorise a live provider run. Ignored when dry_run is true."
+        required: false
+        type: string
+        default: ""
+
+# Never let two pipeline runs interleave: stages 1 and 3 read-modify-write the same
+# shared R2 objects, and stage 5 fully rebuilds a projection from them.
+concurrency:
+  group: brain-pipeline
+  cancel-in-progress: false
+
+jobs:
+  pipeline:
+    name: Synthesis → verification → edge load
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: tools/brain-ingest/package-lock.json
+
+      # Fail before any install/spend if the operator asked for a live run without
+      # confirming, or asked for one that cannot possibly produce a verdict.
+      - name: Gate the run
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          CONFIRM: ${{ inputs.confirm_spend }}
+          CORPUS: ${{ inputs.corpus }}
+        run: |
+          set -eu
+          if [ "$DRY_RUN" != "true" ]; then
+            if [ "$CONFIRM" != "RUN" ]; then
+              echo "::error::live run requires confirm_spend=RUN (got '${CONFIRM}'). Refusing to spend."
+              exit 1
+            fi
+            if [ -z "${CORPUS:-}" ]; then
+              echo "::error::live run with no --corpus would retrieve over an EMPTY corpus, forcing every verdict to 'uncertain' while still spending verifier tokens. Pass a corpus."
+              exit 1
+            fi
+            echo "Live run authorised."
+          else
+            echo "Dry run: no provider call, no R2 write, no DB write."
+          fi
+          if [ -n "${CORPUS:-}" ] && [ ! -f "$CORPUS" ]; then
+            echo "::error::corpus '$CORPUS' not found in the checkout."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: |
+          set -eu
+          npm --prefix shared ci || npm --prefix shared install --no-audit --no-fund
+          npm --prefix tools/llm-router ci
+          npm --prefix tools/brain-ingest ci
+          npm --prefix tools/edge-loader ci
+
+      # The router and the ingest CLI both read tools/brain-ingest/.env. Written here
+      # from repository secrets and removed in the always() teardown below.
+      - name: Write .env from secrets
+        working-directory: tools/brain-ingest
+        run: |
+          set -eu
+          umask 077
+          {
+            printf "INGEST_CONTACT_EMAIL=%s\n" "${{ secrets.INGEST_CONTACT_EMAIL }}"
+            printf "OPENAI_API_KEY=%s\n"       "${{ secrets.OPENAI_API_KEY }}"
+            printf "ANTHROPIC_API_KEY=%s\n"    "${{ secrets.ANTHROPIC_API_KEY }}"
+            printf "AGNES_API_KEY=%s\n"        "${{ secrets.AGNES_API_KEY }}"
+            printf "OPENALEX_API_KEY=%s\n"     "${{ secrets.OPENALEX_API_KEY }}"
+            printf "NCBI_API_KEY=%s\n"         "${{ secrets.NCBI_API_KEY }}"
+            printf "CORE_API_KEY=%s\n"         "${{ secrets.CORE_API_KEY }}"
+            printf "R2_ENDPOINT=%s\n"          "${{ secrets.R2_ENDPOINT }}"
+            printf "R2_ACCESS_KEY_ID=%s\n"     "${{ secrets.R2_ACCESS_KEY_ID }}"
+            printf "R2_SECRET_ACCESS_KEY=%s\n" "${{ secrets.R2_SECRET_ACCESS_KEY }}"
+            printf "R2_BUCKET=%s\n"            "${{ secrets.R2_BUCKET }}"
+          } > .env
+
+      # Proves the configured synthesis/verifier models resolve to DIFFERENT vendor
+      # families and that every required key is present. The decorrelation invariant is
+      # unconditional in config.ts; this surfaces a violation before any token is spent.
+      - name: Check router config (decorrelation + keys)
+        working-directory: tools/brain-ingest
+        run: npx tsx src/cli.ts --check-config
+
+      # `synthesize` resolves each paper's citation metadata (title / year / evidence
+      # tier) from the LOCAL corpus manifest, not from R2. Ingestion runs in a separate
+      # workflow on a different runner, so this runner's cache is always empty and
+      # synthesis would fail with "manifest/corpus metadata missing" even though the
+      # paper text loads from R2 fine. Hydrate first. No-op if already populated.
+      - name: Hydrate local corpus manifest from R2
+        working-directory: tools/brain-ingest
+        run: npx tsx src/cli.ts hydrate-manifest
+
+      # ── 1 + 2 · synthesis, quoteCheck-gated ────────────────────────────────────
+      # The provider keys MUST be in the process environment, not only in .env:
+      # LlmRouter resolves keys from `opts.env ?? process.env` (router.ts) and the
+      # synthesize/verify paths construct it without an explicit env, so they never
+      # read the .env file. Only `live-acceptance` merges .env via loadProtectedEnv.
+      # Writing .env alone would fail here with "requires env var OPENAI_API_KEY".
+      - name: Synthesis
+        working-directory: tools/brain-ingest
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
+          PAIR: ${{ inputs.pair }}
+          PAPERS: ${{ inputs.papers }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -eu
+          ARGS=(synthesize --pair "$PAIR" --paper "$PAPERS")
+          if [ "$DRY_RUN" = "true" ]; then ARGS+=(--dry-run); else ARGS+=(--push-r2); fi
+          echo "Running: npx tsx src/cli.ts ${ARGS[*]}"
+          npx tsx src/cli.ts "${ARGS[@]}"
+
+      # ── 3 + 4 · decorrelated verification, verdicts published to R2 ─────────────
+      - name: Verification
+        working-directory: tools/brain-ingest
+        env:
+          # Same reason as Synthesis: the router reads process.env, not .env.
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
+          CORPUS: ${{ inputs.corpus }}
+          REVISION: ${{ inputs.artifact_revision }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -eu
+          ARGS=(verify --artifact-revision "$REVISION")
+          if [ -n "${CORPUS:-}" ]; then ARGS+=(--corpus "$GITHUB_WORKSPACE/$CORPUS"); fi
+          if [ "$DRY_RUN" = "true" ]; then ARGS+=(--dry-run); else ARGS+=(--push-r2); fi
+          echo "Running: npx tsx src/cli.ts ${ARGS[*]}"
+          npx tsx src/cli.ts "${ARGS[@]}"
+
+      # ── 5 · projection into verified_edges ─────────────────────────────────────
+      #
+      # The loader connects with `pg` and needs a PostgreSQL connection string. It does
+      # NOT use a Supabase API key, so SUPABASE_SECRET_KEYS cannot drive it — see the
+      # note on #233. Without SUPABASE_DB_URL this validates the artifacts and stops,
+      # rather than silently reporting a projection that never happened.
+      - name: Edge load (projection)
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -eu
+          if [ "$DRY_RUN" = "true" ]; then
+            # A dry run deliberately does not push, so on a bucket that has never had a
+            # live run there is legitimately no edges/ object to validate. Treat that one
+            # case as the expected empty state — otherwise a dry run could never go green
+            # on a fresh bucket and would be worthless as a wiring check. Any OTHER loader
+            # failure (bad credentials, malformed artifact) still fails the step.
+            echo "Dry run — validating R2 artifacts without touching the database."
+            set +e
+            OUT=$(node tools/edge-loader/load_edges.mjs --from-r2 --check 2>&1); RC=$?
+            set -e
+            echo "$OUT"
+            if [ $RC -ne 0 ]; then
+              if echo "$OUT" | grep -q "claims.jsonl"; then
+                echo "::notice::No edges/claims.jsonl in R2 yet — expected before the first live run. R2 credentials and connectivity are proven by this probe."
+                exit 0
+              fi
+              echo "::error::edge-loader validation failed for a reason other than the edges artifact being absent."
+              exit $RC
+            fi
+            exit 0
+          fi
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            node tools/edge-loader/load_edges.mjs --from-r2 --check
+            echo "::error::SUPABASE_DB_URL secret is not set, so the projection into verified_edges was SKIPPED. Artifacts above are validated and published to R2, but the database was not written. Add a PostgreSQL connection string for the demo project as the SUPABASE_DB_URL repository secret (the loader uses pg, not a Supabase API key, so SUPABASE_SECRET_KEYS cannot substitute)."
+            exit 1
+          fi
+          node tools/edge-loader/load_edges.mjs --from-r2
+
+      - name: Remove secrets file
+        if: always()
+        run: rm -f tools/brain-ingest/.env
