@@ -53,4 +53,14 @@ Issue: #282 ? PR: #289 ? branch: `test/ui/run4-268-coverage-282` ? target:
 - `flutter test --no-pub -j 2`: 738 passed, 26 skipped, 0 failed.
 - `git diff --check`: PASS.
 
+## Exact-head completion
+
+- Re-fetched and verified `origin/dev-phase2-run4` at
+  `253e0ad6db31bb2a134e47546ddaba84bf284639`; `git ls-remote` matched.
+- Merged that exact tip without rebasing in `e519c0e290f366f29e83e39c5618fd072d7e40b7`.
+- Post-merge `flutter analyze --no-pub`: PASS.
+- Post-merge `flutter test --no-pub -j 2`: 738 passed, 26 skipped, 0 failed.
+- Post-merge `node tools/context_sync.mjs --check`: PASS.
+- Post-merge `git diff --check` and exact-base ancestry: PASS.
+
 memory: none
