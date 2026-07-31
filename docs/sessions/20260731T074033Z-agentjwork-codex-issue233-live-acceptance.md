@@ -114,4 +114,16 @@ base: exact Run 4 head `5ba4b35ad30e873e26bd1072a794439ffc4aa169`; target:
   isolated ordinary clone and elevated project-bounded tools were used. Every tracked source edit used
   the Codex apply-patch engine; no shell or Python source-write workaround was used.
 
+## Local integration completion
+
+- This completion entry supersedes the pre-integration Left bullet above.
+- The independently reviewed implementation was committed as
+  3d112d81cea92591f80b80600f7a48b5b26b324d.
+- Exact origin/dev-phase2-run4 head
+  f82a7038b66c301a1dbf4ea10b3821fe19c06e10 was merged without rebasing or conflicts in merge
+  commit 73dca7a8b2a0df42caab3f57750f27d7ec5b91d8.
+- Post-merge gates passed: both TypeScript typechecks; llm-router 121/121; brain-ingest 426/426.
+- Local integration is complete. Push, PR creation, live provider calls, and hosted mutations remain
+  intentionally unperformed and require a separately authorized execution session.
+
 memory: none
