@@ -1304,10 +1304,9 @@ class _MosquitoBiteStepperState extends State<_MosquitoBiteStepper> {
 
   int _resolvedInitialValue() =>
       (widget.initialValue ?? widget.options.first).clamp(
-            widget.options.first,
-            widget.options.last,
-          )
-          as int;
+        widget.options.first,
+        widget.options.last,
+      );
 
   @override
   void initState() {
@@ -1331,9 +1330,10 @@ class _MosquitoBiteStepperState extends State<_MosquitoBiteStepper> {
   }
 
   void _change(int delta) {
-    final next =
-        (_value + delta).clamp(widget.options.first, widget.options.last)
-            as int;
+    final next = (_value + delta).clamp(
+      widget.options.first,
+      widget.options.last,
+    );
     if (next != _value) setState(() => _value = next);
   }
 
@@ -1357,6 +1357,12 @@ class _MosquitoBiteStepperState extends State<_MosquitoBiteStepper> {
         const SizedBox(width: 10),
         Expanded(
           child: Semantics(
+            // The value readout must be its own node so assistive tech can
+            // announce the pending count on its own. Without `container` the
+            // annotation has no child node to attach to (the visual subtree is
+            // excluded) and the label silently merges into the card's node.
+            container: true,
+            liveRegion: true,
             label: 'Mosquito bites, $_value selected',
             child: ExcludeSemantics(
               child: Container(

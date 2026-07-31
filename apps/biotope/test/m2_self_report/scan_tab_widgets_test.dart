@@ -2,7 +2,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:src/modules/m2_self_report/impl/logging_controller.dart';
 import 'package:src/modules/m2_self_report/ui/screens/scan_tab.dart';
@@ -73,11 +72,16 @@ Future<String> _renderSignature(
   Finder boundaryFinder,
 ) async {
   final boundary = tester.renderObject<RenderRepaintBoundary>(boundaryFinder);
-  final image = await boundary.toImage(pixelRatio: 1);
-  final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
-  final signature = String.fromCharCodes(data!.buffer.asUint8List());
-  image.dispose();
-  return signature;
+  // Layer rasterisation and byte encoding are completed by the engine, not by
+  // the test's fake-async zone, so awaiting them inside `pump` time deadlocks.
+  // `runAsync` is the only place these futures can complete.
+  final signature = await tester.runAsync(() async {
+    final image = await boundary.toImage(pixelRatio: 1);
+    final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+    image.dispose();
+    return String.fromCharCodes(data!.buffer.asUint8List());
+  });
+  return signature!;
 }
 
 void main() {
