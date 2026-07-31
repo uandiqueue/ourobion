@@ -12,6 +12,10 @@ void main() {
       expect(metricAxisTickLabel('stool_form', 7), '7 watery');
     });
 
+    test('named scale fallback labels round fractional ticks', () {
+      expect(metricAxisTickLabel('urine_colour', 2.5), '3');
+      expect(metricAxisTickLabel('stool_form', 2.5), '3');
+    });
     test('every declared numeric unit is appended without a key policy', () {
       final unitMetrics = kMetrics.where(
         (metric) =>
