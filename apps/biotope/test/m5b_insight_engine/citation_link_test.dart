@@ -1,10 +1,7 @@
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:src/modules/m5b_insight_engine/impl/provenance_models.dart';
-
 const kRealDoi = '10.1016/j.isci.2026.116224';
 const kRealDoiUrl = 'https://doi.org/10.1016/j.isci.2026.116224';
-
 const kRepoDois = <String>[
   '10.1371/journal.pone.0211200',
   '10.1099/mic.0.001234',
@@ -12,53 +9,40 @@ const kRepoDois = <String>[
   '10.3390/s26041325',
   '10.48550/arXiv.2103.00020',
 ];
-
 const kCorpusId = 'corpus:gut-mood-cohort-2024';
 const kCorpusTitle = 'Gut comfort and mood in a longitudinal cohort';
 const kCorpusYear = 2024;
-
 const kControlCodePoints = [0x00, 0x07, 0x09, 0x0a, 0x0d, 0x1b, 0x7f, 0x9f];
-
 Uri? _uriFor(String paperId) => ProvenanceCitation(paperId: paperId).paperUri;
-
 String? _urlFor(String paperId) => _uriFor(paperId)?.toString();
-
 String _u(int code) => 'U+${code.toRadixString(16).padLeft(4, '0')}';
-
 void main() {
   group('a real DOI resolves to the canonical doi.org URL', () {
     test('bare', () {
       expect(_urlFor(kRealDoi), kRealDoiUrl);
     });
-
     test('doi:-prefixed, in either case', () {
       expect(_urlFor('doi:$kRealDoi'), kRealDoiUrl);
       expect(_urlFor('DOI:$kRealDoi'), kRealDoiUrl);
     });
-
     test('already an https://doi.org URL', () {
       expect(_urlFor(kRealDoiUrl), kRealDoiUrl);
     });
-
     test('the legacy dx.doi.org resolver normalises to doi.org', () {
       expect(_urlFor('https://dx.doi.org/$kRealDoi'), kRealDoiUrl);
     });
-
     test('a cleartext http:// doi.org URL is rejected outright (#286)', () {
       expect(_uriFor('http://doi.org/$kRealDoi'), isNull);
       expect(_uriFor('http://dx.doi.org/$kRealDoi'), isNull);
     });
-
     test('ordinary surrounding spaces are trimmed safely', () {
       expect(_urlFor('  $kRealDoi  '), kRealDoiUrl);
     });
-
     test('control-character wrappers are rejected before trimming (#286)', () {
       for (final paperId in ['$kRealDoi\n', '\t$kRealDoi', '$kRealDoi\r\n']) {
         expect(_uriFor(paperId), isNull, reason: paperId.codeUnits.toString());
       }
     });
-
     test('DOI case is canonicalised, so one paper has one URL (#286)', () {
       final upper = _uriFor('10.1016/J.ISCI.2026.116224');
       expect(upper, isNotNull);
@@ -66,7 +50,6 @@ void main() {
       expect(upper.toString(), kRealDoiUrl);
       expect(_urlFor('10.1099/MIC.0.001234'), _urlFor('10.1099/mic.0.001234'));
     });
-
     test('other genuine DOI shapes from this repo resolve too', () {
       for (final doi in kRepoDois) {
         final uri = _uriFor(doi);
@@ -77,7 +60,6 @@ void main() {
       }
     });
   });
-
   group('a non-DOI paperId yields null — never a guessed URL', () {
     test('internal corpus ids and other non-DOI identifiers', () {
       for (final id in [
@@ -93,7 +75,6 @@ void main() {
         expect(_uriFor(id), isNull, reason: id);
       }
     });
-
     test('empty and whitespace-only strings', () {
       expect(_uriFor(''), isNull);
       expect(_uriFor('   '), isNull);
@@ -101,7 +82,6 @@ void main() {
       expect(_uriFor('doi:'), isNull);
       expect(_uriFor('https://doi.org/'), isNull);
     });
-
     test('near-miss DOI shapes', () {
       expect(_uriFor('10.103/s41586'), isNull);
       expect(_uriFor('10.1234567890/x'), isNull);
@@ -110,18 +90,15 @@ void main() {
       expect(_uriFor('11.1038/s41586-020-2649-2'), isNull);
       expect(_uriFor('a$kRealDoi'), isNull);
     });
-
     test('an interior space is rejected — a DOI has none', () {
       expect(_uriFor('10.1038/s41586 -020'), isNull);
       expect(_uriFor('10.1038 /s41586'), isNull);
       expect(_uriFor('10.1038/s41586 020 2649'), isNull);
     });
-
     test('free text that merely mentions a DOI is not a DOI', () {
       expect(_uriFor('Array programming with NumPy ($kRealDoi)'), isNull);
     });
   });
-
   group('link safety — hostile paperIds', () {
     test('active-content and local schemes are rejected outright', () {
       for (final id in [
@@ -138,7 +115,6 @@ void main() {
         expect(_uriFor(id), isNull, reason: id);
       }
     });
-
     test('a non-doi.org host is rejected', () {
       for (final id in [
         'https://evil.example/$kRealDoi',
@@ -149,7 +125,6 @@ void main() {
         expect(_uriFor(id), isNull, reason: id);
       }
     });
-
     test('a look-alike host is rejected', () {
       for (final id in [
         'https://doi.org.evil.example/$kRealDoi',
@@ -162,13 +137,11 @@ void main() {
         expect(_uriFor(id), isNull, reason: id);
       }
     });
-
     test('a query or fragment cannot ride along on a doi.org URL', () {
       expect(_uriFor('https://doi.org/$kRealDoi?redirect=evil'), isNull);
       expect(_uriFor('https://doi.org/$kRealDoi#evil'), isNull);
       expect(_uriFor('10.1234/a%3fb'), isNull);
     });
-
     test('a control character INSIDE the identifier is rejected', () {
       for (final code in kControlCodePoints) {
         final c = String.fromCharCode(code);
@@ -189,7 +162,6 @@ void main() {
         );
       }
     });
-
     test('a NON-whitespace trailing control character is rejected', () {
       for (final code in [0x00, 0x07, 0x1b, 0x7f, 0x9f]) {
         expect(
@@ -199,7 +171,6 @@ void main() {
         );
       }
     });
-
     test('whenever a Uri IS produced it is https on exactly doi.org', () {
       final everyInput = <String>[
         kRealDoi,
@@ -241,7 +212,6 @@ void main() {
         expect(uri.toString(), startsWith('https://doi.org/'), reason: id);
       }
     });
-
     test('dot segments are rejected, not resolved away (#286)', () {
       for (final id in [
         '10.1234/../../evil',
@@ -253,7 +223,6 @@ void main() {
       }
     });
   });
-
   group('the parsed model carries the resolver', () {
     test('fromJson round-trips a DOI paperId into a linkable citation', () {
       final citation = ProvenanceCitation.fromJson(const {
@@ -268,7 +237,6 @@ void main() {
       expect(citation.evidenceTier, 4);
       expect(citation.stance, 'supports');
     });
-
     test('fromJson leaves an internal corpus id unlinkable', () {
       final citation = ProvenanceCitation.fromJson(const {
         'paperId': kCorpusId,

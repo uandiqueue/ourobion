@@ -1,53 +1,17 @@
-// UI gap 5 — the data-loss guard for the Scan tab's inline chip answers,
-// and #268 acceptance item 7: EVERY one of the seven daily-core metrics is
-// proven to produce a single-column patch, at BOTH ends of its accepted range.
-//
-// THE RISK: `DailyLogService.saveDailyLog` upserts the WHOLE row. It names every
-// column explicitly, including the ones the caller left null. That is correct
-// for DailyLogScreen (which loads today's row and re-sends every field) and
-// destructive for anything else — answering one chip through it would overwrite
-// every other field logged today with null.
-//
-// THE GUARD: an inline answer goes through `buildFieldPatch`, which emits ONLY
-// the answered column plus the two columns that are a function of it. Its safety
-// property is an ABSENCE — the columns it does not name — so it is asserted here
-// field by field against a fully populated row.
-//
-// The payload-builder portion is pure, so it runs with no database or Supabase
-// client. `_applyWrite` models PostgREST write semantics for that pure case:
-// a modeled write sets exactly the columns named in its payload (explicit nulls
-// included) and leaves every other column untouched. The ONLY difference between
-// the safe path and the destructive one is therefore which keys the payload
-// carries — which is exactly what these tests measure.
-
-//
-// The service portion uses an offline `http.BaseClient` to drive the real
-// `DailyLogService.saveFieldAnswer` request path. It records the existing-row
-// PATCH and absent-row INSERT, including the user/date predicates and payload.
-
 import 'dart:convert';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:src/modules/m2_self_report/impl/logging_controller.dart';
 import 'package:src/modules/m2_self_report/impl/normaliser.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 const _userId = '8f14e45f-ceea-467f-a1d2-91a2b3c4d5e6';
 const _logDate = '2026-07-28';
 final _now = DateTime.utc(2026, 7, 28, 9, 30);
-
 const _context = DailyLogRowContext(
   region: 'Singapore',
   onAntibiotics: true,
   gutWatchActive: false,
 );
-
-/// Today's row with EVERY column populated and distinguishable, except the one
-/// the user is about to answer (`mood_score` — a gap card only appears for a
-/// missing key). Column set taken from
-/// supabase/migrations/20260513_create_m2_daily_gut_rows_and_antibiotic_courses.sql
-/// plus the additive `data_origin` column (20260724120000).
 Map<String, dynamic> _fullyPopulatedRow() => {
   'id': 42,
   'user_id': _userId,
@@ -72,50 +36,33 @@ Map<String, dynamic> _fullyPopulatedRow() => {
   'created_at': '2026-07-28T00:00:00.000Z',
   'updated_at': '2026-07-28T01:00:00.000Z',
 };
-
-/// Models a PostgREST write against an existing row: every key present in the
-/// payload is assigned (a key mapped to null IS assigned null); keys absent from
-/// the payload keep their stored value.
 Map<String, dynamic> _applyWrite(
   Map<String, dynamic> stored,
   Map<String, dynamic> payload,
 ) => {...stored, ...payload};
-
-/// Columns an inline answer to [metricKey] is ALLOWED to change.
 Set<String> _permittedChanges(String metricKey) => {
   metricKey,
   'log_completeness',
   'updated_at',
 };
-
-/// An offline, request-level PostgREST recorder. It is deliberately below the
-/// service rather than a fake [DailyLogService]: the assertions therefore
-/// exercise `saveFieldAnswer`'s real get/update/insert decision and the exact
-/// HTTP operation the Supabase/PostgREST client receives.
 class _RecordedRequest {
   final String method;
   final Uri uri;
   final String body;
-
   const _RecordedRequest(this.method, this.uri, this.body);
-
   Map<String, dynamic> get json => body.isEmpty
       ? const <String, dynamic>{}
       : jsonDecode(body) as Map<String, dynamic>;
 }
-
 class _OfflinePostgrestClient extends http.BaseClient {
   final List<_RecordedRequest> requests = [];
   final Map<String, dynamic>? existingRow;
-
   _OfflinePostgrestClient({this.existingRow});
-
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     final body = utf8.decode(await request.finalize().toBytes());
     final recorded = _RecordedRequest(request.method, request.url, body);
     requests.add(recorded);
-
     Object response = const <Object>[];
     if (request.method == 'GET' &&
         request.url.path.endsWith('daily_gut_rows')) {
@@ -139,7 +86,6 @@ class _OfflinePostgrestClient extends http.BaseClient {
     );
   }
 }
-
 SupabaseClient _offlineSupabase(_OfflinePostgrestClient client) =>
     SupabaseClient(
       'http://offline.test',
@@ -147,24 +93,20 @@ SupabaseClient _offlineSupabase(_OfflinePostgrestClient client) =>
       httpClient: client,
       authOptions: const AuthClientOptions(autoRefreshToken: false),
     );
-
 _RecordedRequest _onlyWrite(_OfflinePostgrestClient client) =>
     client.requests.singleWhere(
       (request) =>
           request.uri.path.endsWith('daily_gut_rows') &&
           request.method != 'GET',
     );
-
 _RecordedRequest _dailyRead(_OfflinePostgrestClient client) => client.requests
     .firstWhere((request) => request.uri.path.endsWith('daily_gut_rows'));
-
 void main() {
   group(
     'buildFieldPatch — an inline chip answer never nulls an unrelated field',
     () {
       test('every other column is byte-identical after the write', () {
         final before = _fullyPopulatedRow();
-
         final patch = DailyLogService.buildFieldPatch(
           existingRow: before,
           metricKey: 'mood_score',
@@ -172,10 +114,7 @@ void main() {
           now: _now,
         );
         final after = _applyWrite(before, patch);
-
-        // Nothing appears or disappears.
         expect(after.keys.toSet(), equals(before.keys.toSet()));
-
         final permitted = _permittedChanges('mood_score');
         for (final column in before.keys) {
           if (permitted.contains(column)) continue;
@@ -188,8 +127,6 @@ void main() {
                 '(+ log_completeness, updated_at).',
           );
         }
-
-        // And the answer itself did land.
         expect(after['mood_score'], 4);
         expect(
           after['log_completeness'],
@@ -197,15 +134,12 @@ void main() {
           reason: '93 + mood_score weight (7) = 100',
         );
       });
-
       test('the same holds for every inline-answerable metric', () {
         for (final entry in kInlineAnswerableOptions.entries) {
           final metricKey = entry.key;
-          // Blank out just this metric so it reads as the day's open gap.
           final before = _fullyPopulatedRow()
             ..['mood_score'] = 3
             ..[metricKey] = null;
-
           final after = _applyWrite(
             before,
             DailyLogService.buildFieldPatch(
@@ -215,7 +149,6 @@ void main() {
               now: _now,
             ),
           );
-
           final permitted = _permittedChanges(metricKey);
           for (final column in before.keys) {
             if (permitted.contains(column)) continue;
@@ -228,7 +161,6 @@ void main() {
           expect(after[metricKey], entry.value.last);
         }
       });
-
       test('the patch names only three columns — the absence IS the guard', () {
         final patch = DailyLogService.buildFieldPatch(
           existingRow: _fullyPopulatedRow(),
@@ -236,7 +168,6 @@ void main() {
           value: 4,
           now: _now,
         );
-
         expect(
           patch.keys.toSet(),
           equals({'mood_score', 'log_completeness', 'updated_at'}),
@@ -244,11 +175,9 @@ void main() {
               'any extra column here becomes a column the UPDATE overwrites',
         );
       });
-
       test(
         'completeness is recomputed from the merged row, not the answer alone',
         () {
-          // Only urine_colour (25) already logged; answering mood (7) gives 32.
           final sparse = {
             'urine_colour': 3,
             'stool_form': null,
@@ -258,14 +187,12 @@ void main() {
             'mood_score': null,
             'gut_comfort_score': null,
           };
-
           final patch = DailyLogService.buildFieldPatch(
             existingRow: sparse,
             metricKey: 'mood_score',
             value: 4,
             now: _now,
           );
-
           expect(
             patch['log_completeness'],
             (kDailyCoreDqsWeights['urine_colour']! +
@@ -274,7 +201,6 @@ void main() {
           );
         },
       );
-
       test('no row yet today: completeness comes from the single answer', () {
         final patch = DailyLogService.buildFieldPatch(
           existingRow: null,
@@ -282,14 +208,12 @@ void main() {
           value: 5,
           now: _now,
         );
-
         expect(patch['energy_score'], 5);
         expect(
           patch['log_completeness'],
           kDailyCoreDqsWeights['energy_score']!.toDouble(),
         );
       });
-
       test('refuses a column that is not a daily-core DQS key', () {
         expect(
           () => DailyLogService.buildFieldPatch(
@@ -303,16 +227,10 @@ void main() {
       });
     },
   );
-
   group('proof the naive approach fails: the whole-row upsert DOES null out '
       'unrelated fields', () {
-    // This is the implementation an inline answer would have had if it reused
-    // saveDailyLog's payload with only the answered field set — the exact
-    // mistake buildFieldPatch exists to prevent. Same stored row, same
-    // simulated write; only the payload shape differs.
     test('a one-field DailyLogInput wipes every other logged value', () {
       final before = _fullyPopulatedRow();
-
       final naivePayload = DailyLogService.buildFullRowPayload(
         userId: _userId,
         logDate: _logDate,
@@ -321,8 +239,6 @@ void main() {
         now: _now,
       );
       final after = _applyWrite(before, naivePayload);
-
-      // Every one of these was populated before the write.
       expect(after['urine_colour'], isNull);
       expect(after['stool_form'], isNull);
       expect(after['stool_count'], isNull);
@@ -334,8 +250,6 @@ void main() {
       expect(after['standing_water_present'], isNull);
       expect(after['symptom_flags'], isEmpty);
       expect(after['log_completeness'], 7);
-
-      // Counted: the damage is broad, not a one-column slip.
       final clobbered = before.keys
           .where((c) => !_permittedChanges('mood_score').contains(c))
           .where((c) => jsonEncode(after[c]) != jsonEncode(before[c]))
@@ -346,10 +260,8 @@ void main() {
         reason: 'expected widespread clobbering, got: $clobbered',
       );
     });
-
     test('the safe patch leaves every column the naive payload destroyed', () {
       final before = _fullyPopulatedRow();
-
       final naive = _applyWrite(
         before,
         DailyLogService.buildFullRowPayload(
@@ -369,12 +281,8 @@ void main() {
           now: _now,
         ),
       );
-
-      // Both wrote the same answer...
       expect(naive['mood_score'], 4);
       expect(safe['mood_score'], 4);
-
-      // ...but only one of them still has the rest of the day's log.
       for (final column in [
         'urine_colour',
         'stool_form',
@@ -394,18 +302,7 @@ void main() {
       }
     });
   });
-
   group('every one of the seven metrics, at BOTH ends of its range', () {
-    // #268 acceptance item 7. The bounds come from kInlineAnswerableOptions
-    // rather than being retyped here; inline_control_range_test.dart is what
-    // ties those option lists to shared/metrics/registry.dart, so a range that
-    // drifts from the registry fails there and the bounds used here follow it.
-    //
-    // Both ends matter for two different reasons. The TOP end is the value a
-    // truncated control would fail to offer. The BOTTOM end is where 0 is a
-    // real answer for outside_meals and mosquito_bites — a completeness check
-    // written as `if (value)` rather than `!= null` would silently drop 20
-    // points for "no meals out today".
     for (final metricKey in kDailyCoreDqsWeights.keys) {
       final options = kInlineAnswerableOptions[metricKey]!;
       for (final entry in {
@@ -414,7 +311,6 @@ void main() {
       }.entries) {
         final bound = entry.key;
         final value = entry.value;
-
         test('$metricKey at its $bound value ($value) patches only three '
             'columns', () {
           final patch = DailyLogService.buildFieldPatch(
@@ -423,7 +319,6 @@ void main() {
             value: value,
             now: _now,
           );
-
           expect(
             patch.keys.toSet(),
             equals({metricKey, 'log_completeness', 'updated_at'}),
@@ -435,7 +330,6 @@ void main() {
             reason: 'the stored value must be the answer, unclamped',
           );
         });
-
         test('$metricKey at its $bound value ($value) names none of the other '
             'columns of an existing row', () {
           final before = _fullyPopulatedRow()..[metricKey] = null;
@@ -445,9 +339,6 @@ void main() {
             value: value,
             now: _now,
           );
-
-          // ABSENCE is the guard: a column the patch never names is a column
-          // PostgREST leaves exactly as it was.
           for (final column in before.keys) {
             if (_permittedChanges(metricKey).contains(column)) continue;
             expect(
@@ -459,7 +350,6 @@ void main() {
             );
           }
         });
-
         test('$metricKey at its $bound value ($value) leaves the stored row '
             'byte-identical everywhere else', () {
           final before = _fullyPopulatedRow()..[metricKey] = null;
@@ -472,7 +362,6 @@ void main() {
               now: _now,
             ),
           );
-
           expect(after.keys.toSet(), equals(before.keys.toSet()));
           for (final column in before.keys) {
             if (_permittedChanges(metricKey).contains(column)) continue;
@@ -486,11 +375,8 @@ void main() {
           }
           expect(after[metricKey], value);
         });
-
         test('$metricKey at its $bound value ($value) counts toward '
             'completeness', () {
-          // The row starts with only this metric missing, so answering it must
-          // take completeness to 100 — including when the answer is 0.
           final before = _fullyPopulatedRow()
             ..['mood_score'] = 3
             ..[metricKey] = null;
@@ -500,7 +386,6 @@ void main() {
             value: value,
             now: _now,
           );
-
           expect(
             patch['log_completeness'],
             100.0,
@@ -510,7 +395,6 @@ void main() {
                 : 'every other daily-core column is already logged',
           );
         });
-
         test('$metricKey at its $bound value ($value) is the same patch with '
             'no row yet today', () {
           final patch = DailyLogService.buildFieldPatch(
@@ -519,7 +403,6 @@ void main() {
             value: value,
             now: _now,
           );
-
           expect(
             patch.keys.toSet(),
             equals({metricKey, 'log_completeness', 'updated_at'}),
@@ -533,7 +416,6 @@ void main() {
         });
       }
     }
-
     test('the seven metrics covered above are the seven daily-core keys', () {
       expect(kDailyCoreDqsWeights.length, 7);
       expect(
@@ -544,7 +426,6 @@ void main() {
             'untested at its bounds',
       );
     });
-
     test('updated_at is stamped, and is the only clock the patch touches', () {
       final patch = DailyLogService.buildFieldPatch(
         existingRow: _fullyPopulatedRow(),
@@ -556,7 +437,6 @@ void main() {
       expect(patch.containsKey('created_at'), isFalse);
     });
   });
-
   group('kInlineAnswerableOptions', () {
     test('every inline key is a daily-core DQS key', () {
       for (final key in kInlineAnswerableOptions.keys) {
@@ -569,10 +449,7 @@ void main() {
         );
       }
     });
-
     test('longer scalar ranges stay on the complete inline path', () {
-      // Compact wrapped controls cover every accepted scalar value without
-      // narrowing the stored domain or routing through a whole-row save.
       for (final key in ['urine_colour', 'stool_form', 'mosquito_bites']) {
         expect(
           kInlineAnswerableOptions.containsKey(key),
@@ -581,9 +458,7 @@ void main() {
         );
       }
     });
-
     test('chip options cover the column CHECK range exactly', () {
-      // Ranges from the daily_gut_rows migration.
       expect(kInlineAnswerableOptions['urine_colour'], [
         1,
         2,
@@ -610,7 +485,6 @@ void main() {
       }
     });
   });
-
   group('saveFieldAnswer â€” real offline PostgREST persistence path', () {
     for (final metricKey in kDailyCoreDqsWeights.keys) {
       final options = kInlineAnswerableOptions[metricKey]!;
@@ -623,19 +497,16 @@ void main() {
               ..[metricKey] = null;
             final recorder = _OfflinePostgrestClient(existingRow: stored);
             final service = DailyLogService(_offlineSupabase(recorder));
-
             final completeness = await service.saveFieldAnswer(
               _userId,
               _logDate,
               metricKey,
               value,
             );
-
             final read = _dailyRead(recorder);
             expect(read.method, 'GET');
             expect(read.uri.queryParameters['user_id'], 'eq.$_userId');
             expect(read.uri.queryParameters['log_date'], 'eq.$_logDate');
-
             final write = _onlyWrite(recorder);
             expect(
               write.method,
@@ -653,7 +524,6 @@ void main() {
             );
             expect(patch[metricKey], value);
             expect(completeness, 100.0);
-
             final after = _applyWrite(stored, patch);
             for (final column in stored.keys) {
               if (_permittedChanges(metricKey).contains(column)) continue;
@@ -667,7 +537,6 @@ void main() {
         );
       }
     }
-
     test(
       'zero is persisted and counted rather than dropped as false',
       () async {
@@ -684,13 +553,11 @@ void main() {
         }
       },
     );
-
     test('inserts only when the initial daily-row lookup is empty', () async {
       final recorder = _OfflinePostgrestClient();
       final completeness = await DailyLogService(
         _offlineSupabase(recorder),
       ).saveFieldAnswer(_userId, _logDate, 'energy_score', 5);
-
       final write = _onlyWrite(recorder);
       expect(write.method, 'POST');
       expect(write.json['user_id'], _userId);

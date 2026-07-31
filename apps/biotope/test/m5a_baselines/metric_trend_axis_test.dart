@@ -1,11 +1,8 @@
-
 import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:src/modules/m5a_baselines/impl/chart_math.dart';
 import 'package:src/modules/m5a_baselines/impl/metric_value_format.dart';
 import 'package:src/modules/m5a_baselines/ui/widgets/metric_trend_section.dart';
-
 const kWholeStepInputPrefixes = <String>[
   'armstrong_',
   'bristol_',
@@ -13,9 +10,7 @@ const kWholeStepInputPrefixes = <String>[
   'segmented_',
   'stepper_',
 ];
-
 const kCategoryLabelledOrdinals = <String>{'urine_colour', 'stool_form'};
-
 Directory _repoRoot() {
   var dir = Directory.current;
   for (var i = 0; i < 8; i++) {
@@ -29,10 +24,8 @@ Directory _repoRoot() {
   }
   throw StateError('repo root not found from ${Directory.current.path}');
 }
-
 String _readRepoFile(String relPath) =>
     File('${_repoRoot().path}/$relPath').readAsStringSync();
-
 class _Entry {
   _Entry({
     required this.type,
@@ -44,7 +37,6 @@ class _Entry {
     required this.baselineApplicable,
     required this.status,
   });
-
   final String type;
   final String? inputType;
   final double? scaleMin;
@@ -53,22 +45,16 @@ class _Entry {
   final String? unit;
   final bool baselineApplicable;
   final String status;
-
   bool get isActiveCharted => status == 'active' && baselineApplicable;
-
   bool get isOrdinalByType =>
       type == 'ordinal' && scaleMin != null && scaleMax != null;
-
   bool get isWholeStepByInput =>
       inputType != null &&
       kWholeStepInputPrefixes.any((p) => inputType!.startsWith(p));
-
   bool get declaresValueStep => valueStep != null;
-
   bool get declaresBoundedSteps =>
       declaresValueStep && scaleMin != null && scaleMax != null;
 }
-
 Map<String, _Entry> _parseRegistry(String source) {
   final keyRe = RegExp(r"key:\s*'([a-z0-9_]+)'");
   final matches = keyRe.allMatches(source).toList();
@@ -106,7 +92,6 @@ Map<String, _Entry> _parseRegistry(String source) {
   }
   return out;
 }
-
 String _axisPolicySource(String widgetSource) {
   const startMarker = 'List<double> trendAxisTicks';
   const endMarker = 'String trendAxisLabel';
@@ -117,7 +102,6 @@ String _axisPolicySource(String widgetSource) {
   }
   return widgetSource.substring(start, end);
 }
-
 Set<String> _hardcodedMetricKeys(
   String axisPolicySource,
   Iterable<String> registryKeys,
@@ -126,18 +110,13 @@ Set<String> _hardcodedMetricKeys(
     .map((m) => m.group(1)!)
     .where(registryKeys.contains)
     .toSet();
-
 const _fractionalProbe = <double>[1, 2];
-
 void main() {
   late Map<String, _Entry> registry;
   late Map<String, _Entry> charted;
   late String axisPolicySource;
-
   late Set<String> stepAligned;
-
   late Set<String> scalePinned;
-
   setUpAll(() {
     registry = _parseRegistry(
       _readRepoFile('shared/metrics/lib/src/registry.dart'),
@@ -169,12 +148,10 @@ void main() {
     expect(stepAligned, isNotEmpty, reason: 'no metric declares a valueStep');
     expect(scalePinned, isNotEmpty);
   });
-
   group('the derivation itself is grounded in the registry', () {
     test('the probe window really is fractional under the plain ladder', () {
       expect(niceTicks(valueBounds(_fractionalProbe)), [1.0, 1.5, 2.0]);
     });
-
     test('the axis policy names no metric key of its own (#268 → #285)', () {
       expect(
         _hardcodedMetricKeys(axisPolicySource, registry.keys),
@@ -196,7 +173,6 @@ void main() {
             'step-aligned instead of 1/2/5',
       );
     });
-
     test('every whole-step input prefix is one the registry actually uses', () {
       final used = {
         for (final e in registry.values)
@@ -212,7 +188,6 @@ void main() {
         );
       }
     });
-
     test('the registry still declares the two clinical ordinal scales', () {
       expect(registry['urine_colour']!.type, 'ordinal');
       expect(registry['urine_colour']!.inputType, 'armstrong_1_8');
@@ -224,7 +199,6 @@ void main() {
       expect(registry['stool_form']!.scaleMax, 7);
     });
   });
-
   group('ordinal coverage is complete for registry ordinal metrics', () {
     test('every charted registry ordinal has a metric-aware axis', () {
       final ordinals = {
@@ -232,7 +206,6 @@ void main() {
           if (e.value.isOrdinalByType) e.key,
       };
       expect(ordinals, isNotEmpty);
-
       expect(
         ordinals.difference(scalePinned),
         isEmpty,
@@ -242,7 +215,6 @@ void main() {
             'user never logged',
       );
     });
-
     test('every scale-pinned key is a charted whole-step registry metric', () {
       for (final key in scalePinned) {
         final entry = registry[key]!;
@@ -269,7 +241,6 @@ void main() {
       }
     });
   });
-
   group('ordinal ticks are integers over the DECLARED registry scale', () {
     test('no tick is fractional, for any data window', () {
       for (final key in stepAligned) {
@@ -291,7 +262,6 @@ void main() {
         }
       }
     });
-
     test('ticks span exactly the registry scale, end to end', () {
       for (final key in scalePinned) {
         final entry = registry[key]!;
@@ -304,7 +274,6 @@ void main() {
         }
       }
     });
-
     test('the axis is never narrowed or widened by the data window', () {
       for (final key in scalePinned) {
         final entry = registry[key]!;
@@ -323,7 +292,6 @@ void main() {
         }
       }
     });
-
     test('no axis label is an interpolated number', () {
       for (final key in stepAligned) {
         for (final t in trendAxisTicks(key, _fractionalProbe)) {
@@ -338,7 +306,6 @@ void main() {
       }
     });
   });
-
   group('ordinal axes say what scale they are on', () {
     test('exactly the clinical scales carry category words', () {
       bool namesACategory(String key, double tick) {
@@ -349,7 +316,6 @@ void main() {
         }
         return RegExp('[A-Za-z]').hasMatch(label);
       }
-
       final lettered = {
         for (final key in stepAligned)
           if (trendAxisTicks(
@@ -367,7 +333,6 @@ void main() {
             'count would be an invented category name',
       );
     });
-
     test('both ends of each clinical scale are named, not just numbered', () {
       for (final key in kCategoryLabelledOrdinals) {
         final entry = registry[key]!;
@@ -389,7 +354,6 @@ void main() {
       }
     });
   });
-
   group('continuous axes keep numeric ticks and carry their unit', () {
     test('a metric with a registry unit states that exact unit', () {
       final withUnit = {
@@ -415,7 +379,6 @@ void main() {
         }
       }
     });
-
     test('a continuous metric with no registry unit invents none', () {
       final bare = {
         for (final e in charted.entries)
@@ -432,7 +395,6 @@ void main() {
         }
       }
     });
-
     test('continuous metrics keep the existing 1/2/5 ladder unchanged', () {
       for (final key in charted.keys) {
         if (stepAligned.contains(key)) continue;
@@ -450,7 +412,6 @@ void main() {
         }
       }
     });
-
     test('continuous bounds still cover the real data', () {
       for (final key in charted.keys) {
         if (stepAligned.contains(key)) continue;
@@ -461,7 +422,6 @@ void main() {
         expect(bounds.max, greaterThanOrEqualTo(71), reason: key);
       }
     });
-
     test('the value suffix agrees with the registry unit where both exist', () {
       for (final entry in charted.entries) {
         final suffix = metricValueSuffix(entry.key);
@@ -471,9 +431,7 @@ void main() {
       }
     });
   });
-
   group('CLOSED GAP (#268 → #285) — whole-step counts are axis-aware too', () {
-
     test('no charted whole-step metric is left on the 1/2/5 ladder', () {
       final uncovered = {
         for (final e in charted.entries)
@@ -487,7 +445,6 @@ void main() {
             'no registry valueStep, so their axis can invent a half-step',
       );
     });
-
     test('the previously uncovered metrics, made visible', () {
       for (final key in const [
         'stool_count',

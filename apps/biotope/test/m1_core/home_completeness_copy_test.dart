@@ -1,14 +1,9 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:src/modules/m1_core/ui/screens/home_tab.dart';
-
 import '../../../../shared/constants/copy_guidelines.dart';
-
 const _bannedWords = ['thriving', 'balanced', 'healthy', 'wellness'];
-
 const _sampleScores = <double?>[100, 85, 80, 70, 50, 20, null];
-
 void main() {
   group('HomeCoverageCopy.bucket — pure threshold mapping', () {
     test('null (no coverage yet) reads distinctly from a real low score', () {
@@ -20,7 +15,6 @@ void main() {
         reason: 'no logged data at all must read differently from a little',
       );
     });
-
     test('the real numeric thresholds (80 / 60 / 40) are unchanged', () {
       expect(HomeCoverageCopy.bucket(80), 'High coverage');
       expect(HomeCoverageCopy.bucket(79.9), 'Steady coverage');
@@ -29,7 +23,6 @@ void main() {
       expect(HomeCoverageCopy.bucket(40), 'Partial coverage');
       expect(HomeCoverageCopy.bucket(39.9), 'Early coverage');
     });
-
     test('every required sample score maps to the documented label', () {
       expect(HomeCoverageCopy.bucket(100), 'High coverage');
       expect(HomeCoverageCopy.bucket(85), 'High coverage');
@@ -39,7 +32,6 @@ void main() {
       expect(HomeCoverageCopy.bucket(20), 'Early coverage');
       expect(HomeCoverageCopy.bucket(null), 'No coverage yet');
     });
-
     test('only a genuine 100 could mean every channel was logged — no bucket '
         'label below it claims that', () {
       for (final v in [
@@ -73,7 +65,6 @@ void main() {
         );
       }
     });
-
     test(
       'the label at 80 is truthful ("High coverage", not a completeness claim)',
       () {
@@ -85,7 +76,6 @@ void main() {
       },
     );
   });
-
   group('HomeCoverageCopy.bucketRange — pure threshold mapping', () {
     test('every required sample score maps to the documented range', () {
       expect(HomeCoverageCopy.bucketRange(100), '80–100 weighted points');
@@ -100,7 +90,6 @@ void main() {
       );
     });
   });
-
   group('no health-sounding word ever reaches the score/status area', () {
     testWidgets('the real hero renders the score basis and bucket explainer', (
       tester,
@@ -124,7 +113,6 @@ void main() {
             ),
           ),
         );
-
         expect(find.text(HomeCoverageCopy.bucket(v)), findsOneWidget);
         if (v == null) {
           expect(find.text('/100 weighted points'), findsNothing);
@@ -143,7 +131,6 @@ void main() {
         }
       }
     });
-
     test('no HomeCoverageCopy.bucket output contains a banned word', () {
       for (final v in _sampleScores) {
         final lower = HomeCoverageCopy.bucket(v).toLowerCase();
@@ -156,7 +143,6 @@ void main() {
         }
       }
     });
-
     test('no HomeCoverageCopy.bucketRange output contains a banned word', () {
       for (final v in _sampleScores) {
         final lower = HomeCoverageCopy.bucketRange(v).toLowerCase();
@@ -165,7 +151,6 @@ void main() {
         }
       }
     });
-
     test('the basis strings contain no banned word', () {
       for (final basis in [
         HomeCoverageCopy.sevenDayBasis,
@@ -177,7 +162,6 @@ void main() {
         }
       }
     });
-
     testWidgets(
       'the rendered hero shows no banned word for any required sample score',
       (tester) async {
@@ -199,7 +183,6 @@ void main() {
               ),
             ),
           );
-
           for (final banned in _bannedWords) {
             expect(
               find.textContaining(RegExp(banned, caseSensitive: false)),
@@ -211,7 +194,6 @@ void main() {
         }
       },
     );
-
     testWidgets('the rendered hero at exactly 80 states "High coverage"', (
       tester,
     ) async {
@@ -232,14 +214,12 @@ void main() {
           ),
         ),
       );
-
       expect(find.text('High coverage'), findsOneWidget);
       expect(find.text('80'), findsOneWidget);
       expect(find.textContaining('Complete'), findsNothing);
       expect(find.textContaining('every channel'), findsNothing);
     });
   });
-
   group('HomeCoverageCopy strings pass the non-diagnostic gate', () {
     test('the basis constants validate', () {
       for (final s in [
@@ -253,7 +233,6 @@ void main() {
         );
       }
     });
-
     test('every bucket() and bucketRange() output validates', () {
       for (final v in _sampleScores) {
         for (final s in [

@@ -1,28 +1,21 @@
-
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:src/modules/m2_self_report/ui/screens/scan_tab.dart';
-
 import 'scan_test_support.dart';
-
 final _globe = find.byKey(ScanGlobe.globeKey);
 final _band = find.byKey(ScanGlobe.sweepBandKey);
 final _overlay = find.byKey(ScanGlobe.completionOverlayKey);
-
 double _overlayOpacity(WidgetTester tester) => tester
     .widgetList<Opacity>(find.ancestor(of: _overlay, matching: find.byType(Opacity)))
     .first
     .opacity;
-
 void main() {
   group('the dial · geometry', () {
     testWidgets('is 262 logical px while idle', (tester) async {
       await tester.pumpWidget(globeHarness(stoppedGlobe()));
       expect(tester.getSize(_globe), const Size.square(ScanGlobe.idleSize));
     });
-
     testWidgets('is still 262 logical px while scanning', (tester) async {
       await tester.pumpWidget(globeHarness(stoppedGlobe(scanning: true)));
       expect(
@@ -31,12 +24,10 @@ void main() {
         reason: 'the reference does not resize the dial until the result lands',
       );
     });
-
     testWidgets('is 190 logical px once the sweep is done', (tester) async {
       await tester.pumpWidget(globeHarness(stoppedGlobe(completed: true)));
       expect(tester.getSize(_globe), const Size.square(ScanGlobe.completedSize));
     });
-
     test('the reference sizes and timings are the ones the reference declares', () {
       expect(ScanGlobe.idleSize, 262.0);
       expect(ScanGlobe.completedSize, 190.0);
@@ -44,18 +35,15 @@ void main() {
       expect(ScanGlobe.sweepDuration, const Duration(milliseconds: 1500));
       expect(ScanGlobe.resultDuration, const Duration(milliseconds: 380));
     });
-
     testWidgets('the resize is 420ms on Cubic(.2, 0, 0, 1)', (tester) async {
       await tester.pumpWidget(globeHarness(stoppedGlobe()));
       final animated = tester.widget<AnimatedContainer>(_globe);
       expect(animated.duration, const Duration(milliseconds: 420));
       expect(animated.curve, const Cubic(0.2, 0, 0, 1));
     });
-
     testWidgets('actually animates 262 → 190 rather than jumping', (tester) async {
       final completed = ValueNotifier(false);
       addTearDown(completed.dispose);
-
       await tester.pumpWidget(
         globeHarness(
           ValueListenableBuilder<bool>(
@@ -65,7 +53,6 @@ void main() {
         ),
       );
       expect(tester.getSize(_globe).width, ScanGlobe.idleSize);
-
       completed.value = true;
       await tester.pump();
       expect(
@@ -73,12 +60,10 @@ void main() {
         ScanGlobe.idleSize,
         reason: 'the shrink is animated, so frame 0 is still the idle size',
       );
-
       await tester.pump(const Duration(milliseconds: 210));
       final mid = tester.getSize(_globe).width;
       expect(mid, lessThan(ScanGlobe.idleSize));
       expect(mid, greaterThan(ScanGlobe.completedSize));
-
       await tester.pump(const Duration(milliseconds: 260));
       expect(
         tester.getSize(_globe).width,
@@ -87,14 +72,12 @@ void main() {
       );
     });
   });
-
   group('the completed overlay · present only when there is a result', () {
     testWidgets('is absent while idle', (tester) async {
       await tester.pumpWidget(globeHarness(stoppedGlobe()));
       await tester.pump(const Duration(milliseconds: 600));
       expect(_overlay, findsNothing, reason: 'no sweep has produced a result yet');
     });
-
     testWidgets('is absent while scanning', (tester) async {
       await tester.pumpWidget(globeHarness(stoppedGlobe(scanning: true)));
       await tester.pump(const Duration(milliseconds: 600));
@@ -104,12 +87,9 @@ void main() {
         reason: 'a coverage figure shown mid-sweep would be last run\'s number',
       );
     });
-
     testWidgets('is present when done, and fills the whole dial', (tester) async {
       await tester.pumpWidget(globeHarness(stoppedGlobe(completed: true)));
-
       expect(_overlay, findsOneWidget);
-
       final interior = tester
           .getSize(find.descendant(of: _globe, matching: find.byType(Stack)).first);
       expect(tester.getSize(_overlay), interior);
@@ -119,7 +99,6 @@ void main() {
         reason: 'nothing but the rim may sit between the wash and the edge',
       );
     });
-
     testWidgets('reads back the stored coverage and the open-channel count', (
       tester,
     ) async {
@@ -130,7 +109,6 @@ void main() {
       expect(find.text('68%'), findsOneWidget);
       expect(find.text('2 channels open'), findsOneWidget);
     });
-
     testWidgets('singularises one open channel and names a clean sweep', (
       tester,
     ) async {
@@ -138,13 +116,11 @@ void main() {
         globeHarness(stoppedGlobe(completed: true, coverage: 94, missingCount: 1)),
       );
       expect(find.text('1 channel open'), findsOneWidget);
-
       await tester.pumpWidget(
         globeHarness(stoppedGlobe(completed: true, coverage: 100, missingCount: 0)),
       );
       expect(find.text('All channels in'), findsOneWidget);
     });
-
     testWidgets('the reading surface is opaque, so the bloom cannot bleed '
         'through the number', (tester) async {
       await tester.pumpWidget(globeHarness(stoppedGlobe(completed: true)));
@@ -154,24 +130,20 @@ void main() {
       expect(gradient.colors.first.a, 1);
       expect(gradient.colors.last.a, greaterThanOrEqualTo(0.94));
     });
-
     testWidgets('the reveal is driven by the completion animation…', (tester) async {
       await tester.pumpWidget(
         globeHarness(stoppedGlobe(completed: true, reveal: 0.0)),
       );
       expect(_overlayOpacity(tester), 0.0);
-
       await tester.pumpWidget(
         globeHarness(stoppedGlobe(completed: true, reveal: 0.5)),
       );
       expect(_overlayOpacity(tester), closeTo(0.5, 0.001));
-
       await tester.pumpWidget(
         globeHarness(stoppedGlobe(completed: true, reveal: 1.0)),
       );
       expect(_overlayOpacity(tester), 1.0);
     });
-
     testWidgets('…and reduce-motion short-circuits it to a legible first frame', (
       tester,
     ) async {
@@ -189,7 +161,6 @@ void main() {
       expect(find.text('68%'), findsOneWidget);
     });
   });
-
   group('the four reference states render the right combination', () {
     testWidgets('idle · full dial, nothing sweeping, no result', (tester) async {
       await tester.pumpWidget(globeHarness(stoppedGlobe()));
@@ -197,14 +168,12 @@ void main() {
       expect(_band, findsNothing);
       expect(_overlay, findsNothing);
     });
-
     testWidgets('scanning · full dial, band present, no result yet', (tester) async {
       await tester.pumpWidget(globeHarness(stoppedGlobe(scanning: true)));
       expect(tester.getSize(_globe), const Size.square(ScanGlobe.idleSize));
       expect(_band, findsOneWidget);
       expect(_overlay, findsNothing);
     });
-
     testWidgets('completed · shrunk dial, band gone, result shown', (tester) async {
       await tester.pumpWidget(globeHarness(stoppedGlobe(completed: true)));
       expect(tester.getSize(_globe), const Size.square(ScanGlobe.completedSize));
@@ -215,7 +184,6 @@ void main() {
       );
       expect(_overlay, findsOneWidget);
     });
-
     testWidgets('expanded-gap · the completed dial is unchanged while a gap '
         'card is open', (tester) async {
       await tester.pumpWidget(
@@ -232,22 +200,18 @@ void main() {
           ),
         ),
       );
-
       expect(tester.getSize(_globe), const Size.square(ScanGlobe.completedSize));
       expect(_overlay, findsOneWidget);
       expect(_band, findsNothing);
       expect(find.text('68%'), findsOneWidget);
-
       expect(findExpandedArea('mood_score'), findsOneWidget);
       expect(findExpandedArea('energy_score'), findsNothing);
     });
   });
-
   group('the tab drives the dial with the dial\'s own constants', () {
     final source = File(
       'lib/modules/m2_self_report/ui/screens/scan_tab.dart',
     ).readAsStringSync();
-
     test('the sweep controller runs for ScanGlobe.sweepDuration', () {
       expect(
         source.contains('duration: ScanGlobe.sweepDuration'),
@@ -255,7 +219,6 @@ void main() {
         reason: 'the sweep controller must not re-type the 1.5s literal',
       );
     });
-
     test('the completion controller runs for ScanGlobe.resultDuration', () {
       final match = RegExp(
         r'_completionAnim\s*=\s*AnimationController\([^)]*duration:\s*([^,\n]+)',

@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:src/modules/m5b_insight_engine/impl/insight_service.dart';
@@ -6,22 +5,17 @@ import 'package:src/modules/m5b_insight_engine/impl/provenance_models.dart';
 import 'package:src/modules/m5b_insight_engine/impl/provenance_service.dart';
 import 'package:src/modules/m5b_insight_engine/ui/screens/insight_provenance_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 const kRealDoi = '10.1016/j.isci.2026.116224';
 const kRealDoiUrl = 'https://doi.org/10.1016/j.isci.2026.116224';
-
 const kRealDoiTitle =
     'Unraveling the gut microbiota-brain axis: Mechanisms, pathophysiology, '
     'and therapeutic opportunities.';
 const kRealDoiYear = 2026;
-
 const kCorpusId = 'corpus:gut-mood-cohort-2024';
 const kCorpusTitle = 'Gut comfort and mood in a longitudinal cohort';
 const kCorpusYear = 2024;
-
 class _FakeProvenanceService extends ProvenanceService {
   final InsightProvenance? result;
-
   _FakeProvenanceService(this.result)
     : super(
         SupabaseClient(
@@ -30,22 +24,18 @@ class _FakeProvenanceService extends ProvenanceService {
           authOptions: const AuthClientOptions(autoRefreshToken: false),
         ),
       );
-
   @override
   Future<InsightProvenance?> getProvenance(int cardId) async => result;
 }
-
 class _RecordingLauncher {
   _RecordingLauncher({this.succeeds = true});
   final bool succeeds;
   final List<Uri> opened = [];
-
   Future<bool> call(Uri uri) async {
     opened.add(uri);
     return succeeds;
   }
 }
-
 InsightCard _card() => InsightCard(
   id: 2,
   userId: 'u-test',
@@ -62,7 +52,6 @@ InsightCard _card() => InsightCard(
   phaseGenerated: 'p2s8',
   producer: InsightProducer.rules,
 );
-
 ProvenanceCardInfo _cardInfo({String producer = 'edge'}) => ProvenanceCardInfo(
   id: 2,
   ruleId: 'gut_comfort_trending_down',
@@ -73,7 +62,6 @@ ProvenanceCardInfo _cardInfo({String producer = 'edge'}) => ProvenanceCardInfo(
   severity: 'info',
   generatedAt: '2026-07-24T09:37:53.975+00:00',
 );
-
 ProvenanceEdge _acceptedDoiEdge({
   String citationPaperId = kRealDoi,
 }) => ProvenanceEdge(
@@ -128,7 +116,6 @@ ProvenanceEdge _acceptedDoiEdge({
     ),
   ],
 );
-
 const _committedCorpusEdge = ProvenanceEdge(
   edgeId: 'gut_comfort_score|correlates|mood_score',
   subject: 'gut_comfort_score',
@@ -156,32 +143,23 @@ const _committedCorpusEdge = ProvenanceEdge(
     ),
   ],
 );
-
 InsightProvenance _withEdges(List<ProvenanceEdge> edges) =>
     InsightProvenance(card: _cardInfo(), edges: edges);
-
 InsightProvenance _doiProvenance([String paperId = kRealDoi]) =>
     _withEdges([_acceptedDoiEdge(citationPaperId: paperId)]);
-
 InsightProvenance _corpusProvenance() => _withEdges([_committedCorpusEdge]);
-
 InsightProvenance _mixedAccurateProvenance() =>
     _withEdges([_acceptedDoiEdge(), _committedCorpusEdge]);
-
 InsightProvenance _negativeInputProvenance(String paperId) => _withEdges([
   ProvenanceEdge(
     edgeId: 'test-only-negative-paper-id',
     citations: [ProvenanceCitation(paperId: paperId)],
   ),
 ]);
-
 InsightProvenance _fullyCitedProvenance() => _doiProvenance();
-
 Finder _linkFor(String paperId) =>
     find.byKey(ValueKey('citation-link-$paperId'));
-
 int _pumpSeq = 0;
-
 Future<_RecordingLauncher> _pump(
   WidgetTester tester,
   InsightProvenance? provenance, {
@@ -201,12 +179,10 @@ Future<_RecordingLauncher> _pump(
   await tester.pumpAndSettle();
   return launcher;
 }
-
 void main() {
   group('a citation with a REAL DOI renders a working external link', () {
     testWidgets('the link is present and names the action', (tester) async {
       await _pump(tester, _doiProvenance());
-
       expect(_linkFor(kRealDoi), findsOneWidget);
       expect(find.text(ProvenanceCopy.openPaper), findsOneWidget);
       expect(find.byIcon(Icons.open_in_new_rounded), findsOneWidget);
@@ -216,23 +192,19 @@ void main() {
         findsOneWidget,
       );
     });
-
     testWidgets('tapping it opens the canonical doi.org URL externally', (
       tester,
     ) async {
       final launcher = await _pump(tester, _doiProvenance());
-
       await tester.ensureVisible(_linkFor(kRealDoi));
       await tester.pumpAndSettle();
       await tester.tap(_linkFor(kRealDoi));
       await tester.pumpAndSettle();
-
       expect(launcher.opened, hasLength(1));
       expect(launcher.opened.single.toString(), kRealDoiUrl);
       expect(launcher.opened.single.scheme, 'https');
       expect(launcher.opened.single.host, 'doi.org');
     });
-
     testWidgets('the external-paper control is a semantic link (#286)', (
       tester,
     ) async {
@@ -247,71 +219,56 @@ void main() {
       );
       semantics.dispose();
     });
-
     testWidgets('a doi:-prefixed stored id still opens the canonical URL', (
       tester,
     ) async {
       const stored = 'doi:$kRealDoi';
       final launcher = await _pump(tester, _doiProvenance(stored));
-
       await tester.ensureVisible(_linkFor(stored));
       await tester.pumpAndSettle();
       await tester.tap(_linkFor(stored));
       await tester.pumpAndSettle();
-
       expect(launcher.opened.single.toString(), kRealDoiUrl);
     });
-
     testWidgets('an upper-cased stored DOI opens the same paper on doi.org', (
       tester,
     ) async {
       const stored = '10.1016/J.ISCI.2026.116224';
       final launcher = await _pump(tester, _doiProvenance(stored));
-
       await tester.ensureVisible(_linkFor(stored));
       await tester.pumpAndSettle();
       await tester.tap(_linkFor(stored));
       await tester.pumpAndSettle();
-
       final opened = launcher.opened.single;
       expect(opened.scheme, 'https');
       expect(opened.host, 'doi.org');
       expect(opened.toString().toLowerCase(), kRealDoiUrl);
     });
-
     testWidgets('a failed launch says so rather than doing nothing', (
       tester,
     ) async {
       await _pump(tester, _doiProvenance(), launchSucceeds: false);
-
       await tester.ensureVisible(_linkFor(kRealDoi));
       await tester.pumpAndSettle();
       await tester.tap(_linkFor(kRealDoi));
       await tester.pumpAndSettle();
-
       expect(find.text(ProvenanceCopy.paperLinkFailed), findsOneWidget);
-
       await tester.pumpAndSettle(const Duration(seconds: 5));
     });
-
     testWidgets('a successful launch shows no failure notice', (tester) async {
       await _pump(tester, _doiProvenance());
-
       await tester.ensureVisible(_linkFor(kRealDoi));
       await tester.pumpAndSettle();
       await tester.tap(_linkFor(kRealDoi));
       await tester.pumpAndSettle();
-
       expect(find.text(ProvenanceCopy.paperLinkFailed), findsNothing);
     });
   });
-
   group('a non-DOI paperId renders the honest unavailable state', () {
     testWidgets('an internal corpus id gets a sentence, never a link', (
       tester,
     ) async {
       final launcher = await _pump(tester, _corpusProvenance());
-
       expect(find.text(ProvenanceCopy.paperLinkUnavailable), findsOneWidget);
       expect(_linkFor(kCorpusId), findsNothing);
       expect(find.text(ProvenanceCopy.openPaper), findsNothing);
@@ -319,7 +276,6 @@ void main() {
       expect(launcher.opened, isEmpty);
       expect(find.textContaining(kCorpusTitle), findsOneWidget);
     });
-
     testWidgets('hostile and malformed paperIds never render a link', (
       tester,
     ) async {
@@ -354,20 +310,16 @@ void main() {
         expect(launcher.opened, isEmpty);
       }
     });
-
     testWidgets('mixed artifacts link only the DOI, never the corpus id', (
       tester,
     ) async {
       final launcher = await _pump(tester, _mixedAccurateProvenance());
-
       expect(_linkFor(kRealDoi), findsOneWidget);
       expect(_linkFor(kCorpusId), findsNothing);
       expect(find.text(ProvenanceCopy.openPaper), findsOneWidget);
-
       await tester.scrollUntilVisible(find.textContaining(kCorpusTitle), 300);
       await tester.pumpAndSettle();
       expect(find.text(ProvenanceCopy.paperLinkUnavailable), findsOneWidget);
-
       await tester.scrollUntilVisible(_linkFor(kRealDoi), -300);
       await tester.pumpAndSettle();
       await tester.tap(_linkFor(kRealDoi));
@@ -375,20 +327,16 @@ void main() {
       expect(launcher.opened.single.toString(), kRealDoiUrl);
     });
   });
-
   group('provenance and trust labels survive the link affordance', () {
     testWidgets('a fully cited edge renders every label AND the one link', (
       tester,
     ) async {
       final launcher = await _pump(tester, _fullyCitedProvenance());
-
       expect(_linkFor(kRealDoi), findsOneWidget);
       expect(find.text(ProvenanceCopy.openPaper), findsOneWidget);
       expect(find.text(ProvenanceCopy.paperLinkUnavailable), findsNothing);
-
       expect(find.textContaining(kRealDoiTitle), findsOneWidget);
       expect(find.textContaining('($kRealDoiYear)'), findsOneWidget);
-
       expect(find.text(ProvenanceCopy.citationsLabel), findsOneWidget);
       expect(
         find.textContaining('${ProvenanceCopy.evidenceTierPrefix}4'),
@@ -404,14 +352,12 @@ void main() {
       expect(find.text(ProvenanceCopy.researchLinksLabel), findsOneWidget);
       expect(find.text(ProvenanceCopy.noEdgesRules), findsNothing);
       expect(find.text(ProvenanceCopy.noEdgesPersonal), findsNothing);
-
       await tester.ensureVisible(_linkFor(kRealDoi));
       await tester.pumpAndSettle();
       await tester.tap(_linkFor(kRealDoi));
       await tester.pumpAndSettle();
       expect(launcher.opened.single.toString(), kRealDoiUrl);
     });
-
     testWidgets('a plain rules card keeps its honest no-citation note', (
       tester,
     ) async {
@@ -419,7 +365,6 @@ void main() {
         tester,
         InsightProvenance(card: _cardInfo(producer: 'rules')),
       );
-
       expect(find.text(ProvenanceCopy.noEdgesRules), findsOneWidget);
       expect(find.text(ProvenanceCopy.researchLinksLabel), findsOneWidget);
       expect(find.text(ProvenanceCopy.openPaper), findsNothing);
@@ -428,7 +373,6 @@ void main() {
       expect(find.text(ProvenanceCopy.testModeVerdictLabel), findsNothing);
       expect(launcher.opened, isEmpty);
     });
-
     testWidgets('the uncited personal card says it is from your own data', (
       tester,
     ) async {
@@ -446,7 +390,6 @@ void main() {
           ),
         ),
       );
-
       expect(find.text(ProvenanceCopy.noEdgesPersonal), findsOneWidget);
       expect(find.text(ProvenanceCopy.yourDataLabel), findsOneWidget);
       expect(find.textContaining('ρ 0.95'), findsOneWidget);

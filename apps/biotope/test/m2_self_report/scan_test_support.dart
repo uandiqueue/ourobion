@@ -1,15 +1,11 @@
-
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:src/modules/m2_self_report/impl/logging_controller.dart';
 import 'package:src/modules/m2_self_report/impl/normaliser.dart';
 import 'package:src/modules/m2_self_report/ui/screens/scan_tab.dart';
 import 'package:src/modules/m5a_baselines/index.dart' show metricDisplayLabel;
-
 List<String> get dailyCoreKeys => kDailyCoreDqsWeights.keys.toList();
-
 Widget scanHarness(
   Widget child, {
   bool reduceMotion = false,
@@ -25,14 +21,12 @@ Widget scanHarness(
     ),
   ),
 );
-
 Widget globeHarness(Widget child, {bool reduceMotion = false}) => MaterialApp(
   home: MediaQuery(
     data: MediaQueryData(disableAnimations: reduceMotion),
     child: Scaffold(body: Center(child: child)),
   ),
 );
-
 ScanGlobe stoppedGlobe({
   bool scanning = false,
   bool completed = false,
@@ -48,7 +42,6 @@ ScanGlobe stoppedGlobe({
   sweepAnimation: AlwaysStoppedAnimation(sweep),
   completionAnimation: AlwaysStoppedAnimation(reveal),
 );
-
 GapCard gapCard(
   String metricKey, {
   bool expanded = false,
@@ -66,16 +59,12 @@ GapCard gapCard(
   onToggle: onToggle ?? () {},
   onAnswer: onAnswer ?? (_) {},
 );
-
 class ScanGapListHost extends StatefulWidget {
   final List<String> metricKeys;
-
   final Map<String, int?> answered;
   final Set<String> savingKeys;
   final void Function(String metricKey, int value)? onAnswer;
-
   final String? initiallyOpen;
-
   const ScanGapListHost({
     super.key,
     required this.metricKeys,
@@ -84,20 +73,16 @@ class ScanGapListHost extends StatefulWidget {
     this.onAnswer,
     this.initiallyOpen,
   });
-
   @override
   State<ScanGapListHost> createState() => ScanGapListHostState();
 }
-
 class ScanGapListHostState extends State<ScanGapListHost> {
   String? openGapKey;
-
   @override
   void initState() {
     super.initState();
     openGapKey = widget.initiallyOpen;
   }
-
   @override
   Widget build(BuildContext context) => Column(
     children: [
@@ -119,29 +104,21 @@ class ScanGapListHostState extends State<ScanGapListHost> {
     ],
   );
 }
-
 String expandedProbe(String metricKey) => ScanTabCopy.inlineHints[metricKey]!;
-
 enum ScanControl {
   chips,
-
   armstrong,
-
   bristol,
-
   stepper,
 }
-
 ScanControl controlFor(String metricKey) => switch (metricKey) {
   'urine_colour' => ScanControl.armstrong,
   'stool_form' => ScanControl.bristol,
   'mosquito_bites' => ScanControl.stepper,
   _ => ScanControl.chips,
 };
-
 bool hasPerValueButtons(String metricKey) =>
     controlFor(metricKey) != ScanControl.stepper;
-
 String optionSemanticLabel(String metricKey, int value) =>
     switch (controlFor(metricKey)) {
       ScanControl.armstrong || ScanControl.bristol =>
@@ -153,13 +130,10 @@ String optionSemanticLabel(String metricKey, int value) =>
         'assert stepperReadoutLabel() and the labelled +/- instead',
       ),
     };
-
 String stepperReadoutLabel(int value) => 'Mosquito bites, $value selected';
-
 String scanTabSource() => File(
   'lib/modules/m2_self_report/ui/screens/scan_tab.dart',
 ).readAsStringSync();
-
 String declarationBody(String source, String name) {
   final decl = RegExp(
     r'^(?:abstract final )?(?:class|enum) (\w+)',
@@ -173,20 +147,16 @@ String declarationBody(String source, String name) {
   }
   throw StateError('declaration "$name" not found in scan_tab.dart');
 }
-
 String squashWhitespace(String source) =>
     source.replaceAll(RegExp(r'\s+'), ' ');
-
 Finder findGapCard(String metricKey) => find.byWidgetPredicate(
   (w) => w is GapCard && w.metricKey == metricKey,
   description: 'GapCard($metricKey)',
 );
-
 Finder findExpandedArea(String metricKey) => find.descendant(
   of: findGapCard(metricKey),
   matching: find.text(expandedProbe(metricKey)),
 );
-
 Finder findOption(String metricKey, int value) {
   final matching = switch (controlFor(metricKey)) {
     ScanControl.chips => find.text('$value'),
@@ -199,13 +169,11 @@ Finder findOption(String metricKey, int value) {
   };
   return find.descendant(of: findGapCard(metricKey), matching: matching);
 }
-
 Finder get findStepperIncrease =>
     find.widgetWithIcon(IconButton, Icons.add_rounded);
 Finder get findStepperDecrease =>
     find.widgetWithIcon(IconButton, Icons.remove_rounded);
 Finder get findStepperSave => find.byKey(const ValueKey('mosquito-save'));
-
 int stepperValue(WidgetTester tester) {
   final readout = tester.widget<Text>(
     find.descendant(
@@ -215,7 +183,6 @@ int stepperValue(WidgetTester tester) {
   );
   return int.parse(readout.data!.split(' ').first);
 }
-
 Future<void> stepStepperTo(WidgetTester tester, int value) async {
   var current = stepperValue(tester);
   while (current != value) {
@@ -230,7 +197,6 @@ Future<void> stepStepperTo(WidgetTester tester, int value) async {
     current = next;
   }
 }
-
 Future<void> answerWith(
   WidgetTester tester,
   String metricKey,
@@ -246,7 +212,6 @@ Future<void> answerWith(
   await tester.tap(target);
   await tester.pump();
 }
-
 Future<void> tapGapCard(WidgetTester tester, String metricKey) async {
   await tester.tap(
     find.descendant(

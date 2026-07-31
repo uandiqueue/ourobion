@@ -1,13 +1,10 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:src/modules/m2_self_report/impl/logging_controller.dart';
 import 'package:src/modules/m2_self_report/impl/normaliser.dart';
 import 'package:src/modules/m2_self_report/ui/screens/scan_tab.dart';
-
 import '../guards/guard_support.dart';
 import 'scan_test_support.dart';
-
 Map<String, ({int min, int max})> _registryScales(String source) {
   final keyRe = RegExp('''key:\\s*['"]([a-z0-9_]+)['"]''');
   final matches = keyRe.allMatches(source).toList();
@@ -26,7 +23,6 @@ Map<String, ({int min, int max})> _registryScales(String source) {
   }
   return out;
 }
-
 Map<String, String> _registryInputTypes(String source) {
   final keyRe = RegExp('''key:\\s*['"]([a-z0-9_]+)['"]''');
   final matches = keyRe.allMatches(source).toList();
@@ -41,20 +37,17 @@ Map<String, String> _registryInputTypes(String source) {
   }
   return out;
 }
-
 void main() {
   final registry = readRepoFile('shared/metrics/lib/src/registry.dart');
   final scales = _registryScales(registry);
   final inputTypes = _registryInputTypes(registry);
   final weights = registryDailyCoreWeights(registry);
-
   group('the registry is the source of truth for what is answerable', () {
     test('sanity: the registry parsed', () {
       expect(scales, isNotEmpty);
       expect(inputTypes, isNotEmpty);
       expect(weights, isNotEmpty);
     });
-
     test('the seven daily-core keys are the registry\'s, not a local list', () {
       expect(
         kDailyCoreDqsWeights.keys.toSet(),
@@ -65,7 +58,6 @@ void main() {
       );
       expect(kDailyCoreDqsWeights.length, 7);
     });
-
     test('every daily-core key has an inline control, and nothing else does', () {
       expect(
         kInlineAnswerableOptions.keys.toSet(),
@@ -75,7 +67,6 @@ void main() {
             'the full Daily Log, which the Scan tab never does',
       );
     });
-
     test('every daily-core key declares a scale in the registry', () {
       for (final key in dailyCoreKeys) {
         expect(
@@ -85,7 +76,6 @@ void main() {
         );
       }
     });
-
     test('each control offers every value in the registry range, in order', () {
       for (final key in dailyCoreKeys) {
         final scale = scales[key]!;
@@ -99,7 +89,6 @@ void main() {
         );
       }
     });
-
     test('the ranges the acceptance criteria name are the ranges in force', () {
       expect(scales['urine_colour'], (min: 1, max: 8));
       expect(scales['stool_form'], (min: 1, max: 7));
@@ -109,7 +98,6 @@ void main() {
         expect(scales[key], (min: 1, max: 5));
       }
     });
-
     test('every control is a contiguous run with no gaps or repeats', () {
       for (final key in dailyCoreKeys) {
         final options = kInlineAnswerableOptions[key]!;
@@ -123,7 +111,6 @@ void main() {
         }
       }
     });
-
     test('every declared affordance still fits a compact inline control', () {
       const wrappable = {
         'armstrong_1_8',
@@ -143,7 +130,6 @@ void main() {
       }
     });
   });
-
   group('every metric is answerable inline over its FULL range', () {
     for (final key in kDailyCoreDqsWeights.keys) {
       testWidgets('$key offers every accepted value, and each one answers', (
@@ -152,7 +138,6 @@ void main() {
         final scale = scales[key]!;
         final range = [for (var v = scale.min; v <= scale.max; v++) v];
         final answers = <int>[];
-
         if (controlFor(key) == ScanControl.stepper) {
           await tester.pumpWidget(scanHarness(gapCard(key, expanded: true)));
           for (final value in range) {
@@ -187,20 +172,17 @@ void main() {
             await answerWith(tester, key, value);
           }
         }
-
         expect(
           answers,
           equals(range),
           reason: 'every offered value must write that exact value',
         );
       });
-
       testWidgets('$key offers nothing outside its accepted range', (
         tester,
       ) async {
         final scale = scales[key]!;
         await tester.pumpWidget(scanHarness(gapCard(key, expanded: true)));
-
         if (controlFor(key) == ScanControl.stepper) {
           expect(
             tester.widget<IconButton>(findStepperDecrease).onPressed,
@@ -215,7 +197,6 @@ void main() {
           );
           return;
         }
-
         expect(
           findOption(key, scale.min - 1),
           findsNothing,
@@ -226,7 +207,6 @@ void main() {
         expect(findOption(key, scale.max + 1), findsNothing);
       });
     }
-
     testWidgets('the long scales are not abbreviated behind a "more" link', (
       tester,
     ) async {
@@ -258,14 +238,12 @@ void main() {
           findsNothing,
         );
       }
-
       await tester.pumpWidget(
         scanHarness(gapCard('mosquito_bites', expanded: true)),
       );
       expect(find.textContaining('More'), findsNothing);
       expect(find.textContaining('full log', findRichText: true), findsNothing);
     });
-
     testWidgets('a collapsed card offers no values at all', (tester) async {
       await tester.pumpWidget(scanHarness(gapCard('mood_score')));
       for (final value in kInlineAnswerableOptions['mood_score']!) {
@@ -273,7 +251,6 @@ void main() {
       }
       expect(findExpandedArea('mood_score'), findsNothing);
     });
-
     testWidgets('no control writes anything until a value is picked', (
       tester,
     ) async {
@@ -290,7 +267,6 @@ void main() {
         );
       }
     });
-
     testWidgets('every metric carries a hint naming what its numbers mean', (
       tester,
     ) async {
