@@ -57,6 +57,9 @@ String metricAxisDescription(String metricKey) {
 
   final unit = metric.unit;
   if (unit != null && unit.isNotEmpty) {
+    if (label != null && label.toLowerCase() == unit.toLowerCase()) {
+      return label;
+    }
     return label == null ? 'Recorded value ($unit)' : '$label ($unit)';
   }
 
