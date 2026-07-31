@@ -612,7 +612,6 @@ const List<MetricDefinition> kMetrics = [
     continuity: 'continuous',
     type: 'numeric',
     scale: MetricScale(min: 0, max: 100),
-    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,

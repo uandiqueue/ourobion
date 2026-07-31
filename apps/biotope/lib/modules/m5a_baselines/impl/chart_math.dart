@@ -85,22 +85,61 @@ List<double> steppedTicks(
 }) {
   assert(valueStep > 0);
   assert(targetCount >= 1);
+  if (!valueStep.isFinite || valueStep <= 0) {
+    throw ArgumentError.value(
+      valueStep,
+      'valueStep',
+      'must be finite and positive',
+    );
+  }
+  if (!origin.isFinite ||
+      !bounds.min.isFinite ||
+      !bounds.max.isFinite ||
+      bounds.max < bounds.min) {
+    throw ArgumentError.value(bounds, 'bounds', 'must be finite and ordered');
+  }
   if (bounds.isDegenerate) {
-    final gridPosition = (bounds.min - origin) / valueStep;
-    return [origin + gridPosition.round() * valueStep];
+    // No distinct ticks are possible. Preserve the real bounded value even if
+    // corrupt/off-grid input reached this display layer.
+    return [bounds.min];
   }
 
-  final spanInSteps = (bounds.max - bounds.min) / valueStep;
-  final niceMultiple = niceStep(spanInSteps / targetCount);
-  final intervalSteps = niceMultiple < 1 ? 1 : niceMultiple.ceil();
-  final interval = intervalSteps * valueStep;
-  final firstTick =
-      origin + ((bounds.min - origin) / interval).floor() * interval;
-  final ticks = <double>[];
-  for (var t = firstTick; t < bounds.max + interval / 2; t += interval) {
-    ticks.add(double.parse(t.toStringAsFixed(10)));
+  // Divide before subtracting so very large opposite-signed bounds do not
+  // overflow while deriving a readable interval.
+  final roughInterval = bounds.max / targetCount - bounds.min / targetCount;
+  final roughMultiple = roughInterval / valueStep;
+  final double interval;
+  if (roughMultiple.isFinite && roughMultiple > 0) {
+    final niceMultiple = niceStep(roughMultiple);
+    interval = (niceMultiple < 1 ? 1 : niceMultiple.ceil()) * valueStep;
+  } else if (roughInterval.isFinite && roughInterval > 0) {
+    interval = niceStep(roughInterval);
+  } else {
+    return [bounds.min, bounds.max];
   }
-  return ticks;
+  if (!interval.isFinite || interval <= 0) {
+    return [bounds.min, bounds.max];
+  }
+
+  final tolerance = interval.abs() * 1e-12;
+  final scaledMin = bounds.min / interval - origin / interval;
+  final firstIndex = (scaledMin - tolerance / interval).ceil();
+  final ticks = <double>[];
+  // Index from the first in-range grid point instead of accumulating floats.
+  // The hard cap is defensive only; the nice interval normally emits ~5 ticks.
+  for (var i = 0; i < 10000; i++) {
+    final tick = origin + (firstIndex + i) * interval;
+    if (tick > bounds.max + tolerance) break;
+    if (tick >= bounds.min - tolerance) {
+      final boundedTick = tick < bounds.min
+          ? bounds.min
+          : tick > bounds.max
+          ? bounds.max
+          : tick;
+      ticks.add(_snapTick(boundedTick));
+    }
+  }
+  return ticks.isEmpty ? [bounds.min, bounds.max] : ticks;
 }
 
 /// Compact value label: integers without a decimal point, otherwise one
@@ -108,6 +147,30 @@ List<double> steppedTicks(
 String compactValueLabel(double v) {
   if (v == v.roundToDouble()) return v.round().toString();
   return v.toStringAsFixed(1);
+}
+
+/// Compact label that preserves the decimal precision declared by [valueStep].
+String steppedValueLabel(double v, double valueStep) {
+  if (!valueStep.isFinite || valueStep <= 0) return compactValueLabel(v);
+  var scaledStep = valueStep.abs();
+  var decimalPlaces = 0;
+  while (decimalPlaces < 10 &&
+      (scaledStep - scaledStep.roundToDouble()).abs() > 1e-9) {
+    scaledStep *= 10;
+    decimalPlaces++;
+  }
+  if (decimalPlaces == 0) return compactValueLabel(v);
+  var label = v.toStringAsFixed(decimalPlaces);
+  while (label.contains('.') && label.endsWith('0')) {
+    label = label.substring(0, label.length - 1);
+  }
+  if (label.endsWith('.')) label = label.substring(0, label.length - 1);
+  return label == '-0' ? '0' : label;
+}
+
+double _snapTick(double value) {
+  if (value.abs() >= 1e20) return value;
+  return double.parse(value.toStringAsFixed(10));
 }
 
 const _shortMonths = [

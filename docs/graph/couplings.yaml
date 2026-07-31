@@ -123,9 +123,9 @@ couplings:
     from: shared/metrics/lib/ourobion_metrics.dart
     to: apps/biotope/lib/modules/m5a_baselines/ui/widgets/metric_trend_section.dart
     why: >
-      M5a trend axes must derive discrete versus continuous value policy from the shared metric
-      registry. A local metric-key switch silently emits fractional ticks for new integer-valued
-      metrics; valueStep and scale make the policy additive and keep the chart free of key lists.
+      M5a trend axes and detail headers must derive placement, units, and category wording from the
+      shared metric registry. Local metric-key switches silently emit fractional ticks or stale
+      labels for new metrics; valueStep, scale, unit, and minimal UI metadata keep policy additive.
     guard: apps/biotope/test/m5a_baselines/metric_trend_section_widget_test.dart
     status: active
     phase: P2

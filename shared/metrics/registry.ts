@@ -446,7 +446,6 @@ const SELF_REPORT: MetricDefinition[] = [
     continuity: 'continuous',
     type: 'numeric',
     scale: { min: 0, max: 100 },
-    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,

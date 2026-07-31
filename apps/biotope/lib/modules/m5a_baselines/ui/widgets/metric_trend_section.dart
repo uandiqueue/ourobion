@@ -334,9 +334,7 @@ List<double> _ordinalTicks(MetricScale scale, double valueStep) {
   final max = scale.max.toDouble();
   final categoryCount = ((max - min) / valueStep).round() + 1;
   if (categoryCount <= 4) {
-    return [
-      for (var i = 0; i < categoryCount; i++) min + i * valueStep,
-    ];
+    return [for (var i = 0; i < categoryCount; i++) min + i * valueStep];
   }
   final midpoint = min + ((categoryCount - 1) ~/ 2) * valueStep;
   return [min, midpoint, max];
@@ -348,8 +346,9 @@ ValueBounds trendAxisBounds(
   List<double> ticks,
 ) {
   final metric = metricByKey(metricKey);
-  final scale =
-      metric == null || metric.valueStep == null ? null : metric.scale;
+  final scale = metric == null || metric.valueStep == null
+      ? null
+      : metric.scale;
   if (scale != null) {
     return ValueBounds(scale.min.toDouble(), scale.max.toDouble());
   }
@@ -360,27 +359,8 @@ ValueBounds trendAxisBounds(
   );
 }
 
-String trendAxisLabel(String metricKey, double tick) => switch (metricKey) {
-  'urine_colour' => switch (tick.round()) {
-    1 => '1 pale',
-    4 => '4 yellow',
-    8 => '8 dark',
-    _ => tick.round().toString(),
-  },
-  'stool_form' => switch (tick.round()) {
-    1 => '1 firm',
-    4 => '4 smooth',
-    7 => '7 watery',
-    _ => tick.round().toString(),
-  },
-  'sleep_duration_min' => '${compactValueLabel(tick)} min',
-  'resting_hr_bpm' => '${compactValueLabel(tick)} bpm',
-  'hrv_sdnn_ms' => '${compactValueLabel(tick)} ms',
-  'step_count' => '${compactValueLabel(tick)} steps',
-  'spo2_pct' => '${compactValueLabel(tick)} %',
-  'body_temp_c' => '${compactValueLabel(tick)} °C',
-  _ => compactValueLabel(tick),
-};
+String trendAxisLabel(String metricKey, double tick) =>
+    metricAxisTickLabel(metricKey, tick);
 
 /// Hand-rolled daily-series chart: nice-tick gridlines with value labels, a
 /// date-proportional polyline, and a dot per day. All math lives in

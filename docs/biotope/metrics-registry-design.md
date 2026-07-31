@@ -149,6 +149,9 @@ which is *why* it is nullable — not a reason to drop it). The stale artifact w
    (`apps/biotope/lib/modules/m2_self_report/impl/normaliser.dart`) is kept in lockstep with the
    registry's `countsTowardDailyCompleteness` weights by the active `metrics-registry-to-dqs` guard.
    (M6 only consumes the resulting `log_completeness`.)
+6. M5a trend-axis placement and wording derive from registry `valueStep`, `scale`, `unit`, and
+   minimal `ui` metadata. Armstrong/Bristol category semantics switch on `ui.inputType`, never on a
+   metric key; ordinary numeric metrics can be added without editing chart source.
 
 The `shared/` changes are 2-reviewer per [memory 0002](../memory/0002-shared-contract-two-reviewers.md).
 

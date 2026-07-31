@@ -84,17 +84,80 @@ class RegistryEntry {
     this.table,
     this.status,
     this.baselineApplicable,
+    this.type,
+    this.scaleMin,
+    this.scaleMax,
     this.valueStep,
   );
   final String key;
   final String table;
   final String status;
   final bool baselineApplicable;
+  final String type;
+  final num? scaleMin;
+  final num? scaleMax;
   final num? valueStep;
 }
 
 /// Parse metric entries (in declaration order) from a registry source (TS or Dart). Both files
 /// list one entry per object with `key:`, `table:`, `status:`, `baselineApplicable:` fields.
+String? _quotedField(String source, String name) {
+  final marker = '$name:';
+  final markerIndex = source.indexOf(marker);
+  if (markerIndex < 0) return null;
+  var index = markerIndex + marker.length;
+  while (index < source.length) {
+    final code = source.codeUnitAt(index);
+    if (code != 9 && code != 10 && code != 13 && code != 32) break;
+    index++;
+  }
+  if (index >= source.length) return null;
+  final quote = source.codeUnitAt(index);
+  if (quote != 34 && quote != 39) return null;
+  final end = source.indexOf(String.fromCharCode(quote), index + 1);
+  return end < 0 ? null : source.substring(index + 1, end);
+}
+
+num? _numericField(String source, String name) {
+  final marker = '$name:';
+  final markerIndex = source.indexOf(marker);
+  if (markerIndex < 0) return null;
+  var start = markerIndex + marker.length;
+  while (start < source.length) {
+    final code = source.codeUnitAt(start);
+    if (code != 9 && code != 10 && code != 13 && code != 32) break;
+    start++;
+  }
+  var end = start;
+  const numberCharacters = '+-.0123456789eE';
+  while (end < source.length && numberCharacters.contains(source[end])) {
+    end++;
+  }
+  return num.tryParse(source.substring(start, end));
+}
+
+(num?, num?) _scaleFields(String source) {
+  const marker = 'scale:';
+  final markerIndex = source.indexOf(marker);
+  if (markerIndex < 0) return (null, null);
+  final tail = source.substring(markerIndex + marker.length).trimLeft();
+  if (tail.startsWith('null')) return (null, null);
+
+  final String payload;
+  if (tail.startsWith('{')) {
+    final end = tail.indexOf('}');
+    if (end < 0) return (null, null);
+    payload = tail.substring(1, end);
+  } else if (tail.startsWith('MetricScale(')) {
+    final end = tail.indexOf(')');
+    if (end < 0) return (null, null);
+    payload = tail.substring('MetricScale('.length, end);
+  } else {
+    return (null, null);
+  }
+  return (_numericField(payload, 'min'), _numericField(payload, 'max'));
+}
+
 List<RegistryEntry> parseRegistry(String source) {
   final keyRe = RegExp(r'''key:\s*['"]([a-z0-9_]+)['"]''');
   final keyMatches = keyRe.allMatches(source).toList();
@@ -119,11 +182,24 @@ List<RegistryEntry> parseRegistry(String source) {
           r'baselineApplicable:\s*(true|false)',
         ).firstMatch(block)?.group(1) ==
         'true';
-    final stepMatch =
-        RegExp(r'valueStep:\s*(-?\d+(?:\.\d+)?)').firstMatch(block);
-    final valueStep =
-        stepMatch == null ? null : num.parse(stepMatch.group(1)!);
-    entries.add(RegistryEntry(key, table, status, ba, valueStep));
+    final type = _quotedField(block, 'type') ?? '';
+    final (scaleMin, scaleMax) = _scaleFields(block);
+    final stepMatch = RegExp(
+      r'valueStep:\s*(-?\d+(?:\.\d+)?)',
+    ).firstMatch(block);
+    final valueStep = stepMatch == null ? null : num.parse(stepMatch.group(1)!);
+    entries.add(
+      RegistryEntry(
+        key,
+        table,
+        status,
+        ba,
+        type,
+        scaleMin,
+        scaleMax,
+        valueStep,
+      ),
+    );
   }
   return entries;
 }

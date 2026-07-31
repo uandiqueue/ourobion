@@ -272,7 +272,7 @@ test('valueStep is optional-with-default and rejects incompatible grids', () => 
   );
 });
 
-test('production whole-step policy covers all 16 discrete metrics explicitly', () => {
+test('production whole-step policy covers all 15 discrete metrics explicitly', () => {
   const stepped = productionMetrics
     .filter((metric) => metric.valueStep === 1)
     .map((metric) => metric.key)
@@ -286,7 +286,6 @@ test('production whole-step policy covers all 16 discrete metrics explicitly', (
       'energy_score',
       'focus_score',
       'gut_comfort_score',
-      'log_completeness',
       'mood_score',
       'mosquito_bites',
       'outside_meals',
@@ -318,6 +317,33 @@ test('Biotope consumes the registry through the public Dart package barrel', () 
     ),
     'utf8',
   );
+  const detail = readFileSync(
+    path.join(
+      REPO_ROOT,
+      'apps',
+      'biotope',
+      'lib',
+      'modules',
+      'm5a_baselines',
+      'ui',
+      'screens',
+      'metric_detail_screen.dart',
+    ),
+    'utf8',
+  );
+  const axisPolicy = readFileSync(
+    path.join(
+      REPO_ROOT,
+      'apps',
+      'biotope',
+      'lib',
+      'modules',
+      'm5a_baselines',
+      'impl',
+      'metric_axis_policy.dart',
+    ),
+    'utf8',
+  );
 
   assert.equal(existsSync(path.join(metricRoot, 'registry.dart')), false);
   assert.equal(existsSync(path.join(metricRoot, 'index.dart')), false);
@@ -326,10 +352,15 @@ test('Biotope consumes the registry through the public Dart package barrel', () 
   assert.match(trend, /package:ourobion_metrics\/ourobion_metrics\.dart/);
   assert.match(trend, /metricByKey\(metricKey\)/);
   assert.match(trend, /metric\?\.valueStep/);
-  const axisPolicy = trend.slice(
-    trend.indexOf('List<double> trendAxisTicks'),
-    trend.indexOf('String trendAxisLabel'),
-  );
+  assert.ok(trend.includes('metricAxisTickLabel(metricKey, tick)'));
+  assert.equal(trend.includes('switch (metricKey)'), false);
+  assert.ok(detail.includes('metricAxisDescription(metricKey)'));
+  assert.equal(detail.includes('switch (metricKey)'), false);
+  assert.ok(axisPolicy.includes('switch (metric.ui?.inputType)'));
+  assert.ok(axisPolicy.includes('metric.ui?.label'));
+  assert.ok(axisPolicy.includes('metric.scale'));
+  assert.ok(axisPolicy.includes('metric.unit'));
+  assert.ok(axisPolicy.includes('metric.valueStep'));
   assert.doesNotMatch(axisPolicy, /switch\s*\(metricKey\)/);
 });
 

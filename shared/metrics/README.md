@@ -37,10 +37,18 @@ See [`docs/biotope/metrics-registry-design.md`](../../docs/biotope/metrics-regis
 | `introducedIn` / `deprecatedAt` | lifecycle stamps |
 
 `valueStep` is deliberately explicit rather than inferred. `type: ordinal` and the existing UI
-input hints identify 13 whole-step metrics, but neither can classify derived `stool_variability`,
-derived `log_completeness`, or sensor `step_count`; `scale` also cannot help because `step_count`
-is intentionally unbounded. Declaring the increment on all 16 discrete metrics lets every display
-consumer stay registry-driven while continuous metrics retain the backward-compatible `null` default.
+input hints identify 13 whole-step metrics, but neither can classify derived `stool_variability`
+or sensor `step_count`; `scale` also cannot help because `step_count` is intentionally unbounded.
+Declaring the increment on all 15 discrete metrics lets every display consumer stay registry-driven
+while continuous metrics retain the backward-compatible `null` default. `log_completeness` remains
+continuous because its SQL `numeric(5,2)` and Dart `double` truth boundaries permit fractions; add
+a step only if those boundaries later enforce one.
+
+M5a also treats registry metadata as the display policy for its axes: `ui.inputType` selects named
+category wording (Armstrong and Bristol), while `ui.label`, `scale`, `unit`, and `valueStep`
+describe detail charts and label numeric ticks at the declared precision. Metric keys are lookups
+only, never label/unit policy; unrecognised metadata falls back to a plain recorded value rather
+than a guessed unit.
 
 Typed accessors live in `index.ts` / `lib/ourobion_metrics.dart` (`activeMetrics`, `metricByKey`,
 `metricsByTable`, `baselineKeys`, `activeKeys`, `isActiveMetric`, `dqsWeights`,

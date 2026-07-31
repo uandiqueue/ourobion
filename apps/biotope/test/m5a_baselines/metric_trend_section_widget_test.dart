@@ -83,40 +83,39 @@ void main() {
       expect(trendAxisLabel('hrv_sdnn_ms', 44), '44 ms');
 
       final spo2Ticks = trendAxisTicks('spo2_pct', [96, 97, 98]);
-      final spo2Bounds = trendAxisBounds(
-        'spo2_pct',
-        [96, 97, 98],
-        spo2Ticks,
-      );
+      final spo2Bounds = trendAxisBounds('spo2_pct', [96, 97, 98], spo2Ticks);
       expect(spo2Bounds.min, greaterThan(0));
       expect(spo2Bounds.max, lessThanOrEqualTo(100));
     });
 
-    test('every registry-declared step metric stays on its valid value grid', () {
-      final stepped = kMetrics
-          .where(
-            (metric) =>
-                metric.status == 'active' &&
-                metric.baselineApplicable &&
-                metric.valueStep != null,
-          )
-          .toList();
-      expect(stepped, hasLength(16));
+    test(
+      'every registry-declared step metric stays on its valid value grid',
+      () {
+        final stepped = kMetrics
+            .where(
+              (metric) =>
+                  metric.status == 'active' &&
+                  metric.baselineApplicable &&
+                  metric.valueStep != null,
+            )
+            .toList();
+        expect(stepped, hasLength(15));
 
-      for (final metric in stepped) {
-        final ticks = trendAxisTicks(metric.key, [1, 2]);
-        final step = metric.valueStep!.toDouble();
-        final origin = metric.scale?.min.toDouble() ?? 0;
-        for (final tick in ticks) {
-          final gridPosition = (tick - origin) / step;
-          expect(
-            gridPosition,
-            closeTo(gridPosition.roundToDouble(), 1e-9),
-            reason: '${metric.key} emitted off-grid tick $tick',
-          );
+        for (final metric in stepped) {
+          final ticks = trendAxisTicks(metric.key, [1, 2]);
+          final step = metric.valueStep!.toDouble();
+          final origin = metric.scale?.min.toDouble() ?? 0;
+          for (final tick in ticks) {
+            final gridPosition = (tick - origin) / step;
+            expect(
+              gridPosition,
+              closeTo(gridPosition.roundToDouble(), 1e-9),
+              reason: '${metric.key} emitted off-grid tick $tick',
+            );
+          }
         }
-      }
-    });
+      },
+    );
 
     test('stool_count 1..2 cannot render a half-stool gridline', () {
       final ticks = trendAxisTicks('stool_count', [1, 2]);

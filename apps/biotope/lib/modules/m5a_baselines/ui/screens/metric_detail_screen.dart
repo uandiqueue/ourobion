@@ -7,6 +7,7 @@ import '../../../../core/widgets/gold_card.dart';
 import '../../impl/baseline_service.dart';
 import '../../impl/chart_math.dart';
 import '../../impl/metric_series_models.dart';
+import '../../impl/metric_axis_policy.dart';
 import '../../impl/metric_series_service.dart';
 import '../../impl/metric_value_format.dart';
 import '../widgets/metric_trend_section.dart';
@@ -70,16 +71,10 @@ abstract final class MetricDetailCopy {
   static const sourceWearable = 'From a connected wearable';
   static const sourceSignal = 'From a derived signal';
 
-  /// The unit the chart's own axis numbers are in — the chart plots stored
-  /// values, so sleep's gridlines are minutes even though the headline reads
-  /// '7h 12m'. Saying so beats silently mixing units.
-  static String axisUnit(String metricKey) => switch (metricKey) {
-    kSleepMetricKey => 'minutes asleep',
-    kHrvMetricKey => 'milliseconds',
-    kStepsMetricKey => 'steps',
-    kGutMetricKey => 'comfort out of 5',
-    _ => 'stored value',
-  };
+  /// The registry-defined unit or scale the chart's axis numbers represent.
+  /// This calls the same policy as the trend painter, so named self-report
+  /// scales and numeric sensor units cannot drift between chart surfaces.
+  static String axisUnit(String metricKey) => metricAxisDescription(metricKey);
 
   static const all = <String>[
     eyebrow,
