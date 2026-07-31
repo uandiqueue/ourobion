@@ -164,9 +164,11 @@ class ProvenanceCitation {
   /// the shared contract. Internal IDs and malformed/active-content strings
   /// therefore remain plain text rather than becoming guessed links.
   Uri? get paperUri {
+    if (RegExp(r'[\u0000-\u001F\u007F-\u009F]').hasMatch(paperId)) {
+      return null;
+    }
     final source = paperId.trim();
-    if (source.isEmpty ||
-        RegExp(r'[\u0000-\u001F\u007F-\u009F]').hasMatch(source)) {
+    if (source.isEmpty) {
       return null;
     }
     final doiPrefix = RegExp(r'^doi:', caseSensitive: false);
