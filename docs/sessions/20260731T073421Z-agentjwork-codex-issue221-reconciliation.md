@@ -230,3 +230,35 @@ memory: none
 - None locally. Dependency installation is deliberately hosted-only for this disposable runner.
 
 memory: none
+
+## Continuation — metric-view package ownership correction
+
+### Attempted
+
+- Reviewed the next hosted rollback log after root `npm ci`: the metric fixture still failed to
+  resolve `tsx`, confirming the tool is not owned by the root package.
+- Compared the fixture import with the existing node-tools CI matrix and the metric-view package
+  manifest/lockfile.
+
+### Changed
+
+- Replaced the root installation with the exact package-local `npm ci` in `tools/metric-view`, and
+  bound the setup-node npm cache to `tools/metric-view/package-lock.json`.
+- Tightened the static contract to require the metric-view lockfile, working directory, and install
+  before both rollback fixtures.
+
+### Decided
+
+- `tsx` is a lockfile-pinned dependency of `tools/metric-view`; use its existing CI package boundary.
+  Do not add a global/ad-hoc install, database grant, or product code change.
+
+### Left
+
+- Re-run the hosted rollback evidence, then regenerate derived attestation evidence after fresh
+  graphs and route probes.
+
+### Blockers
+
+- None locally. Package installation remains deliberately hosted-only for this disposable runner.
+
+memory: none

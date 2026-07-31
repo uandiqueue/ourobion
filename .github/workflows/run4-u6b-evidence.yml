@@ -63,7 +63,9 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-      - name: Install repository-local tools
+          cache-dependency-path: tools/metric-view/package-lock.json
+      - name: Install metric-view fixture dependencies
+        working-directory: tools/metric-view
         run: npm ci
       - name: Alias service container for unchanged local fixtures
         run: docker rename "${{ job.services.postgres.id }}" supabase_db_ourobion
