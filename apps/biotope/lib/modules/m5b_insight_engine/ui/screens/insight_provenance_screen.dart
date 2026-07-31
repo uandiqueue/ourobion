@@ -69,6 +69,7 @@ abstract final class ProvenanceCopy {
   static const citationsLabel = 'CITATIONS';
   static const evidenceLabel = 'Evidence passages';
   static const openPaper = 'Open paper';
+  static const openPaperExternal = 'Open paper externally';
   static const paperLinkUnavailable = 'Paper link unavailable';
   static const paperLinkFailed = 'Paper link could not be opened.';
 
@@ -108,6 +109,7 @@ abstract final class ProvenanceCopy {
     citationsLabel,
     evidenceLabel,
     openPaper,
+    openPaperExternal,
     paperLinkUnavailable,
     paperLinkFailed,
     notVisibleBody,
@@ -777,16 +779,24 @@ class _CitationTile extends StatelessWidget {
           if (citation.paperUri case final uri?)
             Align(
               alignment: Alignment.centerLeft,
-              child: TextButton.icon(
+              child: Semantics(
                 key: ValueKey('citation-link-${citation.paperId}'),
-                onPressed: () => onOpenPaper(uri),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  minimumSize: const Size(0, 32),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                container: true,
+                link: true,
+                label: ProvenanceCopy.openPaperExternal,
+                value: uri.toString(),
+                onTap: () => onOpenPaper(uri),
+                child: ExcludeSemantics(
+                  child: TextButton.icon(
+                    onPressed: () => onOpenPaper(uri),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      minimumSize: const Size(48, 48),
+                    ),
+                    icon: const Icon(Icons.open_in_new_rounded, size: 14),
+                    label: Text(ProvenanceCopy.openPaper),
+                  ),
                 ),
-                icon: const Icon(Icons.open_in_new_rounded, size: 14),
-                label: Text(ProvenanceCopy.openPaper),
               ),
             )
           else
