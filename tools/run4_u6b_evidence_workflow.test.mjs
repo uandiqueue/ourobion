@@ -5,6 +5,8 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const workflow = readFileSync(new URL('../.github/workflows/run4-u6b-evidence.yml', import.meta.url), 'utf8');
+const wellbeingFixture = readFileSync(new URL('../supabase/tests/wellbeing-foundation/local_schema_fixture.mjs', import.meta.url), 'utf8');
+const metricViewFixture = readFileSync(new URL('../supabase/tests/metric-view/local_projection_fixture.mjs', import.meta.url), 'utf8');
 
 test('U6b evidence workflow remains path-scoped and supplemental', () => {
   assert.match(workflow, /pull_request:\s*\n\s+branches: \[dev-phase2-run4\]/);
@@ -22,6 +24,10 @@ test('rollback evidence pins the existing fixture container contract and migrati
   assert.match(workflow, /filename" > "20260730020000"/);
   assert.match(workflow, /node supabase\/tests\/wellbeing-foundation\/local_schema_fixture\.mjs/);
   assert.match(workflow, /node supabase\/tests\/metric-view\/local_projection_fixture\.mjs/);
+  for (const fixture of [wellbeingFixture, metricViewFixture]) {
+    assert.match(fixture, /insert into auth\.users \(id, email\) values/);
+    assert.doesNotMatch(fixture, /auth\.users \(id, aud, role, email, created_at, updated_at\)/);
+  }
 });
 
 test('attestation evidence pins exact local routes, denial hash, generator, and fresh graphs', () => {
@@ -35,6 +41,13 @@ test('attestation evidence pins exact local routes, denial hash, generator, and 
   assert.match(workflow, /verify-graphs/);
   assert.match(workflow, /cp "\$manifest" supabase\/deploy-attestation\.json/);
   assert.match(workflow, /local-functions-serve\.log\.sha256/);
+  assert.match(workflow, /supabase start --exclude gotrue,realtime,storage-api,imgproxy,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor/);
+  assert.match(workflow, /supabase stop --no-backup/);
+  assert.match(workflow, /seq 1 120/);
+  assert.match(workflow, /kill -0 \$server_pid/);
+  assert.match(workflow, /listener did not become ready within 120 seconds/);
+  assert.match(workflow, /sanitized_tail/);
+  assert.match(workflow, /rm \$start_log \$stop_log/);
   assert.match(workflow, /rm "\$server_log"/);
   assert.match(workflow, /cp "\$original_manifest" supabase\/deploy-attestation\.json/);
   assert.match(workflow, /rm "\$original_manifest"/);

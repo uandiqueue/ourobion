@@ -39,9 +39,9 @@ const userB = '10000000-0000-0000-0000-000000000002';
 
 const sql = `
 begin;
-insert into auth.users (id, aud, role, email, created_at, updated_at) values
- ('${userA}', 'authenticated', 'authenticated', 'metric-view-a@local.invalid', now(), now()),
- ('${userB}', 'authenticated', 'authenticated', 'metric-view-b@local.invalid', now(), now());
+insert into auth.users (id, email) values
+ ('${userA}', 'metric-view-a@local.invalid'),
+ ('${userB}', 'metric-view-b@local.invalid');
 ${wellbeingMigration}
 insert into public.daily_gut_rows (
   user_id, log_date, region, appetite_score, anxiety_score, brain_clarity_score, focus_score,

@@ -26,9 +26,9 @@ create temporary table wellbeing_policy_before as
 select policyname, permissive, roles::text, cmd, qual, with_check
   from pg_policies where schemaname = 'public' and tablename = 'daily_gut_rows';
 
-insert into auth.users (id, aud, role, email, created_at, updated_at) values
- ('${userA}', 'authenticated', 'authenticated', 'wellbeing-a@local.invalid', now(), now()),
- ('${userB}', 'authenticated', 'authenticated', 'wellbeing-b@local.invalid', now(), now());
+insert into auth.users (id, email) values
+ ('${userA}', 'wellbeing-a@local.invalid'),
+ ('${userB}', 'wellbeing-b@local.invalid');
 ${migration}
 
 select 'columns_exact=' || count(*) from information_schema.columns

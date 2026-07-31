@@ -90,3 +90,43 @@ memory: none
 - None. Local host execution remains deliberately deferred for shared-container safety.
 
 memory: none
+
+## Continuation — hosted evidence remediation
+
+### Attempted
+
+- Reviewed hosted workflow run `30615883769` after the supplemental workflow contract job passed.
+- Kept the remediation runner-only; no shared-host Docker or Supabase process was started.
+
+### Changed
+
+- Changed both unchanged rollback fixture seeds to the portable `auth.users (id, email)` form.
+  The baseline bootstrap intentionally supplies only those columns; all assertion and transaction
+  rollback behaviour remains unchanged.
+- Before the required local function serve command, the attestation job now starts only the
+  runner-local postgres and Kong services. It excludes gotrue, realtime, storage-api, imgproxy,
+  mailpit, postgrest, postgres-meta, studio, edge-runtime, logflare, vector, and supavisor.
+- Added a 120-second fail-closed readiness loop that detects an exited serve process and accepts
+  only a local 401 route response. Cleanup stops the runner-local stack with `--no-backup`.
+- Successful artifacts retain only SHA-256 files for start, serve, and stop logs, then delete the
+  raw logs. Failure prints only sanitized short log tails with JWT-shaped and key/value secret
+  forms redacted; raw logs are never uploaded.
+- Extended the static workflow contract to pin the portable fixture seeds, minimum exclusions,
+  cleanup, readiness failure, and log-deletion safeguards.
+
+### Decided
+
+- The hosted run exposed setup constraints, not proof gaps: it did not bind the local listener and
+  its bootstrap auth schema has a deliberately minimal row shape. This remediation does not claim
+  a successful replay until a later hosted run passes.
+
+### Left
+
+- Allow a subsequent GitHub Actions run to execute the runner-only remediation and assess its
+  generated artifact.
+
+### Blockers
+
+- None locally. Hosted image-pull and function-runtime behaviour remains to be observed remotely.
+
+memory: none
