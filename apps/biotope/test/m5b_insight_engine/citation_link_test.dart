@@ -49,7 +49,9 @@ const kRepoDois = <String>[
 
 /// A stable internal corpus id — the other half of the `paperId` contract, and
 /// deliberately NOT resolvable to any page.
-const kCorpusId = 'corpus:01JQZK4E1N7Y8B2W9T3M5X6R0A';
+const kCorpusId = 'corpus:gut-mood-cohort-2024';
+const kCorpusTitle = 'Gut comfort and mood in a longitudinal cohort';
+const kCorpusYear = 2024;
 
 /// NUL, BEL, TAB, LF, CR, ESC, DEL and a C1 control.
 const kControlCodePoints = [0x00, 0x07, 0x09, 0x0a, 0x0d, 0x1b, 0x7f, 0x9f];
@@ -336,13 +338,13 @@ void main() {
     test('fromJson leaves an internal corpus id unlinkable', () {
       final citation = ProvenanceCitation.fromJson(const {
         'paperId': kCorpusId,
-        'title': 'An unindexed record held only in the corpus',
-        'year': 2019,
+        'title': kCorpusTitle,
+        'year': kCorpusYear,
       });
       expect(citation.paperUri, isNull);
       expect(
         citation.title,
-        'An unindexed record held only in the corpus',
+        kCorpusTitle,
         reason: 'unlinkable is not invisible — the citation still renders',
       );
     });

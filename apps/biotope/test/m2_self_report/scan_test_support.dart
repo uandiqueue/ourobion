@@ -2,9 +2,9 @@
 // so `flutter test` does not run it as a suite (same convention as
 // test/guards/guard_support.dart).
 //
-// WHY A HARNESS AT ALL: `ScanTab` reads `Supabase.instance.client` and
-// `auth.currentUser!.id` in `initState`, so it cannot be pumped in a widget
-// test without a live Supabase singleton. The pieces it is built from —
+// WHY A HARNESS AT ALL: the default `ScanTab` path reads Supabase in `initState`.
+// `scan_tab_widgets_test.dart` now pumps the actual tab through deterministic
+// callbacks for state sequencing. This harness remains for direct components —
 // [ScanGlobe], [GapCard], [EnvironmentRow] — are public exactly so they can be
 // pumped directly, and [ScanGapListHost] below re-creates the ONE piece of
 // state that lives in `_ScanTabState` rather than in a public widget: the
@@ -170,8 +170,9 @@ String chipSemanticLabel(String metricKey, int value) =>
 // hold the stand-in to the real thing instead of trusting it.
 
 /// The merged Scan tab's source. `flutter test` runs from the package root.
-String scanTabSource() =>
-    File('lib/modules/m2_self_report/ui/screens/scan_tab.dart').readAsStringSync();
+String scanTabSource() => File(
+  'lib/modules/m2_self_report/ui/screens/scan_tab.dart',
+).readAsStringSync();
 
 /// The text of one top-level declaration in [source], from `class X` / `enum X`
 /// up to the next top-level declaration.
@@ -191,7 +192,8 @@ String declarationBody(String source, String name) {
 
 /// Collapses runs of whitespace so a source assertion survives reformatting.
 /// (Named `squash…` because `matcher` already exports a `collapseWhitespace`.)
-String squashWhitespace(String source) => source.replaceAll(RegExp(r'\s+'), ' ');
+String squashWhitespace(String source) =>
+    source.replaceAll(RegExp(r'\s+'), ' ');
 
 // ── Finders ────────────────────────────────────────────────────────────────
 
@@ -207,10 +209,8 @@ Finder findExpandedArea(String metricKey) => find.descendant(
 );
 
 /// The chip offering [value] inside [metricKey]'s card.
-Finder findChip(String metricKey, int value) => find.descendant(
-  of: findGapCard(metricKey),
-  matching: find.text('$value'),
-);
+Finder findChip(String metricKey, int value) =>
+    find.descendant(of: findGapCard(metricKey), matching: find.text('$value'));
 
 /// Taps a card's own body (its metric name), which is what a user taps to
 /// open it — the card centre can land on a chip once it is already open.

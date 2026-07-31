@@ -13,8 +13,9 @@
 // inline_control_range_test.dart; items 1-3, the dial and the sweep, are in
 // scan_globe_states_test.dart and scan_sweep_test.dart.)
 //
-// `ScanTab` reads `Supabase.instance.client` in `initState`, so the widgets it
-// composes are pumped directly. The one piece of behaviour that lives in
+// The default production `ScanTab` reads `Supabase.instance.client` in
+// `initState`. This file now also pumps the actual tab through deterministic
+// service callbacks. The mirror still covers the one piece of behaviour that lives in
 // `_ScanTabState` rather than in a public widget — the single `_openGapKey`
 // that makes the list one-open-at-a-time — is mirrored by [ScanGapListHost] in
 // scan_test_support.dart, and the last group here holds that mirror to the

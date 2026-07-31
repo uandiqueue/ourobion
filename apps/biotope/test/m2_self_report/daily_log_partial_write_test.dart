@@ -13,12 +13,17 @@
 // property is an ABSENCE — the columns it does not name — so it is asserted here
 // field by field against a fully populated row.
 //
-// Both payload builders are pure, so this runs with no database and no Supabase
-// client. `_applyWrite` models PostgREST write semantics for both shapes at
-// once: a write sets exactly the columns named in its payload (explicit nulls
+// The payload-builder portion is pure, so it runs with no database or Supabase
+// client. `_applyWrite` models PostgREST write semantics for that pure case:
+// a modeled write sets exactly the columns named in its payload (explicit nulls
 // included) and leaves every other column untouched. The ONLY difference between
 // the safe path and the destructive one is therefore which keys the payload
 // carries — which is exactly what these tests measure.
+
+//
+// The service portion uses an offline `http.BaseClient` to drive the real
+// `DailyLogService.saveFieldAnswer` request path. It records the existing-row
+// PATCH and absent-row INSERT, including the user/date predicates and payload.
 
 import 'dart:convert';
 

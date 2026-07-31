@@ -7,7 +7,6 @@ import '../../../../core/theme.dart';
 import '../../../../core/widgets/badge_chip.dart';
 import '../../../../core/widgets/gold_card.dart';
 import '../../../m3_passive_health/index.dart';
-import '../../../m3_passive_health/ui/widgets/wearable_sync_row.dart';
 import '../../../m5a_baselines/index.dart' show metricDisplayLabel;
 import '../../../m6_engagement/index.dart';
 import '../../impl/logging_controller.dart';

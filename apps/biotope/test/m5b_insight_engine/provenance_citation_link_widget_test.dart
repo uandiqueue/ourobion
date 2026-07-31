@@ -32,12 +32,16 @@ const kRealDoi = '10.1016/j.isci.2026.116224';
 const kRealDoiUrl = 'https://doi.org/10.1016/j.isci.2026.116224';
 
 /// The genuine title and year of the paper that DOI resolves to.
-const kRealDoiTitle = 'Unraveling the gut microbiota-brain axis';
+const kRealDoiTitle =
+    'Unraveling the gut microbiota-brain axis: Mechanisms, pathophysiology, '
+    'and therapeutic opportunities.';
 const kRealDoiYear = 2026;
 
 /// A stable internal corpus id — the other half of the `Citation.paperId`
 /// contract, and deliberately NOT resolvable to any page.
-const kCorpusId = 'corpus:01JQZK4E1N7Y8B2W9T3M5X6R0A';
+const kCorpusId = 'corpus:gut-mood-cohort-2024';
+const kCorpusTitle = 'Gut comfort and mood in a longitudinal cohort';
+const kCorpusYear = 2024;
 
 class _FakeProvenanceService extends ProvenanceService {
   final InsightProvenance? result;
@@ -113,9 +117,9 @@ InsightProvenance _withCitations(List<ProvenanceCitation> citations) {
   );
 }
 
-/// A fully-cited edge carrying both citation cases at once: one real DOI and
-/// one internal corpus id. Every trust label the screen owns is populated, so a
-/// regression that drops one is visible here too.
+/// The accepted A8 artifact for the real DOI. Its claim, scope, citation tier,
+/// impact tier, and quote spans are recorded in the session log; no invented
+/// population, edge score, verification, or second citation is added here.
 InsightProvenance _fullyCitedProvenance() => const InsightProvenance(
   card: ProvenanceCardInfo(
     id: 2,
@@ -127,38 +131,56 @@ InsightProvenance _fullyCitedProvenance() => const InsightProvenance(
     severity: 'info',
     generatedAt: '2026-07-24T09:37:53.975+00:00',
   ),
-  patternKey: 'signal:sleep_duration_min:down',
-  branch: 'agree',
   edges: [
     ProvenanceEdge(
-      edgeId: 'gut_microbiota->brain_axis',
-      subject: 'gut_microbiota',
-      object: 'brain_axis',
-      relation: 'describes',
-      direction: 'consistent',
-      servingBand: 'core',
-      edgeScore: 0.82,
-      verdict: 'agree',
-      verifiedAt: '2026-07-10T00:00:00Z',
-      derivation: 'Synthesised from the cited sources.',
-      population: 'healthy adults 18-40',
+      edgeId: 'gut_comfort_score|correlates|mood_score',
+      subject: 'gut_comfort_score',
+      object: 'mood_score',
+      relation: 'correlates',
+      derivation:
+          'The review states the bidirectional gut-brain nature of IBS (Q1) '
+          'and reports a parallel RCT in which an FMT intervention reduced '
+          'both IBS severity scores and anxiety/depression scores together '
+          '(Q2), asserted as a correlation rather than a directed causal '
+          'claim between the two subjective metrics. Strongest supporting '
+          'evidence described is an RCT (tier 4), reported within a narrative '
+          'review; scope kept narrow to the studied IBS population.',
+      population: 'IBS patients comorbid with anxiety and depression',
+      quoteSpans: [
+        ProvenanceQuoteSpan(
+          paperId: kRealDoi,
+          quote:
+              'In IBS, psychological stress activates the HPA axis, releasing '
+              'CORT which affects gut motility and sensitivity, while dysbiotic '
+              'microbiota independently generates neuroactive metabolites '
+              'acting on the ENS, illustrating the bidirectional gut-brain '
+              'nature of IBS pathophysiology.',
+          locator: 'gut-brain axis / IBS pathophysiology',
+          charStart: 52301,
+          charEnd: 52578,
+        ),
+        ProvenanceQuoteSpan(
+          paperId: kRealDoi,
+          quote:
+              'A parallel RCT in IBS patients comorbid with anxiety and '
+              'depression demonstrated that 12 weeks of oral FMT capsules '
+              'significantly reduced both IBS severity scores and '
+              'anxiety/depression scores compared to empty capsule controls, '
+              'reinforcing the gut-brain-behavior connection in this population.',
+          locator: 'therapeutic opportunities / FMT RCT',
+          charStart: 53297,
+          charEnd: 53591,
+        ),
+      ],
       citations: [
         ProvenanceCitation(
           paperId: kRealDoi,
           title: kRealDoiTitle,
           year: kRealDoiYear,
           evidenceTier: 4,
-          impactTier: 'moderate',
+          impactTier: 'high',
           stance: 'supports',
-          population: 'healthy adults 18-40',
-        ),
-        ProvenanceCitation(
-          paperId: kCorpusId,
-          title: 'An unindexed record held only in the corpus',
-          year: 2019,
-          evidenceTier: 2,
-          impactTier: 'low',
-          stance: 'mentions',
+          population: 'IBS patients comorbid with anxiety and depression',
         ),
       ],
     ),
@@ -347,8 +369,8 @@ void main() {
         _withCitations(const [
           ProvenanceCitation(
             paperId: kCorpusId,
-            title: 'An unindexed record held only in the corpus',
-            year: 2019,
+            title: kCorpusTitle,
+            year: kCorpusYear,
           ),
         ]),
       );
@@ -411,7 +433,11 @@ void main() {
         tester,
         _withCitations(const [
           ProvenanceCitation(paperId: kRealDoi, title: kRealDoiTitle),
-          ProvenanceCitation(paperId: kCorpusId, title: 'Corpus-only record'),
+          ProvenanceCitation(
+            paperId: kCorpusId,
+            title: kCorpusTitle,
+            year: kCorpusYear,
+          ),
         ]),
       );
 
@@ -434,45 +460,23 @@ void main() {
     ) async {
       final launcher = await _pump(tester, _fullyCitedProvenance());
 
-      // Two citations, exactly one of which is linkable.
+      // The accepted artifact has one DOI-backed citation, and it is linkable.
       expect(_linkFor(kRealDoi), findsOneWidget);
-      expect(_linkFor(kCorpusId), findsNothing);
       expect(find.text(ProvenanceCopy.openPaper), findsOneWidget);
-      expect(find.text(ProvenanceCopy.paperLinkUnavailable), findsOneWidget);
+      expect(find.text(ProvenanceCopy.paperLinkUnavailable), findsNothing);
 
       // The real paper, by its genuine title and year.
       expect(find.textContaining(kRealDoiTitle), findsOneWidget);
       expect(find.textContaining('($kRealDoiYear)'), findsOneWidget);
 
-      // Every provenance / trust label the screen owns.
+      // The trust fields actually recorded on the accepted artifact.
       expect(find.text(ProvenanceCopy.citationsLabel), findsOneWidget);
-      expect(
-        find.textContaining('${ProvenanceCopy.verdictPrefix}agree'),
-        findsOneWidget,
-      );
-      // D15 honesty: the verdict carries the TEST-MODE stamp, verbatim.
-      expect(find.text(ProvenanceCopy.testModeVerdictLabel), findsOneWidget);
       expect(
         find.textContaining('${ProvenanceCopy.evidenceTierPrefix}4'),
         findsOneWidget,
       );
-      expect(
-        find.textContaining('${ProvenanceCopy.evidenceTierPrefix}2'),
-        findsOneWidget,
-      );
       expect(find.textContaining('supports'), findsOneWidget);
-      expect(find.textContaining('mentions'), findsOneWidget);
-      expect(find.textContaining('· moderate ·'), findsOneWidget);
-      // '· low ·' rather than 'low': the card body contains the word "lower".
-      expect(find.textContaining('· low ·'), findsOneWidget);
-      expect(
-        find.textContaining('${ProvenanceCopy.servingBandPrefix}core'),
-        findsOneWidget,
-      );
-      expect(
-        find.textContaining(ProvenanceCopy.directionConsistent),
-        findsOneWidget,
-      );
+      expect(find.textContaining('· high ·'), findsOneWidget);
       expect(
         find.textContaining(ProvenanceCopy.populationPrefix),
         findsOneWidget,

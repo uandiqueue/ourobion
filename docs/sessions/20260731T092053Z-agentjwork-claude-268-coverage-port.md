@@ -1,6 +1,6 @@
 ---
-title: Port the #268 acceptance-test coverage onto the merged implementation
-summary: Added 251 tests covering the acceptance criteria #268 specified but PR #279 landed without, changing no production code — and surfaced four real defects in the merged app, including a Home card claiming every channel was captured from a score of 60.
+title: Port and repair #268 acceptance coverage on the merged implementation
+summary: The original port added 251 acceptance tests. Later repair work added real request and widget evidence, two narrow behavior-preserving production test seams, and honest citation fixtures; #284 through #287 remain filed and unfixed.
 type: session
 scope: ui
 status: canonical
@@ -21,7 +21,10 @@ Issue: #282 · branch: `test/ui/run4-268-coverage-282` · base: `dev-phase2-run4
 
 ## Changed
 
-Only `apps/biotope/test/**`. **No production file was modified, and none needed to be.**
+The original port changed `apps/biotope/test/**`. The later repair also changed
+two behavior-preserving production test seams, the M3 public facade/imports,
+the direct-dev dependency declaration, and this session record; the details
+below supersede the original tests-only statement.
 
 - `m2_self_report/` — `scan_globe_states_test.dart`, `inline_control_range_test.dart` and
   `scan_test_support.dart` added; `scan_sweep_test.dart` and `scan_tab_widgets_test.dart` rewritten;
@@ -61,10 +64,53 @@ Only `apps/biotope/test/**`. **No production file was modified, and none needed 
   `pumpWidget` calls of the same unkeyed widget, so fixture loops silently re-asserted the first case.
   Both were mutation-checked afterwards — injecting the real DOI into the hostile-input list fails the
   suite, as it must.
-- Citation tests use a real DOI, `10.1038/s41586-020-2649-2` (Harris et al., *Array programming with
-  NumPy*, Nature 585, 2020), already committed at `tools/brain-ingest/tests/fixtures/`. That fixture
-  pairs the real DOI with an unrelated placeholder title; the pairing is deliberately never
-  reproduced, and the genuine title and year are used instead.
+- Citation fixture provenance was corrected during the later repair; see the
+  authoritative reconciliation below for the real DOI, accepted edge, and
+  committed internal-corpus fixture now used by these tests.
+
+## Current reconciliation (authoritative correction)
+
+The original port recorded 251 added acceptance tests on its then-current
+merged base. Later repair work is part of this same coverage unit and
+supersedes any earlier statement here that it changed tests only.
+
+- The latest verified full Flutter run is **693 passed, 26 skipped, 0 failed**.
+  Do not infer a new whole-suite delta from this log: the original 251-test
+  comparison and the later repair evidence were taken on different merged
+  heads.
+- The repair added two narrow, behavior-preserving production test seams:
+  `ProfileTab` accepts an optional `ProfileService` and user id, and `ScanTab`
+  accepts optional deterministic load/sync/save/engagement callbacks plus a
+  sweep-floor duration. Production construction supplies none of them and
+  continues to use its existing Supabase-backed paths.
+- `http: ^1.6.0` is a direct development dependency only. An offline
+  `http.BaseClient` now drives the real `DailyLogService.saveFieldAnswer` path,
+  proving the existing-row PATCH predicates/payload and absent-row INSERT,
+  rather than only modeling those writes in a pure helper.
+- The Scan coverage now pumps the actual injected `ScanTab` state machine for
+  success and failure sequencing. The direct-component and mirror coverage is
+  retained as supplemental coverage, not presented as proof of the actual tab.
+  The sweep test and production `ScanTab` use the M3 public facade; that facade
+  now explicitly exports the legitimately public `WearableSyncRow`.
+- Citation fixtures use the real iScience DOI
+  `10.1016/j.isci.2026.116224`, title *Unraveling the gut microbiota-brain
+  axis: Mechanisms, pathophysiology, and therapeutic opportunities.*, year
+  2026. The fully cited edge copies the recorded accepted A8 artifact:
+  `gut_comfort_score|correlates|mood_score`, population `IBS patients comorbid
+  with anxiety and depression`, evidence tier 4, high impact, supports, and
+  its recorded quote spans/locators. It does not invent verification, serving,
+  score, direction, or a second citation. The unavailable-link fixture uses
+  the committed internal record `corpus:gut-mood-cohort-2024`, *Gut comfort and
+  mood in a longitudinal cohort* (2024), never a fabricated corpus record.
+- False-pass repairs are explicit: widget loops use distinct keys so Flutter
+  cannot reuse the first fixture's State; real tab/service tests complement
+  source mirrors and pure payload models; DOI/title metadata is paired only
+  with its recorded paper; and #286's HTTP, dot-segment, case, and semantics
+  weaknesses remain named known-gap tests, not accepted behavior.
+- The current coverage branch merged `dev-phase2-run4` at
+  `c6a2ca64298998205a09451f78a6bfc63afa1a03`. This is test and documentation
+  evidence only; it does **not** claim strict exact-head release evidence or a
+  completed Run 4 promotion.
 
 ## Defects found in the merged implementation (filed, not fixed)
 
@@ -90,8 +136,11 @@ and no "coverage"/"score"/"%" wording, so it structurally cannot carry it.
 
 ## Left
 
-- The four filed defects. None is fixed here; this unit changes no production code by design.
-- Commit, push and PR — none performed, per the standing instruction.
+- The four filed defects, #284 through #287. They remain filed and are not
+  fixed by the original coverage port or its repair.
+- No push, PR edit, or issue comment was made by the repair. Local commits add
+  the narrow production test seams/facade cleanup and evidence corrections
+  described above.
 
 ## Blockers
 

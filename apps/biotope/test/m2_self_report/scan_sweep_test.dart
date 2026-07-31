@@ -16,15 +16,16 @@
 //      most of the cycle;
 //   4. nothing sweeps over the wearable / self-report / environment rows.
 //
-// `ScanTab` needs `Supabase.instance`, so the globe is pumped directly; the
+// The default `ScanTab` path needs `Supabase.instance`, so this focused globe
+// test pumps the globe directly; the
 // repeating drive below mirrors `_ScanTabState._runSweep` (`_sweepAnim` is an
 // AnimationController on ScanGlobe.sweepDuration, started with `.repeat()`),
 // and the source guards at the bottom hold that mirror to the real screen.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:src/modules/m3_passive_health/ui/widgets/wearable_sync_row.dart';
 import 'package:src/modules/m2_self_report/ui/screens/scan_tab.dart';
+import 'package:src/modules/m3_passive_health/index.dart';
 
 import 'scan_test_support.dart';
 
@@ -99,9 +100,14 @@ void main() {
       );
     });
 
-    testWidgets('absent under reduce-motion, not merely slower', (tester) async {
+    testWidgets('absent under reduce-motion, not merely slower', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        globeHarness(stoppedGlobe(scanning: true, sweep: 0.5), reduceMotion: true),
+        globeHarness(
+          stoppedGlobe(scanning: true, sweep: 0.5),
+          reduceMotion: true,
+        ),
       );
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 400));
@@ -168,7 +174,9 @@ void main() {
     testWidgets('the sweep is eased, not linear', (tester) async {
       // Cubic(.4, 0, .6, 1) — the reference's ease-in-out. A linear band would
       // cover equal distance in equal time.
-      await tester.pumpWidget(globeHarness(stoppedGlobe(scanning: true, sweep: 0)));
+      await tester.pumpWidget(
+        globeHarness(stoppedGlobe(scanning: true, sweep: 0)),
+      );
       final atStart = tester.getTopLeft(_band).dy;
       await tester.pumpWidget(
         globeHarness(stoppedGlobe(scanning: true, sweep: 0.25)),
@@ -212,14 +220,16 @@ void main() {
       expect(
         tester.getSize(_clip),
         tester.getSize(_globe),
-        reason: 'a clip smaller or larger than the dial would shape the sweep '
+        reason:
+            'a clip smaller or larger than the dial would shape the sweep '
             'into something other than the circle',
       );
       expect(
         (tester.widget<AnimatedContainer>(_globe).decoration! as BoxDecoration)
             .shape,
         BoxShape.circle,
-        reason: 'the clip path is derived from the decoration, so the '
+        reason:
+            'the clip path is derived from the decoration, so the '
             'decoration is what makes the band circular',
       );
     });
@@ -302,7 +312,7 @@ void main() {
         2,
         reason: 'the key is declared once and used once, both inside ScanGlobe',
       );
-      final globe = declarationBody(source,'ScanGlobe');
+      final globe = declarationBody(source, 'ScanGlobe');
       expect(globe.contains('static const sweepBandKey'), isTrue);
       expect(globe.contains('key: sweepBandKey'), isTrue);
     });
@@ -310,7 +320,7 @@ void main() {
     test('no row widget animates anything', () {
       final source = scanTabSource();
       for (final name in ['_SelfReportRow', 'EnvironmentRow']) {
-        final body = declarationBody(source,name);
+        final body = declarationBody(source, name);
         for (final token in [
           'Animation',
           'AnimatedBuilder',
@@ -321,7 +331,8 @@ void main() {
           expect(
             body.contains(token),
             isFalse,
-            reason: '$name mentions "$token" — the reference sweeps the dial '
+            reason:
+                '$name mentions "$token" — the reference sweeps the dial '
                 'only, never the rows beneath it',
           );
         }
