@@ -148,12 +148,36 @@ void main() {
       );
     });
 
+    test('accepted DOI wrappers resolve to one lowercase canonical URI', () {
+      const expected = 'https://doi.org/10.1038/s41586-020-2649-2';
+      for (final paperId in [
+        '10.1038/S41586-020-2649-2',
+        'DOI:10.1038/S41586-020-2649-2',
+        ' https://doi.org/10.1038/S41586-020-2649-2 ',
+        'https://dx.doi.org/10.1038/S41586-020-2649-2',
+      ]) {
+        expect(
+          ProvenanceCitation(paperId: paperId).paperUri.toString(),
+          expected,
+        );
+      }
+    });
+
     test('internal IDs and active-content strings never become links', () {
       for (final paperId in [
         'corpus:01TEST',
         'paper-1',
         'javascript:alert(1)',
+        'http://doi.org/10.1038/S41586-020-2649-2',
         'https://example.com/not-a-doi',
+        'https://doi.org:443/10.1038/S41586-020-2649-2',
+        'https://user@doi.org/10.1038/S41586-020-2649-2',
+        'https://doi.org/10.1038/S41586-020-2649-2?x=1',
+        'https://doi.org/10.1038/S41586-020-2649-2#section',
+        'https://doi.org.example/10.1038/S41586-020-2649-2',
+        '10.1234/../../evil',
+        '10.1038/ S41586-020-2649-2',
+        '10.1038/S41586-020-2649-2\u0000',
       ]) {
         expect(ProvenanceCitation(paperId: paperId).paperUri, isNull);
       }

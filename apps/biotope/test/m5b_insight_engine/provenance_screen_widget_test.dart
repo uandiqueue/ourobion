@@ -227,6 +227,18 @@ void main() {
     );
     await tester.scrollUntilVisible(paperButton, 200);
     await tester.pumpAndSettle();
+    expect(tester.getSize(paperButton).height, greaterThanOrEqualTo(48));
+    final semanticsHandle = tester.ensureSemantics();
+    final semantics = tester.getSemantics(
+      find.byKey(
+        const ValueKey('citation-link-doi:10.1016/j.isci.2026.116224'),
+      ),
+    );
+    final semanticsData = semantics.getSemanticsData();
+    expect(semanticsData.flagsCollection.isLink, isTrue);
+    expect(semanticsData.label, ProvenanceCopy.openPaperExternal);
+    expect(semanticsData.value, 'https://doi.org/10.1016/j.isci.2026.116224');
+    semanticsHandle.dispose();
     await tester.tap(paperButton);
     await tester.pump();
     expect(opened, [Uri.parse('https://doi.org/10.1016/j.isci.2026.116224')]);
