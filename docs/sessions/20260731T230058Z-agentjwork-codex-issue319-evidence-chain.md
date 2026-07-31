@@ -50,11 +50,11 @@ Issue: #319 ? branch: `feat/m5b/evidence-chain-rendering` ? base:
 - `flutter analyze --no-pub`: no issues.
 - Full serial `flutter test --no-pub --concurrency=1`: 744 passed, 26 skipped, 0 failed.
 - `git diff --check`: passed.
+- Committed-head Run 4 product union: 565 paths / 83,385 added lines; recorded, non-gating, and
+  over the unchanged 115-path / 8,500-line cap with acceptance still false.
 
 ## Left
 
-- Commit the exact working tree, refresh only the Run 4 product-union snapshot if the committed-head
-  measurement requires it, then run context/release gates.
 - Push, exact-head CI, self-merge into `dev-phase2-run4`, and issue closure evidence.
 - PR #318 / issue #317 remains separately blocked: Deno 2.8.1 moved two unexpected function graphs in
   addition to `compute-baselines`, so its manifest was not written.
@@ -66,4 +66,3 @@ Issue: #319 ? branch: `feat/m5b/evidence-chain-rendering` ? base:
   reviewed zero-context unified patches were applied with `git apply` inside the isolated worktree.
 
 memory: none
-
