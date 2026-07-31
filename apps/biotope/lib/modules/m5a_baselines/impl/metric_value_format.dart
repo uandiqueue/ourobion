@@ -7,7 +7,7 @@
 // metric_series_models.dart / chart_math.dart) — it is pure formatting over a
 // double and is unit-testable without a canvas or a Flutter binding.
 
-/// The metric registry keys (shared/metrics/registry.dart) the Home signals
+/// The metric registry keys (package:ourobion_metrics/ourobion_metrics.dart) the Home signals
 /// grid renders and the detail view drills into.
 ///
 /// "Gut comfort" is the closest real signal to the design's composite "gut

@@ -1,4 +1,4 @@
-// shared/metrics/registry.dart
+// shared/metrics/lib/src/registry.dart
 // Dart mirror of shared/metrics/registry.ts. Held in lockstep by the metrics-registry-ts-dart-parity guard.
 
 class MetricScale {
@@ -136,6 +136,9 @@ class MetricDefinition {
   /// { min, max } for numeric/ordinal; null otherwise.
   final MetricScale? scale;
 
+  /// Smallest valid value increment. Null means the metric is continuous.
+  final num? valueStep;
+
   /// Display unit, when meaningful.
   final String? unit;
 
@@ -182,6 +185,7 @@ class MetricDefinition {
     required this.continuity,
     required this.type,
     this.scale,
+    this.valueStep,
     this.unit,
     this.enumValues,
     required this.baselineApplicable,
@@ -210,6 +214,7 @@ const List<MetricDefinition> kMetrics = [
     continuity: 'continuous',
     type: 'ordinal',
     scale: MetricScale(min: 1, max: 8),
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -232,6 +237,7 @@ const List<MetricDefinition> kMetrics = [
     continuity: 'continuous',
     type: 'ordinal',
     scale: MetricScale(min: 1, max: 7),
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -254,6 +260,7 @@ const List<MetricDefinition> kMetrics = [
     continuity: 'continuous',
     type: 'numeric',
     scale: MetricScale(min: 0, max: 10),
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -277,6 +284,7 @@ const List<MetricDefinition> kMetrics = [
     continuity: 'continuous',
     type: 'numeric',
     scale: MetricScale(min: 0, max: 6),
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -299,6 +307,7 @@ const List<MetricDefinition> kMetrics = [
     continuity: 'continuous',
     type: 'ordinal',
     scale: MetricScale(min: 0, max: 3),
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -321,6 +330,7 @@ const List<MetricDefinition> kMetrics = [
     continuity: 'episodic',
     type: 'numeric',
     scale: MetricScale(min: 0, max: 20),
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -343,6 +353,7 @@ const List<MetricDefinition> kMetrics = [
     continuity: 'continuous',
     type: 'ordinal',
     scale: MetricScale(min: 1, max: 5),
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -365,6 +376,7 @@ const List<MetricDefinition> kMetrics = [
     continuity: 'continuous',
     type: 'ordinal',
     scale: MetricScale(min: 1, max: 5),
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -387,6 +399,7 @@ const List<MetricDefinition> kMetrics = [
     continuity: 'continuous',
     type: 'ordinal',
     scale: MetricScale(min: 1, max: 5),
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -409,6 +422,7 @@ const List<MetricDefinition> kMetrics = [
     continuity: 'continuous',
     type: 'ordinal',
     scale: MetricScale(min: 1, max: 5),
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -431,6 +445,7 @@ const List<MetricDefinition> kMetrics = [
     continuity: 'continuous',
     type: 'ordinal',
     scale: MetricScale(min: 1, max: 5),
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -453,6 +468,7 @@ const List<MetricDefinition> kMetrics = [
     continuity: 'continuous',
     type: 'ordinal',
     scale: MetricScale(min: 1, max: 5),
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -475,6 +491,7 @@ const List<MetricDefinition> kMetrics = [
     continuity: 'continuous',
     type: 'ordinal',
     scale: MetricScale(min: 1, max: 5),
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -497,6 +514,7 @@ const List<MetricDefinition> kMetrics = [
     continuity: 'continuous',
     type: 'ordinal',
     scale: MetricScale(min: 1, max: 5),
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -735,6 +753,7 @@ const List<MetricDefinition> kMetrics = [
     continuity: 'continuous',
     type: 'numeric',
     scale: null,
+    valueStep: 1,
     unit: 'steps',
     enumValues: null,
     baselineApplicable: true,

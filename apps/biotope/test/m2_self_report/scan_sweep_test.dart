@@ -359,4 +359,13 @@ void main() {
       );
     });
   });
+
+  test('reduce-motion removes only the artificial scan floor', () {
+    expect(
+      ScanGlobe.sweepFloorFor(reducedMotion: false),
+      ScanGlobe.sweepFloorDuration,
+    );
+    expect(ScanGlobe.sweepFloorDuration, const Duration(milliseconds: 2400));
+    expect(ScanGlobe.sweepFloorFor(reducedMotion: true), Duration.zero);
+  });
 }

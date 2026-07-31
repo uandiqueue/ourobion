@@ -1,17 +1,26 @@
 // The Scan tab's gap cards and channel rows (#268 acceptance items 4, 5, 8, 9).
 //
-//  · item 4 — exactly ONE Needs-You card is expanded at a time, and a saved
-//    card collapses into a logged state that can be re-opened;
+//  · item 4 — exactly ONE Needs-You card is expanded at a time, an expanded
+//    card can be tapped shut, and a saved card collapses into a logged state
+//    that can be re-opened;
 //  · item 5 — the primary inline action never routes to the full Daily Log,
 //    for any of the seven daily-core metrics;
 //  · item 8 — the environment row stays truthfully "Not built": inert, and the
 //    word "Synced" never appears in it;
 //  · item 9 — every inline option is a real button node for assistive tech
-//    with a meaningful label.
+//    with a meaningful label, and the one stepper labels its increment,
+//    decrement and live value readout.
 //
 // (Item 6, the full accepted range per metric, is in
 // inline_control_range_test.dart; items 1-3, the dial and the sweep, are in
 // scan_globe_states_test.dart and scan_sweep_test.dart.)
+//
+// Not every metric answers with a chip row: `_InlineAnswerControl` honours the
+// registry's declared affordance, so urine_colour gets named Armstrong
+// swatches, stool_form gets named Bristol rows, and the 0-20 mosquito_bites
+// range gets a stepper that commits on Save. Loops over the seven keys branch
+// on `controlFor` in scan_test_support.dart rather than assuming chips, and the
+// last group here covers each specialised control on its own terms.
 //
 // The default production `ScanTab` reads `Supabase.instance.client` in
 // `initState`. This file now also pumps the actual tab through deterministic
@@ -21,12 +30,15 @@
 // scan_test_support.dart, and the last group here holds that mirror to the
 // screen's actual source line by line.
 
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:src/modules/m2_self_report/impl/logging_controller.dart';
 import 'package:src/modules/m2_self_report/impl/normaliser.dart';
 import 'package:src/modules/m2_self_report/ui/screens/scan_tab.dart';
+import 'package:src/modules/m2_self_report/ui/widgets/daily_scale_visuals.dart';
 import 'package:src/modules/m3_passive_health/index.dart';
 import 'package:src/modules/m5a_baselines/index.dart' show metricDisplayLabel;
 
@@ -119,6 +131,26 @@ Widget _realScanHarness(_ScanRuntime runtime, {_RouteLog? routes}) =>
       ),
     );
 
+/// The rasterised pixels behind [boundaryFinder], so "these seven shapes are
+/// actually different" is a measurement rather than a claim about the painter's
+/// arguments.
+Future<String> _renderSignature(
+  WidgetTester tester,
+  Finder boundaryFinder,
+) async {
+  final boundary = tester.renderObject<RenderRepaintBoundary>(boundaryFinder);
+  // Layer rasterisation and byte encoding are completed by the engine, not by
+  // the test's fake-async zone, so awaiting them inside `pump` time deadlocks.
+  // `runAsync` is the only place these futures can complete.
+  final signature = await tester.runAsync(() async {
+    final image = await boundary.toImage(pixelRatio: 1);
+    final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+    image.dispose();
+    return String.fromCharCodes(data!.buffer.asUint8List());
+  });
+  return signature!;
+}
+
 void main() {
   group('the real ScanTab state machine', () {
     testWidgets(
@@ -150,8 +182,7 @@ void main() {
         expect(findExpandedArea('mood_score'), findsNothing);
         expect(findExpandedArea('energy_score'), findsOneWidget);
 
-        await tester.ensureVisible(findChip('energy_score', 5));
-        await tester.tap(findChip('energy_score', 5));
+        await answerWith(tester, 'energy_score', 5);
         await tester.pumpAndSettle();
         expect(runtime.saves, [('energy_score', 5)]);
         expect(runtime.engagementUpdates, [93.0]);
@@ -189,8 +220,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 500));
         await tester.ensureVisible(findGapCard('mood_score'));
         await tapGapCard(tester, 'mood_score');
-        await tester.ensureVisible(findChip('mood_score', 4));
-        await tester.tap(findChip('mood_score', 4));
+        await answerWith(tester, 'mood_score', 4);
         await tester.pumpAndSettle();
 
         expect(runtime.saves, [('mood_score', 4)]);
@@ -334,11 +364,10 @@ void main() {
 
       expect(findExpandedArea('mood_score'), findsOneWidget);
       for (final option in kInlineAnswerableOptions['mood_score']!) {
-        expect(findChip('mood_score', option), findsOneWidget);
+        expect(findOption('mood_score', option), findsOneWidget);
       }
 
-      await tester.tap(findChip('mood_score', 4));
-      await tester.pump();
+      await answerWith(tester, 'mood_score', 4);
       expect(answers, {'mood_score': 4});
     });
 
@@ -351,8 +380,7 @@ void main() {
       await tapGapCard(tester, 'stool_form');
       expect(findExpandedArea('stool_form'), findsOneWidget);
 
-      await tester.tap(findChip('stool_form', 4));
-      await tester.pump();
+      await answerWith(tester, 'stool_form', 4);
 
       expect(
         findExpandedArea('stool_form'),
@@ -383,8 +411,7 @@ void main() {
         scanHarness(const _AnsweringList(['mood_score'])),
       );
       await tapGapCard(tester, 'mood_score');
-      await tester.tap(findChip('mood_score', 5));
-      await tester.pump();
+      await answerWith(tester, 'mood_score', 5);
 
       expect(find.text(ScanTabCopy.gapChange), findsOneWidget);
 
@@ -395,8 +422,7 @@ void main() {
         reason: 'a logged answer must stay correctable from the same card',
       );
       // Re-answering writes the new value.
-      await tester.tap(findChip('mood_score', 2));
-      await tester.pump();
+      await answerWith(tester, 'mood_score', 2);
       expect(
         find.text(ScanTabCopy.answerLabel('mood_score', 2)),
         findsOneWidget,
@@ -419,7 +445,7 @@ void main() {
       );
 
       expect(find.text(ScanTabCopy.gapSaving), findsOneWidget);
-      await tester.tap(findChip('gut_comfort_score', 3));
+      await tester.tap(findOption('gut_comfort_score', 3));
       await tester.pump();
       expect(
         answers,
@@ -443,8 +469,7 @@ void main() {
       );
 
       await tapGapCard(tester, 'energy_score');
-      await tester.tap(findChip('energy_score', 2));
-      await tester.pump();
+      await answerWith(tester, 'energy_score', 2);
 
       expect(answers, {'energy_score': 2});
     });
@@ -508,15 +533,21 @@ void main() {
       }
     });
 
-    testWidgets('an open card stops being a tap target, so a stray tap on its '
-        'own body cannot dismiss the options', (tester) async {
-      // RECORDED BEHAVIOUR, not an endorsement: the merged GapCard passes
-      // `onTap: expanded || saving ? null : onToggle`, so an expanded card
-      // cannot be re-tapped shut. `_openGapKey` still has a
-      // `== key ? null : key` toggle branch, but nothing in the UI can reach
-      // it — a lone open card closes only by being answered.
+    testWidgets('an expanded card can be tapped shut, so a lone open card is '
+        'not a trap', (tester) async {
+      // Issue #287: `GapCard` used to pass
+      // `onTap: expanded || saving ? null : onToggle`, which made the toggle's
+      // own `_openGapKey == key ? null : key` branch unreachable — a single
+      // open card could only be closed by answering it. The header is a tap
+      // target whether or not the card is open.
+      final answers = <String, int>{};
       await tester.pumpWidget(
-        scanHarness(const ScanGapListHost(metricKeys: ['mood_score'])),
+        scanHarness(
+          ScanGapListHost(
+            metricKeys: const ['mood_score'],
+            onAnswer: (k, v) => answers[k] = v,
+          ),
+        ),
       );
 
       await tapGapCard(tester, 'mood_score');
@@ -525,14 +556,42 @@ void main() {
       await tapGapCard(tester, 'mood_score');
       expect(
         findExpandedArea('mood_score'),
-        findsOneWidget,
-        reason:
-            'the open card is inert to its own tap; answering or opening '
-            'another card is what closes it',
+        findsNothing,
+        reason: 'tapping the open card\'s header closes the inline logger',
       );
       expect(
         tester.widget<GapCard>(findGapCard('mood_score')).expanded,
-        isTrue,
+        isFalse,
+      );
+      expect(
+        answers,
+        isEmpty,
+        reason: 'closing a card must not write an answer nobody picked',
+      );
+    });
+
+    testWidgets('a card being saved is not tappable, open or shut', (
+      tester,
+    ) async {
+      var toggles = 0;
+      await tester.pumpWidget(
+        scanHarness(
+          gapCard(
+            'mood_score',
+            expanded: true,
+            saving: true,
+            onToggle: () => toggles++,
+          ),
+        ),
+      );
+
+      await tapGapCard(tester, 'mood_score');
+      expect(
+        toggles,
+        0,
+        reason:
+            'collapsing the card mid-write would hide the answer the person '
+            'is waiting on',
       );
     });
 
@@ -544,8 +603,7 @@ void main() {
       await tapGapCard(tester, 'mood_score');
       expect(findExpandedArea('mood_score'), findsOneWidget);
 
-      await tester.tap(findChip('mood_score', 3));
-      await tester.pump();
+      await answerWith(tester, 'mood_score', 3);
       expect(findExpandedArea('mood_score'), findsNothing);
     });
   });
@@ -578,7 +636,7 @@ void main() {
           );
 
           final first = kInlineAnswerableOptions[metricKey]!.first;
-          await tester.tap(findChip(metricKey, first));
+          await answerWith(tester, metricKey, first);
           await tester.pumpAndSettle();
 
           expect(answers, {metricKey: first});
@@ -641,7 +699,7 @@ void main() {
   group(
     'item 9 · every inline option is a labelled button for assistive tech',
     () {
-      for (final metricKey in kDailyCoreDqsWeights.keys) {
+      for (final metricKey in dailyCoreKeys.where(hasPerValueButtons)) {
         testWidgets(
           '$metricKey exposes one labelled button per accepted value',
           (tester) async {
@@ -651,7 +709,7 @@ void main() {
             );
 
             for (final option in kInlineAnswerableOptions[metricKey]!) {
-              final label = chipSemanticLabel(metricKey, option);
+              final label = optionSemanticLabel(metricKey, option);
               expect(
                 find.bySemanticsLabel(label),
                 findsOneWidget,
@@ -675,77 +733,59 @@ void main() {
         );
       }
 
-      testWidgets('the semantics tap action answers, not just the pointer', (
-        tester,
-      ) async {
-        final handle = tester.ensureSemantics();
-        final answers = <String, int>{};
-        await tester.pumpWidget(
-          scanHarness(
-            ScanGapListHost(
-              metricKeys: const ['mood_score'],
-              onAnswer: (k, v) => answers[k] = v,
-            ),
-          ),
-        );
-        await tapGapCard(tester, 'mood_score');
-
-        tester.semantics.performAction(
-          find.semantics.byLabel(chipSemanticLabel('mood_score', 5)),
-          SemanticsAction.tap,
-        );
-        await tester.pump();
-
-        expect(answers, {'mood_score': 5});
-        handle.dispose();
-      });
-
-      testWidgets('a saving card announces its options as disabled', (
-        tester,
-      ) async {
-        final handle = tester.ensureSemantics();
-        await tester.pumpWidget(
-          scanHarness(gapCard('energy_score', expanded: true, saving: true)),
-        );
-
-        final label = chipSemanticLabel('energy_score', 3);
-        expect(
-          tester.getSemantics(find.bySemanticsLabel(label)),
-          matchesSemantics(
-            label: label,
-            isButton: true,
-            hasEnabledState: true,
-            isEnabled: false,
-          ),
-        );
-        handle.dispose();
-      });
-
-      testWidgets('the option label reads back the metric, not just a digit', (
-        tester,
-      ) async {
-        final handle = tester.ensureSemantics();
-        await tester.pumpWidget(
-          scanHarness(gapCard('gut_comfort_score', expanded: true)),
-        );
-        final label = chipSemanticLabel('gut_comfort_score', 1);
-        expect(label, 'Gut comfort score 1');
-        expect(
-          label.startsWith(metricDisplayLabel('gut_comfort_score')),
-          isTrue,
-        );
-        expect(find.bySemanticsLabel(label), findsOneWidget);
-        handle.dispose();
-      });
-
-      testWidgets('the merged tab has no stepper, so there is no unlabelled '
-          'increment or decrement to find', (tester) async {
+      testWidgets('mosquito_bites is the one stepper, and its increment, '
+          'decrement and pending value are all announced', (tester) async {
         // #268 requires "any stepper exposes labelled increment/decrement".
-        // The merged implementation answers mosquito_bites (0..20) with 21 chips
-        // rather than a stepper, so the clause is satisfied by absence — and this
-        // fails the day a stepper is introduced without labelled controls.
+        // Issue #287 adds the readout: with `container: false` its label had no
+        // descendant node to attach to (the visual subtree is excluded) and
+        // merged upward into the card, so someone stepping the count never
+        // heard the value they were about to save.
         final handle = tester.ensureSemantics();
-        for (final key in dailyCoreKeys) {
+        await tester.pumpWidget(
+          scanHarness(gapCard('mosquito_bites', expanded: true)),
+        );
+
+        const stepLabels = [
+          'Increase mosquito bites',
+          'Decrease mosquito bites',
+        ];
+        for (final label in stepLabels) {
+          expect(
+            tester.getSemantics(find.bySemanticsLabel(label)),
+            isSemantics(label: label, isButton: true),
+          );
+        }
+
+        final options = kInlineAnswerableOptions['mosquito_bites']!;
+        expect(
+          tester.getSemantics(
+            find.bySemanticsLabel(stepperReadoutLabel(options.first)),
+          ),
+          isSemantics(
+            label: stepperReadoutLabel(options.first),
+            isLiveRegion: true,
+          ),
+          reason:
+              'the pending count must be its own live node, not text merged '
+              'into the card that announced it once and never again',
+        );
+
+        for (final value in options) {
+          await stepStepperTo(tester, value);
+          expect(
+            find.bySemanticsLabel(stepperReadoutLabel(value)),
+            findsOneWidget,
+            reason: 'stepping to $value must announce $value',
+          );
+        }
+        handle.dispose();
+      });
+
+      testWidgets('no other metric grew an unlabelled stepper or slider', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        for (final key in dailyCoreKeys.where(hasPerValueButtons)) {
           await tester.pumpWidget(scanHarness(gapCard(key, expanded: true)));
           for (final icon in [
             Icons.add,
@@ -767,8 +807,308 @@ void main() {
         }
         handle.dispose();
       });
+
+      testWidgets('the semantics tap action answers, not just the pointer', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        final answers = <String, int>{};
+        await tester.pumpWidget(
+          scanHarness(
+            ScanGapListHost(
+              metricKeys: const ['mood_score'],
+              onAnswer: (k, v) => answers[k] = v,
+            ),
+          ),
+        );
+        await tapGapCard(tester, 'mood_score');
+
+        tester.semantics.performAction(
+          find.semantics.byLabel(optionSemanticLabel('mood_score', 5)),
+          SemanticsAction.tap,
+        );
+        await tester.pump();
+
+        expect(answers, {'mood_score': 5});
+        handle.dispose();
+      });
+
+      testWidgets('a saving card announces its options as disabled', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          scanHarness(gapCard('energy_score', expanded: true, saving: true)),
+        );
+
+        final label = optionSemanticLabel('energy_score', 3);
+        expect(
+          tester.getSemantics(find.bySemanticsLabel(label)),
+          matchesSemantics(
+            label: label,
+            isButton: true,
+            hasEnabledState: true,
+            isEnabled: false,
+          ),
+        );
+        handle.dispose();
+      });
+
+      testWidgets('the option label reads back the metric, not just a digit', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          scanHarness(gapCard('gut_comfort_score', expanded: true)),
+        );
+        final label = optionSemanticLabel('gut_comfort_score', 1);
+        expect(label, 'Gut comfort score 1');
+        expect(
+          label.startsWith(metricDisplayLabel('gut_comfort_score')),
+          isTrue,
+        );
+        expect(find.bySemanticsLabel(label), findsOneWidget);
+        handle.dispose();
+      });
+
+      testWidgets('the descriptive scales say what the number looks like', (
+        tester,
+      ) async {
+        // "Urine colour 6" and "Stool form Type 6" are unusable on their own:
+        // the scale is the picture, so the name travels with the number.
+        final handle = tester.ensureSemantics();
+        for (final key in ['urine_colour', 'stool_form']) {
+          await tester.pumpWidget(scanHarness(gapCard(key, expanded: true)));
+          for (final option in kInlineAnswerableOptions[key]!) {
+            final label = optionSemanticLabel(key, option);
+            expect(
+              label,
+              contains('·'),
+              reason: '$key option $option must carry its descriptive name',
+            );
+            expect(find.bySemanticsLabel(label), findsOneWidget);
+          }
+        }
+        handle.dispose();
+      });
     },
   );
+
+  group('the registry\'s declared affordance gets the control it asks for', () {
+    testWidgets('all Armstrong choices keep palette, semantics, and mapping', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final answers = <int>[];
+      await tester.pumpWidget(
+        scanHarness(
+          gapCard('urine_colour', expanded: true, onAnswer: answers.add),
+        ),
+      );
+
+      for (var value = 1; value <= 8; value++) {
+        final name = kArmstrongNames[value - 1];
+        final semantic = find.bySemanticsLabel('Urine colour $value · $name');
+        expect(find.text(name), findsOneWidget);
+        expect(semantic, findsOneWidget);
+        final swatch = tester.widget<Container>(
+          find.byKey(ValueKey('armstrong-option-$value')),
+        );
+        expect(
+          (swatch.decoration! as BoxDecoration).color,
+          kArmstrongColors[value - 1],
+        );
+        final targetSize = tester.getSize(
+          find.byKey(ValueKey('armstrong-target-$value')),
+        );
+        expect(targetSize.width, greaterThanOrEqualTo(48));
+        expect(targetSize.height, greaterThanOrEqualTo(48));
+        tester.semantics.performAction(
+          find.semantics.byLabel('Urine colour $value · $name'),
+          SemanticsAction.tap,
+        );
+      }
+      expect(answers, [1, 2, 3, 4, 5, 6, 7, 8]);
+      handle.dispose();
+    });
+
+    testWidgets('all Bristol choices share names and render distinct shapes', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final answers = <int>[];
+      await tester.pumpWidget(
+        scanHarness(
+          gapCard('stool_form', expanded: true, onAnswer: answers.add),
+        ),
+      );
+
+      final signatures = <String>{};
+      for (var value = 1; value <= 7; value++) {
+        final name = kBristolNames[value - 1];
+        final semantic = find.bySemanticsLabel(
+          'Stool form Type $value · $name',
+        );
+        expect(find.text(name), findsOneWidget);
+        expect(semantic, findsOneWidget);
+        final shape = tester.widget<CustomPaint>(
+          find.byKey(ValueKey('bristol-shape-$value')),
+        );
+        final targetSize = tester.getSize(
+          find.byKey(ValueKey('bristol-option-$value')),
+        );
+        expect(targetSize.width, greaterThanOrEqualTo(48));
+        expect(targetSize.height, greaterThanOrEqualTo(48));
+        final painter = shape.painter! as BristolShapePainter;
+        expect(painter.type, value);
+        expect(
+          tester.getSize(find.byKey(ValueKey('bristol-shape-size-$value'))),
+          const Size(52, 32),
+        );
+        expect(
+          tester.getSize(find.byKey(ValueKey('bristol-shape-$value'))),
+          const Size(52, 32),
+        );
+        signatures.add(
+          await _renderSignature(
+            tester,
+            find.byKey(ValueKey('bristol-shape-boundary-$value')),
+          ),
+        );
+        tester.semantics.performAction(
+          find.semantics.byLabel('Stool form Type $value · $name'),
+          SemanticsAction.tap,
+        );
+      }
+      expect(
+        signatures,
+        hasLength(7),
+        reason: 'two Bristol types that rasterise identically are not a scale',
+      );
+      expect(answers, [1, 2, 3, 4, 5, 6, 7]);
+      handle.dispose();
+    });
+
+    testWidgets('mosquito stepper covers both bounds with labelled 48dp taps', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final answers = <int>[];
+      await tester.pumpWidget(
+        scanHarness(
+          gapCard('mosquito_bites', expanded: true, onAnswer: answers.add),
+        ),
+      );
+
+      expect(tester.widget<IconButton>(findStepperDecrease).onPressed, isNull);
+      expect(find.bySemanticsLabel(stepperReadoutLabel(0)), findsOneWidget);
+      expect(find.bySemanticsLabel('Increase mosquito bites'), findsOneWidget);
+      expect(tester.getSize(findStepperIncrease), const Size.square(48));
+      expect(tester.getSize(findStepperDecrease), const Size.square(48));
+      expect(answers, isEmpty);
+
+      await stepStepperTo(tester, 20);
+      expect(find.bySemanticsLabel(stepperReadoutLabel(20)), findsOneWidget);
+      expect(tester.widget<IconButton>(findStepperIncrease).onPressed, isNull);
+      expect(
+        answers,
+        isEmpty,
+        reason: 'stepping never writes implicitly — Save commits',
+      );
+      handle.dispose();
+    });
+
+    testWidgets(
+      'mosquito edit preserves value and commits only once per Save',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        final answers = <int>[];
+        Widget card(int value, {bool saving = false}) => scanHarness(
+          gapCard(
+            'mosquito_bites',
+            expanded: true,
+            currentValue: value,
+            saving: saving,
+            onAnswer: answers.add,
+          ),
+        );
+
+        await tester.pumpWidget(card(12));
+        expect(find.bySemanticsLabel(stepperReadoutLabel(12)), findsOneWidget);
+        expect(find.text('12 bites'), findsOneWidget);
+        expect(answers, isEmpty);
+
+        final saveSize = tester.getSize(findStepperSave);
+        expect(saveSize.width, greaterThanOrEqualTo(48));
+        expect(saveSize.height, greaterThanOrEqualTo(48));
+        await tester.tap(findStepperSave);
+        await tester.tap(findStepperSave);
+        await tester.pump();
+        expect(answers, [12], reason: 'a rapid duplicate Save is ignored');
+
+        await tester.pumpWidget(card(15));
+        expect(find.bySemanticsLabel(stepperReadoutLabel(15)), findsOneWidget);
+        await tester.tap(findStepperSave);
+        await tester.pump();
+        expect(answers, [12, 15]);
+        handle.dispose();
+      },
+    );
+
+    testWidgets('mosquito initial values clamp and saving stays inert', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final answers = <int>[];
+      Widget card(int value, {bool saving = false}) => scanHarness(
+        gapCard(
+          'mosquito_bites',
+          expanded: true,
+          currentValue: value,
+          saving: saving,
+          onAnswer: answers.add,
+        ),
+      );
+
+      await tester.pumpWidget(card(-4));
+      expect(find.bySemanticsLabel(stepperReadoutLabel(0)), findsOneWidget);
+
+      await tester.pumpWidget(card(12, saving: true));
+      expect(find.bySemanticsLabel(stepperReadoutLabel(12)), findsOneWidget);
+      expect(tester.widget<IconButton>(findStepperDecrease).onPressed, isNull);
+      expect(tester.widget<IconButton>(findStepperIncrease).onPressed, isNull);
+      expect(tester.widget<FilledButton>(findStepperSave).onPressed, isNull);
+      expect(answers, isEmpty);
+
+      await tester.pumpWidget(card(12));
+      await tester.tap(findStepperSave);
+      await tester.pump();
+      expect(answers, [12], reason: 'saving completion enables one retry');
+
+      await tester.pumpWidget(card(99));
+      expect(find.bySemanticsLabel(stepperReadoutLabel(20)), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('special controls fit the 390x844 target viewport', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      for (final key in ['urine_colour', 'stool_form', 'mosquito_bites']) {
+        await tester.pumpWidget(scanHarness(gapCard(key, expanded: true)));
+        await tester.pump();
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: '$key must not overflow',
+        );
+      }
+    });
+  });
 
   group('the harness above is the screen\'s own wiring, not an invention', () {
     // ScanGapListHost stands in for `_ScanTabState`, which cannot be pumped.
@@ -801,6 +1141,18 @@ void main() {
         isTrue,
         reason: 'this single line is what makes the list one-at-a-time',
       );
+    });
+
+    test('the card\'s own tap can reach that toggle (issue #287)', () {
+      final body = squashWhitespace(declarationBody(source, 'GapCard'));
+      expect(
+        body.contains('onTap: saving ? null : onToggle,'),
+        isTrue,
+        reason:
+            'gating onTap on `expanded` too is what made the collapse branch '
+            'above dead code',
+      );
+      expect(body.contains('expanded || saving ? null : onToggle'), isFalse);
     });
 
     test('a landed write closes the open card', () {
