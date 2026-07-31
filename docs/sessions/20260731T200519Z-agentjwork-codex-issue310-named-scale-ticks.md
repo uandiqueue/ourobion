@@ -44,4 +44,12 @@ Issue: #310 ? parent goal: #308 ? branch: `fix/m5a/named-scale-integer-ticks` ? 
 - Quote gate: not applicable; no paper text, quotations, or offsets changed.
 - `git diff --check`: PASS.
 
+## Serialized integration
+
+- Paused before push when Session A's base advance landed, then allowed higher-priority PR #289 to land first as #308 requires.
+- Fetched and verified `origin/dev-phase2-run4` at
+  `783010eb33fc16252297cb9729f1b55b70a821b8`, then merged it without rebasing in
+  `4e171ef743dad1bfe48afe3c7130bdde33dc47d7`.
+- Final product snapshot measurement, exact-head Flutter reruns, CI, merge verification, and manual closure remain before shipping.
+
 memory: none
