@@ -17,6 +17,11 @@ export interface DailyGutRow {
   energy_score: number | null;
   mood_score: number | null;
   gut_comfort_score: number | null;
+  appetite_score?: number | null;
+  anxiety_score?: number | null;
+  brain_clarity_score?: number | null;
+  focus_score?: number | null;
+  social_interaction_quality_score?: number | null;
   symptom_flags: string[];
   notes: string | null;
   log_completeness: number;

@@ -27,7 +27,8 @@ void main() {
     const tableToMigration = {
       'daily_gut_rows':
           'supabase/migrations/20260513_create_m2_daily_gut_rows_and_antibiotic_courses.sql',
-      'wearable_daily': 'supabase/migrations/20260528100000_create_m3_wearable_daily.sql',
+      'wearable_daily':
+          'supabase/migrations/20260528100000_create_m3_wearable_daily.sql',
     };
 
     // Continuity primitives: table -> (migration, core columns every instance row relies on).
@@ -42,13 +43,23 @@ void main() {
 
     tableToMigration.forEach((table, migration) {
       test('$table registry keys == metric columns in migration', () {
-        final cols = migrationColumns(readRepoFile(migration), table);
+        final cols = table == 'daily_gut_rows'
+            ? migrationColumnsWithAdditions(readRepoFile(migration), table, [
+                readRepoFile(
+                  'supabase/migrations/20260730020001_add_u6b_wellbeing_metrics.sql',
+                ),
+              ])
+            : migrationColumns(readRepoFile(migration), table);
         final metricCols = cols.difference(systemOrDerivedColumns);
         final regKeys = activeKeysFor(registry, table);
-        expect(metricCols, equals(regKeys),
-            reason: 'registry vs $table columns drift. '
-                'registry-only: ${regKeys.difference(metricCols)}; '
-                'column-only: ${metricCols.difference(regKeys)}');
+        expect(
+          metricCols,
+          equals(regKeys),
+          reason:
+              'registry vs $table columns drift. '
+              'registry-only: ${regKeys.difference(metricCols)}; '
+              'column-only: ${metricCols.difference(regKeys)}',
+        );
       });
     });
 
@@ -57,21 +68,38 @@ void main() {
         // readRepoFile throws if the migration file is missing.
         final cols = migrationColumns(readRepoFile(primitivesMigration), table);
         for (final col in coreColumns) {
-          expect(cols, contains(col),
-              reason: '$table is a tall/narrow continuity primitive — its migration must '
-                  'declare core column `$col` (metrics store rows keyed by metric_key, '
-                  'not dedicated columns)');
+          expect(
+            cols,
+            contains(col),
+            reason:
+                '$table is a tall/narrow continuity primitive — its migration must '
+                'declare core column `$col` (metrics store rows keyed by metric_key, '
+                'not dedicated columns)',
+          );
         }
       });
     });
 
-    test('every table declared by an active registry metric has schema coverage', () {
-      final declared = registry.where((e) => e.status == 'active').map((e) => e.table).toSet();
-      final covered = {...tableToMigration.keys, ...primitiveCoreColumns.keys};
-      expect(declared.difference(covered), isEmpty,
-          reason: 'active registry metrics declare table(s) with no migration mapping in this '
+    test(
+      'every table declared by an active registry metric has schema coverage',
+      () {
+        final declared = registry
+            .where((e) => e.status == 'active')
+            .map((e) => e.table)
+            .toSet();
+        final covered = {
+          ...tableToMigration.keys,
+          ...primitiveCoreColumns.keys,
+        };
+        expect(
+          declared.difference(covered),
+          isEmpty,
+          reason:
+              'active registry metrics declare table(s) with no migration mapping in this '
               'guard — add the table to tableToMigration (wide) or primitiveCoreColumns '
-              '(continuity primitive)');
-    });
+              '(continuity primitive)',
+        );
+      },
+    );
   });
 }
