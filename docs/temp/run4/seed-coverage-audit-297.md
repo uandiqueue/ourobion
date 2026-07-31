@@ -11,7 +11,8 @@ updated: 2026-08-01
 
 This is an audit and decision record only. It performs no provider call, ingestion, seed edit, R2
 write, database write, or deployment. Evidence was collected at
-`253e0ad6db31bb2a134e47546ddaba84bf284639`.
+`253e0ad6db31bb2a134e47546ddaba84bf284639` and rechecked after Session A landed at
+`dea055c8155c1e9c6851931f4de9816a88d66b2d`; the candidate set and decision did not change.
 
 ## What `seed-queries` actually covers
 
@@ -26,10 +27,10 @@ candidates:16 {"derivedFrom":8,"rule_blueprint":2,"static_topic":6}
 
 That is ten metric-pair candidates plus six domain anchors. The result agrees with the real-data
 assertion in [`tools/brain-ingest/tests/seeder.test.ts`](../../../tools/brain-ingest/tests/seeder.test.ts).
-No `data/corpus/seed-queries.json` exists at the audited head. The workflow in
-[`.github/workflows/brain-ingest.yml`](../../../.github/workflows/brain-ingest.yml) does not run
-`seed-queries`, so it cannot silently fill this gap. Ingest therefore falls back to the static/manual
-seed path unless a reviewed artifact is generated separately.
+No `data/corpus/seed-queries.json` exists at the refreshed head. Neither the ingestion workflow nor
+the new [brain pipeline](../../../.github/workflows/brain-pipeline.yml) runs `seed-queries`, so cloud
+execution cannot silently fill this gap. Ingest therefore falls back to the static/manual seed path
+unless a reviewed artifact is generated separately.
 
 ## All generated metric pairs
 

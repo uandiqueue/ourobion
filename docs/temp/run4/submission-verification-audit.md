@@ -9,10 +9,11 @@ updated: 2026-08-01
 
 # Hackathon submission evidence audit
 
-This is the submission defect ledger, **not final submission prose**. It audits repository state at
-`253e0ad6db31bb2a134e47546ddaba84bf284639` (the fetched `origin/dev-phase2-run4` head at session
-start). Re-run every command after the parallel brain/rules and data-rule sessions land. Do not
-promote any model-training or evaluation claim until issue #277's gate is satisfied.
+This is the submission defect ledger, **not final submission prose**. The initial audit used
+`253e0ad6db31bb2a134e47546ddaba84bf284639`; implementation-sensitive findings were refreshed after
+Session A landed at integration merge `dea055c8155c1e9c6851931f4de9816a88d66b2d`. Re-run every
+command after the remaining parallel work lands. Do not promote any model-training or evaluation
+claim until issue #277's gate is satisfied.
 
 ## Classification
 
@@ -33,22 +34,29 @@ or a machine artifact; each accepted fact also names the observation that must b
 |---|---|---|---|
 | Active metric registry | [`shared/metrics/registry.ts`](../../../shared/metrics/registry.ts) | Load the exported registry with the repository TypeScript loader and filter `status === 'active'` → **24 keys**. | `verified`: 24 active metrics exist. This does not prove literature coverage. |
 | Rule blueprints | [`supabase/functions/generate-insights/data_rules.ts`](../../../supabase/functions/generate-insights/data_rules.ts) | Load the exported blueprint array → **8** entries; every entry has `verificationTier: 'hand_authored'` and `citation: null`. | `verified`: all eight rule blueprints are uncited hand-authored rules. |
-| Migration and workflow inventory | [`supabase/migrations/`](../../../supabase/migrations/), [`.github/workflows/`](../../../.github/workflows/) | `find supabase/migrations -maxdepth 1 -type f | wc -l` → **41**; `find .github/workflows -maxdepth 1 -type f` → **4 workflow files**. | `verified`: the connection map's 39 migrations / 2 workflows is stale. |
-| Cloud brain workflow | [`.github/workflows/brain-ingest.yml`](../../../.github/workflows/brain-ingest.yml) | GitHub Actions history checked for this workflow → **no executions**. Its YAML uses `workflow_dispatch` and does not run `seed-queries`. | `verified`: the pipeline is defined but has never been executed as a workflow. |
+| Migration and workflow inventory | [`supabase/migrations/`](../../../supabase/migrations/), [`.github/workflows/`](../../../.github/workflows/) | `find supabase/migrations -maxdepth 1 -type f | wc -l` → **41**; `find .github/workflows -maxdepth 1 -type f` → **5 workflow files** after Session A. | `verified`: the connection map's 39 migrations / 2 workflows is stale. |
+| Cloud brain workflow | [`.github/workflows/brain-pipeline.yml`](../../../.github/workflows/brain-pipeline.yml) | GitHub Actions history and the rejected pre-merge dispatch were checked → **no executions**. Its YAML uses `workflow_dispatch`; it hydrates the manifest and runs bounded synthesis/verification/load stages, but does not run `seed-queries`. | `verified`: the pipeline is defined and merged but has never been executed as a workflow. |
 | Seeder candidates | [`tools/brain-ingest/src/seeder/candidates.ts`](../../../tools/brain-ingest/src/seeder/candidates.ts), [`tests/seeder.test.ts`](../../../tools/brain-ingest/tests/seeder.test.ts) | Run the candidate enumerator against the real registry and blueprints → `candidates:16 {"derivedFrom":8,"rule_blueprint":2,"static_topic":6}`. | `verified`: only ten metric-pair candidates plus six topics are enumerated; see the #297 audit. |
 | Seeder artifact | [`tools/brain-ingest/src/seeder/artifact.ts`](../../../tools/brain-ingest/src/seeder/artifact.ts) | `test -f data/corpus/seed-queries.json` → false at the audited head. | `verified`: ingest cannot consume generated queries that do not exist. |
-| Corpus volume | R2 manifest output supplied by the corpus session | Manifest aggregation → **1,298 papers**, **739** with full text longer than 5,000 characters. | `verified for the current session evidence`; make submission-ready only after the parallel session lands a durable machine artifact and the command is rerun from the integration head. |
+| Corpus volume | [`tools/brain-ingest/src/cli.ts`](../../../tools/brain-ingest/src/cli.ts) now exposes the R2-to-local `hydrate-manifest` command | The authorized R2 hydration output was **0 → 1,298 records**; the established manifest aggregation is **739** records with full text longer than 5,000 characters. | `verified as bounded command output`; final submission still needs a durable machine-readable coverage artifact rather than a copied session total. |
 | Live provider acceptance | [`tools/brain-ingest/src/liveAcceptance.ts`](../../../tools/brain-ingest/src/liveAcceptance.ts), [`tests/liveAcceptance.test.ts`](../../../tools/brain-ingest/tests/liveAcceptance.test.ts) | Authorized acceptance output: ordered Anthropic `claude-sonnet-5`, OpenAI provider-attested `gpt-5-2025-08-07`, Agnes `agnes-2.5-flash`; four POST responses were 200; provider-leg cost **$0.0182055**, session total **$0.044**; journal hash chain intact; a fourth invocation refused without dispatch; no `GET /models`. | `verified for provider transport under binding authentication only`. The test proves ordering/refusal offline; the live values must be attached as a durable artifact before final copy. |
 | Verification disposition | Live acceptance output from the same bounded run | Verdict: `uncertain`, confidence **0.3**, **0** supporting sources, independent-source stance mentions; edge held and no card emitted. | `overclaim guard`: this is fail-closed transport evidence, not scientific validation of a relationship. |
 | Synthesis output | Two authorized live `gpt-5` run outputs on well-matched papers | Both runs: **0 accepted / 0 rejected claims**. | `verified negative result`: do not claim an end-to-end research edge; issue #300 owns the synthesis revamp. |
 | Paper lineage in cards | [`supabase/functions/generate-insights/index.ts`](../../../supabase/functions/generate-insights/index.ts) and the eight blueprint records above | Inspect current generated/fixture outputs → only edge-produced cards currently carry paper lineage. Cross-rule code can accept edge references, but no current output demonstrates that path. | `verified bounded claim`: current observed lineage is edge-card-only; do not generalize potential code paths into shipped evidence. |
 | Release-envelope facts | [`tools/run4_release_gate.mjs`](../../../tools/run4_release_gate.mjs), [`supabase/deploy-attestation.json`](../../../supabase/deploy-attestation.json) | `product-cap --head f8cb75251f0602395bdf88285e18d00525b88db4` → **512 paths / 71,841 additions**, `withinCap:false`; audited head → **533 / 75,645**, `withinCap:false`. | `verified`: the per-unit base advanced; whole-product acceptance and hosted parity remain false. |
 
-The established same-day report that three CI defects were fixed and that `hydrate-manifest` was
-added is **pending integration evidence** on this base. `--push-r2` is present in
-[`tools/brain-ingest/src/cli.ts`](../../../tools/brain-ingest/src/cli.ts); do not describe the other
-changes as landed until their owning session merges and the paths/tests can be cited from the target
-branch.
+The three same-day CI fixes and the new pipeline commands are now integrated at `dea055c`:
+
+- [`.github/workflows/brain-pipeline.yml`](../../../.github/workflows/brain-pipeline.yml) treats the
+  absent `edges/` artifact as the expected empty state only for a dry run, hydrates the local manifest
+  before synthesis, and passes provider credentials through the process environment.
+- [`tools/brain-ingest/src/cli.ts`](../../../tools/brain-ingest/src/cli.ts) exposes
+  `hydrate-manifest` and the `--push-r2` synthesis/verification paths.
+- [`tools/brain-ingest/tests/verify.test.ts`](../../../tools/brain-ingest/tests/verify.test.ts)
+  exercises the opt-in R2 verification publication and failure behavior.
+
+These paths prove the fixes are built. They do not prove that `brain-pipeline.yml` has executed on
+GitHub; it has not.
 
 ## Existing write-up claim audit
 
@@ -68,7 +76,7 @@ branch.
 
 | Component / label | Finding |
 |---|---|
-| 39 migrations and 2 workflows | `now-wrong`: inventory is 41 and 4. |
+| 39 migrations and 2 workflows | `now-wrong`: inventory is 41 and 5 after Session A. |
 | Real verifier never ran | `now-wrong`: Agnes ran under the bounded live acceptance. The resulting verdict remained uncertain and held. |
 | Provider/model topology | `stale`: it conflates default routing, the older provider run, and acceptance overrides. Draw those as three evidence layers. |
 | One accepted/held research edge | `overclaimed`: no synthesis claim survived either current live `gpt-5` attempt. |

@@ -31,6 +31,8 @@ updated: 2026-08-01
 - Marked the existing submission write-up and system map `DO NOT SUBMIT` and changed their generated
   index summaries from submission-ready/current to blocked.
 - Added the new records to the Run 4 document table and regenerated `docs/INDEX.md`.
+- After PR #292 landed, merged integration head `dea055c`, refreshed the implementation-sensitive
+  audit facts, and kept this PR's comparison diff docs-only.
 
 ## Decided
 
@@ -48,9 +50,9 @@ updated: 2026-08-01
 
 ## Left
 
-- Rewrite the final submission narrative and connection map only after the brain/rules and corpus
-  sessions land, #300 supplies a synthesis result worth reporting, and #277 resolves or excludes all
-  model claims.
+- Rewrite the final submission narrative and connection map only after the remaining parallel work
+  lands, #300 supplies a synthesis result worth reporting, and #277 resolves or excludes all model
+  claims. Session A is integrated; its cloud workflow remains never executed.
 - Re-run all counts, machine artifacts, costs, lineage outputs, and tests from the final integration
   head; the 533-path / 75,645-line product measurement is point-in-time only.
 - Owning architecture sessions should later separate built/planned state in the stale brain-path docs;
@@ -62,6 +64,9 @@ updated: 2026-08-01
 - Any support-model performance/training prose: issue #277.
 - A submission-ready live provider/corpus statement: durable machine outputs must land on the target
   branch and be reproduced there.
+- PR #305 merge: the release-evidence test records an exact moving whole-product snapshot and requires
+  a tool-owner refresh for this docs delta. Editing that tool test is outside this session's explicit
+  `docs/**` territory; the issue thread records the required hand-off.
 
 ## Verification
 
@@ -69,5 +74,7 @@ updated: 2026-08-01
 - `node tools/context_sync.mjs --check` — passed before commit.
 - `git diff --check` — passed before commit.
 - GitHub issue #303 carries the pre-PR evidence summary and territory declaration.
+- PR #292 / Session A merged at `dea055c`; the target was merged into this branch and product-cap
+  output was remeasured at 536 paths / 76,360 additions for that integration head.
 
 memory: none

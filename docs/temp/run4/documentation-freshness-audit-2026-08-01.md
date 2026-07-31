@@ -9,16 +9,17 @@ updated: 2026-08-01
 
 # Documentation freshness audit — 2026-08-01
 
-This sweep reports defects; it does not make historical snapshots silently current. It was performed
-against `253e0ad6db31bb2a134e47546ddaba84bf284639`. Code, executable output, machine artifacts, and
-current GitHub state outrank all documents listed here.
+This sweep reports defects; it does not make historical snapshots silently current. It was initially
+performed against `253e0ad6db31bb2a134e47546ddaba84bf284639` and refreshed for Session A's merge at
+`dea055c8155c1e9c6851931f4de9816a88d66b2d`. Code, executable output, machine artifacts, and current
+GitHub state outrank all documents listed here.
 
 ## Submission surfaces
 
 | Document | Freshness defect | Disposition |
 |---|---|---|
 | [`writeup.md`](../../shared/hackathon/submission/writeup.md) | Mixes older provider roles/costs with current acceptance; calls a held uncertain edge an end-to-end result; says Agnes was unused; carries contradictory support-model claims; cites prose/logs for evaluation. | `blocked`; warning added. Rewrite only after active implementation and #300 land; exclude model claims pending #277. |
-| [`system-connection-map.md`](../../shared/hackathon/submission/system-connection-map.md) | 39 migrations / 2 workflows is now 41 / 4; real-verifier, corpus, provider-role, synthesis-result, support-model, and built/planned labels are stale. | `blocked`; warning added. Regenerate labels/counts at final head. |
+| [`system-connection-map.md`](../../shared/hackathon/submission/system-connection-map.md) | 39 migrations / 2 workflows is now 41 / 5; real-verifier, corpus, provider-role, synthesis-result, support-model, and built/planned labels are stale. | `blocked`; warning added. Regenerate labels/counts at final head. |
 | [`hackathon-direction.md`](../../shared/hackathon/hackathon-direction.md) | Strategy snapshot from 2026-07-26 includes then-current status, 1,200-corpus target, model/pricing assumptions, unbuilt delta/evaluation, old commit counts, and immediate actions. | Keep as strategy history, not current-state or evidence authority. |
 | [`hackathon-rules.md`](../../shared/hackathon/hackathon-rules.md) | Raw event rules remain a reference, but their presence does not prove implementation, eligibility, or current sponsor/model availability. | Retain; validate externally at final submission time. |
 

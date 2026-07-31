@@ -41,6 +41,7 @@ node tools/run4_release_gate.mjs product-cap --head <head>
 |---|---|---:|---:|---|
 | #290/#296 merge | `f8cb75251f0602395bdf88285e18d00525b88db4` | 512 | 71,841 | `withinCap: false` |
 | Audit-session base | `253e0ad6db31bb2a134e47546ddaba84bf284639` | 533 | 75,645 | `withinCap: false` |
+| Session A / PR #292 integration merge | `dea055c8155c1e9c6851931f4de9816a88d66b2d` | 536 | 76,360 | `withinCap: false` |
 
 Both use the fixed product base. They are moving-head measurements, not new caps. The original
 115-path / 8,500-line whole-product envelope remains exceeded under the owner-approved issue #264
@@ -53,5 +54,5 @@ deviation, while every new unit still faces the same fail-closed per-unit gate.
 - A green per-unit check must never be presented as a whole-product cap pass.
 - This record does not authorize promotion to `dev-phase2`, deployment, database writes, or any other
   release action.
-- Re-run the product measurement at the final integration head; never reuse 533 / 75,645 as a live
+- Re-run the product measurement at the final integration head; never reuse any row above as a live
   number after the branch moves.
