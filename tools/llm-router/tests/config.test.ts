@@ -13,19 +13,37 @@ import { billingModeOf, defaultConfigPath, familyOf, loadConfig, priceIsAuthorit
 import { RouterConfigError } from '../src/errors.js';
 import { baseConfigObject, testConfig } from './helpers.js';
 
-test('the shipped router.config.json loads: run-4 OpenAI + Anthropic-verifier posture (C13)', () => {
+test('the shipped router.config.json loads: run-4 OpenAI + Agnes-verifier posture (C13)', () => {
   const config = loadConfig(defaultConfigPath());
-  // C13 posture: OpenAI drives everything except the verifier, which is Anthropic.
+  // C13 posture, revised on #307: OpenAI drives everything except the verifier, which is AGNES.
+  //
+  // It was Anthropic. The owner put Anthropic off-limits for this run (US$3 budget, do not use)
+  // while synthesis stays on OpenAI, and the decorrelation invariant is unconditional —
+  // family(verifier) !== family(synthesis) — so of the configured providers Agnes is the ONLY
+  // legal verifier left. Leaving it on claude-sonnet-5 would either spend forbidden Anthropic
+  // budget or fail closed at config load.
+  //
+  // CONSEQUENCE, ASSERTED EXPLICITLY BELOW RATHER THAN LEFT IMPLICIT: agnes-2.5-flash is priced
+  // free (owner-confirmed plan), so it reserves exactly US$0 and the per-day USD ledger cannot
+  // bound the verifier node at all. The 50-call Agnes ceiling is an OPERATOR cap, not a system
+  // limit. That is a real reduction in automatic budget protection for this node, and it is the
+  // reason the shipped config previously refused to let any node use Agnes.
   assert.equal(config.nodes.synthesis.model, 'gpt-5');
-  assert.equal(config.nodes.verifier.model, 'claude-sonnet-5');
+  assert.equal(config.nodes.verifier.model, 'agnes-2.5-flash');
   assert.equal(config.nodes.seeder.model, 'gpt-5-mini');
   assert.equal(config.nodes.phrasing_card.model, 'gpt-5-mini');
   assert.equal(config.nodes.extract_assist.model, 'gpt-5-mini');
   assert.equal(config.nodes.report_narrative.model, 'gpt-5-mini');
   for (const [nodeId, node] of Object.entries(config.nodes)) {
     assert.equal(node.route, 'api_worker');
-    assert.equal(familyOf(config, node.model), nodeId === 'verifier' ? 'anthropic' : 'openai');
+    assert.equal(familyOf(config, node.model), nodeId === 'verifier' ? 'agnes' : 'openai');
   }
+  // Anthropic must not drive ANY node this run, even though its provider entry and price row
+  // remain configured (a future run may re-enable it).
+  assert.ok(
+    Object.values(config.nodes).every((node) => familyOf(config, node.model) !== 'anthropic'),
+    'no node may route to Anthropic while it is off-limits',
+  );
   // No test-mode escape hatch survives in the shipped file (R4-U3).
   assert.equal((config as unknown as Record<string, unknown>).testMode, undefined);
   // C7 caps set LOW for the 20-SGD run: US$1/day/node, 60k output tokens/run.
@@ -38,7 +56,17 @@ test('the shipped router.config.json loads: run-4 OpenAI + Anthropic-verifier po
   assert.equal(agnesPrice.outputUsdPerMTok, 0);
   assert.equal(agnesPrice.provisional, false);
   assert.match(agnesPrice.pricingProvenance ?? '', /owner-confirmed free Agnes API plan/);
-  assert.ok(Object.values(config.nodes).every((node) => !node.model.startsWith('agnes-')));
+  // Previously: NO node could use Agnes at all, because a free-priced model reserves US$0 and so
+  // escapes USD budget accounting. #307 makes the verifier the one sanctioned exception (see the
+  // posture note above). Narrowed rather than deleted, so an Agnes model creeping onto any OTHER
+  // node — where it would silently escape the budget with no owner decision behind it — still fails.
+  for (const [nodeId, node] of Object.entries(config.nodes)) {
+    if (nodeId === 'verifier') continue;
+    assert.ok(
+      !node.model.startsWith('agnes-'),
+      `${nodeId} must not use a free-priced Agnes model — only the verifier is sanctioned`,
+    );
+  }
   for (const [model, price] of Object.entries(config.prices)) {
     if (model === 'agnes-2.5-flash') continue;
     assert.equal(billingModeOf(price), 'metered');
