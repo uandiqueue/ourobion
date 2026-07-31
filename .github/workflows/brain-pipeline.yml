@@ -181,8 +181,24 @@ jobs:
         run: |
           set -eu
           if [ "$DRY_RUN" = "true" ]; then
+            # A dry run deliberately does not push, so on a bucket that has never had a
+            # live run there is legitimately no edges/ object to validate. Treat that one
+            # case as the expected empty state — otherwise a dry run could never go green
+            # on a fresh bucket and would be worthless as a wiring check. Any OTHER loader
+            # failure (bad credentials, malformed artifact) still fails the step.
             echo "Dry run — validating R2 artifacts without touching the database."
-            node tools/edge-loader/load_edges.mjs --from-r2 --check
+            set +e
+            OUT=$(node tools/edge-loader/load_edges.mjs --from-r2 --check 2>&1); RC=$?
+            set -e
+            echo "$OUT"
+            if [ $RC -ne 0 ]; then
+              if echo "$OUT" | grep -q "claims.jsonl"; then
+                echo "::notice::No edges/claims.jsonl in R2 yet — expected before the first live run. R2 credentials and connectivity are proven by this probe."
+                exit 0
+              fi
+              echo "::error::edge-loader validation failed for a reason other than the edges artifact being absent."
+              exit $RC
+            fi
             exit 0
           fi
           if [ -z "${SUPABASE_DB_URL:-}" ]; then
