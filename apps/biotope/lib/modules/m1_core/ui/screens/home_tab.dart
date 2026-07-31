@@ -1186,7 +1186,7 @@ class CoverageCard extends StatelessWidget {
                               Text(
                                 fullyCaptured
                                     ? '100 pts — every channel captured'
-                                    : '${dqs!.toInt()} / 100 pts — add a sweep to capture more today',
+                                    : '${dqs!.toInt()} / 100 pts — run a sweep to capture more today',
                                 style: GoogleFonts.manrope(
                                   fontSize: 12,
                                   color: OurobionColors.outline,

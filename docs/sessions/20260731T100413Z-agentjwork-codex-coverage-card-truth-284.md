@@ -20,7 +20,7 @@ Issue: #284 · branch: `fix/m1/coverage-card-truth-284` · base: `dev-phase2-run
 
 - Kept the existing `dqs >= 60` visual high-coverage state and disabled-card behavior.
 - Made `Every channel captured today` and its matching detail render only when canonical `dqs == 100`.
-- Rendered the factual 60–99 state as `Coverage recorded today` with its score out of 100 and a prompt to add a sweep.
+- Rendered the factual 60–99 state as `Coverage recorded today` with its score out of 100 and a prompt to run a sweep.
 - Added an independent CoverageCard widget test for 60, 70, 80, 85, and 99 as non-completion states and 100 as completion, plus replacement-copy validation through the shared non-diagnostic gate.
 
 ## Decided

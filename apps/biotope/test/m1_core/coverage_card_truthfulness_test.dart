@@ -26,7 +26,7 @@ void main() {
         expect(find.text('Every channel captured today'), findsNothing);
         expect(
           find.text(
-            '${dqs.toInt()} / 100 pts — add a sweep to capture more today',
+            '${dqs.toInt()} / 100 pts — run a sweep to capture more today',
           ),
           findsOneWidget,
         );
@@ -47,7 +47,7 @@ void main() {
     const replacementCopy = [
       'Coverage recorded today',
       '100 pts — every channel captured',
-      '/ 100 pts — add a sweep to capture more today',
+      '/ 100 pts — run a sweep to capture more today',
     ];
     for (final text in replacementCopy) {
       expect(
