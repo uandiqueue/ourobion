@@ -93,8 +93,14 @@ demo.
 
 **What we did not build, plainly.** *biotope* is prior work — **118 commits** before 3 Jul 2026, versus
 **248** since; it's the backdrop, not the delta. The verified graph is **one held edge from one paper** —
-small by design, not a knowledge graph. No support model was trained; SciFact/HealthVer/BioRED are roadmap
-data only. Our evaluation is a **single end-to-end run**, not a labelled study: one refusal observed, zero
+small by design, not a knowledge graph. Two research checkpoints **were** trained after this section was
+first drafted — Zebra v1 (claim/evidence entailment, SciFact) and Viceroy v0 (causal wording) — but
+neither serves anything: both are frozen, privately stored, `validated=false`, `serving_ready=false`, and
+have zero imports from `apps/`, `supabase/`, `shared/` or `tools/brain-ingest`, enforced in CI. Zebra
+failed two of its three readiness gates (mean macro-F1 0.5991 vs the ≥0.70 bar; every-class minimum-seed
+recall ≥0.60 missed on contradicted 0.4348 and supported 0.5796). Only calibration passed. HealthVer and
+BioRED remain roadmap data only. Our evaluation is a **single end-to-end run**, not a
+labelled study: one refusal observed, zero
 baseline comparisons — a demonstrated mechanism, not a measured accuracy rate. The grounding invariant is
 **schema-plus-prompt, not proof**: we require an independent-retrieval flag before a supported verdict, but
 cannot prove the retrieval was truly independent — cross-model checking reports residual error correlation
@@ -177,7 +183,12 @@ cross-examining one model with another.
 - **Anthropic** (Claude family) — adversarial verifier, used; this is the verifier that actually ran.
 - **Agnes AI**, **GMI Cloud** — not used; no run and no training exists behind either, so neither is
   credited or claimed.
-- **SciFact, HealthVer, BioRED** — named as roadmap training data only; no training performed.
+- **SciFact** — training data for the Zebra v1 entailment checkpoint (research-only, frozen, not serving,
+  weights not distributed). **HealthVer, BioRED** — roadmap data only; no training performed on either.
+- **Yu, Li & Wang causal-language corpus** — training data for the Viceroy v0 causal-wording checkpoint,
+  same research-only posture. Its repository is marked GPL-3.0 with no separate data licence, and whether
+  those terms propagate to trained weights is **unresolved**; public weight release is blocked pending
+  model-specific licence clearance. Base model: Microsoft BiomedBERT (MIT).
 - **OpenAlex, CORE, PubMed, Semantic Scholar, Lens, Unpaywall** — paper discovery / retrieval, prebuild.
 - 25 AI-generated image assets in `apps/biotope/assets/images/generated/` — generator and terms to be
   confirmed and named in the repo's `ATTRIBUTION.md` before submission.

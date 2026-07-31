@@ -1,9 +1,9 @@
-// shared/metrics/index.dart
-// Typed accessors over the metrics registry (Dart side). Mirrors shared/metrics/index.ts.
+// Public Dart package barrel and typed accessors over the metrics registry.
+// Mirrors shared/metrics/index.ts without exposing the private lib/src path.
 
-import 'registry.dart';
+import 'src/registry.dart';
 
-export 'registry.dart';
+export 'src/registry.dart';
 
 /// Active (non-deprecated) metrics.
 List<MetricDefinition> activeMetrics() {

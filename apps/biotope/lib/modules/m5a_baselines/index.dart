@@ -10,6 +10,7 @@
 
 export 'impl/baseline_service.dart';
 export 'impl/chart_math.dart';
+export 'impl/metric_axis_policy.dart';
 export 'impl/metric_series_models.dart';
 export 'impl/metric_series_service.dart';
 export 'impl/metric_value_format.dart';

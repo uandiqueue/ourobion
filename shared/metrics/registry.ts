@@ -5,8 +5,8 @@
 // baselines / engine / dqs guards (apps/biotope/test/guards/, docs/graph/couplings.yaml) fail the build if any
 // consumer drifts from this list. See shared/metrics/README.md for the add / remove runbook.
 //
-// TRUTH tier (git-tracked, 2-reviewer PR per docs/memory/0002). Keep registry.ts and registry.dart
-// in lockstep — the metrics-registry-ts-dart-parity guard enforces it.
+// TRUTH tier (git-tracked, 2-reviewer PR per docs/memory/0002). Keep registry.ts and the
+// ourobion_metrics Dart package mirror in lockstep; the parity guard enforces it.
 //
 // v2 (the metric platform): each metric carries the scale dimensions phase-2-plan's platform needs —
 // source economy, collection tier, continuity, reliability, derivation inputs, platform availability,
@@ -78,6 +78,8 @@ export interface MetricDefinition {
   type: MetricType;
   /** { min, max } for numeric/ordinal; null otherwise. */
   scale: { min: number; max: number } | null;
+  /** Smallest valid value increment. null/absent means the metric is continuous. */
+  valueStep?: number | null;
   /** Display unit, when meaningful. */
   unit: string | null;
   /** Allowed values for enum / multi_select; null otherwise. */
@@ -121,6 +123,7 @@ const SELF_REPORT: MetricDefinition[] = [
     continuity: 'continuous',
     type: 'ordinal',
     scale: { min: 1, max: 8 },
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -143,6 +146,7 @@ const SELF_REPORT: MetricDefinition[] = [
     continuity: 'continuous',
     type: 'ordinal',
     scale: { min: 1, max: 7 },
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -165,6 +169,7 @@ const SELF_REPORT: MetricDefinition[] = [
     continuity: 'continuous',
     type: 'numeric',
     scale: { min: 0, max: 10 },
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -188,6 +193,7 @@ const SELF_REPORT: MetricDefinition[] = [
     continuity: 'continuous',
     type: 'numeric',
     scale: { min: 0, max: 6 },
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -210,6 +216,7 @@ const SELF_REPORT: MetricDefinition[] = [
     continuity: 'continuous',
     type: 'ordinal',
     scale: { min: 0, max: 3 },
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -232,6 +239,7 @@ const SELF_REPORT: MetricDefinition[] = [
     continuity: 'episodic',
     type: 'numeric',
     scale: { min: 0, max: 20 },
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -254,6 +262,7 @@ const SELF_REPORT: MetricDefinition[] = [
     continuity: 'continuous',
     type: 'ordinal',
     scale: { min: 1, max: 5 },
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -276,6 +285,7 @@ const SELF_REPORT: MetricDefinition[] = [
     continuity: 'continuous',
     type: 'ordinal',
     scale: { min: 1, max: 5 },
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -298,6 +308,7 @@ const SELF_REPORT: MetricDefinition[] = [
     continuity: 'continuous',
     type: 'ordinal',
     scale: { min: 1, max: 5 },
+    valueStep: 1,
     unit: null,
     enumValues: null,
     baselineApplicable: true,
@@ -314,7 +325,7 @@ const SELF_REPORT: MetricDefinition[] = [
   },
   {
     key: 'appetite_score', source: 'manual', table: 'daily_gut_rows', tier: 'T2',
-    continuity: 'continuous', type: 'ordinal', scale: { min: 1, max: 5 }, unit: null,
+    continuity: 'continuous', type: 'ordinal', scale: { min: 1, max: 5 }, valueStep: 1, unit: null,
     enumValues: null, baselineApplicable: true, reliability: 2, derivedFrom: null,
     availability: 'both', preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false }, signal: { deadbandK: 1.0 },
@@ -322,7 +333,7 @@ const SELF_REPORT: MetricDefinition[] = [
   },
   {
     key: 'anxiety_score', source: 'manual', table: 'daily_gut_rows', tier: 'T2',
-    continuity: 'continuous', type: 'ordinal', scale: { min: 1, max: 5 }, unit: null,
+    continuity: 'continuous', type: 'ordinal', scale: { min: 1, max: 5 }, valueStep: 1, unit: null,
     enumValues: null, baselineApplicable: true, reliability: 2, derivedFrom: null,
     availability: 'both', preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false }, signal: { deadbandK: 1.0 },
@@ -330,7 +341,7 @@ const SELF_REPORT: MetricDefinition[] = [
   },
   {
     key: 'brain_clarity_score', source: 'manual', table: 'daily_gut_rows', tier: 'T2',
-    continuity: 'continuous', type: 'ordinal', scale: { min: 1, max: 5 }, unit: null,
+    continuity: 'continuous', type: 'ordinal', scale: { min: 1, max: 5 }, valueStep: 1, unit: null,
     enumValues: null, baselineApplicable: true, reliability: 2, derivedFrom: null,
     availability: 'both', preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false }, signal: { deadbandK: 1.0 },
@@ -338,7 +349,7 @@ const SELF_REPORT: MetricDefinition[] = [
   },
   {
     key: 'focus_score', source: 'manual', table: 'daily_gut_rows', tier: 'T2',
-    continuity: 'continuous', type: 'ordinal', scale: { min: 1, max: 5 }, unit: null,
+    continuity: 'continuous', type: 'ordinal', scale: { min: 1, max: 5 }, valueStep: 1, unit: null,
     enumValues: null, baselineApplicable: true, reliability: 2, derivedFrom: null,
     availability: 'both', preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false }, signal: { deadbandK: 1.0 },
@@ -346,7 +357,7 @@ const SELF_REPORT: MetricDefinition[] = [
   },
   {
     key: 'social_interaction_quality_score', source: 'manual', table: 'daily_gut_rows', tier: 'T2',
-    continuity: 'continuous', type: 'ordinal', scale: { min: 1, max: 5 }, unit: null,
+    continuity: 'continuous', type: 'ordinal', scale: { min: 1, max: 5 }, valueStep: 1, unit: null,
     enumValues: null, baselineApplicable: true, reliability: 2, derivedFrom: null,
     availability: 'both', preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false }, signal: { deadbandK: 1.0 },
@@ -581,6 +592,7 @@ const WEARABLE: MetricDefinition[] = [
     continuity: 'continuous',
     type: 'numeric',
     scale: null,
+    valueStep: 1,
     unit: 'steps',
     enumValues: null,
     baselineApplicable: true,

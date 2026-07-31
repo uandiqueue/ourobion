@@ -102,6 +102,59 @@ void main() {
     });
   });
 
+  group('steppedTicks', () {
+    test('never invents fractional values for a narrow whole-step range', () {
+      expect(steppedTicks(const ValueBounds(1, 2), valueStep: 1), [1, 2]);
+    });
+
+    test('flat off-grid input stays on its real degenerate bound', () {
+      expect(steppedTicks(const ValueBounds(1.5, 1.5), valueStep: 1), [1.5]);
+    });
+
+    test('uses a readable multiple of the declared smallest increment', () {
+      final ticks = steppedTicks(const ValueBounds(0, 20), valueStep: 1);
+      expect(ticks, [0, 5, 10, 15, 20]);
+      for (final tick in ticks) {
+        expect(tick % 1, 0);
+      }
+    });
+
+    test('bounded 0..9 policy never emits an out-of-range 10', () {
+      final ticks = steppedTicks(const ValueBounds(0, 9), valueStep: 1);
+      expect(ticks, [0, 5]);
+      expect(ticks.every((tick) => tick >= 0 && tick <= 9), isTrue);
+    });
+
+    test('supports negative and fractional grids within bounds', () {
+      expect(steppedTicks(const ValueBounds(-3, 2), valueStep: 1), [-2, 0, 2]);
+      expect(steppedTicks(const ValueBounds(0, 1), valueStep: 0.25), [
+        0,
+        0.25,
+        0.5,
+        0.75,
+        1,
+      ]);
+    });
+
+    test('huge finite ranges terminate with finite in-range ticks', () {
+      final ticks = steppedTicks(const ValueBounds(0, 1e300), valueStep: 1e298);
+      expect(ticks, isNotEmpty);
+      expect(ticks.length, lessThan(100));
+      expect(
+        ticks.every((tick) => tick.isFinite && tick >= 0 && tick <= 1e300),
+        isTrue,
+      );
+    });
+
+    test('keeps a binary decimal max boundary instead of omitting it', () {
+      expect(steppedTicks(const ValueBounds(0.1, 0.3), valueStep: 0.1), [
+        0.1,
+        0.2,
+        0.3,
+      ]);
+    });
+  });
+
   group('compactValueLabel', () {
     test('integers drop the decimal point', () {
       expect(compactValueLabel(4.0), '4');
@@ -112,6 +165,18 @@ void main() {
     test('non-integers keep one decimal', () {
       expect(compactValueLabel(3.5), '3.5');
       expect(compactValueLabel(0.25), '0.3');
+    });
+  });
+
+  group('steppedValueLabel', () {
+    test('preserves fractional valueStep precision', () {
+      expect(steppedValueLabel(0.25, 0.25), '0.25');
+      expect(steppedValueLabel(0.75, 0.25), '0.75');
+      expect(steppedValueLabel(-0.125, 0.125), '-0.125');
+    });
+
+    test('whole steps remain compact', () {
+      expect(steppedValueLabel(4, 1), '4');
     });
   });
 }
