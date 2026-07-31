@@ -35,9 +35,10 @@ updated: 2026-08-01
 - Added the new records to the Run 4 document table and regenerated `docs/INDEX.md`.
 - After PR #292 landed, merged integration head `dea055c`, refreshed the implementation-sensitive
   audit facts, and kept this PR's comparison diff docs-only.
-- Resumed under issue #309, rebased onto post-#300 head `abcba95`, refreshed the audit for the new
-  whole-paper/mechanism/blueprint path, expanded #297 into a 22-topic execution handoff, and refreshed
-  the exact product snapshot to 549 paths / 79,620 additions.
+- Resumed under issue #309, rebased first onto post-#300 head `abcba95` and again after PR #312 landed
+  at `aef9bc1`, refreshed the audit for the new whole-paper/mechanism/blueprint path, expanded #297
+  into a 22-topic execution handoff, and remeasured the product snapshot at 550 paths / 79,784
+  additions before the final record refresh.
 
 ## Decided
 
@@ -69,8 +70,9 @@ updated: 2026-08-01
 - Any support-model performance/training prose: issue #277.
 - A submission-ready live provider/corpus statement: durable machine outputs must land on the target
   branch and be reproduced there.
-- None for PR #305 local readiness after issue #309 authorized the exact snapshot refresh. The
-  narrative hold is intentional sequencing, not a merge blocker for the audit records.
+- PR #305's measured snapshot line is locally verified, but committing its one-line `tools/**` update
+  requires explicit confirmation that Task 1 overrides this session's otherwise docs-only territory.
+  The narrative hold is intentional sequencing, not a merge blocker for the audit records.
 
 ## Verification
 
@@ -80,10 +82,10 @@ updated: 2026-08-01
 - GitHub issue #303 carries the pre-PR evidence summary and territory declaration.
 - PR #292 / Session A merged at `dea055c`; the target was merged into this branch and product-cap
   output was remeasured at 536 paths / 76,360 additions for that integration head.
-- Rebased onto `abcba95`; `seed-queries --candidates-only` reproduced 6 static topics + 16 total
+- Rebased through `aef9bc1`; `seed-queries --candidates-only` reproduced 6 static topics + 16 total
   candidates (8 derived, 2 rule, 6 topic); active registry load reproduced 24 keys.
-- `node --test tools/run4_release_gate.test.mjs` — 18/18 after refreshing the pinned snapshot;
-  `product-cap --head a859ace390ac18a5e7f0047cb1dc1b8891ea0c9a` — 549 paths / 79,620 additions,
-  `withinCap: false`.
+- `node --test tools/run4_release_gate.test.mjs` — 18/18 with the locally refreshed candidate
+  snapshot; `product-cap --head b53a0eaf6725302949c1645ee1778d54cd66411c` — 550 paths / 79,784
+  additions, `withinCap: false`.
 
 memory: none
