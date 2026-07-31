@@ -544,6 +544,10 @@ const routerFor = (perCall: { inputTokens: number; outputTokens: number }) => ({
 });
 
 const ROUTER_CONFIG = {
+  // `nodes.synthesis.model` is the fallback rate used when the provider-ATTESTED id (e.g. the
+  // dated snapshot `gpt-5-2025-08-07`) has no prices[] row of its own — see paperRun.ts. Without
+  // it a real run accounted US$0 for genuine spend, making --max-usd decorative.
+  nodes: { synthesis: { model: 'gpt-5' } },
   prices: { 'gpt-5': { inputUsdPerMTok: 1_000_000, outputUsdPerMTok: 0 } },
 } as never;
 
@@ -723,6 +727,45 @@ test('#300 G6: corpus metadata is resolved ONCE per run, not once per paper', as
   // would mean the manifest had crept onto the per-paper path.
   assert.ok(lookups < 100, `metadata lookups (${lookups}) must not scale with the ${CORPUS}-paper corpus`);
   assert.equal(router.calls.length, 3, 'a 3,000-paper corpus still costs exactly 3 calls for 3 papers');
+});
+
+test('#300 G2: an ATTESTED snapshot id with no price row is accounted, not silently zeroed', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ourobion-batch-'));
+  // The real defect this pins: OpenAI attests a DATED SNAPSHOT ('gpt-5-2025-08-07') which has no
+  // prices[] row, while only the configured id ('gpt-5') does. A live two-paper run therefore spent
+  // US$0.055 and recorded US$0.000000 — so --max-usd could never fire. Accounting must fall back to
+  // the configured node rate rather than treating an unpriced attested id as free.
+  const router = {
+    calls: [] as string[],
+    async route(req: { prompt: string }) {
+      this.calls.push(req.prompt);
+      return {
+        text: replyForPrompt(req.prompt),
+        usage: { inputTokens: 1, outputTokens: 0 },
+        model: 'gpt-5-2025-08-07', // attested snapshot — deliberately absent from prices[]
+        modelIdentity: {
+          model: 'gpt-5-2025-08-07',
+          source: 'provider-response' as const,
+          providerAttested: true,
+          family: 'openai' as const,
+          returnedVersion: null,
+          decorrelatedFromSynthesis: null,
+        },
+        route: 'api_worker' as const,
+      };
+    },
+  };
+
+  const result = await synthesizePapers(
+    batchOpts({ edgesDir: dir, router, paperUids: ['p1', 'p2', 'p3'], maxUsd: 1.5 }) as never,
+  );
+
+  // 1 input token at $1,000,000/MTok = $1.00 per call under the CONFIGURED gpt-5 rate, so a $1.50
+  // ceiling must stop the run after two calls. If the unpriced snapshot were zeroed it would run all
+  // three and report US$0.
+  assert.ok(result.budget.usdSpent > 0, 'an unpriced attested id must NOT be accounted as free');
+  assert.equal(result.budget.stopReason, 'budget-ceiling');
+  assert.equal(router.calls.length, 2, 'the ceiling must actually fire');
 });
 
 test('#300 G2: a dry run assembles prompts, makes no call, and writes nothing', async () => {
