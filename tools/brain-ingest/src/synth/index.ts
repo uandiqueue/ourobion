@@ -415,6 +415,46 @@ export {
   RAW_SYNTHESIS_BASENAME,
   R2_CLAIMS_KEY,
 } from './artifact.js';
-export { loadClaimValidator, loadCopyValidator, loadActiveMetricKeys } from './load.js';
-export type { ClaimValidator, CopyValidator } from './load.js';
+export {
+  loadClaimValidator,
+  loadCopyValidator,
+  loadActiveMetricKeys,
+  loadActiveMetricCatalogue,
+  loadBlueprintValidator,
+} from './load.js';
+export type {
+  ActiveMetricDescriptor,
+  BlueprintValidator,
+  ClaimValidator,
+  CopyValidator,
+} from './load.js';
+
+// ── #300 · whole-paper synthesis (§A–§D) + batch/budget/dedupe (G1/G2/G3/G5) ────
+export { buildPaperSynthesisPrompt, PAPER_PROMPT_VERSION, PAPER_SYNTHESIS_SYSTEM } from './paperPrompt.js';
+export { processPaperSynthesisResponse, parsePaperClaimsResponse, gateBlueprint } from './paperPostprocess.js';
+export type { PaperProcessContext } from './paperPostprocess.js';
+export {
+  blueprintDedupeKey,
+  creditedPapers,
+  dedupeBlueprints,
+  existingBlueprintKeysFromText,
+} from './blueprint.js';
+export type { BlueprintDedupeResult } from './blueprint.js';
+export {
+  appendBlueprintsToDir,
+  blueprintsPath,
+  blueprintsToJsonl,
+  existingBlueprintKeys,
+  BLUEPRINTS_BASENAME,
+  R2_BLUEPRINTS_KEY,
+} from './blueprintArtifact.js';
+export { synthesizePapers, paperUidsAlreadySynthesised } from './paperRun.js';
+export type { SynthesizePapersOptions, SynthesizePapersResult } from './paperRun.js';
+export {
+  INTRO_ZONE_FRACTION,
+  MECHANISM_LOCATOR_PREFIX,
+  isMechanismLocator,
+  sectionFromLocator,
+} from './types.js';
+
 export type * from './types.js';

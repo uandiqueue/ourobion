@@ -264,6 +264,22 @@ export interface EdgeVerification {
   confidence: number;
   /** Edge's contribution to graph trust — the brain's analog of metric `dqs.weight`, 0..1. */
   dqs: { weight: number };
+  /**
+   * #300 §E · APPROVE-WITH-CAVEAT. A short, user-safe note on *why* to read this edge with care
+   * — a narrower population than claimed, a weak study design, a small sample.
+   *
+   * This exists because low credibility must be **surfaced, not silently converted into a
+   * rejection**: the user decides whether to trust it. Rejection is reserved for the one case
+   * where nothing can be salvaged — the evidence is simply not relevant to the claim.
+   *
+   * Because it is user-facing copy it MUST pass the non-diagnostic copy gate, which
+   * `relationships.schema.ts` enforces — a caveat cannot smuggle diagnostic language onto a
+   * card by the back door.
+   *
+   * ADDITIVE + OPTIONAL: absent on every legacy record, and `null` means "approved with no
+   * caveat", which is distinct from absent ("this producer predates caveats").
+   */
+  caveat?: string | null;
 
   // ── provenance ──
   verifierModel: string;

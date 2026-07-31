@@ -14,6 +14,7 @@
 // a contradicting source, and scores stay in range. See docs/nao/brain-synthesis-design.md.
 
 import { z } from 'zod';
+import { validateCopyString } from '../constants/copy_guidelines';
 import type {
   Citation,
   EvidencePassage,
@@ -180,6 +181,12 @@ export const edgeVerificationSchema = z
     evidenceTier: evidenceTierSchema,
     confidence: z.number().min(0).max(1),
     dqs: z.object({ weight: z.number().min(0).max(1) }),
+    /**
+     * #300 §E · approve-with-caveat. Additive + optional; `null` = approved with no caveat,
+     * absent = a producer that predates caveats. Copy-gated in the superRefine below, because it
+     * reaches the user on a card.
+     */
+    caveat: z.string().min(1).nullable().optional(),
     verifierModel: z.string().min(1),
     promptVersion: z.string().min(1),
     verifiedAt: z.string().datetime({ offset: true }),
@@ -188,6 +195,16 @@ export const edgeVerificationSchema = z
     attestation: modelAttestationSchema.optional(),
   })
   .superRefine((v, ctx) => {
+    // #300 §E · a caveat is user-facing copy on a card, so it passes the SAME non-diagnostic gate
+    // as every other user-facing string (memory 0003). Surfacing low credibility must not become a
+    // hole through which diagnostic language reaches the user.
+    if (typeof v.caveat === 'string' && !validateCopyString(v.caveat)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['caveat'],
+        message: `${v.edgeId}: caveat fails validateCopyString (diagnostic language — memory 0003)`,
+      });
+    }
     // THE safeguard invariant: every SERVABLE verdict requires INDEPENDENT grounding. Re-opining over
     // the synthesis context (no retrieval) can only ever be `uncertain` — this is what makes the second
     // pass non-redundant rather than a rubber stamp. `partial` is servable (shared/brain/index.ts

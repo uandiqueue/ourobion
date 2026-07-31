@@ -23,7 +23,13 @@ import {
   loadMergedSeeds,
   type MergedSeeds,
 } from './seeder/index.js';
-import { pairFromKeys, synthesize, claimsPath, defaultEdgesDir } from './synth/index.js';
+import {
+  pairFromKeys,
+  synthesize,
+  synthesizePapers,
+  claimsPath,
+  defaultEdgesDir,
+} from './synth/index.js';
 import { repoRoot } from './seeder/load.js';
 import { R2Store } from './storage/r2.js';
 import { r2TextLoader } from './verify/quoteCheck.js';
@@ -61,6 +67,16 @@ Commands:
                                                    A8 synthesis: load canonical text → passages → LLM
                                                    RelationshipClaims (via router), quoteCheck-gated;
                                                    appends data/corpus/edges/claims.jsonl (edge-loader reads it)
+  synthesize-papers --paper <uid>[,<uid>] [--max-usd <n>] [--max-calls <n>]
+                    [--no-resume] [--no-blueprints] [--dry-run] [--push-r2]
+                                                   #300 WHOLE-PAPER synthesis: the full canonical text goes
+                                                   in (no keyword prefilter), one provider call per paper,
+                                                   serial. Emits RelationshipClaims AND 'extracted' rule
+                                                   blueprints, each grounded in a verbatim evidence quote
+                                                   plus the paper's own verbatim mechanism sentence.
+                                                   Stops cleanly at --max-usd/--max-calls and skips papers
+                                                   already synthesised, so a re-run never pays twice;
+                                                   appends claims.jsonl + blueprints.jsonl
   verify [--from-claims <path>] [--corpus <path>] [--edge <edgeId>]
          [--edges-dir <dir>] [--artifact-revision <id>] [--dry-run] [--triage-only]
                                                    A10 adversarial verification: A9 quoteCheck →
@@ -476,6 +492,102 @@ async function runVerify(flags: Set<string>, options: Map<string, string>): Prom
   return 0;
 }
 
+/**
+ * `synthesize-papers` — #300 whole-paper batch synthesis (§A–§D, G1/G2/G3/G5).
+ *
+ * The SINGLE entry point for both front doors (G5): the session-screened demo batch and the
+ * nao-triggered single paper differ only in how many uids `--paper` carries.
+ *
+ *  - `--paper <uid>[,<uid>]`: papers to synthesise — one provider call each, serial.
+ *  - `--max-usd <n>`:  G2 stop cleanly once this much has been spent.
+ *  - `--max-calls <n>`: G2 stop cleanly after this many provider calls.
+ *  - `--no-resume`:    re-synthesise papers already present in claims.jsonl (default is to skip
+ *                      them, so a re-run never pays twice).
+ *  - `--no-blueprints`: emit edges only, no rule blueprints.
+ *  - `--dry-run`:      assemble + print prompts, no LLM call, no write.
+ *  - `--push-r2`:      also append accepted claims to R2 edges/claims.jsonl.
+ */
+async function runSynthesizePapersCli(
+  flags: Set<string>,
+  options: Map<string, string>,
+): Promise<number> {
+  const log = (line: string) => process.stdout.write(line + '\n');
+  const paperUids = parseCsv(options, 'paper');
+  if (paperUids === undefined) {
+    process.stderr.write('synthesize-papers: --paper <uid>[,<uid>] is required\n');
+    return 2;
+  }
+
+  const numeric = (key: string): number | null | undefined => {
+    // FAIL CLOSED on a malformed ceiling. `parseArgs` files `--max-usd -5` (and a bare
+    // `--max-usd` with no value at all) under `flags`, not `options`, because the next token
+    // starts with '-'. Reading only `options` would silently mean "no ceiling" — a spend guard
+    // that vanishes when you typo it is worse than no guard, so refuse instead of defaulting.
+    if (flags.has(key)) {
+      process.stderr.write(
+        `synthesize-papers: --${key} needs a non-negative value (use --${key}=<n>; ` +
+          'a negative or missing value is refused rather than treated as "no ceiling")\n',
+      );
+      return null;
+    }
+    const raw = options.get(key);
+    if (raw === undefined) return undefined;
+    const value = Number(raw);
+    if (!Number.isFinite(value) || value < 0) {
+      process.stderr.write(`synthesize-papers: --${key} must be a non-negative number\n`);
+      return null;
+    }
+    return value;
+  };
+  const maxUsd = numeric('max-usd');
+  const maxCalls = numeric('max-calls');
+  if (maxUsd === null || maxCalls === null) return 2;
+
+  const result = await synthesizePapers({
+    paperUids,
+    ...(maxUsd !== undefined ? { maxUsd } : {}),
+    ...(maxCalls !== undefined ? { maxCalls } : {}),
+    resume: !flags.has('no-resume'),
+    emitBlueprints: !flags.has('no-blueprints'),
+    dryRun: flags.has('dry-run'),
+    pushR2: flags.has('push-r2'),
+    log,
+  });
+
+  if (flags.has('dry-run')) {
+    for (const a of result.assembled ?? []) {
+      log(`\n--- system (${a.paperUid}) ---\n${a.system}`);
+      log(`\n--- prompt (${a.paperUid}) ---\n${a.prompt}`);
+    }
+    log(`\ndry-run: ${(result.assembled ?? []).length} paper(s) assembled — no LLM call.`);
+    return 0;
+  }
+
+  // G2 · the run ALWAYS reports where it stopped and what it cost, so a partial pass is a
+  // legitimate, resumable outcome rather than an ambiguous failure.
+  const b = result.budget;
+  log('');
+  log(`synthesize-papers stopped: ${b.stopReason}`);
+  log(
+    `  papers: ${b.papersSynthesised} synthesised, ${b.papersSkippedAlreadyDone} already done, ` +
+      `${b.papersNotReached} not reached (of ${b.papersRequested} requested)`,
+  );
+  log(
+    `  provider: ${b.providerCalls} call(s), US$${b.usdSpent.toFixed(6)}` +
+      `${b.maxUsd !== null ? ` of US$${b.maxUsd} ceiling` : ''}` +
+      `${b.maxCalls !== null ? `, ${b.maxCalls}-call ceiling` : ''}`,
+  );
+  log(
+    `  output: ${result.accepted.length} claim(s), ${result.blueprints.length} blueprint(s) ` +
+      `(${result.rejectedCount} claim / ${result.rejectedBlueprintCount} blueprint rejected)`,
+  );
+  if (b.papersNotReached > 0) {
+    const remaining = result.perPaper.filter((p) => p.status === 'not-reached').map((p) => p.paperUid);
+    log(`  resume with: --paper ${remaining.join(',')}`);
+  }
+  return 0;
+}
+
 async function runSinglePaperCli(flags: Set<string>, options: Map<string, string>): Promise<number> {
   const doi = options.get('doi');
   const localDir = options.get('local-dir');
@@ -607,6 +719,11 @@ export async function main(argv: string[]): Promise<number> {
 
       case 'synthesize':
         return await runSynthesize(flags, options);
+
+      // #300 · whole-paper batch synthesis. Kept as a distinct verb from `synthesize` so the
+      // pair-scoped path (and the live-acceptance evidence that used it) stays reproducible.
+      case 'synthesize-papers':
+        return await runSynthesizePapersCli(flags, options);
 
       case 'verify':
         return await runVerify(flags, options);
