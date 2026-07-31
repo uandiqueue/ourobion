@@ -68,7 +68,12 @@ abstract final class ProfileTabCopy {
 }
 
 class ProfileTab extends StatefulWidget {
-  const ProfileTab({super.key});
+  /// Optional test seam. Normal app construction leaves both null and uses the
+  /// authenticated Supabase client exactly as before.
+  final ProfileService? service;
+  final String? userId;
+
+  const ProfileTab({super.key, this.service, this.userId});
 
   @override
   State<ProfileTab> createState() => _ProfileTabState();
@@ -79,6 +84,11 @@ class _ProfileTabState extends State<ProfileTab> {
   bool _digestEnabled = false;
   bool _loading = true;
   bool _loadFailed = false;
+
+  ProfileService get _service =>
+      widget.service ?? ProfileService(Supabase.instance.client);
+  String get _userId =>
+      widget.userId ?? Supabase.instance.client.auth.currentUser!.id;
 
   @override
   void initState() {
@@ -91,15 +101,12 @@ class _ProfileTabState extends State<ProfileTab> {
   /// alive, so an uncaught failure here is permanent for the session. Clear
   /// `_loading` on every path and offer an explicit retry.
   Future<void> _load() async {
-    final client = Supabase.instance.client;
-    final userId = client.auth.currentUser!.id;
-    final service = ProfileService(client);
     // The digest preference lives in its own table behind an RPC, so it is a
     // second round trip; issue it alongside the profile read rather than after.
     try {
       final results = await Future.wait([
-        service.getProfile(userId),
-        service.getDailyDigestEnabled(),
+        _service.getProfile(_userId),
+        _service.getDailyDigestEnabled(),
       ]);
       if (!mounted) return;
       setState(() {
@@ -127,10 +134,7 @@ class _ProfileTabState extends State<ProfileTab> {
 
   Future<void> _toggleWearableOwned(bool value) async {
     setState(() => _profile = _profile?.copyWith(wearableOwned: value));
-    final client = Supabase.instance.client;
-    await ProfileService(
-      client,
-    ).updateProfile(client.auth.currentUser!.id, {'wearable_owned': value});
+    await _service.updateProfile(_userId, {'wearable_owned': value});
   }
 
   /// Both preference rows write through [ProfileService] — the wearable toggle
@@ -138,8 +142,7 @@ class _ProfileTabState extends State<ProfileTab> {
   /// `setDailyDigestEnabled` (an RPC over a separate table). Different storage,
   /// one service; neither row opens a second client of its own.
   Future<void> _writeDigestEnabled(bool value) async {
-    final client = Supabase.instance.client;
-    await ProfileService(client).setDailyDigestEnabled(value);
+    await _service.setDailyDigestEnabled(value);
     if (mounted) _digestEnabled = value;
   }
 
