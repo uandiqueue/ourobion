@@ -19,7 +19,7 @@ import 'sign_in_screen.dart';
 abstract final class ProfileTabCopy {
   static const backdropLabel = 'Living backdrop';
   static const backdropSubtitle =
-      'Drifting colour orbs on sign-in and load screens. Saved on this device.';
+      'Shows drifting orbs on supported hero screens. Saved on this device only.';
 
   static const digestLabel = 'Daily digest';
 
@@ -28,12 +28,14 @@ abstract final class ProfileTabCopy {
   /// rather than the device — but nothing in this repo composes or sends a
   /// digest. The row says both. "Account" rather than "profile" because the
   /// value is deliberately NOT on the `profiles` table.
-  static const digestSubtitle = 'Saved to your account. No digest is sent yet.';
+  static const digestSubtitle =
+      'Saved to your account. No digest or notification is sent yet.';
   static const digestSaveFailed =
       'Not saved — check your connection and try again.';
 
-  static const wearableLabel = 'Wearable connected';
-  static const wearableSubtitle = 'Enables wearable syncing on the Scan tab';
+  static const wearableLabel = 'I use a wearable';
+  static const wearableSubtitle =
+      'Records device ownership only. Scan requests provider access separately.';
 
   /// The read counterpart of [digestSaveFailed]. Without it a failed load left
   /// the tab on a spinner forever: the exception escaped `_load`, `_loading`

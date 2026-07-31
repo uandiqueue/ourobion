@@ -40,12 +40,7 @@ abstract final class ArchiveTabCopy {
 class ArchiveTab extends StatefulWidget {
   /// [service] / [seriesService] / [userId] are injectable for widget tests
   /// only — production passes none and falls back to `Supabase.instance`.
-  const ArchiveTab({
-    super.key,
-    this.service,
-    this.seriesService,
-    this.userId,
-  });
+  const ArchiveTab({super.key, this.service, this.seriesService, this.userId});
 
   final InsightService? service;
   final MetricSeriesService? seriesService;
@@ -147,49 +142,49 @@ class _ArchiveTabState extends State<ArchiveTab> {
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
                   : _loadFailed
-                      ? _ArchiveLoadError(onRetry: _retryLoad)
-                      : RefreshIndicator(
-                          onRefresh: _load,
-                          color: OurobionColors.primary,
-                          child: SingleChildScrollView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _Eyebrow(ArchiveTabCopy.savedEyebrow, rule: true),
-                                const SizedBox(height: 12),
-                                if (_cards.isEmpty)
-                                  const _EmptyArchive()
-                                else ...[
-                                  const _ArchiveCollectionArtwork(),
-                                  const SizedBox(height: 12),
-                                  for (var i = 0; i < _cards.length; i++) ...[
-                                    if (i > 0) const SizedBox(height: 11),
-                                    _ArchiveTile(
-                                      card: _cards[i],
-                                      onTap: () => _openDetail(_cards[i]),
-                                    ),
-                                  ],
-                                ],
-
-                                // ── Historical metric trends (issue #200) ──
-                                // Real per-metric daily series over the same
-                                // service/chart-math Home uses. No synthetic
-                                // fallback: an empty/failed read renders its
-                                // own explicit state (MetricTrendSection),
-                                // never a fabricated chart.
-                                const SizedBox(height: 28),
-                                _Eyebrow(TrendCopy.eyebrow, rule: true),
-                                const SizedBox(height: 12),
-                                MetricTrendSection(
-                                  service: _seriesService,
-                                  userId: _userId,
+                  ? _ArchiveLoadError(onRetry: _retryLoad)
+                  : RefreshIndicator(
+                      onRefresh: _load,
+                      color: OurobionColors.primary,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _Eyebrow(ArchiveTabCopy.savedEyebrow, rule: true),
+                            const SizedBox(height: 12),
+                            if (_cards.isEmpty)
+                              const _EmptyArchive()
+                            else ...[
+                              const _ArchiveCollectionArtwork(),
+                              const SizedBox(height: 12),
+                              for (var i = 0; i < _cards.length; i++) ...[
+                                if (i > 0) const SizedBox(height: 11),
+                                _ArchiveTile(
+                                  card: _cards[i],
+                                  onTap: () => _openDetail(_cards[i]),
                                 ),
                               ],
+                            ],
+
+                            // ── Historical metric trends (issue #200) ──
+                            // Real per-metric daily series over the same
+                            // service/chart-math Home uses. No synthetic
+                            // fallback: an empty/failed read renders its
+                            // own explicit state (MetricTrendSection),
+                            // never a fabricated chart.
+                            const SizedBox(height: 28),
+                            _Eyebrow(TrendCopy.eyebrow, rule: true),
+                            const SizedBox(height: 12),
+                            MetricTrendSection(
+                              service: _seriesService,
+                              userId: _userId,
                             ),
-                          ),
+                          ],
                         ),
+                      ),
+                    ),
             ),
           ],
         ),
@@ -316,7 +311,7 @@ class _ArchiveTile extends StatelessWidget {
                     fontSize: 9,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.4,
-                  color: InsightCardVisual.iconColor(card.category),
+                    color: InsightCardVisual.iconColor(card.category),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -359,20 +354,6 @@ class _EmptyArchive extends StatelessWidget {
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
-          Positioned(
-            right: -42,
-            top: -38,
-            child: Opacity(
-              opacity: 0.42,
-              child: Image.asset(
-                BiotopeGeneratedAssets.archiveHerbariumSpecimen,
-                width: 130,
-                height: 130,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stack) => const SizedBox.shrink(),
-              ),
-            ),
-          ),
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -380,7 +361,8 @@ class _EmptyArchive extends StatelessWidget {
                 BiotopeGeneratedAssets.emptyArchiveSpecimen,
                 width: 132,
                 height: 132,
-                errorBuilder: (context, error, stack) => const SizedBox(width: 132, height: 132),
+                errorBuilder: (context, error, stack) =>
+                    const SizedBox(width: 132, height: 132),
               ),
               const SizedBox(height: 16),
               Text(
@@ -429,9 +411,8 @@ class _ArchiveCollectionArtwork extends StatelessWidget {
               BiotopeGeneratedAssets.archiveHerbariumSpecimen,
               fit: BoxFit.cover,
               alignment: Alignment.centerRight,
-              errorBuilder: (context, error, stack) => const ColoredBox(
-                color: OurobionColors.primaryContainer,
-              ),
+              errorBuilder: (context, error, stack) =>
+                  const ColoredBox(color: OurobionColors.primaryContainer),
             ),
             DecoratedBox(
               decoration: BoxDecoration(

@@ -24,7 +24,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: 'ourobion nao',
-  description: 'A window into the brain — the ourobion corpus dashboard.',
+  description: 'How Ourobion connects personal reflection with authorized research context.',
   // Both icons are pinned explicitly and both are served from public/brand/,
   // so src/app/ deliberately contains NO icon.* files at all.
   //

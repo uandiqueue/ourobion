@@ -13,7 +13,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildLoad } from '../lib/artifacts.mjs';
-import { loadIntoDb } from '../load_edges.mjs';
+import { decodePinnedR2Artifacts, loadIntoDb } from '../load_edges.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CLI = path.join(HERE, '..', 'load_edges.mjs');
@@ -116,6 +116,32 @@ test('--no-prune refuses missing, malformed, or mismatched expected hashes befor
     assert.equal(out.status, 1);
     assert.doesNotMatch(out.stderr, /SUPABASE_DB_URL is not set/);
   }
+});
+
+test('--no-prune requires exact hashes for the R2 path before any R2 client can be constructed', () => {
+  const out = runCli(['--from-r2', '--no-prune']);
+  assert.equal(out.status, 1);
+  assert.match(out.stderr, /expected artifact hashes/);
+  assert.doesNotMatch(out.stderr, /--from-r2 needs env vars/);
+});
+
+test('R2 pinning hashes exact downloaded bytes before UTF-8 decoding', () => {
+  const prefix = Buffer.from([0x7b, 0x22, 0x65, 0x64, 0x67, 0x65, 0x22, 0x3a, 0x22]);
+  const suffix = Buffer.from([0x22, 0x7d, 0x0a]);
+  const claimsA = Buffer.concat([prefix, Buffer.from([0xff]), suffix]);
+  const claimsB = Buffer.concat([prefix, Buffer.from([0xfe]), suffix]);
+  const verifications = Buffer.from([0x7b, 0x7d, 0x0a]);
+  assert.equal(claimsA.toString('utf8'), claimsB.toString('utf8'), 'both invalid bytes decode to the same replacement character');
+  const expected = {
+    claims: createHash('sha256').update(claimsA).digest('hex'),
+    verifications: createHash('sha256').update(verifications).digest('hex'),
+  };
+  const decoded = decodePinnedR2Artifacts(claimsA, verifications, expected);
+  assert.equal(decoded.claimsText, claimsA.toString('utf8'));
+  assert.throws(
+    () => decodePinnedR2Artifacts(claimsB, verifications, expected),
+    /R2 edge artifact SHA-256 mismatch/,
+  );
 });
 
 function loadedFixture() {

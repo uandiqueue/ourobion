@@ -3,17 +3,39 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'normaliser.dart';
 
-/// Daily-core keys an inline chip row can answer *in full*, with the exact
-/// option set those chips offer.
+/// Daily-core scalar keys Scan can answer *in full*, with the exact option set
+/// its compact controls offer.
 ///
-/// A key belongs here only if a short row of chips can express every value the
-/// column accepts. Anything lossy stays off this list and keeps routing to
-/// `DailyLogScreen`, so the inline path can never silently narrow an answer:
-///  - `urine_colour` — an 8-swatch colour comparison, not a number choice
-///  - `stool_form`   — 7 Bristol types, each needing its description
-///  - `mosquito_bites` — 0..20, a stepper range no chip row can cover
+/// Every list exactly covers the database CHECK range. Scan may wrap the
+/// longer ranges, but it must never abbreviate the stored domain or route a
+/// scalar answer through a whole-row save.
 const Map<String, List<int>> kInlineAnswerableOptions = {
+  'urine_colour': [1, 2, 3, 4, 5, 6, 7, 8],
+  'stool_form': [1, 2, 3, 4, 5, 6, 7],
   'outside_meals': [0, 1, 2, 3],
+  'mosquito_bites': [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+  ],
   'energy_score': [1, 2, 3, 4, 5],
   'mood_score': [1, 2, 3, 4, 5],
   'gut_comfort_score': [1, 2, 3, 4, 5],

@@ -4,7 +4,7 @@ summary: nao is ourobion's expert web window into the brain (query/visualise the
 type: design
 scope: nao
 status: canonical
-updated: 2026-07-28
+updated: 2026-07-31
 ---
 # Ourobion nao — Design (brain inspection & curation)
 
@@ -82,9 +82,10 @@ A clean instance of the repo's core principle ([memory 0001](../memory/0001-two-
 - **Hosted Supabase only** for real auth — local Docker can't do OAuth
   ([memory 0011]; biotope's `auth_service` patterns in
   [`apps/biotope/lib/modules/m1_core/impl/auth_service.dart`](../../apps/biotope/lib/modules/m1_core/impl/auth_service.dart)
-  are the reference). A `nao_role` claim (app_metadata or a `nao_members` table) gates access; **v1
-  requires an authenticated, authorised user even to load** (the brain is a shared asset, not per-user
-  data, so this is access-gating + edit-attribution, not per-row RLS).
+  are the reference). The exact public `/` route is a static product explainer with a Login entry;
+  legacy `/how-it-works` links redirect to it. Every corpus, data, control, and API surface requires
+  an authenticated user with an effective `nao_members` role (the brain is a shared asset, not
+  per-user data, so this is access-gating + edit-attribution, not per-row RLS).
 
 ## 5 · Data sources & feature phasing
 
@@ -221,7 +222,7 @@ construction derives from; the sibling system is
 **Implemented foundation:**
 
 - The repo-root package boundary and `apps/nao/` Next.js application.
-- R2/D1 corpus reads, Supabase auth, corpus/claims/operations surfaces, and the shared design tokens.
+- R2/D1 corpus reads, Supabase-backed sign-in, corpus/claims/operations surfaces, and the shared UI variables.
 - R2 edge artifacts plus the deterministic `tools/edge-loader/` projection into
   `relationship_claims`, `edge_verifications`, and the relational `verified_edges` view.
 

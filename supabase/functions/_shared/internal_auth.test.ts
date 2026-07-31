@@ -65,18 +65,13 @@ function requestWith(headerValue?: string | null): Request {
 /**
  * Read a source file with line endings normalised to LF.
  *
- * Required on Windows: git checks these files out CRLF, and compute-baselines/index.ts is
- * exempt (git treats it as binary because of its deliberate NUL byte), so the four files do not
- * agree on line endings. Every source assertion below must be ending-agnostic.
+ * Required on Windows because source assertions must remain ending-agnostic across checkouts.
  */
 function readText(path: string): string {
   return readFileSync(path, "utf8").replace(/\r\n/g, "\n");
 }
 
 function source(fn: string): string {
-  // compute-baselines/index.ts contains a deliberate literal NUL byte as the
-  // `${user_id}\x00${metric_key}` map-key separator (grep reports the file as binary). It is
-  // only ever READ here, never rewritten.
   return readText(resolve(functionsDir, fn, "index.ts"));
 }
 
@@ -552,16 +547,13 @@ test("no function or the shared module logs a secret value", () => {
   }
 });
 
-test("compute-baselines still contains its deliberate literal NUL separator", () => {
-  // The NUL is written here as an ESCAPE so this test file itself stays plain ASCII text.
+test("compute-baselines keeps the NUL runtime separator without a literal NUL source byte", () => {
   const NUL = String.fromCharCode(0);
   const raw = readText(resolve(functionsDir, "compute-baselines", "index.ts"));
-  const lines = raw.split("\n");
-  const nulLines = lines.map((l, i) => (l.includes(NUL) ? i + 1 : 0)).filter(Boolean);
-  assert.equal(nulLines.length, 1, "exactly one line must carry the NUL byte");
-  assert.equal(nulLines[0], 172, "the NUL is expected on the baseline map-key line");
+  assert.equal(raw.includes(NUL), false, "TypeScript source must remain a text file without NUL bytes");
   assert.ok(
-    lines[nulLines[0] - 1].includes("${row.user_id}" + NUL + "${row.metric_key}"),
-    "the NUL must still be the baseline map-key separator",
+    raw.includes("`${row.user_id}\\u0000${row.metric_key}`"),
+    "the map key must retain the source-level Unicode escape",
   );
+  assert.equal(`user${NUL}metric`, "user\u0000metric", "the escape must preserve the runtime delimiter");
 });
