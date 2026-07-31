@@ -273,20 +273,23 @@ void main() {
       expect(launcher.opened.single.host, 'doi.org');
     });
 
-    testWidgets(
-      'KNOWN GAP #286: the rendered external-paper control is not exposed as a semantic link',
-      (tester) async {
-        final semantics = tester.ensureSemantics();
-        await _pump(tester, _doiProvenance());
-        expect(
-          tester.getSemantics(_linkFor(kRealDoi)).flagsCollection.isLink,
-          isFalse,
-          reason:
-              'replace this known-gap pin when #286 adds explicit link semantics',
-        );
-        semantics.dispose();
-      },
-    );
+    testWidgets('the external-paper control is a semantic link (#286)', (
+      tester,
+    ) async {
+      // Pinned as a known gap while this rendered as an unlabelled button: a
+      // screen-reader user had no way to know the control leaves the app for a
+      // web page. #286 added the link semantics.
+      final semantics = tester.ensureSemantics();
+      await _pump(tester, _doiProvenance());
+      expect(
+        tester.getSemantics(_linkFor(kRealDoi)).flagsCollection.isLink,
+        isTrue,
+        reason:
+            'a control that leaves the app for doi.org must announce itself as '
+            'a link, not as an ordinary button',
+      );
+      semantics.dispose();
+    });
 
     testWidgets('a doi:-prefixed stored id still opens the canonical URL', (
       tester,

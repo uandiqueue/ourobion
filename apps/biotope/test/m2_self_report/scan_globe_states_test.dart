@@ -267,9 +267,9 @@ void main() {
 
   group('the tab drives the dial with the dial\'s own constants', () {
     // The screen and the widget are in the same file, so a drift here is only
-    // ever a copy-paste slip — but resultDuration is currently declared on
-    // ScanGlobe and re-typed as a literal in _ScanTabState, which is exactly
-    // the shape that drifts silently.
+    // ever a copy-paste slip — and both controllers now name the ScanGlobe
+    // constant instead of re-typing its milliseconds, so there is no second
+    // copy left to drift.
     final source = File(
       'lib/modules/m2_self_report/ui/screens/scan_tab.dart',
     ).readAsStringSync();
@@ -282,18 +282,27 @@ void main() {
       );
     });
 
-    test('the completion controller runs for ScanGlobe.resultDuration\'s length', () {
+    test('the completion controller runs for ScanGlobe.resultDuration', () {
       final match = RegExp(
-        r'_completionAnim\s*=\s*AnimationController\([^)]*duration:\s*const Duration\(milliseconds:\s*(\d+)\)',
+        r'_completionAnim\s*=\s*AnimationController\([^)]*duration:\s*([^,\n]+)',
         dotAll: true,
       ).firstMatch(source);
-      expect(match, isNotNull, reason: 'could not find the completion controller');
       expect(
-        int.parse(match!.group(1)!),
-        ScanGlobe.resultDuration.inMilliseconds,
+        match,
+        isNotNull,
+        reason: 'could not find the completion controller',
+      );
+      expect(
+        match!.group(1)!.trim(),
+        'ScanGlobe.resultDuration',
         reason:
-            'the reveal controller and ScanGlobe.resultDuration must agree; '
-            'the reference reveals the result over 380ms',
+            'the reveal controller must name ScanGlobe.resultDuration rather '
+            'than re-type the reference\'s 380ms',
+      );
+      expect(
+        ScanGlobe.resultDuration,
+        const Duration(milliseconds: 380),
+        reason: 'the reference reveals the result over 380ms',
       );
     });
   });

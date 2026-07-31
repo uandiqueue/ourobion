@@ -84,41 +84,36 @@ void main() {
       expect(_urlFor('https://dx.doi.org/$kRealDoi'), kRealDoiUrl);
     });
 
-    test(
-      'KNOWN GAP #286: an http:// doi.org URL is upgraded instead of rejected',
-      () {
-        final uri = _uriFor('http://doi.org/$kRealDoi');
-        expect(uri, isNotNull);
-        expect(
-          uri!.scheme,
-          'https',
-          reason: 'a cleartext link must not survive',
-        );
-        expect(uri.toString(), kRealDoiUrl);
-      },
-    );
-
-    test('surrounding whitespace is tolerated, not a reason to reject', () {
-      expect(_urlFor('  $kRealDoi\n'), kRealDoiUrl);
-      expect(_urlFor('\t$kRealDoi\r\n'), kRealDoiUrl);
+    test('a cleartext http:// doi.org URL is rejected outright (#286)', () {
+      // This was pinned as a known gap while the resolver silently upgraded the
+      // scheme. #286 chose rejection instead, which is the stricter of the two
+      // ways to honour "a cleartext link must not survive": a stored http://
+      // paperId is malformed data, and quietly repairing it hides that.
+      expect(_uriFor('http://doi.org/$kRealDoi'), isNull);
+      expect(_uriFor('http://dx.doi.org/$kRealDoi'), isNull);
     });
 
-    test(
-      'KNOWN GAP #286: a DOI is accepted but its path casing is not canonicalised',
-      () {
-        // Crossref — and this repo's crossref-works.json fixture — store this DOI
-        // upper-cased. It is the same paper and must still resolve.
-        final uri = _uriFor('10.1016/J.ISCI.2026.116224');
-        expect(uri, isNotNull);
-        expect(uri!.host, 'doi.org');
-        expect(
-          uri.toString(),
-          'https://doi.org/10.1016/J.ISCI.2026.116224',
-          reason:
-              'remove this known-gap assertion when #286 canonicalises DOI case',
-        );
-      },
-    );
+    test('ordinary surrounding spaces are trimmed safely', () {
+      expect(_urlFor('  $kRealDoi  '), kRealDoiUrl);
+    });
+
+    test('control-character wrappers are rejected before trimming (#286)', () {
+      for (final paperId in ['$kRealDoi\n', '\t$kRealDoi', '$kRealDoi\r\n']) {
+        expect(_uriFor(paperId), isNull, reason: paperId.codeUnits.toString());
+      }
+    });
+
+    test('DOI case is canonicalised, so one paper has one URL (#286)', () {
+      // Crossref — and this repo's crossref-works.json fixture — store this DOI
+      // upper-cased. A DOI is case-insensitive, so it is the same paper: it must
+      // resolve, and it must resolve to the SAME link as the lower-cased
+      // spelling rather than to a second URL for one document.
+      final upper = _uriFor('10.1016/J.ISCI.2026.116224');
+      expect(upper, isNotNull);
+      expect(upper!.host, 'doi.org');
+      expect(upper.toString(), kRealDoiUrl);
+      expect(_urlFor('10.1099/MIC.0.001234'), _urlFor('10.1099/mic.0.001234'));
+    });
 
     test('other genuine DOI shapes from this repo resolve too', () {
       for (final doi in kRepoDois) {
@@ -126,7 +121,9 @@ void main() {
         expect(uri, isNotNull, reason: doi);
         expect(uri!.scheme, 'https', reason: doi);
         expect(uri.host, 'doi.org', reason: doi);
-        expect(uri.path, '/$doi', reason: doi);
+        // Canonical case (#286), so an upper-cased stored spelling and its
+        // lower-cased twin cannot become two links to one paper.
+        expect(uri.path, '/${doi.toLowerCase()}', reason: doi);
       }
     });
   });
@@ -307,17 +304,20 @@ void main() {
       }
     });
 
-    test(
-      'KNOWN GAP #286: dot segments are mis-resolved rather than rejected',
-      () {
-        expect(
-          _urlFor('10.1234/../../evil'),
-          'https://doi.org/evil',
-          reason:
-              'replace this explicit known-gap pin when #286 rejects dot segments',
-        );
-      },
-    );
+    test('dot segments are rejected, not resolved away (#286)', () {
+      // Pinned as a known gap while `Uri.parse` collapsed these into a
+      // different path than the stored identifier named — 10.1234/../../evil
+      // became https://doi.org/evil, a link to somewhere the citation never
+      // pointed. #286 rejects them instead.
+      for (final id in [
+        '10.1234/../../evil',
+        '10.1234/../evil',
+        '10.1234/./evil',
+        'https://doi.org/10.1234/../evil',
+      ]) {
+        expect(_uriFor(id), isNull, reason: id);
+      }
+    });
   });
 
   group('the parsed model carries the resolver', () {

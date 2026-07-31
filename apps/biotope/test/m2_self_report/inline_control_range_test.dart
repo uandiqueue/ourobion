@@ -9,9 +9,15 @@
 // `lib/` cannot import `shared/` — the registry is a cross-language parity
 // mirror living outside the Flutter package, which is why kDailyCoreDqsWeights
 // mirrors its DQS weights rather than reading them. So the ranges are held to
-// shared/metrics/registry.dart HERE, by parsing the registry source exactly as
-// the guards in test/guards/ do. Nothing below hardcodes a range: if the
-// registry moves and kInlineAnswerableOptions does not, these fail.
+// shared/metrics/lib/src/registry.dart HERE, by parsing the registry source
+// exactly as the guards in test/guards/ do. Nothing below hardcodes a range: if
+// the registry moves and kInlineAnswerableOptions does not, these fail.
+//
+// "Offers the value" is control-shaped, not chip-shaped: the Armstrong and
+// Bristol controls have one tap target per accepted value, while the 0-20
+// mosquito stepper reaches a value by stepping to it. Both are held to the same
+// contract — every value the column accepts must be reachable, and nothing
+// outside the range may be.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -59,7 +65,7 @@ Map<String, String> _registryInputTypes(String source) {
 }
 
 void main() {
-  final registry = readRepoFile('shared/metrics/registry.dart');
+  final registry = readRepoFile('shared/metrics/lib/src/registry.dart');
   final scales = _registryScales(registry);
   final inputTypes = _registryInputTypes(registry);
   final weights = registryDailyCoreWeights(registry);
@@ -143,11 +149,13 @@ void main() {
       }
     });
 
-    test('the registry\'s declared affordance still fits a chip row', () {
-      // The merged Scan tab renders one compact chip per value for every
-      // metric. That is only honest while every daily-core inputType is a
-      // small, discrete, wrappable scale — a free-text or multi-select
-      // inputType appearing here would mean a chip row is the wrong control.
+    test('every declared affordance still fits a compact inline control', () {
+      // The Scan tab answers each metric with the control its inputType asks
+      // for: chips, Armstrong swatches, Bristol rows, or a stepper. That is
+      // only honest while every daily-core inputType is a small, discrete
+      // scale — a free-text or multi-select inputType appearing here would mean
+      // no compact inline control can represent it and the gap card would have
+      // to route away from the tab.
       const wrappable = {
         'armstrong_1_8',
         'bristol_1_7',
@@ -160,8 +168,8 @@ void main() {
           wrappable.contains(inputTypes[key]),
           isTrue,
           reason:
-              '"$key" declares inputType "${inputTypes[key]}", which no chip '
-              'row can represent',
+              '"$key" declares inputType "${inputTypes[key]}", which no '
+              'compact inline control can represent',
         );
       }
     });
@@ -173,24 +181,51 @@ void main() {
         tester,
       ) async {
         final scale = scales[key]!;
+        final range = [for (var v = scale.min; v <= scale.max; v++) v];
         final answers = <int>[];
-        await tester.pumpWidget(
-          scanHarness(gapCard(key, expanded: true, onAnswer: answers.add)),
-        );
 
-        for (var value = scale.min; value <= scale.max; value++) {
-          expect(
-            findChip(key, value),
-            findsOneWidget,
-            reason: '$key must offer $value inline',
+        if (controlFor(key) == ScanControl.stepper) {
+          // No per-value target exists, so reachability is proved by actually
+          // stepping the whole range — stepStepperTo throws the moment a bound
+          // stops it short.
+          await tester.pumpWidget(scanHarness(gapCard(key, expanded: true)));
+          for (final value in range) {
+            await stepStepperTo(tester, value);
+            expect(stepperValue(tester), value);
+          }
+          // Then that committing any of them writes that exact value.
+          for (final value in range) {
+            await tester.pumpWidget(
+              scanHarness(
+                gapCard(
+                  key,
+                  expanded: true,
+                  currentValue: value,
+                  onAnswer: answers.add,
+                ),
+              ),
+            );
+            expect(stepperValue(tester), value);
+            await tester.tap(findStepperSave);
+            await tester.pump();
+          }
+        } else {
+          await tester.pumpWidget(
+            scanHarness(gapCard(key, expanded: true, onAnswer: answers.add)),
           );
-          await tester.tap(findChip(key, value));
-          await tester.pump();
+          for (final value in range) {
+            expect(
+              findOption(key, value),
+              findsOneWidget,
+              reason: '$key must offer $value inline',
+            );
+            await answerWith(tester, key, value);
+          }
         }
 
         expect(
           answers,
-          equals([for (var v = scale.min; v <= scale.max; v++) v]),
+          equals(range),
           reason: 'every offered value must write that exact value',
         );
       });
@@ -201,45 +236,103 @@ void main() {
         final scale = scales[key]!;
         await tester.pumpWidget(scanHarness(gapCard(key, expanded: true)));
 
+        if (controlFor(key) == ScanControl.stepper) {
+          expect(
+            tester.widget<IconButton>(findStepperDecrease).onPressed,
+            isNull,
+            reason: '$key must not be able to step below ${scale.min}',
+          );
+          await stepStepperTo(tester, scale.max);
+          expect(
+            tester.widget<IconButton>(findStepperIncrease).onPressed,
+            isNull,
+            reason: '$key must not be able to step above ${scale.max}',
+          );
+          return;
+        }
+
         expect(
-          findChip(key, scale.min - 1),
+          findOption(key, scale.min - 1),
           findsNothing,
-          reason: '$key must not offer ${scale.min - 1}, which the column '
+          reason:
+              '$key must not offer ${scale.min - 1}, which the column '
               'would reject',
         );
-        expect(findChip(key, scale.max + 1), findsNothing);
+        expect(findOption(key, scale.max + 1), findsNothing);
       });
     }
 
     testWidgets('the long scales are not abbreviated behind a "more" link', (
       tester,
     ) async {
-      // urine_colour (8), stool_form (7) and mosquito_bites (21) are the ones a
-      // compact control is tempted to truncate.
-      for (final key in ['urine_colour', 'stool_form', 'mosquito_bites']) {
+      // urine_colour (8) and stool_form (7) are the ones a per-value control is
+      // tempted to truncate: every accepted value must have its own target.
+      //
+      // Counted by the controls' own option keys rather than by GestureDetector
+      // — since #287 the card header is itself a tap target, so a type count
+      // would be one too many and would say nothing about which values it
+      // covered.
+      for (final key in ['urine_colour', 'stool_form']) {
         await tester.pumpWidget(scanHarness(gapCard(key, expanded: true)));
-        final chips = tester.widgetList<GestureDetector>(
-          find.descendant(
-            of: findGapCard(key),
-            matching: find.byType(GestureDetector),
-          ),
-        );
+        final options = kInlineAnswerableOptions[key]!;
+        for (final value in options) {
+          expect(
+            findOption(key, value),
+            findsOneWidget,
+            reason: '$key must offer $value its own target',
+          );
+        }
+        final prefix = key == 'urine_colour'
+            ? 'armstrong-target-'
+            : 'bristol-option-';
         expect(
-          chips.length,
-          kInlineAnswerableOptions[key]!.length,
-          reason: '$key must render one tappable chip per accepted value',
+          find.byWidgetPredicate((w) {
+            final widgetKey = w.key;
+            return widgetKey is ValueKey<String> &&
+                widgetKey.value.startsWith(prefix);
+          }),
+          findsNWidgets(options.length),
+          reason: '$key must render exactly one target per accepted value',
         );
         expect(find.textContaining('More'), findsNothing);
-        expect(find.textContaining('full log', findRichText: true), findsNothing);
+        expect(
+          find.textContaining('full log', findRichText: true),
+          findsNothing,
+        );
       }
+
+      // mosquito_bites (21) is truncation-proof differently: the stepper's
+      // bounds are the column's bounds, which the range tests above walk.
+      await tester.pumpWidget(
+        scanHarness(gapCard('mosquito_bites', expanded: true)),
+      );
+      expect(find.textContaining('More'), findsNothing);
+      expect(find.textContaining('full log', findRichText: true), findsNothing);
     });
 
     testWidgets('a collapsed card offers no values at all', (tester) async {
       await tester.pumpWidget(scanHarness(gapCard('mood_score')));
       for (final value in kInlineAnswerableOptions['mood_score']!) {
-        expect(findChip('mood_score', value), findsNothing);
+        expect(findOption('mood_score', value), findsNothing);
       }
       expect(findExpandedArea('mood_score'), findsNothing);
+    });
+
+    testWidgets('no control writes anything until a value is picked', (
+      tester,
+    ) async {
+      for (final key in dailyCoreKeys) {
+        final answers = <int>[];
+        await tester.pumpWidget(
+          scanHarness(gapCard(key, expanded: true, onAnswer: answers.add)),
+        );
+        await tester.pump();
+        expect(
+          answers,
+          isEmpty,
+          reason: '$key wrote a value merely by being expanded',
+        );
+      }
     });
 
     testWidgets('every metric carries a hint naming what its numbers mean', (

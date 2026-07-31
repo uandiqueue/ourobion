@@ -291,9 +291,19 @@ void main() {
         points: _hrvSeries(),
       );
 
-      // The stored-value unit line the detail screen owns…
-      expect(find.text(MetricDetailCopy.axisUnit('hrv_sdnn_ms')), findsOneWidget);
-      expect(MetricDetailCopy.axisUnit('hrv_sdnn_ms'), 'milliseconds');
+      // The stored-value unit line the detail screen owns. Since #285 the
+      // wording comes from the registry rather than a per-metric literal, so
+      // what is asserted is that it NAMES the registry unit — not one
+      // hand-written phrase that would have to be re-typed per metric.
+      final axisUnit = MetricDetailCopy.axisUnit('hrv_sdnn_ms');
+      expect(find.text(axisUnit), findsOneWidget);
+      expect(
+        axisUnit,
+        contains('ms'),
+        reason:
+            'the chart plots stored values, so the line above it has to say '
+            'which unit those numbers are in',
+      );
       // …and the same unit on every gridline the painter will draw.
       for (final label in _axisLabels(_painter(tester))) {
         expect(label, endsWith(' ms'));

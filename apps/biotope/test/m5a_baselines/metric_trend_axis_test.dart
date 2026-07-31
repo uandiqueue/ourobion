@@ -1,6 +1,6 @@
 // Metric-aware trend axes — the policy in ui/widgets/metric_trend_section.dart
 // (`trendAxisTicks`, `trendAxisBounds`, `trendAxisLabel`), held against
-// shared/metrics/registry.dart.
+// shared/metrics/lib/src/registry.dart.
 //
 // The bug class this pins: chart_math's 1/2/5 nice-number ladder is
 // metric-agnostic, so an ordinal series (Bristol stool form, integer types 1..7)
@@ -14,9 +14,10 @@
 // `scale`, `ui.inputType`, `unit`, `status`, `baselineApplicable`), not by
 // restating a list — the same source-parsing technique as test/guards/*, so
 // registry drift fails this suite instead of silently changing what a chart
-// claims. Neither source can be imported from lib/: shared/metrics/registry.dart
-// is a cross-language parity mirror rather than a package dependency, and the
-// axis policy is a switch inside a widget file.
+// claims. Neither source can be imported from lib/: the registry at
+// shared/metrics/lib/src/registry.dart is a cross-language parity mirror rather
+// than a package dependency, and the axis policy is a switch inside a widget
+// file.
 
 import 'dart:io';
 
@@ -67,6 +68,7 @@ class _Entry {
     required this.inputType,
     required this.scaleMin,
     required this.scaleMax,
+    required this.valueStep,
     required this.unit,
     required this.baselineApplicable,
     required this.status,
@@ -76,6 +78,7 @@ class _Entry {
   final String? inputType;
   final double? scaleMin;
   final double? scaleMax;
+  final double? valueStep;
   final String? unit;
   final bool baselineApplicable;
   final String status;
@@ -92,6 +95,15 @@ class _Entry {
   bool get isWholeStepByInput =>
       inputType != null &&
       kWholeStepInputPrefixes.any((p) => inputType!.startsWith(p));
+
+  /// The registry declares the smallest legal increment, so the axis can be
+  /// aligned to it instead of to a metric-agnostic 1/2/5 ladder.
+  bool get declaresValueStep => valueStep != null;
+
+  /// …and declares the scale that increment runs over, so the axis can be fixed
+  /// to the whole scale rather than to whatever the data window happened to be.
+  bool get declaresBoundedSteps =>
+      declaresValueStep && scaleMin != null && scaleMax != null;
 }
 
 /// Split registry.dart into per-metric blocks and pull out what the axis needs.
@@ -117,6 +129,9 @@ Map<String, _Entry> _parseRegistry(String source) {
       ).firstMatch(block)?.group(1),
       scaleMin: scale == null ? null : double.parse(scale.group(1)!),
       scaleMax: scale == null ? null : double.parse(scale.group(2)!),
+      valueStep: double.tryParse(
+        RegExp(r'valueStep:\s*(-?[\d.]+)').firstMatch(block)?.group(1) ?? '',
+      ),
       unit: RegExp(
         r"(?<![A-Za-z])unit:\s*'([^']+)'",
       ).firstMatch(block)?.group(1),
@@ -125,28 +140,38 @@ Map<String, _Entry> _parseRegistry(String source) {
             r'baselineApplicable:\s*(true|false)',
           ).firstMatch(block)?.group(1) ==
           'true',
-      status:
-          RegExp(r"status:\s*'([a-z]+)'").firstMatch(block)?.group(1) ?? '',
+      status: RegExp(r"status:\s*'([a-z]+)'").firstMatch(block)?.group(1) ?? '',
     );
   }
   return out;
 }
 
-/// The metric keys `trendAxisTicks` special-cases, read out of its own switch
-/// so this suite cannot drift from the implementation it is guarding.
-Set<String> _axisAwareKeys(String widgetSource) {
+/// The source of `trendAxisTicks` + `trendAxisBounds`, so this suite can assert
+/// HOW the axis decides as well as what it draws.
+String _axisPolicySource(String widgetSource) {
   const startMarker = 'List<double> trendAxisTicks';
-  const endMarker = 'ValueBounds trendAxisBounds';
+  const endMarker = 'String trendAxisLabel';
   final start = widgetSource.indexOf(startMarker);
   final end = widgetSource.indexOf(endMarker, start);
   if (start < 0 || end < 0) {
-    throw StateError('trendAxisTicks switch not found in metric_trend_section');
+    throw StateError('the axis policy was not found in metric_trend_section');
   }
-  final body = widgetSource.substring(start, end);
-  return RegExp(
-    r"'([a-z0-9_]+)'",
-  ).allMatches(body).map((m) => m.group(1)!).toSet();
+  return widgetSource.substring(start, end);
 }
+
+/// Registry metric keys named as literals inside the axis policy. #268 filed
+/// the hardcoded switch as the defect, and #285 replaced it with registry
+/// lookups, so this set must now be EMPTY — a key reappearing here means a
+/// metric was special-cased in the chart instead of described in the registry.
+/// Intersected with the registry so ordinary strings (`'ordinal'`) do not count.
+Set<String> _hardcodedMetricKeys(
+  String axisPolicySource,
+  Iterable<String> registryKeys,
+) => RegExp(r"'([a-z][a-z0-9_]{2,})'")
+    .allMatches(axisPolicySource)
+    .map((m) => m.group(1)!)
+    .where(registryKeys.contains)
+    .toSet();
 
 /// A probe window that would land on a fractional 1/2/5 tick if the metric were
 /// not axis-aware — niceTicks(1..2) is [1, 1.5, 2].
@@ -154,12 +179,23 @@ const _fractionalProbe = <double>[1, 2];
 
 void main() {
   late Map<String, _Entry> registry;
-  late Set<String> axisAware;
   late Map<String, _Entry> charted;
+  late String axisPolicySource;
+
+  /// Charted metrics the registry declares a value increment for. #285 made
+  /// this — not a list of keys in the chart — what decides whether an axis is
+  /// step-aligned, so it is what this suite derives its expectations from.
+  late Set<String> stepAligned;
+
+  /// …and of those, the ones that also declare the scale the increment runs
+  /// over, whose axis is therefore fixed to the scale rather than to the data.
+  late Set<String> scalePinned;
 
   setUpAll(() {
-    registry = _parseRegistry(_readRepoFile('shared/metrics/registry.dart'));
-    axisAware = _axisAwareKeys(
+    registry = _parseRegistry(
+      _readRepoFile('shared/metrics/lib/src/registry.dart'),
+    );
+    axisPolicySource = _axisPolicySource(
       _readRepoFile(
         'apps/biotope/lib/modules/m5a_baselines/ui/widgets/'
         'metric_trend_section.dart',
@@ -169,8 +205,22 @@ void main() {
       for (final e in registry.entries)
         if (e.value.isActiveCharted) e.key: e.value,
     };
+    stepAligned = {
+      for (final e in charted.entries)
+        if (e.value.declaresValueStep) e.key,
+    };
+    scalePinned = {
+      for (final e in charted.entries)
+        if (e.value.declaresBoundedSteps) e.key,
+    };
     expect(registry, isNotEmpty, reason: 'the registry parse found nothing');
-    expect(axisAware, isNotEmpty, reason: 'the axis switch parse found nothing');
+    expect(
+      axisPolicySource,
+      isNotEmpty,
+      reason: 'the axis policy parse found nothing',
+    );
+    expect(stepAligned, isNotEmpty, reason: 'no metric declares a valueStep');
+    expect(scalePinned, isNotEmpty);
   });
 
   group('the derivation itself is grounded in the registry', () {
@@ -178,6 +228,33 @@ void main() {
       // Everything below rests on this: without a metric-aware axis, a 1..2
       // window produces a 1.5 gridline.
       expect(niceTicks(valueBounds(_fractionalProbe)), [1.0, 1.5, 2.0]);
+    });
+
+    test('the axis policy names no metric key of its own (#268 → #285)', () {
+      // The original defect this suite recorded was that `trendAxisTicks` was a
+      // hardcoded metric-key switch, so every newly registered metric silently
+      // inherited the metric-agnostic ladder. #285 replaced it with registry
+      // lookups. This is what keeps that fix from being undone one special case
+      // at a time.
+      expect(
+        _hardcodedMetricKeys(axisPolicySource, registry.keys),
+        isEmpty,
+        reason:
+            'a metric named in the axis policy is a metric whose axis stops '
+            'following its registry declaration',
+      );
+      expect(
+        axisPolicySource,
+        contains('metricByKey('),
+        reason: 'the axis must read the metric it is drawing from the registry',
+      );
+      expect(
+        axisPolicySource,
+        contains('valueStep'),
+        reason:
+            'the registry\'s declared increment is what makes an axis '
+            'step-aligned instead of 1/2/5',
+      );
     });
 
     test('every whole-step input prefix is one the registry actually uses', () {
@@ -217,50 +294,28 @@ void main() {
       };
       expect(ordinals, isNotEmpty);
 
-      // DOCUMENTED, NOT ENDORSED — same defect as the whole-step group below,
-      // and the reason `trendAxisTicks` being a hardcoded switch is itself
-      // filed as a bug rather than a style note.
-      //
-      // PR #274 (u6b batch 1) added five active, baselineApplicable
-      // `type: ordinal` likert_1_5 metrics without extending the switch, so
-      // each inherits the metric-agnostic 1/2/5 ladder and can be drawn at
-      // 3.5 on a scale whose only legal values are 1..5.
-      //
-      // Recorded here so the merge that introduced it is visible instead of
-      // silently passing. If this set GROWS, another ordinal has inherited the
-      // defect. If it becomes EMPTY, the gap is fixed — delete this allowance
-      // so the assertion below carries every ordinal again.
-      const knownUncoveredOrdinals = {
-        'appetite_score',
-        'anxiety_score',
-        'brain_clarity_score',
-        'focus_score',
-        'social_interaction_quality_score',
-      };
+      // This assertion carried an allowance while the axis was a hardcoded
+      // switch: the five likert_1_5 wellbeing scores PR #274 added were
+      // `type: ordinal`, were charted, and were not in the switch, so each
+      // inherited the metric-agnostic 1/2/5 ladder and could be drawn at 3.5 on
+      // a scale whose only legal values are 1..5. #285 made the axis read the
+      // registry, which covers every ordinal by construction, so the allowance
+      // is gone and this now carries all of them.
       expect(
-        ordinals.difference(axisAware).difference(knownUncoveredOrdinals),
+        ordinals.difference(scalePinned),
         isEmpty,
         reason:
             'these registry `type: ordinal` metrics fall through to the '
             'metric-agnostic 1/2/5 ladder and can be drawn at a value the '
             'user never logged',
       );
-      expect(
-        ordinals.difference(axisAware),
-        knownUncoveredOrdinals,
-        reason:
-            'the recorded ordinal-axis gap has changed. Added by PR #274 and '
-            'reported as #285 — update this set deliberately, never to make a '
-            'red test green.',
-      );
     });
 
-    test('every axis-aware key is a charted registry metric with a scale', () {
-      for (final key in axisAware) {
-        final entry = registry[key];
-        expect(entry, isNotNull, reason: '$key is not in the registry');
+    test('every scale-pinned key is a charted whole-step registry metric', () {
+      for (final key in scalePinned) {
+        final entry = registry[key]!;
         expect(
-          entry!.isActiveCharted,
+          entry.isActiveCharted,
           isTrue,
           reason: '$key is a stale axis policy — it cannot reach a chart',
         );
@@ -271,11 +326,13 @@ void main() {
         );
         expect(entry.scaleMax, isNotNull, reason: '$key scale.max');
         expect(
-          entry.isOrdinalByType || entry.isWholeStepByInput,
+          entry.isOrdinalByType ||
+              entry.isWholeStepByInput ||
+              entry.type == 'numeric',
           isTrue,
           reason:
-              '$key is pinned to whole categories but the registry calls it '
-              'neither ordinal nor a whole-step input',
+              '$key is pinned to whole steps but the registry calls it neither '
+              'ordinal, a whole-step input, nor numeric',
         );
       }
     });
@@ -283,7 +340,7 @@ void main() {
 
   group('ordinal ticks are integers over the DECLARED registry scale', () {
     test('no tick is fractional, for any data window', () {
-      for (final key in axisAware) {
+      for (final key in stepAligned) {
         for (final values in const [
           _fractionalProbe,
           <double>[4, 4],
@@ -304,7 +361,7 @@ void main() {
     });
 
     test('ticks span exactly the registry scale, end to end', () {
-      for (final key in axisAware) {
+      for (final key in scalePinned) {
         final entry = registry[key]!;
         final ticks = trendAxisTicks(key, _fractionalProbe);
         expect(ticks.first, entry.scaleMin, reason: '$key first tick');
@@ -320,7 +377,7 @@ void main() {
       // A week where the user only ever logged one value must still show the
       // whole scale — otherwise a flat week reads as a full-range week. And a
       // corrupt out-of-scale row must not stretch the declared scale either.
-      for (final key in axisAware) {
+      for (final key in scalePinned) {
         final entry = registry[key]!;
         for (final values in const [
           <double>[4, 4],
@@ -339,7 +396,7 @@ void main() {
     });
 
     test('no axis label is an interpolated number', () {
-      for (final key in axisAware) {
+      for (final key in stepAligned) {
         for (final t in trendAxisTicks(key, _fractionalProbe)) {
           expect(
             trendAxisLabel(key, t),
@@ -350,21 +407,34 @@ void main() {
           );
         }
       }
-      // Even if a fractional value were forced through, a named clinical scale
-      // labels the whole category rather than inventing a half-step.
-      for (final key in kCategoryLabelledOrdinals) {
-        expect(trendAxisLabel(key, 2.5), isNot(contains('.')), reason: key);
-      }
+      // `trendAxisLabel` formats a tick supplied by `trendAxisTicks`; it is not
+      // a second bounds or step validator. The loop above therefore proves the
+      // user-visible contract on every tick the axis can actually emit, rather
+      // than injecting an impossible half-step that bypasses the registry-led
+      // tick policy.
     });
   });
 
   group('ordinal axes say what scale they are on', () {
     test('exactly the clinical scales carry category words', () {
+      // A registry unit is not a category name, so it is removed before asking
+      // whether the label carries a word — otherwise `step_count` ("4 steps")
+      // would read as a named scale.
+      bool namesACategory(String key, double tick) {
+        final unit = registry[key]!.unit;
+        var label = trendAxisLabel(key, tick);
+        if (unit != null && unit.isNotEmpty && label.endsWith(unit)) {
+          label = label.substring(0, label.length - unit.length);
+        }
+        return RegExp('[A-Za-z]').hasMatch(label);
+      }
+
       final lettered = {
-        for (final key in axisAware)
-          if (trendAxisTicks(key, _fractionalProbe).any(
-            (t) => RegExp('[A-Za-z]').hasMatch(trendAxisLabel(key, t)),
-          ))
+        for (final key in stepAligned)
+          if (trendAxisTicks(
+            key,
+            _fractionalProbe,
+          ).any((t) => namesACategory(key, t)))
             key,
       };
       expect(
@@ -390,7 +460,8 @@ void main() {
           expect(
             RegExp('[A-Za-z]').hasMatch(label),
             isTrue,
-            reason: '$key tick $tick reads "$label" — the scale endpoint has '
+            reason:
+                '$key tick $tick reads "$label" — the scale endpoint has '
                 'to say what it means',
           );
         }
@@ -427,7 +498,7 @@ void main() {
     test('a continuous metric with no registry unit invents none', () {
       final bare = {
         for (final e in charted.entries)
-          if (e.value.unit == null && !axisAware.contains(e.key)) e.key,
+          if (e.value.unit == null && !stepAligned.contains(e.key)) e.key,
       };
       expect(bare, isNotEmpty);
       for (final key in bare) {
@@ -443,7 +514,7 @@ void main() {
 
     test('continuous metrics keep the existing 1/2/5 ladder unchanged', () {
       for (final key in charted.keys) {
-        if (axisAware.contains(key)) continue;
+        if (stepAligned.contains(key)) continue;
         for (final values in const [
           <double>[38, 71],
           <double>[360, 420],
@@ -461,7 +532,7 @@ void main() {
 
     test('continuous bounds still cover the real data', () {
       for (final key in charted.keys) {
-        if (axisAware.contains(key)) continue;
+        if (stepAligned.contains(key)) continue;
         const values = <double>[38, 71];
         final ticks = trendAxisTicks(key, values);
         final bounds = trendAxisBounds(key, values, ticks);
@@ -483,57 +554,56 @@ void main() {
     });
   });
 
-  group('KNOWN GAP (#268) — whole-step counts outside the axis switch', () {
-    test('the uncovered whole-step metrics are exactly the recorded set', () {
-      // DOCUMENTED, NOT ENDORSED. These registry metrics are whole steps by
-      // their input control (there is no half a stool) but are not in
-      // trendAxisTicks' switch, so they inherit the metric-agnostic 1/2/5
-      // ladder and can be drawn at a fractional value the user never logged.
-      //
-      // If this set GROWS, a new whole-step metric has silently inherited the
-      // same defect. If it becomes EMPTY, the gap has been fixed — delete this
-      // group and let the ordinal-coverage guards above carry the metric.
+  group('CLOSED GAP (#268 → #285) — whole-step counts are axis-aware too', () {
+    // This group recorded the gap while it was open: metrics that are whole
+    // steps by their input control (there is no half a stool) but absent from
+    // trendAxisTicks' hardcoded switch inherited the metric-agnostic 1/2/5
+    // ladder and could be drawn at a fractional value the user never logged.
+    // #285 made the axis registry-driven, closing it. The assertions below are
+    // the same facts inverted, so the fix cannot silently regress.
+
+    test('no charted whole-step metric is left on the 1/2/5 ladder', () {
       final uncovered = {
         for (final e in charted.entries)
-          if (e.value.isWholeStepByInput && !axisAware.contains(e.key)) e.key,
+          if (e.value.isWholeStepByInput && !stepAligned.contains(e.key)) e.key,
       };
       expect(
         uncovered,
-        {
-          // registry `numeric` with `stepper_0_10`; the switch covers its
-          // sibling mosquito_bites (stepper_0_20) but not it.
-          'stool_count',
-          // The five likert_1_5 scores added by PR #274 (u6b batch 1). They
-          // are whole-step by input as well as `type: ordinal`, so they fail
-          // this guard and the ordinal-coverage guard above for the same
-          // underlying reason: trendAxisTicks is a hardcoded switch.
-          'appetite_score',
-          'anxiety_score',
-          'brain_clarity_score',
-          'focus_score',
-          'social_interaction_quality_score',
-        },
+        isEmpty,
         reason:
-            'the recorded whole-step axis gap has changed. Reported as #285 — '
-            'update this set deliberately, never to make a red test green.',
+            'these metrics are whole steps by their input control but declare '
+            'no registry valueStep, so their axis can invent a half-step',
       );
     });
 
-    test('the consequence, made visible', () {
-      // The concrete defect the set above stands for.
-      final ticks = trendAxisTicks('stool_count', _fractionalProbe);
-      expect(
-        ticks.any((t) => t != t.roundToDouble()),
-        isTrue,
-        reason:
-            'if this no longer holds, stool_count has become axis-aware — '
-            'remove this whole group',
-      );
-      expect(
-        ticks.map((t) => trendAxisLabel('stool_count', t)),
-        contains('1.5'),
-        reason: 'there is no such thing as 1.5 stools in a day',
-      );
+    test('the previously uncovered metrics, made visible', () {
+      // The concrete keys the open gap stood for: stool_count (stepper_0_10)
+      // and the five likert_1_5 scores PR #274 added.
+      for (final key in const [
+        'stool_count',
+        'appetite_score',
+        'anxiety_score',
+        'brain_clarity_score',
+        'focus_score',
+        'social_interaction_quality_score',
+      ]) {
+        expect(
+          stepAligned,
+          contains(key),
+          reason: '$key has fallen back out of the registry-driven axis',
+        );
+        final ticks = trendAxisTicks(key, _fractionalProbe);
+        expect(
+          ticks.every((t) => t == t.roundToDouble()),
+          isTrue,
+          reason: '$key drew a fractional gridline: $ticks',
+        );
+        expect(
+          ticks.map((t) => trendAxisLabel(key, t)),
+          isNot(contains('1.5')),
+          reason: 'there is no such thing as 1.5 of $key in a day',
+        );
+      }
     });
   });
 }

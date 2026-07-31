@@ -160,9 +160,55 @@ class ScanGapListHostState extends State<ScanGapListHost> {
 /// unambiguous "this card is open" probe on the merged surface.
 String expandedProbe(String metricKey) => ScanTabCopy.inlineHints[metricKey]!;
 
-/// What a screen reader is meant to announce for the chip offering [value].
-String chipSemanticLabel(String metricKey, int value) =>
-    '${metricDisplayLabel(metricKey)} $value';
+/// Which inline control a metric answers with. `_InlineAnswerControl` in
+/// scan_tab.dart dispatches on the metric key to honour the registry's declared
+/// affordance, so the finders below follow the same split rather than assuming
+/// every scale is a chip row. A "for every metric" loop has to branch on this,
+/// which is the point: it cannot silently assert chip-shaped things about the
+/// colour, shape and counter controls.
+enum ScanControl {
+  /// A wrapped row of numbered chips — one tap target per accepted value.
+  chips,
+
+  /// Named Armstrong colour swatches — one tap target per accepted value.
+  armstrong,
+
+  /// Named, shape-led Bristol rows — one tap target per accepted value.
+  bristol,
+
+  /// A -/readout/+/Save stepper. No per-value tap target exists: a value is
+  /// reached by stepping and then deliberately committed.
+  stepper,
+}
+
+ScanControl controlFor(String metricKey) => switch (metricKey) {
+  'urine_colour' => ScanControl.armstrong,
+  'stool_form' => ScanControl.bristol,
+  'mosquito_bites' => ScanControl.stepper,
+  _ => ScanControl.chips,
+};
+
+/// True when [metricKey]'s control exposes one button per accepted value.
+bool hasPerValueButtons(String metricKey) =>
+    controlFor(metricKey) != ScanControl.stepper;
+
+/// What a screen reader is meant to announce for the control offering [value].
+/// The descriptive scales carry their name as well as the number, because
+/// "Urine colour 6" alone says nothing about what 6 looks like.
+String optionSemanticLabel(String metricKey, int value) =>
+    switch (controlFor(metricKey)) {
+      ScanControl.armstrong || ScanControl.bristol =>
+        '${metricDisplayLabel(metricKey)} '
+            '${ScanTabCopy.answerLabel(metricKey, value)}',
+      ScanControl.chips => '${metricDisplayLabel(metricKey)} $value',
+      ScanControl.stepper => throw StateError(
+        '$metricKey answers with a stepper, which has no per-value button — '
+        'assert stepperReadoutLabel() and the labelled +/- instead',
+      ),
+    };
+
+/// What the stepper's live readout announces while [value] is pending.
+String stepperReadoutLabel(int value) => 'Mosquito bites, $value selected';
 
 // ── Source guards ──────────────────────────────────────────────────────────
 // The screen's own state (`_openGapKey`, `_sweepAnim`) is private and
@@ -208,9 +254,77 @@ Finder findExpandedArea(String metricKey) => find.descendant(
   matching: find.text(expandedProbe(metricKey)),
 );
 
-/// The chip offering [value] inside [metricKey]'s card.
-Finder findChip(String metricKey, int value) =>
-    find.descendant(of: findGapCard(metricKey), matching: find.text('$value'));
+/// The tap target offering [value] inside [metricKey]'s card, whichever control
+/// the metric got. Throws for the stepper, which has no per-value target — see
+/// [stepStepperTo].
+Finder findOption(String metricKey, int value) {
+  final matching = switch (controlFor(metricKey)) {
+    ScanControl.chips => find.text('$value'),
+    ScanControl.armstrong => find.byKey(ValueKey('armstrong-target-$value')),
+    ScanControl.bristol => find.byKey(ValueKey('bristol-option-$value')),
+    ScanControl.stepper => throw StateError(
+      '$metricKey answers with a stepper — step to the value instead of '
+      'looking for a button that offers it',
+    ),
+  };
+  return find.descendant(of: findGapCard(metricKey), matching: matching);
+}
+
+// ── The mosquito stepper ───────────────────────────────────────────────────
+
+Finder get findStepperIncrease =>
+    find.widgetWithIcon(IconButton, Icons.add_rounded);
+Finder get findStepperDecrease =>
+    find.widgetWithIcon(IconButton, Icons.remove_rounded);
+Finder get findStepperSave => find.byKey(const ValueKey('mosquito-save'));
+
+/// The value the stepper is currently showing, read off its own readout rather
+/// than tracked separately by the test.
+int stepperValue(WidgetTester tester) {
+  final readout = tester.widget<Text>(
+    find.descendant(
+      of: find.byKey(const ValueKey('mosquito-selected-value')),
+      matching: find.byType(Text),
+    ),
+  );
+  return int.parse(readout.data!.split(' ').first);
+}
+
+/// Walks the stepper's +/- from wherever it sits to [value], failing loudly if
+/// a bound stops it short instead of looping forever.
+Future<void> stepStepperTo(WidgetTester tester, int value) async {
+  var current = stepperValue(tester);
+  while (current != value) {
+    final button = current < value ? findStepperIncrease : findStepperDecrease;
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await tester.pump();
+    final next = stepperValue(tester);
+    if (next == current) {
+      throw StateError('the stepper will not move past $current toward $value');
+    }
+    current = next;
+  }
+}
+
+/// Answers [metricKey] with [value] the way a person would: one tap on the
+/// per-value controls, step-then-Save on the stepper. The expanded Armstrong
+/// and Bristol controls are tall, so every target is scrolled into view first.
+Future<void> answerWith(
+  WidgetTester tester,
+  String metricKey,
+  int value,
+) async {
+  final target = controlFor(metricKey) == ScanControl.stepper
+      ? findStepperSave
+      : findOption(metricKey, value);
+  if (controlFor(metricKey) == ScanControl.stepper) {
+    await stepStepperTo(tester, value);
+  }
+  await tester.ensureVisible(target);
+  await tester.tap(target);
+  await tester.pump();
+}
 
 /// Taps a card's own body (its metric name), which is what a user taps to
 /// open it — the card centre can land on a chip once it is already open.
