@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ourobion_metrics/ourobion_metrics.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/theme.dart';
@@ -304,35 +305,60 @@ class MetricTrendSectionState extends State<MetricTrendSection> {
 
 // ── Chart painter ──────────────────────────────────────────────────────────────
 
-/// Metric-aware y-axis ticks. Ordinal scales stay on valid integer categories;
-/// continuous metrics retain nice numeric ticks.
-List<double> trendAxisTicks(String metricKey, List<double> values) =>
-    switch (metricKey) {
-      'urine_colour' => const [1, 4, 8],
-      'stool_form' => const [1, 4, 7],
-      'outside_meals' => const [0, 1, 2, 3],
-      'mosquito_bites' => const [0, 5, 10, 15, 20],
-      'energy_score' || 'mood_score' || 'gut_comfort_score' => const [1, 3, 5],
-      _ => niceTicks(valueBounds(values)),
-    };
+/// Metric-aware y-axis ticks. The shared registry owns whether values are
+/// continuous or step-aligned; adding a metric never requires a chart key list.
+List<double> trendAxisTicks(String metricKey, List<double> values) {
+  final metric = metricByKey(metricKey);
+  final valueStep = metric?.valueStep?.toDouble();
+  if (metric == null || valueStep == null) {
+    return niceTicks(valueBounds(values));
+  }
+
+  final scale = metric.scale;
+  if (metric.type == 'ordinal' && scale != null) {
+    return _ordinalTicks(scale, valueStep);
+  }
+
+  final bounds = scale == null
+      ? valueBounds(values)
+      : ValueBounds(scale.min.toDouble(), scale.max.toDouble());
+  return steppedTicks(
+    bounds,
+    valueStep: valueStep,
+    origin: scale?.min.toDouble() ?? 0,
+  );
+}
+
+List<double> _ordinalTicks(MetricScale scale, double valueStep) {
+  final min = scale.min.toDouble();
+  final max = scale.max.toDouble();
+  final categoryCount = ((max - min) / valueStep).round() + 1;
+  if (categoryCount <= 4) {
+    return [
+      for (var i = 0; i < categoryCount; i++) min + i * valueStep,
+    ];
+  }
+  final midpoint = min + ((categoryCount - 1) ~/ 2) * valueStep;
+  return [min, midpoint, max];
+}
 
 ValueBounds trendAxisBounds(
   String metricKey,
   List<double> values,
   List<double> ticks,
-) => switch (metricKey) {
-  'urine_colour' => const ValueBounds(1, 8),
-  'stool_form' => const ValueBounds(1, 7),
-  'outside_meals' => const ValueBounds(0, 3),
-  'mosquito_bites' => const ValueBounds(0, 20),
-  'energy_score' ||
-  'mood_score' ||
-  'gut_comfort_score' => const ValueBounds(1, 5),
-  _ => ValueBounds(
-    math.min(valueBounds(values).min, ticks.first),
-    math.max(valueBounds(values).max, ticks.last),
-  ),
-};
+) {
+  final metric = metricByKey(metricKey);
+  final scale =
+      metric == null || metric.valueStep == null ? null : metric.scale;
+  if (scale != null) {
+    return ValueBounds(scale.min.toDouble(), scale.max.toDouble());
+  }
+  final dataBounds = valueBounds(values);
+  return ValueBounds(
+    math.min(dataBounds.min, ticks.first),
+    math.max(dataBounds.max, ticks.last),
+  );
+}
 
 String trendAxisLabel(String metricKey, double tick) => switch (metricKey) {
   'urine_colour' => switch (tick.round()) {

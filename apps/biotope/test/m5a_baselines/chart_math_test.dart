@@ -102,6 +102,33 @@ void main() {
     });
   });
 
+  group('steppedTicks', () {
+    test('never invents fractional values for a narrow whole-step range', () {
+      expect(
+        steppedTicks(const ValueBounds(1, 2), valueStep: 1),
+        [1, 2],
+      );
+    });
+
+    test('flat off-grid input still labels the declared value grid', () {
+      expect(
+        steppedTicks(const ValueBounds(1.5, 1.5), valueStep: 1),
+        [2],
+      );
+    });
+
+    test('uses a readable multiple of the declared smallest increment', () {
+      final ticks = steppedTicks(
+        const ValueBounds(0, 20),
+        valueStep: 1,
+      );
+      expect(ticks, [0, 5, 10, 15, 20]);
+      for (final tick in ticks) {
+        expect(tick % 1, 0);
+      }
+    });
+  });
+
   group('compactValueLabel', () {
     test('integers drop the decimal point', () {
       expect(compactValueLabel(4.0), '4');

@@ -3,7 +3,8 @@
 **This file is the ONLY definition of the `MetricDefinition` shape; [`docs/biotope/metrics-registry-design.md`](../../docs/biotope/metrics-registry-design.md) carries rationale only.**
 
 `registry.ts` is **the single source of truth** for every metric ourobion collects.
-`registry.dart` is its faithful mirror for the Flutter app. The two are held in lockstep by
+`lib/src/registry.dart` is its faithful mirror for the Flutter app, exposed only through the
+`lib/ourobion_metrics.dart` package barrel. The two are held in lockstep by
 guards — adding or removing a metric is a localized, guard-protected change, so incomplete
 propagation fails the build instead of silently breaking at runtime.
 
@@ -20,6 +21,7 @@ See [`docs/biotope/metrics-registry-design.md`](../../docs/biotope/metrics-regis
 | `continuity` | `continuous` \| `episodic` \| `state` \| `static` — the data shape over time |
 | `type` | `numeric` \| `ordinal` \| `boolean` \| `enum` \| `multi_select` \| `text` |
 | `scale` | `{ min, max }` for numeric/ordinal, else `null` |
+| `valueStep` | optional smallest valid increment; defaults to `null` (continuous). Every ordinal declares it, and numeric whole-count/whole-point metrics opt in explicitly |
 | `unit` | optional display unit |
 | `enumValues` | allowed values for `enum` / `multi_select`, else `null` |
 | `baselineApplicable` | does M5a compute mean/std/trend? (true only for numeric/ordinal) |
@@ -34,7 +36,13 @@ See [`docs/biotope/metrics-registry-design.md`](../../docs/biotope/metrics-regis
 | `status` | `active` \| `deprecated` |
 | `introducedIn` / `deprecatedAt` | lifecycle stamps |
 
-Typed accessors live in `index.ts` / `index.dart` (`activeMetrics`, `metricByKey`,
+`valueStep` is deliberately explicit rather than inferred. `type: ordinal` and the existing UI
+input hints identify 13 whole-step metrics, but neither can classify derived `stool_variability`,
+derived `log_completeness`, or sensor `step_count`; `scale` also cannot help because `step_count`
+is intentionally unbounded. Declaring the increment on all 16 discrete metrics lets every display
+consumer stay registry-driven while continuous metrics retain the backward-compatible `null` default.
+
+Typed accessors live in `index.ts` / `lib/ourobion_metrics.dart` (`activeMetrics`, `metricByKey`,
 `metricsByTable`, `baselineKeys`, `activeKeys`, `isActiveMetric`, `dqsWeights`,
 `dailyCompletenessKeys`) — consumers read the list through these, never hardcoded keys.
 
@@ -65,7 +73,7 @@ continuous spine), `antibiotic_courses` → `state_bands`, `wearable_daily` → 
 
 ## Add a metric (safe flow)
 
-1. Add **one** entry to `registry.ts` **and** `registry.dart` (same key, same order within its
+1. Add **one** entry to `registry.ts` **and** `lib/src/registry.dart` (same key, same order within its
    source block).
 2. Guards fail and tell you exactly what's missing. Legacy wide table (`daily_gut_rows` /
    `wearable_daily`): add the field to the contract row (TS + Dart) plus a migration
@@ -97,7 +105,7 @@ continuous spine), `antibiotic_courses` → `state_bands`, `wearable_daily` → 
 These edges enforce the registry, defined in [`docs/graph/couplings.yaml`](../../docs/graph/couplings.yaml)
 with tests in [`apps/biotope/test/guards/`](../../apps/biotope/test/guards/):
 
-- `metrics-registry-ts-dart-parity` — `registry.ts` == `registry.dart`
+- `metrics-registry-ts-dart-parity` — `registry.ts` == `lib/src/registry.dart`
 - `metrics-registry-to-contract` — registry keys (per table) == contract row fields (TS + Dart)
 - `metrics-registry-to-schema` — registry keys (per table) == migration columns
 - `metrics-registry-to-baselines` — `compute-baselines` derives its list from the registry

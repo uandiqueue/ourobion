@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -13,15 +13,25 @@ import {
 import { validateRegistry } from '../../../shared/metrics/registry.schema.ts';
 import type { MetricDefinition } from '../../../shared/metrics/registry.ts';
 
+const productionMetrics =
+  metricsRegistry.METRICS as readonly MetricDefinition[];
+
+function productionMetric(key: string): MetricDefinition {
+  const metric = productionMetrics.find((candidate) => candidate.key === key);
+  assert.ok(metric, `missing production metric: ${key}`);
+  return metric;
+}
+
 function fixture(overrides: Partial<MetricDefinition>): MetricDefinition {
   return {
-    ...metricsRegistry.METRICS[0],
+    ...productionMetrics[0]!,
     key: 'fixture_metric',
     table: 'events',
     tier: 'T3',
     continuity: 'episodic',
     type: 'numeric',
     scale: { min: 0, max: 100 },
+    valueStep: null,
     baselineApplicable: false,
     signal: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
@@ -222,9 +232,113 @@ test('runtime schema accepts all production metrics with absent policy defaultin
   }
 });
 
+test('valueStep is optional-with-default and rejects incompatible grids', () => {
+  const sleep = {
+    ...productionMetric('sleep_duration_min'),
+  } as Record<string, unknown>;
+  delete sleep.valueStep;
+  const [normalized] = validateRegistry([sleep]);
+  assert.equal(normalized?.valueStep, null);
+
+  assert.throws(
+    () =>
+      validateRegistry([
+        {
+          ...productionMetric('stool_form'),
+          valueStep: null,
+        },
+      ]),
+    /ordinal metrics require valueStep/,
+  );
+  assert.throws(
+    () =>
+      validateRegistry([
+        {
+          ...productionMetric('stool_count'),
+          valueStep: 4,
+        },
+      ]),
+    /whole multiple of valueStep/,
+  );
+  assert.throws(
+    () =>
+      validateRegistry([
+        {
+          ...productionMetric('standing_water_present'),
+          valueStep: 1,
+        },
+      ]),
+    /valueStep is only valid for numeric\|ordinal/,
+  );
+});
+
+test('production whole-step policy covers all 16 discrete metrics explicitly', () => {
+  const stepped = productionMetrics
+    .filter((metric) => metric.valueStep === 1)
+    .map((metric) => metric.key)
+    .sort();
+  assert.deepEqual(
+    stepped,
+    [
+      'anxiety_score',
+      'appetite_score',
+      'brain_clarity_score',
+      'energy_score',
+      'focus_score',
+      'gut_comfort_score',
+      'log_completeness',
+      'mood_score',
+      'mosquito_bites',
+      'outside_meals',
+      'social_interaction_quality_score',
+      'step_count',
+      'stool_count',
+      'stool_form',
+      'stool_variability',
+      'urine_colour',
+    ],
+  );
+});
+
+test('Biotope consumes the registry through the public Dart package barrel', () => {
+  const metricRoot = path.join(REPO_ROOT, 'shared', 'metrics');
+  const barrel = readFileSync(path.join(metricRoot, 'lib', 'ourobion_metrics.dart'), 'utf8');
+  const pubspec = readFileSync(path.join(REPO_ROOT, 'apps', 'biotope', 'pubspec.yaml'), 'utf8');
+  const trend = readFileSync(
+    path.join(
+      REPO_ROOT,
+      'apps',
+      'biotope',
+      'lib',
+      'modules',
+      'm5a_baselines',
+      'ui',
+      'widgets',
+      'metric_trend_section.dart',
+    ),
+    'utf8',
+  );
+
+  assert.equal(existsSync(path.join(metricRoot, 'registry.dart')), false);
+  assert.equal(existsSync(path.join(metricRoot, 'index.dart')), false);
+  assert.match(barrel, /export 'src\/registry\.dart'/);
+  assert.match(pubspec, /ourobion_metrics:\s*\r?\n\s+path: \.\.\/\.\.\/shared\/metrics/);
+  assert.match(trend, /package:ourobion_metrics\/ourobion_metrics\.dart/);
+  assert.match(trend, /metricByKey\(metricKey\)/);
+  assert.match(trend, /metric\?\.valueStep/);
+  const axisPolicy = trend.slice(
+    trend.indexOf('List<double> trendAxisTicks'),
+    trend.indexOf('String trendAxisLabel'),
+  );
+  assert.doesNotMatch(axisPolicy, /switch\s*\(metricKey\)/);
+});
+
 test('TS and Dart contracts expose the same closed dailyProjection vocabulary', () => {
   const ts = readFileSync(path.join(REPO_ROOT, 'shared', 'metrics', 'registry.ts'), 'utf8');
-  const dart = readFileSync(path.join(REPO_ROOT, 'shared', 'metrics', 'registry.dart'), 'utf8');
+  const dart = readFileSync(
+    path.join(REPO_ROOT, 'shared', 'metrics', 'lib', 'src', 'registry.dart'),
+    'utf8',
+  );
 
   const tsBlock = (name: string) =>
     ts.match(new RegExp(`export type ${name} = \\{([\\s\\S]*?)\\n\\};`))?.[1] ?? '';
@@ -255,6 +369,8 @@ test('TS and Dart contracts expose the same closed dailyProjection vocabulary', 
   assert.deepEqual(tsValues(state, 'interval'), dartValues('StateBandInterval'));
   assert.match(dart, /final DailyProjection\? dailyProjection/);
   assert.match(dart, /this\.dailyProjection/);
+  assert.match(dart, /final num\? valueStep/);
+  assert.match(dart, /this\.valueStep/);
   for (const metric of metricsRegistry.METRICS) {
     assert.equal(metric.dailyProjection ?? null, null, `${metric.key} unexpectedly selected a production policy`);
   }

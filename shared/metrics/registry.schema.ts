@@ -67,6 +67,7 @@ export const metricDefinitionSchema = z.object({
   continuity: metricContinuitySchema,
   type: metricTypeSchema,
   scale: z.object({ min: z.number(), max: z.number() }).nullable(),
+  valueStep: z.number().positive().nullable().default(null),
   unit: z.string().nullable(),
   enumValues: z.array(z.string()).readonly().nullable(),
   baselineApplicable: z.boolean(),
@@ -101,6 +102,27 @@ export const registrySchema = z
           code: 'custom',
           message: `${m.key}: baselineApplicable requires numeric|ordinal type`,
         });
+      }
+      if (m.valueStep !== null && m.type !== 'numeric' && m.type !== 'ordinal') {
+        ctx.addIssue({
+          code: 'custom',
+          message: `${m.key}: valueStep is only valid for numeric|ordinal metrics`,
+        });
+      }
+      if (m.type === 'ordinal' && m.valueStep === null) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `${m.key}: ordinal metrics require valueStep`,
+        });
+      }
+      if (m.scale && m.valueStep !== null) {
+        const scaleSteps = (m.scale.max - m.scale.min) / m.valueStep;
+        if (scaleSteps <= 0 || Math.abs(scaleSteps - Math.round(scaleSteps)) > 1e-9) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `${m.key}: scale span must be a positive whole multiple of valueStep`,
+          });
+        }
       }
       // Every baselined metric carries S4 signal params (ADR-0002 deadband).
       if (m.baselineApplicable && m.signal === null) {

@@ -73,6 +73,36 @@ List<double> niceTicks(ValueBounds bounds, {int targetCount = 4}) {
   return ticks;
 }
 
+/// Tick values aligned to a metric's declared [valueStep].
+///
+/// The display interval is a nice 1/2/5 multiple of the smallest valid value
+/// increment, so a narrow whole-step series such as 1..2 can never invent 1.5.
+List<double> steppedTicks(
+  ValueBounds bounds, {
+  required double valueStep,
+  double origin = 0,
+  int targetCount = 4,
+}) {
+  assert(valueStep > 0);
+  assert(targetCount >= 1);
+  if (bounds.isDegenerate) {
+    final gridPosition = (bounds.min - origin) / valueStep;
+    return [origin + gridPosition.round() * valueStep];
+  }
+
+  final spanInSteps = (bounds.max - bounds.min) / valueStep;
+  final niceMultiple = niceStep(spanInSteps / targetCount);
+  final intervalSteps = niceMultiple < 1 ? 1 : niceMultiple.ceil();
+  final interval = intervalSteps * valueStep;
+  final firstTick =
+      origin + ((bounds.min - origin) / interval).floor() * interval;
+  final ticks = <double>[];
+  for (var t = firstTick; t < bounds.max + interval / 2; t += interval) {
+    ticks.add(double.parse(t.toStringAsFixed(10)));
+  }
+  return ticks;
+}
+
 /// Compact value label: integers without a decimal point, otherwise one
 /// decimal ('4' not '4.0'; '3.5' stays '3.5').
 String compactValueLabel(double v) {

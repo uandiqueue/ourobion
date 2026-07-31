@@ -4,7 +4,7 @@ summary: Why the metric registry (shared/metrics/) is a code-registry-plus-parit
 type: design
 scope: biotope
 status: canonical
-updated: 2026-07-13
+updated: 2026-07-31
 ---
 # Metrics Registry — Design
 
@@ -51,9 +51,12 @@ planned `shared/rules`:
 ```
 shared/metrics/
   registry.ts          # canonical metric definitions (the source of truth)
-  registry.dart        # Dart mirror (app side)
   registry.schema.ts   # zod schema + AssertExact compile-time drift guard (same pattern as shared/rules)
-  index.ts / index.dart# typed accessors (byKey, byTable, active, baselineApplicable, dqsWeights, …)
+  index.ts             # TypeScript typed accessors
+  pubspec.yaml         # local Dart package manifest
+  lib/
+    ourobion_metrics.dart # public Dart barrel + typed accessors
+    src/registry.dart  # private Dart mirror (app side)
   README.md            # the contract + the add / remove runbook
 ```
 
@@ -134,7 +137,8 @@ which is *why* it is nullable — not a reason to drop it). The stale artifact w
 
 ## Implementation steps
 
-1. ✅ `shared/metrics/{registry.ts, registry.schema.ts, index.ts}` + `registry.dart` + `index.dart` + `README.md`.
+1. ✅ `shared/metrics/{registry.ts, registry.schema.ts, index.ts}` + local Dart package +
+   `README.md`.
 2. ✅ Seeded from the **deployed** schema (gut + corrected wearable), all `status: active`. Env (`env_daily`)
    is deferred until the M4 migration lands — the runbook in `shared/metrics/README.md` shows the add flow.
 3. ✅ Parity + contract + schema + baselines + engine guards made real (`status: active` in

@@ -77,13 +77,20 @@ Map<String, Set<String>> dartClassToJsonKeys(String dartSource) {
   return result;
 }
 
-/// One parsed metric entry from registry.ts / registry.dart.
+/// One parsed metric entry from registry.ts / the Dart package mirror.
 class RegistryEntry {
-  RegistryEntry(this.key, this.table, this.status, this.baselineApplicable);
+  RegistryEntry(
+    this.key,
+    this.table,
+    this.status,
+    this.baselineApplicable,
+    this.valueStep,
+  );
   final String key;
   final String table;
   final String status;
   final bool baselineApplicable;
+  final num? valueStep;
 }
 
 /// Parse metric entries (in declaration order) from a registry source (TS or Dart). Both files
@@ -112,7 +119,11 @@ List<RegistryEntry> parseRegistry(String source) {
           r'baselineApplicable:\s*(true|false)',
         ).firstMatch(block)?.group(1) ==
         'true';
-    entries.add(RegistryEntry(key, table, status, ba));
+    final stepMatch =
+        RegExp(r'valueStep:\s*(-?\d+(?:\.\d+)?)').firstMatch(block);
+    final valueStep =
+        stepMatch == null ? null : num.parse(stepMatch.group(1)!);
+    entries.add(RegistryEntry(key, table, status, ba, valueStep));
   }
   return entries;
 }
