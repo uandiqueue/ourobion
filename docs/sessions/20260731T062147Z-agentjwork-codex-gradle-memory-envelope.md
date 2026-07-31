@@ -33,7 +33,7 @@ Issue: #276 · branch: `fix/build/gradle-memory-276` · base: `dev-phase2-run4` 
 - Public build config was copied mechanically from the main worktree. Its only key names were
   `SUPABASE_URL` and `SUPABASE_ANON_KEY`, and `git check-ignore` confirmed `.env.public` stayed ignored;
   no value was printed or committed.
-- Focused Gradle-memory guard: 1 passed, 0 failed.
+- Focused Gradle-memory guard: 1 passed, 0 failed; snapshot reconciliation: focused product-cap test 1/1 and full release-gate suite 17/17 passed.
 - `flutter analyze --no-pub`: clean in 79.3 seconds.
 - `flutter test --no-pub --concurrency=1`: 416 passed, 26 expected skips, 0 failed in 84.2 seconds wall time.
 - `flutter build apk --debug --target-platform android-arm64 --no-pub`: succeeded in 282.5 seconds
@@ -50,7 +50,7 @@ Issue: #276 · branch: `fix/build/gradle-memory-276` · base: `dev-phase2-run4` 
 
 ## Left
 
-- Exact-head GitHub CI and review on the issue PR.
+- PR #281 CI snapshot reconciliation for the measured 447-path / 62,701-line product union; the unchanged 115 / 8,500 caps remain explicitly non-acceptance, followed by exact-head review.
 
 ## Blockers
 
