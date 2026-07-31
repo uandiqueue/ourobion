@@ -25,15 +25,35 @@ Issue: #276 · branch: `fix/build/gradle-memory-276` · base: `dev-phase2-run4` 
 ## Decided
 
 - The committed values reproduce the successful Run 4 bounded ARM64 debug build. They constrain local build tooling only and do not skip build stages or change runtime functionality.
-- Heavy validation remains intentionally deferred until the orchestrator releases the single-host build slot.
+- Heavy validation ran only after the orchestrator released the single-host build slot. The branch
+  first merged `origin/dev-phase2-run4` at `a5d5953b` normally; no rebase or force operation was used.
+
+## Verification
+
+- Public build config was copied mechanically from the main worktree. Its only key names were
+  `SUPABASE_URL` and `SUPABASE_ANON_KEY`, and `git check-ignore` confirmed `.env.public` stayed ignored;
+  no value was printed or committed.
+- Focused Gradle-memory guard: 1 passed, 0 failed.
+- `flutter analyze --no-pub`: clean in 79.3 seconds.
+- `flutter test --no-pub --concurrency=1`: 416 passed, 26 expected skips, 0 failed in 84.2 seconds wall time.
+- `flutter build apk --debug --target-platform android-arm64 --no-pub`: succeeded in 282.5 seconds
+  wall time (Gradle 279.2 seconds) using the committed default properties, with `GRADLE_OPTS`,
+  `JAVA_OPTS`, and `JAVA_TOOL_OPTIONS` absent and no command-line JVM override.
+- The spawned Gradle daemon was PID 29992. Its command line contained `-Xmx1536m`,
+  `MaxMetaspaceSize=768m`, and `ReservedCodeCacheSize=256m`, and did not contain `-Xmx8G`.
+- On the 16,111 MB host, free physical memory was 3,012 MB before the build; the bounded in-flight
+  sample window observed a 2,535 MB minimum; immediate post-build/pre-cleanup free memory was 1,581 MB.
+  After stopping only verified daemon PID 29992 and confirming it exited, free memory recovered to
+  3,129 MB. These are observed snapshots, not a continuous whole-build peak measurement.
+- `flutter pub get` and the build produced lock/generated-plugin drift only; those generated changes
+  were discarded, leaving no dependency or platform-generated delta in the issue branch.
 
 ## Left
 
-- Clean Windows ARM64 debug-build evidence, including observed available memory, on this exact branch.
-- Full Flutter analyze/test and PR CI after the heavy-validation slot is released.
+- Exact-head GitHub CI and review on the issue PR.
 
 ## Blockers
 
-- The shared 16 GB host is currently reserved for higher-priority UI/device acceptance; no Gradle, Flutter, emulator, Docker, or package-install process was started by this session.
+- None.
 
 memory: none
