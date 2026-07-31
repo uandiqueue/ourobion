@@ -44,3 +44,50 @@ Issue: #221 · branch: `feat/m2/run4-u6b-batch1-reconcile-221` · base:
 - None for this fixture-only reconciliation.
 
 memory: none
+
+## Continuation — remote evidence fallback
+
+### Attempted
+
+- Kept the local Docker/Supabase execution deferral intact: the shared host must not create,
+  reset, or remove containers for this session.
+- Added a narrow, path-scoped GitHub Actions evidence workflow for the unresolved #221 rollback
+  fixtures and local four-function attestation evidence.
+
+### Changed
+
+- Added `.github/workflows/run4-u6b-evidence.yml` with a static contract job plus two
+  supplemental, no-secret Ubuntu evidence jobs. The rollback job aliases its isolated postgres:17
+  service container to `supabase_db_ourobion`, applies only the migration baseline through
+  `20260730020000`, installs only the metric-view fixture's local `tsx` dependency, and runs the
+  unchanged transactional wellbeing and metric-view fixtures.
+- The attestation job checks out the event SHA, uses Node 20/Deno 2.8.1/repository-local CLI,
+  probes only the four localhost function routes with unauthenticated `{}`, requires the recorded
+  401 response hash, generates an attestation into runner temp, validates it with a separate fresh
+  graph directory, and uploads a one-day redacted artifact. It retains a hash of the serve log,
+  never the raw log; success explicitly stops the server, restores the checked-in manifest, clears
+  its trap, and removes the backup.
+- Added a static workflow-contract test that pins the migration boundary, container alias, exact
+  route set/hash, generator call, separate graph directories, cleanup/redaction ordering, short
+  retention, and absence from the frozen aggregate.
+
+### Decided
+
+- This is remote CI evidence only. It neither deploys nor contacts a hosted Supabase URL, uses
+  secrets, providers, R2, or a product database, and does not claim hosted deploy parity.
+- The generated manifest preserves the existing replay boundary verbatim. It is copied to the
+  canonical runner-local location only because the existing verifier has no `--manifest-path`;
+  failure cleanup conditionally restores the checked-in manifest.
+- The new jobs are supplemental evidence and deliberately are not added to the frozen Run 4
+  required-job/aggregate set.
+
+### Left
+
+- Let GitHub Actions execute the remote evidence after review; no local Docker/Supabase execution
+  was attempted on the shared host.
+
+### Blockers
+
+- None. Local host execution remains deliberately deferred for shared-container safety.
+
+memory: none
