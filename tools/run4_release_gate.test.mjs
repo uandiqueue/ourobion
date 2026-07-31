@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';
+﻿import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -182,7 +182,7 @@ test('landing delta allowlisted-binary exception passes allowlisted paths at zer
     'rev-parse HEAD': `${head}\n`,
     [`merge-base ${RUN4_UNIT_BASE_SHA} ${head}`]: `${RUN4_UNIT_BASE_SHA}\n`,
   };
-  // Unlike the plain `mock` above, this one can also throw — needed to simulate `git cat-file -s`
+  // Unlike the plain `mock` above, this one can also throw â€” needed to simulate `git cat-file -s`
   // failing for a path with no blob at head (e.g. a deletion), the same way real git would.
   const mockGit = (responses) => (_command, args) => {
     const key = args.join(' ');
@@ -418,15 +418,15 @@ test('product cap measures the immutable union, reports breach without throwing,
   assert.ok(recoveredPaths.includes('tools/brain-ingest/src/verify/artifact.ts'), 'product-cap must exercise source-text recovery for artifact.ts');
   assert.equal(delta.allowlistedBinaryPaths, 15);
   assert.ok(delta.allowlistedBinaryBytes > 0 && delta.allowlistedBinaryBytes <= RUN4_MAX_ALLOWLISTED_BINARY_BYTES);
-  assert.deepEqual({ changedPaths: delta.changedPaths, addedLines: delta.addedLines }, { changedPaths: 512, addedLines: 71841 });
+  assert.deepEqual({ changedPaths: delta.changedPaths, addedLines: delta.addedLines }, { changedPaths: 514, addedLines: 72001 });
   assert.ok(delta.changedPaths > RUN4_MAX_CHANGED_PATHS);
   assert.ok(delta.addedLines > RUN4_MAX_ADDED_LINES);
   // Measurement reports breach as data; only the enforcement wrapper throws. This is the whole
-  // "record, don't gate" split — if these two ever agree, the measurement has become a gate.
+  // "record, don't gate" split â€” if these two ever agree, the measurement has become a gate.
   assert.equal(delta.withinCap, false);
   assert.throws(
     () => checkProductLandingDelta({ base: RUN4_PRODUCT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES }),
-    /product landing delta has 512 paths; cap is 115/
+    /product landing delta has 514 paths; cap is 115/
   );
 });
 
@@ -483,7 +483,7 @@ test('product cap rejects unexpected, unmeasurable, over-byte-cap, and over-path
 });
 
 test('product cap enforcement rejects a moving base, a drifted cap, and shallow history', () => {
-  // The per-unit boundary can never satisfy the product gate — that is the #183 invariant.
+  // The per-unit boundary can never satisfy the product gate â€” that is the #183 invariant.
   assert.throws(
     () => checkProductLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES }),
     /base must equal immutable product SHA/
