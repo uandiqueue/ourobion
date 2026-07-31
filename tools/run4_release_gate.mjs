@@ -60,11 +60,11 @@ export function hashTextEvidence(value) {
 // the attestation manifest, so the base advance is folded into this PR rather than opening a
 // separate base-advance PR that would collide with it.
 //
-// Advanced to 6020f444, the exact fully green #254 two-parent integration merge. Its tree equals
-// second parent d536eda (accepted U3 head); 38205d remains in the superseded-base history above.
-// Re-check the integration branch immediately before push; if it moved, this value and the
-// generated attestation must move again. Caps remain 115 / 8,500 and fail closed.
-export const RUN4_UNIT_BASE_SHA = '6020f444a104b734df42e04f262bf19e701d1975';
+// Advanced to 42ae771c, the exact current dev-phase2-run4 integration parent for #221 evidence.
+// 6020f444 remains historical only: retaining it would charge this unit for already accepted
+// integration history. Re-check the integration branch immediately before push; if it moved, this
+// value and the generated attestation must move again. Caps remain 115 / 8,500 and fail closed.
+export const RUN4_UNIT_BASE_SHA = '42ae771c4809fe8f314fbf38dca89d60a809dedb';
 
 // ---------------------------------------------------------------------------------------------
 // Immutable product cap (issue #183) — MEASURED AND RECORDED, NOT YET GATING.
