@@ -66,8 +66,14 @@ abstract final class ProvenanceCopy {
   static const derivationLabel = 'HOW THIS LINK WAS DERIVED';
   static const populationPrefix = 'Studied scope: ';
   static const quotesLabel = 'SOURCE QUOTES';
-  static const citationsLabel = 'CITATIONS';
-  static const evidenceLabel = 'Evidence passages';
+  static const citationsLabel = 'PAPER EVIDENCE';
+  static const verbatimEvidenceLabel = 'VERBATIM EVIDENCE';
+  static const mechanismLabel = "PAPER'S STATED MECHANISM";
+  static const evidenceUnavailable =
+      'No verbatim evidence sentence was supplied for this paper.';
+  static const mechanismUnavailable =
+      'No mechanism sentence was supplied for this paper.';
+  static const evidenceLabel = 'Verifier evidence passages';
   static const openPaper = 'Open paper';
   static const openPaperExternal = 'Open paper externally';
   static const paperLinkUnavailable = 'Paper link unavailable';
@@ -108,6 +114,10 @@ abstract final class ProvenanceCopy {
     quotesLabel,
     citationsLabel,
     evidenceLabel,
+    verbatimEvidenceLabel,
+    mechanismLabel,
+    evidenceUnavailable,
+    mechanismUnavailable,
     openPaper,
     openPaperExternal,
     paperLinkUnavailable,
@@ -593,6 +603,13 @@ class _EdgeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final unmatchedSpans = edge.quoteSpans
+        .where(
+          (span) => !edge.citations.any(
+            (citation) => citation.matchesPaperId(span.paperId),
+          ),
+        )
+        .toList();
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -667,20 +684,26 @@ class _EdgeCard extends StatelessWidget {
               ),
             ),
           ],
-          if (edge.quoteSpans.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            _eyebrow(ProvenanceCopy.quotesLabel),
-            for (final span in edge.quoteSpans) ...[
-              const SizedBox(height: 6),
-              _QuoteSpanTile(span: span),
-            ],
-          ],
           if (edge.citations.isNotEmpty) ...[
             const SizedBox(height: 10),
             _eyebrow(ProvenanceCopy.citationsLabel),
             for (final citation in edge.citations) ...[
               const SizedBox(height: 6),
-              _CitationTile(citation: citation, onOpenPaper: onOpenPaper),
+              _CitationTile(
+                citation: citation,
+                quoteSpans: edge.quoteSpans
+                    .where((span) => citation.matchesPaperId(span.paperId))
+                    .toList(),
+                onOpenPaper: onOpenPaper,
+              ),
+            ],
+          ],
+          if (unmatchedSpans.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _eyebrow(ProvenanceCopy.quotesLabel),
+            for (final span in unmatchedSpans) ...[
+              const SizedBox(height: 6),
+              _QuoteSpanTile(span: span),
             ],
           ],
         ],
@@ -728,10 +751,57 @@ class _QuoteSpanTile extends StatelessWidget {
   }
 }
 
+class _PaperQuoteTile extends StatelessWidget {
+  final ProvenanceQuoteSpan span;
+  const _PaperQuoteTile({required this.span});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: OurobionColors.background,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: OurobionColors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            span.quote,
+            style: GoogleFonts.manrope(
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
+              color: OurobionColors.onSurfaceVariant,
+              height: 1.5,
+            ),
+          ),
+          if (span.section case final section?) ...[
+            const SizedBox(height: 3),
+            Text(
+              section,
+              style: GoogleFonts.manrope(
+                fontSize: 10,
+                color: OurobionColors.outline,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _CitationTile extends StatelessWidget {
   final ProvenanceCitation citation;
+  final List<ProvenanceQuoteSpan> quoteSpans;
   final ValueChanged<Uri> onOpenPaper;
-  const _CitationTile({required this.citation, required this.onOpenPaper});
+  const _CitationTile({
+    required this.citation,
+    required this.quoteSpans,
+    required this.onOpenPaper,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -746,6 +816,12 @@ class _CitationTile extends StatelessWidget {
       if (citation.stance != null) citation.stance!,
       if (citation.population != null) citation.population!,
     ].join(' · ');
+    final evidenceSpans = quoteSpans
+        .where((span) => !span.isMechanism)
+        .toList();
+    final mechanismSpans = quoteSpans
+        .where((span) => span.isMechanism)
+        .toList();
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(10),
@@ -807,6 +883,36 @@ class _CitationTile extends StatelessWidget {
                 color: OurobionColors.outline,
               ),
             ),
+          const SizedBox(height: 10),
+          _eyebrow(ProvenanceCopy.verbatimEvidenceLabel),
+          if (evidenceSpans.isEmpty)
+            Text(
+              ProvenanceCopy.evidenceUnavailable,
+              style: GoogleFonts.manrope(
+                fontSize: 10,
+                color: OurobionColors.outline,
+              ),
+            )
+          else
+            for (final span in evidenceSpans) ...[
+              const SizedBox(height: 4),
+              _PaperQuoteTile(span: span),
+            ],
+          const SizedBox(height: 10),
+          _eyebrow(ProvenanceCopy.mechanismLabel),
+          if (mechanismSpans.isEmpty)
+            Text(
+              ProvenanceCopy.mechanismUnavailable,
+              style: GoogleFonts.manrope(
+                fontSize: 10,
+                color: OurobionColors.outline,
+              ),
+            )
+          else
+            for (final span in mechanismSpans) ...[
+              const SizedBox(height: 4),
+              _PaperQuoteTile(span: span),
+            ],
           if (citation.evidence.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(

@@ -14,9 +14,18 @@
 // the Flutter package (live-proof scripts, plain `dart` VM) — keep it pure.
 
 Map<String, dynamic>? _asMap(dynamic v) =>
-    v == null ? null : Map<String, dynamic>.from(v as Map);
+    v is Map ? Map<String, dynamic>.from(v) : null;
 
-List<dynamic> _asList(dynamic v) => v == null ? const [] : v as List<dynamic>;
+List<dynamic> _asList(dynamic v) => v is List ? v : const [];
+
+String? _optionalString(dynamic value) => value is String ? value : null;
+
+String? _nonEmptyString(dynamic value) {
+  final text = _optionalString(value);
+  return text == null || text.trim().isEmpty ? null : text;
+}
+
+int? _optionalInt(dynamic value) => value is num ? value.toInt() : null;
 
 /// The `card` object: the insight card the provenance belongs to.
 class ProvenanceCardInfo {
@@ -192,6 +201,14 @@ class ProvenanceCitation {
     return Uri.parse('https://doi.org/${candidate.toLowerCase()}');
   }
 
+  /// Matches exact internal IDs and canonical-equivalent DOI spellings.
+  bool matchesPaperId(String candidate) {
+    if (candidate == paperId) return true;
+    final ownUri = paperUri;
+    final candidateUri = ProvenanceCitation(paperId: candidate).paperUri;
+    return ownUri != null && candidateUri != null && ownUri == candidateUri;
+  }
+
   factory ProvenanceCitation.fromJson(Map<String, dynamic> json) {
     return ProvenanceCitation(
       paperId: json['paperId'] as String,
@@ -206,11 +223,45 @@ class ProvenanceCitation {
       ).map((e) => ProvenanceEvidencePassage.fromJson(_asMap(e)!)).toList(),
     );
   }
+
+  /// Tolerant parser for additive provenance payloads. A malformed citation is
+  /// omitted rather than turning a card's whole evidence screen into an error.
+  static ProvenanceCitation? tryFromJson(dynamic value) {
+    final json = _asMap(value);
+    final paperId = json == null ? null : _nonEmptyString(json['paperId']);
+    if (json == null || paperId == null) return null;
+
+    final evidence = <ProvenanceEvidencePassage>[];
+    for (final item in _asList(json['evidence'])) {
+      final passage = _asMap(item);
+      final text = passage == null ? null : _nonEmptyString(passage['text']);
+      if (passage == null || text == null) continue;
+      evidence.add(
+        ProvenanceEvidencePassage(
+          text: text,
+          locator: _optionalString(passage['locator']),
+        ),
+      );
+    }
+
+    return ProvenanceCitation(
+      paperId: paperId,
+      title: _optionalString(json['title']),
+      year: _optionalInt(json['year']),
+      population: _optionalString(json['population']),
+      evidenceTier: _optionalInt(json['evidenceTier']),
+      impactTier: _optionalString(json['impactTier']),
+      stance: _optionalString(json['stance']),
+      evidence: evidence,
+    );
+  }
 }
 
 /// One verbatim quote span backing a claim
 /// (shared/brain/relationships.ts `QuoteSpan`).
 class ProvenanceQuoteSpan {
+  static const mechanismLocatorPrefix = 'mechanism:';
+
   final String paperId;
   final String quote;
   final String? locator;
@@ -225,6 +276,21 @@ class ProvenanceQuoteSpan {
     this.charEnd,
   });
 
+  /// Mirrors #300's TypeScript locator convention exactly. The mechanism is
+  /// still [quote] verbatim; this only classifies how it is presented.
+  bool get isMechanism => locator?.startsWith(mechanismLocatorPrefix) ?? false;
+
+  /// Model-declared section with the mechanism marker removed.
+  String? get section {
+    final raw = locator;
+    if (raw == null || raw.isEmpty) return null;
+    final value = isMechanism
+        ? raw.substring(mechanismLocatorPrefix.length)
+        : raw;
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
   factory ProvenanceQuoteSpan.fromJson(Map<String, dynamic> json) {
     return ProvenanceQuoteSpan(
       paperId: json['paperId'] as String,
@@ -232,6 +298,22 @@ class ProvenanceQuoteSpan {
       locator: json['locator'] as String?,
       charStart: (json['charStart'] as num?)?.toInt(),
       charEnd: (json['charEnd'] as num?)?.toInt(),
+    );
+  }
+
+  /// Keeps only spans that can truthfully identify a paper and quote. Optional
+  /// metadata is retained when well-typed and otherwise left unavailable.
+  static ProvenanceQuoteSpan? tryFromJson(dynamic value) {
+    final json = _asMap(value);
+    final paperId = json == null ? null : _nonEmptyString(json['paperId']);
+    final quote = json == null ? null : _nonEmptyString(json['quote']);
+    if (json == null || paperId == null || quote == null) return null;
+    return ProvenanceQuoteSpan(
+      paperId: paperId,
+      quote: quote,
+      locator: _optionalString(json['locator']),
+      charStart: _optionalInt(json['charStart']),
+      charEnd: _optionalInt(json['charEnd']),
     );
   }
 }
@@ -289,12 +371,14 @@ class ProvenanceEdge {
       verifiedAt: json['verifiedAt'] as String?,
       derivation: json['derivation'] as String?,
       population: json['population'] as String?,
-      quoteSpans: _asList(
-        json['quoteSpans'],
-      ).map((e) => ProvenanceQuoteSpan.fromJson(_asMap(e)!)).toList(),
-      citations: _asList(
-        json['citations'],
-      ).map((e) => ProvenanceCitation.fromJson(_asMap(e)!)).toList(),
+      quoteSpans: _asList(json['quoteSpans'])
+          .map(ProvenanceQuoteSpan.tryFromJson)
+          .whereType<ProvenanceQuoteSpan>()
+          .toList(),
+      citations: _asList(json['citations'])
+          .map(ProvenanceCitation.tryFromJson)
+          .whereType<ProvenanceCitation>()
+          .toList(),
     );
   }
 }
