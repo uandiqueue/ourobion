@@ -44,10 +44,10 @@ test('attestation evidence pins exact local routes, denial hash, generator, and 
   assert.match(workflow, /supabase start --yes --exclude gotrue,realtime,storage-api,imgproxy,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor/);
   assert.match(workflow, /supabase stop --no-backup/);
   assert.match(workflow, /seq 1 120/);
-  assert.match(workflow, /kill -0 \$server_pid/);
+  assert.match(workflow, /kill -0 .*server_pid/);
   assert.match(workflow, /listener did not become ready within 120 seconds/);
   assert.match(workflow, /sanitized_tail/);
-  assert.match(workflow, /rm \$start_log \$stop_log/);
+  assert.match(workflow, /rm .*start_log.*stop_log/);
   assert.doesNotMatch(workflow, /grep -Eq '\^\(401\|404\|500\)\$'/);
   assert.equal((workflow.match(/checksums\.sha256/g) ?? []).length, 1);
   assert.match(workflow, /rm "\$server_log"/);
