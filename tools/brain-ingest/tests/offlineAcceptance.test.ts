@@ -4,7 +4,8 @@ import { appendFileSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFile
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { encodeClaimsJsonl, readFrozenFile, runOfflineAcceptance } from '../src/offlineAcceptance.js';
+import { fileURLToPath } from 'node:url';
+import { encodeClaimsJsonl, prepareOfflineAcceptance, readFrozenFile, runOfflineAcceptance } from '../src/offlineAcceptance.js';
 import { main } from '../src/cli.js';
 
 const PAPER = 'paper:offline-1';
@@ -14,9 +15,15 @@ const INDEPENDENT_QUOTE = 'Independent observations linked higher gut comfort wi
 
 function setup(response = goodResponse(), paperUids = [PAPER]) {
   const dir = mkdtempSync(join(tmpdir(), 'ourobion-offline-acceptance-'));
+  const evidenceInputs = {
+    abstract: null,
+    workType: null,
+    publicationTypes: [],
+    meshHeadings: [{ ui: 'D015331', name: 'Cohort Studies', majorTopic: false }],
+  };
   writeFileSync(join(dir, 'corpus.jsonl'), [
-    JSON.stringify({ paperId: PAPER, title: 'Offline paper', year: 2026, text: QUOTE, evidenceTier: 3, impactTier: 'moderate' }),
-    JSON.stringify({ paperId: INDEPENDENT, title: 'Independent paper', year: 2025, text: INDEPENDENT_QUOTE, evidenceTier: 3, impactTier: 'moderate' }),
+    JSON.stringify({ paperId: PAPER, title: 'Offline paper', year: 2026, text: QUOTE, evidenceTier: 3, evidenceInputs, impactTier: 'moderate' }),
+    JSON.stringify({ paperId: INDEPENDENT, title: 'Independent paper', year: 2025, text: INDEPENDENT_QUOTE, evidenceTier: 3, evidenceInputs, impactTier: 'moderate' }),
   ].join('\n') + '\n');
   writeFileSync(join(dir, 'response.json'), response);
   writeFileSync(join(dir, 'bundle.json'), JSON.stringify({ acceptanceRunId: 'run4-offline-001', artifactRevision: 'run4/offline-001', pair: ['gut_comfort_score', 'mood_score'], paperUids, corpus: 'corpus.jsonl', synthesisResponse: 'response.json' }));
@@ -50,6 +57,18 @@ test('offline acceptance freezes inputs and proves quoteCheck without provider d
     assert.equal(manifest.artifacts.rawEvidenceStaged, false);
     assert.doesNotMatch(JSON.stringify(manifest), /api[_-]?key|secret|postgres/i);
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('checked-in two-paper bundle is quote-valid, independently retrieved, and metadata-authoritative', async () => {
+  const bundle = new URL('../fixtures/offline-acceptance-run4/bundle.json', import.meta.url);
+  const prepared = await prepareOfflineAcceptance(fileURLToPath(bundle));
+  assert.equal(prepared.corpus.length, 2);
+  assert.equal(prepared.acceptedClaims.length, 1);
+  assert.equal(prepared.acceptedClaims[0]?.citations[0]?.title, 'Frozen cited study');
+  assert.equal(prepared.acceptedClaims[0]?.citations[0]?.year, 2024);
+  const manifest = prepared.manifest as Record<string, any>;
+  assert.ok(manifest.stages.verify.retrievalSources[0] > 0);
+  assert.deepEqual(manifest.stages.verify.retrievalPaperIds[0], ['fixture:run4-independent']);
 });
 
 test('quoteCheck-only triage is explicitly non-acceptance even when every quote is present', async () => {

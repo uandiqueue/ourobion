@@ -4,7 +4,12 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-import { generateViewSql, metricsRegistry, REPO_ROOT } from '../lib/view.mjs';
+import {
+  generateViewSql,
+  metricsRegistry,
+  REPO_ROOT,
+  VIEW_MIGRATION_RELPATH,
+} from '../lib/view.mjs';
 import { validateRegistry } from '../../../shared/metrics/registry.schema.ts';
 import type { MetricDefinition } from '../../../shared/metrics/registry.ts';
 
@@ -255,8 +260,8 @@ test('TS and Dart contracts expose the same closed dailyProjection vocabulary', 
   }
 });
 
-test('--write refuses to overwrite the landed migration and leaves its bytes unchanged', () => {
-  const migration = path.join(REPO_ROOT, 'supabase', 'migrations', '20260715154000_create_m5a_metric_daily_values_view.sql');
+test('--write refuses to overwrite the generated target and leaves migration bytes unchanged', () => {
+  const migration = path.join(REPO_ROOT, ...VIEW_MIGRATION_RELPATH.split('/'));
   const before = readFileSync(migration);
   const result = spawnSync(
     process.execPath,

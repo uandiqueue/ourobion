@@ -76,3 +76,14 @@ test('view preserves RLS via security_invoker and has the signals daily-grain br
     'signals branch must aggregate to daily grain (mean)',
   );
 });
+
+test('five wellbeing columns are projected once, as doubles, while nulls are omitted', () => {
+  for (const key of [
+    'appetite_score', 'anxiety_score', 'brain_clarity_score', 'focus_score',
+    'social_interaction_quality_score',
+  ]) {
+    assert.equal([...generated.matchAll(new RegExp(`'${key}'::text as metric_key`, 'g'))].length, 1);
+    assert.ok(generated.includes(`${key}::double precision as value`));
+    assert.ok(generated.includes(`where ${key} is not null`));
+  }
+});

@@ -16,6 +16,8 @@
  */
 
 import type { SynthClaim } from '../synth/types.js';
+import type { EvidenceTierClassification } from '../evidenceTier.js';
+import type { EvidenceTierInput } from '../evidenceTier.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Structural mirrors of shared/brain/relationships.ts (the verification half)
@@ -231,6 +233,10 @@ export interface CorpusDoc {
   /** Canonical extracted text (the finding sentences the ranker scores). */
   text: string;
   evidenceTier: VerifyEvidenceTier;
+  /** Truth inputs retained so classification/hash are recomputed on every load. */
+  evidenceInputs?: Omit<EvidenceTierInput, 'paperUid' | 'title'>;
+  /** Local classifier posture; mandatory for acceptance bundles, optional for legacy corpora. */
+  evidenceClassification?: EvidenceTierClassification;
   impactTier: VerifyImpactTier;
 }
 

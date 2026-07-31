@@ -73,6 +73,10 @@ const fakeFiles = {
   repoRoot: resolve('C:/repo-fixture'),
 };
 
+test('per-unit landing base is the approved Issue 221 integration parent', () => {
+  assert.equal(RUN4_UNIT_BASE_SHA, '42ae771c4809fe8f314fbf38dca89d60a809dedb');
+});
+
 test('real TOML parser accepts quoted dotted names and rejects redefinitions', () => {
   const parsed = parseFunctionConfig("[functions.'alpha.beta'] # legal TOML\nenabled = true # comment\nimport_map = './functions/alpha.beta/deno.json'\nentrypoint = './functions/alpha.beta/index.ts'");
   assert.equal(parsed[0].name, 'alpha.beta');
@@ -414,7 +418,7 @@ test('product cap measures the immutable union, reports breach without throwing,
   assert.ok(recoveredPaths.includes('tools/brain-ingest/src/verify/artifact.ts'), 'product-cap must exercise source-text recovery for artifact.ts');
   assert.equal(delta.allowlistedBinaryPaths, 15);
   assert.ok(delta.allowlistedBinaryBytes > 0 && delta.allowlistedBinaryBytes <= RUN4_MAX_ALLOWLISTED_BINARY_BYTES);
-  assert.deepEqual({ changedPaths: delta.changedPaths, addedLines: delta.addedLines }, { changedPaths: 447, addedLines: 62701 });
+  assert.deepEqual({ changedPaths: delta.changedPaths, addedLines: delta.addedLines }, { changedPaths: 480, addedLines: 67231 });
   assert.ok(delta.changedPaths > RUN4_MAX_CHANGED_PATHS);
   assert.ok(delta.addedLines > RUN4_MAX_ADDED_LINES);
   // Measurement reports breach as data; only the enforcement wrapper throws. This is the whole
@@ -422,7 +426,7 @@ test('product cap measures the immutable union, reports breach without throwing,
   assert.equal(delta.withinCap, false);
   assert.throws(
     () => checkProductLandingDelta({ base: RUN4_PRODUCT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES }),
-    /product landing delta has 447 paths; cap is 115/
+    /product landing delta has 480 paths; cap is 115/
   );
 });
 

@@ -60,14 +60,19 @@ Map<String, Set<String>> dartClassToJsonKeys(String dartSource) {
   for (var i = 0; i < matches.length; i++) {
     final name = matches[i].group(1)!;
     final start = matches[i].start;
-    final end = (i + 1 < matches.length) ? matches[i + 1].start : dartSource.length;
+    final end = (i + 1 < matches.length)
+        ? matches[i + 1].start
+        : dartSource.length;
     final block = dartSource.substring(start, end);
     final tj = block.indexOf('toJson()');
     if (tj < 0) continue;
     // Wire keys are snake_case for table columns; jsonb payload shapes (InsightCardEdgeRef)
     // keep the camelCase keys the engine writes, so uppercase is allowed here.
     final keyRe = RegExp(r"'([a-zA-Z0-9_]+)':");
-    result[name] = keyRe.allMatches(block.substring(tj)).map((m) => m.group(1)!).toSet();
+    result[name] = keyRe
+        .allMatches(block.substring(tj))
+        .map((m) => m.group(1)!)
+        .toSet();
   }
   return result;
 }
@@ -89,22 +94,38 @@ List<RegistryEntry> parseRegistry(String source) {
   final entries = <RegistryEntry>[];
   for (var i = 0; i < keyMatches.length; i++) {
     final start = keyMatches[i].start;
-    final end = (i + 1 < keyMatches.length) ? keyMatches[i + 1].start : source.length;
+    final end = (i + 1 < keyMatches.length)
+        ? keyMatches[i + 1].start
+        : source.length;
     final block = source.substring(start, end);
     final key = keyMatches[i].group(1)!;
-    final table = RegExp(r'''table:\s*['"]([a-z0-9_]+)['"]''').firstMatch(block)?.group(1) ?? '';
-    final status = RegExp(r'''status:\s*['"]([a-z]+)['"]''').firstMatch(block)?.group(1) ?? '';
-    final ba = RegExp(r'baselineApplicable:\s*(true|false)').firstMatch(block)?.group(1) == 'true';
+    final table =
+        RegExp(
+          r'''table:\s*['"]([a-z0-9_]+)['"]''',
+        ).firstMatch(block)?.group(1) ??
+        '';
+    final status =
+        RegExp(r'''status:\s*['"]([a-z]+)['"]''').firstMatch(block)?.group(1) ??
+        '';
+    final ba =
+        RegExp(
+          r'baselineApplicable:\s*(true|false)',
+        ).firstMatch(block)?.group(1) ==
+        'true';
     entries.add(RegistryEntry(key, table, status, ba));
   }
   return entries;
 }
 
 /// Active baseline-applicable keys for a table, from a parsed registry.
-List<String> baselineKeysFor(List<RegistryEntry> entries, String table) => entries
-    .where((e) => e.table == table && e.status == 'active' && e.baselineApplicable)
-    .map((e) => e.key)
-    .toList();
+List<String> baselineKeysFor(List<RegistryEntry> entries, String table) =>
+    entries
+        .where(
+          (e) =>
+              e.table == table && e.status == 'active' && e.baselineApplicable,
+        )
+        .map((e) => e.key)
+        .toList();
 
 /// All active keys for a table, from a parsed registry.
 Set<String> activeKeysFor(List<RegistryEntry> entries, String table) => entries
@@ -156,6 +177,80 @@ Set<String> migrationColumns(String sql, String tableName) {
   return cols;
 }
 
+/// Metric columns declared by one explicitly marked additive migration.
+///
+/// System-only ALTER migrations are intentionally excluded: the marker and exact, unique
+/// `ADD COLUMN` set are required so this guard cannot silently widen a shared row contract.
+Set<String> additiveMetricColumns(String sql, String tableName) {
+  final markerMatches = RegExp(
+    r'^\s*--\s*metric-columns:\s*(.*?)\s*$',
+    caseSensitive: false,
+    multiLine: true,
+  ).allMatches(sql).toList();
+  if (markerMatches.length != 1) {
+    throw StateError('expected exactly one metric-columns marker');
+  }
+  final marked = markerMatches.single
+      .group(1)!
+      .split(',')
+      .map((entry) => entry.trim())
+      .toList();
+  if (marked.isEmpty ||
+      marked.any((entry) => !RegExp(r'^[a-z][a-z0-9_]*$').hasMatch(entry)) ||
+      marked.toSet().length != marked.length) {
+    throw StateError('invalid or duplicate metric-columns marker');
+  }
+  final uncommented = sql.replaceAll(RegExp(r'--[^\n]*'), '');
+  final alters = RegExp(
+    'alter\\s+table\\s+public\\.$tableName\\b([\\s\\S]*?);',
+    caseSensitive: false,
+  ).allMatches(uncommented).toList();
+  if (alters.length != 1) {
+    throw StateError('expected one ALTER TABLE statement');
+  }
+  final body = alters.single.group(1)!;
+  if (RegExp(
+    r'\badd\s+column\s+if\s+not\s+exists\b',
+    caseSensitive: false,
+  ).hasMatch(body)) {
+    throw StateError('metric columns cannot use IF NOT EXISTS');
+  }
+  final declared = RegExp(
+    r'\badd\s+column\s+([a-z][a-z0-9_]*)\b',
+    caseSensitive: false,
+  ).allMatches(body).map((match) => match.group(1)!.toLowerCase()).toList();
+  if (declared.isEmpty || declared.toSet().length != declared.length) {
+    throw StateError('invalid or duplicate ADD COLUMN declaration');
+  }
+  final markedSet = marked.toSet();
+  final declaredSet = declared.toSet();
+  if (markedSet.length != declaredSet.length ||
+      !markedSet.containsAll(declaredSet)) {
+    throw StateError('metric marker and ADD COLUMN declarations differ');
+  }
+  return declaredSet;
+}
+
+/// Original CREATE TABLE columns plus explicitly marked additive metric migrations.
+Set<String> migrationColumnsWithAdditions(
+  String createSql,
+  String tableName,
+  Iterable<String> additiveMigrations,
+) {
+  final columns = migrationColumns(createSql, tableName);
+  for (final migration in additiveMigrations) {
+    final additions = additiveMetricColumns(migration, tableName);
+    final duplicates = columns.intersection(additions);
+    if (duplicates.isNotEmpty) {
+      throw StateError(
+        'additive migration redeclares existing columns: $duplicates',
+      );
+    }
+    columns.addAll(additions);
+  }
+  return columns;
+}
+
 /// The quoted string literals in the first `[ ... ]` array following [label] in [src].
 /// Strips `//` line comments first so a commented-out entry is not counted.
 List<String> quotedListAfter(String src, String label) {
@@ -164,8 +259,12 @@ List<String> quotedListAfter(String src, String label) {
   final open = src.indexOf('[', li);
   final close = src.indexOf(']', open);
   if (open < 0 || close < 0) throw StateError('array after $label not found');
-  var block = src.substring(open + 1, close).replaceAll(RegExp(r'//[^\n]*'), '');
-  return RegExp("['\"]([^'\"]+)['\"]").allMatches(block).map((m) => m.group(1)!).toList();
+  var block = src
+      .substring(open + 1, close)
+      .replaceAll(RegExp(r'//[^\n]*'), '');
+  return RegExp(
+    "['\"]([^'\"]+)['\"]",
+  ).allMatches(block).map((m) => m.group(1)!).toList();
 }
 
 /// Like [quotedListAfter], but for a declaration whose TYPE ANNOTATION itself contains brackets
@@ -181,8 +280,12 @@ List<String> quotedListAfterEquals(String src, String label) {
   final open = src.indexOf('[', eq);
   final close = src.indexOf(']', open);
   if (open < 0 || close < 0) throw StateError('array after $label not found');
-  var block = src.substring(open + 1, close).replaceAll(RegExp(r'//[^\n]*'), '');
-  return RegExp("['\"]([^'\"]+)['\"]").allMatches(block).map((m) => m.group(1)!).toList();
+  var block = src
+      .substring(open + 1, close)
+      .replaceAll(RegExp(r'//[^\n]*'), '');
+  return RegExp(
+    "['\"]([^'\"]+)['\"]",
+  ).allMatches(block).map((m) => m.group(1)!).toList();
 }
 
 /// The quoted string literals (keys AND values, in source order) inside the first BALANCED
@@ -206,7 +309,9 @@ List<String> quotedBlockAfter(String src, String label) {
   }
   if (depth != 0) throw StateError('unbalanced braces in block after $label');
   var block = src.substring(open + 1, i).replaceAll(RegExp(r'//[^\n]*'), '');
-  return RegExp("['\"]([^'\"]+)['\"]").allMatches(block).map((m) => m.group(1)!).toList();
+  return RegExp(
+    "['\"]([^'\"]+)['\"]",
+  ).allMatches(block).map((m) => m.group(1)!).toList();
 }
 
 /// The quoted string literals (in source order) in a scalar `const X = '...';` (or `+`-
@@ -221,7 +326,9 @@ List<String> quotedScalarAfter(String src, String label) {
   final semi = src.indexOf(';', eq);
   if (semi < 0) throw StateError('terminating ; after $label not found');
   final block = src.substring(eq + 1, semi);
-  return RegExp("['\"]([^'\"]+)['\"]").allMatches(block).map((m) => m.group(1)!).toList();
+  return RegExp(
+    "['\"]([^'\"]+)['\"]",
+  ).allMatches(block).map((m) => m.group(1)!).toList();
 }
 
 /// {key: dqs.weight} for registry metrics with countsTowardDailyCompleteness: true.
@@ -230,9 +337,13 @@ Map<String, int> registryDailyCoreWeights(String registrySource) {
   final matches = keyRe.allMatches(registrySource).toList();
   final out = <String, int>{};
   for (var i = 0; i < matches.length; i++) {
-    final end = (i + 1 < matches.length) ? matches[i + 1].start : registrySource.length;
+    final end = (i + 1 < matches.length)
+        ? matches[i + 1].start
+        : registrySource.length;
     final block = registrySource.substring(matches[i].start, end);
-    if (!RegExp(r'countsTowardDailyCompleteness:\s*true').hasMatch(block)) continue;
+    if (!RegExp(r'countsTowardDailyCompleteness:\s*true').hasMatch(block)) {
+      continue;
+    }
     final w = RegExp(r'weight:\s*(\d+)').firstMatch(block);
     if (w != null) out[matches[i].group(1)!] = int.parse(w.group(1)!);
   }
@@ -247,5 +358,7 @@ Map<String, int> dartIntMap(String src, String name) {
   final close = src.indexOf('}', open);
   final block = src.substring(open + 1, close);
   final re = RegExp('''['"]([a-z0-9_]+)['"]\\s*:\\s*(\\d+)''');
-  return {for (final m in re.allMatches(block)) m.group(1)!: int.parse(m.group(2)!)};
+  return {
+    for (final m in re.allMatches(block)) m.group(1)!: int.parse(m.group(2)!),
+  };
 }

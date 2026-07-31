@@ -238,6 +238,39 @@ test('resolveDedup collapses id-less duplicates by fingerprint', () => {
   assert.deepEqual(deduped[0]!.discoveredVia, ['doaj', 'biorxiv']);
 });
 
+test('resolveDedup retains the union of PubMed publication types and MeSH evidence', () => {
+  const base: Candidate = {
+    identifiers: { pmid: '12345678' },
+    title: 'Indexed cohort and trial record',
+    authors: ['A. Author'],
+    year: 2024,
+    venue: 'Journal',
+    abstract: 'An indexed observational record.',
+    discoveredVia: 'pubmed',
+  };
+  const merged = resolveDedup([
+    {
+      ...base,
+      publicationTypes: [{ ui: 'D016449', name: 'Randomized Controlled Trial' }],
+      meshHeadings: [{ ui: 'D000818', name: 'Animals', majorTopic: false }],
+    },
+    {
+      ...base,
+      discoveredVia: 'europepmc',
+      publicationTypes: [{ ui: 'D016428', name: 'Journal Article' }],
+      meshHeadings: [{ ui: 'D006801', name: 'Humans', majorTopic: true }],
+    },
+  ])[0]!;
+  assert.deepEqual(merged.candidate.publicationTypes, [
+    { ui: 'D016449', name: 'Randomized Controlled Trial' },
+    { ui: 'D016428', name: 'Journal Article' },
+  ]);
+  assert.deepEqual(merged.candidate.meshHeadings, [
+    { ui: 'D000818', name: 'Animals', majorTopic: false },
+    { ui: 'D006801', name: 'Humans', majorTopic: true },
+  ]);
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // reconcileByIdentifiers — the post-OA-location merge (§4)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -288,6 +321,26 @@ test('reconcileByIdentifiers: doi-only + pmcid-only for the same paper merge to 
   assert.deepEqual(canon.discoveredVia, 'crossref,europepmc');
   // The pmcid-only uid is absorbed (its meta/ object must be deleted).
   assert.deepEqual(absorbed, ['pmcid:PMC8123456']);
+});
+
+test('reconcileByIdentifiers retains PT/MeSH evidence from every absorbed record', () => {
+  const a = paperRec('doi:10.1/indexed', { doi: '10.1/indexed', pmid: '123' }, {
+    publicationTypes: [{ ui: 'D016449', name: 'Randomized Controlled Trial' }],
+    meshHeadings: [{ ui: 'D000818', name: 'Animals', majorTopic: false }],
+  });
+  const b = paperRec('pmid:123', { pmid: '123' }, {
+    publicationTypes: [{ ui: 'D016428', name: 'Journal Article' }],
+    meshHeadings: [{ ui: 'D006801', name: 'Humans', majorTopic: true }],
+  });
+  const record = reconcileByIdentifiers([a, b]).merged[0]!;
+  assert.deepEqual(record.publicationTypes, [
+    { ui: 'D016449', name: 'Randomized Controlled Trial' },
+    { ui: 'D016428', name: 'Journal Article' },
+  ]);
+  assert.deepEqual(record.meshHeadings, [
+    { ui: 'D000818', name: 'Animals', majorTopic: false },
+    { ui: 'D006801', name: 'Humans', majorTopic: true },
+  ]);
 });
 
 test('reconcileByIdentifiers: two genuinely different papers (no shared id) are NOT merged', () => {

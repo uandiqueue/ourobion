@@ -1,0 +1,8 @@
+{
+  "acceptanceRunId": "run4-233-live-acceptance",
+  "artifactRevision": "run4/issue-233/offline-fixture-v1",
+  "pair": ["gut_comfort_score", "mood_score"],
+  "paperUids": ["fixture:run4-cited"],
+  "corpus": "corpus.jsonl",
+  "synthesisResponse": "synthesis-response.json"
+}

@@ -28,6 +28,7 @@ import { checkClaimQuotes, type QuoteSpanInput } from '../verify/quoteCheck.js';
 import type { ClaimValidator, CopyValidator } from './load.js';
 import type {
   ProcessResult,
+  PaperCitationMetadata,
   RejectedClaim,
   SynthClaim,
   SynthPair,
@@ -40,6 +41,8 @@ export interface ProcessContext {
   allowedPaperIds: readonly string[];
   /** paperId → canonical text, for the A9 quoteCheck + offset backfill. */
   texts: ReadonlyMap<string, string>;
+  /** Corpus-owned title/year/evidenceTier by paper id; model copies are overwritten. */
+  paperMetadata: ReadonlyMap<string, PaperCitationMetadata>;
   /** The shared zod gate (injected; loaded via synth/load.ts for a real run). */
   validateClaim: ClaimValidator;
   /** The shared copy gate over `derivation` (injected; loaded via synth/load.ts for a real run). O20/H3. */
@@ -154,6 +157,35 @@ export function processSynthesisResponse(rawText: string, ctx: ProcessContext): 
       continue;
     }
 
+    const rawCitations = Array.isArray(c['citations']) ? c['citations'] as unknown[] : [];
+    const missingMetadata = rawCitations
+      .map((citation) => typeof citation === 'object' && citation !== null
+        ? (citation as Record<string, unknown>)['paperId']
+        : null)
+      .filter((paperId): paperId is string => typeof paperId === 'string')
+      .filter((paperId) => !ctx.paperMetadata.has(paperId));
+    if (missingMetadata.length > 0) {
+      rejected.push({
+        edgeId,
+        reason: 'citation-metadata',
+        detail: `manifest/corpus metadata missing for: ${[...new Set(missingMetadata)].join(', ')}`,
+      });
+      continue;
+    }
+    const authoritativeCitations = rawCitations.map((rawCitation) => {
+      const citation = typeof rawCitation === 'object' && rawCitation !== null
+        ? { ...rawCitation as Record<string, unknown> }
+        : {};
+      const paperId = typeof citation['paperId'] === 'string' ? citation['paperId'] : '';
+      const metadata = ctx.paperMetadata.get(paperId);
+      if (metadata !== undefined) {
+        citation['title'] = metadata.title;
+        citation['year'] = metadata.year;
+        citation['evidenceTier'] = metadata.evidenceTier;
+      }
+      return citation;
+    });
+
     // (5) backfill charStart/charEnd from A9 quoteCheck's computed offsets.
     const rawSpans = Array.isArray(c['quoteSpans']) ? (c['quoteSpans'] as unknown[]) : [];
     const spanInputs = rawSpans.map(toQuoteSpanInput);
@@ -173,6 +205,7 @@ export function processSynthesisResponse(rawText: string, ctx: ProcessContext): 
     const candidate = {
       ...c,
       edgeId,
+      citations: authoritativeCitations,
       quoteSpans: backfilledSpans,
       synthesisModel: ctx.synthesisModel,
       promptVersion: ctx.promptVersion,

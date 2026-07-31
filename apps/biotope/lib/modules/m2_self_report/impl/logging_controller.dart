@@ -50,6 +50,11 @@ class DailyLogInput {
   final int? energy;
   final int? mood;
   final int? gutComfort;
+  final int? appetite;
+  final int? anxiety;
+  final int? brainClarity;
+  final int? focus;
+  final int? socialInteractionQuality;
   final List<String> symptomFlags;
   final String? notes;
   final bool? standingWaterPresent;
@@ -64,12 +69,43 @@ class DailyLogInput {
     this.energy,
     this.mood,
     this.gutComfort,
+    this.appetite,
+    this.anxiety,
+    this.brainClarity,
+    this.focus,
+    this.socialInteractionQuality,
     this.symptomFlags = const [],
     this.notes,
     this.standingWaterPresent,
     required this.logCompleteness,
   });
+
+  bool get hasWellbeingCheckIn => hasWellbeingCheckInValues(
+    appetite: appetite,
+    anxiety: anxiety,
+    brainClarity: brainClarity,
+    focus: focus,
+    socialInteractionQuality: socialInteractionQuality,
+  );
 }
+
+/// T2 wellbeing values are optional and deliberately excluded from the daily-core DQS.
+bool hasWellbeingCheckInValues({
+  int? appetite,
+  int? anxiety,
+  int? brainClarity,
+  int? focus,
+  int? socialInteractionQuality,
+}) => [
+  appetite,
+  anxiety,
+  brainClarity,
+  focus,
+  socialInteractionQuality,
+].any((value) => value != null);
+
+bool canSaveDailyLog({required int dqs, required bool hasWellbeingCheckIn}) =>
+    dqs > 0 || hasWellbeingCheckIn;
 
 /// Values M2 stamps onto a daily row at write time: `region` copied from the
 /// profile, and the two antibiotic-derived flags. Derived once
@@ -126,6 +162,11 @@ class DailyLogService {
       'energy_score': input.energy,
       'mood_score': input.mood,
       'gut_comfort_score': input.gutComfort,
+      'appetite_score': input.appetite,
+      'anxiety_score': input.anxiety,
+      'brain_clarity_score': input.brainClarity,
+      'focus_score': input.focus,
+      'social_interaction_quality_score': input.socialInteractionQuality,
       'symptom_flags': input.symptomFlags,
       'notes': (notes == null || notes.isEmpty) ? null : notes,
       'standing_water_present': input.standingWaterPresent,

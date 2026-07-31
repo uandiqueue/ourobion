@@ -12,6 +12,7 @@ import 'antibiotic_course_screen.dart';
 import 'symptom_flags_screen.dart';
 import 'urine_color_screen.dart';
 import 'stool_form_screen.dart';
+import '../widgets/likert_check_in_card.dart';
 
 // Urine swatch colors — mirrors urine_color_screen.dart
 const _kUrineColors = [
@@ -60,6 +61,11 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
   int? _energy;
   int? _mood;
   int? _gutComfort;
+  int? _appetite;
+  int? _anxiety;
+  int? _brainClarity;
+  int? _focus;
+  int? _socialInteractionQuality;
   List<String> _symptomFlags = [];
   final _notesCtrl = TextEditingController();
   bool _isSaving = false;
@@ -80,6 +86,23 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
         'mood_score': _mood,
         'gut_comfort_score': _gutComfort,
       });
+
+  bool get _hasWellbeingCheckIn => hasWellbeingCheckInValues(
+        appetite: _appetite,
+        anxiety: _anxiety,
+        brainClarity: _brainClarity,
+        focus: _focus,
+        socialInteractionQuality: _socialInteractionQuality,
+      );
+
+  bool get _canSave =>
+      canSaveDailyLog(dqs: _dqs, hasWellbeingCheckIn: _hasWellbeingCheckIn);
+
+  String get _saveCtaLabel => _dqs > 0
+      ? 'Save log · $_dqs pts →'
+      : _hasWellbeingCheckIn
+          ? 'Save optional check-in →'
+          : 'Save log →';
 
   Color get _dqsColor {
     final pts = _dqs;
@@ -134,6 +157,12 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
         _energy     = row['energy_score'] as int?;
         _mood       = row['mood_score'] as int?;
         _gutComfort = row['gut_comfort_score'] as int?;
+        _appetite = row['appetite_score'] as int?;
+        _anxiety = row['anxiety_score'] as int?;
+        _brainClarity = row['brain_clarity_score'] as int?;
+        _focus = row['focus_score'] as int?;
+        _socialInteractionQuality =
+            row['social_interaction_quality_score'] as int?;
         _symptomFlags = (row['symptom_flags'] as List<dynamic>?)
             ?.map((e) => e as String)
             .toList() ?? [];
@@ -203,6 +232,11 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
           energy: _energy,
           mood: _mood,
           gutComfort: _gutComfort,
+          appetite: _appetite,
+          anxiety: _anxiety,
+          brainClarity: _brainClarity,
+          focus: _focus,
+          socialInteractionQuality: _socialInteractionQuality,
           symptomFlags: _symptomFlags,
           notes: _notesCtrl.text,
           standingWaterPresent: _standingWaterPresent,
@@ -214,7 +248,7 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Log saved — $_dqs pts',
+            _dqs > 0 ? 'Log saved — $_dqs pts' : 'Optional check-in saved',
             style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: Colors.white),
           ),
           backgroundColor: OurobionColors.primary,
@@ -434,6 +468,59 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
                       ),
                     ),
 
+                    const _SectionLabel('WELLBEING CHECK-IN (OPTIONAL)'),
+                    LikertCheckInCard(
+                      icon: Icons.restaurant_outlined,
+                      label: 'Appetite',
+                      lowLabel: 'Less appetite',
+                      highLabel: 'More appetite',
+                      value: _appetite,
+                      onChanged: (v) => setState(
+                        () => _appetite = _appetite == v ? null : v,
+                      ),
+                    ),
+                    LikertCheckInCard(
+                      icon: Icons.self_improvement_outlined,
+                      label: 'Feeling anxious',
+                      lowLabel: 'Not at all',
+                      highLabel: 'Very',
+                      value: _anxiety,
+                      onChanged: (v) => setState(
+                        () => _anxiety = _anxiety == v ? null : v,
+                      ),
+                    ),
+                    LikertCheckInCard(
+                      icon: Icons.visibility_outlined,
+                      label: 'Mental clarity',
+                      lowLabel: 'Foggy',
+                      highLabel: 'Clear',
+                      value: _brainClarity,
+                      onChanged: (v) => setState(
+                        () => _brainClarity = _brainClarity == v ? null : v,
+                      ),
+                    ),
+                    LikertCheckInCard(
+                      icon: Icons.center_focus_strong_outlined,
+                      label: 'Focus',
+                      lowLabel: 'Hard to focus',
+                      highLabel: 'Easy to focus',
+                      value: _focus,
+                      onChanged: (v) => setState(
+                        () => _focus = _focus == v ? null : v,
+                      ),
+                    ),
+                    LikertCheckInCard(
+                      icon: Icons.people_outline_rounded,
+                      label: 'Social interaction quality',
+                      lowLabel: 'Unsatisfying',
+                      highLabel: 'Satisfying',
+                      value: _socialInteractionQuality,
+                      onChanged: (v) => setState(
+                        () => _socialInteractionQuality =
+                            _socialInteractionQuality == v ? null : v,
+                      ),
+                    ),
+
                     // ── NOTES ────────────────────────────────────
                     const _SectionLabel('NOTES'),
                     _NotesCard(controller: _notesCtrl),
@@ -458,7 +545,7 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
               child: FilledButton(
-                onPressed: _dqs > 0 && !_isSaving ? _save : null,
+                onPressed: _canSave && !_isSaving ? _save : null,
                 child: _isSaving
                     ? const SizedBox(
                         width: 20,
@@ -468,7 +555,7 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
                           color: Colors.white,
                         ),
                       )
-                    : Text('Save log · $_dqs pts →'),
+                    : Text(_saveCtaLabel),
               ),
             ),
             const SizedBox(height: 24),

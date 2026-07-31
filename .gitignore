@@ -101,6 +101,10 @@ graphify-out/
 # papers.jsonl + meta/<uid>.json + pdf|jats|text). See BRAIN-INGESTION-DESIGN §1/§6.
 data/corpus/
 
+# Provider acceptance artifacts/state are task-scoped and rebuildable. Keep this
+# exact directory ignored so a completed leg cannot dirty the reviewed Git head.
+data/brain-ingest/live-acceptance/
+
 # llm-router runtime state: budget ledger + local-agent mailbox (request/response
 # audit files). Rebuildable/ephemeral run state, never truth — see
 # tools/llm-router/README.md.

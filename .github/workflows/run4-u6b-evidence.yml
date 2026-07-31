@@ -1,0 +1,205 @@
+name: Run 4 U6b local evidence
+
+# Supplemental #221 evidence only: this workflow does not alter the frozen Run 4 aggregate.
+on:
+  pull_request:
+    branches: [dev-phase2-run4]
+    paths:
+      - '.github/workflows/run4-u6b-evidence.yml'
+      - 'tools/run4_u6b_evidence_workflow.test.mjs'
+      - 'supabase/migrations/20260730020001_add_u6b_wellbeing_metrics.sql'
+      - 'supabase/migrations/20260730020002_replace_m5a_metric_daily_values_view.sql'
+      - 'supabase/tests/wellbeing-foundation/local_schema_fixture.mjs'
+      - 'supabase/tests/metric-view/local_projection_fixture.mjs'
+      - 'shared/metrics/**'
+      - 'tools/metric-view/**'
+      - 'supabase/functions/**'
+      - 'supabase/config.toml'
+      - 'supabase/deno.lock'
+      - 'tools/run4_release_gate.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'docs/sessions/20260731T073421Z-agentjwork-codex-issue221-reconciliation.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evidence-contract:
+    name: U6b evidence workflow contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate supplemental workflow contract
+        run: node --test tools/run4_u6b_evidence_workflow.test.mjs
+
+  rollback-fixtures:
+    name: U6b rollback fixtures (postgres:17)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGDATABASE: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: |
+            tools/metric-view/package-lock.json
+            shared/package-lock.json
+      - name: Install shared contract dependencies
+        working-directory: shared
+        run: npm ci
+      - name: Install metric-view fixture dependencies
+        working-directory: tools/metric-view
+        run: npm ci
+      - name: Alias service container for unchanged local fixtures
+        run: docker rename "${{ job.services.postgres.id }}" supabase_db_ourobion
+      - name: Install pg_cron/pg_net stubs into the fixture container
+        run: docker cp ci/pg-extension-stubs/. supabase_db_ourobion:/usr/share/postgresql/17/extension/
+      - name: Bootstrap Supabase-shaped primitives
+        run: psql -v ON_ERROR_STOP=1 -q -f ci/migrations-bootstrap.sql
+      - name: Apply only the pre-U6b migration baseline
+        run: |
+          set -euo pipefail
+          while IFS= read -r migration; do
+            filename="$(basename "$migration" .sql)"
+            if [[ "$filename" > "20260730020000" ]]; then
+              break
+            fi
+            echo "== $migration"
+            psql -v ON_ERROR_STOP=1 -q -f "$migration"
+          done < <(find supabase/migrations -maxdepth 1 -type f -name '*.sql' -print | sort)
+      # The vanilla CI bootstrap creates roles/policies but intentionally grants no product table
+      # privileges. These runner-only grants let the fixtures exercise existing RLS policies.
+      - name: Grant only fixture role privileges (RLS remains authoritative)
+        run: |
+          psql -v ON_ERROR_STOP=1 -q -c 'grant usage on schema public to authenticated;'
+          psql -v ON_ERROR_STOP=1 -q -c 'grant select, insert on table public.daily_gut_rows to authenticated;'
+          psql -v ON_ERROR_STOP=1 -q -c 'grant usage on sequence public.daily_gut_rows_id_seq to authenticated;'
+          psql -v ON_ERROR_STOP=1 -q -c 'grant select on table public.wearable_daily, public.events, public.state_bands, public.signals, public.metric_daily_values to authenticated;'
+      - name: Prove wellbeing migration rolls back
+        run: node supabase/tests/wellbeing-foundation/local_schema_fixture.mjs
+      - name: Prove metric projection migration rolls back
+        run: node supabase/tests/metric-view/local_projection_fixture.mjs
+
+  local-four-function-attestation:
+    name: Four-function local attestation evidence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.8.1
+      - name: Install repository-local tools
+        run: npm ci
+      - name: Assert checkout is the event SHA
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Serve and attest the four local function routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/run4-u6b-evidence"
+          record_graphs="$evidence/record-graphs"
+          verify_graphs="$evidence/verify-graphs"
+          manifest="$evidence/deploy-attestation.json"
+          route_evidence="$evidence/routes.json"
+          server_log="$evidence/local-functions-serve.log"
+          original_manifest="$evidence/checked-in-deploy-attestation.json"
+          mkdir -p "$evidence" "$record_graphs" "$verify_graphs"
+          cp supabase/deploy-attestation.json "$original_manifest"
+          server_pid=''
+          start_log="$evidence/local-stack-start.log"
+          stop_log="$evidence/local-stack-stop.log"
+          stack_started=''
+          sanitized_tail() {
+            local log="$1"
+            [[ -f "$log" ]] || return 0
+            tail -n 20 "$log" | sed -E -e 's/eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9._-]+\.[A-Za-z0-9._-]+/[REDACTED_JWT]/g' -e 's/(([A-Za-z_][A-Za-z0-9_]*(KEY|SECRET|TOKEN|PASSWORD)[A-Za-z0-9_]*)[[:space:]]*[:=][[:space:]]*)[^[:space:],}]+/\1[REDACTED]/Ig'
+          }
+          cleanup() {
+            status=$?
+            if [[ -n "$server_pid" ]]; then kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; fi
+            if [[ -n "$stack_started" ]]; then node_modules/.bin/supabase stop --no-backup >"$stop_log" 2>&1 || true; fi
+            if [[ -f "$original_manifest" ]]; then cp "$original_manifest" supabase/deploy-attestation.json; fi
+            if [[ "$status" -ne 0 ]]; then
+              echo 'Sanitized local-stack start log tail:'; sanitized_tail "$start_log"
+              echo 'Sanitized local-functions serve log tail:'; sanitized_tail "$server_log"
+              echo 'Sanitized local-stack stop log tail:'; sanitized_tail "$stop_log"
+            fi
+            exit "$status"
+          }
+          trap cleanup EXIT
+          stack_started=yes
+          node_modules/.bin/supabase start --yes --exclude gotrue,realtime,storage-api,imgproxy,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor >"$start_log" 2>&1
+          node_modules/.bin/supabase functions serve --debug --no-verify-jwt >"$server_log" 2>&1 &
+          server_pid=$!
+          ready=''
+          for attempt in $(seq 1 120); do
+            if ! kill -0 "$server_pid" 2>/dev/null; then echo 'local functions serve process exited before readiness'; exit 1; fi
+            status=$(curl --silent --show-error --connect-timeout 1 --max-time 5 --output /dev/null --write-out '%{http_code}' --request POST --header 'content-type: application/json' --data '{}' http://127.0.0.1:54321/functions/v1/compute-baselines || true)
+            if [[ "$status" = 401 ]]; then ready=yes; break; fi
+            sleep 1
+          done
+          if [[ -z "$ready" ]]; then echo 'local functions listener did not become ready within 120 seconds'; exit 1; fi
+          routes=()
+          for name in compute-baselines evaluate-signals generate-insights run-pipeline; do
+            body="$evidence/$name.body"
+            status="$(curl --silent --show-error --output "$body" --write-out '%{http_code}' --request POST --header 'content-type: application/json' --data '{}' "http://127.0.0.1:54321/functions/v1/$name")"
+            hash="$(sha256sum "$body" | awk '{print $1}')"
+            test "$status" = '401'
+            test "$hash" = 'd089c8a9fc28e4e50223eb38c9409e362521be9380a37341304fbac7a4cd9e5f'
+            routes+=("{\"name\":\"$name\",\"path\":\"/functions/v1/$name\",\"handlerReached\":true,\"httpStatus\":401,\"bodySha256\":\"$hash\"}")
+            rm "$body"
+          done
+          printf '[%s]\n' "$(IFS=,; echo "${routes[*]}")" > "$route_evidence"
+          node tools/run4_release_gate.mjs graph-hashes --deno deno --graph-dir "$record_graphs"
+          routes_base64="$(base64 --wrap=0 "$route_evidence")"
+          node tools/run4_release_gate.mjs record-attestation --supabase-cli ./node_modules/.bin/supabase --graph-dir "$record_graphs" --routes-base64 "$routes_base64" --manifest-path "$manifest"
+          # The verifier has no manifest-path option, so this runner-local copy is restored by trap.
+          cp "$manifest" supabase/deploy-attestation.json
+          node tools/run4_release_gate.mjs attest --deno deno --supabase-cli ./node_modules/.bin/supabase --graph-dir "$verify_graphs"
+          git rev-parse HEAD > "$evidence/git-sha.txt"
+          kill "$server_pid" 2>/dev/null || true
+          wait "$server_pid" 2>/dev/null || true
+          server_pid=''
+          node_modules/.bin/supabase stop --no-backup >"$stop_log" 2>&1
+          stack_started=''
+          sha256sum "$start_log" > "$evidence/local-stack-start.log.sha256"
+          sha256sum "$stop_log" > "$evidence/local-stack-stop.log.sha256"
+          rm "$start_log" "$stop_log"
+          sha256sum "$server_log" > "$evidence/local-functions-serve.log.sha256"
+          rm "$server_log"
+          sha256sum "$manifest" "$route_evidence" "$evidence/git-sha.txt" "$evidence/local-stack-start.log.sha256" "$evidence/local-functions-serve.log.sha256" "$evidence/local-stack-stop.log.sha256" > "$evidence/checksums.sha256"
+          cp "$original_manifest" supabase/deploy-attestation.json
+          rm "$original_manifest"
+          trap - EXIT
+      - name: Upload redacted local evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: run4-u6b-local-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/run4-u6b-evidence
+          retention-days: 1

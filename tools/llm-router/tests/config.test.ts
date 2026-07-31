@@ -9,7 +9,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { billingModeOf, defaultConfigPath, familyOf, loadConfig, providerFor, validateConfig } from '../src/config.js';
+import { billingModeOf, defaultConfigPath, familyOf, loadConfig, priceIsAuthoritativeAt, providerFor, validateConfig } from '../src/config.js';
 import { RouterConfigError } from '../src/errors.js';
 import { baseConfigObject, testConfig } from './helpers.js';
 
@@ -42,12 +42,31 @@ test('the shipped router.config.json loads: run-4 OpenAI + Anthropic-verifier po
   for (const [model, price] of Object.entries(config.prices)) {
     if (model === 'agnes-2.5-flash') continue;
     assert.equal(billingModeOf(price), 'metered');
-    assert.equal(price.provisional, true);
+    if (model === 'claude-sonnet-5' || model === 'gpt-5') {
+      assert.equal(price.provisional, false);
+      assert.equal(priceIsAuthoritativeAt(price, Date.parse('2026-07-31T12:00:00.000Z')), true);
+      assert.equal(priceIsAuthoritativeAt(price, Date.parse(price.expiresAt!)), false);
+      assert.match(price.pricingProvenance ?? '', /official/i);
+    } else {
+      assert.equal(price.provisional, true);
+    }
   }
   // Every node model has a price row (budget accounting is never blind).
   for (const node of Object.values(config.nodes)) {
     assert.ok(config.prices[node.model] !== undefined, `${node.model} needs a prices[] entry`);
   }
+});
+
+test('non-provisional metered pricing requires provenance and a valid finite window', () => {
+  const invalid = baseConfigObject();
+  invalid.prices['gpt-5'].provisional = false;
+  delete invalid.prices['gpt-5'].expiresAt;
+  assert.throws(() => validateConfig(invalid), /effectiveFrom\/expiresAt window/);
+
+  const reversed = baseConfigObject();
+  reversed.prices['gpt-5'].effectiveFrom = '2027-01-01T00:00:00.000Z';
+  reversed.prices['gpt-5'].expiresAt = '2026-01-01T00:00:00.000Z';
+  assert.throws(() => validateConfig(reversed), /must precede expiresAt/);
 });
 
 test('free billing is explicit exact-zero non-provisional pricing with provenance', () => {
@@ -57,6 +76,8 @@ test('free billing is explicit exact-zero non-provisional pricing with provenanc
       outputUsdPerMTok: 0,
       billingMode: 'free',
       pricingProvenance: 'owner-confirmed free plan',
+      effectiveFrom: '2026-01-01T00:00:00.000Z',
+      expiresAt: '2027-01-01T00:00:00.000Z',
       provisional: false,
     };
   });
@@ -72,6 +93,8 @@ test('free billing is explicit exact-zero non-provisional pricing with provenanc
         outputUsdPerMTok: 0,
         billingMode: 'free',
         pricingProvenance: 'owner-confirmed',
+        effectiveFrom: '2026-01-01T00:00:00.000Z',
+        expiresAt: '2027-01-01T00:00:00.000Z',
         provisional: false,
       };
     },
@@ -81,6 +104,8 @@ test('free billing is explicit exact-zero non-provisional pricing with provenanc
         outputUsdPerMTok: 0,
         billingMode: 'free',
         pricingProvenance: '   ',
+        effectiveFrom: '2026-01-01T00:00:00.000Z',
+        expiresAt: '2027-01-01T00:00:00.000Z',
         provisional: false,
       };
     },
@@ -202,15 +227,15 @@ test('validateConfig rejects non-objects and wrong versions', () => {
   assert.throws(() => validateConfig({ ...baseConfigObject(), version: 2 }), /version/);
 });
 
-test('acceptance journal config is one canonical ignored runtime path', () => {
-  for (const journalPath of [
+test('acceptance config is one canonical ignored runtime root', () => {
+  for (const runtimeRoot of [
     '../escape.jsonl',
     'tools/llm-router/src/router.ts',
     'data/llm-router/another.jsonl',
     'C:\\tmp\\attempts.jsonl',
   ]) {
     const raw = baseConfigObject();
-    raw.acceptance = { journalPath };
-    assert.throws(() => validateConfig(raw), /must be exactly 'data\/llm-router\/acceptance-attempts\.jsonl'/);
+    raw.acceptance = { runtimeRoot };
+    assert.throws(() => validateConfig(raw), /must be exactly 'data\/brain-ingest\/live-acceptance'/);
   }
 });

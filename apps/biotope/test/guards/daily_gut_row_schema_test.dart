@@ -13,22 +13,52 @@ import 'guard_support.dart';
 void main() {
   group('coupling guard: daily-gut-row-to-schema', () {
     test('DailyGutRow contract fields == daily_gut_rows columns (TS + Dart)', () {
-      final tsFields = tsInterfaceFields(readRepoFile('shared/types/index.ts'), 'DailyGutRow');
-      final dartKeys = dartClassToJsonKeys(readRepoFile('shared/types/index.dart'))['DailyGutRow'];
-      final cols = migrationColumns(
+      final tsFields = tsInterfaceFields(
+        readRepoFile('shared/types/index.ts'),
+        'DailyGutRow',
+      );
+      final dartKeys = dartClassToJsonKeys(
+        readRepoFile('shared/types/index.dart'),
+      )['DailyGutRow'];
+      final cols = migrationColumnsWithAdditions(
         readRepoFile(
           'supabase/migrations/20260513_create_m2_daily_gut_rows_and_antibiotic_courses.sql',
         ),
         'daily_gut_rows',
+        [
+          readRepoFile(
+            'supabase/migrations/20260730020001_add_u6b_wellbeing_metrics.sql',
+          ),
+        ],
       );
 
-      expect(dartKeys, isNotNull, reason: 'DailyGutRow has no toJson() in index.dart');
-      expect(dartKeys, equals(tsFields), reason: 'TS/Dart DailyGutRow field drift');
+      expect(
+        dartKeys,
+        isNotNull,
+        reason: 'DailyGutRow has no toJson() in index.dart',
+      );
+      expect(
+        dartKeys,
+        equals(tsFields),
+        reason: 'TS/Dart DailyGutRow field drift',
+      );
       expect(
         cols,
         equals(tsFields),
-        reason: 'DailyGutRow vs daily_gut_rows column drift — '
+        reason:
+            'DailyGutRow vs daily_gut_rows column drift — '
             'contract-only: ${tsFields.difference(cols)}; column-only: ${cols.difference(tsFields)}',
+      );
+    });
+
+    test('additive metric migrations fail closed without an exact marker', () {
+      expect(
+        () => additiveMetricColumns(
+          '-- metric-columns: appetite_score\n'
+              'alter table public.daily_gut_rows add column if not exists appetite_score smallint;',
+          'daily_gut_rows',
+        ),
+        throwsStateError,
       );
     });
   });
