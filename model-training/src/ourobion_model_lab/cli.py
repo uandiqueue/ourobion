@@ -64,6 +64,33 @@ def _build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("list-models", help="list registered model job names")
 
+    # `predict` is deliberately NOT routed through JobSpec.execute(): it trains
+    # nothing, reads no dataset, and needs no licence-approval artifact. Its own
+    # fail-closed gates are the pinned release registry and the artifact
+    # verification in inference/acquire.py. See inference/__init__.py.
+    p_predict = sub.add_parser(
+        "predict",
+        help="offline research inference over a frozen release (issue #266); "
+        "never product serving",
+    )
+    p_predict.add_argument(
+        "--model", required=True, help="pinned release name, e.g. zebra-v1 or viceroy-v0"
+    )
+    p_predict.add_argument(
+        "--input-manifest", required=True, help="path to a frozen JSONL input manifest"
+    )
+    p_predict.add_argument(
+        "--output",
+        required=False,
+        default=None,
+        help="path to write JSONL predictions; omit to report aggregate counts only",
+    )
+    p_predict.add_argument(
+        "--list-releases",
+        action="store_true",
+        help="print the registered release pins and exit without touching the network",
+    )
+
     return parser
 
 
@@ -79,6 +106,42 @@ def main(argv: Sequence[str] | None = None) -> int:
         for name in registered_models():
             print(name)
         return 0
+
+    if args.command == "predict":
+        # Imported here, not at module scope, so the rest of the CLI stays free
+        # of the inference package (and its lazy Torch path) entirely.
+        from .inference.predict import run_inference
+        from .inference.releases import RELEASE_PINS
+
+        if args.list_releases:
+            _print(
+                {
+                    name: {
+                        "release_id": pin.release_id,
+                        "object_prefix": pin.object_prefix,
+                        "bundle_size_bytes": pin.bundle_size_bytes,
+                    }
+                    for name, pin in sorted(RELEASE_PINS.items())
+                }
+            )
+            return 0
+        try:
+            result = run_inference(
+                model=args.model,
+                input_manifest=args.input_manifest,
+                output_path=args.output,
+            )
+        except ModelLabError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            _log.warning(
+                "command=predict model=%s failed closed: %s: %s",
+                args.model,
+                type(exc).__name__,
+                exc,
+            )
+            return 2
+        _print(result.to_dict())
+        return 0 if result.ok else 1
 
     if args.command == "preflight" and not args.model:
         report = gmi_preflight.run_preflight(strict_python=args.strict_python)
