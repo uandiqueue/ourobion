@@ -8,6 +8,7 @@
 // by trend_copy_gate_test.dart, so they are not duplicated here.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ourobion_metrics/ourobion_metrics.dart';
 import 'package:src/modules/m1_core/ui/screens/home_tab.dart';
 import 'package:src/modules/m5a_baselines/impl/metric_value_format.dart';
 import 'package:src/modules/m5a_baselines/ui/screens/metric_detail_screen.dart';
@@ -41,14 +42,38 @@ void main() {
     ]);
 
     gate('MetricDetailCopy.axisUnit', [
-      for (final key in [
-        kSleepMetricKey,
-        kGutMetricKey,
-        kHrvMetricKey,
-        kStepsMetricKey,
-      ])
-        MetricDetailCopy.axisUnit(key),
+      for (final metric in kMetrics.where(
+        (metric) => metric.status == 'active' && metric.baselineApplicable,
+      ))
+        MetricDetailCopy.axisUnit(metric.key),
+      MetricDetailCopy.axisUnit('future_numeric_metric'),
     ]);
+  });
+
+  group('detail axis wording follows registry metadata', () {
+    test('names the two established self-report scales and endpoints', () {
+      expect(
+        MetricDetailCopy.axisUnit('urine_colour'),
+        'Armstrong urine-colour scale: 1 pale to 8 dark',
+      );
+      expect(
+        MetricDetailCopy.axisUnit('stool_form'),
+        'Bristol stool-form scale: 1 firm to 7 watery',
+      );
+    });
+
+    test('keeps honest ordinal, count, sensor, and fallback wording', () {
+      expect(MetricDetailCopy.axisUnit(kGutMetricKey), 'Gut comfort out of 5');
+      expect(MetricDetailCopy.axisUnit('stool_count'), 'Stool count, 0 to 10');
+      expect(
+        MetricDetailCopy.axisUnit(kSleepMetricKey),
+        'Recorded value (min)',
+      );
+      expect(
+        MetricDetailCopy.axisUnit('future_numeric_metric'),
+        'Recorded value',
+      );
+    });
   });
 
   group('the grid and the detail view agree on a tile label', () {
@@ -68,8 +93,11 @@ void main() {
       }
     });
 
-    test('an unknown key falls back to a derived label, never a guessed one', () {
-      expect(SignalsCopy.labelFor('mood_score'), 'Mood score');
-    });
+    test(
+      'an unknown key falls back to a derived label, never a guessed one',
+      () {
+        expect(SignalsCopy.labelFor('mood_score'), 'Mood score');
+      },
+    );
   });
 }
