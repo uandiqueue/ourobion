@@ -22,7 +22,6 @@ test('rollback evidence pins the existing fixture container contract and migrati
   assert.match(workflow, /filename" > "20260730020000"/);
   assert.match(workflow, /node supabase\/tests\/wellbeing-foundation\/local_schema_fixture\.mjs/);
   assert.match(workflow, /node supabase\/tests\/metric-view\/local_projection_fixture\.mjs/);
-  assert.match(workflow, /npm ci --prefix tools\/metric-view/);
 });
 
 test('attestation evidence pins exact local routes, denial hash, generator, and fresh graphs', () => {

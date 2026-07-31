@@ -59,11 +59,6 @@ jobs:
       PGPASSWORD: postgres
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install metric fixture dependency
-        run: npm ci --prefix tools/metric-view
       - name: Alias service container for unchanged local fixtures
         run: docker rename "${{ job.services.postgres.id }}" supabase_db_ourobion
       - name: Install pg_cron/pg_net stubs into the fixture container

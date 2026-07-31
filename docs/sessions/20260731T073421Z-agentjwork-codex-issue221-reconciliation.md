@@ -59,8 +59,7 @@ memory: none
 - Added `.github/workflows/run4-u6b-evidence.yml` with a static contract job plus two
   supplemental, no-secret Ubuntu evidence jobs. The rollback job aliases its isolated postgres:17
   service container to `supabase_db_ourobion`, applies only the migration baseline through
-  `20260730020000`, installs only the metric-view fixture's local `tsx` dependency, and runs the
-  unchanged transactional wellbeing and metric-view fixtures.
+  `20260730020000` and runs the unchanged transactional wellbeing and metric-view fixtures.
 - The attestation job checks out the event SHA, uses Node 20/Deno 2.8.1/repository-local CLI,
   probes only the four localhost function routes with unauthenticated `{}`, requires the recorded
   401 response hash, generates an attestation into runner temp, validates it with a separate fresh
