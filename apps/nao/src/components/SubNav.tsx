@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const TABS: ReadonlyArray<{ href: string; label: string; match: (p: string) => boolean }> = [
-  { href: '/', label: 'Overview', match: (p) => p === '/' },
+  { href: '/overview', label: 'Overview', match: (p) => p === '/overview' },
   {
     href: '/papers',
     label: 'Papers',
@@ -22,7 +22,7 @@ const TABS: ReadonlyArray<{ href: string; label: string; match: (p: string) => b
 ];
 
 export function SubNav() {
-  const pathname = usePathname() ?? '/';
+  const pathname = usePathname() ?? '/overview';
   return (
     <nav className="subnav" aria-label="Sections">
       {TABS.map((tab) => {
