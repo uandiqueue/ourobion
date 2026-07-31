@@ -304,15 +304,35 @@ export async function synthesizePapers(
     providerCalls += 1;
 
     // G2 · account this call with the router's own pricing.
-    let callUsd = 0;
+    //
+    // FAIL-CLOSED PRICING. `response.model` is the provider-ATTESTED id, which for OpenAI is a
+    // dated snapshot (`gpt-5-2025-08-07`) with no `prices[]` row — only the configured id
+    // (`gpt-5`) has one. Accounting 0 for an unpriced model made this ceiling DECORATIVE: a live
+    // two-paper run spent US$0.055 and recorded US$0.000000, so `--max-usd` could never fire.
+    // Measured on a real run, not hypothesised.
+    //
+    // So: price the attested id when it is priced, else fall back to the CONFIGURED node model —
+    // which is the rate actually authorised for this node. If neither is priced, refuse: at that
+    // point the run cannot account its own spend and continuing would silently burn budget.
+    const configuredModel = routerConfig!.nodes?.synthesis?.model;
+    let callUsd: number;
     try {
       callUsd = costUsd(routerConfig!, response.model, response.usage);
-    } catch (error: unknown) {
-      // A missing price entry is a real problem, not something to paper over with 0.
-      log(
-        `synth: ${paperUid} — WARNING cannot price '${response.model}': ` +
-          `${error instanceof Error ? error.message : String(error)}`,
-      );
+    } catch {
+      try {
+        if (configuredModel === undefined) throw new Error('no configured synthesis model');
+        callUsd = costUsd(routerConfig!, configuredModel, response.usage);
+        log(
+          `synth: ${paperUid} — attested id '${response.model}' has no prices[] row; ` +
+            `accounted at the configured '${configuredModel}' rate (US$${callUsd.toFixed(6)})`,
+        );
+      } catch (error: unknown) {
+        throw new Error(
+          `synth: cannot account spend for attested '${response.model}' nor configured ` +
+            `'${configuredModel}' — refusing to continue an unaccountable run ` +
+            `(${error instanceof Error ? error.message : String(error)})`,
+        );
+      }
     }
     usdSpent += callUsd;
 
