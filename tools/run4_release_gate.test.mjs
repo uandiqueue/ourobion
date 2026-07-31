@@ -73,6 +73,10 @@ const fakeFiles = {
   repoRoot: resolve('C:/repo-fixture'),
 };
 
+test('per-unit landing base is the approved Issue 221 integration parent', () => {
+  assert.equal(RUN4_UNIT_BASE_SHA, '42ae771c4809fe8f314fbf38dca89d60a809dedb');
+});
+
 test('real TOML parser accepts quoted dotted names and rejects redefinitions', () => {
   const parsed = parseFunctionConfig("[functions.'alpha.beta'] # legal TOML\nenabled = true # comment\nimport_map = './functions/alpha.beta/deno.json'\nentrypoint = './functions/alpha.beta/index.ts'");
   assert.equal(parsed[0].name, 'alpha.beta');

@@ -23,6 +23,12 @@ test('rollback evidence pins the existing fixture container contract and migrati
   assert.match(workflow, /ci\/migrations-bootstrap\.sql/);
   assert.match(workflow, /filename" > "20260730020000"/);
   assert.match(workflow, /node supabase\/tests\/wellbeing-foundation\/local_schema_fixture\.mjs/);
+  assert.match(workflow, /Grant only fixture role privileges \(RLS remains authoritative\)/);
+  assert.match(workflow, /grant usage on schema public to authenticated/);
+  assert.match(workflow, /grant select, insert on table public\.daily_gut_rows to authenticated/);
+  assert.match(workflow, /grant usage on sequence public\.daily_gut_rows_id_seq to authenticated/);
+  assert.match(workflow, /public\.signals, public\.metric_daily_values to authenticated/);
+  assert.doesNotMatch(workflow, /disable row level security|bypassrls/i);
   assert.match(workflow, /node supabase\/tests\/metric-view\/local_projection_fixture\.mjs/);
   for (const fixture of [wellbeingFixture, metricViewFixture]) {
     assert.match(fixture, /insert into auth\.users \(id, email\) values/);

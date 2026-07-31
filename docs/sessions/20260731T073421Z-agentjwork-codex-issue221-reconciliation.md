@@ -130,3 +130,72 @@ memory: none
 - None locally. Hosted image-pull and function-runtime behaviour remains to be observed remotely.
 
 memory: none
+
+## Continuation — rollback fixture privilege remediation
+
+### Attempted
+
+- Reviewed the latest hosted rollback failure: the wellbeing fixture reached `set local role
+  authenticated` but its first owner-row insert was denied before RLS policy evaluation.
+- Kept the change isolated to the disposable CI postgres service; no product migration, policy,
+  or shared-host database action was changed.
+
+### Changed
+
+- Added a post-baseline runner-only grant step for the existing authenticated role: schema usage,
+  daily-gut select/insert, daily-gut identity-sequence usage, and select-only access to the
+  metric-view projection and its RLS-protected source relations.
+- The authenticated role remains NOLOGIN and without BYPASSRLS. Existing `auth.uid()` policies
+  remain the authority for own-row allow/other-row denial, so the fixture now reaches the policy
+  assertions it was written to prove.
+- Extended the static contract to pin the grant scope and forbid RLS disable/BYPASSRLS wording.
+
+### Decided
+
+- The root cause is a deliberate gap in the vanilla `ci/migrations-bootstrap.sql`: it creates the
+  Supabase-shaped role and policy expressions but intentionally grants no public product-table
+  privileges. PostgreSQL rejects table access before applying RLS; granting only the fixture's
+  required operations restores the intended RLS test semantics without changing product schema.
+
+### Left
+
+- Let the next hosted evidence run execute the rollback fixtures with the runner-only grants.
+
+### Blockers
+
+- None locally. The resulting transactional proof remains pending its next hosted execution.
+
+memory: none
+
+## Continuation — per-unit landing base advance
+
+### Attempted
+
+- Audited the hosted release-gate failure against the prior `6020f444` unit boundary: it measured
+  cumulative integration history rather than only the #221 landing.
+
+### Changed
+
+- Advanced `RUN4_UNIT_BASE_SHA` and the parsed CI workflow environment to the exact current
+  dev-phase2-run4 integration parent `42ae771c4809fe8f314fbf38dca89d60a809dedb`.
+- Added a release-gate test that pins that approved unit base.
+
+### Decided
+
+- Retain the accepted 115-path / 8,500-added-line caps. The evidence work was 23 paths / 1,602
+  additions against the new parent; including this three-path base-advance remediation, the complete
+  branch working-tree delta is 26 paths / 1,694 additions. Do not remove accepted paths merely to
+  compensate for unrelated, already-integrated history.
+
+### Left
+
+- Re-record `supabase/deploy-attestation.json` with the existing attestation generator after fresh
+  hosted graph recomputation and route probes. The checked-in derived manifest intentionally remains
+  unchanged and stale to this newly advanced base until that evidence exists.
+
+### Blockers
+
+- None locally. Hosted regeneration is still required before the final release-gate attestation can
+  validate the new provenance.
+
+memory: none

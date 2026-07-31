@@ -76,6 +76,14 @@ jobs:
             echo "== $migration"
             psql -v ON_ERROR_STOP=1 -q -f "$migration"
           done < <(find supabase/migrations -maxdepth 1 -type f -name '*.sql' -print | sort)
+      # The vanilla CI bootstrap creates roles/policies but intentionally grants no product table
+      # privileges. These runner-only grants let the fixtures exercise existing RLS policies.
+      - name: Grant only fixture role privileges (RLS remains authoritative)
+        run: |
+          psql -v ON_ERROR_STOP=1 -q -c 'grant usage on schema public to authenticated;'
+          psql -v ON_ERROR_STOP=1 -q -c 'grant select, insert on table public.daily_gut_rows to authenticated;'
+          psql -v ON_ERROR_STOP=1 -q -c 'grant usage on sequence public.daily_gut_rows_id_seq to authenticated;'
+          psql -v ON_ERROR_STOP=1 -q -c 'grant select on table public.wearable_daily, public.events, public.state_bands, public.signals, public.metric_daily_values to authenticated;'
       - name: Prove wellbeing migration rolls back
         run: node supabase/tests/wellbeing-foundation/local_schema_fixture.mjs
       - name: Prove metric projection migration rolls back
