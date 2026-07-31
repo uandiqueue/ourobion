@@ -35,7 +35,7 @@ identity-kit binary allowlist and caps used for per-unit landings (D-231-PRODUCT
 | Submission-audit base | `253e0ad6db31bb2a134e47546ddaba84bf284639` | 533 | 75,645 | 418 paths / 67,145 lines |
 | Session A / PR #292 integration merge | `dea055c8155c1e9c6851931f4de9816a88d66b2d` | 536 | 76,360 | 421 paths / 67,860 lines |
 | #300 / PR #306 integration merge | `abcba95f8386d31c49f62f20f4b623de180e29c0` | 544 | 79,125 | 429 paths / 70,625 lines |
-| PR #305 rebased head before landing | `46c7e873727a75aa9a0321cee48ec0d5309476cb` | 549 | 79,554 | 434 paths / 71,054 lines |
+| PR #305 audit head before snapshot refresh | `a859ace390ac18a5e7f0047cb1dc1b8891ea0c9a` | 549 | 79,620 | 434 paths / 71,120 lines |
 
 At each listed measurement the release-gate command reported 28 MT4 paths excluded, 15 allowlisted
 binary paths, and 837,194 allowlisted binary bytes. Those are reproducible outputs of
