@@ -16,6 +16,8 @@ import { spawnSync } from 'node:child_process';
 import { selectPassages, defaultTermsForKeys } from './synth/passages.js';
 import { buildSynthesisPrompt, PROMPT_VERSION } from './synth/prompt.js';
 import { processSynthesisResponse } from './synth/postprocess.js';
+import { classifyEvidenceTier } from './evidenceTier.js';
+import type { PaperRecord } from './types.js';
 import {
   loadActiveMetricKeys,
   loadClaimValidator,
@@ -353,7 +355,7 @@ export async function runSinglePaper(options: SinglePaperOptions): Promise<Recor
     }
     return { ...prior, ...(options.resume ? { resumed: true } : { repeated: true }), ...(options.dryRun ? { dryRun: true, dbWrites: 0 } : {}) };
   }
-  const processed = processSynthesisResponse(response, { pair, allowedPaperIds: [paperUid], texts: new Map([[paperUid, text]]), validateClaim, validateCopy, synthesisModel: 'local-host-supplied', promptVersion: PROMPT_VERSION, now: () => Date.parse(deterministicAt(synthesisRunId)) });
+  const processed = processSynthesisResponse(response, { pair, allowedPaperIds: [paperUid], texts: new Map([[paperUid, text]]), paperMetadata: new Map([[paperUid, { title: typeof paper.title === 'string' ? paper.title : paperUid, year: typeof paper.year === 'number' && Number.isInteger(paper.year) ? paper.year : null, evidenceTier: classifyEvidenceTier(paper as unknown as PaperRecord).assignedTier }]]), validateClaim, validateCopy, synthesisModel: 'local-host-supplied', promptVersion: PROMPT_VERSION, now: () => Date.parse(deterministicAt(synthesisRunId)) });
   const verifications = processed.accepted.map((claim) => buildQuoteOnlyRecord({
     claim,
     quoteCheck: { spansFound: claim.quoteSpans.length, spansTotal: claim.quoteSpans.length, allPresent: claim.quoteSpans.length > 0 },

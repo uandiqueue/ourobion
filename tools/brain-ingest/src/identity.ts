@@ -316,6 +316,10 @@ export function resolveDedup(candidates: Candidate[], now = 0): DedupedPaper[] {
     let mergedIds = normalizeIdentifiers(canonical.identifiers);
     const via: string[] = [];
     const seenVia = new Set<string>();
+    const publicationTypes: NonNullable<Candidate['publicationTypes']> = [];
+    const seenPublicationTypes = new Set<string>();
+    const meshHeadings: NonNullable<Candidate['meshHeadings']> = [];
+    const seenMeshHeadings = new Set<string>();
 
     for (const idx of members) {
       const c = candidates[idx] as Candidate;
@@ -324,6 +328,20 @@ export function resolveDedup(candidates: Candidate[], now = 0): DedupedPaper[] {
       if (!seenVia.has(c.discoveredVia)) {
         seenVia.add(c.discoveredVia);
         via.push(c.discoveredVia);
+      }
+      for (const publicationType of c.publicationTypes ?? []) {
+        const key = `${publicationType.ui ?? ''}\u0000${publicationType.name}`;
+        if (!seenPublicationTypes.has(key)) {
+          seenPublicationTypes.add(key);
+          publicationTypes.push(publicationType);
+        }
+      }
+      for (const meshHeading of c.meshHeadings ?? []) {
+        const key = `${meshHeading.ui ?? ''}\u0000${meshHeading.name}`;
+        if (!seenMeshHeadings.has(key)) {
+          seenMeshHeadings.add(key);
+          meshHeadings.push(meshHeading);
+        }
       }
     }
 
@@ -336,7 +354,12 @@ export function resolveDedup(candidates: Candidate[], now = 0): DedupedPaper[] {
     result.push({
       paperUid,
       identifiers: mergedIds,
-      candidate: { ...canonical, identifiers: mergedIds },
+      candidate: {
+        ...canonical,
+        identifiers: mergedIds,
+        ...(publicationTypes.length > 0 ? { publicationTypes } : {}),
+        ...(meshHeadings.length > 0 ? { meshHeadings } : {}),
+      },
       discoveredVia: via,
     });
   }
@@ -494,6 +517,14 @@ export function reconcileByIdentifiers(
       members.flatMap((m) => m.discoveredVia.split(',').map((s) => s.trim()).filter(Boolean)),
     ).join(',');
     const errors = members.flatMap((m) => m.errors);
+    const publicationTypes = [...new Map(
+      members.flatMap((m) => m.publicationTypes ?? [])
+        .map((item) => [`${item.ui ?? ''}\u0000${item.name}`, item] as const),
+    ).values()];
+    const meshHeadings = [...new Map(
+      members.flatMap((m) => m.meshHeadings ?? [])
+        .map((item) => [`${item.ui ?? ''}\u0000${item.name}`, item] as const),
+    ).values()];
 
     const canonical: PaperRecord = {
       ...base,
@@ -502,6 +533,8 @@ export function reconcileByIdentifiers(
       topicTags,
       discoveredVia,
       errors,
+      ...(publicationTypes.length > 0 ? { publicationTypes } : {}),
+      ...(meshHeadings.length > 0 ? { meshHeadings } : {}),
       // metrics/journal/workType/concepts/oa stay from the base (per spec — prefer base).
       // IMPORTANT: if the base was `fetched`, keep its `storage` AS-IS. storage.key
       // already points at the real bytes on R2; the uid may change here but the bytes

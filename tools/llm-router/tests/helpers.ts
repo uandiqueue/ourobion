@@ -7,6 +7,44 @@
  */
 
 import { validateConfig, type RouterConfig } from '../src/config.js';
+import { acceptanceAuthorizationHash } from '../src/attemptJournal.js';
+import type { AcceptanceAuthorization, AcceptanceCallContext } from '../src/types.js';
+
+export function testAuthorization(
+  mutate?: (authorization: AcceptanceAuthorization) => void,
+): AcceptanceAuthorization {
+  const authorization: AcceptanceAuthorization = {
+    version: 1,
+    authorizationId: 'test-authorization',
+    authorizationBasis: 'Test-only finite provider ceilings; fixture USD values require no conversion.',
+    issuedAt: '2026-01-01T00:00:00.000Z',
+    expiresAt: '2027-01-01T00:00:00.000Z',
+    providers: {
+      anthropic: { maxPostStarts: 100, maxReservedUsd: 100, priorPostStarts: 0, priorReservedUsd: 0 },
+      openai: { maxPostStarts: 100, maxReservedUsd: 100, priorPostStarts: 0, priorReservedUsd: 0 },
+      agnes: { maxPostStarts: 100, maxReservedUsd: 100, priorPostStarts: 0, priorReservedUsd: 0 },
+    },
+  };
+  mutate?.(authorization);
+  return authorization;
+}
+
+export function acceptanceContext(
+  acceptanceRunId: string,
+  logicalCallId: string,
+  authorization = testAuthorization(),
+): AcceptanceCallContext {
+  return { acceptanceRunId, logicalCallId, authorization };
+}
+
+export function authorizationBinding(authorization = testAuthorization()) {
+  return {
+    authorization,
+    authorizationId: authorization.authorizationId,
+    authorizationHash: acceptanceAuthorizationHash(authorization),
+    authorizationBasis: authorization.authorizationBasis,
+  };
+}
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function baseConfigObject(): any {
@@ -26,9 +64,9 @@ export function baseConfigObject(): any {
       { prefix: 'gemini-', family: 'google', envKey: 'GOOGLE_API_KEY' },
     ],
     prices: {
-      'claude-sonnet-5': { inputUsdPerMTok: 3, outputUsdPerMTok: 15, provisional: true },
-      'claude-haiku-4-5': { inputUsdPerMTok: 1, outputUsdPerMTok: 5, provisional: true },
-      'gpt-5': { inputUsdPerMTok: 1.25, outputUsdPerMTok: 10, provisional: true },
+      'claude-sonnet-5': { inputUsdPerMTok: 3, outputUsdPerMTok: 15, pricingProvenance: 'test fixture', effectiveFrom: '2026-01-01T00:00:00.000Z', expiresAt: '2027-01-01T00:00:00.000Z', provisional: true },
+      'claude-haiku-4-5': { inputUsdPerMTok: 1, outputUsdPerMTok: 5, pricingProvenance: 'test fixture', effectiveFrom: '2026-01-01T00:00:00.000Z', expiresAt: '2027-01-01T00:00:00.000Z', provisional: true },
+      'gpt-5': { inputUsdPerMTok: 1.25, outputUsdPerMTok: 10, pricingProvenance: 'test fixture', effectiveFrom: '2026-01-01T00:00:00.000Z', expiresAt: '2027-01-01T00:00:00.000Z', provisional: true },
     },
     budget: {
       perRunOutputTokens: 200000,

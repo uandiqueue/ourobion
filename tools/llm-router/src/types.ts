@@ -62,25 +62,40 @@ export const TEST_MODE_LABEL =
 /** Vendor family used for the decorrelation invariant. */
 export type VendorFamily = 'anthropic' | 'openai' | 'google' | 'agnes';
 
-/** Fixed, non-raiseable ceilings for the owner-authorised two-leg acceptance. */
+/** Generic, non-raiseable request-safety ceilings for provider acceptance. */
 export const ACCEPTANCE_MAX_INPUT_BYTES = 24_000;
 export const ACCEPTANCE_MAX_OUTPUT_TOKENS = 3_072;
-export const ACCEPTANCE_ANTHROPIC_MAX_POST_STARTS_PER_LEG = 3;
-export const ACCEPTANCE_AGNES_MAX_POST_STARTS_PER_LEG = 10;
-export const ACCEPTANCE_GLOBAL_MAX_USD = 5;
-/** The sole repository-relative acceptance journal location. `data/llm-router/` is gitignored. */
-export const ACCEPTANCE_JOURNAL_REPO_PATH = 'data/llm-router/acceptance-attempts.jsonl';
+export const ACCEPTANCE_MAX_POST_STARTS_PER_LOGICAL_CALL = 3;
+export const ACCEPTANCE_RUNTIME_REPO_ROOT = 'data/brain-ingest/live-acceptance';
+
+export interface AcceptanceProviderAuthorization {
+  maxPostStarts: number;
+  maxReservedUsd: number;
+  priorPostStarts: number;
+  priorReservedUsd: number;
+}
+
+/** Frozen, finite operator authorization supplied by a live runtime bundle. */
+export interface AcceptanceAuthorization {
+  version: 1;
+  authorizationId: string;
+  /** Human-auditable owner directive and any conservative currency conversion rationale. */
+  authorizationBasis: string;
+  issuedAt: string;
+  expiresAt: string;
+  providers: Record<'anthropic' | 'openai' | 'agnes', AcceptanceProviderAuthorization>;
+}
 
 /**
  * Opt-in call identity for the acceptance-only provider path.
  *
- * Limits are deliberately not caller fields: the constants above are compiled
- * policy, so an invocation cannot raise the prompt, output, POST, or USD ceiling.
- * Transport and enforcement retries MUST reuse the same logicalCallId.
+ * Prompt/output/retry safety remains compiled policy. Provider aggregate
+ * POST/spend authorization is a finite frozen runtime descriptor.
  */
 export interface AcceptanceCallContext {
   acceptanceRunId: string;
   logicalCallId: string;
+  authorization: AcceptanceAuthorization;
 }
 
 /**

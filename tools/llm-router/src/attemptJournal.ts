@@ -24,10 +24,10 @@ import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import type { BillingMode } from './config.js';
 import { RouterAttemptJournalError } from './errors.js';
 import {
-  ACCEPTANCE_AGNES_MAX_POST_STARTS_PER_LEG,
-  ACCEPTANCE_GLOBAL_MAX_USD,
-  ACCEPTANCE_ANTHROPIC_MAX_POST_STARTS_PER_LEG,
+  ACCEPTANCE_MAX_POST_STARTS_PER_LOGICAL_CALL,
+  ACCEPTANCE_RUNTIME_REPO_ROOT,
   LLM_NODE_IDS,
+  type AcceptanceAuthorization,
   type LlmNodeId,
   type VendorFamily,
 } from './types.js';
@@ -40,6 +40,8 @@ export interface AttemptPriceMetadata {
   outputUsdPerMTok: number;
   provisional: false;
   pricingProvenance: string | null;
+  effectiveFrom?: string | null;
+  expiresAt?: string | null;
 }
 
 export interface AttemptJournalEvent {
@@ -47,6 +49,9 @@ export interface AttemptJournalEvent {
   sequence: number;
   previousHash: string | null;
   eventHash: string;
+  authorizationId: string;
+  authorizationHash: string;
+  authorizationBasis: string;
   acceptanceRunId: string;
   logicalCallId: string;
   nodeId: LlmNodeId;
@@ -66,6 +71,10 @@ export interface AttemptJournalEvent {
 }
 
 export interface AttemptReservationInput {
+  authorization: AcceptanceAuthorization;
+  authorizationId: string;
+  authorizationHash: string;
+  authorizationBasis: string;
   acceptanceRunId: string;
   logicalCallId: string;
   nodeId: LlmNodeId;
@@ -78,16 +87,19 @@ export interface AttemptReservationInput {
   price: AttemptPriceMetadata;
 }
 
-export interface AttemptReservation extends AttemptReservationInput {
+export interface AttemptReservation extends Omit<AttemptReservationInput, 'authorization'> {
   attempt: number;
 }
 
 function sameReservationIdentity(
-  left: Omit<AttemptReservationInput, 'price'> & { attempt: number; price?: AttemptPriceMetadata },
-  right: Omit<AttemptReservationInput, 'price'> & { attempt: number; price?: AttemptPriceMetadata },
+  left: Omit<AttemptReservationInput, 'price' | 'authorization'> & { attempt: number; price?: AttemptPriceMetadata },
+  right: Omit<AttemptReservationInput, 'price' | 'authorization'> & { attempt: number; price?: AttemptPriceMetadata },
 ): boolean {
   return (
     left.acceptanceRunId === right.acceptanceRunId &&
+    left.authorizationId === right.authorizationId &&
+    left.authorizationHash === right.authorizationHash &&
+    left.authorizationBasis === right.authorizationBasis &&
     left.logicalCallId === right.logicalCallId &&
     left.nodeId === right.nodeId &&
     left.providerFamily === right.providerFamily &&
@@ -111,7 +123,9 @@ function samePriceMetadata(
     left.inputUsdPerMTok === right.inputUsdPerMTok &&
     left.outputUsdPerMTok === right.outputUsdPerMTok &&
     left.provisional === right.provisional &&
-    left.pricingProvenance === right.pricingProvenance
+    left.pricingProvenance === right.pricingProvenance &&
+    (left.effectiveFrom ?? null) === (right.effectiveFrom ?? null) &&
+    (left.expiresAt ?? null) === (right.expiresAt ?? null)
   );
 }
 
@@ -161,18 +175,92 @@ function sha256(value: string): string {
   return `sha256:${createHash('sha256').update(value, 'utf8').digest('hex')}`;
 }
 
+export function acceptanceAuthorizationHash(value: AcceptanceAuthorization): string {
+  return sha256(canonicalJson(value));
+}
+
+export function acceptanceJournalRepoPath(authorizationId: string): string {
+  validateId('authorizationId', authorizationId);
+  return `${ACCEPTANCE_RUNTIME_REPO_ROOT}/${authorizationId}/attempts.jsonl`;
+}
+
+export function validateAcceptanceAuthorization(
+  raw: unknown,
+  nowMs: number,
+): AcceptanceAuthorization {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    fail('authorization must be an object');
+  }
+  const value = raw as Partial<AcceptanceAuthorization>;
+  if (
+    value.version !== 1 ||
+    typeof value.authorizationId !== 'string' ||
+    typeof value.authorizationBasis !== 'string' ||
+    value.authorizationBasis.trim().length === 0
+  ) {
+    fail('authorization version/id is invalid');
+  }
+  validateId('authorizationId', value.authorizationId);
+  const issued = typeof value.issuedAt === 'string' ? Date.parse(value.issuedAt) : NaN;
+  const expires = typeof value.expiresAt === 'string' ? Date.parse(value.expiresAt) : NaN;
+  if (!Number.isFinite(issued) || !Number.isFinite(expires) || issued >= expires) {
+    fail('authorization must have a valid finite issuedAt/expiresAt window');
+  }
+  if (nowMs < issued || nowMs >= expires) {
+    fail('authorization is not effective at the current time');
+  }
+  if (typeof value.providers !== 'object' || value.providers === null) {
+    fail('authorization providers must be an object');
+  }
+  const source = value.providers as Record<string, unknown>;
+  const keys = Object.keys(source).sort();
+  if (canonicalJson(keys) !== canonicalJson(['agnes', 'anthropic', 'openai'])) {
+    fail('authorization providers must be exactly agnes, anthropic, and openai');
+  }
+  const providers = {} as AcceptanceAuthorization['providers'];
+  for (const family of ['anthropic', 'openai', 'agnes'] as const) {
+    const rawLimit = source[family];
+    if (typeof rawLimit !== 'object' || rawLimit === null || Array.isArray(rawLimit)) {
+      fail(`authorization provider '${family}' is invalid`);
+    }
+    const limit = rawLimit as Record<string, unknown>;
+    const maxPostStarts = limit.maxPostStarts;
+    const priorPostStarts = limit.priorPostStarts;
+    const maxReservedUsd = limit.maxReservedUsd;
+    const priorReservedUsd = limit.priorReservedUsd;
+    if (
+      !Number.isInteger(maxPostStarts) || (maxPostStarts as number) < 0 ||
+      !Number.isInteger(priorPostStarts) || (priorPostStarts as number) < 0 ||
+      (priorPostStarts as number) > (maxPostStarts as number) ||
+      typeof maxReservedUsd !== 'number' || !Number.isFinite(maxReservedUsd) || maxReservedUsd < 0 ||
+      typeof priorReservedUsd !== 'number' || !Number.isFinite(priorReservedUsd) || priorReservedUsd < 0 ||
+      priorReservedUsd > maxReservedUsd + Number.EPSILON
+    ) {
+      fail(`authorization provider '${family}' has invalid starts/spend limits`);
+    }
+    providers[family] = {
+      maxPostStarts: maxPostStarts as number,
+      maxReservedUsd,
+      priorPostStarts: priorPostStarts as number,
+      priorReservedUsd,
+    };
+  }
+  return {
+    version: 1,
+    authorizationId: value.authorizationId,
+    authorizationBasis: value.authorizationBasis.trim(),
+    issuedAt: new Date(issued).toISOString(),
+    expiresAt: new Date(expires).toISOString(),
+    providers,
+  };
+}
+
 function eventHash(event: Omit<AttemptJournalEvent, 'eventHash'>): string {
   return sha256(canonicalJson(event));
 }
 
 function fail(message: string): never {
   throw new RouterAttemptJournalError(`llm-router acceptance: ${message}`);
-}
-
-function maxPostStartsFor(providerFamily: VendorFamily, model: string): number {
-  if (providerFamily === 'anthropic' && model.startsWith('claude-')) return ACCEPTANCE_ANTHROPIC_MAX_POST_STARTS_PER_LEG;
-  if (providerFamily === 'agnes' && model.startsWith('agnes-')) return ACCEPTANCE_AGNES_MAX_POST_STARTS_PER_LEG;
-  fail(`provider family/model '${providerFamily}/${model}' is not a canonical acceptance provider`);
 }
 
 function validateId(label: string, value: string): void {
@@ -182,9 +270,13 @@ function validateId(label: string, value: string): void {
 function validPriceMetadata(price: AttemptPriceMetadata | undefined): boolean {
   if (price === undefined || price === null || typeof price !== 'object' || price.provisional !== false) return false;
   const provenanceIsValid =
-    price.pricingProvenance === null ||
     (typeof price.pricingProvenance === 'string' && price.pricingProvenance.trim().length > 0);
   if (!provenanceIsValid) return false;
+  const windowIsValid =
+    typeof price.effectiveFrom === 'string' && !Number.isNaN(Date.parse(price.effectiveFrom)) &&
+    typeof price.expiresAt === 'string' && !Number.isNaN(Date.parse(price.expiresAt)) &&
+    Date.parse(price.effectiveFrom) < Date.parse(price.expiresAt);
+  if (!windowIsValid) return false;
   if (price.billingMode === 'free') {
     return (
       price.inputUsdPerMTok === 0 &&
@@ -197,7 +289,8 @@ function validPriceMetadata(price: AttemptPriceMetadata | undefined): boolean {
     Number.isFinite(price.inputUsdPerMTok) &&
     price.inputUsdPerMTok > 0 &&
     Number.isFinite(price.outputUsdPerMTok) &&
-    price.outputUsdPerMTok > 0
+    price.outputUsdPerMTok > 0 &&
+    typeof price.pricingProvenance === 'string'
   );
 }
 
@@ -291,6 +384,9 @@ export class AttemptJournal {
         event.sequence !== index + 1 ||
         event.previousHash !== previousHash ||
         !HASH_RE.test(event.eventHash ?? '') ||
+        typeof event.authorizationId !== 'string' || !ID_RE.test(event.authorizationId) ||
+        !HASH_RE.test(event.authorizationHash ?? '') ||
+        typeof event.authorizationBasis !== 'string' || event.authorizationBasis.trim().length === 0 ||
         !['reserved', 'started', 'response', 'failed', 'unknown'].includes(event.kind) ||
         !Number.isInteger(event.attempt) || event.attempt < 1 ||
         !validReservationBilling(event.reservedUsd, event.price, true) ||
@@ -304,7 +400,9 @@ export class AttemptJournal {
       ) {
         fail(`journal '${this.path}' line ${index + 1} has an invalid shape or chain position`);
       }
-      if (event.kind === 'reserved') maxPostStartsFor(event.providerFamily, event.model);
+      if (event.kind === 'reserved' && event.providerFamily === 'google') {
+        fail('Google is not an authorized acceptance provider');
+      }
       const { eventHash: recorded, ...hashable } = event;
       if (eventHash(hashable) !== recorded) fail(`journal '${this.path}' line ${index + 1} hash mismatch`);
       events.push(event);
@@ -338,16 +436,33 @@ export class AttemptJournal {
   }
 
   reserveAndStart(input: AttemptReservationInput): AttemptReservation {
+    const authorization = validateAcceptanceAuthorization(input.authorization, this.now());
+    const authorizationHash = acceptanceAuthorizationHash(authorization);
+    if (
+      input.authorizationId !== authorization.authorizationId ||
+      input.authorizationHash !== authorizationHash ||
+      input.authorizationBasis !== authorization.authorizationBasis
+    ) {
+      fail('reservation authorization identity/hash does not match the frozen descriptor');
+    }
     validateId('acceptanceRunId', input.acceptanceRunId);
     validateId('logicalCallId', input.logicalCallId);
     if (!HASH_RE.test(input.promptHash)) fail('promptHash must be sha256:<64 lowercase hex>');
     if (!validReservationBilling(input.reservedUsd, input.price, false)) {
       fail('reservation price metadata or reservedUsd is invalid for its billing mode');
     }
-    const maxPostStarts = maxPostStartsFor(input.providerFamily, input.model);
+    if (input.providerFamily === 'google') fail('Google is not an authorized acceptance provider');
+    const providerLimit = authorization.providers[input.providerFamily];
 
     return this.withLock(() => {
       const events = this.readEvents();
+      if (events.some((event) =>
+        event.authorizationId !== authorization.authorizationId ||
+        event.authorizationHash !== authorizationHash ||
+        event.authorizationBasis !== authorization.authorizationBasis
+      )) {
+        fail('journal contains an event from a different authorization');
+      }
       const reservations = events.filter((event) => event.kind === 'reserved');
       // A run id groups evidence; it is not an authorization/budget key. The
       // stable hashed logical id is capped across the entire singleton journal.
@@ -366,20 +481,28 @@ export class AttemptJournal {
         fail(`logical call '${input.logicalCallId}' changed identity, prompt, or ceilings/price between retries`);
       }
 
-      if (legReservations.length >= maxPostStarts) {
-        fail(`logical call '${input.logicalCallId}' exhausted its ${maxPostStarts} POST starts`);
+      if (legReservations.length >= ACCEPTANCE_MAX_POST_STARTS_PER_LOGICAL_CALL) {
+        fail(`logical call '${input.logicalCallId}' exhausted its ${ACCEPTANCE_MAX_POST_STARTS_PER_LOGICAL_CALL} retry-safety POST starts`);
       }
-      // The US$5 ceiling is global to this journal, not resettable by choosing a
-      // fresh acceptanceRunId. Run ids group evidence; they are not budget keys.
-      const reserved = reservations.reduce((sum, event) => sum + event.reservedUsd, 0);
-      if (reserved + input.reservedUsd > ACCEPTANCE_GLOBAL_MAX_USD + Number.EPSILON) {
+      const providerReservations = reservations.filter((event) => event.providerFamily === input.providerFamily);
+      const aggregateStarts = providerLimit.priorPostStarts + providerReservations.length + 1;
+      if (aggregateStarts > providerLimit.maxPostStarts) {
         fail(
-          `run '${input.acceptanceRunId}' would exceed the global US$${ACCEPTANCE_GLOBAL_MAX_USD} ceiling ` +
-            `(reserved US$${reserved.toFixed(6)}, next US$${input.reservedUsd.toFixed(6)})`,
+          `authorization '${authorization.authorizationId}' would exceed ${input.providerFamily} POST starts ` +
+            `(${aggregateStarts} > ${providerLimit.maxPostStarts}, including prior starts)`,
+        );
+      }
+      const journalReserved = providerReservations.reduce((sum, event) => sum + event.reservedUsd, 0);
+      const aggregateReserved = providerLimit.priorReservedUsd + journalReserved + input.reservedUsd;
+      if (aggregateReserved > providerLimit.maxReservedUsd + Number.EPSILON) {
+        fail(
+          `authorization '${authorization.authorizationId}' would exceed ${input.providerFamily} reserved USD ` +
+            `(${aggregateReserved.toFixed(6)} > ${providerLimit.maxReservedUsd.toFixed(6)}, including prior spend)`,
         );
       }
 
-      const reservation: AttemptReservation = { ...input, attempt: legReservations.length + 1 };
+      const { authorization: _authorization, ...reservationInput } = input;
+      const reservation: AttemptReservation = { ...reservationInput, attempt: legReservations.length + 1 };
       this.appendEvent(events, reservation, 'reserved');
       // A separate fsynced line distinguishes reservation from the actual start.
       // The reservation still counts if the process dies between these lines.
@@ -584,7 +707,10 @@ export class AttemptJournal {
 }
 
 /** Stable bounded id for a raw pair/edge identity that may contain pipes or arbitrary Unicode. */
-export function logicalCallIdSha256(namespace: 'synthesis' | 'verifier', rawIdentity: string): string {
+export function logicalCallIdSha256(
+  namespace: 'synthesis' | 'verifier' | 'anthropic-synthesis' | 'openai-synthesis',
+  rawIdentity: string,
+): string {
   if (rawIdentity.length === 0) fail('logical call raw identity must be non-empty');
   return `${namespace}:${createHash('sha256').update(rawIdentity, 'utf8').digest('hex')}`;
 }
