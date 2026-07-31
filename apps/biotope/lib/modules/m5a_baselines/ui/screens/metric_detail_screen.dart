@@ -295,10 +295,7 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: _retry,
-                child: Text(TrendCopy.retry),
-              ),
+              OutlinedButton(onPressed: _retry, child: Text(TrendCopy.retry)),
             ],
           ),
         ),
@@ -540,7 +537,7 @@ class _HistoryCard extends StatelessWidget {
             // The shared painter — not a second charting path. It plots one dot
             // per real day at a DATE-proportional x, so gaps stay gaps.
             child: CustomPaint(
-              painter: TrendChartPainter(points: points),
+              painter: TrendChartPainter(metricKey: metricKey, points: points),
               child: const SizedBox.expand(),
             ),
           ),

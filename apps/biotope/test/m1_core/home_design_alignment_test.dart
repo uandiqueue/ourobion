@@ -42,7 +42,10 @@ void main() {
       // The number is log_completeness. "index" would imply a composite health
       // score the app does not compute — a deliberate divergence from the
       // design in favour of the truth of the underlying field.
-      expect(source.contains('/100 coverage'), isTrue);
+      expect(source.contains('/100 weighted points'), isTrue);
+      expect(source.contains('7-day weighted logging completeness'), isTrue);
+      expect(source.contains('High coverage'), isTrue);
+      expect(source.contains('Thriving'), isFalse);
       expect(
         source.contains('/100 index'),
         isFalse,

@@ -221,16 +221,18 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
     return delta == 0 ? null : delta;
   }
 
-  /// Categorical status word derived from a real number (7-day DQS average),
-  /// not a fabricated composite — observational per copy_guidelines.dart.
+  /// Coverage bucket derived from the same real score the hero displays.
   String get _statusWord {
     final v = _engagement.dqs7DayAvg ?? _todayDqs;
-    if (v == null) return 'Getting started';
-    if (v >= 80) return 'Thriving';
-    if (v >= 60) return 'Balanced';
-    if (v >= 40) return 'Settling in';
-    return 'Getting started';
+    return HomeCoverageCopy.bucket(v);
   }
+
+  String get _coverageBasis => _engagement.dqs7DayAvg != null
+      ? HomeCoverageCopy.sevenDayBasis
+      : HomeCoverageCopy.todayBasis;
+
+  String get _coverageRange =>
+      HomeCoverageCopy.bucketRange(_engagement.dqs7DayAvg ?? _todayDqs);
 
   @override
   Widget build(BuildContext context) {
@@ -335,6 +337,8 @@ class HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                     SystemStatusHero(
                       statusWord: _statusWord,
                       index: (_engagement.dqs7DayAvg ?? _todayDqs)?.round(),
+                      scoreBasis: _coverageBasis,
+                      bucketRange: _coverageRange,
                       streak: _engagement.currentStreakDays,
                       indexDelta: _indexDelta,
                     ),
@@ -570,6 +574,28 @@ class _DeltaPill extends StatelessWidget {
   }
 }
 
+/// Truthful labels for the weighted logging-completeness score on Home.
+abstract final class HomeCoverageCopy {
+  static const sevenDayBasis = '7-day weighted logging completeness';
+  static const todayBasis = 'Today’s weighted logging completeness';
+
+  static String bucket(double? value) {
+    if (value == null) return 'No coverage yet';
+    if (value >= 80) return 'High coverage';
+    if (value >= 60) return 'Steady coverage';
+    if (value >= 40) return 'Partial coverage';
+    return 'Early coverage';
+  }
+
+  static String bucketRange(double? value) {
+    if (value == null) return 'Log-weight score appears after your first entry';
+    if (value >= 80) return '80–100 weighted points';
+    if (value >= 60) return '60–79 weighted points';
+    if (value >= 40) return '40–59 weighted points';
+    return '0–39 weighted points';
+  }
+}
+
 /// Full-width Home status card with its visual treatment kept behind live data.
 ///
 /// This stays independently pumpable because HomeTab itself reads Supabase
@@ -577,12 +603,16 @@ class _DeltaPill extends StatelessWidget {
 class SystemStatusHero extends StatelessWidget {
   final String statusWord;
   final int? index;
+  final String scoreBasis;
+  final String bucketRange;
   final int streak;
   final int? indexDelta;
   const SystemStatusHero({
     super.key,
     required this.statusWord,
     required this.index,
+    required this.scoreBasis,
+    required this.bucketRange,
     required this.streak,
     required this.indexDelta,
   });
@@ -695,7 +725,7 @@ class SystemStatusHero extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 10),
                         // Design's gold hairline fading to nothing, rather than a hard
                         // 60px rule.
                         Container(
@@ -710,7 +740,7 @@ class SystemStatusHero extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         if (index != null)
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -728,7 +758,7 @@ class SystemStatusHero extends StatelessWidget {
                               const SizedBox(width: 6),
                               Flexible(
                                 child: Text(
-                                  '/100 coverage',
+                                  '/100 weighted points',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.manrope(
@@ -740,15 +770,29 @@ class SystemStatusHero extends StatelessWidget {
                               ),
                             ],
                           ),
+                        if (index != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            '$scoreBasis\n$bucketRange',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.manrope(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              height: 1.2,
+                              color: OurobionColors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
                         // Real movement against the 7-day average. Rendered only when
                         // both numbers exist, so an absent baseline shows no pill
                         // rather than a fabricated "▲ 0".
                         if (indexDelta != null) ...[
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 6),
                           _DeltaPill(points: indexDelta!),
                         ],
                         if (streak > 0) ...[
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,

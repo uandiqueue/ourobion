@@ -17,11 +17,13 @@ class _FakeSeriesService extends MetricSeriesService {
   // autoRefreshToken off: the default GoTrue auto-refresh timer trips the
   // test binding's pending-timers invariant.
   _FakeSeriesService({required this.keys, required this.points})
-    : super(SupabaseClient(
-        'http://localhost',
-        'test-key',
-        authOptions: const AuthClientOptions(autoRefreshToken: false),
-      ));
+    : super(
+        SupabaseClient(
+          'http://localhost',
+          'test-key',
+          authOptions: const AuthClientOptions(autoRefreshToken: false),
+        ),
+      );
 
   @override
   Future<List<String>> getMetricKeys(
@@ -56,6 +58,31 @@ List<MetricDailyPoint> _series() => [
 ];
 
 void main() {
+  group('metric-aware y-axis', () {
+    test('urine and stool stay on labelled ordinal categories', () {
+      expect(trendAxisTicks('urine_colour', [2, 5, 7]), [1, 4, 8]);
+      expect(trendAxisLabel('urine_colour', 1), '1 pale');
+      expect(trendAxisLabel('urine_colour', 8), '8 dark');
+      expect(trendAxisBounds('urine_colour', [2, 5, 7], [1, 4, 8]).min, 1);
+      expect(trendAxisBounds('urine_colour', [2, 5, 7], [1, 4, 8]).max, 8);
+
+      expect(trendAxisTicks('stool_form', [2, 4, 6]), [1, 4, 7]);
+      expect(trendAxisLabel('stool_form', 1), '1 firm');
+      expect(trendAxisLabel('stool_form', 4), '4 smooth');
+      expect(trendAxisLabel('stool_form', 7), '7 watery');
+    });
+
+    test('continuous metrics keep numeric ticks with their units', () {
+      final ticks = trendAxisTicks('sleep_duration_min', [360, 390, 420]);
+      expect(ticks, isNotEmpty);
+      for (final tick in ticks) {
+        expect(trendAxisLabel('sleep_duration_min', tick), endsWith(' min'));
+      }
+      expect(trendAxisLabel('resting_hr_bpm', 62), '62 bpm');
+      expect(trendAxisLabel('hrv_sdnn_ms', 44), '44 ms');
+    });
+  });
+
   testWidgets('renders picker + chart and preselects gut_comfort_score', (
     tester,
   ) async {
