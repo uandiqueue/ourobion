@@ -111,13 +111,13 @@ jobs:
           mkdir -p "$evidence" "$record_graphs" "$verify_graphs"
           cp supabase/deploy-attestation.json "$original_manifest"
           server_pid=''
-          start_log=$evidence/local-stack-start.log
-          stop_log=$evidence/local-stack-stop.log
+          start_log="$evidence/local-stack-start.log"
+          stop_log="$evidence/local-stack-stop.log"
           stack_started=''
           sanitized_tail() {
-            local log=$1
-            [[ -f $log ]] || return 0
-            tail -n 20 $log | sed -E -e 's/eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9._-]+\.[A-Za-z0-9._-]+/[REDACTED_JWT]/g' -e 's/(([A-Za-z_][A-Za-z0-9_]*(KEY|SECRET|TOKEN|PASSWORD)[A-Za-z0-9_]*)[[:space:]]*[:=][[:space:]]*)[^[:space:],}]+/\1[REDACTED]/Ig'
+            local log="$1"
+            [[ -f "$log" ]] || return 0
+            tail -n 20 "$log" | sed -E -e 's/eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9._-]+\.[A-Za-z0-9._-]+/[REDACTED_JWT]/g' -e 's/(([A-Za-z_][A-Za-z0-9_]*(KEY|SECRET|TOKEN|PASSWORD)[A-Za-z0-9_]*)[[:space:]]*[:=][[:space:]]*)[^[:space:],}]+/\1[REDACTED]/Ig'
           }
           cleanup() {
             status=$?
@@ -133,18 +133,17 @@ jobs:
           }
           trap cleanup EXIT
           stack_started=yes
-          node_modules/.bin/supabase start --exclude gotrue,realtime,storage-api,imgproxy,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor >$start_log 2>&1
+          node_modules/.bin/supabase start --yes --exclude gotrue,realtime,storage-api,imgproxy,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor >"$start_log" 2>&1
           node_modules/.bin/supabase functions serve --debug --no-verify-jwt >"$server_log" 2>&1 &
           server_pid=$!
           ready=''
           for attempt in $(seq 1 120); do
-            if ! kill -0 $server_pid 2>/dev/null; then echo 'local functions serve process exited before readiness'; exit 1; fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then echo 'local functions serve process exited before readiness'; exit 1; fi
             status=$(curl --silent --show-error --connect-timeout 1 --max-time 5 --output /dev/null --write-out '%{http_code}' --request POST --header 'content-type: application/json' --data '{}' http://127.0.0.1:54321/functions/v1/compute-baselines || true)
-            if [[ $status = 401 ]]; then ready=yes; break; fi
-            if curl --silent --show-error --output /dev/null --write-out '%{http_code}' --request POST --header 'content-type: application/json' --data '{}' http://127.0.0.1:54321/functions/v1/compute-baselines | grep -Eq '^(401|404|500)$'; then break; fi
+            if [[ "$status" = 401 ]]; then ready=yes; break; fi
             sleep 1
           done
-          if [[ -z $ready ]]; then echo 'local functions listener did not become ready within 120 seconds'; exit 1; fi
+          if [[ -z "$ready" ]]; then echo 'local functions listener did not become ready within 120 seconds'; exit 1; fi
           routes=()
           for name in compute-baselines evaluate-signals generate-insights run-pipeline; do
             body="$evidence/$name.body"
@@ -163,21 +162,17 @@ jobs:
           cp "$manifest" supabase/deploy-attestation.json
           node tools/run4_release_gate.mjs attest --deno deno --supabase-cli ./node_modules/.bin/supabase --graph-dir "$verify_graphs"
           git rev-parse HEAD > "$evidence/git-sha.txt"
-          kill $server_pid 2>/dev/null || true
-          wait $server_pid 2>/dev/null || true
-          server_pid=''
-          node_modules/.bin/supabase stop --no-backup >$stop_log 2>&1
-          stack_started=''
-          sha256sum $start_log > $evidence/local-stack-start.log.sha256
-          sha256sum $stop_log > $evidence/local-stack-stop.log.sha256
-          rm $start_log $stop_log
-          sha256sum "$server_log" > "$evidence/local-functions-serve.log.sha256"
-          rm "$server_log"
-          sha256sum "$manifest" "$route_evidence" "$evidence/git-sha.txt" "$evidence/local-functions-serve.log.sha256" > "$evidence/checksums.sha256"
           kill "$server_pid" 2>/dev/null || true
           wait "$server_pid" 2>/dev/null || true
           server_pid=''
-          sha256sum $manifest $route_evidence $evidence/git-sha.txt $evidence/local-stack-start.log.sha256 $evidence/local-functions-serve.log.sha256 $evidence/local-stack-stop.log.sha256 > $evidence/checksums.sha256
+          node_modules/.bin/supabase stop --no-backup >"$stop_log" 2>&1
+          stack_started=''
+          sha256sum "$start_log" > "$evidence/local-stack-start.log.sha256"
+          sha256sum "$stop_log" > "$evidence/local-stack-stop.log.sha256"
+          rm "$start_log" "$stop_log"
+          sha256sum "$server_log" > "$evidence/local-functions-serve.log.sha256"
+          rm "$server_log"
+          sha256sum "$manifest" "$route_evidence" "$evidence/git-sha.txt" "$evidence/local-stack-start.log.sha256" "$evidence/local-functions-serve.log.sha256" "$evidence/local-stack-stop.log.sha256" > "$evidence/checksums.sha256"
           cp "$original_manifest" supabase/deploy-attestation.json
           rm "$original_manifest"
           trap - EXIT
