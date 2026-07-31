@@ -23,6 +23,8 @@ Issue: #271 · branch: `fix/db/compute-baselines-nul` · base: `dev-phase2-run4`
   identical runtime separator between user and metric identifiers.
 - Updated the source contract test to require both ordinary text source and the escaped delimiter.
 - Removed obsolete test comments describing the function source as deliberately binary.
+- Regenerated `supabase/deploy-attestation.json` through the checked-in `record-attestation`
+  generator after a fresh local serve probe; the derived evidence was never hand-edited.
 
 ## Decided
 
@@ -37,5 +39,15 @@ Issue: #271 · branch: `fix/db/compute-baselines-nul` · base: `dev-phase2-run4`
 ## Blockers
 
 - None for the source normalization.
+
+## Verification
+
+- All four configured handlers were reached through local `supabase functions serve --debug
+  --no-verify-jwt` and returned the expected byte-identical `401 Unauthorized` response without the
+  internal header.
+- Fresh module-graph attestation verification passed.
+- Run 4 release-gate tests: **17/17 passed**.
+- Focused internal-auth and source-contract tests: **41/41 passed**.
+- `context_sync --check` and `git diff --check` passed.
 
 memory: none
