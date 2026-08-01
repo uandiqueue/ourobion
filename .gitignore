@@ -156,7 +156,8 @@ data/llm-router/
 # not match a bare .py, which is exactly how `git add -A` swept four of these
 # into PR #311 — caught only as a model-training lint failure, not as a licence
 # gate. Promised on #311 and landed here; see also #277 for the licence scope.
-/model-training/experiments/
+/model-training/experiments/*
+!/model-training/experiments/2026-07-31-disagreement-pilot/
 
 # Raw datasets. Every training plan's licence gate treats PMIDs/labels/
 # manifests as the committed artifact and the underlying corpus text/files
@@ -182,6 +183,29 @@ data/llm-router/
 /model-training/**/*.parquet
 !/model-training/constraints.txt
 !/model-training/**/requirements*.txt
+
+# Disagreement-pilot evidence (issue #277). Zebra v1 / Viceroy v0 vs Claude
+# Haiku 4.5 on real ingested papers — cited by the hackathon submission, so the
+# numbers must be independently checkable rather than asserted.
+#
+# Named ONE BY ONE, following the #266 convention immediately below: the data
+# dir is re-included so git descends into it, then re-excluded wholesale, then
+# each reviewed artifact is named. A directory-wide negation would commit any
+# corpus file later dropped in that folder — the exact accident the extension
+# rules above exist to prevent.
+#
+# Only DERIVED artifacts are named. The pilot's *-inputs.jsonl, *-clean.jsonl
+# and ADJUDICATE-*.tsv carry VERBATIM third-party paper text and are therefore
+# NOT named, so they stay ignored by the rules above. `row_id` values are DOIs,
+# so anyone can re-fetch the sources: referenced, never redistributed.
+!/model-training/experiments/2026-07-31-disagreement-pilot/data/
+/model-training/experiments/2026-07-31-disagreement-pilot/data/*
+!/model-training/experiments/2026-07-31-disagreement-pilot/data/zebra-pilot-preds.jsonl
+!/model-training/experiments/2026-07-31-disagreement-pilot/data/viceroy-pilot-preds.jsonl
+!/model-training/experiments/2026-07-31-disagreement-pilot/data/zebra-key.json
+!/model-training/experiments/2026-07-31-disagreement-pilot/data/viceroy-key.json
+!/model-training/experiments/2026-07-31-disagreement-pilot/data/haiku-labels.tsv
+!/model-training/experiments/2026-07-31-disagreement-pilot/data/haiku-zebra-labels.tsv
 
 # Frozen public inference-input manifests (issue #266). These are named ONE BY
 # ONE, not as a `inference-manifests/*.jsonl` glob, and that is deliberate: a
