@@ -41,6 +41,7 @@ import {
   verify,
   loadVerificationValidator,
   appendVerificationsToDir,
+  verifierLogicalCallId,
 } from '../src/verify/verifier.js';
 import type {
   CorpusDoc,
@@ -549,10 +550,10 @@ test('verifyClaim acceptance: valid adverse verdict returns once, without retry 
     maxAttempts: 3,
   });
   assert.equal(requests.length, 1);
-  assert.equal(
-    requests[0]!.acceptance?.logicalCallId,
-    logicalCallIdSha256('verifier', makeClaim().edgeId),
-  );
+  // #307: assert via the EXPORTED derivation, not a local copy of the formula. The previous
+  // edgeId-only version was duplicated here, so fixing the real derivation would have left this
+  // assertion silently pinning the old, colliding behaviour.
+  assert.equal(requests[0]!.acceptance?.logicalCallId, verifierLogicalCallId(makeClaim()));
   assert.equal(res.record?.verdict, 'unsupported');
   assert.equal(res.fallback, undefined);
 });

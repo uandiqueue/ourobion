@@ -31,7 +31,12 @@ import {
 import { parseEnv } from './config.js';
 import { prepareOfflineAcceptance, readFrozenFile } from './offlineAcceptance.js';
 import { synthesize, type SynthesisRouter } from './synth/index.js';
-import { loadClaimsFromFile, verify, type VerifierRouter } from './verify/verifier.js';
+import {
+  loadClaimsFromFile,
+  verify,
+  verifierLogicalCallId,
+  type VerifierRouter,
+} from './verify/verifier.js';
 
 export type LiveAcceptanceLeg =
   | 'anthropic-synthesis'
@@ -424,7 +429,10 @@ function validateCompletedArtifacts(
     const claimsPath = absoluteRuntimePath(taskRoot, openai.primaryArtifactPath);
     assertOrdinaryTaskFile(taskRoot, claimsPath, 'OpenAI claims artifact');
     const claims = loadClaimsFromFile(claimsPath);
-    const expected = claims.map((claim) => logicalCallIdSha256('verifier', claim.edgeId));
+    // #307: use the SHARED derivation. This was a second copy of the edgeId-only formula, so the
+    // collision fix in verifier.ts would otherwise have desynchronised the two and surfaced as
+    // "Agnes logical-call binding drift" — exactly the drift the exported helper exists to prevent.
+    const expected = claims.map((claim) => verifierLogicalCallId(claim));
     if (canonical(verification.logicalCallIds) !== canonical(expected)) {
       throw new Error('live-acceptance: Agnes logical-call binding drift');
     }
@@ -544,7 +552,11 @@ export async function runLiveAcceptance(
       maxAttempts: 2,
       now,
     });
-    const logicalCallIds = claims.map((claim) => logicalCallIdSha256('verifier', claim.edgeId));
+    // #307 · the SHARED derivation. This was the fourth copy of the edgeId-only formula, and the one
+    // that produced `journal logical-call set is not exactly represented by state` once the other
+    // three moved: the journal held paper-discriminated ids while this expectation was still built
+    // from edgeIds alone.
+    const logicalCallIds = claims.map((claim) => verifierLogicalCallId(claim));
     validateJournal(bundle.acceptanceRunId, authorizationHash, authorization.authorizationBasis, [...priorIds, ...logicalCallIds], true);
     if (result.write?.raw === undefined) throw new Error('live-acceptance: Agnes raw sidecar was not written');
     completedLeg = {

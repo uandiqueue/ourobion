@@ -425,6 +425,7 @@ export async function synthesizePapers(
       papersSynthesised: perPaper.filter((p) => p.status === 'synthesised').length,
       papersSkippedAlreadyDone: perPaper.filter((p) => p.status === 'skipped-already-done').length,
       papersNotReached: perPaper.filter((p) => p.status === 'not-reached').length,
+      papersFailed: perPaper.filter((p) => p.status === 'failed').length,
       providerCalls,
       usdSpent,
       maxUsd,

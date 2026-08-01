@@ -109,8 +109,30 @@ function toQuoteSpanInput(raw: unknown): QuoteSpanInput {
 
 /**
  * Fold the model's `role` + claim-level `section` into the contract's free-text `locator`
- * (#300 §B/§C). `role: 'mechanism'` becomes the `mechanism:` prefix; anything else is an
- * evidence span carrying the section alone. A locator the model supplied directly is kept.
+ * (#300 §B/§C). A locator the model supplied directly is kept.
+ *
+ * #307 D2 · A span is labelled `mechanism:` ONLY when the model explicitly declared
+ * `mechanismIsPathway: true` — its own judgement that the quote explains the biology or behaviour
+ * rather than the study.
+ *
+ * WHY THE MODEL AND NOT A DETERMINISTIC RULE. A live run emitted two spans quoting
+ * *"This lack of association may be due to the limited variability in sleep quality in this
+ * population and the small sample size."* — verbatim, so the quote gate passed it, and labelled a
+ * mechanism. That is a statement about the STUDY, and on a card it would tell a reader their body
+ * works a certain way when the paper only said its own sample was too small.
+ *
+ * The first fix considered was a phrase blocklist. That is the wrong instrument: "may be due to"
+ * occurs in genuine hedged mechanisms as readily as in limitations, so the list cannot separate
+ * them. Deterministic gates belong on facts with ground truth — is this quote verbatim at these
+ * offsets, is this key in the registry. "Is this sentence biology or methodology" is a JUDGEMENT,
+ * and the model is the only component holding the whole paper. The earlier failure was ours: the
+ * prompt asked for "the sentence explaining WHY the relationship holds" without ever saying a
+ * methodological caveat disqualifies, and for a `no_effect` claim that instruction has no referent
+ * at all — so the model answered the question it was actually asked.
+ *
+ * Undeclared spans are DEMOTED to a plain evidence span — not dropped, not trusted. The quote is
+ * still verbatim and still useful; we simply stop asserting it is the mechanism. The failure mode
+ * is therefore under-claiming, never mislabelling.
  */
 function locatorForSpan(raw: unknown, section: string | null): string | null {
   const s = asRecord(raw);
@@ -118,7 +140,9 @@ function locatorForSpan(raw: unknown, section: string | null): string | null {
   if (typeof existing === 'string' && existing.trim() !== '') return existing;
   const role = typeof s['role'] === 'string' ? s['role'].toLowerCase() : '';
   const sectionPart = section ?? '';
-  if (role === 'mechanism') return `${MECHANISM_LOCATOR_PREFIX}${sectionPart}`;
+  if (role === 'mechanism' && s['mechanismIsPathway'] === true) {
+    return `${MECHANISM_LOCATOR_PREFIX}${sectionPart}`;
+  }
   return sectionPart === '' ? null : sectionPart;
 }
 
@@ -271,6 +295,8 @@ export function processPaperSynthesisResponse(
       s['locator'] = locatorForSpan(rawSpan, section);
       // `role` is a prompt-level convenience, not part of the contract — fold and drop it.
       delete s['role'];
+      // Prompt-level declaration, folded into the locator above and not part of the contract.
+      delete s['mechanismIsPathway'];
       if (typeof s['paperId'] !== 'string') s['paperId'] = ctx.paperUid;
       return s;
     });

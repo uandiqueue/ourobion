@@ -195,6 +195,37 @@ function buildFallbackUncertain(
 }
 
 /**
+ * #307 · The acceptance logical-call id for ONE verifier call.
+ *
+ * Exported and used by BOTH the router call and its tests, so the derivation cannot drift between
+ * them — the previous edgeId-only formula was duplicated in a test assertion, which is exactly how
+ * a collision fix gets silently reverted.
+ *
+ * It discriminates by CITED PAPER, not by edgeId alone. Two claims may legitimately assert the same
+ * edge from different papers — cross-paper corroboration is a desired outcome, not bad data. Keyed
+ * on edgeId only they collapsed onto one logical call carrying different prompts, and the acceptance
+ * journal correctly aborted the run with `logical call … changed identity, prompt, or ceilings/price
+ * between retries`. Measured on a real 16-paper batch where one edge arrived from two papers.
+ *
+ * A RETRY of the same claim still yields the same id — which is what the per-logical-call POST cap
+ * exists to bound — because every input is a stable property of the claim.
+ */
+export function verifierLogicalCallId(claim: {
+  edgeId: string;
+  promptVersion: string;
+  citations: readonly { paperId: string }[];
+}): string {
+  return logicalCallIdSha256(
+    'verifier',
+    [
+      claim.edgeId,
+      claim.promptVersion,
+      [...new Set(claim.citations.map((c) => c.paperId))].sort().join('|'),
+    ].join('\0'),
+  );
+}
+
+/**
  * Verify ONE claim. Returns a record (full or quoteCheck-only), or a rejection.
  * The LLM is called only in full, non-dry-run mode; its output is never trusted —
  * every field of the record is re-derived / enforced (enforce.ts).
@@ -277,7 +308,20 @@ export async function verifyClaim(
         ? {
             acceptance: {
               ...opts.acceptance,
-              logicalCallId: logicalCallIdSha256('verifier', claim.edgeId),
+              // #307 · The logical call id MUST discriminate by cited paper, not by edgeId alone.
+              //
+              // Two claims can legitimately assert the SAME edge from DIFFERENT papers — that is
+              // cross-paper corroboration, a desired outcome, not bad data. Keyed on edgeId only,
+              // both claims mapped to one logical call with different prompts, and the acceptance
+              // journal correctly refused the second with "logical call … changed identity, prompt,
+              // or ceilings/price between retries", aborting the whole run mid-batch. Measured on a
+              // real 16-paper batch, where `sleep_duration_min|modulates|hrv_sdnn_ms` arrived twice.
+              //
+              // Mirrors `claimDedupeKey`'s discriminator (edgeId + promptVersion + sorted paperIds)
+              // so a retry of the SAME claim still collapses onto one logical call — which is what
+              // the per-logical-call POST cap is there to bound — while a different paper's claim
+              // gets its own.
+              logicalCallId: verifierLogicalCallId(claim),
             },
           }
         : {}),

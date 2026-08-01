@@ -34,7 +34,10 @@ import type { ActiveMetricDescriptor } from './load.js';
 import type { SynthPaperTarget } from './types.js';
 
 /** Bump on ANY change to the system/prompt text below (artifact provenance). */
-export const PAPER_PROMPT_VERSION = 'synthesis-whole-paper-2026-08-01.1';
+// Bumped for #307: the mechanism-vs-limitation specification (D2) and the strengthened blueprint
+// ask (D1-a) both changed the prompt text, and this stamp is the artifact's provenance — claims
+// synthesised under the two versions are not interchangeable and must not share a dedupe key.
+export const PAPER_PROMPT_VERSION = 'synthesis-whole-paper-2026-08-01.2';
 
 export const PAPER_SYNTHESIS_SYSTEM = [
   "You are the ourobion brain pipeline's relationship-synthesis node, reading ONE paper in full.",
@@ -51,6 +54,22 @@ export const PAPER_SYNTHESIS_SYSTEM = [
   '  relationship holds — never your own wording, never a summary, never a synthesis of two',
   '  sentences. If the paper states no mechanism, omit the mechanism span. Omitting it is',
   '  correct and expected; INVENTING one is the worst thing you can do here.',
+  '- A MECHANISM explains the BIOLOGY OR BEHAVIOUR that links the two metrics. A sentence about',
+  '  the STUDY — its sample size, its statistical power, how much its participants varied, what',
+  '  future work should do — is NOT a mechanism, however plainly the paper states it. Judge this',
+  '  yourself; you have the whole paper and you are the only thing here that can tell the',
+  '  difference. Two concrete cases:',
+  '    MECHANISM     "These acute changes indicate parasympathetic activation and reduced',
+  '                   physiological arousal during mindfulness practice."   <- explains the body',
+  '    NOT MECHANISM "This lack of association may be due to the limited variability in sleep',
+  '                   quality in this population and the small sample size."  <- explains the STUDY',
+  '  The second is a limitation. Quoting it as a mechanism would tell a reader their body works a',
+  '  certain way when the paper only said its own sample was too small. OMIT instead.',
+  '- A `no_effect` claim takes NO mechanism span. There is no relationship, so there is no pathway',
+  '  to explain, and a sentence explaining why nothing was found is a limitation, not a mechanism.',
+  '- Set `"mechanismIsPathway": true` on any mechanism span you emit, as your explicit declaration',
+  '  that the quote explains the biology or behaviour and is not a statement about the study. If you',
+  '  cannot declare that honestly, omit the span.',
   '- `ownFinding` must be `true` only when the result is THIS paper\'s own finding. Set it',
   '  `false` when the sentence reports someone else\'s result that this paper merely cites.',
   '  A false value causes rejection, so do not use it to hedge.',
@@ -84,8 +103,10 @@ const PAPER_CONTRACT = [
   '      "quoteSpans": [',
   '        { "paperId": "<the provided uid>", "role": "evidence",',
   '          "quote": "<VERBATIM sentence stating the relationship>" },',
-  '        { "paperId": "<the provided uid>", "role": "mechanism",',
-  '          "quote": "<VERBATIM sentence stating WHY — omit this span entirely if the paper states none>" }',
+  '        { "paperId": "<the provided uid>", "role": "mechanism", "mechanismIsPathway": true,',
+  '          "quote": "<VERBATIM sentence stating WHY — omit this span entirely if the paper states',
+  '                     none, if the claim is no_effect, or if the only candidate is a statement',
+  '                     about the study rather than about the biology>" }',
   '      ],',
   '      "derivation": "<plain language: how these quotes produce this claim>",',
   '      "blueprint": null',
@@ -101,12 +122,38 @@ const PAPER_CONTRACT = [
 ].join('\n');
 
 /**
- * Optional rule-blueprint block (#300 §D). Kept as a SEPARATE section of the prompt so the
- * claim contract above stays readable, and so a model that emits only claims is still valid.
+ * Rule-blueprint block (#300 §D). Kept as a SEPARATE section of the prompt so the claim contract
+ * above stays readable, and so a model that emits only claims is still valid.
+ *
+ * #307 D1-a · The ask was STRENGTHENED after a measured yield of 1 blueprint from 15 papers, against
+ * the 3–5 per paper the ≥50-card goal assumed. At the measured rate 50 cards needs ~750 papers
+ * (~US$37, over the US$20 ceiling), so the goal was unreachable on prompt wording alone.
+ *
+ * Three things were wrong with the original wording, all of them ours:
+ *   1. it opened with "OPTIONALLY", which invites skipping;
+ *   2. it said "weekly self-tracked data", which reads as excluding anything measured at
+ *      session scale — most HR/HRV findings — when in fact the user logs these metrics DAILY, so
+ *      any co-movement is recognisable across a week regardless of the study's measurement window;
+ *   3. it never said a blueprint is the thing that becomes a CARD, so the model had no way to know
+ *      it was the load-bearing output rather than an optional extra.
+ *
+ * It is still not mandatory: a `no_effect` claim genuinely has no card to make, and forcing one
+ * would manufacture a rule from an absence.
  */
 const BLUEPRINT_CONTRACT = [
-  'OPTIONALLY, when a claim describes a pattern that could be recognised in a person\'s own',
-  'weekly self-tracked data, set `blueprint` on that claim to:',
+  'BLUEPRINTS — these become the insight cards the user actually sees, so they are the most',
+  'valuable thing you produce here. EXPECTED for every claim with a DIRECTION',
+  '(`increases`/`decreases`/`modulates`/`correlates`). Emit one unless you genuinely cannot.',
+  '',
+  'Do NOT emit one for a `no_effect` claim: there is no pattern to recognise, and inventing a rule',
+  'from an absence is wrong.',
+  '',
+  'The person logs these metrics EVERY DAY, so a relationship measured over any window — a single',
+  'session, a night, eight weeks — can still show up as two of their own metrics moving together',
+  'across a week. Do not withhold a blueprint because the study measured something over minutes',
+  'rather than weeks; translate the DIRECTION of the finding into a weekly pattern.',
+  '',
+  'Set `blueprint` on the claim to:',
   '{',
   '  "ruleId": "<snake_case_id>",',
   '  "schemaVersion": 1,',

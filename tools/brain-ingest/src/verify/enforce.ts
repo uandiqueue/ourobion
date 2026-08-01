@@ -55,11 +55,41 @@ export interface ParsedVerifierReply {
   confidence: number;
 }
 
+/**
+ * #307 D3-a · Strip a markdown code fence around an otherwise well-formed JSON reply.
+ *
+ * MEASURED, not guessed. Agnes (`agnes-2.5-flash`) returns valid JSON wrapped in a fence:
+ *
+ *   "\n\n```json\n{ \"verdict\": \"uncertain\", … }\n```"
+ *
+ * so `JSON.parse` failed on the backticks and every one of 14 live verifier calls was recorded as an
+ * `unparseable reply` — burning two attempts per claim and falling back to `uncertain`. The verdict
+ * itself was fine; Agnes even reasoned the contract correctly ("no sources retrieved → the verdict
+ * can only be 'uncertain'"). Only the wrapper broke it.
+ *
+ * Deliberately CONSERVATIVE. This unwraps a fence and nothing else — it does not hunt for the first
+ * `{` in arbitrary prose, because that would start salvaging JSON out of commentary and quietly
+ * accept replies that are genuinely malformed. A fence is an unambiguous, self-delimiting wrapper;
+ * anything else still fails closed.
+ */
+export function stripJsonCodeFence(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith('```')) return text;
+  const firstNewline = trimmed.indexOf('\n');
+  if (firstNewline === -1) return text;
+  // The opening line is ``` optionally followed by a language tag (```json). Reject anything else,
+  // so a stray backtick-prefixed reply is not silently reinterpreted.
+  if (!/^```[a-zA-Z0-9_-]*$/.test(trimmed.slice(0, firstNewline).trim())) return text;
+  const closing = trimmed.lastIndexOf('```');
+  if (closing <= firstNewline) return text;
+  return trimmed.slice(firstNewline + 1, closing).trim();
+}
+
 /** Parse the verifier's JSON reply into a defensive, typed shape. Throws on non-JSON. */
 export function parseVerifierResponse(rawText: string): ParsedVerifierReply {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(rawText);
+    parsed = JSON.parse(stripJsonCodeFence(rawText));
   } catch (err) {
     throw new Error(`verify: reply was not valid JSON — ${err instanceof Error ? err.message : String(err)}`);
   }
