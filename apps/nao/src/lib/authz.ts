@@ -66,6 +66,8 @@ export function satisfies(actual: NaoRole | null, required: NaoRole): boolean {
  * test's header comment for the same note.
  */
 export const ROUTE_POLICY: Readonly<Record<string, NaoRole>> = Object.freeze({
+  'GET /api/brain-pipeline': 'viewer',
+  'POST /api/brain-pipeline': 'curator',
   'GET /api/claims': 'viewer',
   'POST /api/claims/reject': 'curator',
   'GET /api/gaps': 'viewer',

@@ -168,6 +168,91 @@
   grid-column: 1 / -1;
 }
 
+.brain-pipeline__wide { grid-column: 1 / -1; }
+.brain-pipeline__blocked { color: #f08a7f; }
+.brain-pipeline__form,
+.brain-pipeline__form label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+.brain-pipeline__form { gap: 16px; }
+.brain-pipeline__form label {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.brain-pipeline__form input,
+.brain-pipeline__form select,
+.brain-pipeline__form textarea {
+  width: 100%;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--panel-inset);
+  color: var(--text-primary);
+  font: inherit;
+  padding: 9px 10px;
+}
+.brain-pipeline__form input:focus-visible,
+.brain-pipeline__form select:focus-visible,
+.brain-pipeline__form textarea:focus-visible,
+.brain-pipeline button:focus-visible,
+.brain-pipeline a:focus-visible {
+  outline: 3px solid var(--accent-1);
+  outline-offset: 2px;
+}
+.brain-pipeline__pair {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.brain-pipeline__mode { flex-direction: row !important; align-items: center; }
+.brain-pipeline__mode input { width: auto; }
+.brain-pipeline__estimate {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 10px;
+  padding: 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.brain-pipeline__list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.brain-pipeline__list li,
+.brain-pipeline__result > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.brain-pipeline__badge {
+  display: inline-flex;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.brain-pipeline__results { display: grid; gap: 10px; }
+.brain-pipeline__result {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  border-top: 1px solid var(--hairline);
+  padding-top: 10px;
+}
+@media (max-width: 680px) {
+  .brain-pipeline__pair { grid-template-columns: 1fr; }
+}
+
 /* ── Claims panel (O13 /claims + per-paper section, run-2 U9) ─ */
 .claims-card {
   grid-column: 1 / -1;

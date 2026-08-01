@@ -16,6 +16,11 @@ const TABS: ReadonlyArray<{ href: string; label: string; match: (p: string) => b
     match: (p) => p === '/papers' || p.startsWith('/papers/') || p.startsWith('/paper/'),
   },
   { href: '/ingest', label: 'Ingestion', match: (p) => p === '/ingest' || p.startsWith('/ingest/') },
+  {
+    href: '/brain-pipeline',
+    label: 'Brain pipeline',
+    match: (p) => p === '/brain-pipeline' || p.startsWith('/brain-pipeline/'),
+  },
   { href: '/loader', label: 'Data Loader', match: (p) => p === '/loader' || p.startsWith('/loader/') },
   { href: '/models', label: 'Models', match: (p) => p === '/models' || p.startsWith('/models/') },
   { href: '/claims', label: 'Claims', match: (p) => p === '/claims' || p.startsWith('/claims/') },

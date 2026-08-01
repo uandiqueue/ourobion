@@ -112,6 +112,18 @@ test('mergeClaimsWithVerdicts joins the verified_edges row and coerces edge_scor
   const edges: VerifiedEdgeRow[] = [
     {
       edge_id: 'a|increases|b',
+      verification: {
+        confidence: 0.82,
+        quoteCheck: { spansFound: 1, spansTotal: 1, allPresent: true },
+        corroboration: { supporting: 1, contradicting: 1 },
+        verifierModel: 'config:agnes-2.5-flash',
+        attestation: {
+          returnedModel: 'agnes-2.5-flash',
+          family: 'agnes',
+          decorrelated: true,
+          attested: true,
+        },
+      },
       verdict: 'supported',
       serving_band: 'high',
       edge_score: '0.855', // numeric arrives as a string over PostgREST
@@ -123,6 +135,11 @@ test('mergeClaimsWithVerdicts joins the verified_edges row and coerces edge_scor
   const [v] = mergeClaimsWithVerdicts([claim('a|increases|b')], edges);
   assert.equal(v!.verification?.verdict, 'supported');
   assert.equal(v!.verification?.edgeScore, 0.855);
+  assert.equal(v!.verification?.confidence, 0.82);
+  assert.deepEqual(v!.verification?.corroboration, { supporting: 1, contradicting: 1 });
+  assert.equal(v!.verification?.verifierIdentity, 'agnes-2.5-flash');
+  assert.equal(v!.verification?.providerFamily, 'agnes');
+  assert.equal(v!.verification?.decorrelated, true);
   assert.equal(v!.humanVerdict, null);
   assert.equal(v!.subject, 'a');
   assert.equal(v!.citations.length, 1);
@@ -139,6 +156,7 @@ test('mergeClaimsWithVerdicts passes the human verdict through', () => {
   const edges: VerifiedEdgeRow[] = [
     {
       edge_id: 'a|increases|b',
+      verification: {},
       verdict: 'supported',
       serving_band: 'high',
       edge_score: 0.9,
