@@ -1,6 +1,6 @@
 ---
 title: Demo runbook — 3-minute video production plan
-summary: The shot-by-shot production plan for the hackathon demo video, centred on nao and the paper-ingestion brain — a 180-second running order of PowerPoint slides and app captures, the exact narration, the setup commands to reach each state, what must never be claimed, and the failure fallbacks.
+summary: The shot-by-shot production plan for the hackathon demo video, centred on nao and the paper-ingestion brain — the owner-specified animation-led 180-second running order with every beat mapped to the internal component it depicts (issue #300 target flow), the setup commands to reach each state, what must never be claimed, and the failure fallbacks.
 type: reference
 scope: repo
 status: draft
@@ -9,7 +9,7 @@ updated: 2026-08-01
 
 # Demo runbook — 3-minute video production plan
 
-> **State anchor.** Verified against `dev-phase2-run4` @ `e6f0e1f09a1cae7ab02e580af88c3da88c99298d`,
+> **State anchor.** Verified against `dev-phase2-run4` @ `476780e` (running order updated 2026-08-01 08:25Z),
 > **2026-08-01 ~06:00 UTC**, on the macOS recording machine (§2). Re-verify before recording — §10.
 >
 > Doc 4 of the four-document set in issue #328. Written first because what can physically be recorded
@@ -43,25 +43,145 @@ Where the honest answer is "no evidence found," this document says so. That is a
 
 ---
 
-## 1. The running order
+## 1. The running order — OWNER-SPECIFIED, 2026-08-01
 
-180 seconds. Narration assumes ~150 words/minute. **Record in this order.**
+> **This section supersedes the earlier slide-led running order.** The owner specified an
+> **animation-led** structure on 2026-08-01. Sections 6 (captures) and 7 (slides) below still
+> describe the previous plan and need restructuring around this order — the *content* of Slide 4
+> (decorrelation) and Slide 5 (the honest slide) survives and is folded into §4 and §8 here.
+>
+> **Division of labour, owner's words:** *"demo is supposed to be flashy, the writeup will be
+> detailed, evidence will be in repo."* So this video's job is to **communicate the mechanism**,
+> not to carry the evidence. Depth belongs in `writeup.md`; proof belongs in the repo.
 
-| # | Medium | Time | Runs to | On screen | Purpose |
-|---|---|---|---|---|---|
-| 1 | **Slide 1** | 0:08 | 0:08 | Title + one-line definition | What this is |
-| 2 | **Slide 2** | 0:14 | 0:22 | The problem | Why a brain is the answer |
-| 3 | **Capture N1** | 0:25 | 0:47 | nao **Overview** — corpus dashboard | The corpus is real |
-| 4 | **Capture N2** | 0:30 | 1:17 | nao **Papers** — search + facets | **Hero shot** |
-| 5 | **Slide 3** | 0:28 | 1:45 | The ingestion → publication pipeline | How a paper becomes a claim |
-| 6 | **Slide 4** | 0:20 | 2:05 | The decorrelation invariant | **The design decision** |
-| 7 | **Capture B1** | 0:25 | 2:30 | biotope — card + provenance | Where it lands for a person |
-| 8 | **Slide 5** | 0:25 | 2:55 | **The honest slide** | The differentiator |
-| 9 | **Slide 6** | 0:05 | 3:00 | Close | — |
+180 seconds. Narration assumes ~150 words/minute.
 
-**If you run over, cut in this order:** fold Capture N1 into N2 (saves 25s) → Slide 2 down to 12s →
-Capture B1 down to 18s. **Never cut Slide 4 or Slide 5.** They are the two segments the judging
-criteria reward most.
+| § | Content | ~time | Medium |
+|---|---|---|---|
+| 1 | What this is | 0:12 | slide |
+| 2 | Problem framing | 0:13 | slide |
+| 3 | **nao UI overview + features** | 0:20 | capture |
+| 4 | **The pipeline animation** (6 beats, below) | 0:40 | animation |
+| 5 | Client intro — biotope walkthrough, fast and short | 0:20 | capture |
+| 6 | **Insights animation** — metrics → match → surface | 0:25 | animation |
+| 7 | Back to biotope insights — cards + evidence chain | 0:30 | capture |
+| 8 | Living app · gap ledger · future · Zebra & Viceroy | 0:20 | slide |
+
+**No hero shot.** The mechanism is the hero.
+
+### Why animation is the correct choice here, not a compromise
+
+The pipeline's internals are **genuinely unfilmable** — there is no screen on which a claim becomes
+an edge. Animating them is the only honest way to show them. The governing principle:
+
+> **Animate what cannot be filmed. Film what can.**
+
+§4 and §6 are animation because nothing renders them. §3, §5 and §7 are real screen captures
+because those surfaces exist and work. Do not animate anything that could have been filmed.
+
+---
+
+## 1b. Section-by-section map to the internal system
+
+Every beat below names the code, contract or table it depicts, so the animation cannot drift from
+what the system actually does. **The authority for this flow is issue #300 §"Target flow".**
+Three model tiers: **`a`** = small/cheap · **`s`** = synthesis (smart) · **`v`** = verifier.
+
+### §3 · nao UI overview → #300 step 1 · Sourcing
+
+| On screen | Internal |
+|---|---|
+| Corpus dashboard, paper search + facets | `apps/nao` Papers/Overview reading **D1/FTS5**, a *derived projection* of R2 |
+| Seeds / research questions | `ingestion_seeds` table, `/api/seeds` |
+| "Ingest" control | `githubDispatch` → GitHub Actions (**never** a provider call from nao) |
+| Keyword expansion | **`a`** model, `seeder` node → `seed-queries` |
+
+**Truth boundary to respect on screen:** R2 + `manifest/papers.jsonl` are truth; **D1 is a
+projection**. nao dispatches and reports — it never holds a provider key.
+
+### §4 · The pipeline animation → #300 steps 2–5
+
+Six beats, each mapped:
+
+| # | Animation beat | Internal | Status |
+|---|---|---|---|
+| 1 | Research paper | `StructuredPaper.canonicalText` from R2 | built |
+| 2 | **Flattened** | **`selectPassages` deleted — whole paper in** (#300 §A) | built (#306) |
+| 3 | Fed into synthesiser | **`s`** model via `paperRun.ts` / `paperPrompt.ts` | built (#306) |
+| 4 | **Extracting key sentences → verdict** | `quoteSpans[]` — verbatim + exact char offsets, **plus the mechanism span** (#300 §B) | built (#306) |
+| 5 | Evidence chain + verdict → verifier | deterministic gates run **first**, then **`v`** model | gates built; verdict vocabulary partial |
+| 6 | **Verification → stored on Supabase** | `relationship_claims` · `edge_verifications` · `verified_edges`; blueprints → `rules` | built; **never yet run end to end** |
+
+**Beat 2 is the one to make legible.** "Flattened" is exactly right and it is a real design
+decision: the keyword prefilter was *deleted*, not improved. #300 measured why — searching
+`gut_comfort_score` yielded `gut` 99 hits, `comfort` **0**, while `depress` (45) and `anxi` (30)
+were never searched, so ~75 relevant sentences never reached the model and two live runs returned
+**0 claims**. And the fix is deliberately **not** a synonym map: *"a hand-maintained alias table
+means a human must expand vocabulary before the system can research any new pair, which defeats
+automated research."*
+
+**Beat 4 must show the mechanism quote**, not just a highlighted sentence. This is the
+differentiator and it is what #300 §B exists for:
+
+> **Your gut comfort and mood have been rising together.**
+> Research reports these move together — *"Gut microbes synthesise neurotransmitter precursors
+> that signal to the brain via the vagus nerve."*
+> — *Diet–Microbiome–Brain Axis and Mental Health* (2026), cohort evidence
+
+Not *"research supports this link"* — that is what every wellness app claims. The mechanism is
+carried as a **second verbatim quote span**, never a paraphrase, because a paraphrased pathway is
+exactly where invented biology appears.
+
+**Beat 5 carries the decision content from the old Slide 4** — the decorrelation invariant,
+`family(verifier) !== family(synthesis)`, unconditional and fail-closed, no flag and no test-mode
+escape. Show that the verifier is a **different vendor family** from the synthesiser.
+
+### §5 · biotope walkthrough → the client surface
+
+Logging flows, Bristol/urine named-scale visuals, quick counts with bounded custom entry.
+All landed in PR #329. Fast and short — this is context, not the argument.
+
+### §6 · Insights animation → #300 step 6
+
+| Animation beat | Internal |
+|---|---|
+| Week of metrics processed into trend / edge / personal shapes | `compute-baselines` → `evaluate-signals` (Deno edge functions) |
+| Matching against the database | rules engine matches a week of user data against the `rules` table |
+| Pulling insights out | `insight_cards`, `producer ∈ {rules, edge, personal}` |
+| Surfacing onto the app | m5b card render + provenance panel |
+
+**Non-matching signals → the gap ledger.** Owner has **excluded the gap ledger from the MVP**, so
+it appears in §8 as future work, not here as a live component.
+
+### §7 · Cards + evidence chain → #300 step 6, second half
+
+**Evidence is never LLM-processed.** The card *summary* is rendered by the **`a`** model; the
+paper name, link and **verbatim quote** are surfaced as-is. The animation and the capture must not
+imply the quote was generated.
+
+### §8 · Living app → future
+
+Gap ledger grows the corpus from unmatched demand; Zebra and Viceroy are **trained but have not
+reached benchmark** and are **not integrated** — say both parts. This section carries the old
+Slide 5 "honest slide" content, which the judging criteria reward most: **never cut it.**
+
+---
+
+### The one thing this running order must not promise
+
+§7 shows cards with an evidence chain. **Every card in the system today is `provenance.tier:
+'hand_authored'` scaffolding built for UI testing** — `rule.schema.ts` supports
+`tier: 'extracted'` with `citation: {paperId, locator}` and **has never been written to**. Hosted
+state is `verified_edges 0 · relationship_claims 0 · edge_verifications 0 · insight_cards 1`.
+
+So §4 → §6 → §7 is one continuous promise — *we read papers → we verify them → we match them to
+your week → here are the cards* — and §7 cannot currently pay it off with a paper-originated card.
+
+**Resolve before recording §7.** Either a real paper-originated card exists by then (the
+synthesise → blueprint → `extracted` rules → card path, which is built but has never been run), or
+§7 shows what genuinely exists and the narration says so. **Do not film a hand-authored card while
+the animation claims it came from a paper.** That is the one failure mode this document exists to
+prevent.
 
 ---
 
@@ -103,8 +223,8 @@ This is the section that decides the video, so it is evidence-first.
 | Measure | Local D1 | Live figure per issue #328 §4 |
 |---|---|---|
 | Papers indexed | **1,298** | — |
-| `status = fetched` | **756** | **756** ✅ exact match |
-| Full text > 5k chars | **739** | **739** ✅ exact match |
+| `status = fetched` | **870** | **870** ✅ exact match |
+| Full text > 5k chars | **845** | **845** ✅ exact match |
 | `status = discovered` | 542 | — |
 | Extraction method | `jats` 488 · `pdf` 259 · `directOa` 5 · `core` 4 | — |
 
@@ -113,7 +233,7 @@ actual progress metrics, the local papers view is **not stale — it is exact.**
 titles, real character counts. You can film it and quote its numbers.
 
 > Do **not** quote 6,158. That is the record count, and the issue is explicit that record count is not
-> the progress metric. Quote **756 fetched** and **739 with usable full text**.
+> the progress metric. Quote **870 fetched** and **845 with usable full text**.
 
 ### What is filmable, and what is not
 
@@ -297,7 +417,7 @@ seed topics → discover → fetch → extract full text (jats / pdf / directOa 
   → adversarial verification (LLM B) → verified_edge → card
 ```
 
-Annotate with the real figures: **1,298 indexed · 756 fetched · 739 with usable full text.**
+Annotate with the real figures: **1,298 indexed · 870 fetched · 845 with usable full text.**
 
 Second call-out — **a decision we reversed**: *we deleted the keyword prefilter.*
 
@@ -357,7 +477,7 @@ while TEST-MODE routes every node to OpenAI is unexplained — resolve it before
 Headline: **Verified edges today: 0.**
 - Synthesis is measured at batch scale; Agnes verification has run but is **not complete**
 - Nothing has cleared the full gate — and `uncertain` never ships, so we hold it
-- Corpus: **756 fetched · 739 with usable full text** · spend to date **US$1.118**
+- Corpus: **870 fetched · 845 with usable full text** · spend to date **US$1.118**
 
 > **Confirm this wording with the orchestrator before recording.** An earlier draft said the verifier
 > was "blocked on a provider key." That was the older state and is no longer safe to assert: **Agnes
@@ -430,7 +550,7 @@ So we hold them. We could have hardcoded a plausible edge and you would not have
 | "The verifier is blocked" / "the verifier works" | "Verification has run but is not complete; nothing has cleared the full gate" |
 | "We select the relevant passages and send those" | "The whole paper goes in — the model picks and quotes its own evidence" (#300 §A; there is no passage-selection stage) |
 | "The card explains the mechanism" | "The card *quotes* the paper's own mechanism sentence, verbatim — we never paraphrase a pathway" |
-| "6,158 papers" | "756 fetched, 739 with usable full text" |
+| "6,158 papers" | "870 fetched, 845 with usable full text" |
 | "Verified research edges power the app" | "Zero verified edges today — we hold uncertain claims" |
 | "Live" / "in production" / "deployed" | "Running against a local stack" |
 | "Detects", "diagnoses", "treats" | "Signal", "pattern", "observation" ([memory 0003](../../../memory/0003-non-diagnostic-copy.md)) |
