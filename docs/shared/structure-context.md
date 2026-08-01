@@ -4,7 +4,7 @@ summary: The authoritative repo directory layout (apps/, shared/, supabase/, too
 type: context
 scope: repo
 status: canonical
-updated: 2026-07-13
+updated: 2026-07-26
 ---
 
 # structure-context.md — Ourobion Repository Structure
@@ -20,21 +20,24 @@ This is a monolithic repository containing the frontend mobile application, back
 ourobion/
 ├── AGENTS.md                  # SINGLE SOURCE OF TRUTH for agents + humans (points to everything)
 ├── CLAUDE.md / GEMINI.md      # Thin pointers to AGENTS.md
+├── .graphifyignore            # Excludes archive + generated human view from semantic indexing
 ├── assets/                    # Brand assets (design reference, NOT app-bundled)
 │   ├── ourobion-brand/        # Logos (PNG/SVG, light/dark), favicon, colors, brand DESIGN.md
 │   └── ourobion-biotope-logo/ # biotope logo + brand kit (logo, color, favicon, DESIGN.md)
 ├── .githooks/
-│   └── pre-push               # Runs `node tools/context_sync.mjs --check` (core.hooksPath=.githooks)
+│   └── pre-push               # Context gate + local graph-view freshness check
 ├── .github/
 │   ├── workflows/
-│   │   ├── ci.yml             # context check + Flutter analyze/test + TypeScript type check
+│   │   ├── ci.yml             # context/graph-view gates + app/backend/tool checks
 │   │   └── pr-review.yml      # AI prelim PR reviewer (planned)
 │   ├── ISSUE_TEMPLATE/
 │   │   ├── bug_report.yml
 │   │   └── feature_request.yml
 │   └── PULL_REQUEST_TEMPLATE.md
-├── tools/                     # Node-stdlib enforcement + multi-agent helpers (no Python)
+├── tools/                     # Node-stdlib enforcement + multi-agent helpers (TypeScript/Node only —
+│                              #   Python is isolated to model-training/, see AGENTS.md §1/§4)
 │   ├── brain-ingest/          # TS paper-corpus ingestion pipeline (see docs/nao/brain-ingestion-design.md)
+│   ├── graph-view/            # Deterministic graph.json -> docs/graph/semantic-graph.md renderer + tests
 │   ├── context_sync.mjs       # --session-start briefing / --check enforcement
 │   ├── setup_agent_worktree.mjs # create an isolated git worktree + configure hooks
 │   └── shared_memory.mjs      # task-claim coordinator (.agents/session-log.json, gitignored)
@@ -72,13 +75,16 @@ ourobion/
 │   │   └── hackathon/                  # dated evaluation / narrative research
 │   ├── sessions/              # Append-only one-file-per-session logs (variable layer)
 │   ├── memory/                # Durable one-fact-per-file memory + README index
-│   └── graph/                 # couplings.yaml (semantic couplings + guard tests) + README (graphify + deferred structural graph)
+│   └── graph/                 # coupling guards + one generated human semantic-graph view + index
 ├── scripts/                   # Local setup and utility scripts
 │   ├── setup.sh               # Linux/macOS (+ Git Bash/WSL) env check + dep install
 │   ├── setup.ps1              # Windows-native bounded toolchain installer (Miniconda + Flutter + Android SDK)
 │   ├── biotope-env.ps1        # Windows: per-shell activation of the bounded toolchain
-│   ├── graphify-build.ps1     # Rebuild the graphify semantic context graph (AST-only, local)
+│   ├── graphify-build.ps1     # Update machine graph + refresh tracked human graph view
 │   └── seed-test-data.ps1     # Inject backdated rows + rebuild projections for local testing
+├── model-training/            # Isolated Python workspace: training/eval/export/release code for the
+│                              #   five planned custom models (AGENTS.md D1). No real training runs
+│                              #   here — see docs/temp/model-training/README.md and human-gates.md.
 ├── shared/                    # Code shared across frontend and backend boundaries
 │   ├── SHARED-CONTEXT.md      # Shared types and integration contracts
 │   ├── types/                 # Shared data models (TypeScript + Dart)
@@ -103,7 +109,9 @@ ourobion/
 ```
 
 > `graphify-out/` and the `..\biotope-toolchain\graphify-venv` that produces it are machine-local and
-> uncommitted — rebuild with `scripts/graphify-build.ps1`. See [`graph/README.md`](../graph/README.md).
+> uncommitted. `docs/graph/semantic-graph.md` is the one tracked, generated human view. Rebuild both
+> with `scripts/graphify-build.ps1`; direct Graphify updates must be followed by
+> `npm run graph:view:write`. See [`graph/README.md`](../graph/README.md).
 
 ## Environment Files
 

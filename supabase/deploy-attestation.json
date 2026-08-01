@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 2,
+  "scope": "local-only",
+  "hostedDeployParityClaimed": false,
+  "productCapAcceptanceClaimed": false,
+  "replayBoundary": "CI recomputes frozen graphs and validates this local evidence, but does not replay local serve or claim hosted deploy parity.",
+  "generator": "node tools/run4_release_gate.mjs record-attestation",
+  "provenance": {
+    "unitBaseSha": "e0c6077dd887fe277a3468130f0c44c909a86875",
+    "productCapBaseSha": "77c98213e23ad56ae37c86201b39ef4e7543a543",
+    "maxChangedPaths": 115,
+    "maxAddedLines": 8500
+  },
+  "cliVersion": "2.81.2",
+  "denoVersion": "2.8.1",
+  "configSha256": "9dcc18f47eaa41b452499433103db54619050802c6e8a546e8643bf1f16f4545",
+  "lockSha256": "47cf575c1e3c9892792729d206e2e5b0e6ed9fdcaf792c32c1776b4ee9175c89",
+  "functions": [
+    {
+      "name": "compute-baselines",
+      "entrypoint": "./functions/compute-baselines/index.ts",
+      "importMap": "./functions/compute-baselines/deno.json",
+      "entrypointSha256": "ee7a0675e5d556814de3c2e1e861cfd33901081768e1d36cd7ff895881a17546",
+      "importMapSha256": "559f0671914e7e20a5396b944a780be2bdb0208c6a23da9d3ed1e62aedd63bae",
+      "moduleGraphSha256": "e295c21a32a06efe1f425887176ebe17d6638f4e8f3a86272301cea813cdae09"
+    },
+    {
+      "name": "generate-insights",
+      "entrypoint": "./functions/generate-insights/index.ts",
+      "importMap": "./functions/generate-insights/deno.json",
+      "entrypointSha256": "d5a2096f870c4f3249fe198be06502b18dabc0eb9bdd58612366febdb4eccd68",
+      "importMapSha256": "559f0671914e7e20a5396b944a780be2bdb0208c6a23da9d3ed1e62aedd63bae",
+      "moduleGraphSha256": "58c17e1a744dde086815d0a62fae3dd2c5579cfb41a919ca7dd306cc60d320bc"
+    },
+    {
+      "name": "evaluate-signals",
+      "entrypoint": "./functions/evaluate-signals/index.ts",
+      "importMap": "./functions/evaluate-signals/deno.json",
+      "entrypointSha256": "e3f8ebd990b9334a5d1810615d3df53ce79fefa99928498529daaec521d7eb6a",
+      "importMapSha256": "559f0671914e7e20a5396b944a780be2bdb0208c6a23da9d3ed1e62aedd63bae",
+      "moduleGraphSha256": "2e6a8a65b56d5e5c274df39d4ce68552ea86f0ad561a9e1cb8f1355d2c2dc539"
+    },
+    {
+      "name": "run-pipeline",
+      "entrypoint": "./functions/run-pipeline/index.ts",
+      "importMap": "./functions/run-pipeline/deno.json",
+      "entrypointSha256": "80e8aaeaedfcf5ee60986d719b8d3de38e9d2de425ded3c6925f267cf9b08a29",
+      "importMapSha256": "559f0671914e7e20a5396b944a780be2bdb0208c6a23da9d3ed1e62aedd63bae",
+      "moduleGraphSha256": "60515bda161b45836acf4f5dccf4cca2df3fd654f0ceebca70274caf59178dcf"
+    }
+  ],
+  "serveProbe": {
+    "mode": "local-functions-serve",
+    "command": "node_modules/.bin/supabase functions serve --debug --no-verify-jwt",
+    "startupExitStatus": 0,
+    "edgeRuntimeVersion": "1.71.0",
+    "compatibleDenoVersion": "2.1.4",
+    "routes": [
+      {
+        "name": "compute-baselines",
+        "path": "/functions/v1/compute-baselines",
+        "handlerReached": true,
+        "httpStatus": 401,
+        "bodySha256": "d089c8a9fc28e4e50223eb38c9409e362521be9380a37341304fbac7a4cd9e5f"
+      },
+      {
+        "name": "evaluate-signals",
+        "path": "/functions/v1/evaluate-signals",
+        "handlerReached": true,
+        "httpStatus": 401,
+        "bodySha256": "d089c8a9fc28e4e50223eb38c9409e362521be9380a37341304fbac7a4cd9e5f"
+      },
+      {
+        "name": "generate-insights",
+        "path": "/functions/v1/generate-insights",
+        "handlerReached": true,
+        "httpStatus": 401,
+        "bodySha256": "d089c8a9fc28e4e50223eb38c9409e362521be9380a37341304fbac7a4cd9e5f"
+      },
+      {
+        "name": "run-pipeline",
+        "path": "/functions/v1/run-pipeline",
+        "handlerReached": true,
+        "httpStatus": 401,
+        "bodySha256": "d089c8a9fc28e4e50223eb38c9409e362521be9380a37341304fbac7a4cd9e5f"
+      }
+    ]
+  }
+}

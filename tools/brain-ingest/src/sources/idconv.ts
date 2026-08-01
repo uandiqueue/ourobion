@@ -52,11 +52,20 @@ interface HttpStatusError extends Error {
   status: number;
 }
 
-/** One crosswalk record the converter returns (only the fields we read). */
+/**
+ * One crosswalk record the converter returns (only the fields we read).
+ *
+ * `pmid` is `number` on the wire. Measured against the live endpoint:
+ *   {"doi":"10.1186/s12864-019-5764-4","pmcid":"PMC6542083","pmid":31142281,"requested-id":"31142281"}
+ * — `doi`/`pmcid`/`requested-id` are quoted, `pmid` is NOT. `number` is therefore the
+ * observed shape, not a defensive guess. The other id fields are typed permissively
+ * because this is untrusted JSON and one unquoted field proves the envelope is not
+ * self-consistent; `asIdString` is what actually makes them safe to normalize.
+ */
 interface IdConvRecord {
-  pmcid?: string | null;
-  pmid?: string | null;
-  doi?: string | null;
+  pmcid?: string | number | null;
+  pmid?: string | number | null;
+  doi?: string | number | null;
   status?: string | null;
   errmsg?: string | null;
 }
@@ -105,14 +114,80 @@ export function collectQueryIds(records: PaperRecord[]): string[] {
  * per-record errors (`status:"error"` / `errmsg`). Returns `null` when nothing
  * usable is present.
  */
+/**
+ * Coerce one converter id field to the `string` the `identity.ts` normalizers require.
+ *
+ * Those normalizers are typed `string | undefined | null` and call `.trim()` after a bare
+ * `== null` check, so a JSON *number* slips past the guard and throws
+ * `raw.trim is not a function`. Coercing here — at the untrusted-JSON boundary — keeps the
+ * id rather than dropping it, and leaves the normalizers strict on purpose: a throw on a
+ * genuinely unexpected shape is louder than a silent id drop, so we do not want to widen
+ * them to swallow non-strings corpus-wide.
+ */
+function asIdString(v: string | number | null | undefined): string | undefined {
+  if (v == null) return undefined;
+  const s = typeof v === 'number' ? (Number.isFinite(v) ? String(v) : '') : v;
+  return s.trim() === '' ? undefined : s;
+}
+
 export function recordToIdentifiers(r: IdConvRecord): Identifiers | null {
   if ((r.status != null && r.status.toLowerCase() === 'error') || r.errmsg != null) return null;
   const raw: Identifiers = {};
-  if (r.doi != null && r.doi !== '') raw.doi = r.doi;
-  if (r.pmid != null && r.pmid !== '') raw.pmid = r.pmid;
-  if (r.pmcid != null && r.pmcid !== '') raw.pmcid = r.pmcid;
+  const doi = asIdString(r.doi);
+  if (doi !== undefined) raw.doi = doi;
+  const pmid = asIdString(r.pmid);
+  if (pmid !== undefined) raw.pmid = pmid;
+  const pmcid = asIdString(r.pmcid);
+  if (pmcid !== undefined) raw.pmcid = pmcid;
   const norm = normalizeIdentifiers(raw);
   return Object.keys(norm).length > 0 ? norm : null;
+}
+
+/**
+ * The ID Converter's own notion of an id type. It infers exactly ONE per request and 400s on a
+ * mixed batch, so this is what we must partition by.
+ */
+export type IdConvType = 'pmcid' | 'pmid' | 'doi';
+
+/**
+ * Classify one query id the way the converter does: `PMC…` is a pmcid, all-digits is a pmid,
+ * anything else is treated as a doi. Returns `null` for an id we should not send at all, so an
+ * empty or unrecognisable value cannot poison an otherwise valid batch.
+ */
+export function idConvTypeOf(id: string): IdConvType | null {
+  const v = id.trim();
+  if (v === '') return null;
+  if (/^PMC\d+$/i.test(v)) return 'pmcid';
+  if (/^\d+$/.test(v)) return 'pmid';
+  // A doi is the only remaining shape the converter accepts; require the `10.` registrant
+  // prefix rather than waving through arbitrary junk.
+  if (/^10\.\S+\/\S+/.test(v)) return 'doi';
+  return null;
+}
+
+/**
+ * Partition query ids by converter id type, then chunk each partition to {@link IDCONV_BATCH_SIZE}.
+ *
+ * Every yielded batch is therefore HOMOGENEOUS, which is what keeps the converter from 400ing (see
+ * the call site for the measured evidence). Order is deterministic — pmcid, then pmid, then doi, each
+ * preserving input order — so a run is reproducible and test expectations are stable.
+ */
+export function idConvBatches(queryIds: readonly string[]): string[][] {
+  const groups = new Map<IdConvType, string[]>([
+    ['pmcid', []],
+    ['pmid', []],
+    ['doi', []],
+  ]);
+  for (const id of queryIds) {
+    const type = idConvTypeOf(id);
+    if (type === null) continue; // unsendable id: dropped rather than allowed to fail a batch
+    groups.get(type)!.push(id);
+  }
+  const out: string[][] = [];
+  for (const ids of groups.values()) {
+    if (ids.length > 0) out.push(...chunk(ids, IDCONV_BATCH_SIZE));
+  }
+  return out;
 }
 
 /** Build the ID Converter request URL with the polite-pool query params. */
@@ -202,7 +277,26 @@ export async function enrichWithIdConverter(
 
   // SEQUENTIAL: await each batch before starting the next (no concurrent idconv
   // requests — the converter 429s under any burst).
-  for (const batch of chunk(queryIds, IDCONV_BATCH_SIZE)) {
+  //
+  // HOMOGENEOUS BY ID TYPE, and that is load-bearing. The converter infers ONE `idtype` per
+  // request and rejects a request mixing types with a flat HTTP 400. Verified directly against
+  // the live endpoint:
+  //
+  //     ids=<pmid>,<pmid>    -> 200 ok, idtype=pmid
+  //     ids=<pmcid>,<pmcid>  -> 200 ok, idtype=pmcid
+  //     ids=<pmid>,<pmcid>   -> 400 Bad Request     <- the mix we were actually sending
+  //
+  // `collectQueryIds` already excludes DOIs (the file docstring records why: a preprint DOI
+  // 400s the whole batch), so DOIs were never the problem. But it collects PMIDs *and* PMCIDs
+  // into one list, and chunking that list produced batches carrying both — two id types, hence
+  // the 400. Retries cannot help: 400 is not transient. Observed as 138 of 138 batches failing
+  // and 0 papers fetched on the #307 bounded ingestion run.
+  //
+  // Deliberately partitioning rather than restricting to one type: PMIDs and PMCIDs are both
+  // legitimate query ids, and dropping either would lose crosswalk coverage. Note this bug can
+  // only fire once a corpus holds records of both shapes — which is why it can lie dormant and
+  // then appear to be caused by whatever most recently changed the corpus mix.
+  for (const batch of idConvBatches(queryIds)) {
     const resp = await fetchBatchWithRetry(ctx, batch, backoffBaseMs, log);
     if (resp === null) continue; // batch skipped after retries — keep going
 

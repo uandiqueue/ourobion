@@ -155,8 +155,9 @@ interface BaselineSnapshot {
   confidence: 'insufficient' | 'low' | 'medium' | 'high'
   // insufficient = <3 days, low = 3–6 days, medium = 7–13 days, high = 14+ days
 
-  // Expansion hint: data_sources will include 'wearable' and 'env' in later phases
-  data_sources: ('self_report' | 'wearable' | 'env')[]
+  // Vocabulary = the S2 metric_daily_values view's source tags ('signal' = the signals
+  // long-table branch); 'env' is reserved for env metrics in later phases
+  data_sources: ('self_report' | 'wearable' | 'env' | 'signal')[]
 }
 ```
 
@@ -168,16 +169,16 @@ interface BaselineSnapshot {
 
 ```typescript
 interface InsightCard {
-  id: string
+  id: number                        // bigint identity — a JSON number over PostgREST
   user_id: string
   generated_at: string              // ISO datetime
 
   // Content
   title: string                     // short, non-diagnostic
   body: string                      // 1–2 sentences, observational language only
-  category: 'hydration' | 'gut' | 'vector' | 'behaviour' | 'descriptive'
+  category: 'hydration' | 'gut' | 'vector' | 'behaviour' | 'descriptive' | 'relationship'
   severity: 'info' | 'notice' | 'watch'
-  // MVP only uses 'info' and 'descriptive' cards — 'notice'/'watch' are Phase 2
+  // 'relationship' = the §S8 composer producers' category (edge / personal cards)
 
   // Evidence (always populated, even if empty array in MVP)
   contributing_metrics: string[]    // e.g. ['urine_colour', 'gut_comfort_score']
@@ -185,8 +186,8 @@ interface InsightCard {
 
   // Confidence
   confidence_score: number          // 0–1
-  confidence_sources: ('self_report' | 'wearable' | 'env')[]
-  // MVP: confidence_sources = ['self_report'] always
+  confidence_sources: ('self_report' | 'wearable' | 'env' | 'signal' | 'brain')[]
+  // = BaselineSnapshot.data_sources vocabulary + 'brain' (card rests on verified research edges)
 
   // Lifecycle
   status: 'active' | 'snoozed' | 'dismissed'
@@ -195,6 +196,12 @@ interface InsightCard {
   // Metadata
   rule_id: string                   // which rule generated this — for debugging
   phase_generated: string           // e.g. 'p1s1' — for filtering/analytics
+
+  // §S8 producer columns — optional-with-default (docs/memory/0002): instances serialized
+  // before migration 20260716050639 lack them; the DB defaults are 'rules' / null / [].
+  producer?: 'rules' | 'edge' | 'personal'
+  insight_id?: string | null        // composed_insights FK; null for plain rules cards
+  edge_refs?: { edgeId: string; verifiedAt: string }[] // [] for producer 'personal' (CHECK)
 }
 ```
 
@@ -269,6 +276,35 @@ The two join into a `VerifiedEdge` — the servable unit of the graph. **Why the
 rubber stamp, the schema invariants that enforce it, gating (`edgeScore` / `servingBand`), and the
 two-tier placement are rationale — see [`docs/nao/brain-synthesis-design.md`](../docs/nao/brain-synthesis-design.md)**
 (field-level reference: [`shared/brain/README.md`](./brain/README.md)).
+
+### Artifact trust + scientific semantics (R4-U4 / O27, additive)
+
+Both records carry an **optional** `artifact: ArtifactRef` (`revision`, `contentHash`
+`sha256:<64 hex>`, `posture` `fixture`/`live`), and `EdgeVerification` additionally carries an
+optional `attestation: ModelAttestation` (provider-**returned** model/version, `family`,
+`decorrelated`, `attested`). Both are optional-with-default so pre-U4 artifacts still validate —
+**absence is not benign**: `shared/brain/provenance.ts` `trustFailures()` treats a missing posture
+or attestation as untrusted and **blocks** serving on any path that requires trust. A configured
+model id is not attestation.
+
+`shared/brain/provenance.ts` holds the serving-side rules — `effectiveClaimKind` (the verifier's
+`claimKindCheck.supportedKind` **caps** the synthesised `claimKind`, so a correlational finding can
+never be rendered causally), `provenanceGaps` (chain completeness, incl. the foreign-paper check),
+`verifyExactQuote` (offset-exact, not "occurs somewhere"), and `resolveDisposition` (an expert
+verdict binds to artifact revision **+ content hash**, so approval is never inherited by a rebuilt
+claim).
+
+`shared/brain/trust_labels.ts` is the **user-facing vocabulary** and the single source of truth for
+its Dart mirror `trust_labels.dart`. Parity is enforced by
+`apps/biotope/test/guards/brain_trust_labels_parity_test.dart` — **generated-or-parity-guarded
+constants, never a cross-language import** (O38). It renames "evidence tier" to **study-design
+tier**, and never presents the uncalibrated composite as confidence or certainty: it is a
+**prototype support rank**, shown to ordinary users as a band word, always alongside
+"Certainty is not assessed."
+
+`trust_labels.ts` deliberately has **no imports** so Deno edge functions can load it;
+`trust_labels.typetest.ts` asserts at compile time that the unions it restates are exactly the
+contract unions.
 
 ---
 

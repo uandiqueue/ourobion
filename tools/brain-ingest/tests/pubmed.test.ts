@@ -207,7 +207,14 @@ test('parseEfetchXml handles a single (non-array) PubmedArticle', () => {
       <PMID>99</PMID>
       <Article>
         <ArticleTitle>Solo.</ArticleTitle>
+        <PublicationTypeList>
+          <PublicationType UI="D016449">Randomized Controlled Trial</PublicationType>
+          <PublicationType UI="D016430">Multicenter Study</PublicationType>
+        </PublicationTypeList>
       </Article>
+      <MeshHeadingList>
+        <MeshHeading><DescriptorName UI="D015331" MajorTopicYN="Y">Cohort Studies</DescriptorName></MeshHeading>
+      </MeshHeadingList>
     </MedlineCitation>
     <PubmedData>
       <ArticleIdList><ArticleId IdType="pubmed">99</ArticleId></ArticleIdList>
@@ -218,6 +225,13 @@ test('parseEfetchXml handles a single (non-array) PubmedArticle', () => {
   assert.equal(cands.length, 1);
   assert.equal(cands[0]?.identifiers.pmid, '99');
   assert.equal(cands[0]?.title, 'Solo.');
+  assert.deepEqual(cands[0]?.publicationTypes, [
+    { ui: 'D016449', name: 'Randomized Controlled Trial' },
+    { ui: 'D016430', name: 'Multicenter Study' },
+  ]);
+  assert.deepEqual(cands[0]?.meshHeadings, [
+    { ui: 'D015331', name: 'Cohort Studies', majorTopic: true },
+  ]);
 });
 
 test('discover() chains esearch→efetch through the limiter + budget guard (keyed)', async () => {

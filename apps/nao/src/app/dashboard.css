@@ -474,6 +474,39 @@
   word-break: break-all;
 }
 
+/* Which source answered — the corpus object and the index row are not
+   equivalent, so the page always says which one it read. */
+.detail__source {
+  font-size: 11.5px;
+  color: var(--text-ghost);
+  margin-top: -14px;
+  margin-bottom: 20px;
+}
+
+/* The reduced-record banner: deliberately prominent. It must not be possible to
+   read the fallback as the full stored record. */
+.detail__reduced {
+  background: rgba(224, 158, 90, 0.09);
+  border: 1px solid rgba(224, 158, 90, 0.45);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+.detail__reduced-text {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.detail__reduced-fields {
+  margin: 8px 0 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
 .detail__facts {
   display: flex;
   flex-wrap: wrap;

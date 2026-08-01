@@ -1,0 +1,30 @@
+{
+  "ruleId": "gut_comfort_trending_down",
+  "schemaVersion": 1,
+  "category": "gut",
+  "severity": "info",
+  "scope": "single",
+  "enabledPhase": "phase1_stage1",
+  "metricKeys": ["gut_comfort_score"],
+  "provenance": {
+    "tier": "hand_authored",
+    "sourceNote": "Faithful port of the hardcoded MVP rule 'gut_comfort_trending_down' (supabase/functions/generate-insights/index.ts): trend === 'falling' && notInsufficient(s).",
+    "citation": null
+  },
+  "effectiveFrom": null,
+  "effectiveTo": null,
+  "status": "active",
+  "deprecatedAt": null,
+  "cooldownDays": null,
+  "expiryDays": 7,
+  "condition": {
+    "type": "trend",
+    "metricKey": "gut_comfort_score",
+    "equals": "falling",
+    "minConfidence": "low"
+  },
+  "template": {
+    "title": "Gut comfort pattern",
+    "body": "Your gut comfort data shows a declining pattern over the past week."
+  }
+}

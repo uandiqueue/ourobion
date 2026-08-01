@@ -120,8 +120,332 @@
   margin: 0;
 }
 
+/* ── Models panel (O10 /models, run-2 U8) — table + banner on the same system ─ */
+.models-testmode {
+  grid-column: 1 / -1;
+  border: 1px solid rgba(224, 158, 90, 0.55);
+  background: rgba(224, 158, 90, 0.08);
+}
+
+.models-table-wrap {
+  overflow-x: auto;
+}
+.models-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
+.models-table th,
+.models-table td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--hairline);
+  white-space: nowrap;
+}
+.models-table th {
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.models-table td {
+  color: var(--text-primary);
+}
+
+.models-override {
+  color: #e09e5a;
+}
+
+.models-editor-node {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 130px;
+}
+
+/* Provider-family rollup: derived from the published rows, so it reads as a list
+   of observations rather than a headline figure. */
+.models-providers {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.models-providers strong {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+/* The nodes table wants the full row; keep the two summary panels side by side. */
+.models-nodes-panel {
+  grid-column: 1 / -1;
+}
+
+.brain-pipeline__wide { grid-column: 1 / -1; }
+.brain-pipeline__blocked { color: #f08a7f; }
+.brain-pipeline__form,
+.brain-pipeline__form label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+.brain-pipeline__form { gap: 16px; }
+.brain-pipeline__form label {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.brain-pipeline__form input,
+.brain-pipeline__form select,
+.brain-pipeline__form textarea {
+  width: 100%;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--panel-inset);
+  color: var(--text-primary);
+  font: inherit;
+  padding: 9px 10px;
+}
+.brain-pipeline__form input:focus-visible,
+.brain-pipeline__form select:focus-visible,
+.brain-pipeline__form textarea:focus-visible,
+.brain-pipeline button:focus-visible,
+.brain-pipeline a:focus-visible {
+  outline: 3px solid var(--accent-1);
+  outline-offset: 2px;
+}
+.brain-pipeline__pair {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.brain-pipeline__mode { flex-direction: row !important; align-items: center; }
+.brain-pipeline__mode input { width: auto; }
+.brain-pipeline__estimate {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 10px;
+  padding: 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.brain-pipeline__list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.brain-pipeline__list li,
+.brain-pipeline__result > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.brain-pipeline__badge {
+  display: inline-flex;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.brain-pipeline__results { display: grid; gap: 10px; }
+.brain-pipeline__result {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  border-top: 1px solid var(--hairline);
+  padding-top: 10px;
+}
+@media (max-width: 680px) {
+  .brain-pipeline__pair { grid-template-columns: 1fr; }
+}
+
+/* ── Claims panel (O13 /claims + per-paper section, run-2 U9) ─ */
+.claims-card {
+  grid-column: 1 / -1;
+}
+
+.claims-edgeid {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.claims-quote {
+  margin: 6px 0;
+  padding: 6px 10px;
+  border-left: 2px solid var(--hairline);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.claims-quote__src {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.claims-verdict {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--hairline);
+}
+
+.claims-stamp {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #e09e5a;
+}
+
+.claims-reject {
+  margin-top: 8px;
+}
+.claims-reject input[type='text'] {
+  width: 260px;
+}
+.claims-reject__btn {
+  border: 1px solid rgba(224, 101, 90, 0.55);
+  background: transparent;
+  color: #e0655a;
+}
+
 @media (max-width: 920px) {
   .ingest-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── Seeds (O14 seeds-as-data, run-2 U10) ────────────────────────────────── */
+.seeds-panel {
+  margin-top: 18px;
+}
+
+.seeds-list {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.seeds-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 8px;
+  background: var(--panel-inset);
+}
+.seeds-row--disabled {
+  opacity: 0.55;
+}
+
+.seeds-row__main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.seeds-row__slug {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.seeds-row__detail {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.seeds-row__toggle {
+  margin-left: auto;
+}
+
+.seeds-badge {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.seeds-badge--builtin {
+  color: var(--text-muted);
+  background: var(--panel-inset);
+  border: 1px solid var(--hairline-strong);
+}
+.seeds-badge--enabled {
+  color: #2bc4be;
+  background: rgba(43, 196, 190, 0.12);
+  border: 1px solid rgba(43, 196, 190, 0.3);
+}
+.seeds-badge--off {
+  color: #e09e5a;
+  background: rgba(224, 158, 90, 0.1);
+  border: 1px solid rgba(224, 158, 90, 0.3);
+}
+
+.seeds-form input[type='text'] {
+  min-width: 220px;
+}
+
+.seeds-slug-preview {
+  margin-top: 6px;
+}
+
+/* ── Knowledge gaps (O9 demo slice / feature (d), run-2 U11) ─────────────── */
+.gaps-panel {
+  margin-top: 18px;
+}
+
+.gaps-table-wrap {
+  overflow-x: auto;
+}
+.gaps-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+}
+.gaps-table th,
+.gaps-table td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--hairline);
+  white-space: nowrap;
+}
+.gaps-table th {
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.gaps-table td {
+  color: var(--text-primary);
+}
+
+.gaps-pair {
+  font-family: var(--font-mono);
+}
+.gaps-table .gaps-num {
+  text-align: right;
+}
+.gaps-when,
+.gaps-context {
+  color: var(--text-secondary);
+}
+.gaps-addseed {
+  font-size: 11px;
+  padding: 3px 10px;
 }

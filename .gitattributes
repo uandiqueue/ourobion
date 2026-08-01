@@ -1,0 +1,60 @@
+# Git attributes for ourobion.
+#
+# Deliberately minimal: one path, one reason. Add entries only with a stated
+# reason, because attributes silently change how git diffs, merges and checks
+# out files.
+
+# ─── supabase/functions/compute-baselines/index.ts ────────────────────────────
+# This file contains a DELIBERATE literal NUL (0x00) byte: it is the separator
+# in the `${user_id}\x00${metric_key}` baseline map key. See the file itself and
+# the repo's Windows-toolchain notes, which call out that this NUL is intentional
+# and must be preserved (an accidental NUL elsewhere is a known write-tool bug,
+# but this one is load-bearing).
+#
+# Because git classifies a file as binary when it finds a NUL in the first 8000
+# bytes, `git diff --numstat` reports `-  -  <path>` for it instead of line
+# counts. The Run 4 landing gate (tools/run4_release_gate.mjs, `checkLandingDelta`)
+# fails closed on exactly that row — "binary/unparsable diff row" — because a
+# binary diff cannot be measured against the added-line cap. That is correct
+# behaviour for a real binary, but here it is a false positive on a TypeScript
+# source file, and it blocks any unit that edits this file (R4-U2 was the first).
+#
+#   -text  never apply EOL conversion, so the stored and checked-out bytes stay
+#          byte-identical. This matters beyond tidiness: supabase/deploy-attestation.json
+#          pins this file's entrypointSha256, so any EOL rewrite would invalidate
+#          the recorded attestation.
+#   diff   treat it as text when diffing, so --numstat yields real line counts
+#          and the landing cap can measure it.
+#
+# Neither attribute alters the blob's content; they only change how git presents
+# and converts it.
+supabase/functions/compute-baselines/index.ts -text diff
+
+# The before-blob has legacy NUL separators; force this transition's text diff
+# so numstat and landing caps can inspect its actual line delta.
+tools/brain-ingest/src/synth/artifact.ts -text diff
+
+# ─── model-training/evidence/*/local-bundle-sha256sums.txt ────────────────────
+# These two files are CONTENT-ADDRESSED: each private R2 release is named
+# `sha256-<hex>` where the hex is the SHA-256 of the file itself
+# (model-training/src/ourobion_model_lab/inference/releases.py re-derives it and
+# fails closed on a mismatch). Their bytes are therefore load-bearing, not just
+# their lines.
+#
+# On the repo's Windows-native dev machine `core.autocrlf=true` checks them out
+# as CRLF, which changes the digest:
+#
+#   zebra-v1    LF e1d09fbd…  ->  CRLF e3806b3b…
+#   viceroy-v0  LF 751fbf1f…  ->  CRLF 45cbf55c…
+#
+# Neither CRLF digest matches the pinned release id, so every inference run and
+# the tracked-pin tests fail on Windows while passing on Linux CI. `text eol=lf`
+# forces the working-tree bytes to LF on every platform, which is what the
+# release ids were taken over.
+model-training/evidence/*/local-bundle-sha256sums.txt text eol=lf
+
+# ─── model-training/inference-manifests/*.jsonl ───────────────────────────────
+# Frozen research inputs. Not currently hashed, but they must be byte-identical
+# across platforms so a prediction file is reproducible from the same manifest
+# on any machine — and so they stay hashable if a pin is added later.
+model-training/inference-manifests/*.jsonl text eol=lf

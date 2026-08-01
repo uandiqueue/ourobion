@@ -44,6 +44,9 @@ The authoritative shapes are in [`relationships.ts`](./relationships.ts). Highli
 | Field | Meaning |
 |---|---|
 | `edgeId` | deterministic `${subject}\|${relation}\|${object}` (see `index.relationKey`) — re-runs update the same edge |
+| `derivation` | the synthesis node's plain-language reasoning trace — how the quoted sentences produce the claim; captured at synthesis time (never regenerated on view), copy-gated before storage |
+| `Citation.population` | per-paper studied population, verbatim, when stated — distinct from the claim-level `population` (the claimed scope); U1 applicability-grader input |
+| `charStart` / `charEnd` | a `QuoteSpan`'s offsets into the source's canonical extracted text (`null` when unknown) — makes the deterministic quote check exact |
 | `relation` | `increases` · `decreases` · `modulates` · `correlates` · `confounds` · `no_effect` (`no_effect` records a studied null) |
 | `claimKind` | `causal` · `correlational` · `mechanistic` — the axis synthesis most overstates |
 | `evidenceTier` | study-design strength `1` mechanistic … `5` meta-analysis — the brain's analog of metric `reliability` |
@@ -54,13 +57,26 @@ The authoritative shapes are in [`relationships.ts`](./relationships.ts). Highli
 
 ## Gating (where trust becomes behaviour)
 
-`index.ts` is the single home for gating, kept as pure functions:
+`index.ts` is the single home for gating, kept as pure functions. **Since C15 the RANK and the
+SERVING DECISION are separate** (`docs/temp/run4/config-decisions.md` C15):
 
-- `edgeScore(v)` — rolls `confidence` × evidence-tier × net-corroboration into a 0..1 trust score.
+- `singlePaperGate(v)` — **the serving decision.** Asks only whether the claim faithfully
+  represents the paper it cites: verdict relevance, the deterministic quote gate, and
+  direction / claim-kind / effect-size matching, then a `confidence` floor. Returns the band plus
+  named `failures`. Config: `SINGLE_PAPER_GATE`.
+- `edgeScore(v)` — rolls `confidence` × study-design tier × net-corroboration into a 0..1
+  composite. **A rank only — it no longer gates.**
 - `servingBand(v)` — `high` (serve plainly) · `mid` (serve with a "limited evidence" qualifier) ·
-  `hold` (don't serve). Thresholds in `EDGE_GATES`.
-- `isServable(v)` / `servableEdges(edges)` — what the graph may surface, ranked by trust.
-- `needsReview(edges)` — `contradicted` edges (suppress + flag the source) and grounded-but-low edges.
+  `hold` (don't serve). Thin reader of `singlePaperGate`; floors in `EDGE_GATES` read against
+  `confidence`.
+- `isServable(v)` / `servableEdges(edges)` — what the graph may surface, ranked by `edgeScore`.
+- `needsReview(edges)` — `contradicted` edges (suppress + flag the source) and grounded-but-held edges.
+
+**A card can be served on the strength of a single paper.** Corroboration, study-design tier, venue
+impact tier and the other-paper `scopeCheck` are still computed, stored and ranked on, but they
+cannot withhold a card (`SINGLE_PAPER_GATE.nonGatingSignals`). The risk that the one paper is wrong
+or unreplicated reaches the user through `EdgeVerification.caveat` (#300 §E) — that caveat is now
+the **only** mechanism carrying it.
 
 ## Two-tier truth
 
@@ -77,16 +93,17 @@ runtime (the jobs `validateClaim` / `validateVerification` their own output befo
 compile-time `AssertExact<>` fails `tsc` if the hand-written interfaces and the zod-inferred types
 drift apart.
 
-## Deferred (lands with the first persistence + consumer)
+## Guards and remaining parity
 
-TS-first, like the registry was before its env metrics landed:
+- **Landed:** `brain-edge-schema` couples the relationship contract to the
+  `relationship_claims`/`edge_verifications` migration through
+  `tools/edge-loader/tests/edge_table_schema.test.ts`.
+- **Landed:** `brain-endpoints-metrics-registry` asserts every edge endpoint resolves to an active
+  registry metric through `tools/edge-loader/tests/edge_endpoints_registry.test.ts`.
+- **Still deferred:** `relationships.dart` plus TS↔Dart parity, because Flutter consumes the
+  provenance/card RPC shape rather than mirroring the full authoring contract today. Add the mirror
+  only when a real Dart consumer needs it.
 
-- **`relationships.dart` + a `brain-relationships-ts-dart-parity` guard** — when the Flutter app
-  renders edges.
-- **A `brain-edge-to-schema` guard** — when the graph is persisted to a table/migration.
-- **A `brain-endpoint-to-registry` guard** — asserting every edge endpoint resolves to an active
-  registry metric (`metrics.isActiveMetric`).
-
-These follow the `couplings.yaml` pattern in [`docs/biotope/metrics-registry-design.md`](../../docs/biotope/metrics-registry-design.md);
-they aren't added yet because there's no Dart consumer or DB table to hold honest. See
-`docs/nao/brain-synthesis-design.md` → "Guards (deferred)".
+The executable coupling declarations live in
+[`docs/graph/couplings.yaml`](../../docs/graph/couplings.yaml). See the broader guard design in
+[`docs/nao/brain-synthesis-design.md`](../../docs/nao/brain-synthesis-design.md).

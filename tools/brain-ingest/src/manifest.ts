@@ -27,6 +27,7 @@ import {
   appendFileSync,
   renameSync,
   existsSync,
+  unlinkSync,
 } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import type { PaperRecord, PaperStatus } from './types.js';
@@ -180,13 +181,33 @@ export class Manifest {
   /** Atomic full-file rewrite from the in-memory index (temp file + rename). */
   private rewrite(): void {
     this.ensureDir();
+    const expectedCount = this.index.size;
     const body = this.order
       .map((uid) => JSON.stringify(this.index.get(uid)))
       .join('\n');
     const payload = body.length > 0 ? body + '\n' : '';
     const tmp = `${this.path}.tmp`;
     writeFileSync(tmp, payload, 'utf8');
+
+    // Validate the staged file before replacing the last known-good manifest.
+    // At 20k+ records, a silently truncated rewrite would discard hours of
+    // network work; count equality is the fail-closed invariant that matters.
+    const stagedCount = readAll(tmp).length;
+    if (stagedCount !== expectedCount) {
+      unlinkSync(tmp);
+      throw new Error(
+        `manifest: staged rewrite count mismatch (expected ${expectedCount}, got ${stagedCount})`,
+      );
+    }
+
     renameSync(tmp, this.path);
+
+    const persistedCount = readAll(this.path).length;
+    if (persistedCount !== expectedCount) {
+      throw new Error(
+        `manifest: persisted rewrite count mismatch (expected ${expectedCount}, got ${persistedCount})`,
+      );
+    }
   }
 
   /**

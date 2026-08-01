@@ -4,7 +4,7 @@ summary: The single next-steps home — the current top priority, near-term work
 type: plan
 scope: repo
 status: canonical
-updated: 2026-07-15
+updated: 2026-07-16
 ---
 
 # Next Steps & Roadmap
@@ -22,10 +22,20 @@ gate, see [`phase-2-plan.md`](./phase-2-plan.md).
 
 ## Near-term by area
 
-2. **Insight engine — run the long-shot implementation of the plan.** Implement the 23-stage
-   architecture in [`insight-engine-architecture.md`](./insight-engine-architecture.md) following its
-   build-order dependency graph (§9): L0 the contract-extension PR first, then up through the one-card
-   end-to-end slice (L6), then the full loop (L8). This is the flagship build.
+2. **Insight engine — continue the long-shot implementation of the plan.** Build-order graph in
+   [`insight-engine-architecture.md`](./insight-engine-architecture.md) §9. **L0–L6 are shipped** (the
+   Phase-2 run U1–U13): L0 contract extension, storage/router/quoteCheck primitives, rules-as-data (U5),
+   baselines v2 + S2/S3 (U6), S4/S5 signals+evaluator (U7), S6 edge store + A11 loader (U8), the agentic
+   seeder (U9), the real A8 synthesis run (U10), the A10 verifier scaffold (U11), the S7 composer + S8
+   card producer (U12), and the **L6 one-card end-to-end slice** (U13) — one pair
+   (`gut_comfort_score × mood_score`) wired claim→card with its source-panel dataset. Reproduce it via
+   [`insight-slice-demo-runbook.md`](./insight-slice-demo-runbook.md); run history lives in
+   [`docs/sessions/`](../sessions/).
+   **Remaining:** L7 (S9 report + surfaced_cards; A1 ledger + A3 transport + A12 coverage), L8 (the full
+   gap→queue→dispatch→new-edge loop), the A4–A7 structure/tiering/mention/gate stages, the U1 real
+   applicability grader, and — gating a real verifier verdict on the L6 edge — the non-Anthropic
+   verifier key ([memory 0016](../memory/0016-insight-engine-l6-one-card-slice.md); L6 ships an interim key-blocked-honest
+   verification). Calibration is item 6.
 
 3. **biotope UI — develop the app UI using the AI-generated starter assets** in the
    [ai-assets subsystem](../biotope/ui/ai-assets/) (asset paths resolve via the

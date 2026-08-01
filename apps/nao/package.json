@@ -12,6 +12,7 @@
     "prebuild": "npm run gen-env",
     "build": "next build",
     "typecheck": "tsc --noEmit",
+    "test": "node --experimental-test-module-mocks --test \"tests/**/*.test.ts\"",
     "lint": "next lint",
     "etl": "node scripts/etl.mjs"
   },

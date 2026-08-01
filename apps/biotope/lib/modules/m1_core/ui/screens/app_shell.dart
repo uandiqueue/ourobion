@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/app_preferences.dart';
 import '../../../../core/theme.dart';
-import '../../../m2_self_report/ui/screens/daily_log_screen.dart';
+import '../../../../core/widgets/biotope_bottom_navigation.dart';
+import '../../../../core/widgets/biotope_screen_entrance.dart';
+import '../../../m2_self_report/ui/screens/scan_tab.dart';
+import '../../../m5b_insight_engine/ui/screens/archive_tab.dart';
 import '../../../m5b_insight_engine/ui/screens/insights_tab.dart';
 import 'home_tab.dart';
+import 'profile_tab.dart';
+import '../widgets/living_backdrop.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -24,165 +29,41 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _index,
+      backgroundColor: Colors.transparent,
+      extendBody: true,
+      body: Stack(
         children: [
-          HomeTab(key: _homeKey, onLogTodayTap: () => _switchTo(1)),
-          const DailyLogScreen(),
-          const InsightsTab(),
-          const _PlaceholderTab(
-            label: 'Squad',
-            icon: Icons.group_outlined,
-            subtitle: 'Compare gut health trends with friends.',
+          Positioned.fill(
+            child: ValueListenableBuilder<bool>(
+              valueListenable: AppPreferences.backdropEnabled,
+              builder: (context, enabled, child) => enabled
+                  ? const LivingBackdrop()
+                  : const ColoredBox(color: OurobionColors.background),
+            ),
           ),
-          const _PlaceholderTab(
-            label: 'World',
-            icon: Icons.public_outlined,
-            subtitle: 'Environmental and regional outbreak signals.',
-          ),
-        ],
-      ),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Divider(
-            height: 1,
-            thickness: 1,
-            color: OurobionColors.outlineVariant,
-          ),
-          NavigationBarTheme(
-            data: NavigationBarThemeData(
-              backgroundColor: OurobionColors.surfaceContainer,
-              indicatorColor: OurobionColors.primaryFixed,
-              indicatorShape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
+          IndexedStack(
+            index: _index,
+            children: [
+              BiotopeScreenEntrance(
+                active: _index == 0,
+                child: HomeTab(
+                  key: _homeKey,
+                  onScanTap: () => _switchTo(1),
+                  onInsightsTap: () => _switchTo(2),
+                  onProfileTap: () => _switchTo(4),
+                ),
               ),
-              labelTextStyle: WidgetStateProperty.resolveWith((states) {
-                final active = states.contains(WidgetState.selected);
-                return GoogleFonts.manrope(
-                  fontSize: 11,
-                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                  color: active
-                      ? OurobionColors.primary
-                      : OurobionColors.onSurfaceVariant,
-                );
-              }),
-              iconTheme: WidgetStateProperty.resolveWith((states) {
-                final active = states.contains(WidgetState.selected);
-                return IconThemeData(
-                  color: active
-                      ? OurobionColors.primary
-                      : OurobionColors.onSurfaceVariant,
-                  size: 22,
-                );
-              }),
-            ),
-            child: NavigationBar(
-              selectedIndex: _index,
-              onDestinationSelected: _switchTo,
-              elevation: 0,
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Icons.home_outlined),
-                  selectedIcon: Icon(Icons.home_rounded),
-                  label: 'Home',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.edit_note_outlined),
-                  selectedIcon: Icon(Icons.edit_note_rounded),
-                  label: 'Log',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.lightbulb_outline_rounded),
-                  selectedIcon: Icon(Icons.lightbulb_rounded),
-                  label: 'Insights',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.group_outlined),
-                  selectedIcon: Icon(Icons.group_rounded),
-                  label: 'Squad',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.public_outlined),
-                  selectedIcon: Icon(Icons.public_rounded),
-                  label: 'World',
-                ),
-              ],
-            ),
+              BiotopeScreenEntrance(active: _index == 1, child: const ScanTab()),
+              BiotopeScreenEntrance(active: _index == 2, child: const InsightsTab()),
+              BiotopeScreenEntrance(active: _index == 3, child: const ArchiveTab()),
+              BiotopeScreenEntrance(active: _index == 4, child: const ProfileTab()),
+            ],
           ),
         ],
       ),
-    );
-  }
-}
-
-// ── Placeholder tab ────────────────────────────────────────────────────────────
-
-class _PlaceholderTab extends StatelessWidget {
-  final String label;
-  final String subtitle;
-  final IconData icon;
-
-  const _PlaceholderTab({
-    required this.label,
-    required this.icon,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: OurobionColors.surface,
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: OurobionColors.primaryFixed,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Icon(icon, size: 32, color: OurobionColors.primary),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  label,
-                  style: GoogleFonts.manrope(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.2,
-                    color: OurobionColors.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.manrope(
-                    fontSize: 13,
-                    color: OurobionColors.outline,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Coming soon',
-                  style: GoogleFonts.manrope(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                    color: OurobionColors.outlineVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+      bottomNavigationBar: BiotopeBottomNavigation(
+        selectedIndex: _index,
+        onSelected: _switchTo,
       ),
     );
   }

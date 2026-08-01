@@ -68,8 +68,9 @@ import { loadConfig } from './config.js';
 import { createRateLimiter } from './limits/rateLimiter.js';
 import { createBudgetGuard } from './limits/budget.js';
 import { resolveDedup, reconcileByIdentifiers, mergeIdentifiers, normalizeIdentifiers } from './identity.js';
-import { SEEDS, seedByTopic, SEED_TOPICS } from './seeds.js';
+import { SEEDS } from './seeds.js';
 import { Manifest, parseJsonl, type ManifestSummary } from './manifest.js';
+import { ManifestCheckpointBuffer, installManifestCheckpointGuards } from './manifestCheckpoint.js';
 import { R2Store, pdfKey, jatsKey, textKey, sha256, MANIFEST_KEY, metaKey } from './storage/r2.js';
 import { extractFromPdf, extractFromJats } from './extract.js';
 
@@ -96,6 +97,7 @@ import { fetchArxivPdf, arxivIdFromRecord } from './retrieval/arxivPdf.js';
 import { fetchBestOaUrl } from './retrieval/directOa.js';
 import { waitForMemory, type MemoryGuardOptions } from './limits/memoryGuard.js';
 import { loadIngestControl } from './control.js';
+import { readArtifact, seedsFromArtifact } from './seeder/artifact.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Options + result
@@ -134,6 +136,15 @@ export interface RunOptions {
    * `src/control.ts`'s docstring.)
    */
   controlFromR2?: boolean;
+  /**
+   * The seed-topic pool `selectSeeds` draws from (O14 seeds-as-data, run-2
+   * U10): the CLI passes the MERGED static + `ingestion_seeds` pool
+   * (`seeder/dbSeeds.ts`, fetched fail-soft) so human-added db seeds drive
+   * discovery and are valid `--seed` selectors. `undefined` (tests /
+   * programmatic callers) ⇒ the static `SEEDS` — `run()` itself never touches
+   * the Supabase boundary, keeping it hermetic.
+   */
+  seedPool?: readonly Seed[];
 }
 
 /** Outcome of a {@link run} — the numbers the CLI prints. */
@@ -292,6 +303,12 @@ function newRecord(
     year: candidate.year,
     venue: candidate.venue,
     abstract: candidate.abstract,
+    ...(candidate.publicationTypes !== undefined
+      ? { publicationTypes: [...candidate.publicationTypes] }
+      : {}),
+    ...(candidate.meshHeadings !== undefined
+      ? { meshHeadings: [...candidate.meshHeadings] }
+      : {}),
     discoveredVia: discoveredVia.join(','),
     topicTags,
     oa: { isOa: false, status: 'unknown', bestOaUrl: null, license: null, version: null },
@@ -618,29 +635,40 @@ async function fetchAndStore(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Sync the full metadata view to R2 (NOT called in dry-run): the combined index
- * `manifest/papers.jsonl` (one JSON per line) plus one `meta/<uid>.json` per
- * record (the full {@link PaperRecord} as pretty JSON). `R2Store.sync` sha-skips
- * unchanged objects, so this is idempotent and cheap on resume / multi-day runs.
+ * Sync metadata to R2 (NOT called in dry-run): the combined index always receives
+ * the COMPLETE canonical corpus, while only records changed since the preceding
+ * sync receive a `meta/<uid>.json` write. The split is important: passing a subset
+ * as the index would truncate truth, but re-HEADing every per-paper object makes a
+ * bounded topic run O(corpus) before it can fetch its first paper.
  */
 async function syncMetadata(
   store: R2Store,
-  records: readonly PaperRecord[],
+  indexRecords: readonly PaperRecord[],
+  changedRecords: readonly PaperRecord[],
   log: (line: string) => void,
 ): Promise<void> {
   const encoder = new TextEncoder();
 
   // Combined index: one JSON object per line (JSONL), all current records.
-  const jsonl = records.map((r) => JSON.stringify(r)).join('\n') + (records.length > 0 ? '\n' : '');
+  const jsonl = indexRecords.map((r) => JSON.stringify(r)).join('\n') + (indexRecords.length > 0 ? '\n' : '');
   await store.sync(MANIFEST_KEY, encoder.encode(jsonl), 'application/x-ndjson');
 
-  // Per-paper objects: the full record as pretty JSON, content-addressed by uid.
-  for (const rec of records) {
+  // Per-paper objects: last change wins if one uid changed at multiple stages.
+  const uniqueChanges = new Map(changedRecords.map((record) => [record.paperUid, record]));
+  for (const rec of uniqueChanges.values()) {
     const body = encoder.encode(JSON.stringify(rec, null, 2));
     await store.sync(metaKey(rec.paperUid), body, 'application/json');
   }
 
-  log(`metadata → R2: ${records.length} meta/ + manifest index`);
+  log(
+    `metadata → R2: ${uniqueChanges.size} changed meta/ + complete manifest index ` +
+      `(${indexRecords.length} records)`,
+  );
+}
+
+/** Exact byte-shape comparison for the metadata representation written above. */
+function sameMetadata(left: PaperRecord | undefined, right: PaperRecord): boolean {
+  return left !== undefined && JSON.stringify(left) === JSON.stringify(right);
 }
 
 /**
@@ -650,7 +678,7 @@ async function syncMetadata(
  * what makes resume work on a machine that has never run before — without it, a
  * fresh clone re-discovers and re-downloads everything it already has on R2.
  */
-async function hydrateManifestFromR2(
+export async function hydrateManifestFromR2(
   manifest: Manifest,
   store: R2Store,
   log: (line: string) => void,
@@ -676,16 +704,42 @@ function errMsg(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-/** Resolve the seed list from `opts.seed` (one topic) or all six. */
-function selectSeeds(seedTopic: string | undefined): Seed[] {
-  if (seedTopic === undefined) return [...SEEDS];
-  const seed = seedByTopic(seedTopic);
-  if (seed === undefined) {
-    throw new Error(
-      `unknown --seed '${seedTopic}'. Known topics: ${SEED_TOPICS.join(', ')}`,
-    );
+/**
+ * Resolve the seed list. An explicit `--seed <topic>` always selects a single
+ * topic from `pool` (explicit selection wins). Otherwise, when the agentic
+ * seeder's `seed-queries.json` artifact is present in `corpusDir` and
+ * non-empty, its generated queries drive discovery (superseding the topic
+ * pool); absent or empty, the pool topics are the fallback (soft). `log`
+ * reports which. `pool` defaults to the static `SEEDS`; the CLI passes the
+ * merged static + db pool (O14 seeds-as-data — see `RunOptions.seedPool`).
+ */
+function selectSeeds(
+  seedTopic: string | undefined,
+  corpusDir: string,
+  log: (line: string) => void,
+  pool: readonly Seed[] = SEEDS,
+): Seed[] {
+  if (seedTopic !== undefined) {
+    const seed = pool.find((s) => s.topic === seedTopic);
+    if (seed === undefined) {
+      throw new Error(
+        `unknown --seed '${seedTopic}'. Known topics: ${pool.map((s) => s.topic).join(', ')}`,
+      );
+    }
+    return [seed];
   }
-  return [seed];
+  const artifact = readArtifact(corpusDir);
+  if (artifact !== undefined) {
+    const seeds = seedsFromArtifact(artifact);
+    if (seeds.length > 0) {
+      log(
+        `seeds: agentic seed-queries.json (${artifact.candidates.length} candidate(s), ` +
+          `${seeds.length} query-seed(s), promptVersion=${artifact.promptVersion})`,
+      );
+      return seeds;
+    }
+  }
+  return [...pool];
 }
 
 /**
@@ -741,7 +795,7 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
     await hydrateManifestFromR2(manifest, store, log);
   }
 
-  const seeds = selectSeeds(opts.seed);
+  const seeds = selectSeeds(opts.seed, corpusDir, log, opts.seedPool);
   log(`ingest: seeds=[${seeds.map((s) => s.topic).join(', ')}]${opts.dryRun ? ' (dry-run)' : ''}`);
 
   // ── Steps 1–4: discover → dedup → record → OA-locate → classify ─────────────
@@ -808,7 +862,10 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
     );
   }
 
-  // Persist the discovered/classified state up front (so a crash keeps progress).
+  // Persist the discovered/classified state up front (so a crash keeps progress),
+  // but retain only exact changes for the per-paper R2 projection. On a repeat
+  // per-topic run most records compare equal and therefore cost no meta/ HEAD/PUT.
+  const discoveryChanges = records.filter((record) => !sameMetadata(manifest.get(record.paperUid), record));
   manifest.upsertMany(records);
 
   // R2 orphan cleanup (NOT in dry-run): delete the absorbed uids' meta/<uid>.json.
@@ -823,9 +880,9 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
   }
 
   // Push the discovered/classified metadata to R2 (canonical store) — skip in
-  // dry-run. A re-sync is idempotent (sha-skip), so this is cheap on resume.
+  // dry-run. The canonical index remains complete; per-paper sync is incremental.
   if (!opts.dryRun) {
-    await syncMetadata(store, manifest.all(), log);
+    await syncMetadata(store, manifest.all(), discoveryChanges, log);
   }
 
   // ── Step 5–7: retrieve → extract → store (skipped under --dry-run) ──────────
@@ -843,6 +900,7 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
   let skipped = 0;
   let deferred = 0;
   let budgetStopped = false;
+  const changesSinceSync = new Map<string, PaperRecord>();
 
   if (opts.dryRun) {
     for (const rec of limited) {
@@ -850,30 +908,46 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
     }
     log('dry-run: no retrieval / R2 calls issued.');
   } else {
-    for (const rec of limited) {
-      if (rec.status === 'fetched') {
-        skipped++;
-        continue;
-      }
+    const checkpoint = new ManifestCheckpointBuffer(manifest, { log });
+    const removeCheckpointGuards = installManifestCheckpointGuards(checkpoint);
+    try {
+      for (const rec of limited) {
+        if (rec.status === 'fetched') {
+          skipped++;
+          continue;
+        }
 
-      // §5.1 fail-closed is now PER METERED SOURCE (inside that source's own
-      // adapter, e.g. core.ts's own `wouldExceed95` check before it dispatches)
-      // rather than a whole-run early-exit here — see the module docstring for
-      // why: the free steps ahead of CORE must still get a chance even once
-      // CORE itself is capped for the day.
-      if (opts.memoryGuard !== undefined) {
-        await waitForMemory(opts.memoryGuard, log);
-      }
+        // §5.1 fail-closed is now PER METERED SOURCE (inside that source's own
+        // adapter, e.g. core.ts's own `wouldExceed95` check before it dispatches)
+        // rather than a whole-run early-exit here — see the module docstring for
+        // why: the free steps ahead of CORE must still get a chance even once
+        // CORE itself is capped for the day.
+        if (opts.memoryGuard !== undefined) {
+          await waitForMemory(opts.memoryGuard, log);
+        }
 
-      const { record: finalised, stored } = await fetchAndStore(ctx, store, rec, now);
-      manifest.upsert(finalised);
-      if (stored) {
-        fetched++;
-        log(`  fetched ${finalised.paperUid} → ${finalised.storage.key} (${finalised.fullText.charCount ?? 0} chars)`);
-      } else if (finalised.status === 'failed') {
-        log(`  failed ${finalised.paperUid}: ${finalised.errors[finalised.errors.length - 1] ?? 'unknown'}`);
-      } else {
-        log(`  unretrieved ${finalised.paperUid} [${finalised.retrievability}] — left 'discovered'`);
+        const { record: finalised, stored } = await fetchAndStore(ctx, store, rec, now);
+        if (!sameMetadata(manifest.get(finalised.paperUid), finalised)) {
+          changesSinceSync.set(finalised.paperUid, finalised);
+          checkpoint.stage(finalised);
+        }
+        if (stored) {
+          fetched++;
+          log(`  fetched ${finalised.paperUid} → ${finalised.storage.key} (${finalised.fullText.charCount ?? 0} chars)`);
+        } else if (finalised.status === 'failed') {
+          log(`  failed ${finalised.paperUid}: ${finalised.errors[finalised.errors.length - 1] ?? 'unknown'}`);
+        } else {
+          log(`  unretrieved ${finalised.paperUid} [${finalised.retrievability}] — left 'discovered'`);
+        }
+      }
+    } finally {
+      // `flush` is synchronous and atomic. The same buffer is also guarded by
+      // exit/SIGINT/SIGTERM handlers, so an external stop loses at most one
+      // bounded interval of changed records.
+      try {
+        checkpoint.flush('retrieval-loop-finally');
+      } finally {
+        removeCheckpointGuards();
       }
     }
 
@@ -903,8 +977,14 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
   // absorbs the stale `pmcid:` orphan. Run AFTER the fetch loop so fetched statuses
   // are final (a fetched record is never absorbed-then-recreated by a later fetch).
   const corpus = reconcileByIdentifiers(manifest.all());
+  for (const record of corpus.merged) {
+    if (!sameMetadata(manifest.get(record.paperUid), record)) {
+      changesSinceSync.set(record.paperUid, record);
+    }
+  }
   for (const uid of corpus.absorbed) {
     manifest.delete(uid);
+    changesSinceSync.delete(uid);
   }
   manifest.upsertMany(corpus.merged);
   if (corpus.absorbed.length > 0) {
@@ -924,9 +1004,10 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
 
   // Final metadata sync — captures everything the retrieval loop just finalised
   // (storage{}, fullText{}, fetchedAt) AND the corpus-wide reconcile above.
-  // Idempotent; skipped under --dry-run.
+  // The manifest index is still complete; per-paper objects are only exact changes.
+  // Skipped under --dry-run.
   if (!opts.dryRun) {
-    await syncMetadata(store, manifest.all(), log);
+    await syncMetadata(store, manifest.all(), [...changesSinceSync.values()], log);
   }
 
   const summary = manifest.summary();

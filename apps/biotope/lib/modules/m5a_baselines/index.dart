@@ -5,5 +5,12 @@
 //
 // getBaseline(userId, metricKey)  → BaselineSnapshot?   single metric lookup
 // getBaselines(userId)            → List<BaselineSnapshot>  all metrics for a user
+// getMetricKeys(userId)           → List<String>            metrics with data in the window (U7)
+// getSeries(userId, metricKey)    → List<MetricDailyPoint>  trailing daily series (U7)
 
 export 'impl/baseline_service.dart';
+export 'impl/chart_math.dart';
+export 'impl/metric_axis_policy.dart';
+export 'impl/metric_series_models.dart';
+export 'impl/metric_series_service.dart';
+export 'impl/metric_value_format.dart';

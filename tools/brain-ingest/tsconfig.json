@@ -8,9 +8,12 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "declaration": true,
-    "sourceMap": true,
-    "outDir": "dist",
+    // This package is never compiled to JS: `typecheck` is `tsc --noEmit`, and both `test` and
+    // `start` run the TypeScript directly through tsx. Declaring noEmit (instead of the previous
+    // outDir/declaration/sourceMap) keeps that explicit and avoids TS6's "the common source
+    // directory is '..'" diagnostic — src/ and tests/ import tools/llm-router/src directly, so the
+    // computed root is tools/, and an emit would have landed in dist/brain-ingest + dist/llm-router.
+    "noEmit": true,
     "resolveJsonModule": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,

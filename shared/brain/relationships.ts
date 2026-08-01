@@ -72,16 +72,88 @@ export type VerificationStatus =
   | 'stale'        // promptVersion / corpus moved on — re-run pending
   | 'superseded';  // replaced by a newer verification of the same edge
 
+/**
+ * One bounded, provenance-addressable evidence passage carried on a citation (O15/B1: the
+ * verifier judges ONLY shown evidence, so the passage text must survive to the prompt).
+ * `locator` addresses where in the paper the passage came from:
+ *   - `chars:<start>-<end>` — character span (end exclusive) into the source's canonical
+ *     extracted text (`StructuredPaper.canonicalText`), same coordinate space as
+ *     `QuoteSpan.charStart`/`charEnd`;
+ *   - `abstract:<start>-<end>` — character span into the source's abstract (external
+ *     discovery candidates, where only an abstract is available).
+ * Producers bound `text` (brain-ingest `maxEvidenceCharsPerSource`); the schema keeps it
+ * additive-optional so legacy records without evidence stay valid.
+ */
+export interface EvidencePassage {
+  /** Verbatim passage text from the source (bounded by the producer). */
+  text: string;
+  /** Provenance address of the passage within the source (see grammar above). */
+  locator: string;
+}
+
 /** A cited source, scored on the two independent axes (design strength × venue impact). */
 export interface Citation {
   /** DOI when available, else a stable internal corpus id. */
   paperId: string;
   title: string;
   year: number | null;
+  /**
+   * Per-paper studied population, verbatim, when the source states one; null when not reported.
+   * Distinct from the claim-level `RelationshipClaim.population` (the claimed scope of the whole
+   * edge) — this is what THIS paper actually studied. U1 applicability-grader input.
+   */
+  population: string | null;
   evidenceTier: EvidenceTier;
   impactTier: ImpactTier;
   /** What this source does to the edge. */
   stance: 'supports' | 'refutes' | 'mixed' | 'mentions';
+  /**
+   * Bounded evidence passages from THIS source (O15/B1) — what the verifier was actually
+   * shown. OPTIONAL and additive: absent on legacy records and on sources where no passage
+   * could be extracted honestly (e.g. an external candidate with no abstract). Never
+   * fabricated — an empty/absent list means the source cannot ground the claim.
+   */
+  evidence?: readonly EvidencePassage[];
+}
+
+/**
+ * R4-U4 / O27 · Whether a record was loaded from a frozen FIXTURE artifact (no provider was
+ * called) or from a LIVE provider run. There is deliberately no 'unknown' member: a record that
+ * cannot state its posture has none, and no posture fails closed at the serving gate.
+ */
+export type ArtifactPosture = 'fixture' | 'live';
+
+/**
+ * R4-U4 / O27 · Content-addressed identity of the artifact line a record was loaded from — the
+ * anchor of the provenance chain. `revision` names the artifact BUNDLE; `contentHash` pins this
+ * record's exact bytes within it, so a rebuild that changes a claim yields a different hash and
+ * any revision-bound expert disposition (B-BR7) stops applying instead of silently carrying over.
+ */
+export interface ArtifactRef {
+  /** Revision id of the artifact bundle (corpus / edge manifest revision). */
+  revision: string;
+  /** Hash of this record's canonical artifact bytes, formatted `sha256:<64 lowercase hex>`. */
+  contentHash: string;
+  /** Fixture vs live — disclosed on every card derived from this record (B-UI9). */
+  posture: ArtifactPosture;
+}
+
+/**
+ * R4-U4 / O27 · What a provider actually RETURNED, as distinct from what was configured.
+ * `attested` is true ONLY when `returnedModel` came back on a real provider response — a model id
+ * copied from router config is a configuration echo, not attestation (B-BR1).
+ */
+export interface ModelAttestation {
+  /** Model identity the provider returned on the response. */
+  returnedModel: string;
+  /** Provider-returned version / snapshot id, or null when the provider exposes none. */
+  returnedVersion: string | null;
+  /** Provider family — the unit the decorrelation invariant compares (O7 / B-BR2). */
+  family: string;
+  /** True iff this verification's family differs from the synthesising family for the same edge. */
+  decorrelated: boolean;
+  /** True ONLY for a provider-returned identity. A configured id is not attestation. */
+  attested: boolean;
 }
 
 /** A verbatim span grounding a claim in a specific source — enables a near-free deterministic check. */
@@ -92,6 +164,14 @@ export interface QuoteSpan {
   quote: string;
   /** Section / page / figure locator, when known. */
   locator: string | null;
+  /**
+   * Start character offset of `quote` into the source's canonical extracted text
+   * (`StructuredPaper.canonicalText`); null when unknown. Upgrades `locator` from free-text-only
+   * and makes the deterministic quote check exact.
+   */
+  charStart: number | null;
+  /** End character offset (exclusive) into the canonical extracted text; null when unknown. */
+  charEnd: number | null;
 }
 
 /**
@@ -118,10 +198,25 @@ export interface RelationshipClaim {
   citations: readonly Citation[];
   /** Grounding spans (≥1) — exact text the claim rests on. */
   quoteSpans: readonly QuoteSpan[];
+  /**
+   * The synthesis node's plain-language reasoning trace — "how these sentences produce this
+   * claim". Captured AT synthesis time (never regenerated on view), copy-gated before storage.
+   * Required on every claim.
+   */
+  derivation: string;
   /** Provenance — makes the claim a reproducible projection. */
   synthesisModel: string;
   promptVersion: string;
   synthesisedAt: string; // ISO datetime, supplied by the job
+  /**
+   * R4-U4 / O27 · The artifact revision + content hash this claim was loaded from, and whether
+   * that artifact is a fixture or a live run. ADDITIVE + OPTIONAL (accepted-contract discipline:
+   * add optional, never remove/rename) so pre-U4 records still validate — but absence is not
+   * benign: `provenance.trustFailures` treats a missing ref as an untrusted record and BLOCKS it
+   * on any path that requires trust. Legacy records are therefore honestly untrusted, not
+   * grandfathered in.
+   */
+  artifact?: ArtifactRef;
 }
 
 /**
@@ -169,12 +264,40 @@ export interface EdgeVerification {
   confidence: number;
   /** Edge's contribution to graph trust — the brain's analog of metric `dqs.weight`, 0..1. */
   dqs: { weight: number };
+  /**
+   * #300 §E · APPROVE-WITH-CAVEAT. A short, user-safe note on *why* to read this edge with care
+   * — a narrower population than claimed, a weak study design, a small sample.
+   *
+   * This exists because low credibility must be **surfaced, not silently converted into a
+   * rejection**: the user decides whether to trust it. Rejection is reserved for the one case
+   * where nothing can be salvaged — the evidence is simply not relevant to the claim.
+   *
+   * Because it is user-facing copy it MUST pass the non-diagnostic copy gate, which
+   * `relationships.schema.ts` enforces — a caveat cannot smuggle diagnostic language onto a
+   * card by the back door.
+   *
+   * ADDITIVE + OPTIONAL: absent on every legacy record, and `null` means "approved with no
+   * caveat", which is distinct from absent ("this producer predates caveats").
+   */
+  caveat?: string | null;
 
   // ── provenance ──
   verifierModel: string;
   promptVersion: string;
   verifiedAt: string; // ISO datetime, supplied by the job
   status: VerificationStatus;
+  /**
+   * R4-U4 / O27 · The artifact revision + content hash this verification was loaded from.
+   * ADDITIVE + OPTIONAL; absence fails closed at the serving gate (see `RelationshipClaim.artifact`).
+   */
+  artifact?: ArtifactRef;
+  /**
+   * R4-U4 / O27 · What the verifier PROVIDER returned — model identity/version, family,
+   * decorrelation, and whether the identity is genuinely attested. Distinct from `verifierModel`,
+   * which is the CONFIGURED id and can be a mere echo of router config (B-BR1). ADDITIVE +
+   * OPTIONAL; absence blocks serving on any path that requires attestation.
+   */
+  attestation?: ModelAttestation;
 }
 
 /** A claim joined with its current verification — the servable unit of the graph. */

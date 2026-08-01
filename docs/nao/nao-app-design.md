@@ -4,7 +4,7 @@ summary: nao is ourobion's expert web window into the brain (query/visualise the
 type: design
 scope: nao
 status: canonical
-updated: 2026-07-13
+updated: 2026-07-31
 ---
 # Ourobion nao — Design (brain inspection & curation)
 
@@ -23,12 +23,13 @@ how edges are synthesised + verified is [`brain-synthesis-design.md`](brain-synt
 acquired is [`brain-ingestion-design.md`](brain-ingestion-design.md); how biotope *consumes* the brain is
 [`../biotope/rules-engine-design.md`](../biotope/rules-engine-design.md) and [`../phase-2-plan.md`](../shared/phase-2-plan.md) (Track B/W2).
 
-> **Status (current reality).** The brain has a **contract** (`shared/brain/`, TRUTH, 2-reviewer-guarded)
-> and a **paper corpus** (on Cloudflare R2, see ingestion design) — but **no edges yet**: the synthesis
-> LLM, the verification LLM, and a runtime edge store are unbuilt (Track B). So nao's graph/evidence
-> features depend on work that does not exist, while a **paper-corpus dashboard ships from R2 today.**
-> **v1 is therefore the corpus dashboard;** the graph, evidence, ingestion, and LLM features land in
-> phases as the brain fills in (§5).
+> **Status (current reality, 2026-07-26).** The contract, R2 corpus, synthesis/verification tooling,
+> edge artifacts, deterministic Supabase loader/projection, and nao corpus/claims/seed/gap/model/run
+> surfaces now exist in the repo. That does **not** prove a production deployment: hosted migration
+> parity, explicit role/RLS enforcement, real verifier attestation/retrieval, and immutable release
+> promotion remain open. Current build gaps are reconciled in
+> [`pending-build-register.md`](../temp/run3/pending-build-register.md); the phasing below explains the
+> intended product shape, not a live implementation-status ledger.
 
 ## 1 · What nao is (three capability pillars)
 
@@ -81,9 +82,10 @@ A clean instance of the repo's core principle ([memory 0001](../memory/0001-two-
 - **Hosted Supabase only** for real auth — local Docker can't do OAuth
   ([memory 0011]; biotope's `auth_service` patterns in
   [`apps/biotope/lib/modules/m1_core/impl/auth_service.dart`](../../apps/biotope/lib/modules/m1_core/impl/auth_service.dart)
-  are the reference). A `nao_role` claim (app_metadata or a `nao_members` table) gates access; **v1
-  requires an authenticated, authorised user even to load** (the brain is a shared asset, not per-user
-  data, so this is access-gating + edit-attribution, not per-row RLS).
+  are the reference). The exact public `/` route is a static product explainer with a Login entry;
+  legacy `/how-it-works` links redirect to it. Every corpus, data, control, and API surface requires
+  an authenticated user with an effective `nao_members` role (the brain is a shared asset, not
+  per-user data, so this is access-gating + edit-attribution, not per-row RLS).
 
 ## 5 · Data sources & feature phasing
 
@@ -151,18 +153,39 @@ encodes everything nao must display:
 ## 7 · Visual design — "bio-neo-mythical"
 
 The brand mark already *is* this thesis: **mythical** (ouroboros — an *open* ring: "the loop of
-understanding is never finished"), **bio** (cell/nucleus, 23-segment ring = haploid chromosomes, DNA
-double-helix weave), **neo** (bioluminescent teal→blue gradient, fluorescence-microscopy glow). So nao
-is biotope's **dark, expert, graph-centric sibling** — biotope is the warm light *ecosystem*; nao is the
-deep, glowing *brain*. Tokens come from
-[`assets/ourobion-brand/`](../../assets/ourobion-brand/); the sibling system is
+understanding is never finished", the shared 23-segment/23-crossing ring + coiling serpent every
+Ourobion product wears), **bio** (that ring reads as haploid chromosomes woven in a DNA double-helix),
+**neo** (bioluminescent teal→blue→violet gradient, fluorescence-microscopy glow). Every Ourobion product
+keeps that ring and serpent and changes only the **nucleus** at the centre; nao's nucleus is a
+**knowledge graph** — a single bright hub node, four mid nodes radiating out on connecting edges, each
+branching again to smaller leaf nodes — intelligence that is *structured*, the orchestration core that
+coordinates everything downstream. So nao is biotope's **dark, expert, graph-centric sibling** — biotope
+is the warm light *ecosystem*; nao is the deep, glowing *brain*. Tokens and mark files come from the
+**Nao identity kit** at [`assets/ourobion-nao-logo/`](../../assets/ourobion-nao-logo/) (`DESIGN.md` +
+`README.md` + `color/colors.css` / `colors.json`) — nao's brand source of truth, distinct from the
+master kit at [`assets/ourobion-brand/`](../../assets/ourobion-brand/) that the shared ring/serpent
+construction derives from; the sibling system is
 [`../biotope/ui/ui-design-context.md`](../biotope/ui/ui-design-context.md).
 
 - **Palette (Ourobion dark):** background `#0B1D24`; accent ramp **`#2BC4BE` → `#2FB7D6` → `#3FA2E6` →
-  `#5E8DF0` → `#7C86F2`**; eyebrow labels `#2BC4BE`; light text on dark. The 23-step coil ramp is the
-  **data-viz gradient** (node colour by domain, edge colour by relation kind, glow by `edgeScore`).
-- **Typography:** **Manrope** for UI/body (continuity with biotope); **Outfit** for display/headers +
-  the wordmark. Keep biotope's **uppercase, letter-spaced eyebrow** labels.
+  `#5E8DF0` → `#7C86F2`**; eyebrow labels `#2BC4BE`; light text on dark. The 23-step coil ramp
+  (`color/colors.json`'s `coil_ramp_full_23`) is the **data-viz gradient** (node colour by domain, edge
+  colour by relation kind, glow by `edgeScore`).
+- **Mark usage — dark is primary:** nao is infrastructure, so **dark on `#0B1D24` or darker** is the
+  primary rendering; the **light** variant (teal→blue on white) is only for white/pale surfaces (print,
+  embedded docs, a light card dropped onto an otherwise-dark page — see the `.nao-light` /
+  `[data-theme="light"]` scope in `theme.css`). The app renders the fixed-**40px**
+  `/brand/nao-mark-dark.svg` in the top bar — the kit's documented legibility floor ("the full graph
+  holds together to ~40 px") — and the full **vertical lockup** (`/brand/nao-lockup-dark.svg`: mark
+  stacked over an `ourobion` kicker and `nao` wordmark) on the login surface, the one screen with room
+  for it. Keep clear space of at least the envelope-ring diameter around the mark; **below ~40 px use
+  the simplified hub-and-nodes favicon glyph, never the full mark** (the favicon in `<head>` already
+  does this).
+- **Typography:** the app loads **Outfit** (`next/font/google`, `apps/nao/src/app/layout.tsx`) for both
+  UI/body and display/headers, and **JetBrains Mono** for eyebrows, labels, numbers, and identifiers —
+  **not** Manrope; Manrope is not loaded anywhere in the app. In the kit's own SVG files the wordmark is
+  Outfit outlined to paths, so no font load is needed to render the logo itself. Keep biotope's
+  **uppercase, letter-spaced eyebrow** labels.
 - **Graph aesthetic:** dark canvas; nodes = glowing cyan orbs (size by connectivity); edges = teal→blue
   gradient strands (thickness/opacity by `confidence`/`edgeScore`; colour/style by `relation` kind);
   **bioluminescent glow on hover/active**. `react-force-graph` (WebGL) or Cytoscape.js are the candidate
@@ -189,14 +212,19 @@ deep, glowing *brain*. Tokens come from
 - [`tools/brain-ingest/src/types.ts`](../../tools/brain-ingest/src/types.ts) — `PaperRecord` (v1 model).
 - [`tools/brain-ingest/src/storage/r2.ts`](../../tools/brain-ingest/src/storage/r2.ts) — R2 key layout
   (`MANIFEST_KEY`, `metaKey`, `pdfKey`/`jatsKey`/`textKey`) + S3 client setup.
-- [`assets/ourobion-brand/`](../../assets/ourobion-brand/) — palette (`color/colors.json`), logo SVGs.
+- [`assets/ourobion-nao-logo/`](../../assets/ourobion-nao-logo/) — the **Nao identity kit**: palette
+  (`color/colors.json` / `colors.css`), mark + vertical lockup SVGs (dark + light), and the favicon
+  glyph. This is nao's source of truth for brand assets; `apps/nao/public/brand/` is a copy of it.
+- [`assets/ourobion-brand/`](../../assets/ourobion-brand/) — the master kit: palette and logo SVGs for
+  the shared open-ouroboros ring + coiling serpent construction every Ourobion product's mark derives
+  from (still accurate for that shared system; nao-specific work should use the Nao kit above).
 
-**Create:**
+**Implemented foundation:**
 
-- A repo-root `package.json` with workspaces so `apps/nao` can import `shared/`.
-- `apps/nao/` — the Next.js app: an R2 reader in a server route, Supabase auth + role gate, the corpus
-  dashboard UI, and a design-token module derived from the brand palette.
-- (v2+) the truth-tier edge store + the edge loader that builds the relational `verified_edges` projection.
+- The repo-root package boundary and `apps/nao/` Next.js application.
+- R2/D1 corpus reads, Supabase-backed sign-in, corpus/claims/operations surfaces, and the shared UI variables.
+- R2 edge artifacts plus the deterministic `tools/edge-loader/` projection into
+  `relationship_claims`, `edge_verifications`, and the relational `verified_edges` view.
 
 ## 9 · Verification (v1 acceptance)
 
@@ -209,14 +237,14 @@ deep, glowing *brain*. Tokens come from
 
 ## 10 · Deferred / open
 
-- **Brain synthesis + verification pipeline** (Track B) — the real critical path for everything past v1;
-  nao v2 cannot render a real graph until edges exist. See [`brain-synthesis-design.md`](brain-synthesis-design.md).
-- **Truth-tier edge store + relational `verified_edges` projection** — **shape now decided** (R2 JSONL
-  edge artifacts + the contract = truth; a deterministic edge loader → the relational Postgres
-  `verified_edges` projection, a 1-hop lookup, no graph DB) per the
-  [pipeline decision](../memory/0013-brain-pipeline-and-support-models-decision.md); build lands with v2.
+- **Production brain path** — the synthesis/verifier/loader foundation exists; real verifier
+  attestation and retrieval, hosted migration parity, immutable release selection/promotion, rollback,
+  and production evidence remain open. See [`brain-synthesis-design.md`](brain-synthesis-design.md).
+- **Role and privacy boundary** — explicit viewer/curator/admin membership, direct-write revocation,
+  redacted global-job responses, and negative role/RLS tests remain release blockers.
 - **Source-reliability grading standard** — **decided**: an `evidenceTier` study-design classifier + an
   `impactTier` venue lookup (SJR + OpenAlex; JCR dropped as paid), per
   [`brain-support-models-design.md`](brain-support-models-design.md). Extends `impactTier` (§6) — no new evidence model.
-- **`apps/biotope/` move** — relocating the Flutter app under `apps/` is optional housekeeping.
+- **Deployment proof** — exact-tip Cloudflare build/deploy evidence and an environment-matched
+  D1/R2/Supabase verification run are still required.
 - **External users / richer roles** — Supabase Auth was chosen partly to keep this open.

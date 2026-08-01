@@ -1,0 +1,44 @@
+{
+  "ruleId": "gut_comfort_mood_comove",
+  "schemaVersion": 1,
+  "category": "gut",
+  "severity": "info",
+  "scope": "cross",
+  "enabledPhase": "phase2_engine",
+  "metricKeys": ["gut_comfort_score", "mood_score"],
+  "provenance": {
+    "tier": "hand_authored",
+    "sourceNote": "L6 one-card slice (U13) cross-metric coincidence rule for the gut-brain pair. The brain carries a synthesised edge gut_comfort_score|correlates|mood_score (real A8 run, U10) grounded in the gut-brain-axis literature; the engine scopes coincidence rules to brain-neighbour pairs at runtime (C10), so this rule only ever fires when that edge is SERVABLE. The edge is a symmetric `correlates` (context-only, no direction), so both leaves test the same-day rising co-movement and the lag is null (same window ≡ C10 lag 0) rather than a directed next-day horizon.",
+    "citation": null
+  },
+  "effectiveFrom": null,
+  "effectiveTo": null,
+  "status": "active",
+  "deprecatedAt": null,
+  "cooldownDays": null,
+  "expiryDays": 7,
+  "condition": {
+    "type": "coincidence",
+    "metricKeys": ["gut_comfort_score", "mood_score"],
+    "both": [
+      {
+        "type": "trend",
+        "metricKey": "gut_comfort_score",
+        "equals": "rising",
+        "minConfidence": "low"
+      },
+      {
+        "type": "trend",
+        "metricKey": "mood_score",
+        "equals": "rising",
+        "minConfidence": "low"
+      }
+    ],
+    "lagDays": null,
+    "minConfidence": "low"
+  },
+  "template": {
+    "title": "Pattern: {{metric_a_label}} and {{metric_b_label}} rising together",
+    "body": "Your {{metric_a_label}} and {{metric_b_label}} data have been rising together recently. Published research reports these two signals tend to move together, and your own recent data shows the same pattern."
+  }
+}

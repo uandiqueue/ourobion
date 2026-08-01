@@ -1,0 +1,30 @@
+{
+  "ruleId": "hydration_trending_down",
+  "schemaVersion": 1,
+  "category": "hydration",
+  "severity": "info",
+  "scope": "single",
+  "enabledPhase": "phase1_stage1",
+  "metricKeys": ["urine_colour"],
+  "provenance": {
+    "tier": "hand_authored",
+    "sourceNote": "Faithful port of the hardcoded MVP rule 'hydration_trending_down' (supabase/functions/generate-insights/index.ts): trend === 'falling' && notInsufficient(s).",
+    "citation": null
+  },
+  "effectiveFrom": null,
+  "effectiveTo": null,
+  "status": "active",
+  "deprecatedAt": null,
+  "cooldownDays": null,
+  "expiryDays": 7,
+  "condition": {
+    "type": "trend",
+    "metricKey": "urine_colour",
+    "equals": "falling",
+    "minConfidence": "low"
+  },
+  "template": {
+    "title": "Hydration pattern this week",
+    "body": "Your urine colour data shows a falling pattern this week — values suggest improving hydration."
+  }
+}

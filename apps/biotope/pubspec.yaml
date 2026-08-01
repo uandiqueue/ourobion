@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  ourobion_metrics:
+    path: ../../shared/metrics
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -41,10 +43,18 @@ dependencies:
   google_fonts: ^6.2.1
   country_picker: ^2.0.26
   health: ^13.3.1
+  flutter_svg: ^2.3.0
+  url_launcher: ^6.3.2
+  # Device-local display preferences only (core/app_preferences.dart) — never
+  # user data, which belongs in Supabase. Already resolved transitively before
+  # this line existed; declared directly because the app now imports it.
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  http: ^1.6.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -64,10 +74,23 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # A directory entry here is NOT recursive — Flutter bundles only the files
+  # sitting directly in it. `assets/images/generated/biomech_botanical/` holds
+  # nothing but subdirectories, so listing it alone shipped ZERO artwork: every
+  # Image.asset fell through to its errorBuilder and the reskin rendered as
+  # blank space on a real device while still looking deliberate. Each leaf
+  # directory must be listed explicitly. asset_bundling_test.dart enforces that
+  # every BiotopeGeneratedAssets path is actually covered.
   assets:
     - .env.public
-    - assets/images/
-    - assets/images/generated/biomech_botanical/
+    - assets/images/biotope-mark-light.svg
+    - assets/images/generated/biomech_botanical/archive/
+    - assets/images/generated/biomech_botanical/decorative/
+    - assets/images/generated/biomech_botanical/empty_states/
+    - assets/images/generated/biomech_botanical/home/
+    - assets/images/generated/biomech_botanical/insights/
+    - assets/images/generated/biomech_botanical/profile/
+    - assets/images/generated/biomech_botanical/scan/
 
   fonts:
     - family: Manrope

@@ -4,8 +4,11 @@
   // CORPUS binding (no S3 creds) and the search index via the DB (D1) binding.
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "ourobion-nao",
+  // Preserve the reviewed runtime date. Because it predates the 2025-04-01
+  // process.env default, opt in explicitly so text/JSON bindings populate the
+  // process.env surface consumed by the existing Nao server code.
   "compatibility_date": "2024-12-01",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
   "main": ".open-next/worker.js",
   "assets": {
     "directory": ".open-next/assets",
@@ -25,10 +28,20 @@
     }
   ],
   // Plain (non-secret) runtime vars — public info, safe to commit. The GitHub
-  // PAT itself (GH_ACTIONS_TOKEN) and SUPABASE_URL are set via
-  // `wrangler secret put` instead (see docs/nao/brain-ingestion-design.md §8.1).
+  // Required Worker runtime names are declared without committing their values.
+  // SUPABASE_PUBLISHABLE_KEY is low privilege, but stays runtime-only because
+  // only the server relay consumes it. See docs/nao/brain-ingestion-design.md §8.1.
+  "secrets": {
+    "required": [
+      "SUPABASE_URL",
+      "SUPABASE_PUBLISHABLE_KEY",
+      "OUROBION_INTERNAL_SECRET",
+      "GH_ACTIONS_TOKEN"
+    ]
+  },
   "vars": {
-    "GH_REPO": "uandiqueue/ourobion"
+    "GH_REPO": "uandiqueue/ourobion",
+    "GH_ACTIONS_REF": "dev-phase2-run4"
   },
   // ourobion.com is already on Cloudflare (confirmed via NS lookup), so a Custom
   // Domain route claims nao.ourobion.com for this Worker on `wrangler deploy` —

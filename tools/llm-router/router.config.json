@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "nodes": {
+    "seeder": { "model": "gpt-5-mini", "route": "api_worker", "maxOutputTokens": 8000 },
+    "synthesis": { "model": "gpt-5", "route": "api_worker", "maxOutputTokens": 8000 },
+    "verifier": { "model": "agnes-2.5-flash", "route": "api_worker", "maxOutputTokens": 8000 },
+    "phrasing_card": { "model": "gpt-5-mini", "route": "api_worker", "maxOutputTokens": 2000 },
+    "report_narrative": { "model": "gpt-5-mini", "route": "api_worker", "maxOutputTokens": 4000 },
+    "extract_assist": { "model": "gpt-5-mini", "route": "api_worker", "maxOutputTokens": 2000 }
+  },
+  "providers": [
+    { "prefix": "claude-", "family": "anthropic", "envKey": "ANTHROPIC_API_KEY" },
+    { "prefix": "gpt-", "family": "openai", "envKey": "OPENAI_API_KEY" },
+    { "prefix": "o3", "family": "openai", "envKey": "OPENAI_API_KEY" },
+    { "prefix": "o4", "family": "openai", "envKey": "OPENAI_API_KEY" },
+    { "prefix": "gemini-", "family": "google", "envKey": "GOOGLE_API_KEY" },
+    { "prefix": "agnes-", "family": "agnes", "envKey": "AGNES_API_KEY" }
+  ],
+  "prices": {
+    "claude-sonnet-5": { "inputUsdPerMTok": 2.0, "outputUsdPerMTok": 10.0, "pricingProvenance": "Anthropic official Claude Sonnet 5 launch pricing, verified 2026-07-31 (anthropic.com/news/claude-sonnet-5)", "effectiveFrom": "2026-06-30T00:00:00.000Z", "expiresAt": "2026-09-01T00:00:00.000Z", "provisional": false },
+    "claude-haiku-4-5": { "inputUsdPerMTok": 1.0, "outputUsdPerMTok": 5.0, "provisional": true },
+    "gpt-5": { "inputUsdPerMTok": 1.25, "outputUsdPerMTok": 10.0, "pricingProvenance": "OpenAI official GPT-5 model page, operator-verified 2026-07-31; re-verified unchanged 2026-08-01 at $1.25/$10.00 per MTok (developers.openai.com/api/docs/models/gpt-5)", "effectiveFrom": "2026-07-31T00:00:00.000Z", "expiresAt": "2026-09-01T00:00:00.000Z", "provisional": false },
+    "gpt-5-mini": { "inputUsdPerMTok": 0.25, "outputUsdPerMTok": 2.0, "provisional": true },
+    "agnes-2.5-flash": {
+      "inputUsdPerMTok": 0,
+      "outputUsdPerMTok": 0,
+      "billingMode": "free",
+      "pricingProvenance": "Ourobion owner-confirmed free Agnes API plan, 2026-07-30",
+      "effectiveFrom": "2026-07-30T00:00:00.000Z",
+      "expiresAt": "2026-08-08T00:00:00.000Z",
+      "provisional": false
+    }
+  },
+  "budget": {
+    "perRunOutputTokens": 60000,
+    "perDayUsdPerNode": 1.0,
+    "hardStopFraction": 0.95,
+    "ledgerPath": "data/llm-router/ledger.json",
+    "retentionDays": 30
+  },
+  "localAgent": {
+    "mailboxDir": "data/llm-router/mailbox",
+    "timeoutMs": 300000,
+    "pollIntervalMs": 500
+  },
+  "acceptance": {
+    "runtimeRoot": "data/brain-ingest/live-acceptance"
+  }
+}

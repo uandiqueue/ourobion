@@ -1,0 +1,25 @@
+{
+  "id": "https://openalex.org/S4306402567",
+  "issn_l": "2692-8205",
+  "issn": ["2692-8205"],
+  "display_name": "bioRxiv (Cold Spring Harbor Laboratory)",
+  "host_organization": "https://openalex.org/I2750212522",
+  "host_organization_name": "Cold Spring Harbor Laboratory",
+  "works_count": 291534,
+  "cited_by_count": 1962610,
+  "summary_stats": {
+    "2yr_mean_citedness": 2.1043,
+    "h_index": 214,
+    "i10_index": 61371
+  },
+  "is_oa": true,
+  "is_in_doaj": false,
+  "is_core": false,
+  "type": "repository",
+  "type_id": "https://openalex.org/source-types/repository",
+  "apc_prices": [],
+  "country_code": "US",
+  "societies": [],
+  "updated_date": "2026-07-01T09:05:44.120774",
+  "created_date": "2022-10-17"
+}

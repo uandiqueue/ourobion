@@ -1,17 +1,15 @@
 #!/bin/sh
 # Shared pre-push hook (enabled via `git config core.hooksPath .githooks`).
 #
-# Enforces in-repo context accuracy before a push. Local hooks are skippable with --no-verify, so CI
-# (.github/workflows/ci.yml) re-runs the same check (plus flutter analyze + flutter test) as the
-# non-bypassable backstop.
-#
-# Git (esp. Git for Windows) runs hooks under `sh`. To stay portable this depends ONLY on `node` and
-# `git` being on PATH (both are real executables `sh` can resolve). ourobion's structural dependency
-# graph is DEFERRED (see docs/graph/README.md), so — unlike NUSPlan's hook — there is no graph
-# regenerate+diff step here yet. When a generated graph is added, regenerate + diff it below.
+# CI re-runs the context check. graphify-out/ is intentionally machine-local, so CI cannot regenerate
+# the semantic graph; when that graph exists locally, this hook also requires its one tracked human
+# view to match.
 set -e
 
 echo "[pre-push] context_sync --check (sessions / memory / decisions / index / couplings)"
 node tools/context_sync.mjs --check
+
+echo "[pre-push] graph-view --check (single tracked view; compare local graph when present)"
+node tools/graph-view/generate_graph_view.mjs --check
 
 echo "[pre-push] ok"

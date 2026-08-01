@@ -18,6 +18,11 @@ class DailyGutRow {
   final num? energyScore;
   final num? moodScore;
   final num? gutComfortScore;
+  final num? appetiteScore;
+  final num? anxietyScore;
+  final num? brainClarityScore;
+  final num? focusScore;
+  final num? socialInteractionQualityScore;
   final List<String> symptomFlags;
   final String? notes;
   final num logCompleteness;
@@ -41,6 +46,11 @@ class DailyGutRow {
     this.energyScore,
     this.moodScore,
     this.gutComfortScore,
+    this.appetiteScore,
+    this.anxietyScore,
+    this.brainClarityScore,
+    this.focusScore,
+    this.socialInteractionQualityScore,
     this.symptomFlags = const [],
     this.notes,
     required this.logCompleteness,
@@ -66,7 +76,14 @@ class DailyGutRow {
       energyScore: json['energy_score'] as num?,
       moodScore: json['mood_score'] as num?,
       gutComfortScore: json['gut_comfort_score'] as num?,
-      symptomFlags: (json['symptom_flags'] as List?)?.cast<String>() ?? const [],
+      appetiteScore: json['appetite_score'] as num?,
+      anxietyScore: json['anxiety_score'] as num?,
+      brainClarityScore: json['brain_clarity_score'] as num?,
+      focusScore: json['focus_score'] as num?,
+      socialInteractionQualityScore:
+          json['social_interaction_quality_score'] as num?,
+      symptomFlags:
+          (json['symptom_flags'] as List?)?.cast<String>() ?? const [],
       notes: json['notes'] as String?,
       logCompleteness: json['log_completeness'] as num,
       createdAt: json['created_at'] as String,
@@ -92,6 +109,11 @@ class DailyGutRow {
       'energy_score': energyScore,
       'mood_score': moodScore,
       'gut_comfort_score': gutComfortScore,
+      'appetite_score': appetiteScore,
+      'anxiety_score': anxietyScore,
+      'brain_clarity_score': brainClarityScore,
+      'focus_score': focusScore,
+      'social_interaction_quality_score': socialInteractionQualityScore,
       'symptom_flags': symptomFlags,
       'notes': notes,
       'log_completeness': logCompleteness,
@@ -297,8 +319,30 @@ class BaselineSnapshot {
   }
 }
 
+/// One card <-> verified-edge reference inside [InsightCard.edgeRefs] (jsonb payload written by
+/// generate-insights — keys stay camelCase on the wire, matching the engine's CardRow shape and
+/// the migration comment "[{edgeId, verifiedAt}]"). verifiedAt pins the edge VERSION (S6).
+class InsightCardEdgeRef {
+  final String edgeId;
+  final String verifiedAt;
+
+  const InsightCardEdgeRef({required this.edgeId, required this.verifiedAt});
+
+  factory InsightCardEdgeRef.fromJson(Map<String, dynamic> json) {
+    return InsightCardEdgeRef(
+      edgeId: json['edgeId'] as String,
+      verifiedAt: json['verifiedAt'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'edgeId': edgeId, 'verifiedAt': verifiedAt};
+  }
+}
+
 class InsightCard {
-  final String id;
+  /// bigint identity column — arrives as a JSON number over PostgREST.
+  final int id;
   final String userId;
   final String generatedAt;
   final String title;
@@ -312,6 +356,14 @@ class InsightCard {
   final String? expiresAt;
   final String ruleId;
   final String phaseGenerated;
+
+  /// S8 producer columns. Optional-with-default (docs/memory/0002): instances serialized before
+  /// the 20260716050639 migration lack them; fromJson tolerates the missing keys with the same
+  /// defaults the DB backfills ('rules' / null / []).
+  final String producer; // 'rules' | 'edge' | 'personal' — DB default 'rules'
+  final String? insightId; // composed_insights FK; null for plain rules cards
+  final List<InsightCardEdgeRef>
+  edgeRefs; // DB default []; always [] for producer 'personal'
 
   const InsightCard({
     required this.id,
@@ -328,11 +380,15 @@ class InsightCard {
     this.expiresAt,
     required this.ruleId,
     required this.phaseGenerated,
+    this.producer = 'rules',
+    this.insightId,
+    this.edgeRefs = const [],
   });
 
   factory InsightCard.fromJson(Map<String, dynamic> json) {
     return InsightCard(
-      id: json['id'] as String,
+      // num-then-toInt: tolerates a decoder that surfaces the JSON number as double.
+      id: (json['id'] as num).toInt(),
       userId: json['user_id'] as String,
       generatedAt: json['generated_at'] as String,
       title: json['title'] as String,
@@ -348,6 +404,17 @@ class InsightCard {
       expiresAt: json['expires_at'] as String?,
       ruleId: json['rule_id'] as String,
       phaseGenerated: json['phase_generated'] as String,
+      producer: json['producer'] as String? ?? 'rules',
+      insightId: json['insight_id'] as String?,
+      edgeRefs:
+          (json['edge_refs'] as List?)
+              ?.map(
+                (e) => InsightCardEdgeRef.fromJson(
+                  Map<String, dynamic>.from(e as Map),
+                ),
+              )
+              .toList() ??
+          const [],
     );
   }
 
@@ -367,6 +434,9 @@ class InsightCard {
       'expires_at': expiresAt,
       'rule_id': ruleId,
       'phase_generated': phaseGenerated,
+      'producer': producer,
+      'insight_id': insightId,
+      'edge_refs': edgeRefs.map((e) => e.toJson()).toList(),
     };
   }
 }

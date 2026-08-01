@@ -165,6 +165,36 @@ test('a windowStart in a previous UTC day resets the counter', () => {
   }
 });
 
+test('missing usage ledger initializes clean, but corrupt or unsupported history fails closed', () => {
+  const { dir, usagePath } = freshUsagePath();
+  try {
+    assert.doesNotThrow(() => new FileBudgetGuard({ usagePath, now: () => DAY1_NOON }));
+
+    writeFileSync(usagePath, '{"version":1,"counters":', 'utf8');
+    assert.throws(
+      () => new FileBudgetGuard({ usagePath, now: () => DAY1_NOON }),
+      /cannot load existing usage ledger.*Refusing to reset spend/,
+    );
+
+    writeFileSync(usagePath, JSON.stringify({ version: 2, counters: {} }), 'utf8');
+    assert.throws(
+      () => new FileBudgetGuard({ usagePath, now: () => DAY1_NOON }),
+      /unsupported or malformed usage ledger/,
+    );
+    writeFileSync(
+      usagePath,
+      JSON.stringify({ version: 1, counters: { openalex: { windowStart: 'not-a-date', spent: -1 } } }),
+      'utf8',
+    );
+    assert.throws(
+      () => new FileBudgetGuard({ usagePath, now: () => DAY1_NOON }),
+      /malformed usage counter 'openalex'/,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('same-UTC-day at a different time keeps the counter (no spurious reset)', () => {
   const { dir, usagePath } = freshUsagePath();
   try {
@@ -213,6 +243,95 @@ test('OpenAlex per-request cost model matches §5.1', () => {
     assert.ok(Math.abs(g.spent('openalex') - 0.004) < 1e-9);
     // Nowhere near the $0.95 hard stop.
     assert.equal(g.wouldExceed95('openalex', OPENALEX_COST.list), false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// A10 — concurrent writers merge instead of last-write-wins
+// ---------------------------------------------------------------------------
+
+test('A10: two interleaved guards on one usage.json — spend sums, no lost updates', () => {
+  const { dir, usagePath } = freshUsagePath();
+  try {
+    // Both constructed BEFORE any spend — the classic last-write-wins setup.
+    const g1 = new FileBudgetGuard({ usagePath, now: () => DAY1_NOON });
+    const g2 = new FileBudgetGuard({ usagePath, now: () => DAY1_NOON });
+
+    // 0.25s are exact in binary floating point — no epsilon needed.
+    g1.charge('openalex', 0.25);
+    g2.charge('openalex', 0.25); // merges g1's 0.25 from disk first
+    g1.charge('openalex', 0.25); // merges the combined 0.50 from disk first
+
+    // On disk: the SUM of all three charges — nothing dropped.
+    const onDisk = JSON.parse(readFileSync(usagePath, 'utf8')) as {
+      counters: { openalex?: { spent: number } };
+    };
+    assert.equal(onDisk.counters.openalex?.spent, 0.75);
+    assert.equal(g1.spent('openalex'), 0.75);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('A10 boundary: the 95% hard stop fires on the MERGED spend no single guard reached alone', () => {
+  const { dir, usagePath } = freshUsagePath();
+  try {
+    const g1 = new FileBudgetGuard({ usagePath, now: () => DAY1_NOON });
+    const g2 = new FileBudgetGuard({ usagePath, now: () => DAY1_NOON });
+
+    g1.charge('openalex', 0.5);
+    g2.charge('openalex', 0.25); // g2's own view alone would be 0.25
+
+    // Combined 0.75; another 0.25 would land at 1.00 ≥ 0.95 — charge() merges
+    // the disk state BEFORE the gate, so g2 refuses even though it only ever
+    // charged 0.25 itself.
+    assert.throws(() => g2.charge('openalex', 0.25), /95% hard stop/);
+    // The denied charge left the merged spend intact for everyone.
+    const g3 = new FileBudgetGuard({ usagePath, now: () => DAY1_NOON });
+    assert.equal(g3.spent('openalex'), 0.75);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// A11 — dead-window counters are pruned from the persisted file
+// ---------------------------------------------------------------------------
+
+test('A11: charging drops counters from past UTC windows; same-window foreign counters survive', () => {
+  const { dir, usagePath } = freshUsagePath();
+  try {
+    mkdirSync(dir, { recursive: true });
+    const day1Window = new Date(Date.UTC(2026, 5, 29)).toISOString();
+    const day2Window = new Date(Date.UTC(2026, 5, 30)).toISOString();
+    // 'core' is unmetered HERE but another process may meter it via
+    // budgetOverrides — its live-window counter must survive; its dead-window
+    // sibling 'lens' must not.
+    writeFileSync(
+      usagePath,
+      JSON.stringify({
+        version: 1,
+        counters: {
+          openalex: { windowStart: day1Window, spent: 0.94 },
+          core: { windowStart: day2Window, spent: 0.005 },
+          lens: { windowStart: day1Window, spent: 0.5 },
+        },
+      }),
+      'utf8',
+    );
+
+    const g = new FileBudgetGuard({ usagePath, now: () => DAY2_NOON });
+    g.charge('openalex', 0.1); // day-1 openalex window is dead → fresh window
+
+    const onDisk = JSON.parse(readFileSync(usagePath, 'utf8')) as {
+      counters: Record<string, { windowStart: string; spent: number }>;
+    };
+    assert.deepEqual(Object.keys(onDisk.counters).sort(), ['core', 'openalex']);
+    assert.equal(onDisk.counters.openalex?.windowStart, day2Window);
+    assert.equal(onDisk.counters.openalex?.spent, 0.1);
+    assert.equal(onDisk.counters.core?.spent, 0.005, 'live-window foreign counter carried through');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

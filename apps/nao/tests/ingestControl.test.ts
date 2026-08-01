@@ -22,9 +22,27 @@ import {
   validatePatchBody,
   applyIngestControlPatch,
   validateTriggerBody,
+  validateTriggerBodyShape,
 } from '../src/lib/ingestControl.ts';
-import { DEFAULT_INGEST_CONTROL } from '../src/lib/types.ts';
+import { buildSeedCatalog } from '../src/lib/seedsControl.ts';
+import type { DbSeedRow } from '../src/lib/seedsControl.ts';
+import { DEFAULT_INGEST_CONTROL, INGEST_SEED_TOPICS } from '../src/lib/types.ts';
 import type { IngestControlConfig } from '../src/lib/types.ts';
+
+function seedRow(overrides: Partial<DbSeedRow> = {}): DbSeedRow {
+  return {
+    id: 1,
+    slug: 'magnesium_sleep',
+    label: 'Magnesium and sleep',
+    query_hint: null,
+    enabled: true,
+    created_by: 'uid-1',
+    created_at: '2026-07-30T00:00:00Z',
+    ...overrides,
+  };
+}
+
+const STATIC_CATALOG = buildSeedCatalog(INGEST_SEED_TOPICS, []);
 
 test('normalizeIngestControl: null/undefined degrades to defaults', () => {
   assert.deepEqual(normalizeIngestControl(null), DEFAULT_INGEST_CONTROL);
@@ -49,6 +67,24 @@ test('normalizeIngestControl: a fully-shaped document round-trips unchanged', ()
 
 test('validatePatchBody: accepts an empty patch (no-op)', () => {
   assert.equal(validatePatchBody({}), null);
+});
+
+// R4-U2 re-review finding N1: `paused` was never type-checked at all, so it
+// flowed straight into recordControlEvent's audit `detail` untouched. Layer 1
+// (authz.ts's sanitizeStorageValue) now makes the AUDIT INSERT unfailable
+// regardless; this is the boundary check that should have existed from the
+// start — reject anything that isn't a real boolean.
+test('validatePatchBody: rejects a non-boolean paused (string, number, null, object, and the string "true")', () => {
+  assert.match(validatePatchBody({ paused: 'true' } as unknown as { paused?: boolean }) ?? '', /paused/);
+  assert.match(validatePatchBody({ paused: 1 } as unknown as { paused?: boolean }) ?? '', /paused/);
+  assert.match(validatePatchBody({ paused: null } as unknown as { paused?: boolean }) ?? '', /paused/);
+  assert.match(validatePatchBody({ paused: {} } as unknown as { paused?: boolean }) ?? '', /paused/);
+  assert.match(validatePatchBody({ paused: [] } as unknown as { paused?: boolean }) ?? '', /paused/);
+});
+
+test('validatePatchBody: accepts a real boolean paused (true and false)', () => {
+  assert.equal(validatePatchBody({ paused: true }), null);
+  assert.equal(validatePatchBody({ paused: false }), null);
 });
 
 test('validatePatchBody: rejects a non-positive/NaN budget, accepts null (clear) and a positive number', () => {
@@ -81,22 +117,59 @@ test('applyIngestControlPatch: an empty patch still re-stamps updatedAt/updatedB
 });
 
 test('validateTriggerBody: accepts an empty body (all six seeds, no limit)', () => {
-  assert.equal(validateTriggerBody({}), null);
+  assert.equal(validateTriggerBody({}, STATIC_CATALOG), null);
+});
+
+test('validateTriggerBody: rejects malformed bodies and slugs before dispatch', () => {
+  for (const body of [null, [], 'x']) {
+    assert.match(validateTriggerBody(body, STATIC_CATALOG) ?? '', /JSON object/);
+  }
+  assert.match(validateTriggerBody({ seed: 'Bad-Slug' }, STATIC_CATALOG) ?? '', /must match/);
+  assert.match(validateTriggerBody({ seed: 'a'.repeat(65) }, STATIC_CATALOG) ?? '', /<= 64/);
+});
+
+test('validateTriggerBodyShape: validates a custom slug without claiming catalog runability', () => {
+  assert.equal(validateTriggerBodyShape({ seed: 'custom_seed', limit: 20 }), null);
+  assert.match(validateTriggerBodyShape({ seed: 'Bad-Slug' }) ?? '', /must match/);
 });
 
 test('validateTriggerBody: rejects an unknown seed', () => {
-  assert.match(validateTriggerBody({ seed: 'not_a_real_seed' }) ?? '', /unknown seed/);
+  assert.match(validateTriggerBody({ seed: 'not_a_real_seed' }, STATIC_CATALOG) ?? '', /unknown seed/);
 });
 
 test('validateTriggerBody: accepts every real seed topic', () => {
   for (const seed of ['gut_microbiome', 'hydration', 'antibiotics', 'sleep_hrv', 'dengue_vector', 'environmental_health']) {
-    assert.equal(validateTriggerBody({ seed }), null);
+    assert.equal(validateTriggerBody({ seed }, STATIC_CATALOG), null);
   }
 });
 
+test('validateTriggerBody: only enabled, non-shadowed custom seeds are runnable', () => {
+  const catalog = buildSeedCatalog(INGEST_SEED_TOPICS, [
+    seedRow(),
+    seedRow({ id: 2, slug: 'disabled_seed', enabled: false }),
+    seedRow({ id: 3, slug: 'hydration', enabled: true }),
+  ]);
+  assert.equal(validateTriggerBody({ seed: 'magnesium_sleep' }, catalog), null);
+  assert.match(validateTriggerBody({ seed: 'disabled_seed' }, catalog) ?? '', /disabled/);
+  assert.equal(
+    validateTriggerBody({ seed: 'hydration' }, catalog),
+    null,
+    'the built-in remains runnable when a colliding custom row is shadowed',
+  );
+});
+
+test('validateTriggerBody: a catalog-visible legacy 65-character seed cannot dispatch', () => {
+  const slug = 'a'.repeat(65);
+  const catalog = buildSeedCatalog(INGEST_SEED_TOPICS, [seedRow({ slug })]);
+  const legacy = catalog.find((entry) => !entry.builtIn && entry.slug === slug)!;
+
+  assert.match(legacy.unavailableReason ?? '', /invalid legacy slug/);
+  assert.match(validateTriggerBody({ seed: slug }, catalog) ?? '', /<= 64/);
+});
+
 test('validateTriggerBody: rejects a non-positive or non-integer limit', () => {
-  assert.match(validateTriggerBody({ limit: 0 }) ?? '', /positive integer/);
-  assert.match(validateTriggerBody({ limit: -5 }) ?? '', /positive integer/);
-  assert.match(validateTriggerBody({ limit: 3.5 }) ?? '', /positive integer/);
-  assert.equal(validateTriggerBody({ limit: 20 }), null);
+  assert.match(validateTriggerBody({ limit: 0 }, STATIC_CATALOG) ?? '', /positive integer/);
+  assert.match(validateTriggerBody({ limit: -5 }, STATIC_CATALOG) ?? '', /positive integer/);
+  assert.match(validateTriggerBody({ limit: 3.5 }, STATIC_CATALOG) ?? '', /positive integer/);
+  assert.equal(validateTriggerBody({ limit: 20 }, STATIC_CATALOG), null);
 });

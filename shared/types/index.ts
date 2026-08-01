@@ -17,6 +17,11 @@ export interface DailyGutRow {
   energy_score: number | null;
   mood_score: number | null;
   gut_comfort_score: number | null;
+  appetite_score?: number | null;
+  anxiety_score?: number | null;
+  brain_clarity_score?: number | null;
+  focus_score?: number | null;
+  social_interaction_quality_score?: number | null;
   symptom_flags: string[];
   notes: string | null;
   log_completeness: number;
@@ -25,7 +30,7 @@ export interface DailyGutRow {
 }
 
 // Wearable signals. Keys are the single source of truth in shared/metrics/registry.ts
-// (source: 'wearable') and match the wearable_daily table columns exactly. All metrics
+// (source: 'sensor') and match the wearable_daily table columns exactly. All metrics
 // nullable; hrv_sdnn_ms is SDNN, iOS/HealthKit only — null on Android (docs/memory/0004).
 export interface DailyPhysioRow {
   user_id: string;
@@ -70,24 +75,52 @@ export interface BaselineSnapshot {
   max: number | null;
   trend: 'stable' | 'rising' | 'falling' | null;
   confidence: 'insufficient' | 'low' | 'medium' | 'high';
-  data_sources: ('self_report' | 'wearable' | 'env')[];
+  // Vocabulary = the S2 metric_daily_values view's source tags: the wide-table unpivot branches
+  // emit 'self_report' (daily_gut_rows) / 'wearable' (wearable_daily), the signals long-table
+  // branch emits 'signal' (tools/metric-view/lib/view.mjs); 'env' is reserved for env metrics.
+  data_sources: ('self_report' | 'wearable' | 'env' | 'signal')[];
+}
+
+// One card <-> verified-edge reference inside InsightCard.edge_refs (jsonb payload written by
+// generate-insights — keys stay camelCase on the wire, matching the engine's CardRow shape and
+// the migration comment "[{edgeId, verifiedAt}]"). verifiedAt pins the edge VERSION (§S6).
+export interface InsightCardEdgeRef {
+  edgeId: string;
+  verifiedAt: string;
 }
 
 export interface InsightCard {
-  id: string;
+  // bigint identity column — arrives as a JSON number over PostgREST.
+  id: number;
   user_id: string;
   generated_at: string;
   title: string;
   body: string;
-  category: 'hydration' | 'gut' | 'vector' | 'behaviour' | 'descriptive';
+  // 'relationship' = the composer producers' category (§S8 migration CHECK).
+  category: 'hydration' | 'gut' | 'vector' | 'behaviour' | 'descriptive' | 'relationship';
   severity: 'info' | 'notice' | 'watch';
   contributing_metrics: string[];
   confidence_score: number;
-  confidence_sources: ('self_report' | 'wearable' | 'env')[];
-  status: 'active' | 'snoozed' | 'dismissed';
+  // BaselineSnapshot.data_sources vocabulary plus 'brain' (the engine appends it when a card
+  // rests on verified research edges — generate-insights/index.ts).
+  confidence_sources: ('self_report' | 'wearable' | 'env' | 'signal' | 'brain')[];
+  // SHARED-CONTEXT (AGENTS.md §3, docs/memory/0002): this union is a `shared/` contract type —
+  // the diff that added 'archived' REQUIRES A PR WITH 2 HUMAN REVIEWERS. 'archived' is the user's
+  // deliberate save (Archive tab, swipe-right); 'snoozed' keeps its pre-existing meaning and its
+  // pre-existing rows. Mirrored by: the insight_cards status CHECK
+  // (supabase/migrations/20260728040000_insight_card_archived_status.sql), the Dart
+  // `InsightStatus` enum (apps/biotope/.../m5b_insight_engine/impl/insight_service.dart), and
+  // USER_HELD_STATUSES in supabase/functions/generate-insights/index.ts — a value missing from
+  // that last one is silently un-held and regenerated back to 'active' by the nightly pass.
+  status: 'active' | 'snoozed' | 'dismissed' | 'archived';
   expires_at: string | null;
   rule_id: string;
   phase_generated: string;
+  // §S8 producer columns. Optional-with-default (docs/memory/0002): instances serialized before
+  // the 20260716050639 migration lack them; the DB backfills reads with the same defaults.
+  producer?: 'rules' | 'edge' | 'personal'; // DB default 'rules'
+  insight_id?: string | null; // composed_insights FK; null/absent for plain rules cards
+  edge_refs?: InsightCardEdgeRef[]; // DB default []; always [] for producer 'personal' (CHECK)
 }
 
 export interface InsightFiredEvent {

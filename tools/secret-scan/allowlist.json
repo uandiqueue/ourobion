@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "ruleId": "generic-api-key",
+      "path": "docs/nao/nao-app-design.md",
+      "fingerprint": "docs/nao/nao-app-design.md:generic-api-key:224",
+      "justification": "Illustrative placeholder token inside a design document's example payload; docs/nao is documentation, not runtime configuration, and the value is not a live credential. Re-review at expiry.",
+      "approvedBy": "Jayden via issue #166",
+      "addedOn": "2026-07-28",
+      "expiresOn": "2027-01-20"
+    },
+    {
+      "ruleId": "stripe-access-token",
+      "path": "model-training/tests/test_release.py",
+      "fingerprint": "model-training/tests/test_release.py:stripe-access-token:118",
+      "justification": "Synthetic literal in a release-packaging unit test that asserts redaction behaviour; model-training/** is a reserved path for R4-U1 so the fixture cannot be edited by this unit. Re-review when R4-U1 closes.",
+      "approvedBy": "Jayden via issue #166",
+      "addedOn": "2026-07-28",
+      "expiresOn": "2027-01-20"
+    },
+    {
+      "ruleId": "stripe-access-token",
+      "path": "model-training/tests/test_release.py",
+      "fingerprint": "0cc35a7b309a8bf1c3d45f66fca8003dddb1e6db:model-training/tests/test_release.py:stripe-access-token:118",
+      "justification": "Synthetic literal in a release-packaging unit test that asserts redaction behaviour; historical commit of the same synthetic test fixture. model-training/** is a reserved path for R4-U1 so the fixture cannot be edited by this unit. Re-review when R4-U1 closes.",
+      "approvedBy": "Jayden via issue #166",
+      "addedOn": "2026-07-28",
+      "expiresOn": "2027-01-20"
+    },
+    {
+      "ruleId": "stripe-access-token",
+      "path": "model-training/tests/test_release.py",
+      "fingerprint": "10eabd979402c28434e17f81da0d96ce7a897c20:model-training/tests/test_release.py:stripe-access-token:118",
+      "justification": "Synthetic literal in a release-packaging unit test that asserts redaction behaviour; historical commit of the same synthetic test fixture. model-training/** is a reserved path for R4-U1 so the fixture cannot be edited by this unit. Re-review when R4-U1 closes.",
+      "approvedBy": "Jayden via issue #166",
+      "addedOn": "2026-07-28",
+      "expiresOn": "2027-01-20"
+    },
+    {
+      "ruleId": "generic-api-key",
+      "path": "docs/nao/nao-app-design.md",
+      "fingerprint": "1a69650eda51a6521c9da35785ca6b029c2479ce:docs/nao/nao-app-design.md:generic-api-key:198",
+      "justification": "Illustrative placeholder token inside a design document's example payload; historical commit. docs/nao is documentation, not runtime configuration, and the value is not a live credential. Re-review at expiry.",
+      "approvedBy": "Jayden via issue #166",
+      "addedOn": "2026-07-28",
+      "expiresOn": "2027-01-20"
+    },
+    {
+      "ruleId": "curl-auth-header",
+      "path": "supabase/functions/compute-baselines/index.ts",
+      "fingerprint": "60927e6105b4ca48886ca9575f72220826f83028:supabase/functions/compute-baselines/index.ts:curl-auth-header:27",
+      "justification": "Supabase CLI scaffold invocation example embedding the published supabase-demo local-development key; JWT payload claims were verified as {iss: supabase-demo, role: anon, exp: 1983812996}, i.e. the public local dev constant, least-privileged anon role, and it is absent from the current tree. Not a credential; no rotation required.",
+      "approvedBy": "Jayden via issue #166",
+      "addedOn": "2026-07-28",
+      "expiresOn": "2027-01-20"
+    },
+    {
+      "ruleId": "jwt",
+      "path": "supabase/functions/compute-baselines/index.ts",
+      "fingerprint": "60927e6105b4ca48886ca9575f72220826f83028:supabase/functions/compute-baselines/index.ts:jwt:28",
+      "justification": "Supabase CLI scaffold invocation example embedding the published supabase-demo local-development key; JWT payload claims were verified as {iss: supabase-demo, role: anon, exp: 1983812996}, i.e. the public local dev constant, least-privileged anon role, and it is absent from the current tree. Not a credential; no rotation required.",
+      "approvedBy": "Jayden via issue #166",
+      "addedOn": "2026-07-28",
+      "expiresOn": "2027-01-20"
+    },
+    {
+      "ruleId": "curl-auth-header",
+      "path": "supabase/functions/generate-insights/index.ts",
+      "fingerprint": "60927e6105b4ca48886ca9575f72220826f83028:supabase/functions/generate-insights/index.ts:curl-auth-header:27",
+      "justification": "Supabase CLI scaffold invocation example embedding the published supabase-demo local-development key; JWT payload claims were verified as {iss: supabase-demo, role: anon, exp: 1983812996}, i.e. the public local dev constant, least-privileged anon role, and it is absent from the current tree. Not a credential; no rotation required.",
+      "approvedBy": "Jayden via issue #166",
+      "addedOn": "2026-07-28",
+      "expiresOn": "2027-01-20"
+    },
+    {
+      "ruleId": "jwt",
+      "path": "supabase/functions/generate-insights/index.ts",
+      "fingerprint": "60927e6105b4ca48886ca9575f72220826f83028:supabase/functions/generate-insights/index.ts:jwt:28",
+      "justification": "Supabase CLI scaffold invocation example embedding the published supabase-demo local-development key; JWT payload claims were verified as {iss: supabase-demo, role: anon, exp: 1983812996}, i.e. the public local dev constant, least-privileged anon role, and it is absent from the current tree. Not a credential; no rotation required.",
+      "approvedBy": "Jayden via issue #166",
+      "addedOn": "2026-07-28",
+      "expiresOn": "2027-01-20"
+    }
+  ]
+}

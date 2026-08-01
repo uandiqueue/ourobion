@@ -60,49 +60,167 @@ Map<String, Set<String>> dartClassToJsonKeys(String dartSource) {
   for (var i = 0; i < matches.length; i++) {
     final name = matches[i].group(1)!;
     final start = matches[i].start;
-    final end = (i + 1 < matches.length) ? matches[i + 1].start : dartSource.length;
+    final end = (i + 1 < matches.length)
+        ? matches[i + 1].start
+        : dartSource.length;
     final block = dartSource.substring(start, end);
     final tj = block.indexOf('toJson()');
     if (tj < 0) continue;
-    final keyRe = RegExp(r"'([a-z0-9_]+)':");
-    result[name] = keyRe.allMatches(block.substring(tj)).map((m) => m.group(1)!).toSet();
+    // Wire keys are snake_case for table columns; jsonb payload shapes (InsightCardEdgeRef)
+    // keep the camelCase keys the engine writes, so uppercase is allowed here.
+    final keyRe = RegExp(r"'([a-zA-Z0-9_]+)':");
+    result[name] = keyRe
+        .allMatches(block.substring(tj))
+        .map((m) => m.group(1)!)
+        .toSet();
   }
   return result;
 }
 
-/// One parsed metric entry from registry.ts / registry.dart.
+/// One parsed metric entry from registry.ts / the Dart package mirror.
 class RegistryEntry {
-  RegistryEntry(this.key, this.table, this.status, this.baselineApplicable);
+  RegistryEntry(
+    this.key,
+    this.table,
+    this.status,
+    this.baselineApplicable,
+    this.type,
+    this.scaleMin,
+    this.scaleMax,
+    this.valueStep,
+    this.uiLabel,
+    this.inputType,
+  );
   final String key;
   final String table;
   final String status;
   final bool baselineApplicable;
+  final String type;
+  final num? scaleMin;
+  final num? scaleMax;
+  final num? valueStep;
+  final String? uiLabel;
+  final String? inputType;
 }
 
 /// Parse metric entries (in declaration order) from a registry source (TS or Dart). Both files
 /// list one entry per object with `key:`, `table:`, `status:`, `baselineApplicable:` fields.
+String? _quotedField(String source, String name) {
+  final marker = '$name:';
+  final markerIndex = source.indexOf(marker);
+  if (markerIndex < 0) return null;
+  var index = markerIndex + marker.length;
+  while (index < source.length) {
+    final code = source.codeUnitAt(index);
+    if (code != 9 && code != 10 && code != 13 && code != 32) break;
+    index++;
+  }
+  if (index >= source.length) return null;
+  final quote = source.codeUnitAt(index);
+  if (quote != 34 && quote != 39) return null;
+  final end = source.indexOf(String.fromCharCode(quote), index + 1);
+  return end < 0 ? null : source.substring(index + 1, end);
+}
+
+num? _numericField(String source, String name) {
+  final marker = '$name:';
+  final markerIndex = source.indexOf(marker);
+  if (markerIndex < 0) return null;
+  var start = markerIndex + marker.length;
+  while (start < source.length) {
+    final code = source.codeUnitAt(start);
+    if (code != 9 && code != 10 && code != 13 && code != 32) break;
+    start++;
+  }
+  var end = start;
+  const numberCharacters = '+-.0123456789eE';
+  while (end < source.length && numberCharacters.contains(source[end])) {
+    end++;
+  }
+  return num.tryParse(source.substring(start, end));
+}
+
+(num?, num?) _scaleFields(String source) {
+  const marker = 'scale:';
+  final markerIndex = source.indexOf(marker);
+  if (markerIndex < 0) return (null, null);
+  final tail = source.substring(markerIndex + marker.length).trimLeft();
+  if (tail.startsWith('null')) return (null, null);
+
+  final String payload;
+  if (tail.startsWith('{')) {
+    final end = tail.indexOf('}');
+    if (end < 0) return (null, null);
+    payload = tail.substring(1, end);
+  } else if (tail.startsWith('MetricScale(')) {
+    final end = tail.indexOf(')');
+    if (end < 0) return (null, null);
+    payload = tail.substring('MetricScale('.length, end);
+  } else {
+    return (null, null);
+  }
+  return (_numericField(payload, 'min'), _numericField(payload, 'max'));
+}
+
 List<RegistryEntry> parseRegistry(String source) {
   final keyRe = RegExp(r'''key:\s*['"]([a-z0-9_]+)['"]''');
   final keyMatches = keyRe.allMatches(source).toList();
   final entries = <RegistryEntry>[];
   for (var i = 0; i < keyMatches.length; i++) {
     final start = keyMatches[i].start;
-    final end = (i + 1 < keyMatches.length) ? keyMatches[i + 1].start : source.length;
+    final end = (i + 1 < keyMatches.length)
+        ? keyMatches[i + 1].start
+        : source.length;
     final block = source.substring(start, end);
     final key = keyMatches[i].group(1)!;
-    final table = RegExp(r'''table:\s*['"]([a-z0-9_]+)['"]''').firstMatch(block)?.group(1) ?? '';
-    final status = RegExp(r'''status:\s*['"]([a-z]+)['"]''').firstMatch(block)?.group(1) ?? '';
-    final ba = RegExp(r'baselineApplicable:\s*(true|false)').firstMatch(block)?.group(1) == 'true';
-    entries.add(RegistryEntry(key, table, status, ba));
+    final table =
+        RegExp(
+          r'''table:\s*['"]([a-z0-9_]+)['"]''',
+        ).firstMatch(block)?.group(1) ??
+        '';
+    final status =
+        RegExp(r'''status:\s*['"]([a-z]+)['"]''').firstMatch(block)?.group(1) ??
+        '';
+    final ba =
+        RegExp(
+          r'baselineApplicable:\s*(true|false)',
+        ).firstMatch(block)?.group(1) ==
+        'true';
+    final type = _quotedField(block, 'type') ?? '';
+    final (scaleMin, scaleMax) = _scaleFields(block);
+    final stepMatch = RegExp(
+      r'valueStep:\s*(-?\d+(?:\.\d+)?)',
+    ).firstMatch(block);
+    final valueStep = stepMatch == null ? null : num.parse(stepMatch.group(1)!);
+    final uiLabel = _quotedField(block, 'label');
+    final inputType = _quotedField(block, 'inputType');
+    entries.add(
+      RegistryEntry(
+        key,
+        table,
+        status,
+        ba,
+        type,
+        scaleMin,
+        scaleMax,
+        valueStep,
+        uiLabel,
+        inputType,
+      ),
+    );
   }
   return entries;
 }
 
 /// Active baseline-applicable keys for a table, from a parsed registry.
-List<String> baselineKeysFor(List<RegistryEntry> entries, String table) => entries
-    .where((e) => e.table == table && e.status == 'active' && e.baselineApplicable)
-    .map((e) => e.key)
-    .toList();
+List<String> baselineKeysFor(List<RegistryEntry> entries, String table) =>
+    entries
+        .where(
+          (e) =>
+              e.table == table && e.status == 'active' && e.baselineApplicable,
+        )
+        .map((e) => e.key)
+        .toList();
 
 /// All active keys for a table, from a parsed registry.
 Set<String> activeKeysFor(List<RegistryEntry> entries, String table) => entries
@@ -154,6 +272,80 @@ Set<String> migrationColumns(String sql, String tableName) {
   return cols;
 }
 
+/// Metric columns declared by one explicitly marked additive migration.
+///
+/// System-only ALTER migrations are intentionally excluded: the marker and exact, unique
+/// `ADD COLUMN` set are required so this guard cannot silently widen a shared row contract.
+Set<String> additiveMetricColumns(String sql, String tableName) {
+  final markerMatches = RegExp(
+    r'^\s*--\s*metric-columns:\s*(.*?)\s*$',
+    caseSensitive: false,
+    multiLine: true,
+  ).allMatches(sql).toList();
+  if (markerMatches.length != 1) {
+    throw StateError('expected exactly one metric-columns marker');
+  }
+  final marked = markerMatches.single
+      .group(1)!
+      .split(',')
+      .map((entry) => entry.trim())
+      .toList();
+  if (marked.isEmpty ||
+      marked.any((entry) => !RegExp(r'^[a-z][a-z0-9_]*$').hasMatch(entry)) ||
+      marked.toSet().length != marked.length) {
+    throw StateError('invalid or duplicate metric-columns marker');
+  }
+  final uncommented = sql.replaceAll(RegExp(r'--[^\n]*'), '');
+  final alters = RegExp(
+    'alter\\s+table\\s+public\\.$tableName\\b([\\s\\S]*?);',
+    caseSensitive: false,
+  ).allMatches(uncommented).toList();
+  if (alters.length != 1) {
+    throw StateError('expected one ALTER TABLE statement');
+  }
+  final body = alters.single.group(1)!;
+  if (RegExp(
+    r'\badd\s+column\s+if\s+not\s+exists\b',
+    caseSensitive: false,
+  ).hasMatch(body)) {
+    throw StateError('metric columns cannot use IF NOT EXISTS');
+  }
+  final declared = RegExp(
+    r'\badd\s+column\s+([a-z][a-z0-9_]*)\b',
+    caseSensitive: false,
+  ).allMatches(body).map((match) => match.group(1)!.toLowerCase()).toList();
+  if (declared.isEmpty || declared.toSet().length != declared.length) {
+    throw StateError('invalid or duplicate ADD COLUMN declaration');
+  }
+  final markedSet = marked.toSet();
+  final declaredSet = declared.toSet();
+  if (markedSet.length != declaredSet.length ||
+      !markedSet.containsAll(declaredSet)) {
+    throw StateError('metric marker and ADD COLUMN declarations differ');
+  }
+  return declaredSet;
+}
+
+/// Original CREATE TABLE columns plus explicitly marked additive metric migrations.
+Set<String> migrationColumnsWithAdditions(
+  String createSql,
+  String tableName,
+  Iterable<String> additiveMigrations,
+) {
+  final columns = migrationColumns(createSql, tableName);
+  for (final migration in additiveMigrations) {
+    final additions = additiveMetricColumns(migration, tableName);
+    final duplicates = columns.intersection(additions);
+    if (duplicates.isNotEmpty) {
+      throw StateError(
+        'additive migration redeclares existing columns: $duplicates',
+      );
+    }
+    columns.addAll(additions);
+  }
+  return columns;
+}
+
 /// The quoted string literals in the first `[ ... ]` array following [label] in [src].
 /// Strips `//` line comments first so a commented-out entry is not counted.
 List<String> quotedListAfter(String src, String label) {
@@ -162,8 +354,76 @@ List<String> quotedListAfter(String src, String label) {
   final open = src.indexOf('[', li);
   final close = src.indexOf(']', open);
   if (open < 0 || close < 0) throw StateError('array after $label not found');
-  var block = src.substring(open + 1, close).replaceAll(RegExp(r'//[^\n]*'), '');
-  return RegExp("['\"]([^'\"]+)['\"]").allMatches(block).map((m) => m.group(1)!).toList();
+  var block = src
+      .substring(open + 1, close)
+      .replaceAll(RegExp(r'//[^\n]*'), '');
+  return RegExp(
+    "['\"]([^'\"]+)['\"]",
+  ).allMatches(block).map((m) => m.group(1)!).toList();
+}
+
+/// Like [quotedListAfter], but for a declaration whose TYPE ANNOTATION itself contains brackets
+/// before the array literal (e.g. TS `NAME: readonly string[] = [ ... ]`) — [quotedListAfter]
+/// would mistake the `[]` in `string[]` for the literal's brackets and read an empty array.
+/// This instead locates the `[` that follows the declaration's `=`, which is always past any
+/// such type annotation. Strips `//` line comments first so a commented-out entry is not counted.
+List<String> quotedListAfterEquals(String src, String label) {
+  final li = src.indexOf(label);
+  if (li < 0) throw StateError('label $label not found');
+  final eq = src.indexOf('=', li);
+  if (eq < 0) throw StateError('assignment after $label not found');
+  final open = src.indexOf('[', eq);
+  final close = src.indexOf(']', open);
+  if (open < 0 || close < 0) throw StateError('array after $label not found');
+  var block = src
+      .substring(open + 1, close)
+      .replaceAll(RegExp(r'//[^\n]*'), '');
+  return RegExp(
+    "['\"]([^'\"]+)['\"]",
+  ).allMatches(block).map((m) => m.group(1)!).toList();
+}
+
+/// The quoted string literals (keys AND values, in source order) inside the first BALANCED
+/// `{ ... }` block following [label] in [src]. Unlike [quotedListAfter] (flat `[...]` arrays),
+/// this tracks brace depth so it also handles a nested object (e.g. a map of maps) — the whole
+/// block is captured, not just up to the first `}`.
+/// Strips `//` line comments first so a commented-out entry is not counted.
+List<String> quotedBlockAfter(String src, String label) {
+  final li = src.indexOf(label);
+  if (li < 0) throw StateError('label $label not found');
+  final open = src.indexOf('{', li);
+  if (open < 0) throw StateError('block after $label not found');
+  var depth = 0;
+  var i = open;
+  for (; i < src.length; i++) {
+    if (src[i] == '{') depth++;
+    if (src[i] == '}') {
+      depth--;
+      if (depth == 0) break;
+    }
+  }
+  if (depth != 0) throw StateError('unbalanced braces in block after $label');
+  var block = src.substring(open + 1, i).replaceAll(RegExp(r'//[^\n]*'), '');
+  return RegExp(
+    "['\"]([^'\"]+)['\"]",
+  ).allMatches(block).map((m) => m.group(1)!).toList();
+}
+
+/// The quoted string literals (in source order) in a scalar `const X = '...';` (or `+`-
+/// concatenated multi-literal) assignment following [label] in [src] — everything between the
+/// first `=` and the terminating `;`. Used for single-value constants such as disclosure
+/// sentences, as opposed to [quotedListAfter] (`[...]`) or [quotedBlockAfter] (`{...}`).
+List<String> quotedScalarAfter(String src, String label) {
+  final li = src.indexOf(label);
+  if (li < 0) throw StateError('label $label not found');
+  final eq = src.indexOf('=', li);
+  if (eq < 0) throw StateError('assignment after $label not found');
+  final semi = src.indexOf(';', eq);
+  if (semi < 0) throw StateError('terminating ; after $label not found');
+  final block = src.substring(eq + 1, semi);
+  return RegExp(
+    "['\"]([^'\"]+)['\"]",
+  ).allMatches(block).map((m) => m.group(1)!).toList();
 }
 
 /// {key: dqs.weight} for registry metrics with countsTowardDailyCompleteness: true.
@@ -172,9 +432,13 @@ Map<String, int> registryDailyCoreWeights(String registrySource) {
   final matches = keyRe.allMatches(registrySource).toList();
   final out = <String, int>{};
   for (var i = 0; i < matches.length; i++) {
-    final end = (i + 1 < matches.length) ? matches[i + 1].start : registrySource.length;
+    final end = (i + 1 < matches.length)
+        ? matches[i + 1].start
+        : registrySource.length;
     final block = registrySource.substring(matches[i].start, end);
-    if (!RegExp(r'countsTowardDailyCompleteness:\s*true').hasMatch(block)) continue;
+    if (!RegExp(r'countsTowardDailyCompleteness:\s*true').hasMatch(block)) {
+      continue;
+    }
     final w = RegExp(r'weight:\s*(\d+)').firstMatch(block);
     if (w != null) out[matches[i].group(1)!] = int.parse(w.group(1)!);
   }
@@ -189,5 +453,7 @@ Map<String, int> dartIntMap(String src, String name) {
   final close = src.indexOf('}', open);
   final block = src.substring(open + 1, close);
   final re = RegExp('''['"]([a-z0-9_]+)['"]\\s*:\\s*(\\d+)''');
-  return {for (final m in re.allMatches(block)) m.group(1)!: int.parse(m.group(2)!)};
+  return {
+    for (final m in re.allMatches(block)) m.group(1)!: int.parse(m.group(2)!),
+  };
 }

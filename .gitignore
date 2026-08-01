@@ -10,6 +10,17 @@
 .dev.vars
 .dev.vars.*
 .claude/settings.local.json
+test_credential.md
+
+# Test credentials handed to agent sessions (owner-supplied, disposable test account).
+# NOT covered by the .env* rules above — verified with `git check-ignore`, which returned
+# NOT IGNORED at abcba95, so this file was untracked AND committable on this line. With sessions
+# self-merging and no human review, gitleaks in CI would only catch it after the secret was
+# already in a pushed commit's history.
+# Deliberately UNANCHORED (no leading `/`) so a copy in any subdirectory is covered too; an
+# anchored rule would protect only the repo root.
+test_credential.md
+test_credentials.md
 
 # Multi-agent task-claim coordination state (machine-local; see tools/shared_memory.mjs).
 .agents/
@@ -40,6 +51,11 @@ build/
 out/
 bin/
 target/
+# Next.js / OpenNext build output. Non-anchored (no leading slash) on purpose:
+# apps/nao/.gitignore anchors it as /.open-next/, but graphify's gitignore
+# matcher only honors non-anchored dir patterns — this keeps the codegraph clean.
+.open-next/
+.next/
 
 # Flutter/Native Builds
 **/doc/api/
@@ -95,3 +111,119 @@ graphify-out/
 # now a LOCAL CACHE — R2 is the canonical metadata + binary store (manifest/
 # papers.jsonl + meta/<uid>.json + pdf|jats|text). See BRAIN-INGESTION-DESIGN §1/§6.
 data/corpus/
+
+# Provider acceptance artifacts/state are task-scoped and rebuildable. Keep this
+# exact directory ignored so a completed leg cannot dirty the reviewed Git head.
+data/brain-ingest/live-acceptance/
+
+# llm-router runtime state: budget ledger + local-agent mailbox (request/response
+# audit files). Rebuildable/ephemeral run state, never truth — see
+# tools/llm-router/README.md.
+data/llm-router/
+
+# ═══════════════════════════════════════════════════════════════
+# 8. MODEL-TRAINING (Python workspace) — model-training/, see AGENTS.md §1/§4
+# ═══════════════════════════════════════════════════════════════
+# Root-level staging area for complete model bundles awaiting upload to
+# approved external object storage (for example, private Cloudflare R2).
+/model/
+
+# Every pattern below is anchored to /model-training/: it is the repo's one
+# isolated Python workspace, and anchoring keeps an ML-specific pattern (e.g.
+# *.onnx, *.bin) from ever matching an unrelated path elsewhere in the tree —
+# a past incident here was caused by a non-anchored pattern matching more
+# than intended, so anchoring is deliberate, not an oversight (see the
+# .open-next/ note in §3 for the opposite, intentionally-non-anchored case).
+
+# Workspace-local virtualenvs (root env/venv/.venv/ above already matches
+# these non-anchored; kept explicit here so the workspace section is
+# self-describing on its own).
+/model-training/.venv/
+/model-training/venv/
+
+# Python tool caches: never useful to commit, always regenerable from source.
+/model-training/**/__pycache__/
+/model-training/**/*.py[cod]
+/model-training/.mypy_cache/
+/model-training/.ruff_cache/
+/model-training/.pytest_cache/
+
+# Scratch experiment code. Ignored WHOLESALE, extensions included, because the
+# risk here is the .py itself rather than a dataset: these scripts are written
+# against licence-restricted corpora (SciFact is CC BY-NC) and quote them in
+# fixtures and docstrings, so the source file carries the licence problem even
+# when no corpus file sits beside it. The extension rules below deliberately do
+# not match a bare .py, which is exactly how `git add -A` swept four of these
+# into PR #311 — caught only as a model-training lint failure, not as a licence
+# gate. Promised on #311 and landed here; see also #277 for the licence scope.
+/model-training/experiments/
+
+# Raw datasets. Every training plan's licence gate treats PMIDs/labels/
+# manifests as the committed artifact and the underlying corpus text/files
+# as never-committed — see docs/temp/model-training/*-training-plan.md.
+/model-training/**/data/
+/model-training/**/datasets/
+/model-training/**/raw/
+
+# Corpus/label files by extension, anywhere in the workspace — not only under
+# data|datasets|raw. A downloaded corpus lands wherever the script's cwd was,
+# and "I put it in the wrong folder" must not be the difference between
+# committing MEDLINE text and not. The two negations below are the committed
+# dependency manifests (D4), which are deliberately tracked.
+/model-training/**/*.jsonl
+/model-training/**/*.ndjson
+/model-training/**/*.csv
+/model-training/**/*.tsv
+/model-training/**/*.txt
+/model-training/**/*.xml
+/model-training/**/*.xml.gz
+/model-training/**/*.gz
+/model-training/**/*.zip
+/model-training/**/*.parquet
+!/model-training/constraints.txt
+!/model-training/**/requirements*.txt
+
+# Frozen public inference-input manifests (issue #266). These are named ONE BY
+# ONE, not as a `inference-manifests/*.jsonl` glob, and that is deliberate: a
+# directory-wide negation would mean anyone who dropped a downloaded corpus in
+# that folder would commit it, which is precisely the accident the extension
+# rules above exist to prevent. A named negation costs one line per reviewed
+# fixture and cannot be triggered by accident.
+#
+# Anything added here must be public/frozen, contain no corpus text under a
+# restrictive licence, and no product or user data.
+!/model-training/inference-manifests/zebra-smoke-v1.jsonl
+!/model-training/inference-manifests/viceroy-smoke-v0.jsonl
+
+# Checkpoints, exported weights, and predictions. No training or export has
+# been run in this code-build (see docs/temp/model-training/human-gates.md);
+# this also fails closed against ever committing one later.
+/model-training/**/*.safetensors
+/model-training/**/*.ckpt
+/model-training/**/*.bin
+/model-training/**/*.pt
+/model-training/**/*.pth
+/model-training/**/*.onnx
+/model-training/**/*.h5
+/model-training/**/*.hdf5
+/model-training/**/*.gguf
+/model-training/**/*.ggml
+/model-training/**/*.tflite
+/model-training/**/*.pb
+/model-training/**/*.msgpack
+/model-training/**/*.npy
+/model-training/**/*.npz
+/model-training/**/*.pkl
+/model-training/**/*.pickle
+/model-training/**/*.joblib
+/model-training/**/*.model
+/model-training/**/*.vocab
+/model-training/**/checkpoints/
+/model-training/**/predictions/
+
+# Experiment trackers and other local run artifacts.
+/model-training/**/mlruns/
+/model-training/**/wandb/
+/model-training/**/.neptune/
+/model-training/**/runs/
+/model-training/**/outputs/

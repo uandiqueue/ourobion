@@ -13,8 +13,27 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { searchPapers, facetCounts, getPaperRow, buildFtsMatchQuery } from '../src/lib/d1.ts';
-import { recordToRow, rowToUpsertSql, manifestToSql, sqlValue } from '../scripts/etl.mjs';
+import {
+  searchPapers,
+  facetCounts,
+  getPaperRow,
+  getPaperDetailRow,
+  buildFtsMatchQuery,
+} from '../src/lib/d1.ts';
+import {
+  assertSqlLimits,
+  createImportSnapshot,
+  ETL_SCHEMA_VERSION,
+  loadEnv,
+  MANIFEST_KEY,
+  manifestToSql,
+  MAX_SQL_STATEMENT_BYTES,
+  parseManifestRecords,
+  recordToRow,
+  rowToUpsertSql,
+  sqlValue,
+  SQL_RELATIVE_PATH,
+} from '../scripts/etl.mjs';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Fake D1 — records every prepared SQL string and the values bound to it.
@@ -157,6 +176,102 @@ test('getPaperRow: binds uid and parses JSON array columns', async () => {
   assert.equal(row?.oaStatus, 'gold');
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// getPaperDetailRow — the paper-detail fallback read
+//
+// Selects four columns PAPER_COLUMNS omits (the detail page renders them, the
+// list does not). Null still means "no such paper in the index", which is the
+// one case where the detail page's 404 is honest.
+// ─────────────────────────────────────────────────────────────────────────────
+test('getPaperDetailRow: binds uid and maps the four detail-only columns', async () => {
+  const raw = {
+    paper_uid: 'doi:10.1/x',
+    title: 'T',
+    authors_json: '["Ada"]',
+    year: 2020,
+    venue: 'V',
+    abstract: null,
+    oa_status: 'gold',
+    retrievability: 'pdf',
+    work_type: 'article',
+    cited_by_count: 5,
+    journal_publisher: 'Pub',
+    topic_tags: '["dengue"]',
+    concepts: '["immunology"]',
+    doi: '10.1/x',
+    pmid: null,
+    pmcid: null,
+    status: 'fetched',
+    discovered_via: 'openalex',
+    full_text_extracted: 1,
+    full_text_method: 'pdf',
+    full_text_char_count: 41234,
+    storage_kind: 'object',
+    storage_size_bytes: 2048,
+    fetched_at: '2026-06-29T07:58:04.045Z',
+  };
+  const { db, captured } = makeFakeDb([], raw);
+  const row = await getPaperDetailRow('doi:10.1/x', db);
+  assert.match(captured[0].sql, /paper_uid = \?/);
+  assert.deepEqual(captured[0].binds, ['doi:10.1/x']);
+  // The four columns the narrower list projection does not select.
+  for (const column of [
+    'full_text_char_count',
+    'storage_kind',
+    'storage_size_bytes',
+    'fetched_at',
+  ]) {
+    assert.ok(captured[0].sql.includes(column), 'missing column ' + column);
+  }
+  assert.equal(row?.fullTextCharCount, 41234);
+  assert.equal(row?.storageKind, 'object');
+  assert.equal(row?.storageSizeBytes, 2048);
+  assert.equal(row?.fetchedAt, '2026-06-29T07:58:04.045Z');
+  // Still inherits the base mapping.
+  assert.deepEqual(row?.authors, ['Ada']);
+  assert.equal(row?.fullTextExtracted, true);
+});
+
+test('getPaperDetailRow: an absent uid yields null (the honest 404 case)', async () => {
+  const { db } = makeFakeDb([], null);
+  assert.equal(await getPaperDetailRow('doi:missing', db), null);
+});
+
+test('getPaperDetailRow: null detail columns stay null, never coerced to 0', async () => {
+  const raw = {
+    paper_uid: 'doi:10.1/y',
+    title: 'T',
+    authors_json: '[]',
+    year: null,
+    venue: null,
+    abstract: null,
+    oa_status: 'closed',
+    retrievability: 'unknown',
+    work_type: null,
+    cited_by_count: null,
+    journal_publisher: null,
+    topic_tags: '[]',
+    concepts: '[]',
+    doi: null,
+    pmid: null,
+    pmcid: null,
+    status: 'discovered',
+    discovered_via: 'openalex',
+    full_text_extracted: 0,
+    full_text_method: null,
+    full_text_char_count: null,
+    storage_kind: null,
+    storage_size_bytes: null,
+    fetched_at: null,
+  };
+  const { db } = makeFakeDb([], raw);
+  const row = await getPaperDetailRow('doi:10.1/y', db);
+  assert.equal(row?.fullTextCharCount, null);
+  assert.equal(row?.storageKind, null);
+  assert.equal(row?.storageSizeBytes, null);
+  assert.equal(row?.fetchedAt, null);
+});
+
 test('facetCounts: issues grouped queries and shapes buckets', async () => {
   const { db } = makeFakeDb([
     { value: 'gold', count: 3 },
@@ -262,17 +377,108 @@ test('rowToUpsertSql: idempotent UPSERT with ON CONFLICT and escaped values', ()
   assert.ok(!/paper_uid=excluded\.paper_uid/.test(sql));
 });
 
-test('manifestToSql: parses JSONL, skips blank + unparseable + keyless lines', () => {
+test('manifestToSql: generates one exact DELETE-plus-UPSERT replacement snapshot', () => {
   const jsonl = [
     JSON.stringify(FIXTURE_RECORD),
-    '',
-    '   ',
-    'not json at all',
-    JSON.stringify({ title: 'no uid here' }),
     JSON.stringify({ paperUid: 'doi:second', title: 'Second' }),
   ].join('\n');
   const stmts = manifestToSql(jsonl);
-  assert.equal(stmts.length, 2, 'only the two records with a paperUid map');
-  assert.ok(stmts[0].includes('doi:10.1234/abc.def'));
-  assert.ok(stmts[1].includes('doi:second'));
+  assert.deepEqual(stmts.slice(0, 1), ['DELETE FROM papers;']);
+  assert.equal(stmts.length, 3);
+  assert.match(stmts[1], /doi:10\.1234\/abc\.def/);
+  assert.match(stmts[2], /doi:second/);
+
+  const snapshot = createImportSnapshot(jsonl);
+  assert.ok(snapshot.sql.startsWith('DELETE FROM papers;\n'));
+  assert.equal(snapshot.sql, `${stmts.join('\n')}\n`);
+});
+
+test('manifest parsing fails closed for malformed, keyless, duplicate, and empty truth data', () => {
+  const cases: Array<[string, RegExp]> = [
+    ['{not json}', /malformed JSON/],
+    [JSON.stringify({ title: 'No primary key' }), /missing a non-empty string paperUid/],
+    [JSON.stringify({ paperUid: 42 }), /missing a non-empty string paperUid/],
+    [
+      [
+        JSON.stringify({ paperUid: 'doi:duplicate' }),
+        JSON.stringify({ paperUid: 'doi:duplicate' }),
+      ].join('\n'),
+      /duplicate paperUid/,
+    ],
+    ['', /zero valid rows/],
+    ['\n  \n', /zero valid rows/],
+  ];
+
+  for (const [manifest, expected] of cases) {
+    assert.throws(() => parseManifestRecords(manifest), expected);
+    assert.throws(() => manifestToSql(manifest), expected);
+  }
+});
+
+test('SQL limits enforce the documented 100,000-byte statement boundary', () => {
+  assert.doesNotThrow(() => assertSqlLimits(['x'.repeat(MAX_SQL_STATEMENT_BYTES)]));
+  assert.throws(
+    () => assertSqlLimits(['x'.repeat(MAX_SQL_STATEMENT_BYTES + 1)]),
+    /SQL statement is 100001 bytes; limit is 100000/,
+  );
+});
+
+test('createImportSnapshot rejects total imports over the configured limit', () => {
+  const manifest = JSON.stringify({ paperUid: 'doi:one', title: 'One' });
+  assert.throws(
+    () => createImportSnapshot(manifest, { maxImportBytes: 1 }),
+    /import is .* bytes; limit is 1/,
+  );
+});
+
+test('createImportSnapshot has deterministic, content-free metadata', () => {
+  const manifest = [
+    JSON.stringify(FIXTURE_RECORD),
+    JSON.stringify({ paperUid: 'doi:second', title: 'Second' }),
+  ].join('\n');
+  const first = createImportSnapshot(manifest);
+  const second = createImportSnapshot(manifest);
+
+  assert.deepEqual(first, second);
+  assert.equal(first.metadata.schemaVersion, ETL_SCHEMA_VERSION);
+  assert.equal(first.metadata.rowCount, 2);
+  assert.equal(first.metadata.statementCount, 3);
+  assert.equal(first.metadata.totalBytes, Buffer.byteLength(first.sql, 'utf8'));
+  assert.equal(first.metadata.sqlRelativePath, SQL_RELATIVE_PATH);
+  assert.match(first.metadata.manifestSha256, /^[a-f0-9]{64}$/);
+  assert.match(first.metadata.sqlSha256, /^[a-f0-9]{64}$/);
+  assert.ok(first.metadata.maxStatementBytes <= MAX_SQL_STATEMENT_BYTES);
+  assert.ok(!JSON.stringify(first.metadata).includes(FIXTURE_RECORD.title));
+});
+
+test('createImportSnapshot produces a complete 5,335-row import without chunking', () => {
+  const count = 5_335;
+  const manifest = Array.from(
+    { length: count },
+    (_, index) =>
+      JSON.stringify({
+        paperUid: `doi:fixture-${index}`,
+        title: `Fixture ${index}`,
+      }),
+  ).join('\n');
+
+  const snapshot = createImportSnapshot(manifest);
+  assert.equal(snapshot.metadata.rowCount, count);
+  assert.equal(snapshot.metadata.statementCount, count + 1);
+  assert.equal(snapshot.sql.split('\n').filter(Boolean).length, count + 1);
+  assert.ok(snapshot.sql.startsWith('DELETE FROM papers;\n'));
+});
+
+test('loadEnv gives CI process credentials precedence over file configuration', () => {
+  const env = loadEnv({
+    R2_ENDPOINT: 'https://ci.example.invalid',
+    R2_ACCESS_KEY_ID: 'ci-access',
+    R2_SECRET_ACCESS_KEY: 'ci-secret',
+    R2_BUCKET: 'ci-bucket',
+  });
+  assert.equal(env.R2_ENDPOINT, 'https://ci.example.invalid');
+  assert.equal(env.R2_ACCESS_KEY_ID, 'ci-access');
+  assert.equal(env.R2_SECRET_ACCESS_KEY, 'ci-secret');
+  assert.equal(env.R2_BUCKET, 'ci-bucket');
+  assert.equal(MANIFEST_KEY, 'manifest/papers.jsonl');
 });

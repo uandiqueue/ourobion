@@ -1,0 +1,30 @@
+{
+  "ruleId": "energy_trending_down",
+  "schemaVersion": 1,
+  "category": "behaviour",
+  "severity": "info",
+  "scope": "single",
+  "enabledPhase": "phase1_stage1",
+  "metricKeys": ["energy_score"],
+  "provenance": {
+    "tier": "hand_authored",
+    "sourceNote": "Faithful port of the hardcoded MVP rule 'energy_trending_down' (supabase/functions/generate-insights/index.ts): trend === 'falling' && notInsufficient(s).",
+    "citation": null
+  },
+  "effectiveFrom": null,
+  "effectiveTo": null,
+  "status": "active",
+  "deprecatedAt": null,
+  "cooldownDays": null,
+  "expiryDays": 7,
+  "condition": {
+    "type": "trend",
+    "metricKey": "energy_score",
+    "equals": "falling",
+    "minConfidence": "low"
+  },
+  "template": {
+    "title": "Energy pattern this week",
+    "body": "Your energy data shows a declining pattern over the past week."
+  }
+}

@@ -2,10 +2,15 @@
 
 // ourobion nao — top bar (Client Component).
 //
-// Brand mark + wordmark (→ Overview), a global corpus search that routes to
+// Brand mark (→ Overview), a global corpus search that routes to
 // /papers?q=…, and the signed-in identity + sign-out. The email is read from the
 // browser Supabase session (getUser) so we don't have to thread it through the
 // server layout; sign-out clears the session and bounces to /login.
+//
+// Brand: /brand/nao-mark-dark.svg (the knowledge-graph nucleus mark) at a
+// fixed 40px — see the "40px rule" comment in shell.css. Its alt text is the
+// button's sole accessible name and includes the destination; there is no
+// reconstructed HTML wordmark or competing button aria-label.
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
@@ -48,14 +53,13 @@ export function TopBar() {
 
   return (
     <header className="topbar">
-      <button type="button" className="topbar__brand" onClick={() => router.push('/')}>
+      <button
+        type="button"
+        className="topbar__brand"
+        onClick={() => router.push('/overview')}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="topbar__mark" src="/brand/ourobion-mark-dark.svg" alt="ourobion" />
-        <span className="topbar__lockup">
-          <span className="topbar__word">ourobion</span>
-          <span className="topbar__divider" />
-          <span className="topbar__sub">nao</span>
-        </span>
+        <img className="topbar__mark" src="/brand/nao-mark-dark.svg" alt="ourobion nao — Overview" />
       </button>
 
       <div className="topbar__searchwrap">

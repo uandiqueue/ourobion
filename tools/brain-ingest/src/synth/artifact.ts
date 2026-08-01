@@ -1,0 +1,241 @@
+/**
+ * A8 · Claims artifact — append-safe `edges/claims.jsonl` (design step 3).
+ *
+ * The claims artifact is the TRUTH-tier, rebuildable projection (memory 0001)
+ * the A11 edge-loader reads (`tools/edge-loader --from-dir` / `--from-r2`). It is
+ * APPEND-ONLY JSONL: one `RelationshipClaim` per line. The local mirror lives
+ * under the R2 cache layout at `data/corpus/edges/claims.jsonl` (the same
+ * basename R2's `edges/` prefix uses), so `edge-loader --from-dir <edgesDir>`
+ * loads it unchanged.
+ *
+ * DEDUPE SEMANTICS (idempotent re-runs): a claim is skipped when a line with the
+ * same dedupe key already exists. The key is
+ *   `edgeId \0 promptVersion \0 <sorted unique citation paperIds>`
+ * — the union of the design's `(edgeId, promptVersion)` idempotency
+ * (insight-engine §A8.6) and the session brief's "edgeId + paper set": a
+ * re-synthesis of the SAME edge from the SAME papers under the SAME prompt is a
+ * no-op, while a promptVersion bump or a new supporting paper appends a fresh
+ * line (which the loader upserts, last-line-wins per edgeId).
+ *
+ * ESM / NodeNext — imports use explicit `.js` extensions.
+ */
+
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+import type { LlmResponse } from '../../../llm-router/src/index.js';
+import { R2Store } from '../storage/r2.js';
+import type { SynthClaim, SynthPair, SynthRawRecord } from './types.js';
+
+/** Basename inside the edges dir / R2 prefix (matches edge-loader's CLAIMS_BASENAME). */
+export const CLAIMS_BASENAME = 'claims.jsonl';
+/** R2 object key for the claims artifact (matches edge-loader's R2_CLAIMS_KEY). */
+export const R2_CLAIMS_KEY = `edges/${CLAIMS_BASENAME}`;
+/** Local evidence only; edge-loader and R2 publication deliberately ignore it. */
+export const RAW_SYNTHESIS_BASENAME = 'synthesis-raw.jsonl';
+
+/** Default local edges dir: `<repoRoot>/data/corpus/edges` (R2 `edges/` mirror). */
+export function defaultEdgesDir(root: string): string {
+  return join(root, 'data', 'corpus', 'edges');
+}
+
+/** Absolute claims.jsonl path for an edges dir. */
+export function claimsPath(edgesDir: string): string {
+  return join(edgesDir, CLAIMS_BASENAME);
+}
+
+export function rawSynthesisPath(edgesDir: string): string {
+  return join(edgesDir, RAW_SYNTHESIS_BASENAME);
+}
+
+/** Build pair/attempt-scoped provider evidence independently of claim output. */
+export function buildSynthRawRecord(
+  pair: SynthPair,
+  response: LlmResponse | undefined,
+  context: {
+    synthesisRunId: string;
+    logicalCallId: string;
+    attempt: number;
+    capturedAt: string;
+    result: SynthRawRecord['result'];
+    acceptedCount: number;
+    rejectedCount: number;
+  },
+): SynthRawRecord | undefined {
+  if (response?.rawBody === undefined) return undefined;
+  const identity = response.modelIdentity;
+  return {
+    ...context,
+    pairId: pair.id,
+    synthesisModel: response.model,
+    returnedModel: identity.model,
+    returnedVersion: identity.returnedVersion,
+    family: identity.family ?? 'unknown',
+    attested: identity.providerAttested,
+    raw: {
+      body: response.rawBody.body,
+      bytes: response.rawBody.bytes,
+      truncated: response.rawBody.truncated,
+      capBytes: response.rawBody.capBytes,
+      sha256: response.rawBody.sha256,
+    },
+  };
+}
+
+/** The dedupe key for a claim (see module docstring). */
+export function claimDedupeKey(claim: SynthClaim): string {
+  const paperIds = [...new Set(claim.citations.map((c) => c.paperId))].sort();
+  return `${claim.edgeId}\0${claim.promptVersion}\0${paperIds.join('|')}`;
+}
+
+/** Existing dedupe keys parsed from JSONL text (blank / unparseable lines ignored). */
+export function existingKeysFromText(text: string): Set<string> {
+  const keys = new Set<string>();
+  const clean = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+  for (const line of clean.split(/\r?\n/)) {
+    if (line.trim() === '') continue;
+    try {
+      const rec = JSON.parse(line) as SynthClaim;
+      if (rec && typeof rec.edgeId === 'string' && Array.isArray(rec.citations)) {
+        keys.add(claimDedupeKey(rec));
+      }
+    } catch {
+      // tolerate a bad line — dedupe just won't match it
+    }
+  }
+  return keys;
+}
+
+export interface DedupeResult {
+  toWrite: SynthClaim[];
+  skipped: SynthClaim[];
+}
+
+/**
+ * Pure dedupe: partition `claims` into those to append vs those already present
+ * (by dedupe key). Deduplicates WITHIN the batch too (first occurrence wins).
+ */
+export function dedupeAgainst(existingKeys: ReadonlySet<string>, claims: readonly SynthClaim[]): DedupeResult {
+  const seen = new Set(existingKeys);
+  const toWrite: SynthClaim[] = [];
+  const skipped: SynthClaim[] = [];
+  for (const c of claims) {
+    const key = claimDedupeKey(c);
+    if (seen.has(key)) {
+      skipped.push(c);
+    } else {
+      seen.add(key);
+      toWrite.push(c);
+    }
+  }
+  return { toWrite, skipped };
+}
+
+/** One JSONL line per claim (no trailing newline). */
+export function toJsonl(claims: readonly SynthClaim[]): string {
+  return claims.map((c) => JSON.stringify(c)).join('\n');
+}
+
+export interface WriteResult {
+  path: string;
+  written: number;
+  skipped: number;
+  raw?: { path: string; written: number; skipped: number };
+}
+
+/**
+ * Append new claims to the local `edges/claims.jsonl`, skipping duplicates.
+ * Creates the dir + file on first write. Append-only: existing lines are never
+ * rewritten (truth-artifact semantics).
+ */
+export function appendClaimsToDir(
+  edgesDir: string,
+  claims: readonly SynthClaim[],
+  rawRecords: readonly SynthRawRecord[] = [],
+): WriteResult {
+  mkdirSync(edgesDir, { recursive: true });
+  const path = claimsPath(edgesDir);
+  const existing = existsSync(path) ? readFileSync(path, 'utf8') : '';
+  const { toWrite, skipped } = dedupeAgainst(existingKeysFromText(existing), claims);
+  if (toWrite.length > 0) {
+    // A leading newline only when the file exists and lacks a trailing one.
+    const needsLeadingNl = existing.length > 0 && !existing.endsWith('\n');
+    appendFileSync(path, (needsLeadingNl ? '\n' : '') + toJsonl(toWrite) + '\n', 'utf8');
+  }
+  const result: WriteResult = { path, written: toWrite.length, skipped: skipped.length };
+  if (rawRecords.length > 0) result.raw = appendRawSynthesisToDir(edgesDir, rawRecords);
+  return result;
+}
+
+/** Append synthesis provider evidence locally; never uploaded or edge-loaded. */
+export function appendRawSynthesisToDir(
+  edgesDir: string,
+  rawRecords: readonly SynthRawRecord[],
+): { path: string; written: number; skipped: number } {
+  mkdirSync(edgesDir, { recursive: true });
+  const path = rawSynthesisPath(edgesDir);
+  const existing = existsSync(path) ? readFileSync(path, 'utf8') : '';
+  const seen = new Set<string>();
+  for (const line of existing.split(/\r?\n/)) {
+    if (line.trim() === '') continue;
+    try {
+      const record = JSON.parse(line) as SynthRawRecord;
+      if (
+        typeof record.synthesisRunId === 'string' &&
+        typeof record.pairId === 'string' &&
+        Number.isInteger(record.attempt) &&
+        typeof record.raw?.sha256 === 'string'
+      ) {
+        seen.add(`${record.synthesisRunId}\0${record.pairId}\0${record.attempt}\0${record.raw.sha256}`);
+      }
+    } catch {
+      // Preserve append-only evidence. A malformed historical line cannot match.
+    }
+  }
+  const toWrite: SynthRawRecord[] = [];
+  let skipped = 0;
+  for (const record of rawRecords) {
+    const key = `${record.synthesisRunId}\0${record.pairId}\0${record.attempt}\0${record.raw.sha256}`;
+    if (seen.has(key)) {
+      skipped++;
+    } else {
+      seen.add(key);
+      toWrite.push(record);
+    }
+  }
+  if (toWrite.length > 0) {
+    const needsLeadingNl = existing.length > 0 && !existing.endsWith('\n');
+    appendFileSync(
+      path,
+      (needsLeadingNl ? '\n' : '') + toWrite.map((record) => JSON.stringify(record)).join('\n') + '\n',
+      'utf8',
+    );
+  }
+  return { path, written: toWrite.length, skipped };
+}
+
+/**
+ * Append new claims to the R2 `edges/claims.jsonl` object (dual-mode with the
+ * local mirror — the same artifact edge-loader `--from-r2` reads). R2 has no
+ * append primitive, so this reads the current object, dedupes, and PUTs the
+ * merged JSONL back. Opt-in for a terminal/prepopulation run (the R2 copy is the
+ * shared truth tier — write it deliberately).
+ */
+export async function appendClaimsToR2(
+  store: R2Store,
+  claims: readonly SynthClaim[],
+): Promise<{ key: string; written: number; skipped: number }> {
+  let existing = '';
+  try {
+    existing = await store.getObjectText(R2_CLAIMS_KEY);
+  } catch {
+    existing = ''; // missing object → start fresh
+  }
+  const { toWrite, skipped } = dedupeAgainst(existingKeysFromText(existing), claims);
+  if (toWrite.length > 0) {
+    const base = existing.length === 0 ? '' : existing.endsWith('\n') ? existing : existing + '\n';
+    const body = base + toJsonl(toWrite) + '\n';
+    await store.putObject(R2_CLAIMS_KEY, new TextEncoder().encode(body), 'application/x-ndjson');
+  }
+  return { key: R2_CLAIMS_KEY, written: toWrite.length, skipped: skipped.length };
+}

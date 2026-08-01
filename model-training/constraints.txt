@@ -1,0 +1,24 @@
+# Mirrors the exact `==` pins declared in pyproject.toml's [project.optional-dependencies]
+# (D4, docs/temp/model-training/code-build-decisions.md). `uv` is unavailable and there is
+# no network-enabled resolve environment for this code-build, so this is an exact-pin
+# manifest, NOT a hash-pinned lockfile. Do not add `--hash=` lines without actually
+# resolving them on a network-enabled machine -- a fabricated hash is worse than an
+# admitted gap. The hash-pinned lock (`pip install --require-hashes`) is tracked as an
+# open item in docs/temp/model-training/human-gates.md.
+#
+# Usage once extras are actually installed (a later, execution-run concern):
+#   pip install -c constraints.txt -e ".[ml]"   # or ".[dev]"
+
+# --- dev extra: local/CI tooling only, never imported by package code ---
+ruff==0.6.9
+mypy==1.11.2
+
+# --- ml extra: imported lazily by model code (MT1-MT5) only ---
+numpy==1.26.4
+scipy==1.13.1
+scikit-learn==1.5.1
+torch==2.4.1
+transformers==4.44.2
+datasets==2.20.0
+onnx==1.16.2
+onnxruntime==1.18.1

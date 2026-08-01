@@ -13,3 +13,5 @@ Future<double> getCompletenessScore(String userId, String date)  // 0–100 DQS
 */
 
 export 'impl/logging_controller.dart';
+export 'ui/widgets/daily_scale_visuals.dart';
+export 'ui/widgets/daily_scale_value_visual.dart';

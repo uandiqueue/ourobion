@@ -54,14 +54,37 @@ evidence** before it can be served. The pivotal design decision is *what makes t
 Those two properties are not left to prompt discipline — they are **schema invariants** in
 [`relationships.schema.ts`](../../shared/brain/relationships.schema.ts):
 
-- A verdict of `supported` / `contradicted` **requires `independentRetrieval.performed === true`**. No
-  independent retrieval ⇒ the verdict can only be `uncertain`. This single invariant is what
-  structurally prevents the rubber-stamp failure mode.
-- `supported` / `partial` require ≥1 corroborating source; `contradicted` requires ≥1 contradicting
-  source.
+- A verdict of `supported` / `partial` / `contradicted` **requires
+  `independentRetrieval.performed === true`**. No independent retrieval ⇒ the verdict can only be
+  `uncertain`. This single invariant is what structurally prevents the rubber-stamp failure mode.
+- An approving verdict (`supported` / `partial`) requires a **passing `quoteCheck`** and a
+  `directionCheck` that **matches** the claim; `contradicted` requires a `directionCheck` that does
+  **not** match. Corroboration counts may never exceed what the retrieved source stances support.
 - Each claim must cite ≥1 source and ground ≥1 verbatim quote span, every span pointing at a cited
   source — so a deterministic, near-free `quoteCheck` runs *before* the verifier LLM (if the cited
   span isn't even in the source, that's a free-caught hallucination).
+
+### What the verdict answers — and what it deliberately does not
+
+**The verdict answers exactly one question: is this claim a faithful reading of the ONE paper it
+cites?** That means the quotes are verbatim at the stated offsets, the direction is the direction
+that paper reports, the claim kind is not inflated (an association may not be written as a cause),
+the effect size is the size it reports, and the claim is about the two metrics named. If those hold,
+the verdict is **approving with a caveat**; rejection is reserved for a claim that is irrelevant to,
+or unfaithful to, its cited paper.
+
+**Corroboration, impact tier, venue prestige and evidence tier do NOT influence the verdict** (owner
+instruction 2026-08-01). Independent retrieval still runs — it is the safeguard above and stays
+mandatory — and its sources are still stanced, counted into `corroboration`, and fed to `edgeScore`.
+But whether *other* papers agree reaches the user through the **`caveat`** and nowhere else. This
+closed a measured defect: two faithful single-paper claims came back `unsupported` (confidence 0.92)
+carrying the caveat *"The other studies found did not back this up"* — the verifier was answering a
+question nobody asked, and a claim's own paper backing it counted for nothing. A faithful reading of
+one paper with zero corroborating studies is `supported`-**with-caveat**, not `unsupported`.
+
+This supersedes the earlier clause of [memory 0012](../memory/0012-brain-adversarial-edge-verification.md)
+that made an approving verdict conditional on ≥1 corroborating source. The clause that matters — the
+verifier must perform its OWN retrieval — is untouched. Retrieval still runs; it just no longer votes.
 
 The verifier does not emit a yes/no gate — it emits **structured evidence metadata** that feeds a
 trust score. That is more valuable than a pass/fail and mirrors the registry's `reliability` / `dqs`
