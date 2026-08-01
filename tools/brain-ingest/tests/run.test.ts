@@ -62,7 +62,7 @@ function makeConfig(enabled = allDisabled()): Config {
 }
 
 /** An R2 store backed by an in-memory map (no network). */
-function memStore(): { store: R2Store; puts: string[] } {
+function memStore(): { store: R2Store; puts: string[]; objects: Map<string, Uint8Array> } {
   const objects = new Map<string, Uint8Array>();
   const puts: string[] = [];
   const client = {
@@ -89,7 +89,7 @@ function memStore(): { store: R2Store; puts: string[] } {
       return {};
     },
   };
-  return { store: new R2Store(makeConfig(), { client }), puts };
+  return { store: new R2Store(makeConfig(), { client }), puts, objects };
 }
 
 function tmpCorpus(): string {
@@ -194,7 +194,7 @@ test('dry-run persists discovered records but issues no R2 calls', async () => {
   }
 });
 
-test('non-dry run syncs metadata to R2 â€” meta/<uid>.json + the manifest index', async () => {
+test('non-dry run does not re-sync untouched per-paper metadata', async () => {
   const dir = tmpCorpus();
   const { store, puts } = memStore();
   try {
@@ -223,13 +223,93 @@ test('non-dry run syncs metadata to R2 â€” meta/<uid>.json + the manifest i
 
     await run({ config: makeConfig(), corpusDir: dir, store, log: () => {} });
 
-    // The combined index and a per-paper meta object were both written.
+    // The combined index remains complete, but this pre-existing record was not
+    // rediscovered or changed, so its per-paper object must not be re-HEADed.
     assert.ok(puts.includes('manifest/papers.jsonl'), 'manifest index synced');
-    assert.ok(
-      puts.includes('meta/doi%3A10.1%2Fmeta.json'),
-      'per-paper meta object synced (uid percent-encoded)',
-    );
+    assert.equal(puts.some((key) => key.startsWith('meta/')), false, 'untouched meta excluded');
   } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('metadata sync writes only changed topic records while keeping the complete index', async () => {
+  const dir = tmpCorpus();
+  const { store, puts, objects } = memStore();
+  const untouched: PaperRecord = {
+    paperUid: 'doi:10.1/untouched',
+    identifiers: { doi: '10.1/untouched' },
+    title: 'Untouched corpus member',
+    authors: [],
+    year: 2020,
+    venue: null,
+    abstract: null,
+    discoveredVia: 'crossref',
+    topicTags: ['legacy'],
+    oa: { isOa: false, status: 'unknown', bestOaUrl: null, license: null, version: null },
+    retrievability: 'unknown',
+    storage: { kind: 'none' },
+    fullText: { extracted: false, method: null, charCount: null },
+    status: 'discovered',
+    errors: [],
+    fetchedAt: null,
+  };
+  Manifest.open(dir).append(untouched);
+
+  const enabled = { ...allDisabled(), crossref: true };
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: unknown): Promise<Response> => {
+    const url = String(input);
+    if (!url.includes('api.crossref.org')) throw new Error(`unexpected fetch in test: ${url}`);
+    return {
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      json: async () => ({
+        message: {
+          items: [{
+            DOI: '10.9999/incremental-sync',
+            title: ['Incremental metadata paper'],
+            author: [{ family: 'Tan', given: 'A' }],
+            'container-title': ['Test Journal'],
+            issued: { 'date-parts': [[2026]] },
+          }],
+        },
+      }),
+    } as Response;
+  }) as typeof globalThis.fetch;
+
+  const logs: string[] = [];
+  try {
+    const options = {
+      config: makeConfig(enabled),
+      corpusDir: dir,
+      seed: 'gut_microbiome',
+      limit: 1,
+      store,
+      log: (line: string) => logs.push(line),
+    };
+    await run(options);
+
+    const metaPutsAfterFirst = puts.filter((key) => key.startsWith('meta/'));
+    assert.deepEqual(metaPutsAfterFirst, ['meta/doi%3A10.9999%2Fincremental-sync.json']);
+    assert.ok(logs.some((line) => line.includes('1 changed meta/')));
+
+    const indexBytes = objects.get('manifest/papers.jsonl');
+    assert.ok(indexBytes, 'complete manifest index was written');
+    const indexedUids = new TextDecoder().decode(indexBytes)
+      .trim().split(/\r?\n/).map((line) => (JSON.parse(line) as PaperRecord).paperUid).sort();
+    assert.deepEqual(indexedUids, ['doi:10.1/untouched', 'doi:10.9999/incremental-sync']);
+
+    logs.length = 0;
+    await run(options);
+    assert.equal(
+      puts.filter((key) => key.startsWith('meta/')).length,
+      1,
+      'an identical repeat performs no additional per-paper metadata sync',
+    );
+    assert.ok(logs.some((line) => line.includes('0 changed meta/')));
+  } finally {
+    globalThis.fetch = realFetch;
     rmSync(dir, { recursive: true, force: true });
   }
 });

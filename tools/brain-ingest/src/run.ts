@@ -634,29 +634,40 @@ async function fetchAndStore(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Sync the full metadata view to R2 (NOT called in dry-run): the combined index
- * `manifest/papers.jsonl` (one JSON per line) plus one `meta/<uid>.json` per
- * record (the full {@link PaperRecord} as pretty JSON). `R2Store.sync` sha-skips
- * unchanged objects, so this is idempotent and cheap on resume / multi-day runs.
+ * Sync metadata to R2 (NOT called in dry-run): the combined index always receives
+ * the COMPLETE canonical corpus, while only records changed since the preceding
+ * sync receive a `meta/<uid>.json` write. The split is important: passing a subset
+ * as the index would truncate truth, but re-HEADing every per-paper object makes a
+ * bounded topic run O(corpus) before it can fetch its first paper.
  */
 async function syncMetadata(
   store: R2Store,
-  records: readonly PaperRecord[],
+  indexRecords: readonly PaperRecord[],
+  changedRecords: readonly PaperRecord[],
   log: (line: string) => void,
 ): Promise<void> {
   const encoder = new TextEncoder();
 
   // Combined index: one JSON object per line (JSONL), all current records.
-  const jsonl = records.map((r) => JSON.stringify(r)).join('\n') + (records.length > 0 ? '\n' : '');
+  const jsonl = indexRecords.map((r) => JSON.stringify(r)).join('\n') + (indexRecords.length > 0 ? '\n' : '');
   await store.sync(MANIFEST_KEY, encoder.encode(jsonl), 'application/x-ndjson');
 
-  // Per-paper objects: the full record as pretty JSON, content-addressed by uid.
-  for (const rec of records) {
+  // Per-paper objects: last change wins if one uid changed at multiple stages.
+  const uniqueChanges = new Map(changedRecords.map((record) => [record.paperUid, record]));
+  for (const rec of uniqueChanges.values()) {
     const body = encoder.encode(JSON.stringify(rec, null, 2));
     await store.sync(metaKey(rec.paperUid), body, 'application/json');
   }
 
-  log(`metadata → R2: ${records.length} meta/ + manifest index`);
+  log(
+    `metadata → R2: ${uniqueChanges.size} changed meta/ + complete manifest index ` +
+      `(${indexRecords.length} records)`,
+  );
+}
+
+/** Exact byte-shape comparison for the metadata representation written above. */
+function sameMetadata(left: PaperRecord | undefined, right: PaperRecord): boolean {
+  return left !== undefined && JSON.stringify(left) === JSON.stringify(right);
 }
 
 /**
@@ -850,7 +861,10 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
     );
   }
 
-  // Persist the discovered/classified state up front (so a crash keeps progress).
+  // Persist the discovered/classified state up front (so a crash keeps progress),
+  // but retain only exact changes for the per-paper R2 projection. On a repeat
+  // per-topic run most records compare equal and therefore cost no meta/ HEAD/PUT.
+  const discoveryChanges = records.filter((record) => !sameMetadata(manifest.get(record.paperUid), record));
   manifest.upsertMany(records);
 
   // R2 orphan cleanup (NOT in dry-run): delete the absorbed uids' meta/<uid>.json.
@@ -865,9 +879,9 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
   }
 
   // Push the discovered/classified metadata to R2 (canonical store) — skip in
-  // dry-run. A re-sync is idempotent (sha-skip), so this is cheap on resume.
+  // dry-run. The canonical index remains complete; per-paper sync is incremental.
   if (!opts.dryRun) {
-    await syncMetadata(store, manifest.all(), log);
+    await syncMetadata(store, manifest.all(), discoveryChanges, log);
   }
 
   // ── Step 5–7: retrieve → extract → store (skipped under --dry-run) ──────────
@@ -885,6 +899,7 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
   let skipped = 0;
   let deferred = 0;
   let budgetStopped = false;
+  const changesSinceSync = new Map<string, PaperRecord>();
 
   if (opts.dryRun) {
     for (const rec of limited) {
@@ -908,6 +923,9 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
       }
 
       const { record: finalised, stored } = await fetchAndStore(ctx, store, rec, now);
+      if (!sameMetadata(manifest.get(finalised.paperUid), finalised)) {
+        changesSinceSync.set(finalised.paperUid, finalised);
+      }
       manifest.upsert(finalised);
       if (stored) {
         fetched++;
@@ -945,8 +963,14 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
   // absorbs the stale `pmcid:` orphan. Run AFTER the fetch loop so fetched statuses
   // are final (a fetched record is never absorbed-then-recreated by a later fetch).
   const corpus = reconcileByIdentifiers(manifest.all());
+  for (const record of corpus.merged) {
+    if (!sameMetadata(manifest.get(record.paperUid), record)) {
+      changesSinceSync.set(record.paperUid, record);
+    }
+  }
   for (const uid of corpus.absorbed) {
     manifest.delete(uid);
+    changesSinceSync.delete(uid);
   }
   manifest.upsertMany(corpus.merged);
   if (corpus.absorbed.length > 0) {
@@ -966,9 +990,10 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
 
   // Final metadata sync — captures everything the retrieval loop just finalised
   // (storage{}, fullText{}, fetchedAt) AND the corpus-wide reconcile above.
-  // Idempotent; skipped under --dry-run.
+  // The manifest index is still complete; per-paper objects are only exact changes.
+  // Skipped under --dry-run.
   if (!opts.dryRun) {
-    await syncMetadata(store, manifest.all(), log);
+    await syncMetadata(store, manifest.all(), [...changesSinceSync.values()], log);
   }
 
   const summary = manifest.summary();
