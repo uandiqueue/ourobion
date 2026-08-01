@@ -86,8 +86,8 @@ updated: 2026-08-01
   output was remeasured at 536 paths / 76,360 additions for that integration head.
 - Rebased through `57cf3bd`; `seed-queries --candidates-only` reproduced 6 static topics + 16 total
   candidates (8 derived, 2 rule, 6 topic); active registry load reproduced 24 keys.
-- `product-cap --head 9c29d7e69a389ab2cb7a218cd2e22e01ce88a9e4` — 572 paths / 84,494
-  additions, `withinCap: false`; binding unit delta from `abcba95` — 66 paths / 5,971 additions,
+- `node --test tools/run4_release_gate.test.mjs` — 18/18 with the 572-path / 84,496-line snapshot;
+  binding unit delta from `abcba95` — 66 paths / 5,973 additions,
   within the 115 / 8,500 caps.
 
 memory: none
