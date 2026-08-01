@@ -40,6 +40,13 @@ import type { AcceptanceCallContext } from '../../llm-router/src/index.js';
 import { runSinglePaper } from './singlePaper.js';
 import { runOfflineAcceptance } from './offlineAcceptance.js';
 import { runLiveAcceptance, type LiveAcceptanceLeg } from './liveAcceptance.js';
+import {
+  normalizeArtifactHashes,
+  promoteArtifactBundle,
+  readLocalArtifactBundle,
+  readR2ArtifactBundle,
+  type ArtifactHashes,
+} from './artifactPromotion.js';
 
 const USAGE = `ourobion brain-ingest — open-access-first paper-corpus fetcher
 
@@ -114,6 +121,17 @@ Commands:
   live-acceptance --bundle <file> --leg <anthropic-synthesis|openai-synthesis|agnes-verification> --execute
                                                    one ordered provider leg after offline preflight;
                                                    fixed journal/state, no R2 or DB.
+  promote-edge-artifacts [--edges-dir <dir>] --claims-sha256 <hex>
+                         --blueprints-sha256 <hex> --verifications-sha256 <hex>
+                         [--env-file <path>] [--check]
+                                                   NO-PROVIDER exact-byte promotion of an existing
+                                                   post-#300 claim + blueprint + verification bundle.
+                                                   Every hash and shared contract is checked before
+                                                   R2; any non-identical existing key fails closed.
+  check-r2-edge-artifacts --claims-sha256 <hex> --blueprints-sha256 <hex>
+                          --verifications-sha256 <hex> [--env-file <path>]
+                                                   fetch and validate the exact pinned three-object
+                                                   R2 bundle; no provider or database access.
   venue --issn <issn> [--sjr-quartile 1-4]         b2 venue lookup: OpenAlex Source stats +
                                                    C8 impactTier band (per-ISSN cache)
 
@@ -746,6 +764,62 @@ async function runLiveAcceptanceCli(flags: Set<string>, options: Map<string, str
 }
 
 /** CLI main — returns the process exit code. Async: the pipeline verbs await `run`. */
+function artifactHashesFromOptions(options: Map<string, string>): ArtifactHashes {
+  const claims = options.get('claims-sha256');
+  const blueprints = options.get('blueprints-sha256');
+  const verifications = options.get('verifications-sha256');
+  const missing = [
+    ['claims-sha256', claims],
+    ['blueprints-sha256', blueprints],
+    ['verifications-sha256', verifications],
+  ]
+    .filter(([, value]) => value === undefined)
+    .map(([name]) => `--${name}`);
+  if (missing.length > 0) throw new Error(`artifact bundle needs ${missing.join(', ')}`);
+  return normalizeArtifactHashes({
+    claims: claims!,
+    blueprints: blueprints!,
+    verifications: verifications!,
+  });
+}
+
+async function runPromoteEdgeArtifacts(flags: Set<string>, options: Map<string, string>): Promise<number> {
+  const hashes = artifactHashesFromOptions(options);
+  const edgesDir = options.get('edges-dir') ?? defaultEdgesDir(repoRoot());
+  const bundle = await readLocalArtifactBundle(edgesDir, hashes);
+  process.stdout.write(
+    `validated local bundle: ${bundle.claims.records} claim(s), ` +
+      `${bundle.blueprints.records} blueprint(s), ${bundle.verifications.records} verification(s)\n`,
+  );
+  const result = await promoteArtifactBundle(new R2Store(loadConfig(options.get('env-file'))), bundle, {
+    checkOnly: flags.has('check'),
+  });
+  for (const kind of ['blueprints', 'claims', 'verifications'] as const) {
+    const action = result.written.includes(kind) ? 'written' : result.checked[kind];
+    process.stdout.write(`  - ${bundle[kind].objectName}: ${action} (${bundle[kind].sha256})\n`);
+  }
+  process.stdout.write(
+    flags.has('check')
+      ? 'Check only — no R2 writes and no provider/database access.\n'
+      : `Promotion complete — ${result.written.length} R2 object(s) written; no provider/database access.\n`,
+  );
+  return 0;
+}
+
+async function runCheckR2EdgeArtifacts(options: Map<string, string>): Promise<number> {
+  const hashes = artifactHashesFromOptions(options);
+  const bundle = await readR2ArtifactBundle(new R2Store(loadConfig(options.get('env-file'))), hashes);
+  process.stdout.write(
+    `validated exact R2 bundle: ${bundle.claims.records} claim(s), ` +
+      `${bundle.blueprints.records} blueprint(s), ${bundle.verifications.records} verification(s)\n`,
+  );
+  for (const kind of ['blueprints', 'claims', 'verifications'] as const) {
+    process.stdout.write(`  - ${bundle[kind].objectName}: ${bundle[kind].sha256}\n`);
+  }
+  process.stdout.write('No provider or database access.\n');
+  return 0;
+}
+
 export async function main(argv: string[]): Promise<number> {
   const { command, flags, options } = parseArgs(argv);
 
@@ -824,6 +898,12 @@ export async function main(argv: string[]): Promise<number> {
 
       case 'single-paper':
         return await runSinglePaperCli(flags, options);
+
+      case 'promote-edge-artifacts':
+        return await runPromoteEdgeArtifacts(flags, options);
+
+      case 'check-r2-edge-artifacts':
+        return await runCheckR2EdgeArtifacts(options);
 
       case 'venue':
         return await runVenueLookup(options);

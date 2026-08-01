@@ -667,6 +667,61 @@ test('#300 G1: one process, N papers, N calls — serial, one call per paper', a
   assert.equal(result.budget.stopReason, 'completed');
 });
 
+test('#300 whole-paper push publishes the blueprint before its claim', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ourobion-batch-'));
+  const puts: string[] = [];
+  const r2Store = {
+    async getObjectText() {
+      throw new Error('missing');
+    },
+    async putObject(key: string) {
+      puts.push(key);
+      return { key, sha256: 'test', sizeBytes: 1 };
+    },
+  };
+  const router = {
+    async route() {
+      return {
+        text: JSON.stringify({
+          claims: [
+            claim({
+              citations: [{ paperId: 'p1', stance: 'supports' }],
+              quoteSpans: [{ paperId: 'p1', role: 'evidence', quote: EVIDENCE_QUOTE }],
+              blueprint: BLUEPRINT,
+            }),
+          ],
+        }),
+        usage: { inputTokens: 0, outputTokens: 0 },
+        model: 'gpt-5',
+        modelIdentity: {
+          model: 'gpt-5',
+          source: 'provider-response' as const,
+          providerAttested: true,
+          family: 'openai' as const,
+          returnedVersion: null,
+          decorrelatedFromSynthesis: null,
+        },
+        route: 'api_worker' as const,
+      };
+    },
+  };
+
+  const result = await synthesizePapers(
+    batchOpts({
+      edgesDir: dir,
+      paperUids: ['p1'],
+      router,
+      emitBlueprints: true,
+      pushR2: true,
+      r2Store,
+    }) as never,
+  );
+
+  assert.deepEqual(puts, ['edges/blueprints.jsonl', 'edges/claims.jsonl']);
+  assert.equal(result.blueprintR2?.written, 1);
+  assert.equal(result.r2?.written, 1);
+});
+
 test('#300 G2: a call ceiling stops the run CLEANLY and reports how to resume', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'ourobion-batch-'));
   const router = routerFor({ inputTokens: 0, outputTokens: 0 });

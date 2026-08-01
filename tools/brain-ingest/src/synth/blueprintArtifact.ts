@@ -18,6 +18,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { R2Store } from '../storage/r2.js';
 import { blueprintDedupeKey, dedupeBlueprints, existingBlueprintKeysFromText } from './blueprint.js';
 import type { SynthBlueprintRecord } from './types.js';
 
@@ -73,6 +74,33 @@ export function appendBlueprintsToDir(
   const body = blueprintsToJsonl(toWrite);
   writeFileSync(path, `${prior}${needsNewline ? '\n' : ''}${body}\n`, 'utf8');
   return { path, written: toWrite.length, skipped: merged.length };
+}
+
+/**
+ * Append new blueprint records to the canonical R2 artifact.
+ *
+ * R2 has no append primitive, so this mirrors the claims/verifications writers:
+ * read the current object, dedupe by the #300 G3 key, then PUT the merged JSONL.
+ * The caller publishes blueprints before claims so a failed blueprint write cannot
+ * expose a claim whose required rule artifact never landed.
+ */
+export async function appendBlueprintsToR2(
+  store: R2Store,
+  records: readonly SynthBlueprintRecord[],
+): Promise<{ key: string; written: number; skipped: number }> {
+  let existing = '';
+  try {
+    existing = await store.getObjectText(R2_BLUEPRINTS_KEY);
+  } catch {
+    existing = '';
+  }
+  const { toWrite, merged } = dedupeBlueprints(existingBlueprintKeysFromText(existing), records);
+  if (toWrite.length > 0) {
+    const base = existing.length === 0 ? '' : existing.endsWith('\n') ? existing : existing + '\n';
+    const body = base + blueprintsToJsonl(toWrite) + '\n';
+    await store.putObject(R2_BLUEPRINTS_KEY, new TextEncoder().encode(body), 'application/x-ndjson');
+  }
+  return { key: R2_BLUEPRINTS_KEY, written: toWrite.length, skipped: merged.length };
 }
 
 export { blueprintDedupeKey };

@@ -48,6 +48,7 @@ import {
   defaultEdgesDir,
 } from './artifact.js';
 import {
+  appendBlueprintsToR2,
   appendBlueprintsToDir,
   blueprintsPath,
   existingBlueprintKeys,
@@ -118,6 +119,8 @@ export interface SynthesizePapersOptions {
   dryRun?: boolean;
   /** Also append accepted claims to R2 `edges/claims.jsonl` (opt-in). */
   pushR2?: boolean;
+  /** Injected R2 store (tests); default the configured canonical store. */
+  r2Store?: R2Store;
   now?: () => number;
   log?: (line: string) => void;
 }
@@ -135,6 +138,7 @@ export interface SynthesizePapersResult {
   write?: { path: string; written: number; skipped: number };
   blueprintWrite?: { path: string; written: number; skipped: number };
   r2?: { key: string; written: number; skipped: number };
+  blueprintR2?: { key: string; written: number; skipped: number };
 }
 
 /** Paper uids already represented in an existing claims artifact (G2 resumability). */
@@ -437,18 +441,29 @@ export async function synthesizePapers(
   if (!opts.dryRun && accepted.length > 0) {
     result.write = appendClaimsToDir(edgesDir, accepted);
     log(`synth: wrote ${result.write.written} claim(s) (${result.write.skipped} dup) → ${result.write.path}`);
-    if (opts.pushR2) {
-      const store = new R2Store(loadConfig());
-      result.r2 = await appendClaimsToR2(store, accepted);
-      log(`synth: pushed ${result.r2.written} claim(s) (${result.r2.skipped} dup) → r2 ${result.r2.key}`);
-    }
   }
   if (!opts.dryRun && deduped.toWrite.length > 0) {
     result.blueprintWrite = appendBlueprintsToDir(edgesDir, deduped.toWrite);
     log(
       `synth: wrote ${result.blueprintWrite.written} blueprint(s) ` +
-        `(${result.blueprintWrite.skipped} dup) → ${result.blueprintWrite.path}`,
+      `(${result.blueprintWrite.skipped} dup) → ${result.blueprintWrite.path}`,
     );
+  }
+  if (!opts.dryRun && opts.pushR2) {
+    const store = opts.r2Store ?? new R2Store(loadConfig());
+    // Publish the required blueprint first. If it fails, no new claim becomes
+    // visible in R2 without its post-#300 rule artifact.
+    if (deduped.toWrite.length > 0) {
+      result.blueprintR2 = await appendBlueprintsToR2(store, deduped.toWrite);
+      log(
+        `synth: pushed ${result.blueprintR2.written} blueprint(s) ` +
+          `(${result.blueprintR2.skipped} dup) → r2 ${result.blueprintR2.key}`,
+      );
+    }
+    if (accepted.length > 0) {
+      result.r2 = await appendClaimsToR2(store, accepted);
+      log(`synth: pushed ${result.r2.written} claim(s) (${result.r2.skipped} dup) → r2 ${result.r2.key}`);
+    }
   }
 
   return result;
