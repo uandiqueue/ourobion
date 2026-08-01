@@ -157,17 +157,27 @@ variants are bundled for white/pale surfaces and are intentionally unused by thi
 
 ---
 
-## Deploy (Cloudflare Workers, outline)
+## Deploy (Cloudflare Workers)
+
+Pushes to `main` that change `apps/nao/`, `shared/`, or the deploy workflow automatically run
+`.github/workflows/nao-deploy.yml`. The workflow always checks out `main`, runs typecheck + tests,
+builds with OpenNext, and deploys the `ourobion-nao` Worker while preserving dashboard-managed vars.
+It can also be retried manually from GitHub Actions, but only from `main`.
+
+Configure these GitHub Actions secrets before the first automatic deploy:
+
+- `CLOUDFLARE_API_TOKEN` — permission to edit the `ourobion-nao` Worker and its route/bindings.
+- `CLOUDFLARE_ACCOUNT_ID` — the account that owns the Worker and `ourobion.com` zone.
+- `SUPABASE_URL` and `SUPABASE_ANON_KEY` — already-used hosted Supabase public build values.
+
+For an operator deploy from a trusted machine:
 
 1. `npx wrangler login`.
 2. `npx wrangler d1 create ourobion-nao-index` → put the returned `database_id` in `wrangler.jsonc`.
 3. Apply schema + build the **remote** index: `... d1 execute ourobion-nao-index --remote --file=src/db/schema.sql` then `npm run etl -- --remote`.
-4. Build via OpenNext, then deploy and bind the route (`nao.ourobion.com`). Before deployment, supply
-   the four required Worker runtime values named above; `GH_REPO` / `GH_ACTIONS_REF` and `CORPUS` /
-   `DB` come from `wrangler.jsonc`.
-
-This section is an operator outline, not evidence that those hosted steps were executed. Issue #227's
-authorized verification stops at local build, bundle inspection, and config/type validation.
+4. Run `npm run deploy` to build via OpenNext, deploy, and bind the route (`nao.ourobion.com`).
+   Before deployment, supply the four required Worker runtime values named above; `GH_REPO` /
+   `GH_ACTIONS_REF` and `CORPUS` / `DB` come from `wrangler.jsonc`.
 
 See [`docs/nao/nao-app-design.md`](../../docs/nao/nao-app-design.md) for the full design + rationale.
 **Doc map (start here):** [`docs/INDEX.md`](../../docs/INDEX.md).

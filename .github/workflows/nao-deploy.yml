@@ -1,0 +1,89 @@
+name: Deploy nao
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - apps/nao/**
+      - shared/**
+      - .github/workflows/nao-deploy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nao-production
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  deploy:
+    name: Build, test, and deploy production Worker
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_APP_ENV: production
+    steps:
+      - name: Check out main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: refs/heads/main
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: apps/nao/package-lock.json
+
+      - name: Require production deployment credentials
+        run: |
+          set -euo pipefail
+          missing=''
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY; do
+            if [ -z "${!name:-}" ]; then
+              missing="${missing} ${name}"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            echo "Missing required GitHub Actions values:${missing}" >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        working-directory: apps/nao
+        run: npm ci
+
+      - name: Write production public build config
+        working-directory: apps/nao
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s\n' \
+            "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}" \
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}" \
+            "NEXT_PUBLIC_APP_ENV=${NEXT_PUBLIC_APP_ENV}" \
+            > .env.public
+
+      - name: Typecheck
+        working-directory: apps/nao
+        run: npm run typecheck
+
+      - name: Test
+        working-directory: apps/nao
+        run: npm test
+
+      - name: Deploy production Worker
+        working-directory: apps/nao
+        run: npm run deploy

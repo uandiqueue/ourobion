@@ -11,6 +11,7 @@
     "dev": "next dev",
     "prebuild": "npm run gen-env",
     "build": "next build",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy -- --keep-vars",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-test-module-mocks --test \"tests/**/*.test.ts\"",
     "lint": "next lint",
