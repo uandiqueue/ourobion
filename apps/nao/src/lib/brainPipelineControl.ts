@@ -31,8 +31,24 @@ export interface BrainPipelineRequest {
   confirmSpend: '' | 'RUN';
 }
 
+/**
+ * The operation this control surface dispatches. `brain-pipeline.yml` declares
+ * `operation` as a REQUIRED choice input, and GitHub rejects a
+ * `workflow_dispatch` that omits a required input — so it has to be sent.
+ *
+ * It is pinned to `full` because that is the only operation this form can
+ * express: the workflow's `project-only` branch demands exact 64-hex SHA-256
+ * digests for the three R2 edge artifacts, and nao collects papers and an
+ * artifact revision instead. The workflow keeps `default: project-only`, so the
+ * no-spend projection remains the default for every other dispatcher and for a
+ * manual run from the Actions tab. The `full` path is still fail-closed here:
+ * `dry_run` defaults to true and a live run needs both an approved corpus and
+ * the exact `confirm_spend: RUN`.
+ */
+export const BRAIN_PIPELINE_OPERATION = 'full';
+
 export interface BrainPipelineWorkflowInputs {
-  pair: string;
+  operation: typeof BRAIN_PIPELINE_OPERATION;
   papers: string;
   artifact_revision: string;
   corpus: string;
@@ -134,7 +150,10 @@ export function parseBrainPipelineRequest(body: unknown): BrainPipelineParseResu
     ok: true,
     value: parsed,
     workflowInputs: {
-      pair: parsed.pair.join(','),
+      operation: BRAIN_PIPELINE_OPERATION,
+      // `pair` is deliberately absent: brain-pipeline.yml declares no such
+      // input, and GitHub 422s a dispatch carrying an undeclared one. The
+      // chosen metric pair is still recorded on the control-audit event.
       papers: parsed.papers.join(','),
       artifact_revision: parsed.artifactRevision,
       corpus: parsed.corpus,

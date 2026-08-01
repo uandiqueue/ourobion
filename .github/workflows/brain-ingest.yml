@@ -62,6 +62,16 @@ jobs:
         env:
           SEED: ${{ inputs.seed }}
           LIMIT: ${{ inputs.limit }}
+          # The `ingestion_seeds` boundary (src/seeder/dbSeeds.ts) reads
+          # `opts.env ?? process.env` directly, and config.ts's .env parser
+          # builds a LOCAL merged object — it never writes back into
+          # process.env. So these must be step env, NOT extra lines in the
+          # .env file written above; the same trap 115dbf9 fixed for the
+          # provider keys. Without them the loader degrades (fail-soft) to
+          # static topics only and a seed added in nao is rejected as if the
+          # operator had typed an unknown topic.
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           set -eu
           ARGS=(ingest --remote-control)

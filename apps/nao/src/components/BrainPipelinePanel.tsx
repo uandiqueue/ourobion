@@ -45,6 +45,7 @@ export function BrainPipelinePanel() {
   const [models, setModels] = useState<ModelsState | null>(null);
   const [claims, setClaims] = useState<ClaimView[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [pipelineReason, setPipelineReason] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -62,9 +63,15 @@ export function BrainPipelinePanel() {
     setLoadError(null);
     const results = await Promise.allSettled([
       fetch('/api/brain-pipeline').then(async (response) => {
-        const body = await response.json() as PipelineState | { error?: string };
-        if (!response.ok || !('dispatchability' in body)) {
-          throw new Error('Pipeline registration could not be inspected.');
+        const body = await response.json().catch(() => null) as PipelineState | { error?: string } | null;
+        if (!response.ok || body === null || !('dispatchability' in body)) {
+          // The server already names the failing step and its status. Replacing
+          // that with a house sentence is what made a dead form unreadable, so
+          // pass the reason through and only fall back when there is none.
+          const reason = typeof (body as { error?: unknown } | null)?.error === 'string'
+            ? (body as { error: string }).error
+            : 'Pipeline registration could not be inspected.';
+          throw new Error(reason);
         }
         return body;
       }),
@@ -79,6 +86,13 @@ export function BrainPipelinePanel() {
     ]);
     const [pipelineResult, modelsResult, claimsResult] = results;
     setPipeline(pipelineResult.status === 'fulfilled' ? pipelineResult.value : null);
+    setPipelineReason(
+      pipelineResult.status === 'rejected'
+        ? (pipelineResult.reason instanceof Error
+            ? pipelineResult.reason.message
+            : String(pipelineResult.reason))
+        : null,
+    );
     setModels(modelsResult.status === 'fulfilled' ? modelsResult.value : null);
     setClaims(claimsResult.status === 'fulfilled' ? claimsResult.value.claims : []);
     const errors = results
@@ -135,6 +149,23 @@ export function BrainPipelinePanel() {
     papers.trim() !== '' &&
     artifactRevision.trim() !== '' &&
     (dryRun || (corpus !== '' && confirmSpend === 'RUN'));
+
+  // Every reason the dispatch button is refusing, in the operator's words. The
+  // guards above are unchanged — this only stops them from being invisible. A
+  // greyed button with no stated cause is indistinguishable from a broken page,
+  // which is exactly how a form waiting on two empty fields got read as a
+  // pipeline that would not start.
+  const blockers = useMemo(() => {
+    const reasons: string[] = [];
+    if (!dispatchable) reasons.push('the workflow is not confirmed dispatchable yet');
+    if (leftMetric === rightMetric) reasons.push('metric A and metric B must differ');
+    if (papers.trim() === '') reasons.push('at least one paper UID is required');
+    if (artifactRevision.trim() === '') reasons.push('an artifact revision is required');
+    if (!dryRun && corpus === '') reasons.push('a live run needs an approved verification corpus');
+    if (!dryRun && confirmSpend !== 'RUN') reasons.push('a live run needs the exact word RUN typed to authorize spend');
+    if (!dryRun && synthesisBudget === null) reasons.push('no published synthesis budget is available to bound a live run');
+    return reasons;
+  }, [dispatchable, leftMetric, rightMetric, papers, artifactRevision, dryRun, corpus, confirmSpend, synthesisBudget]);
 
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -204,6 +235,7 @@ export function BrainPipelinePanel() {
         ) : (
           <p className="fmt__cap brain-pipeline__blocked" role="status">
             <strong>Dispatchability is unknown.</strong> No run can start until registration is confirmed.
+            {pipelineReason === null ? '' : ' ' + pipelineReason}
           </p>
         )}
         <button type="button" className="ingest-btn ingest-btn--ghost" onClick={() => void refresh()} disabled={busy}>
@@ -341,6 +373,11 @@ export function BrainPipelinePanel() {
           <button type="submit" className="ingest-btn" disabled={busy || !formReady || (!dryRun && synthesisBudget === null)}>
             {busy ? 'Dispatching…' : dryRun ? 'Dispatch dry run' : 'Dispatch live run'}
           </button>
+          {blockers.length > 0 ? (
+            <p className="fmt__cap brain-pipeline__blocked" role="status">
+              Dispatch is held because {blockers.join('; ')}.
+            </p>
+          ) : null}
         </form>
         {message ? <p className="fmt__cap ingest-success">{message}</p> : null}
         {actionError ? <p className="fmt__cap brain-pipeline__blocked">{actionError}</p> : null}
