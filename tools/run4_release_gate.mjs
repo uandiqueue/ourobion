@@ -53,6 +53,10 @@ export function hashTextEvidence(value) {
 //   38205d2532ef528ab3752d9013d457c2ee994314  (accepted U3 base; superseded by #254 integration merge)
 //   42ae771c4809fe8f314fbf38dca89d60a809dedb  (#221 evidence base; ACCEPTED for that push only,
 //                                              superseded by the #288/#291/#270 integration merges)
+//   abcba95f8386d31c49f62f20f4b623de180e29c0  (#307 base — accepted PR #306 integration merge;
+//                                              superseded by seven later integration merges)
+//   e6f0e1f09a1cae7ab02e580af88c3da88c99298d  (#330 candidate base — accepted PR #305 merge;
+//                                              superseded before push by PR #331 landing)
 //
 // Re-advanced for the same R4-U1 correction (#232), same branch. #232's green status went stale
 // again: PR #199 (the U4 scientific-semantics/trust-labels unit) merged into the integration
@@ -102,7 +106,20 @@ export function hashTextEvidence(value) {
 // code-identity surface unchanged, there is no mechanism by which the four handlers' 401
 // unauthenticated behaviour could have moved since it was probed. Had any graph hash differed,
 // reusing the routes would have needed a real re-probe instead.
-export const RUN4_UNIT_BASE_SHA = 'abcba95f8386d31c49f62f20f4b623de180e29c0';
+//
+// Advanced to 9867bae9 (issue #330), the accepted PR #331 integration merge and the exact current
+// dev-phase2-run4 tip. Seven merges landed after abcba95f and consumed 8,029 of the 8,500-line
+// per-unit budget before #329 contributed a line, leaving only 471 lines. PR #329 then measured
+// 9,756 added lines from that stale base and correctly failed closed. The mandatory pre-push remote
+// check then caught PR #331 landing: that eighth merge added 178 more lines, taking accepted history
+// to 8,207 / 8,500 and leaving 293. This advance does not widen the caps; it starts the next unit at
+// the integration history that has already been accepted.
+//
+// Docker Desktop remained unavailable for this advance, so the existing local serve-probe route
+// evidence is carried forward and disclosed rather than presented as freshly probed. The four
+// frozen module graphs, their entrypoints/import maps, config, and lock must be regenerated and
+// byte-identical before that evidence can be reused; any identity drift requires a fresh probe.
+export const RUN4_UNIT_BASE_SHA = '9867bae92038b33b262732ac8255b9144409f638';
 
 // ---------------------------------------------------------------------------------------------
 // Immutable product cap (issue #183) — MEASURED AND RECORDED, NOT YET GATING.
