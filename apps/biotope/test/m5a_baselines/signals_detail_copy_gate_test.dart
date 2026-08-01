@@ -67,7 +67,7 @@ void main() {
       expect(MetricDetailCopy.axisUnit('stool_count'), 'Stool count, 0 to 10');
       expect(
         MetricDetailCopy.axisUnit(kSleepMetricKey),
-        'Recorded value (min)',
+        'Sleep duration (min)',
       );
       expect(
         MetricDetailCopy.axisUnit('future_numeric_metric'),

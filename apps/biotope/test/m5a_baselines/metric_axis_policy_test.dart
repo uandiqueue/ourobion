@@ -12,6 +12,10 @@ void main() {
       expect(metricAxisTickLabel('stool_form', 7), '7 watery');
     });
 
+    test('named scale fallback labels round fractional ticks', () {
+      expect(metricAxisTickLabel('urine_colour', 2.5), '3');
+      expect(metricAxisTickLabel('stool_form', 2.5), '3');
+    });
     test('every declared numeric unit is appended without a key policy', () {
       final unitMetrics = kMetrics.where(
         (metric) =>
@@ -51,9 +55,9 @@ void main() {
       expect(metricAxisDescription('stool_count'), 'Stool count, 0 to 10');
       expect(
         metricAxisDescription('sleep_duration_min'),
-        'Recorded value (min)',
+        'Sleep duration (min)',
       );
-      expect(metricAxisDescription('step_count'), 'Recorded value (steps)');
+      expect(metricAxisDescription('step_count'), 'Steps');
     });
 
     test('unknown metadata has a truthful generic fallback', () {

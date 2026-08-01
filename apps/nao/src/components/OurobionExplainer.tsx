@@ -32,38 +32,52 @@ const STAGES: readonly string[] = ['SYNTHESIS', 'INDEPENDENT VERIFICATION', 'PUB
 
 export function OurobionExplainer() {
   return (
-    <main style={styles.main}>
+    <main className="ourobion-explainer" style={styles.main}>
       <div style={styles.wrap}>
         <p className="eyebrow">OUROBION</p>
-        <h1 style={styles.heading}>How Ourobion works</h1>
-        <p style={styles.intro}>
+        <h1 className="ourobion-explainer__heading" style={styles.heading}>
+          How Ourobion works
+        </h1>
+        <p className="ourobion-explainer__intro" style={styles.intro}>
           Ourobion connects a personal reflection app with an expert workspace for preparing
           research context.
         </p>
 
-        <section style={styles.cards} aria-label="The two apps and the boundary between them">
+        <section
+          className="ourobion-explainer__cards"
+          style={styles.cards}
+          aria-label="The two apps and the boundary between them"
+        >
           {CARDS.map((card) => (
-            <article key={card.label} style={styles.card}>
+            <article key={card.label} className="ourobion-explainer__card" style={styles.card}>
               <p className="eyebrow" style={styles.cardLabel}>
                 {card.label}
               </p>
-              <p style={styles.cardBody}>{card.body}</p>
+              <p className="ourobion-explainer__card-body" style={styles.cardBody}>
+                {card.body}
+              </p>
             </article>
           ))}
         </section>
 
-        <section style={styles.flowSection} aria-label="The high-level stages">
-          <ol style={styles.flow}>
+        <section
+          className="ourobion-explainer__flow-section"
+          style={styles.flowSection}
+          aria-label="The high-level stages"
+        >
+          <ol className="ourobion-explainer__flow" style={styles.flow}>
             {STAGES.map((stage, i) => (
-              <li key={stage} style={styles.flowItem}>
-                <span style={styles.flowStage}>{stage}</span>
+              <li key={stage} className="ourobion-explainer__flow-item" style={styles.flowItem}>
+                <span className="ourobion-explainer__flow-stage" style={styles.flowStage}>
+                  {stage}
+                </span>
                 {i < STAGES.length - 1 ? <span style={styles.flowSep}>→</span> : null}
               </li>
             ))}
           </ol>
         </section>
 
-        <p style={styles.unlock}>
+        <p className="ourobion-explainer__unlock" style={styles.unlock}>
           Signing in gives authorized workspace members access to the review tools for research
           context.
         </p>
@@ -181,7 +195,7 @@ const styles: Record<string, CSSProperties> = {
   },
   ctaNote: {
     margin: 0,
-    color: 'var(--text-muted)',
+    color: 'var(--text-secondary)',
     fontSize: '0.8rem',
   },
 };

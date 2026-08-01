@@ -102,8 +102,8 @@ export interface MetricDefinition {
    * Set for every baselineApplicable metric; null for metrics S4 never signals on.
    */
   signal: { deadbandK: number } | null;
-  /** Optional hint for the M2 self-report screens. */
-  ui: { label: string; inputType: string } | null;
+  /** Optional display metadata; inputType is present only for self-report controls. */
+  ui: { label: string; inputType: string | null } | null;
   /** Explicit primitive-to-day policy. Omitted/null until a primitive-homed metric is selected. */
   dailyProjection?: DailyProjection | null;
   status: MetricStatus;
@@ -491,7 +491,7 @@ const WEARABLE: MetricDefinition[] = [
     preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
     signal: { deadbandK: 1.0 },
-    ui: null,
+    ui: { label: 'Resting heart rate', inputType: null },
     status: 'active',
     introducedIn: 'phase2',
     deprecatedAt: null,
@@ -513,7 +513,7 @@ const WEARABLE: MetricDefinition[] = [
     preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
     signal: { deadbandK: 1.0 },
-    ui: null,
+    ui: { label: 'Heart-rate variability (SDNN)', inputType: null },
     status: 'active',
     introducedIn: 'phase2',
     deprecatedAt: null,
@@ -535,7 +535,7 @@ const WEARABLE: MetricDefinition[] = [
     preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
     signal: { deadbandK: 1.0 },
-    ui: null,
+    ui: { label: 'Sleep duration', inputType: null },
     status: 'active',
     introducedIn: 'phase2',
     deprecatedAt: null,
@@ -557,7 +557,7 @@ const WEARABLE: MetricDefinition[] = [
     preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
     signal: { deadbandK: 1.0 },
-    ui: null,
+    ui: { label: 'Blood oxygen', inputType: null },
     status: 'active',
     introducedIn: 'phase2',
     deprecatedAt: null,
@@ -579,7 +579,7 @@ const WEARABLE: MetricDefinition[] = [
     preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
     signal: { deadbandK: 1.0 },
-    ui: null,
+    ui: { label: 'Body temperature', inputType: null },
     status: 'active',
     introducedIn: 'phase2',
     deprecatedAt: null,
@@ -602,7 +602,7 @@ const WEARABLE: MetricDefinition[] = [
     preferredSource: null,
     dqs: { weight: 0, countsTowardDailyCompleteness: false },
     signal: { deadbandK: 1.0 },
-    ui: null,
+    ui: { label: 'Steps', inputType: null },
     status: 'active',
     introducedIn: 'phase2',
     deprecatedAt: null,

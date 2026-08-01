@@ -25,7 +25,7 @@ class MetricSignal {
 
 class MetricUi {
   final String label;
-  final String inputType;
+  final String? inputType;
   const MetricUi({required this.label, required this.inputType});
 }
 
@@ -652,7 +652,7 @@ const List<MetricDefinition> kMetrics = [
     preferredSource: null,
     dqs: MetricDqs(weight: 0, countsTowardDailyCompleteness: false),
     signal: MetricSignal(deadbandK: 1.0),
-    ui: null,
+    ui: MetricUi(label: 'Resting heart rate', inputType: null),
     status: 'active',
     introducedIn: 'phase2',
     deprecatedAt: null,
@@ -674,7 +674,7 @@ const List<MetricDefinition> kMetrics = [
     preferredSource: null,
     dqs: MetricDqs(weight: 0, countsTowardDailyCompleteness: false),
     signal: MetricSignal(deadbandK: 1.0),
-    ui: null,
+    ui: MetricUi(label: 'Heart-rate variability (SDNN)', inputType: null),
     status: 'active',
     introducedIn: 'phase2',
     deprecatedAt: null,
@@ -696,7 +696,7 @@ const List<MetricDefinition> kMetrics = [
     preferredSource: null,
     dqs: MetricDqs(weight: 0, countsTowardDailyCompleteness: false),
     signal: MetricSignal(deadbandK: 1.0),
-    ui: null,
+    ui: MetricUi(label: 'Sleep duration', inputType: null),
     status: 'active',
     introducedIn: 'phase2',
     deprecatedAt: null,
@@ -718,7 +718,7 @@ const List<MetricDefinition> kMetrics = [
     preferredSource: null,
     dqs: MetricDqs(weight: 0, countsTowardDailyCompleteness: false),
     signal: MetricSignal(deadbandK: 1.0),
-    ui: null,
+    ui: MetricUi(label: 'Blood oxygen', inputType: null),
     status: 'active',
     introducedIn: 'phase2',
     deprecatedAt: null,
@@ -740,7 +740,7 @@ const List<MetricDefinition> kMetrics = [
     preferredSource: null,
     dqs: MetricDqs(weight: 0, countsTowardDailyCompleteness: false),
     signal: MetricSignal(deadbandK: 1.0),
-    ui: null,
+    ui: MetricUi(label: 'Body temperature', inputType: null),
     status: 'active',
     introducedIn: 'phase2',
     deprecatedAt: null,
@@ -763,7 +763,7 @@ const List<MetricDefinition> kMetrics = [
     preferredSource: null,
     dqs: MetricDqs(weight: 0, countsTowardDailyCompleteness: false),
     signal: MetricSignal(deadbandK: 1.0),
-    ui: null,
+    ui: MetricUi(label: 'Steps', inputType: null),
     status: 'active',
     introducedIn: 'phase2',
     deprecatedAt: null,

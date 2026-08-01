@@ -80,7 +80,7 @@ export const metricDefinitionSchema = z.object({
     countsTowardDailyCompleteness: z.boolean(),
   }),
   signal: z.object({ deadbandK: z.number().positive() }).nullable(),
-  ui: z.object({ label: z.string(), inputType: z.string() }).nullable(),
+  ui: z.object({ label: z.string(), inputType: z.string().nullable() }).nullable(),
   dailyProjection: dailyProjectionSchema.nullable().default(null),
   status: metricStatusSchema,
   introducedIn: z.string(),
