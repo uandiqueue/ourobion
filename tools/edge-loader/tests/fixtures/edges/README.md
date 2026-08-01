@@ -14,9 +14,13 @@ moved under `data/` (real artifacts live in R2, not in git — two-tier truth, m
 
 Coverage by design:
 
+`edge_score` is the composite RANK (unchanged since F3); `serving_band` is the **C15 single-paper
+gate** — quote gate + direction/claim-kind/effect-size against the CITED paper + verdict relevance,
+floored on `confidence`. The two are independent, so a row can rank low and still serve.
+
 | edge | verifications | expected serving |
 |---|---|---|
-| `sleep_duration_min\|increases\|hrv_sdnn_ms` | 2 active (2026-07-11, 2026-07-12) — loader supersedes the older | newest wins: score 0.900, band `high` |
-| `sleep_duration_min\|decreases\|resting_hr_bpm` | 1 active, verdict `partial` | score 0.560, band `mid` |
+| `sleep_duration_min\|increases\|hrv_sdnn_ms` | 2 active (2026-07-11, 2026-07-12) — loader supersedes the older | newest wins: score 0.900, band `high`; the superseded 2026-07-11 line scores 0.765 and also bands `high` (conf 0.85 ≥ 0.8) |
+| `sleep_duration_min\|decreases\|resting_hr_bpm` | 1 active, verdict `partial` | score 0.560, band `hold` — `effectSizeCheck.matchesClaim` is false (extracted −0.8 vs the claimed effect), a single-paper faithfulness failure. Its `scopeCheck.mismatch` and thin corroboration are deliberately **not** why. |
 | `step_count\|increases\|sleep_duration_min` | 1 active, verdict `uncertain` (no independent retrieval) | score 0.000, band `hold` — never served |
 | `stool_form\|correlates\|gut_comfort_score` | none | claim row only; absent from `verified_edges` |

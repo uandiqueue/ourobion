@@ -57,13 +57,26 @@ The authoritative shapes are in [`relationships.ts`](./relationships.ts). Highli
 
 ## Gating (where trust becomes behaviour)
 
-`index.ts` is the single home for gating, kept as pure functions:
+`index.ts` is the single home for gating, kept as pure functions. **Since C15 the RANK and the
+SERVING DECISION are separate** (`docs/temp/run4/config-decisions.md` C15):
 
-- `edgeScore(v)` — rolls `confidence` × evidence-tier × net-corroboration into a 0..1 trust score.
+- `singlePaperGate(v)` — **the serving decision.** Asks only whether the claim faithfully
+  represents the paper it cites: verdict relevance, the deterministic quote gate, and
+  direction / claim-kind / effect-size matching, then a `confidence` floor. Returns the band plus
+  named `failures`. Config: `SINGLE_PAPER_GATE`.
+- `edgeScore(v)` — rolls `confidence` × study-design tier × net-corroboration into a 0..1
+  composite. **A rank only — it no longer gates.**
 - `servingBand(v)` — `high` (serve plainly) · `mid` (serve with a "limited evidence" qualifier) ·
-  `hold` (don't serve). Thresholds in `EDGE_GATES`.
-- `isServable(v)` / `servableEdges(edges)` — what the graph may surface, ranked by trust.
-- `needsReview(edges)` — `contradicted` edges (suppress + flag the source) and grounded-but-low edges.
+  `hold` (don't serve). Thin reader of `singlePaperGate`; floors in `EDGE_GATES` read against
+  `confidence`.
+- `isServable(v)` / `servableEdges(edges)` — what the graph may surface, ranked by `edgeScore`.
+- `needsReview(edges)` — `contradicted` edges (suppress + flag the source) and grounded-but-held edges.
+
+**A card can be served on the strength of a single paper.** Corroboration, study-design tier, venue
+impact tier and the other-paper `scopeCheck` are still computed, stored and ranked on, but they
+cannot withhold a card (`SINGLE_PAPER_GATE.nonGatingSignals`). The risk that the one paper is wrong
+or unreplicated reaches the user through `EdgeVerification.caveat` (#300 §E) — that caveat is now
+the **only** mechanism carrying it.
 
 ## Two-tier truth
 

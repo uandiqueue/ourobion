@@ -448,17 +448,28 @@ async function main() {
             : 'no attestation captured';
       console.log(`      trust: posture ${posture}; ${attested}`);
     }
-    // RU2 guardrail: surface WHY the edge scored as it did — the component breakdown alongside the
-    // composite (uncited weights, so the composite is a rank aid, not a truth value). Review-only /
-    // non-persisted: the DB projection stays edge_score + serving_band (persisting this is B2 backlog).
+    // C15: say the SERVING decision out loud, separately from the rank. The band comes wholly from
+    // the single-paper gate (quote gate + direction/claim-kind/effect-size against the CITED paper
+    // + verdict relevance + a confidence floor); corroboration / study-design tier / impact tier /
+    // other-paper scopeCheck are metadata that rank and feed the caveat, and cannot withhold a card.
     if (active) {
       const c = brain.edgeScoreComponents(active.verification);
+      const g = c.gate;
       console.log(
-        `      components: confidence ${c.confidence.toFixed(3)} × [base ${c.baseContribution.toFixed(3)} + ` +
+        `      gate (single-paper, decides serving): ${g.passed ? 'PASS' : `HOLD — ${g.failures.join(', ')}`}` +
+          ` (confidence ${c.confidence.toFixed(3)})`,
+      );
+      // RU2 guardrail: surface WHY the edge ranked as it did — the component breakdown alongside
+      // the composite (uncited weights, so the composite is a rank aid, not a truth value).
+      // Review-only / non-persisted beyond edge_score (persisting the parts is B2 backlog).
+      console.log(
+        `      rank only (does NOT gate): confidence ${c.confidence.toFixed(3)} × [base ${c.baseContribution.toFixed(3)} + ` +
           `tier ${c.tierContribution.toFixed(3)} (w=${c.tierWeight.toFixed(2)}) + ` +
           `corrob ${c.corroborationContribution.toFixed(3)} (boost=${c.corroborationBoost.toFixed(2)})] ` +
           `= mult ${c.multiplier.toFixed(3)} → ${c.composite.toFixed(3)}`,
       );
+      const caveat = active.caveat ?? null;
+      if (caveat !== null) console.log(`      caveat: ${caveat}`);
     }
   }
 

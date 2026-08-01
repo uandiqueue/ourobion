@@ -36,30 +36,170 @@ export function relationKey(subject: string, relation: RelationKind, object: str
 }
 
 /**
- * Gating thresholds — the confidence floor an edge must clear to be served at each band.
+ * Band floors — the **verifier confidence** an edge must clear to be served at each band, once it
+ * has passed {@link SINGLE_PAPER_GATE}.
  *
- * **Provisional & uncalibrated (RU2f).** The gates 0.8 / 0.5 have no published basis and — because
- * `edgeScore` is not calibrated to any external probability — they carry **no operational meaning
- * beyond rank order**. Until they are calibrated against a GRADE-rated exemplar set (ADR-0003
- * Open-Q 1–2), treat `high` / `mid` as **rank-order UX bands, not truth claims**: a `high` edge is
- * ranked above a `mid` edge, but "0.8" does not mean "≈80% true" (contrast Knowledge Vault's
- * Platt-calibrated 0.9/0.7 gates, which do — Jüni 1999 further shows threshold membership on a
- * composite quality score is scale-dependent). Calibration is backlogged — **phase2-research-fixes B7**.
- * Do NOT read these as tuned; changing a value here re-bands every edge.
+ * **C15 changed what these floors are read against.** They used to floor the composite
+ * `edgeScore` (confidence × [base + study-design tier + corroboration]), which meant thin
+ * corroboration or a weak design could push a faithful claim under `mid` — a rejection with extra
+ * steps. They now floor `confidence` alone; the composite is a rank aid only (see
+ * {@link edgeScoreComponents}). The two NUMBERS are unchanged.
+ *
+ * **Provisional & uncalibrated (RU2f).** The gates 0.8 / 0.5 have no published basis and carry
+ * **no operational meaning beyond rank order**. Until they are calibrated against a GRADE-rated
+ * exemplar set (ADR-0003 Open-Q 1–2), treat `high` / `mid` as **rank-order UX bands, not truth
+ * claims**: a `high` edge is ranked above a `mid` edge, but "0.8" does not mean "≈80% true"
+ * (contrast Knowledge Vault's Platt-calibrated 0.9/0.7 gates, which do — Jüni 1999 further shows
+ * threshold membership on a composite quality score is scale-dependent). Calibration is
+ * backlogged — **phase2-research-fixes B7**. Do NOT read these as tuned; changing a value here
+ * re-bands every edge.
  */
 export const EDGE_GATES = {
-  /** ≥ this and well-evidenced → served plainly. Provisional (uncalibrated) — a rank-order band, not a ~80%-true claim (RU2f). */
+  /** ≥ this confidence → served plainly. Provisional (uncalibrated) — a rank-order band, not a ~80%-true claim (RU2f). */
   high: 0.8,
-  /** ≥ this → served with a "limited evidence" qualifier. Provisional (uncalibrated) — a rank-order band, not a truth claim (RU2f). */
+  /** ≥ this confidence → served with a "limited evidence" qualifier. Provisional (uncalibrated) — not a truth claim (RU2f). */
   mid: 0.5,
 } as const;
 
+/**
+ * **C15 · THE SERVING GATE — single-paper faithfulness.** Owner decision, 2026-08-01, verbatim:
+ *
+ * > "If impact tier or paper reliability is blocking, then ignore them, ignore b too, we focus on
+ * > single paper verification, your evidence cant shown on UI wont even be surfacing so many info"
+ *
+ * ("b" = the verifier's second job — independent retrieval over OTHER papers and
+ * corroboration/impact scoring.)
+ *
+ * **What this means, stated plainly: a card can now be served on the strength of a SINGLE paper.**
+ * Nothing here asks whether the wider literature agrees. The only question the gate asks is
+ * whether the claim faithfully represents the paper it cites. The risk that the one paper is
+ * wrong, small, or unreplicated is carried to the user by **`EdgeVerification.caveat`** (#300 §E,
+ * produced by `tools/brain-ingest/src/verify/caveat.ts`) — the caveat is now the *sole* mechanism
+ * surfacing weak corroboration. That is the owner's explicit, informed choice.
+ *
+ * **What still gates (all of it about the CITED paper):**
+ *   - the verdict is *relevant* — `unsupported` means the shown evidence does not address the
+ *     claim, `contradicted` means it argues against it, `uncertain` means it could not be grounded
+ *     (which, via `enforce.ts`, is also how accepted memory 0012's mandatory
+ *     `independentRetrieval.performed` keeps its teeth);
+ *   - the deterministic A9 quote gate passed (the claim's spans are verbatim in the source);
+ *   - direction, claim-kind and effect-size all match what the claim asserts.
+ *
+ * **What no longer gates — DEMOTED TO METADATA, NOT DELETED** (`nonGatingSignals`). Corroboration
+ * counts, study-design tier, venue impact tier and the other-paper `scopeCheck` are still
+ * computed, still stored on the record, still projected to the DB, still ranked on by
+ * {@link edgeScore}, and still feed the caveat text. They simply may not suppress a band. This is
+ * what #300 §E asks for: low credibility must be SURFACED via a caveat, never used to reject.
+ *
+ * Values live here as named constants rather than inline literals (ADR-0002); the C-entry is
+ * **C15** in `docs/temp/run4/config-decisions.md`.
+ */
+export const SINGLE_PAPER_GATE = {
+  /**
+   * Verdicts whose cited evidence is RELEVANT to the claim. The three excluded verdicts are the
+   * one case #300 §E reserves for rejection: nothing can be salvaged because the evidence does
+   * not address the claim, argues against it, or could not be grounded at all.
+   */
+  relevantVerdicts: ['supported', 'partial'] as readonly Verdict[],
+  /** The deterministic quote gate must be fully satisfied (`quoteCheck.allPresent`). Never relax. */
+  requireQuoteSpansPresent: true,
+  /** `directionCheck.matchesClaim` — A→B vs B→A against the cited paper. */
+  requireDirectionMatch: true,
+  /** `claimKindCheck.matchesClaim` — causal-vs-correlational drift, the most-overstated axis. */
+  requireClaimKindMatch: true,
+  /** `effectSizeCheck.matchesClaim` — the claim may not assert an effect the cited paper does not carry. */
+  requireEffectSizeMatch: true,
+  /** Band floors, read against `confidence` (see {@link EDGE_GATES}). */
+  confidenceFloors: EDGE_GATES,
+  /**
+   * DOCUMENTATION AS DATA — the signals C15 demoted from gate to metadata. Each is still computed
+   * and stored; none may appear in {@link singlePaperGate}. A test asserts this list against the
+   * gate's actual behaviour, so re-promoting one silently is not possible.
+   */
+  nonGatingSignals: ['corroboration', 'evidenceTier', 'impactTier', 'scopeCheck'] as readonly string[],
+} as const;
+
 /** Verdicts a servable edge may carry. `uncertain` / `unsupported` / `contradicted` are never served. */
-const SERVABLE_VERDICTS: ReadonlySet<Verdict> = new Set<Verdict>(['supported', 'partial']);
+const SERVABLE_VERDICTS: ReadonlySet<Verdict> = new Set<Verdict>(SINGLE_PAPER_GATE.relevantVerdicts);
+
+/** A named reason {@link singlePaperGate} withheld an edge. Codes, so callers can route on them. */
+export type SinglePaperGateFailure =
+  /** Verdict is `unsupported` / `contradicted` / `uncertain` — the evidence is not relevant to the claim. */
+  | 'irrelevant-verdict'
+  /** The claim's quote spans are not all verbatim in the source (deterministic A9 gate). */
+  | 'quote-gate-failed'
+  /** The cited paper does not support the claimed direction. */
+  | 'direction-mismatch'
+  /** The cited paper supports a weaker claim kind than the claim asserts. */
+  | 'claim-kind-mismatch'
+  /** The cited paper does not carry the claimed effect size. */
+  | 'effect-size-mismatch'
+  /** Faithful, but the verifier's own confidence sits below `EDGE_GATES.mid`. */
+  | 'below-confidence-floor';
+
+/** The outcome of {@link singlePaperGate} — the band decision plus every reason behind it. */
+export interface SinglePaperGateResult {
+  /** True when the claim faithfully represents its cited paper AND clears the `mid` confidence floor. */
+  passed: boolean;
+  /** True for the faithfulness checks alone, before the confidence floor is applied. */
+  faithful: boolean;
+  /** Every failure, in gate order — empty iff `passed`. */
+  failures: SinglePaperGateFailure[];
+  /** `high` / `mid` when passed, `hold` otherwise. */
+  band: 'high' | 'mid' | 'hold';
+}
+
+/**
+ * **The serving decision (C15).** Pure, and reads ONLY fields describing the claim's relationship
+ * to its cited paper — deliberately never `corroboration`, `evidenceTier`, `impactTier` or
+ * `scopeCheck` (see {@link SINGLE_PAPER_GATE.nonGatingSignals}).
+ *
+ * Field reads are optional-chained on purpose: a malformed record (one that reached here without
+ * the contract's zod gate) must fail CLOSED to `hold`, not throw or serve.
+ */
+export function singlePaperGate(v: EdgeVerification): SinglePaperGateResult {
+  const failures: SinglePaperGateFailure[] = [];
+
+  if (!SERVABLE_VERDICTS.has(v.verdict)) failures.push('irrelevant-verdict');
+  if (SINGLE_PAPER_GATE.requireQuoteSpansPresent && v.quoteCheck?.allPresent !== true) {
+    failures.push('quote-gate-failed');
+  }
+  if (SINGLE_PAPER_GATE.requireDirectionMatch && v.directionCheck?.matchesClaim !== true) {
+    failures.push('direction-mismatch');
+  }
+  if (SINGLE_PAPER_GATE.requireClaimKindMatch && v.claimKindCheck?.matchesClaim !== true) {
+    failures.push('claim-kind-mismatch');
+  }
+  if (SINGLE_PAPER_GATE.requireEffectSizeMatch && v.effectSizeCheck?.matchesClaim !== true) {
+    failures.push('effect-size-mismatch');
+  }
+
+  const faithful = failures.length === 0;
+  const confidence = typeof v.confidence === 'number' ? v.confidence : 0;
+  if (faithful && confidence < SINGLE_PAPER_GATE.confidenceFloors.mid) {
+    failures.push('below-confidence-floor');
+  }
+
+  const passed = failures.length === 0;
+  const band: 'high' | 'mid' | 'hold' = !passed
+    ? 'hold'
+    : confidence >= SINGLE_PAPER_GATE.confidenceFloors.high
+      ? 'high'
+      : 'mid';
+
+  return { passed, faithful, failures, band };
+}
 
 /**
  * `edgeScore` weights + saturation cap, lifted out of the arithmetic per ADR-0002's "values in config
- * objects, never inline literals" mandate. **Provisional — uncited (RU2b):** no literature supports
+ * objects, never inline literals" mandate.
+ *
+ * **C15: these weights RANK, they no longer GATE.** `edgeScore` still folds study-design tier and
+ * net corroboration into a composite, and `servableEdges` still sorts on it — but the serving band
+ * is decided by {@link singlePaperGate}, so a thin-corroboration edge is ordered lower rather than
+ * withheld.
+ *
+ * **Provisional — uncited (RU2b):** no literature supports
  * these specific numbers, so the composite is a rank-order aid, not a calibrated truth value; the
  * honest guardrail is to report the components alongside the composite wherever an edge is surfaced
  * for review (see `edgeScoreComponents`, and RU2's Cochrane-style domain-wise practice). Changing a
@@ -107,21 +247,32 @@ export interface EdgeScoreComponents {
   corroborationContribution: number;
   /** `baseContribution + tierContribution + corroborationContribution` (multiplies confidence). */
   multiplier: number;
-  /** The clamped composite — identical to `edgeScore(v)`; 0 for a non-servable verdict. */
+  /**
+   * The clamped composite — identical to `edgeScore(v)`; 0 for a non-servable verdict. **A RANK,
+   * not a gate (C15):** the band no longer reads it.
+   */
   composite: number;
-  /** Serving band — identical to `servingBand(v)`. */
+  /** The C15 serving decision with its reasons — `band` here is exactly `gate.band`. */
+  gate: SinglePaperGateResult;
+  /** Serving band — identical to `servingBand(v)`. Decided by {@link singlePaperGate}, not by `composite`. */
   band: 'high' | 'mid' | 'hold';
 }
 
 /**
- * Decompose an edge's rolled-up trust into the parts that reconstruct the composite. Pure — the single
- * source of truth `edgeScore` / `servingBand` both read, so they can never disagree. Non-servable
- * verdicts short-circuit to composite 0 / band 'hold' (the structural parts are still reported so a
- * reviewer sees the would-be breakdown, but they never contribute a served score).
+ * Decompose an edge's rolled-up trust into the parts that reconstruct the composite, and report the
+ * C15 serving gate alongside them. Pure — the single source of truth `edgeScore` / `servingBand`
+ * both read, so they can never disagree.
+ *
+ * **The two halves are deliberately independent (C15).** `composite` is the uncalibrated RANK and
+ * still folds in study-design tier and corroboration (short-circuiting to 0 on a non-servable
+ * verdict, as before). `band` is the SERVING decision and comes wholly from
+ * {@link singlePaperGate}, which never looks at those signals. So a faithful single-paper claim
+ * can band `mid` on a low composite, and a well-corroborated but unfaithful one cannot band at all.
  */
 export function edgeScoreComponents(v: EdgeVerification): EdgeScoreComponents {
   const servable = SERVABLE_VERDICTS.has(v.verdict);
   const confidence = v.confidence;
+  const gate = singlePaperGate(v);
   const tierWeight = v.evidenceTier / 5; // 0.2 (mechanistic) … 1.0 (meta-analysis)
   const net = v.corroboration.supporting - v.corroboration.contradicting;
   const corroborationBoost =
@@ -133,15 +284,8 @@ export function edgeScoreComponents(v: EdgeVerification): EdgeScoreComponents {
   const multiplier = baseContribution + tierContribution + corroborationContribution;
 
   // Confidence dominates; design strength and corroboration shade it. Clamped to [0, 1]. A non-servable
-  // verdict scores 0 (never served) — same short-circuit as the pre-refactor edgeScore/servingBand.
+  // verdict scores 0 — unchanged from the pre-C15 formula, which this reproduces bit-for-bit.
   const composite = servable ? Math.max(0, Math.min(1, confidence * multiplier)) : 0;
-  const band: 'high' | 'mid' | 'hold' = !servable
-    ? 'hold'
-    : composite >= EDGE_GATES.high
-      ? 'high'
-      : composite >= EDGE_GATES.mid
-        ? 'mid'
-        : 'hold';
 
   return {
     confidence,
@@ -152,22 +296,28 @@ export function edgeScoreComponents(v: EdgeVerification): EdgeScoreComponents {
     corroborationContribution,
     multiplier,
     composite,
-    band,
+    gate,
+    band: gate.band,
   };
 }
 
 /**
- * Rolled-up trust for an edge, 0..1 — the value the graph ranks and gates on. Combines the verifier's
+ * Rolled-up trust for an edge, 0..1 — the value the graph **ranks** on. Combines the verifier's
  * calibrated `confidence` with structural signals (study-design tier, net corroboration). Thin reader
  * of `edgeScoreComponents` so the composite and its reported breakdown share one source of truth.
+ *
+ * **C15: this no longer gates.** Use `servingBand` / `isServable` for the serving decision.
  */
 export function edgeScore(v: EdgeVerification): number {
   return edgeScoreComponents(v).composite;
 }
 
-/** Serving band for an edge — drives whether/how the brain surfaces it. */
+/**
+ * Serving band for an edge — drives whether/how the brain surfaces it. Thin reader of
+ * {@link singlePaperGate}: single-paper faithfulness plus a confidence floor, nothing else.
+ */
 export function servingBand(v: EdgeVerification): 'high' | 'mid' | 'hold' {
-  return edgeScoreComponents(v).band;
+  return singlePaperGate(v).band;
 }
 
 /** True if the edge may be surfaced to users at all (high or mid band). */
@@ -189,7 +339,11 @@ export function servableEdges(edges: readonly VerifiedEdge[]): VerifiedEdge[] {
 export type ReviewReason =
   /** The verifier found independent evidence pointing the other way. */
   | 'verifier-contradicted'
-  /** Grounded and servable-in-principle, but scoring below the serving floor. */
+  /**
+   * Verdict is relevant, but {@link singlePaperGate} still withheld it — the claim misrepresents
+   * its cited paper (direction / claim kind / effect size), its quote spans do not check out, or
+   * confidence sits below `EDGE_GATES.mid`. `singlePaperGate(v).failures` names which.
+   */
   | 'grounded-but-held'
   /** B-BR10: the USER'S OWN data moved opposite to what this edge claims. */
   | 'personal-data-contradiction'
