@@ -1,15 +1,15 @@
-// ourobion nao — Data Loader (O11, run-2 U6). "Feed the engine."
+// ourobion nao — Data loader (O11, run-2 U6; unavailable state as of run 4).
 //
-// Simulated health-data loader for the demo main loop: load N provenance-flagged
-// days into biotope's tables as the signed-in user, then run the serve pipeline and
-// inspect the per-stage summaries. Thin Server Component shell over LoaderPanel,
-// matching the app's page convention (see ingest/page.tsx).
+// The route and its place in the nav are kept: the loader's server side is
+// intact and still gated, so the capability is only unpresented, not removed.
+// Thin Server Component shell over LoaderPanel, matching the app's page
+// convention (see ingest/page.tsx).
 import type { Metadata } from 'next';
 import { LoaderPanel } from '@/components/LoaderPanel';
 
 export const metadata: Metadata = {
   title: 'Data loader · ourobion nao',
-  description: 'Load simulated, provenance-flagged health data and trigger the serve pipeline.',
+  description: 'Loading demo health data and running the analysis pipeline is coming soon.',
 };
 
 export default function DataLoaderPage() {
