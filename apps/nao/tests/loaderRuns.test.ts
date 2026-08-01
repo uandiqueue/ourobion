@@ -163,15 +163,24 @@ test('source-conformance: POST /api/loader refuses a target equal to the caller 
   assert.match(source, /validationError[\s\S]{0,80}?400/, 'a malformed/absent field must be a 400');
 });
 
-test('LoaderPanel requires an approved target and scopes analysis to the loader request key', () => {
+test('the loader UI offers no interactive surface at all, while the server side stays gated', () => {
+  // The loader page is an unavailable state: no demo target is registered, so
+  // every load a visitor could start would be refused. The controls are REMOVED
+  // rather than disabled — a disabled control is still an invitation — and this
+  // asserts the removal, not merely the absence of the old target field.
   const source = code(LOADER_PANEL);
-  assert.match(source, /target:\s*target\.trim\(\)/, 'the loader request must name the selected target');
-  assert.match(source, /aria-label="Approved demo target ID"[\s\S]{0,250}?required/,
-    'the target input must be required before a loader request is submitted');
-  assert.match(source, /JSON\.stringify\(\{ requestKey: loadResult\.requestKey \}\)/,
-    'the pipeline relay must receive the completed loader request key');
-  assert.match(source, /disabled=\{busy \|\| loadResult === null\}/,
-    'analysis must not be offered without a completed, scoped loader run');
+  for (const forbidden of [/<form/, /<button/, /<input/, /<select/, /onClick/, /onSubmit/, /useState/]) {
+    assert.doesNotMatch(source, forbidden, `the unavailable loader surface must not render ${String(forbidden)}`);
+  }
+  assert.doesNotMatch(source, /fetch\(/, 'the panel must issue no request');
+  assert.doesNotMatch(source, /['"]\/api\/loader/, 'the panel must name no loader endpoint');
+  assert.doesNotMatch(source, /'use client'/, 'a surface with no state needs no client bundle');
+  // Withdrawing the UI must not withdraw the guard: both handlers remain, and
+  // remain curator-gated, so the capability is preserved for when a target exists.
+  assert.equal(ROUTE_POLICY['POST /api/loader'], 'curator');
+  assert.equal(ROUTE_POLICY['POST /api/loader/run-pipeline'], 'curator');
+  assert.match(code(LOADER_ROUTE), /guardRole\('curator'\)/);
+  assert.match(code(RELAY_ROUTE), /guardRole\('curator'\)/);
 });
 
 test('source-conformance: the loader NEVER writes the caller’s own user_id, and the two non-atomic upserts are gone', () => {

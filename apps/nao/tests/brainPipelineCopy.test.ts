@@ -67,3 +67,14 @@ test('every literal on the brain-pipeline surface passes the non-diagnostic copy
 test('the spend and paper-detail provenance copy passes the non-diagnostic gate', () => {
   assertCopyGate(PROVENANCE_COPY_FILES);
 });
+
+// The data-loader surface is now a plain unavailable state whose whole content is
+// prose a viewer reads, so it belongs under the same gate.
+const LOADER_COPY_FILES = [
+  'src/components/LoaderPanel.tsx',
+  'src/app/(app)/loader/page.tsx',
+] as const;
+
+test('the data-loader unavailable-state copy passes the non-diagnostic gate', () => {
+  assertCopyGate(LOADER_COPY_FILES);
+});
