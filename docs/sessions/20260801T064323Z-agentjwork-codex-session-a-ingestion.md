@@ -4,7 +4,7 @@ memory: none
 
 ## Attempted
 
-- Resumed the latest `SESSION A HANDOVER` on issue #307 from exact base `e6f0e1f`, then rebased onto the owner-specified integration tip `c5176a9` after PR #332 landed.
+- Resumed the latest `SESSION A HANDOVER` on issue #307 from exact base `e6f0e1f`, rebased onto the owner-specified integration tip `c5176a9` after PR #332 landed, then advanced at pre-push to current `dev-phase2-run4` tip `c162393` (a merge descendant whose first parent is `c5176a9`).
 - Verified the inherited `ingest --limit 1100` process was no longer running. Measured the protected local corpus at 6,184 records, 756 fetched, and 739 with `fullText.charCount > 5000`; no unobserved fetch progress was claimed.
 - Selected one post-#300 whole-paper claim (`sleep_duration_min|decreases|resting_hr_bpm`) only after offline quote/retrieval gates passed, then dispatched exactly one owner-authorized Agnes verification. The shell wrapper timed out while its Node child remained live, so no retry was issued; the existing PID and acceptance journal were monitored to completion.
 - Implemented and tested incremental R2 metadata synchronization, then ran ingestion sequentially (never parallel) for `cognitive_clarity_attention`, `physical_activity_step_count`, `social_connection_wellbeing`, `standing_water_breeding_sites`, `hydration_urine_colour_status`, `gsrs`, and `activity_mood_relation`.
@@ -28,7 +28,7 @@ memory: none
 
 ## Left
 
-- PR the incremental ingestion fix into `dev-phase2` after the mandatory immediate pre-push rebase/headroom/context gates.
+- PR the incremental ingestion fix into the issue-specific `dev-phase2-run4` integration branch after push; the mandatory context and post-rebase code gates are green.
 - Complete the hosted edge projection without further model spend: add the missing post-#300 blueprint R2 publication seam, publish the already-validated claim/blueprint/verification artifacts, then use an approved projection-only secret-backed job; alternatively, provide an explicitly approved `SUPABASE_DB_URL` target to the loader.
 - The local edge-loader dry-run is green for 11 canonical claims plus one live verification; the adverse edge deterministically projects as `hold @ 0.000 (unsupported)` with live artifact posture and provider-attested Agnes identity.
 - Track the verified 2026-08-08T00:00:00Z pricing expiry for `gpt-5` and `agnes-2.5-flash`; the router fails closed after expiry and no pricing/config change was made in this scope.
@@ -44,3 +44,5 @@ memory: none
 - `tools/edge-loader`: typecheck clean; complete suite 69/69.
 - Exact local edge-loader dry-run: 11 claims + 1 verification valid; no database writes.
 - Canonical R2 edge-loader check: exact HTTP 404 `NoSuchKey` for the required `edges/claims.jsonl`; no database writes.
+- `context_sync --fix-index` produced byte-identical generated indexes; `context_sync --check` passed sessions, memory, decisions, index, and couplings.
+- Docker and the local Supabase stack were not started or used.
