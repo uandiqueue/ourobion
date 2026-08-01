@@ -36,7 +36,7 @@ updated: 2026-08-01
 - After PR #292 landed, merged integration head `dea055c`, refreshed the implementation-sensitive
   audit facts, and kept this PR's comparison diff docs-only.
 - Resumed under issue #309, rebased repeatedly through the serialized integration queue and most
-  recently onto `57cf3bd`, refreshed the audit for the measured whole-paper/mechanism/blueprint path,
+  recently onto `226bfef`, refreshed the audit for the measured whole-paper/mechanism/blueprint path,
   and expanded #297 into a 22-topic execution handoff.
 - Recorded #307's measured batch honestly: 15 papers synthesised plus one resumable skip, 10 claims,
   one blueprint, incomplete Agnes verification, and no projection/card result.
@@ -68,7 +68,8 @@ updated: 2026-08-01
 
 ## Blockers
 
-- Final narrative: #307 has measured synthesis but not a grounded verified edge, projection, or card.
+- Final narrative: #307 has measured synthesis, but hosted state remains `verified_edges 0`,
+  `relationship_claims 0`, `edge_verifications 0`, and no edge-derived card.
 - Any support-model performance/training prose: issue #277.
 - A submission-ready live provider/corpus statement: durable machine outputs must land on the target
   branch and be reproduced there.
@@ -84,10 +85,10 @@ updated: 2026-08-01
 - GitHub issue #303 carries the pre-PR evidence summary and territory declaration.
 - PR #292 / Session A merged at `dea055c`; the target was merged into this branch and product-cap
   output was remeasured at 536 paths / 76,360 additions for that integration head.
-- Rebased through `57cf3bd`; `seed-queries --candidates-only` reproduced 6 static topics + 16 total
+- Rebased through `226bfef`; `seed-queries --candidates-only` reproduced 6 static topics + 16 total
   candidates (8 derived, 2 rule, 6 topic); active registry load reproduced 24 keys.
-- `node --test tools/run4_release_gate.test.mjs` — 18/18 with the 572-path / 84,496-line snapshot;
-  binding unit delta from `abcba95` — 66 paths / 5,973 additions,
+- Post-rebase measurement before the final record refresh: 573 paths / 84,907 additions;
+  binding unit delta from `abcba95` — 73 paths / 6,406 additions,
   within the 115 / 8,500 caps.
 
 memory: none
