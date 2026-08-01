@@ -136,7 +136,7 @@ const DB_SEED: Seed = { topic: 'magnesium_sleep', query: 'magnesium sleep', topi
 
 test('merge: db seeds append after statics; counts feed the "N static + M db" header', () => {
   const merged = mergeSeeds(SEEDS, [DB_SEED]);
-  assert.equal(merged.staticCount, 6);
+  assert.equal(merged.staticCount, SEEDS.length);
   assert.equal(merged.dbCount, 1);
   assert.equal(merged.dbAvailable, true);
   assert.deepEqual(
@@ -179,15 +179,15 @@ test('merge: db seeds dedupe against each other by slug (first wins)', () => {
 
 // ── loadMergedSeeds (the CLI's one call) ─────────────────────────────────────
 
-test('loadMergedSeeds: boundary configured → 6 static + N db in one pool', async () => {
+test('loadMergedSeeds: boundary configured → every static seed + N db in one pool', async () => {
   const { fetchFn } = okFetch([
     { slug: 'magnesium_sleep', label: 'Magnesium and sleep quality', query_hint: null },
   ]);
   const merged = await loadMergedSeeds({ env: ENV, fetchFn, warn: () => {} });
-  assert.equal(merged.staticCount, 6);
+  assert.equal(merged.staticCount, SEEDS.length);
   assert.equal(merged.dbCount, 1);
   assert.equal(merged.dbAvailable, true);
-  assert.equal(merged.seeds.length, 7);
+  assert.equal(merged.seeds.length, SEEDS.length + 1);
 });
 
 test('loadMergedSeeds: boundary absent → the six static topics, one warning', async () => {
