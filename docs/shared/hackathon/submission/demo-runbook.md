@@ -1,19 +1,33 @@
 ---
 title: Demo runbook — 3-minute video production plan
-summary: The shot-by-shot production plan for the hackathon demo video, centred on nao and the paper-ingestion brain — the owner-specified animation-led 180-second running order with every beat mapped to the internal component it depicts (issue #300 target flow), the setup commands to reach each state, what must never be claimed, and the failure fallbacks.
+summary: The shot-by-shot production plan for the hackathon demo video, centred on nao and the paper-ingestion brain — the owner-specified animation-led 180-second running order with every beat mapped to the internal component it depicts (issue #300 target flow), the setup commands to reach each state, what must never be claimed, and the failure fallbacks; figures re-measured 2026-08-02 against 14 verified edges of which 11 are servable, and 0 cards with producer='edge'.
 type: reference
 scope: repo
 status: draft
-updated: 2026-08-01
+updated: 2026-08-02
 ---
 
 # Demo runbook — 3-minute video production plan
 
-> **State anchor.** Verified against `dev-phase2-run4` @ `476780e` (running order updated 2026-08-01 08:25Z),
-> **2026-08-01 ~06:00 UTC**, on the macOS recording machine (§2). Re-verify before recording — §10.
+> **State anchor.** Running order (§1, §1b) is the owner's, unchanged, from PR #342. Every **figure** below
+> was re-measured against `dev-phase2-run4` @ `0083858`; hosted table counts were read directly from the
+> Supabase demo project on **2026-08-02**. Re-verify before recording — §11.
 >
 > Doc 4 of the four-document set in issue #328. Written first because what can physically be recorded
 > bounds what the other three documents may claim.
+>
+> **Three changes since PR #342 was written that alter what you may record:**
+> 1. **R0 is cleared.** `check-config` now reports `Decorrelation: OK — synthesis=openai, verifier=agnes`.
+>    The TEST-MODE override block is gone from `tools/llm-router/src/`. The 🛑 stop-block that stood on
+>    Slide 4 was describing a state that no longer exists, and has been removed.
+> 2. **The pipeline has now run end to end into Supabase.** `verified_edges` is **14, of which 11 are
+>    servable** — not 0. Every corpus, spend and hosted figure in the pre-#342 sections was stale.
+> 3. **The §4 → §6 → §7 promise is now partly payable, and the boundary is exact:** verified edges exist,
+>    but **no `producer='edge'` card exists yet**. See "The one thing this running order must not promise".
+>
+> **The fatal risk has inverted.** It used to be "we claim a verifier that is switched off." It is now
+> **R0b: "we claim the verifier validated something because it ran."** It ran, and 11 of 14 edges are
+> servable — but that is a fidelity judgement about single papers, not a validation of the science.
 
 ## The plan in one paragraph
 
@@ -65,7 +79,7 @@ Where the honest answer is "no evidence found," this document says so. That is a
 | 5 | Client intro — biotope walkthrough, fast and short | 0:20 | capture |
 | 6 | **Insights animation** — metrics → match → surface | 0:25 | animation |
 | 7 | Back to biotope insights — cards + evidence chain | 0:30 | capture |
-| 8 | Living app · gap ledger · future · Zebra & Viceroy | 0:20 | slide |
+| 8 | Living app · gap ledger · future (**not** Zebra & Viceroy — see §1b §8) | 0:20 | slide |
 
 **No hero shot.** The mechanism is the hero.
 
@@ -109,8 +123,8 @@ Six beats, each mapped:
 | 2 | **Flattened** | **`selectPassages` deleted — whole paper in** (#300 §A) | built (#306) |
 | 3 | Fed into synthesiser | **`s`** model via `paperRun.ts` / `paperPrompt.ts` | built (#306) |
 | 4 | **Extracting key sentences → verdict** | `quoteSpans[]` — verbatim + exact char offsets, **plus the mechanism span** (#300 §B) | built (#306) |
-| 5 | Evidence chain + verdict → verifier | deterministic gates run **first**, then **`v`** model | gates built; verdict vocabulary partial |
-| 6 | **Verification → stored on Supabase** | `relationship_claims` · `edge_verifications` · `verified_edges`; blueprints → `rules` | built; **never yet run end to end** |
+| 5 | Evidence chain + verdict → verifier | deterministic gates run **first**, then **`v`** model | built; since PR #355 the verdict judges fidelity to the **cited paper**, not a headcount of agreeing strangers |
+| 6 | **Verification → stored on Supabase** | `relationship_claims` · `edge_verifications` · `verified_edges`; blueprints → `rules` | **run end to end: 14 · 14 · 14, 11 servable.** The step after this one — edge → card — has not run |
 
 **Beat 2 is the one to make legible.** "Flattened" is exactly right and it is a real design
 decision: the keyword prefilter was *deleted*, not improved. #300 measured why — searching
@@ -147,7 +161,7 @@ All landed in PR #329. Fast and short — this is context, not the argument.
 |---|---|
 | Week of metrics processed into trend / edge / personal shapes | `compute-baselines` → `evaluate-signals` (Deno edge functions) |
 | Matching against the database | rules engine matches a week of user data against the `rules` table |
-| Pulling insights out | `insight_cards`, `producer ∈ {rules, edge, personal}` |
+| Pulling insights out | `insight_cards`, `producer ∈ {rules, edge, personal}` — **measured 43 `personal`, 2 `rules`, 0 `edge`**; the `edge` arm is built but has produced nothing |
 | Surfacing onto the app | m5b card render + provenance panel |
 
 **Non-matching signals → the gap ledger.** Owner has **excluded the gap ledger from the MVP**, so
@@ -161,27 +175,52 @@ imply the quote was generated.
 
 ### §8 · Living app → future
 
-Gap ledger grows the corpus from unmatched demand; Zebra and Viceroy are **trained but have not
-reached benchmark** and are **not integrated** — say both parts. This section carries the old
-Slide 5 "honest slide" content, which the judging criteria reward most: **never cut it.**
+Gap ledger grows the corpus from unmatched demand. This section carries the old Slide 5 "honest slide"
+content, which the judging criteria reward most: **never cut it.**
+
+> **Zebra and Viceroy must come out of this slide.** The owner's running order named them, but **issue
+> #277 quarantines every support-model training and evaluation claim** — in both directions, so "trained
+> but not at benchmark" is as barred as a performance figure. The support models are non-serving and
+> CI-enforced against import. Say only that custom models are research-only and serve nothing, or say
+> nothing. Restore them if and when #277 clears.
 
 ---
 
 ### The one thing this running order must not promise
 
-§7 shows cards with an evidence chain. **Every card in the system today is `provenance.tier:
-'hand_authored'` scaffolding built for UI testing** — `rule.schema.ts` supports
-`tier: 'extracted'` with `citation: {paperId, locator}` and **has never been written to**. Hosted
-state is `verified_edges 0 · relationship_claims 0 · edge_verifications 0 · insight_cards 1`.
+§7 shows cards with an evidence chain. **PR #342 wrote that this promise "cannot currently be paid
+off" because every card was hand-authored scaffolding. That is now only partly true, and the exact
+boundary is the single most important honest sentence in this submission:**
 
-So §4 → §6 → §7 is one continuous promise — *we read papers → we verify them → we match them to
-your week → here are the cards* — and §7 cannot currently pay it off with a paper-originated card.
+> **The research pipeline has produced verified edges. It has not yet produced a card.**
 
-**Resolve before recording §7.** Either a real paper-originated card exists by then (the
-synthesise → blueprint → `extracted` rules → card path, which is built but has never been run), or
-§7 shows what genuinely exists and the narration says so. **Do not film a hand-authored card while
-the animation claims it came from a paper.** That is the one failure mode this document exists to
-prevent.
+Measured on the hosted demo project, **2026-08-02**:
+
+| `relationship_claims` | `edge_verifications` | `verified_edges` | `insight_cards` |
+|---|---|---|---|
+| **14** | **14** | **14 — 11 servable** (8 `high`, 3 `mid`, 3 held) | **45 — 43 `personal`, 2 `rules`, 0 `edge`** |
+
+So §4 → §6 → §7 is one continuous promise — *we read papers → we verify them → we match them to your
+week → here are the cards*. **§4 and §6 now pay off; §7 does not.** The chain is real up to
+`verified_edges` and stops one step short of a rendered card.
+
+**What you may say over §7, and what you may not:**
+- **May:** "Fourteen edges have been verified; eleven are servable." That is a measured hosted fact.
+- **May not:** anything implying a card on screen came from a paper. **Zero cards have
+  `producer='edge'`.**
+- **May:** show the 43 `producer='personal'` cards, because they are honest about exactly this gap.
+  They render as *"Still researching: X and Y"* and state in the body: *"This is an unverified
+  personal observation from your own data only — we have not found published research for this
+  pairing yet and are still researching it."* (`generate-insights/render.ts`, `PERSONAL_CARD_TEMPLATE`.)
+
+**That last point is a feature, not an embarrassment — film it deliberately.** The distinction between
+*"research supports this"* and *"only your data so far"* is the product's whole thesis, and the app
+draws it in user-facing copy without being asked to. A card that says "still researching" while the
+animation says "we verify against papers" is coherent and honest; it is the system declining to borrow
+credibility it has not earned.
+
+**The failure mode this document exists to prevent is unchanged:** do not film a card while the
+animation claims it came from a paper. The narration must not close the gap the data leaves open.
 
 ---
 
@@ -220,20 +259,31 @@ This is the section that decides the video, so it is evidence-first.
 `apps/nao/.wrangler/state/v3/d1/…` on this machine holds a populated D1/FTS5 index
 (*Implemented and locally proven*):
 
-| Measure | Local D1 | Live figure per issue #328 §4 |
-|---|---|---|
-| Papers indexed | **1,298** | — |
-| `status = fetched` | **870** | **870** ✅ exact match |
-| Full text > 5k chars | **845** | **845** ✅ exact match |
-| `status = discovered` | 542 | — |
-| Extraction method | `jats` 488 · `pdf` 259 · `directOa` 5 · `core` 4 | — |
+**All figures re-counted directly from `data/corpus/papers.jsonl` (60 MB) on 2026-08-01. The earlier
+`1,298 / 870 / 845` in this section is superseded** — the corpus grew from 1,232 to over 21,000 records
+that day after a seed-list fix. Treat these as a timestamp, not a total, and re-count before recording.
 
-**This corrects an earlier reading of this doc and of issue §2.1.** For the two metrics that are the
-actual progress metrics, the local papers view is **not stale — it is exact.** Real DOIs, real
-titles, real character counts. You can film it and quote its numbers.
+| Measure | Counted 2026-08-01 |
+|---|---|
+| Manifest records | **21,823** |
+| `status = discovered` | **20,912** |
+| `status = fetched` | **911** (all with extracted full text) |
+| Full text > 5,000 chars — **the usable figure** | **894** |
+| Full text > 20,000 chars | 768 |
 
-> Do **not** quote 6,158. That is the record count, and the issue is explicit that record count is not
-> the progress metric. Quote **870 fetched** and **845 with usable full text**.
+> ## The one number discipline for this whole video
+>
+> **"Discovered" is not "usable."** 21,823 records versus 894 usable papers is a ~24× gap. Never say a
+> bare total. Every spoken or on-screen count must carry its tier:
+>
+> - **21,823 records** — what the manifest holds. Mostly metadata hits.
+> - **911 fetched** — what we actually hold the object for.
+> - **894 with usable full text** — the only tier a claim can be grounded in. **Quote this one.**
+>
+> Do **not** quote **6,158**. That is what the deployed console displays: a stale hosted projection that
+> **cannot be refreshed from CI** (§10). It is not a current count of anything.
+
+Real DOIs, real titles, real character counts. You can film the local index and quote the tiered numbers.
 
 ### What is filmable, and what is not
 
@@ -242,23 +292,34 @@ titles, real character counts. You can film it and quote its numbers.
 | nao **Overview** — corpus dashboard | **Yes** | Reads `corpusStats` from D1 (`overview/page.tsx:12`); D1 is populated |
 | nao **Papers** — list, FTS5 search, facets, sort | **Yes** | Reads the D1 index directly (`papers/page.tsx:11`) |
 | nao **Ingest** / **Loader** / **Models** | Chrome renders; underlying state thin | Panel components; treat as B-roll, don't dwell |
-| nao **Claims** | **Renders empty** | `relationship_claims` = 0 |
-| nao **`/paper/[uid]`** detail | **No — 404s locally** | R2 binding empty under `next dev` (local R2 simulator holds no objects; `apps/nao/README.md:77-79`). Needs `wrangler dev --remote` |
-| Evidence chain in biotope | **Renders empty** | `verified_edges` = 0 |
+| nao **Claims** | **Yes — 14 rows** | `relationship_claims` = 14 hosted |
+| nao **`/paper/[uid]`** detail | **Yes, as a reduced record** | PR #354 removed the 404: when the R2 object is out of reach it renders `IndexRowDetail` from the D1 row instead. It only 404s if the index row is missing too. **Say "reduced record" if asked — do not present it as the full paper object** |
+| Evidence chain in biotope | **Renders empty** | 14 verified edges exist, but **0 cards have `producer='edge'`**, so no card carries a chain yet |
 
 ### The numbers you must not contradict
 
-Verified against the hosted demo project at 2026-08-01 05:00 UTC (*Unknown live external state* —
-reported by the orchestrator, not re-observable from this machine):
+Read directly from the hosted Supabase demo project on **2026-08-02**:
 
-| `verified_edges` | `relationship_claims` | `edge_verifications` | `insight_cards` |
+| `relationship_claims` | `edge_verifications` | `verified_edges` | `insight_cards` |
 |---|---|---|---|
-| **0** | **0** | **0** | 1 |
+| **14** | **14** | **14 — 11 servable** (8 `high`, 3 `mid`, 3 held) | **45 — 43 `personal`, 2 `rules`, 0 `edge`** |
 
-The pipeline runs and the corpus is real; **it has not yet produced a published edge.** Slide 3 and 4
-narrate the pipeline, Slide 5 states this plainly, and that is the honest and higher-scoring framing.
+`composed_insights` is populated. Verdicts across the 14: **1 `supported`, 10 `partial`, 2 `uncertain`,
+1 `unsupported`**, confidence 0.72–0.92.
 
-**Spend, for the cost appendix:** US$1.118 OpenAI · Anthropic 0 · Agnes 18/50 calls.
+**The pipeline has produced published edges. It has not produced a card from one.** That is the line to
+hold — §1's promise section states it in full, and Slide 5 narrates it.
+
+**Spend — from the machine-local `data/llm-router/ledger.json`, all-time:** **US$1.80 over 59 calls** ·
+45 OpenAI calls (of which US$1.58 is the 40-call 2026-08-01 synthesis batch, ≈US$0.04/paper) · **Agnes
+10 calls at exactly US$0**, that plan being priced at zero until 2026-08-08.
+
+> Two cautions on that figure. Earlier drafts said *"US$1.118 OpenAI · Agnes 18/50 calls"* — the spend was
+> stale and **"18 of 50" is not verifiable from this repository**; the plan quota is vendor-side. Second,
+> the ledger is **gitignored and machine-local**, and it records 10 Agnes verifier calls on 2026-08-01
+> against **14** hosted verifications. Those two do not reconcile from here — the verification pass may
+> have run on another machine or worktree with its own ledger. Quote the USD total as "measured locally,
+> provider billing authoritative", and do not present the ledger call count as the pipeline's call count.
 
 ---
 
@@ -417,7 +478,8 @@ seed topics → discover → fetch → extract full text (jats / pdf / directOa 
   → adversarial verification (LLM B) → verified_edge → card
 ```
 
-Annotate with the real figures: **1,298 indexed · 870 fetched · 845 with usable full text.**
+Annotate with the real figures, each carrying its tier: **21,823 records · 911 fetched · 894 with usable
+full text** (re-count before recording, §11).
 
 Second call-out — **a decision we reversed**: *we deleted the keyword prefilter.*
 
@@ -433,30 +495,29 @@ Headline: **The model that checks a claim never comes from the platform that wro
 - Different company, different training data, different weights — **so different blind spots**
 - Unconditional and fail-closed; **no retrieval ⇒ `uncertain`**, and `uncertain` is held, never published
 
-> ## 🛑 DO NOT RECORD THIS SLIDE YET — the invariant is currently disabled at runtime
+> ## ✅ R0 IS CLEARED — this slide is now safe to record
 >
-> *Verified by executing `llm-router check-config` at head, 2026-08-01.* The tool's own verdict:
+> *Verified by executing `llm-router check-config` at head on 2026-08-01.* The tool's own verdict is now:
 >
 > ```
-> Decorrelation: VIOLATED (allowed by TEST-MODE) — synthesis=openai, verifier=openai
+> Decorrelation: OK — synthesis=openai, verifier=agnes (independent families enforced)
 > ```
 >
-> `tools/llm-router/router.config.json` **declares** `synthesis → gpt-5` (openai) and
-> `verifier → agnes-2.5-flash` (agnes). But a TEST-MODE override block forces **all six nodes onto
-> OpenAI** and switches the invariant off. Its own text: *"Run 2.0 single-provider posture (Jayden,
-> 2026-07-24): only OPENAI_API_KEY is provisioned, so all six nodes run OpenAI and the
-> synthesis↔verifier family-decorrelation invariant is **deliberately OFF**. Verifier verdicts are
-> scaffolded + unit-tested, NOT independently verified. Restore a second provider and delete this
-> block to re-arm the hard invariant."*
+> The TEST-MODE override block that previously forced all six nodes onto OpenAI **no longer exists in
+> `tools/llm-router/src/`**, and `router.config.json` routes `synthesis → gpt-5` (openai) and
+> `verifier → agnes-2.5-flash` (agnes). Earlier revisions carried a 🛑 stop-block here reporting
+> `Decorrelation: VIOLATED (allowed by TEST-MODE)`; **that state is gone and the stop-block was wrong to
+> leave standing.** Nothing on this slide needs the TEST-MODE label any more.
 >
-> It also mandates a label on any result produced under it:
-> **`scaffolded + unit-tested (TEST-MODE: single-provider, decorrelation OFF)`**.
+> Two constraints still apply to what you may say over it:
+> - Agnes ran and 11 of 14 edges are servable. Slide 4 may claim the *invariant* is real and enforced,
+>   and that verification produced servable verdicts. It may **not** imply the science is settled: since
+>   PR #355 a verdict answers *"is this claim faithful to the one paper it cites?"* — not *"is this true?"*
+> - The free Agnes pricing **expires 2026-08-08**. After that the verifier leg stops until it is renewed,
+>   and only the owner can renew it. If you record after that date, re-run `check-config` first.
 >
-> **What unblocks it:** an `AGNES_API_KEY` now exists in `tools/brain-ingest/.env` (added
-> 2026-08-01), which is the second provider the block was waiting for. Someone with `tools/**`
-> ownership must delete the TEST-MODE block and re-run `check-config` until it reports decorrelation
-> satisfied. **Until that output is green, Slide 4 as written is false and must not be recorded.**
-> Tracked as risk R0.
+> Re-run the command yourself before recording rather than trusting this paragraph — that is the whole
+> point of the pre-record checklist (§11).
 
 **The separation is by platform, not by architecture** — *this part is true of the declared config.*
 `familyOf()` returns a `VendorFamily`, so a "family" here is the provider. When re-armed,
@@ -467,24 +528,29 @@ Headline: **The model that checks a claim never comes from the platform that wro
 are not making; the actual property is two models from different companies, with different corpora
 and different weights, which is what makes the blind spots independent.
 
-**Agnes is the right model to name — once it is actually in the path.** The adversarial role is
-precisely the one that requires a model whose training data and weights are *not* shared with the
-writer. Agnes AI is a sponsor whose team is among the judges (`hackathon-rules.md:78,81`), and the
-usage ledger records **18 of 50 calls consumed**. ⚠️ **Open question:** how those 18 calls were made
-while TEST-MODE routes every node to OpenAI is unexplained — resolve it before quoting the figure.
+**Agnes is the right model to name, and it is genuinely in the path.** The adversarial role is precisely
+the one that requires a model whose training data and weights are *not* shared with the writer. Agnes AI
+is a sponsor whose team is among the judges (`hackathon-rules.md:78,81`). The ledger records **10 Agnes
+calls on 2026-08-01 at US$0**, and the raw responses carry provider attestation `agnes-2.5-flash`. The
+earlier "18 of 50 calls" figure is not reproducible from this repository — do not use it; the 50-call
+plan quota is a vendor-side number we cannot observe.
 
 ### Slide 5 · The honest slide · 25s — **never cut**
-Headline: **Verified edges today: 0.**
-- Synthesis is measured at batch scale; Agnes verification has run but is **not complete**
-- Nothing has cleared the full gate — and `uncertain` never ships, so we hold it
-- Corpus: **870 fetched · 845 with usable full text** · spend to date **US$1.118**
+Headline: **14 verified edges. 0 cards made from one.**
+- The corpus is real: **21,823 records, 894 with usable full text** — and those are different numbers
+- Synthesis ran at batch scale: **40 papers → 20 claims, 12 cited blueprints**, US$0.04 a paper
+- The verifier ran: **14 edges checked, 11 servable** — judged on fidelity to the paper each one cites
+- **The last mile is missing.** No card carries `producer='edge'` yet. Spend to date: **US$1.80**
 
-> **Confirm this wording with the orchestrator before recording.** An earlier draft said the verifier
-> was "blocked on a provider key." That was the older state and is no longer safe to assert: **Agnes
-> has consumed 18 of 50 calls**, and #322 fixed real Agnes response handling (code fences), so the
-> verifier has genuinely run. The 2026-08-01 freshness audit's phrasing is the defensible one —
-> *"#307 has measured synthesis at batch scale, but verification remains incomplete and no
-> projection/card result has been reported."* **Do not say "blocked" and do not say "it works."**
+> **Wording is load-bearing on this slide; do not improvise it.** Three failure modes:
+> - Saying **"blocked"** or **"zero verified edges"** — both false now. 14 exist, 11 servable.
+> - Saying **"the verifier validates our edges"** or **"the science backs this"** — false. A verdict says
+>   the claim is a faithful reading of *one cited paper*. It is not a finding about the literature.
+> - Showing a card while implying it came from a paper — false. **0 cards have `producer='edge'`.**
+>
+> The defensible framing: **"the chain is real up to the verified edge, and stops one step short of a
+> card — and the app says so to the user rather than papering over it."** Naming the exact boundary is
+> stronger than either overclaim, and it is true.
 
 Closing line on the slide: *We could have hardcoded a plausible edge. You would not have known.*
 
@@ -504,10 +570,11 @@ scientific literature, and biotope, which puts what it finds in front of a perso
 they don't show their working. The evidence exists — it's sitting in an ocean of papers nobody reads.
 So we built the reader first."
 
-**Capture N1 (25s).** "This is nao, our operator window into that corpus. Twelve hundred and
-ninety-eight papers indexed. Seven hundred and fifty-six fully fetched. Seven hundred and thirty-nine
-with usable full text — that last number is the one that matters, because a paper we can't read the
-body of is a paper we can't ground a claim in."
+**Capture N1 (25s).** "This is nao, our operator window into that corpus. Twenty-one thousand records
+discovered. Nine hundred and eleven actually fetched. Eight hundred and ninety-four with usable full text —
+and that last number is the only one that matters, because a paper we can't read the body of is a paper we
+can't ground a claim in. We keep those three numbers apart on purpose; collapsing them is how a corpus gets
+advertised at twenty-four times its real size."
 
 **Capture N2 (30s).** "The index is derived — object storage holds the papers, and this is a rebuilt
 full-text search layer over them. Real titles, real DOIs, real citation counts. We can search the
@@ -532,10 +599,13 @@ logged data. Every card can be opened up: what pattern fired, how many days of d
 whether that baseline is stable yet, and what produced it. Here, a built-in rule, not research. If we
 can't say where a card came from, we don't show it."
 
-**Slide 5 (25s).** "So here is the honest state. That pipeline has published zero verified edges.
-The corpus is real, the extraction is real, synthesis runs at batch scale, and Agnes has started
-checking — but nothing has cleared the whole gate yet, and our rule is that uncertain doesn't ship.
-So we hold them. We could have hardcoded a plausible edge and you would not have known."
+**Slide 5 (25s).** "So here is the honest state. The corpus is real, synthesis ran across forty papers for
+about four cents each, and Agnes checked fourteen edges — eleven of them are servable. But read that
+precisely: a verdict says the claim is a faithful reading of the one paper it cites. It does not say the
+science is settled. And no card in the app has come from one of those edges yet — the last step isn't
+built. The app says so itself: it labels those cards 'still researching', and tells you outright it's an
+unverified observation from your own data. We could have hardcoded a plausible edge and you would not have
+known."
 
 **Slide 6 (5s).** "Everything we've claimed is in the write-up, with the evidence attached."
 
@@ -547,11 +617,18 @@ So we hold them. We could have hardcoded a plausible edge and you would not have
 |---|---|
 | "Built for ASEAN" / "for Southeast Asia" | Nothing — drop the regional framing. No localisation, regional data source or market-specific feature shipped, so the claim has no evidence behind it |
 | "A different model *family*" | "A different **platform** — OpenAI writes it, Agnes checks it." "Family" reads as an architecture claim we aren't making |
-| "The verifier is blocked" / "the verifier works" | "Verification has run but is not complete; nothing has cleared the full gate" |
+| "The verifier is blocked" / "zero verified edges" | "It ran: 14 edges checked, 11 servable" — both older phrasings are now false |
+| "The verifier validated it" / "the science backs this" | "The verdict says the claim is faithful to the one paper it cites — that is not a finding about the literature" |
+| "The literature doesn't support these claims" | "Our retrieval has no alias map, so corroboration counts measure our own vocabulary, not the science" |
+| "Only one other study backed this up" as a *template* | It is genuine model-written caveat prose on the stored records — quote it as a real caveat, not as a hardcoded string |
 | "We select the relevant passages and send those" | "The whole paper goes in — the model picks and quotes its own evidence" (#300 §A; there is no passage-selection stage) |
 | "The card explains the mechanism" | "The card *quotes* the paper's own mechanism sentence, verbatim — we never paraphrase a pathway" |
-| "6,158 papers" | "870 fetched, 845 with usable full text" |
-| "Verified research edges power the app" | "Zero verified edges today — we hold uncertain claims" |
+| "21,823 papers" / any bare corpus total | Always give the tier: "21,823 records, 911 fetched, **894 with usable full text**" |
+| "6,158 papers" | "894 with usable full text" — 6,158 is the deployed console's stale projection |
+| "Verified research edges power the app" | "14 verified edges exist; **no card has been made from one yet**" |
+| "This card is backed by research" (of any card on screen) | "This is a personal observation from your own data — the app labels it *still researching*" (**0 cards have `producer='edge'`**) |
+| "3–5 blueprints per paper" | "We designed for 3–5 and measured 0.3" |
+| "The brain pipeline runs in CI" | "It cannot be dispatched — the workflow isn't on the default branch" |
 | "Live" / "in production" / "deployed" | "Running against a local stack" |
 | "Detects", "diagnoses", "treats" | "Signal", "pattern", "observation" ([memory 0003](../../../memory/0003-non-diagnostic-copy.md)) |
 | "Health score" / "rating" | "Coverage — how much of the window has data" |
@@ -568,10 +645,13 @@ functions. The pipeline is real; the person is not."*
 
 | # | Risk | Likelihood | Impact | Fallback |
 |---|---|---|---|---|
-| **R0** | **Slide 4 claims a decorrelated verifier that is switched off.** `check-config` reports `Decorrelation: VIOLATED (allowed by TEST-MODE) — synthesis=openai, verifier=openai` | **Certain today** | **Fatal — this is a false claim in the submission**, the one thing the rules say leads to disqualification | Delete the TEST-MODE block in `tools/llm-router/src/overrides.ts` (an `AGNES_API_KEY` now exists — the second provider it was waiting for), re-run `check-config` until green, then record. If it cannot be re-armed in time, **rewrite Slide 4 to describe the invariant as designed-and-enforced-in-config but currently disabled for single-provider running**, and carry the mandated TEST-MODE label |
+| **R0** | ~~Slide 4 claims a decorrelated verifier that is switched off.~~ **CLEARED 2026-08-01**: `check-config` reports `Decorrelation: OK — synthesis=openai, verifier=agnes`, and the TEST-MODE block is gone | **Resolved** | — | Nothing to do. Re-run `check-config` before recording anyway (§11) |
+| **R0b** | **Narration upgrades "11 edges are servable" into "the verifier validated the science."** A verdict judges fidelity to a single cited paper, nothing wider | **High — it is the natural thing to say** | **Fatal — it is the one materially false claim still available to say**, and the rules treat that as disqualifying | Rehearse §8's Slide 5 wording verbatim; never improvise this segment |
+| **R0c** | **A card on screen is narrated as paper-derived.** 0 cards have `producer='edge'` | **High — §7 invites it** | **Fatal** | Say "still researching / your own data only". See §1's promise section |
+| **R0d** | **Agnes free pricing expires 2026-08-08**, after which the verifier leg cannot run and only the owner can renew it | Certain after that date | High — no re-recording or re-verification possible | Record before 2026-08-08, or get the renewal first. Re-run `check-config` on the day |
 | **R1** | **nao login fails** — no `nao_members` row, or nao still pointed at hosted | **High until dry-run** | **Fatal** — nao is the video | §4. This is the #1 pre-record task |
 | **R2** | macOS biotope build fails at head — last proven at `HEAD~323` | Medium-high | High — costs Capture B1 | Build the day before. `flutter clean`, `pod install` in `apps/biotope/macos`, retry; else Pixel AVD |
-| **R3** | Someone clicks a paper detail page on camera | Medium | Medium — a 404 on screen | Rehearse N2; stay on the list. Or run `wrangler dev --remote` |
+| **R3** | Someone clicks a paper detail page on camera | Medium | **Low since PR #354** — it renders a reduced index record, not a 404 | Safe to click. Do not describe the reduced record as the full paper object |
 | **R4** | Docker not running | High — it isn't now | Fatal | Start Docker Desktop; confirm `docker info` |
 | **R5** | `.env.public` missing → biotope throws at startup | High on a fresh checkout | High | §5; the `flutter analyze` warning is the tripwire |
 | **R6** | Edge function returns `internal auth denied: not_configured` | Medium | Medium | Secret file not passed to `functions serve`, or wrong header. It is `x-ourobion-internal-secret` |
@@ -579,36 +659,45 @@ functions. The pipeline is real; the person is not."*
 | **R8** | Narration drifts into diagnostic language | Medium | **High** — violates a non-negotiable principle | Rehearse §8 and §9 |
 | **R9** | Video runs over 3:00 | High on first cut | **Fatal** — hard event rule | Cut in the §1 order. Never cut Slides 4 or 5 |
 
-> **The D1 ETL workflow is not a fallback — it cannot run.** #326 added
-> `.github/workflows/nao-d1-etl.yml`, but it is `workflow_dispatch`-only, its header says it becomes
-> runnable only once the file reaches the default branch, and its checkout pins `refs/heads/main` —
-> and it **is not on `main`** (`origin/main` carries only `ci.yml` and `brain-ingest.yml`;
-> `gh workflow list --all` registers three workflows, not including it). Correct label: **Configured
-> target; deployment unproven.** Local `npm run etl` is the only refresh path, and the index is
-> already populated anyway (§3).
+> **Two workflows are not fallbacks — neither can run.** Re-verified 2026-08-01 by querying the API:
+> `gh run list --workflow=nao-d1-etl.yml` and `--workflow=brain-pipeline.yml` both return
+> **`HTTP 404: workflow not found on the default branch`**. `workflow_dispatch` resolves the definition
+> from the default branch, and `origin/main` carries only `ci.yml` and `brain-ingest.yml`. So:
+> - **the D1 ETL cannot refresh the hosted index** — which is exactly why the deployed console still shows
+>   ~6,158 and cannot be corrected before recording. Local `npm run etl` is the only refresh path, and the
+>   index is already populated anyway (§3).
+> - **the cloud brain pipeline has never run and cannot be triggered** (#343). Do not narrate it as CI.
+>   The 14 verified edges were produced by a local run, not by the cloud workflow.
+>
+> Correct label for both: **Configured target; deployment unproven.**
 
 ---
 
 ## 11. Pre-record checklist
 
 - [ ] `git fetch && git log -1 origin/dev-phase2-run4` — re-stamp the anchor SHA and timestamp above
-- [ ] **🛑 `llm-router check-config` reports decorrelation satisfied, not `VIOLATED`** (R0). Keys must
-      be exported for the router to see them — it reads `process.env`, and brain-ingest's `.env`
-      parser does **not** export into it:
+- [ ] **`llm-router check-config` reports `Decorrelation: OK`** — was green on 2026-08-01 (R0 cleared), but
+      confirm rather than assume, and confirm the Agnes price has not expired (R0d). Keys must be exported
+      for the router to see them — it reads `process.env`, and brain-ingest's `.env` parser does **not**
+      export into it:
       ```bash
       set -a; . tools/brain-ingest/.env; set +a
       cd tools/llm-router && ./node_modules/.bin/tsx src/cli.ts check-config
       ```
       Without that, every node reports `key absent` even with a fully populated `.env`.
 - [ ] **nao dry run: `npm run dev` → sign in → Overview and Papers render** (R1)
-- [ ] Re-query local D1 and update the §3 numbers if they moved:
-      `sqlite3 <db> "select status, count(*) from papers group by status;"`
+- [ ] **Re-count the corpus and update §3 — it moves fast** (it went 1,232 → 21,823 in one day). Count all
+      three tiers, never just the total. If the numbers moved, update §3, Slide 3's annotation, Slide 5 and
+      the §8 narration together — they quote the same figures and drifting them apart is how a false number
+      reaches the video.
 - [ ] **`flutter run -d macos` reaches sign-in** (R2)
 - [ ] `flutter analyze --no-pub` clean · `flutter test --no-pub` green
-- [ ] `npx supabase start` up; `migration list --local` shows all 41
+- [ ] `npx supabase start` up; `migration list --local` shows all **44**
 - [ ] §5 seeding reports rows; both edge functions return success; Insights renders a card
-- [ ] **Re-check `verified_edges`.** If it is no longer 0, Slide 5 and the §8 pivot change materially
-      — rewrite before recording
+- [ ] **Re-read the four hosted counts** (`relationship_claims`, `edge_verifications`, `verified_edges`,
+      `insight_cards` split by `producer`). §3 records 14 · 14 · 14 (11 servable) · 45 (43/2/**0 edge**) as
+      of 2026-08-02. **If a `producer='edge'` card now exists, §1's promise section, Slide 5 and the §8
+      narration all change materially — rewrite before recording.**
 - [ ] Re-confirm the spend figures
 - [ ] Final cut timed at **≤ 3:00**
 
