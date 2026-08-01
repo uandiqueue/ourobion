@@ -186,11 +186,19 @@ test('O17: supported + partially-found quoteCheck ({1,3,false}) fails validation
 
 test('O17: a servable verdict with a PASSING quote check still loads and bands (no over-blocking)', () => {
   // The unmodified fixtures carry supported/partial lines with passing quoteChecks — they must
-  // stay loadable and servable-banded exactly as before.
+  // stay loadable, and a claim that faithfully represents its cited paper must still band.
   const { errors, verificationRows } = buildLoad(claimsText, verificationsText);
   assert.deepEqual(errors, []);
+  // EDGE_SLEEP_RHR loads (that is the O17 property under test) …
   const partial = verificationRows.find((r) => r.edge_id === EDGE_SLEEP_RHR)!;
-  assert.equal(partial.serving_band, 'mid');
+  assert.ok(partial, 'a passing quote check must not block the row');
+  // … and a fully faithful row bands. C15: EDGE_SLEEP_RHR itself no longer does — its
+  // effectSizeCheck.matchesClaim is false (extracted -0.8 vs the claimed effect), which is a
+  // single-paper faithfulness failure, so it is withheld by the gate rather than by a score.
+  const faithful = verificationRows.find(
+    (r) => r.edge_id === EDGE_SLEEP_HRV && r.verified_at === '2026-07-12T00:00:00.000Z',
+  )!;
+  assert.equal(faithful.serving_band, 'high');
 });
 
 test('a claim endpoint that is not an active registry metric fails with its line number', () => {
@@ -251,21 +259,29 @@ test('fixture scores/bands match hand-computed expectations', () => {
   const { verificationRows } = buildLoad(claimsText, verificationsText);
   const byKey = new Map(verificationRows.map((r) => [`${r.edge_id} ${r.verified_at}`, r]));
 
+  // edge_score is the (unchanged) composite RANK; serving_band is the C15 single-paper gate, which
+  // floors CONFIDENCE — so the two can legitimately disagree, and the older row below shows it.
+
   // Keys use the canonical verified_at (A13): fixture '…T00:00:00Z' → '…T00:00:00.000Z'.
-  // supported, conf .9, tier 5, net +3: .9 * (.6 + .25*1 + .15*1) = 0.9 → high
+  // supported, conf .9, tier 5, net +3: .9 * (.6 + .25*1 + .15*1) = 0.9; faithful, conf .9 → high
   const newest = byKey.get(`${EDGE_SLEEP_HRV} 2026-07-12T00:00:00.000Z`)!;
   assert.ok(Math.abs(newest.edge_score - 0.9) < 1e-9);
   assert.equal(newest.serving_band, 'high');
 
-  // supported, conf .85, tier 4, net +2: .85 * (.6 + .25*.8 + .15*(2/3)) = 0.765 → mid
+  // supported, conf .85, tier 4, net +2: .85 * (.6 + .25*.8 + .15*(2/3)) = 0.765.
+  // Pre-C15 that composite banded `mid`; the gate now floors confidence (.85 ≥ .8) → high.
   const older = byKey.get(`${EDGE_SLEEP_HRV} 2026-07-11T00:00:00.000Z`)!;
   assert.ok(Math.abs(older.edge_score - 0.765) < 1e-9);
-  assert.equal(older.serving_band, 'mid');
+  assert.equal(older.serving_band, 'high');
 
-  // partial, conf .7, tier 3, net +1: .7 * (.6 + .25*.6 + .15*(1/3)) = 0.56 → mid
+  // partial, conf .7, tier 3, net +1: .7 * (.6 + .25*.6 + .15*(1/3)) = 0.56 — rank unchanged.
+  // C15 band: `hold`, because effectSizeCheck.matchesClaim is false (the cited paper's extracted
+  // -0.8 does not carry the claimed effect). That is a single-paper faithfulness failure, NOT the
+  // demoted corroboration/tier/scope metadata — its scopeCheck.mismatch is true and irrelevant.
   const partial = byKey.get(`${EDGE_SLEEP_RHR} 2026-07-12T00:00:00.000Z`)!;
   assert.ok(Math.abs(partial.edge_score - 0.56) < 1e-9);
-  assert.equal(partial.serving_band, 'mid');
+  assert.equal(partial.serving_band, 'hold');
+  assert.deepEqual(brain.singlePaperGate(partial.verification).failures, ['effect-size-mismatch']);
 
   // uncertain: never servable → score 0, hold
   const uncertain = byKey.get(`${EDGE_STEPS_SLEEP} 2026-07-12T00:00:00.000Z`)!;
