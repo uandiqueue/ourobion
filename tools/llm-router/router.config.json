@@ -19,7 +19,7 @@
   "prices": {
     "claude-sonnet-5": { "inputUsdPerMTok": 2.0, "outputUsdPerMTok": 10.0, "pricingProvenance": "Anthropic official Claude Sonnet 5 launch pricing, verified 2026-07-31 (anthropic.com/news/claude-sonnet-5)", "effectiveFrom": "2026-06-30T00:00:00.000Z", "expiresAt": "2026-09-01T00:00:00.000Z", "provisional": false },
     "claude-haiku-4-5": { "inputUsdPerMTok": 1.0, "outputUsdPerMTok": 5.0, "provisional": true },
-    "gpt-5": { "inputUsdPerMTok": 1.25, "outputUsdPerMTok": 10.0, "pricingProvenance": "OpenAI official GPT-5 model page, operator-verified 2026-07-31 (developers.openai.com/api/docs/models/gpt-5)", "effectiveFrom": "2026-07-31T00:00:00.000Z", "expiresAt": "2026-08-08T00:00:00.000Z", "provisional": false },
+    "gpt-5": { "inputUsdPerMTok": 1.25, "outputUsdPerMTok": 10.0, "pricingProvenance": "OpenAI official GPT-5 model page, operator-verified 2026-07-31; re-verified unchanged 2026-08-01 at $1.25/$10.00 per MTok (developers.openai.com/api/docs/models/gpt-5)", "effectiveFrom": "2026-07-31T00:00:00.000Z", "expiresAt": "2026-09-01T00:00:00.000Z", "provisional": false },
     "gpt-5-mini": { "inputUsdPerMTok": 0.25, "outputUsdPerMTok": 2.0, "provisional": true },
     "agnes-2.5-flash": {
       "inputUsdPerMTok": 0,
