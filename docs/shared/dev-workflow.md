@@ -12,7 +12,7 @@ updated: 2026-07-13
 > Purpose: Explains the full development cycle, what AI handles, and what requires human judgment.
 >
 > The cross-tool source of truth is [`AGENTS.md`](../../AGENTS.md); its §7 collaboration protocol is the
-> authoritative version of this cycle. `dev-phase2` is the single working / integration branch all
+> authoritative version of this cycle. `dev-phase2-run4` is the single working / integration branch all
 > session PRs target; it is the only branch that PRs into `main`.
 
 ---
@@ -41,10 +41,11 @@ Someone identifies work — a bug, a feature, or a task. Open a GitHub Issue usi
 ---
 
 ### 2. Branch + Worktree
-Create a branch off `dev-phase2` **in its own git worktree** so two agents on one device never collide
-(`node tools/setup_agent_worktree.mjs --branch <name> --path <path>` — it cuts from `dev-phase2` by
-default). Name it following the convention below. The branch is short-lived: it lives only until its PR
-merges into `dev-phase2`. Never work directly on `dev-phase2`.
+Create a branch off `dev-phase2-run4` **in its own git worktree** so two agents on one device never
+collide (`node tools/setup_agent_worktree.mjs --branch <name> --base dev-phase2-run4 --path <path>` —
+pass `--base` explicitly, since the tool's own default base is still the stale `dev-phase2`; see
+`tools/setup_agent_worktree.mjs`). Name it following the convention below. The branch is short-lived: it
+lives only until its PR merges into `dev-phase2-run4`. Never work directly on `dev-phase2-run4`.
 
 **Naming:**
 ```
@@ -111,10 +112,10 @@ If any step fails, the PR shows a red ✗ and cannot be merged until fixed.
 ---
 
 ### 7. Pull Request
-Open a PR from your branch into `dev-phase2`. Use the PR template. Link the issue it closes.
+Open a PR from your branch into `dev-phase2-run4`. Use the PR template. Link the issue it closes.
 
-**PR destination is always `dev-phase2` (the integration line). Never open a PR directly to `main` —
-only `dev-phase2` does, at phase/milestone completion.**
+**PR destination is always `dev-phase2-run4` (the integration line). Never open a PR directly to `main` —
+only `dev-phase2-run4` does, at phase/milestone completion.**
 
 | Who | What |
 |---|---|
@@ -134,7 +135,7 @@ A team member reads the diff and either approves or requests changes. For shared
 ---
 
 ### 9. Merge
-Approved PR is merged into `dev-phase2`.
+Approved PR is merged into `dev-phase2-run4`.
 
 | Who | What |
 |---|---|
@@ -145,16 +146,16 @@ Approved PR is merged into `dev-phase2`.
 ## Branch Model
 
 ```
-main             ← always shippable; only receives PRs from dev-phase2 at phase/milestone releases
-  └── dev-phase2 ← the single working / integration branch; every session PR targets here
+main                  ← always shippable; only receives PRs from dev-phase2-run4 at phase/milestone releases
+  └── dev-phase2-run4 ← the single working / integration branch; every session PR targets here
         ├── feat/m2-self-report/streak-counter   ← short-lived session branch; deleted after merge
         └── fix/m1-core/supabase-ip-env          ← short-lived session branch; deleted after merge
 ```
 
 There are **no long-running personal branches** (`dev-<name>`). Each session cuts a fresh branch from
-`dev-phase2`, opens a PR back into `dev-phase2`, and the branch is deleted once merged.
+`dev-phase2-run4`, opens a PR back into `dev-phase2-run4`, and the branch is deleted once merged.
 
-`dev-phase2 → main` only happens when a phase/milestone is complete and both team members sign off on a release build.
+`dev-phase2-run4 → main` only happens when a phase/milestone is complete and both team members sign off on a release build.
 
 ---
 
@@ -186,11 +187,11 @@ These are checked by CI and will eventually also be checked by the AI prelim rev
 
 ---
 
-## When `dev-phase2` Merges to `main`
+## When `dev-phase2-run4` Merges to `main`
 
 Only at phase/milestone completions. Both team members must agree. Steps:
-1. `dev-phase2` is stable and CI-green
+1. `dev-phase2-run4` is stable and CI-green
 2. Both members review the milestone summary
-3. Merge `dev-phase2 → main`
+3. Merge `dev-phase2-run4 → main`
 4. Tag the release (e.g. `v0.1.0-mvp1`)
 5. Update `docs/biotope/architecture-context.md` phase status
