@@ -119,7 +119,7 @@ export function hashTextEvidence(value) {
 // evidence is carried forward and disclosed rather than presented as freshly probed. The four
 // frozen module graphs, their entrypoints/import maps, config, and lock must be regenerated and
 // byte-identical before that evidence can be reused; any identity drift requires a fresh probe.
-export const RUN4_UNIT_BASE_SHA = 'e0c6077dd887fe277a3468130f0c44c909a86875';
+export const RUN4_UNIT_BASE_SHA = '545c10440acb46a3d836ef84c94e317e8526a3ff';
 
 // ---------------------------------------------------------------------------------------------
 // Immutable product cap (issue #183) — MEASURED AND RECORDED, NOT YET GATING.
