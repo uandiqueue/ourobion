@@ -1,0 +1,53 @@
+{
+  "ruleId": "short_sleep_higher_resting_hr",
+  "schemaVersion": 1,
+  "category": "descriptive",
+  "severity": "notice",
+  "scope": "cross",
+  "enabledPhase": "phase_2",
+  "metricKeys": [
+    "sleep_duration_min",
+    "resting_hr_bpm"
+  ],
+  "provenance": {
+    "tier": "extracted",
+    "sourceNote": "extracted by gpt-5-2025-08-07 (synthesis-whole-paper-2026-08-01.2) from doi:10.3389/fnhum.2026.1720237 § Results",
+    "citation": {
+      "paperId": "doi:10.3389/fnhum.2026.1720237",
+      "locator": "Results"
+    }
+  },
+  "effectiveFrom": null,
+  "effectiveTo": null,
+  "status": "active",
+  "deprecatedAt": null,
+  "cooldownDays": 7,
+  "expiryDays": 14,
+  "condition": {
+    "type": "coincidence",
+    "metricKeys": [
+      "sleep_duration_min",
+      "resting_hr_bpm"
+    ],
+    "both": [
+      {
+        "type": "trend",
+        "metricKey": "sleep_duration_min",
+        "equals": "falling",
+        "minConfidence": "low"
+      },
+      {
+        "type": "trend",
+        "metricKey": "resting_hr_bpm",
+        "equals": "rising",
+        "minConfidence": "low"
+      }
+    ],
+    "lagDays": null,
+    "minConfidence": "low"
+  },
+  "template": {
+    "title": "Lower sleep duration and higher resting heart rate appeared alongside",
+    "body": "When your sleep_duration_min was lower, your resting_hr_bpm tended to be higher — these moved together."
+  }
+}

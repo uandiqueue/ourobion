@@ -1,0 +1,53 @@
+{
+  "ruleId": "resting_hr_and_anxiety_move_together",
+  "schemaVersion": 1,
+  "category": "descriptive",
+  "severity": "notice",
+  "scope": "cross",
+  "enabledPhase": "phase_2",
+  "metricKeys": [
+    "resting_hr_bpm",
+    "anxiety_score"
+  ],
+  "provenance": {
+    "tier": "extracted",
+    "sourceNote": "extracted by gpt-5-2025-08-07 (synthesis-whole-paper-2026-08-01.2) from doi:10.2196/73812 § Results",
+    "citation": {
+      "paperId": "doi:10.2196/73812",
+      "locator": "Results"
+    }
+  },
+  "effectiveFrom": null,
+  "effectiveTo": null,
+  "status": "active",
+  "deprecatedAt": null,
+  "cooldownDays": 7,
+  "expiryDays": 14,
+  "condition": {
+    "type": "coincidence",
+    "metricKeys": [
+      "resting_hr_bpm",
+      "anxiety_score"
+    ],
+    "both": [
+      {
+        "type": "trend",
+        "metricKey": "resting_hr_bpm",
+        "equals": "rising",
+        "minConfidence": "medium"
+      },
+      {
+        "type": "trend",
+        "metricKey": "anxiety_score",
+        "equals": "rising",
+        "minConfidence": "medium"
+      }
+    ],
+    "lagDays": null,
+    "minConfidence": "medium"
+  },
+  "template": {
+    "title": "Resting heart rate and feeling anxious moved together",
+    "body": "When {{resting_hr_bpm}} trended up, {{anxiety_score}} tended to trend up too; these appeared alongside each other."
+  }
+}

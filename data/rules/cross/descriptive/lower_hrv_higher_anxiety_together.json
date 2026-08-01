@@ -1,0 +1,53 @@
+{
+  "ruleId": "lower_hrv_higher_anxiety_together",
+  "schemaVersion": 1,
+  "category": "descriptive",
+  "severity": "notice",
+  "scope": "cross",
+  "enabledPhase": "phase_2",
+  "metricKeys": [
+    "hrv_sdnn_ms",
+    "anxiety_score"
+  ],
+  "provenance": {
+    "tier": "extracted",
+    "sourceNote": "extracted by gpt-5-2025-08-07 (synthesis-whole-paper-2026-08-01.2) from doi:10.3389/fpsyg.2026.1872288 § Findings",
+    "citation": {
+      "paperId": "doi:10.3389/fpsyg.2026.1872288",
+      "locator": "Findings"
+    }
+  },
+  "effectiveFrom": null,
+  "effectiveTo": null,
+  "status": "active",
+  "deprecatedAt": null,
+  "cooldownDays": 7,
+  "expiryDays": 14,
+  "condition": {
+    "type": "coincidence",
+    "metricKeys": [
+      "hrv_sdnn_ms",
+      "anxiety_score"
+    ],
+    "both": [
+      {
+        "type": "trend",
+        "metricKey": "hrv_sdnn_ms",
+        "equals": "falling",
+        "minConfidence": "medium"
+      },
+      {
+        "type": "trend",
+        "metricKey": "anxiety_score",
+        "equals": "rising",
+        "minConfidence": "medium"
+      }
+    ],
+    "lagDays": null,
+    "minConfidence": "medium"
+  },
+  "template": {
+    "title": "Lower HRV and higher anxiety appeared together",
+    "body": "Lower heart-rate variability (SDNN) appeared alongside higher feelings of anxiety."
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "ruleId": "anxiety_and_symptoms_moved_together",
+  "schemaVersion": 1,
+  "category": "descriptive",
+  "severity": "notice",
+  "scope": "cross",
+  "enabledPhase": "phase_2",
+  "metricKeys": [
+    "anxiety_score",
+    "symptom_flags"
+  ],
+  "provenance": {
+    "tier": "extracted",
+    "sourceNote": "extracted by gpt-5-2025-08-07 (synthesis-whole-paper-2026-08-01.2) from doi:10.7759/cureus.80552 § Case presentation",
+    "citation": {
+      "paperId": "doi:10.7759/cureus.80552",
+      "locator": "Case presentation"
+    }
+  },
+  "effectiveFrom": null,
+  "effectiveTo": null,
+  "status": "active",
+  "deprecatedAt": null,
+  "cooldownDays": 7,
+  "expiryDays": 14,
+  "condition": {
+    "type": "coincidence",
+    "metricKeys": [
+      "anxiety_score",
+      "symptom_flags"
+    ],
+    "both": [
+      {
+        "type": "trend",
+        "metricKey": "anxiety_score",
+        "equals": "rising",
+        "minConfidence": "medium"
+      },
+      {
+        "type": "trend",
+        "metricKey": "symptom_flags",
+        "equals": "rising",
+        "minConfidence": "medium"
+      }
+    ],
+    "lagDays": null,
+    "minConfidence": "medium"
+  },
+  "template": {
+    "title": "Anxiety and symptoms moved together",
+    "body": "Higher anxiety appeared alongside more symptoms in your logs."
+  }
+}

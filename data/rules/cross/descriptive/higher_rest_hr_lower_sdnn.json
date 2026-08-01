@@ -1,0 +1,53 @@
+{
+  "ruleId": "higher_rest_hr_lower_sdnn",
+  "schemaVersion": 1,
+  "category": "descriptive",
+  "severity": "notice",
+  "scope": "cross",
+  "enabledPhase": "phase_2",
+  "metricKeys": [
+    "resting_hr_bpm",
+    "hrv_sdnn_ms"
+  ],
+  "provenance": {
+    "tier": "extracted",
+    "sourceNote": "extracted by gpt-5-2025-08-07 (synthesis-whole-paper-2026-08-01.2) from doi:10.7759/cureus.111596 § Results",
+    "citation": {
+      "paperId": "doi:10.7759/cureus.111596",
+      "locator": "Results"
+    }
+  },
+  "effectiveFrom": null,
+  "effectiveTo": null,
+  "status": "active",
+  "deprecatedAt": null,
+  "cooldownDays": 7,
+  "expiryDays": 14,
+  "condition": {
+    "type": "coincidence",
+    "metricKeys": [
+      "resting_hr_bpm",
+      "hrv_sdnn_ms"
+    ],
+    "both": [
+      {
+        "type": "trend",
+        "metricKey": "resting_hr_bpm",
+        "equals": "rising",
+        "minConfidence": "low"
+      },
+      {
+        "type": "trend",
+        "metricKey": "hrv_sdnn_ms",
+        "equals": "falling",
+        "minConfidence": "low"
+      }
+    ],
+    "lagDays": null,
+    "minConfidence": "low"
+  },
+  "template": {
+    "title": "Higher resting heart rate appeared alongside lower HRV (SDNN)",
+    "body": "On recent days, rising resting_hr_bpm coincided with falling hrv_sdnn_ms — these moved together."
+  }
+}

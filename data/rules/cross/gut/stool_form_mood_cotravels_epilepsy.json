@@ -1,0 +1,53 @@
+{
+  "ruleId": "stool_form_mood_cotravels_epilepsy",
+  "schemaVersion": 1,
+  "category": "gut",
+  "severity": "notice",
+  "scope": "cross",
+  "enabledPhase": "phase_2",
+  "metricKeys": [
+    "stool_form",
+    "mood_score"
+  ],
+  "provenance": {
+    "tier": "extracted",
+    "sourceNote": "extracted by gpt-5-2025-08-07 (synthesis-whole-paper-2026-08-01.2) from doi:10.1007/s11845-026-04396-x § Results",
+    "citation": {
+      "paperId": "doi:10.1007/s11845-026-04396-x",
+      "locator": "Results"
+    }
+  },
+  "effectiveFrom": null,
+  "effectiveTo": null,
+  "status": "active",
+  "deprecatedAt": null,
+  "cooldownDays": 7,
+  "expiryDays": 14,
+  "condition": {
+    "type": "coincidence",
+    "metricKeys": [
+      "stool_form",
+      "mood_score"
+    ],
+    "both": [
+      {
+        "type": "trend",
+        "metricKey": "stool_form",
+        "equals": "rising",
+        "minConfidence": "low"
+      },
+      {
+        "type": "trend",
+        "metricKey": "mood_score",
+        "equals": "rising",
+        "minConfidence": "low"
+      }
+    ],
+    "lagDays": null,
+    "minConfidence": "low"
+  },
+  "template": {
+    "title": "Stool form and mood moved together",
+    "body": "When stool_form shifted, mood appeared alongside those changes — these moved together."
+  }
+}

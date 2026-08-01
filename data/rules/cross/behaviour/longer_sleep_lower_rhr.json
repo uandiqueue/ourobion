@@ -1,0 +1,53 @@
+{
+  "ruleId": "longer_sleep_lower_rhr",
+  "schemaVersion": 1,
+  "category": "behaviour",
+  "severity": "notice",
+  "scope": "cross",
+  "enabledPhase": "phase_2",
+  "metricKeys": [
+    "sleep_duration_min",
+    "resting_hr_bpm"
+  ],
+  "provenance": {
+    "tier": "extracted",
+    "sourceNote": "extracted by gpt-5-2025-08-07 (synthesis-whole-paper-2026-08-01.2) from doi:10.1371/journal.pdig.0001284 § Results",
+    "citation": {
+      "paperId": "doi:10.1371/journal.pdig.0001284",
+      "locator": "Results"
+    }
+  },
+  "effectiveFrom": null,
+  "effectiveTo": null,
+  "status": "active",
+  "deprecatedAt": null,
+  "cooldownDays": 7,
+  "expiryDays": 14,
+  "condition": {
+    "type": "coincidence",
+    "metricKeys": [
+      "sleep_duration_min",
+      "resting_hr_bpm"
+    ],
+    "both": [
+      {
+        "type": "trend",
+        "metricKey": "sleep_duration_min",
+        "equals": "rising",
+        "minConfidence": "low"
+      },
+      {
+        "type": "trend",
+        "metricKey": "resting_hr_bpm",
+        "equals": "falling",
+        "minConfidence": "low"
+      }
+    ],
+    "lagDays": null,
+    "minConfidence": "low"
+  },
+  "template": {
+    "title": "Longer sleep and lower resting heart rate moved together",
+    "body": "When your {{sleep_duration_min}} rose, your {{resting_hr_bpm}} tended to fall — these moved together."
+  }
+}
