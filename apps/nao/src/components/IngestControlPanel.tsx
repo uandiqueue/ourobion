@@ -13,12 +13,24 @@
 // instead. The field is therefore absent at runtime even though
 // IngestControlConfig types it as required, hence the `|| '[redacted]'` fallback
 // at the one render site below.
+//
+// R4 viewer read-only UX: the three sections here are gated INDEPENDENTLY, on
+// the two different routes they call — settings (pause/resume, budget) is
+// `POST /api/ingest-control` and Run now is `POST /api/ingest-control/trigger`,
+// which the route matrix requires different tiers for. That granularity is the
+// reason each control names its own route instead of the panel carrying one
+// "can edit" flag: a caller who may start a run but may not change the budget
+// sees exactly that.
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { INGEST_SEED_TOPICS, DEFAULT_INGEST_CONTROL } from '@/lib/types';
 import type { IngestControlConfig } from '@/lib/types';
 import { buildSeedCatalog, seedRunabilityError } from '@/lib/seedsControl';
 import type { SeedCatalogEntry } from '@/lib/seedsControl';
+import { ControlNote, useControlGate } from './NaoAccess';
+
+const SETTINGS_ROUTE = 'POST /api/ingest-control';
+const TRIGGER_ROUTE = 'POST /api/ingest-control/trigger';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -33,6 +45,7 @@ export interface IngestControlPanelProps {
 }
 
 export function IngestControlPanel({ seedCatalogRevision = 0 }: IngestControlPanelProps = {}) {
+  const gate = useControlGate();
   const [state, setState] = useState<LoadState>('loading');
   const [control, setControl] = useState<IngestControlConfig>(DEFAULT_INGEST_CONTROL);
   const [busy, setBusy] = useState(false);
@@ -167,8 +180,8 @@ export function IngestControlPanel({ seedCatalogRevision = 0 }: IngestControlPan
           <button
             type="button"
             className="ingest-btn"
-            disabled={busy}
             onClick={() => void patchSettings({ paused: !control.paused })}
+            {...gate(SETTINGS_ROUTE, busy)}
           >
             {control.paused ? 'Resume ingestion' : 'Pause ingestion'}
           </button>
@@ -177,13 +190,19 @@ export function IngestControlPanel({ seedCatalogRevision = 0 }: IngestControlPan
           Paused blocks both &quot;Run now&quot; below and any <code>--remote-control</code> CLI run. Last
           changed by {control.updatedBy || '[redacted]'} at {fmtWhen(control.updatedAt)}.
         </p>
+        <ControlNote route={SETTINGS_ROUTE} />
       </div>
 
       {/* Run now */}
       <div className="panel ingest-panel">
         <div className="eyebrow panel__label">Run now</div>
         <form className="ingest-form" onSubmit={submitRun}>
-          <select value={seed} onChange={(e) => setSeed(e.target.value)} aria-label="Seed topic">
+          <select
+            value={seed}
+            onChange={(e) => setSeed(e.target.value)}
+            aria-label="Seed topic"
+            {...gate(TRIGGER_ROUTE)}
+          >
             <optgroup label="Built-in seeds">
               {seedCatalog.filter((entry) => entry.builtIn).map((entry) => (
                 <option key={`built-in:${entry.slug}`} value={entry.slug}>
@@ -217,8 +236,9 @@ export function IngestControlPanel({ seedCatalogRevision = 0 }: IngestControlPan
             onChange={(e) => setLimit(e.target.value)}
             aria-label="Paper limit"
             placeholder="limit"
+            {...gate(TRIGGER_ROUTE)}
           />
-          <button type="submit" className="ingest-btn" disabled={busy || control.paused}>
+          <button type="submit" className="ingest-btn" {...gate(TRIGGER_ROUTE, busy || control.paused)}>
             Run now
           </button>
         </form>
@@ -226,6 +246,7 @@ export function IngestControlPanel({ seedCatalogRevision = 0 }: IngestControlPan
           Triggers a real ingestion run immediately on GitHub Actions ({' '}
           <code>.github/workflows/brain-ingest.yml</code>) with this seed/limit.
         </p>
+        <ControlNote route={TRIGGER_ROUTE} />
         {seedCatalogWarning ? <p className="fmt__cap ingest-error">{seedCatalogWarning}</p> : null}
         {triggerMessage ? <p className="fmt__cap ingest-success">{triggerMessage}</p> : null}
       </div>
@@ -243,12 +264,14 @@ export function IngestControlPanel({ seedCatalogRevision = 0 }: IngestControlPan
             onChange={(e) => setBudget(e.target.value)}
             placeholder="1.00 (default)"
             aria-label="OpenAlex daily budget in USD"
+            {...gate(SETTINGS_ROUTE)}
           />
-          <button type="submit" className="ingest-btn" disabled={busy}>
+          <button type="submit" className="ingest-btn" {...gate(SETTINGS_ROUTE, busy)}>
             Save
           </button>
         </form>
         <p className="fmt__cap">Overrides the compiled-in $1.00/day cap. Leave blank to use the default.</p>
+        <ControlNote route={SETTINGS_ROUTE} />
       </div>
 
       {error ? <p className="ingest-error">{error}</p> : null}

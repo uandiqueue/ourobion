@@ -215,6 +215,43 @@
   box-shadow: 0 0 8px var(--accent-1);
 }
 
+/* ── Read-only access notice (R4) ────────────────────────────────────────── */
+/*
+ * Sits between the sub-nav and the page canvas, so it is the first thing under
+ * the chrome on every page — and it is rendered ONLY for a caller who cannot
+ * change anything (see src/components/ReadOnlyBanner.tsx). Informational
+ * weight, not alarm: a hairline and a low-alpha wash in the cyan accent, never
+ * the amber/red reserved for something being wrong.
+ */
+.access-banner {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 26px;
+  border-bottom: 1px solid var(--hairline);
+  background: rgba(47, 183, 214, 0.07);
+}
+
+.access-banner__label {
+  color: var(--accent-2);
+  flex: none;
+}
+
+.access-banner__body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 720px) {
+  .access-banner {
+    padding: 10px 16px;
+  }
+}
+
 /* ── Page canvas ─────────────────────────────────────────────────────────── */
 .shell__main {
   flex: 1;

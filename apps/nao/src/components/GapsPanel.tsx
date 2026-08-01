@@ -13,8 +13,18 @@
 // pipeline at a gap. The autonomous gap→research→verify loop (A3 queue,
 // dispatch, auto-research) stays gated on B5 + U16 and is deliberately NOT
 // built here.
+//
+// R4 viewer read-only UX: the gap table itself is readable by anyone who can
+// reach this page, so it stays fully live. Only "Add as seed" is gated — and on
+// `POST /api/seeds`, the route the seed it hands over would ultimately be
+// written through, not on any route this panel calls itself. A button whose
+// entire purpose is to start a flow the caller cannot finish is exactly the
+// surface this change exists to remove.
 import { useEffect, useState } from 'react';
 import type { GapViewRow } from '@/lib/gapsControl';
+import { ControlNote, useControlGate } from './NaoAccess';
+
+const SEEDS_ADD_ROUTE = 'POST /api/seeds';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -31,6 +41,7 @@ export interface GapsPanelProps {
 }
 
 export function GapsPanel({ onAddAsSeed }: GapsPanelProps) {
+  const gate = useControlGate();
   const [state, setState] = useState<LoadState>('loading');
   const [gaps, setGaps] = useState<GapViewRow[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -108,6 +119,7 @@ export function GapsPanel({ onAddAsSeed }: GapsPanelProps) {
                           className="ingest-btn ingest-btn--ghost gaps-addseed"
                           title={`Prefill the seed form with "${g.seedLabel}"`}
                           onClick={() => onAddAsSeed(g.seedLabel)}
+                          {...gate(SEEDS_ADD_ROUTE)}
                         >
                           Add as seed
                         </button>
@@ -123,6 +135,7 @@ export function GapsPanel({ onAddAsSeed }: GapsPanelProps) {
               Showing the top {gaps.length} of {totalCount} gaps by demand.
             </p>
           ) : null}
+          {onAddAsSeed ? <ControlNote route={SEEDS_ADD_ROUTE} /> : null}
         </>
       ) : null}
     </div>
