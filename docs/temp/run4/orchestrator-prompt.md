@@ -140,22 +140,39 @@ THE DESIGN FILE
   counterpart (the repo has logo.png).
 
 ===============================================================================
-6. DEVICE SETUP (macOS) — machine-local, does not travel between devices
+6. DEVICE SETUP (Windows, host UaNdIQueue) — machine-local, does not travel between devices
 ===============================================================================
 
-- deno is required by the release gate and is NOT installed by default. Install the pinned version:
-    curl -fsSL https://deno.land/install.sh | DENO_INSTALL="$HOME/.deno" sh -s v2.8.1
-  It must be 2.8.1: CI pins it, and the attestation's module-graph hashes must match.
-- Docker Desktop's credential helper is not on PATH, so `docker run` fails with
-  "docker-credential-desktop not found". Prefix with:
-    export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"
-  The authz and profile_prefs harnesses need this — they spin disposable postgres:17 containers.
-- adb lives at ~/Library/Android/sdk/platform-tools/adb and is not on PATH; `flutter devices` will
-  not see the phone until it is. Note zsh does NOT word-split unquoted variables, so
-  `A="adb -s X"; $A shell ...` fails — write adb commands out in full.
-- The repo-local Supabase CLI is node_modules/.bin/supabase (2.81.2).
+There is NO macOS machine in this project. This section previously prescribed a macOS setup
+(`/Applications/Docker.app`, `~/Library/Android/sdk`, zsh word-splitting) for a machine that does not
+exist; it was corrected on 2026-07-28 against the real box.
+
+- NOTHING is on the base PATH — not node, not flutter, not java. Activate the bounded toolchain once
+  per PowerShell shell, from the repo root:
+    . .\scripts\biotope-env.ps1
+  It reports node / java / flutter / android SDK versions. The toolchain lives in the sibling
+  `..\biotope-toolchain\`, never on the global PATH.
+- PUSH FROM AN ACTIVATED POWERSHELL. Git Bash has no node, so `git push` from bash dies inside
+  `.githooks/pre-push` (`node tools/context_sync.mjs --check` → "node: command not found").
+- deno is required by the release gate and is NOT installed on this box. Install the pinned version:
+    irm https://deno.land/install.ps1 | iex
+  Then confirm `deno --version` is exactly 2.8.1: CI pins it, and the attestation's module-graph
+  hashes must match. If you cannot get exactly 2.8.1, report it blocked — never fudge recorded hashes.
+- adb lives at C:\project\biotope-toolchain\android-sdk\platform-tools\adb.exe. PowerShell has no zsh
+  word-splitting trap, but it has its own: use the call operator `&` for native exes with spaces in
+  the path, and note that inline here-string bodies (`@'...'@`) containing double quotes break
+  `gh`/`git` argument parsing — write the body to a file and use `--body-file` / `-F`.
+- The repo-local Supabase CLI is node_modules\.bin\supabase (2.81.2). GOTCHA: that is an extensionless
+  shell shim, so PowerShell refuses it mid-pipeline with "Cannot run a document in the middle of a
+  pipeline". Use the real binary whenever you need to pipe or redirect:
+    node_modules\supabase\bin\supabase.exe
+- GOTCHA: `curl.exe -X HEAD <url>` HANGS (curl sends HEAD but then waits for a body that never
+  comes). Use `--head`, or a `GET` with `limit=0`, and always pass `-m <seconds>`.
+- Docker Desktop is machine-global here (container `supabase_db_ourobion`). The macOS
+  credential-helper PATH workaround does not apply; a Windows equivalent was not needed or
+  re-verified in the 2026-07-28 session, so treat it as unknown rather than fixed.
 - Local seeding:
-    docker exec -i supabase_db_ourobion psql -U postgres -d postgres -v email=<user> -v days=21 \
+    docker exec -i supabase_db_ourobion psql -U postgres -d postgres -v email=<user> -v days=21 `
       < scripts/seed-test-data.sql
   then invoke compute-baselines and generate-insights. Those functions require the header
   `X-Ourobion-Internal-Secret` (43-char base64url) with OUROBION_INTERNAL_SECRET_CURRENT set in the
