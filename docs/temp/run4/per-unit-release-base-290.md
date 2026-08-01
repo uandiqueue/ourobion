@@ -44,7 +44,8 @@ node tools/run4_release_gate.mjs product-cap --head <head>
 | Session A / PR #292 integration merge | `dea055c8155c1e9c6851931f4de9816a88d66b2d` | 536 | 76,360 | `withinCap: false` |
 | #300 / PR #306 integration merge | `abcba95f8386d31c49f62f20f4b623de180e29c0` | 544 | 79,125 | `withinCap: false` |
 | #307 task 1 / PR #312 integration merge | `aef9bc1c6b534d784f229fef06010f79a1ff6a22` | 545 | 79,288 | `withinCap: false` |
-| PR #305 final docs head before snapshot refresh | `aa2595e7cbb3774f07f64c405550da85b1adbc7e` | 550 | 79,788 | `withinCap: false` |
+| #307 option (d) / PR #313 integration merge | `57cf3bdb3785d16e037902d08abc6eca3b79a5d5` | 567 | 83,986 | `withinCap: false` |
+| PR #305 measured-flow audit head | `9c29d7e69a389ab2cb7a218cd2e22e01ce88a9e4` | 572 | 84,494 | `withinCap: false` |
 
 Both use the fixed product base. They are moving-head measurements, not new caps. The original
 115-path / 8,500-line whole-product envelope remains exceeded under the owner-approved issue #264
