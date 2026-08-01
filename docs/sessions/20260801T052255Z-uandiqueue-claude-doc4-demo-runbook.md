@@ -110,7 +110,25 @@ memory: none
 
 ## Found (reported to #328)
 
-0. **The local D1 corpus index is exact, not stale — this reverses the working assumption.** Direct
+-1. **🛑 The decorrelation invariant is switched OFF at runtime, so Slide 4 as first drafted was a
+   false claim.** Executed `llm-router check-config` at head: **`Decorrelation: VIOLATED (allowed by
+   TEST-MODE) — synthesis=openai, verifier=openai`**. `router.config.json` *declares*
+   `verifier → agnes-2.5-flash`, but a TEST-MODE override block forces all six nodes onto OpenAI and
+   disables the invariant, mandating the label *"scaffolded + unit-tested (TEST-MODE:
+   single-provider, decorrelation OFF)"* on any result. The block's own exit condition — *"Restore a
+   second provider and delete this block"* — is now satisfiable, because an `AGNES_API_KEY` was added
+   to `tools/brain-ingest/.env` on 2026-08-01. Recorded as **risk R0** with a blocking "do not record
+   this slide yet" banner; `tools/**` is Session A's territory so this is reported, not fixed.
+   Unexplained and flagged: how the ledger's 18/50 Agnes calls were made while TEST-MODE routes every
+   node to OpenAI.
+0. **Router keys must be exported; `tools/brain-ingest/.env` alone is not enough.**
+   `LlmRouter.create()` is called with no `env` (`synth/index.ts:225`, `seeder/index.ts:121`,
+   `cli.ts:412`) so the router falls back to `process.env`, while brain-ingest's parser loads its
+   `.env` into a private Config and never exports. Proven both ways with `check-config`: keys read
+   `absent` unexported and `present` after `set -a; . tools/brain-ingest/.env; set +a`. Brain-ingest's
+   own source config is fine either way — `--check-config` reports `config OK`, with openalex/pubmed/
+   core keyed and s2/lens disabled. Added to the pre-record checklist.
+1. **The local D1 corpus index is exact, not stale — this reverses the working assumption.** Direct
    `sqlite3` query of `apps/nao/.wrangler/state/v3/d1/…` on the recording machine: **1,298 papers
    indexed, 756 `fetched`, 739 with `full_text_char_count > 5000`, 542 `discovered`**, extraction
    methods `jats` 488 / `pdf` 259 / `directOa` 5 / `core` 4, with real DOIs and titles. The 756 and

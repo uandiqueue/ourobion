@@ -313,23 +313,45 @@ Headline: **The model that checks a claim never comes from the platform that wro
 - Different company, different training data, different weights — **so different blind spots**
 - Unconditional and fail-closed; **no retrieval ⇒ `uncertain`**, and `uncertain` is held, never published
 
-> **The separation is by platform, not by architecture.** *Verified at head, 2026-08-01 —
-> Implemented and locally proven.* `tools/llm-router/router.config.json` defines vendor families
-> `anthropic` · `openai` · `google` · `agnes`, and `familyOf()` returns a `VendorFamily` — so a
-> "family" here is the provider. Node assignments: `synthesis → gpt-5` (openai),
-> **`verifier → agnes-2.5-flash` (agnes)**, `seeder → gpt-5-mini`. `cli.ts:522-523`: the router config
-> enforces `family(verifier) !== family(synthesis)` **unconditionally at load**, and
-> `offlineAcceptance.ts:207` throws `configured families are not separated` if they ever match.
+> ## 🛑 DO NOT RECORD THIS SLIDE YET — the invariant is currently disabled at runtime
 >
-> **Say "platform" or "provider" on camera, not "family."** "Family" reads as an architecture claim
-> we are not making; the actual property is that the two models come from different companies with
-> different corpora and different weights, which is what makes the blind spots independent.
+> *Verified by executing `llm-router check-config` at head, 2026-08-01.* The tool's own verdict:
+>
+> ```
+> Decorrelation: VIOLATED (allowed by TEST-MODE) — synthesis=openai, verifier=openai
+> ```
+>
+> `tools/llm-router/router.config.json` **declares** `synthesis → gpt-5` (openai) and
+> `verifier → agnes-2.5-flash` (agnes). But a TEST-MODE override block forces **all six nodes onto
+> OpenAI** and switches the invariant off. Its own text: *"Run 2.0 single-provider posture (Jayden,
+> 2026-07-24): only OPENAI_API_KEY is provisioned, so all six nodes run OpenAI and the
+> synthesis↔verifier family-decorrelation invariant is **deliberately OFF**. Verifier verdicts are
+> scaffolded + unit-tested, NOT independently verified. Restore a second provider and delete this
+> block to re-arm the hard invariant."*
+>
+> It also mandates a label on any result produced under it:
+> **`scaffolded + unit-tested (TEST-MODE: single-provider, decorrelation OFF)`**.
+>
+> **What unblocks it:** an `AGNES_API_KEY` now exists in `tools/brain-ingest/.env` (added
+> 2026-08-01), which is the second provider the block was waiting for. Someone with `tools/**`
+> ownership must delete the TEST-MODE block and re-run `check-config` until it reports decorrelation
+> satisfied. **Until that output is green, Slide 4 as written is false and must not be recorded.**
+> Tracked as risk R0.
 
-**Agnes is worth naming explicitly.** It is the verifier, not a bolt-on: the adversarial role is
+**The separation is by platform, not by architecture** — *this part is true of the declared config.*
+`familyOf()` returns a `VendorFamily`, so a "family" here is the provider. When re-armed,
+`cli.ts:522-523` enforces `family(verifier) !== family(synthesis)` unconditionally at config load and
+`offlineAcceptance.ts:207` throws `configured families are not separated`.
+
+**Say "platform" or "provider" on camera, not "family."** "Family" reads as an architecture claim we
+are not making; the actual property is two models from different companies, with different corpora
+and different weights, which is what makes the blind spots independent.
+
+**Agnes is the right model to name — once it is actually in the path.** The adversarial role is
 precisely the one that requires a model whose training data and weights are *not* shared with the
-writer. Agnes AI is a sponsor and its team is among the judges (`hackathon-rules.md:78,81`), and
-usage is real — **18 of 50 calls consumed**. Naming it is accurate and well-motivated, not
-sponsor-flattery.
+writer. Agnes AI is a sponsor whose team is among the judges (`hackathon-rules.md:78,81`), and the
+usage ledger records **18 of 50 calls consumed**. ⚠️ **Open question:** how those 18 calls were made
+while TEST-MODE routes every node to OpenAI is unexplained — resolve it before quoting the figure.
 
 ### Slide 5 · The honest slide · 25s — **never cut**
 Headline: **Verified edges today: 0.**
@@ -426,6 +448,7 @@ functions. The pipeline is real; the person is not."*
 
 | # | Risk | Likelihood | Impact | Fallback |
 |---|---|---|---|---|
+| **R0** | **Slide 4 claims a decorrelated verifier that is switched off.** `check-config` reports `Decorrelation: VIOLATED (allowed by TEST-MODE) — synthesis=openai, verifier=openai` | **Certain today** | **Fatal — this is a false claim in the submission**, the one thing the rules say leads to disqualification | Delete the TEST-MODE block in `tools/llm-router/src/overrides.ts` (an `AGNES_API_KEY` now exists — the second provider it was waiting for), re-run `check-config` until green, then record. If it cannot be re-armed in time, **rewrite Slide 4 to describe the invariant as designed-and-enforced-in-config but currently disabled for single-provider running**, and carry the mandated TEST-MODE label |
 | **R1** | **nao login fails** — no `nao_members` row, or nao still pointed at hosted | **High until dry-run** | **Fatal** — nao is the video | §4. This is the #1 pre-record task |
 | **R2** | macOS biotope build fails at head — last proven at `HEAD~323` | Medium-high | High — costs Capture B1 | Build the day before. `flutter clean`, `pod install` in `apps/biotope/macos`, retry; else Pixel AVD |
 | **R3** | Someone clicks a paper detail page on camera | Medium | Medium — a 404 on screen | Rehearse N2; stay on the list. Or run `wrangler dev --remote` |
@@ -449,7 +472,15 @@ functions. The pipeline is real; the person is not."*
 ## 11. Pre-record checklist
 
 - [ ] `git fetch && git log -1 origin/dev-phase2-run4` — re-stamp the anchor SHA and timestamp above
-- [ ] **nao dry run: `npm run dev` → sign in → Overview and Papers render** (R1 — highest risk)
+- [ ] **🛑 `llm-router check-config` reports decorrelation satisfied, not `VIOLATED`** (R0). Keys must
+      be exported for the router to see them — it reads `process.env`, and brain-ingest's `.env`
+      parser does **not** export into it:
+      ```bash
+      set -a; . tools/brain-ingest/.env; set +a
+      cd tools/llm-router && ./node_modules/.bin/tsx src/cli.ts check-config
+      ```
+      Without that, every node reports `key absent` even with a fully populated `.env`.
+- [ ] **nao dry run: `npm run dev` → sign in → Overview and Papers render** (R1)
 - [ ] Re-query local D1 and update the §3 numbers if they moved:
       `sqlite3 <db> "select status, count(*) from papers group by status;"`
 - [ ] **`flutter run -d macos` reaches sign-in** (R2)
