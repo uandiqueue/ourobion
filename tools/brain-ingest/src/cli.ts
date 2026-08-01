@@ -6,12 +6,13 @@
  * / `resume`, which delegate to `run.ts` (the §10.6 orchestrator).
  */
 
-import { readFileSync, realpathSync } from 'node:fs';
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { inspectConfig, loadConfig, sourceEnablement, REQUIRED_VARS } from './config.js';
 import { run, statusReport, hydrateManifestFromR2, defaultCorpusDir, type RunResult } from './run.js';
-import { Manifest } from './manifest.js';
+import { Manifest, MANIFEST_FILENAME, readAll } from './manifest.js';
 import { SEED_TOPICS } from './seeds.js';
 import { VenueCache, lookupVenueCached } from './venue/cache.js';
 import { bandImpactTier, type SjrQuartile } from './venue/banding.js';
@@ -35,6 +36,12 @@ import { R2Store } from './storage/r2.js';
 import { r2TextLoader } from './verify/quoteCheck.js';
 import { verify } from './verify/verifier.js';
 import { corpusTexts, loadCorpusFromFile } from './verify/corpus.js';
+import {
+  buildCorpusRows,
+  cachedVenueImpactResolver,
+  serializeCorpusRows,
+  textDirLoader,
+} from './verify/corpusBuild.js';
 import { LlmRouter, validateAcceptanceAuthorization } from '../../llm-router/src/index.js';
 import type { AcceptanceCallContext } from '../../llm-router/src/index.js';
 import { runSinglePaper } from './singlePaper.js';
@@ -134,6 +141,24 @@ Commands:
                                                    R2 bundle; no provider or database access.
   venue --issn <issn> [--sjr-quartile 1-4]         b2 venue lookup: OpenAlex Source stats +
                                                    C8 impactTier band (per-ISSN cache)
+  build-verify-corpus [--manifest <path>] [--out <path>] [--text-dir <dir>]
+                      [--limit N] [--dry-run]
+                                                   OFFLINE projection of data/corpus/papers.jsonl
+                                                   into the REAL CorpusDoc JSONL that 'verify
+                                                   --corpus' ranks over (replaces the 5-line test
+                                                   fixture, which would fabricate corroboration).
+                                                   evidenceTier: the deterministic classifier
+                                                   (src/evidenceTier.ts), with evidenceInputs kept
+                                                   so every load recomputes it. impactTier: the
+                                                   per-ISSN venue cache + C8 bands — warm it with
+                                                   'venue --issn' first; an unresolvable venue takes
+                                                   the repo's conservative unscored band, never a
+                                                   flattering guess. text: real canonical text when
+                                                   --text-dir mirrors R2's text/<uid>.txt, else the
+                                                   real abstract; papers with NEITHER are skipped
+                                                   and counted. No provider, R2, or network calls.
+                                                   Default out: data/corpus/verify-corpus.jsonl
+                                                   (gitignored — do not commit it).
 
 Seed topics:
   ${SEED_TOPICS.join(', ')}
@@ -264,6 +289,78 @@ async function runVenueLookup(options: Map<string, string>): Promise<number> {
   const { venue, cacheHit } = await lookupVenueCached(issn, cache, { contactEmail });
   const outcome = bandImpactTier(venue, { sjrQuartile: parseSjrQuartile(options) ?? null });
   process.stdout.write(JSON.stringify({ venue, impactTier: outcome, cacheHit }, null, 2) + '\n');
+  return 0;
+}
+
+/** Default output for `build-verify-corpus` — inside the gitignored corpus dir. */
+export const VERIFY_CORPUS_FILENAME = 'verify-corpus.jsonl';
+
+/**
+ * `build-verify-corpus` — project the ingested manifest into a REAL
+ * `--corpus` JSONL for `verify` (src/verify/corpusBuild.ts).
+ *
+ * Fully OFFLINE: no provider, no R2, no OpenAlex. `evidenceTier` comes from the
+ * deterministic classifier via `buildCorpusDoc`; `impactTier` from the per-ISSN
+ * venue cache the `venue` verb warms, falling back to the repo's conservative
+ * unscored-venue band; `text` from real canonical text (`--text-dir`) else the
+ * real abstract. Papers with neither are skipped and counted — never padded.
+ *
+ * Writes into the gitignored `data/corpus/` by default so a large derived
+ * corpus never lands in git, and prints an accounting summary to stdout.
+ */
+function runBuildVerifyCorpus(flags: Set<string>, options: Map<string, string>): number {
+  const corpusDir = defaultCorpusDir();
+  const manifestPath = options.get('manifest') ?? join(corpusDir, MANIFEST_FILENAME);
+  const outPath = options.get('out') ?? join(corpusDir, VERIFY_CORPUS_FILENAME);
+  const textDir = options.get('text-dir');
+
+  const records = readAll(manifestPath);
+  if (records.length === 0) {
+    process.stderr.write(
+      `build-verify-corpus: no records at '${manifestPath}' — run 'ingest' or 'hydrate-manifest' first\n`,
+    );
+    return 1;
+  }
+
+  const result = buildCorpusRows(records, {
+    ...(textDir !== undefined ? { loadText: textDirLoader(textDir) } : {}),
+    resolveImpact: cachedVenueImpactResolver(VenueCache.open(corpusDir)),
+    ...(parseLimit(options) !== undefined ? { limit: parseLimit(options) } : {}),
+  });
+
+  if (result.rows.length === 0) {
+    process.stderr.write('build-verify-corpus: no paper yielded an honest CorpusDoc — nothing written\n');
+    return 1;
+  }
+
+  if (!flags.has('dry-run')) {
+    mkdirSync(dirname(outPath), { recursive: true });
+    writeFileSync(outPath, serializeCorpusRows(result.rows), 'utf8');
+  }
+
+  // Skip reasons are reported in full: a corpus that silently dropped papers
+  // would misrepresent how much literature the verifier actually searched.
+  process.stdout.write(
+    JSON.stringify(
+      {
+        manifest: manifestPath,
+        out: flags.has('dry-run') ? null : outPath,
+        dryRun: flags.has('dry-run'),
+        textDir: textDir ?? null,
+        ...result.stats,
+        skipExamples: result.skips.slice(0, 10),
+      },
+      null,
+      2,
+    ) + '\n',
+  );
+  if (result.stats.venueBanded === 0) {
+    process.stdout.write(
+      "note: 0 venues were banded from data/corpus/venues.json, so every impactTier is the " +
+        "conservative unscored band. Warm the cache with 'brain-ingest venue --issn <issn>' " +
+        'and re-run to get real C8 bands.\n',
+    );
+  }
   return 0;
 }
 
@@ -907,6 +1004,9 @@ export async function main(argv: string[]): Promise<number> {
 
       case 'venue':
         return await runVenueLookup(options);
+
+      case 'build-verify-corpus':
+        return runBuildVerifyCorpus(flags, options);
 
       default:
         process.stderr.write(`unknown command: ${command}\n\n` + USAGE);
