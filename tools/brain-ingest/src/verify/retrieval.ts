@@ -277,7 +277,15 @@ export function corpusHitToCitation(
 
 /** Default conservative tiers for a freshly-discovered candidate (venue unscored yet). */
 const EXTERNAL_DEFAULT_EVIDENCE_TIER: VerifyEvidenceTier = 2;
-const EXTERNAL_DEFAULT_IMPACT_TIER: VerifyImpactTier = 'low';
+/**
+ * The conservative `impactTier` this repo assigns when a source's venue is NOT
+ * scored. EXPORTED so the corpus builder (verify/corpusBuild.ts) reuses the SAME
+ * band for an offline-unresolvable venue rather than declaring a second default:
+ * banding.ts deliberately returns a typed `unknown` (never a silent 'low'), so
+ * what an unknown BECOMES is a caller decision — and this is the one the repo
+ * already made. `impactTier` is notability-only, never trust (ADR-0003 §5).
+ */
+export const EXTERNAL_DEFAULT_IMPACT_TIER: VerifyImpactTier = 'low';
 
 /** Stable paperId for a discovery candidate: its DOI, else a title fingerprint. */
 export function candidatePaperId(c: Candidate): string {
