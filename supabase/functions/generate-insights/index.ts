@@ -38,6 +38,7 @@ import {
   type ServableEdge,
 } from "./composer.ts"
 import {
+  coMovementEdgeCardTemplate,
   directionPhrase,
   edgeCardTemplate,
   edgeRuleId,
@@ -47,6 +48,7 @@ import {
   RELATIONSHIP_CATEGORY,
   relationPhrase,
   renderCard,
+  renderCoMovementCard,
 } from "./render.ts"
 // R4-U4/O27 · the shared, tested artifact-trust rule. Imported from trust_labels.ts — the
 // import-free shared module — for the same reason validateCopyString is imported straight from
@@ -92,9 +94,10 @@ const SERVING_ENVIRONMENT: ServingEnvironment = ((): ServingEnvironment => {
 // scores completeness from S2 raw day-counts with registry dqs weights, and appends
 // composed_insights (idempotent on the deterministic insight_id).
 //
-// SURFACING (O16 + O18, `rendersCard` in composer.ts is the single policy): only `agree` with
-// a SUBJECT-endpoint cardEdge and `idiosyncratic` ever render a user card. research-context and
-// contradiction are GAP-ONLY (composed row + A1 gap event — architecture §S7, decision O18(a)),
+// SURFACING (O16 + O18, `rendersCard` in composer.ts is the single policy): only `agree` — with a
+// SUBJECT-endpoint cardEdge (the DIRECTIONAL card) or with a coMovementEdge (the
+// DIRECTIONLESS co-movement card) — and `idiosyncratic` ever render a user card. research-context
+// and contradiction are GAP-ONLY (composed row + A1 gap event — architecture §S7, decision O18(a)),
 // and an object-only fired signal (O16: the fired metric is only an edge's OBJECT endpoint)
 // likewise records a gap event instead of a card — a card never states the non-fired endpoint
 // as having moved. Gap events land in gap_ledger via record_gap_events_keyed() (§A1, keyed —
@@ -843,6 +846,101 @@ Deno.serve(async (req) => {
         },
       })
 
+      // ── THE CO-MOVEMENT EDGE CARD ─────────────────────────────────────────────────────────
+      //
+      // A servable CORRELATIONAL edge over this fired pair renders its own cited card, with NO
+      // direction stated anywhere in it. This is the path that made `producer='edge'` reachable
+      // at all: 13 of 14 verified edges are `correlates`, they can never satisfy the monotonic
+      // `agree` rule, and so every one of them used to fall to research-context (gap-only) — of
+      // the 45 live insight_cards rows, 43 were `producer='personal'`, 2 were `rules`, and ZERO
+      // were `edge`.
+      //
+      // It is a SEPARATE block, not a widening of the directional one, because the two cards make
+      // different statements and must not share a template, a phrase function, or an edge field:
+      // `classified.cardEdge` (directional) and `classified.coMovementEdge` (co-movement) are
+      // mutually exclusive in the composer, and the monotonic rule returns FIRST — so a pair that
+      // already served a directional card is completely unaffected by this block.
+      //
+      // The rule's own template is deliberately bypassed here. `edge_refs` on a rules-producer
+      // card only ever carries monotonic direction-consistent edges (O18, below), which is empty
+      // for a correlational pair — so the rules card would have shipped with no citation, no
+      // caveat and no trust gate. The edge card carries all three.
+      if (classified.coMovementEdge !== null) {
+        const coEdge = classified.coMovementEdge
+        const coContributing = [coEdge.subject, coEdge.object]
+        const coClaimKind = composeClaimKind(coEdge)
+        const coTrust = composeTrustPosture(coEdge)
+        // Same fail-closed artifact trust gate as the directional card, evaluated BEFORE any copy
+        // exists. A cited card inherits its source's posture whether or not it states a direction.
+        const coFailures = edgeTrustFailures(coEdge, SERVING_ENVIRONMENT)
+        if (coFailures.length > 0) {
+          const reason = `artifact trust check failed for ${SERVING_ENVIRONMENT}: ` +
+            coFailures.map((f) => f.code).join(",")
+          renderDrops.push({ userId, ruleId: edgeRuleId(coEdge.edge_id), reason })
+          console.warn(
+            `co-movement card blocked by artifact trust gate: ${userId}:${edgeRuleId(coEdge.edge_id)}`,
+            coFailures,
+          )
+          continue
+        }
+        // renderCoMovementCard = renderCard's three gates (placeholders, non-diagnostic copy,
+        // claim-kind + causal verbs) PLUS the directional-copy gate. No relation phrase and no
+        // direction phrase are passed, because the template has nowhere to put one.
+        const coRendered = renderCoMovementCard(
+          coMovementEdgeCardTemplate(classified.personal !== null),
+          {
+            metric_a_label: label(coEdge.subject),
+            metric_b_label: label(coEdge.object),
+            posture_disclosure: postureDisclosure(coTrust.posture),
+          },
+          { effectiveKind: coClaimKind.effective },
+        )
+        if (!coRendered.ok) {
+          renderDrops.push({
+            userId,
+            ruleId: edgeRuleId(coEdge.edge_id),
+            reason: JSON.stringify(coRendered.failure),
+          })
+          console.warn(
+            `co-movement card dropped at render: ${userId}:${edgeRuleId(coEdge.edge_id)}`,
+            coRendered.failure,
+          )
+          continue
+        }
+        pushCard({
+          user_id: userId,
+          rule_id: edgeRuleId(coEdge.edge_id),
+          generated_at: now,
+          title: coRendered.copy.title,
+          body: coRendered.copy.body,
+          category: RELATIONSHIP_CATEGORY,
+          severity: "info",
+          contributing_metrics: coContributing,
+          confidence_score: round(coEdge.edge_score, 3),
+          confidence_sources: [...new Set([...snapshotSources(coContributing), "brain"])].sort(),
+          status: "active",
+          expires_at: addDaysIso(now, COMPOSER_EXPIRY_DAYS),
+          phase_generated: COMPOSER_PHASE,
+          producer: "edge",
+          insight_id: id,
+          // THE POINT OF THE CARD. The verifier's caveat and the edge identity travel here, and
+          // get_insight_provenance joins that edgeId back to relationship_claims to surface the
+          // paper title, year and quoted span VERBATIM on the card itself. A co-movement card
+          // without these is a bare assertion, so this is not optional decoration.
+          edge_refs: [
+            {
+              edgeId: coEdge.edge_id,
+              verifiedAt: coEdge.verified_at,
+              caveat: coEdge.caveat ?? null,
+              claimKind: coClaimKind,
+              trust: coTrust,
+              studyDesignTier: coEdge.verification?.evidenceTier ?? null,
+            },
+          ],
+        })
+        continue
+      }
+
       // O18 (decision (a), Jayden 2026-07-24): ONLY `agree` renders the rule's card —
       // research-context and contradiction keep their composed row (pushInsight above) and
       // write an A1 gap event instead of surfacing (§S7 / composed_insights migration comment).
@@ -944,6 +1042,12 @@ Deno.serve(async (req) => {
         // (cardEdge null) — the directional template would state that the SUBJECT moved when
         // only the object fired — and for research-context / contradiction (O18 gap-only);
         // all three route to the A1 gap event below instead of a card.
+        //
+        // Co-movement: `classified.coMovementEdge` is ALWAYS null on this path — the composer requires
+        // `kind === 'coincidence'` and two metricKeys, and every pattern here is a single-metric
+        // fired S4 signal. That is on purpose and is the same rule as O16: only one endpoint
+        // fired, so "these two moved together" would state movement that was never observed.
+        // A correlational 1-hop edge on a single fired signal therefore still yields NO card.
         if (rendersCard(classified) && classified.cardEdge !== null) {
           const cardEdge = classified.cardEdge
           const state = userStates[metricKey]

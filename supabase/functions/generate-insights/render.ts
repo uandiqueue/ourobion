@@ -83,6 +83,8 @@ export type RenderFailure =
   | { reason: "causal-copy-gate"; field: "title" | "body"; terms: string[]; claimKind: string }
   /** R4-U4/B-SCI1: a cited card whose claim kind could not be established at all. */
   | { reason: "claim-kind-missing"; field: "title" | "body" }
+  /** A CO-MOVEMENT card's copy states a direction, which that card may never do. */
+  | { reason: "directional-copy-gate"; field: "title" | "body"; terms: string[] }
 
 export type RenderResult =
   | { ok: true; copy: RenderedCopy }
@@ -159,6 +161,104 @@ export function renderCard(
   return { ok: true, copy: { title: out.title!, body: out.body! } }
 }
 
+// ─── THE DIRECTIONAL-COPY GATE (co-movement cards only) ───────────────────────────────
+
+/**
+ * Words that state WHICH WAY something moved, or WHICH ONE acted on the other. A co-movement card
+ * — the card backed by a sign-free `correlates` edge — must contain NONE of them: it is allowed to
+ * say that two series moved together and that research reports they move together, and nothing
+ * more.
+ *
+ * This is a THIRD gate, distinct from the two that already run:
+ *   * `validateCopyString` blocks diagnostic language, which is a different concern entirely;
+ *   * `causalCopyViolations` blocks CAUSAL verbs, which is necessary but NOT sufficient here — a
+ *     correlational relation has no sign, so "your sleep rose and your HRV rose" asserts no
+ *     causation yet still attributes a direction to each endpoint that the research never stated.
+ *     That sentence passes the causal gate and must still not ship on a co-movement card.
+ *
+ * Deliberately NOT listed: `moved`, `move`, `together`, `alongside`, `pairing` — the co-movement
+ * vocabulary itself. And `increase`/`decrease`/`raise`/`lower` are absent here because they are
+ * already in CAUSAL_VERBS, which runs over the same text; duplicating them would make a failure
+ * report name the same term twice.
+ *
+ * Conservative by design: a false positive drops one card, a false negative ships a direction the
+ * paper never claimed.
+ */
+export const DIRECTIONAL_TERMS: readonly string[] = [
+  // one endpoint stated as having moved a particular way
+  "upward",
+  "downward",
+  "higher",
+  "lower",
+  "rise",
+  "rose",
+  "rising",
+  "risen",
+  "fall",
+  "fell",
+  "falling",
+  "fallen",
+  "climb",
+  "climbed",
+  "drop",
+  "dropped",
+  "shifted",
+  "better",
+  "worse",
+  // one endpoint stated as acting on, or responding to, the other
+  "drive",
+  "drove",
+  "driven",
+  "because",
+  "due to",
+  "thanks to",
+  "responds to",
+  "response to",
+  "followed by",
+  "in turn",
+  "knock-on",
+]
+
+/** Word-boundary matcher allowing a trailing plural/3rd-person `s` (the CAUSAL_VERBS convention). */
+function directionalTermPattern(term: string): RegExp {
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  return new RegExp(`\\b${escaped}(?:e?s)?\\b`)
+}
+
+/** Every directional term present in `text`, in `DIRECTIONAL_TERMS` order. */
+export function directionalTermsIn(text: string): string[] {
+  const lower = text.toLowerCase()
+  return DIRECTIONAL_TERMS.filter((term) => directionalTermPattern(term).test(lower))
+}
+
+/**
+ * Render a CO-MOVEMENT card. Runs everything `renderCard` runs (placeholder resolution, the
+ * non-diagnostic copy gate, the claim-kind fail-closed check and the causal-verb gate) and then
+ * ALSO refuses any copy containing a directional term.
+ *
+ * `claimKind` is REQUIRED, not optional: this card cites published research, so the claim kind it
+ * renders under must be established. A null effective kind drops the card exactly as it does for a
+ * directional cited card.
+ *
+ * The extra gate runs on the FINAL filled text, so an interpolated metric label or a future
+ * phrasing layer cannot smuggle a direction in through a placeholder.
+ */
+export function renderCoMovementCard(
+  template: { title: string; body: string },
+  values: Readonly<Record<string, string | number>>,
+  claimKind: ClaimKindContext,
+): RenderResult {
+  const base = renderCard(template, values, claimKind)
+  if (!base.ok) return base
+  for (const field of ["title", "body"] as const) {
+    const terms = directionalTermsIn(base.copy[field])
+    if (terms.length > 0) {
+      return { ok: false, failure: { reason: "directional-copy-gate", field, terms } }
+    }
+  }
+  return base
+}
+
 // ─── The composer producers' deterministic templates (§S8 card variants) ───────────────────
 //
 // These are the SHIPPED copy for edge ("cited") and personal ("still researching") cards.
@@ -215,6 +315,57 @@ export function edgeCardTemplate(
   hasGatePassingPersonal: boolean,
 ): typeof EDGE_CARD_TEMPLATE | typeof EDGE_CARD_TEMPLATE_WITH_PERSONAL {
   return hasGatePassingPersonal ? EDGE_CARD_TEMPLATE_WITH_PERSONAL : EDGE_CARD_TEMPLATE
+}
+
+// ─── The CO-MOVEMENT card (a sign-free `correlates` edge, no direction anywhere) ───────
+//
+// The templates above have `{{direction_phrase}}` and `{{relation_phrase}}` — one states which way
+// the fired metric moved, the other states what the research says one metric does to the other.
+// NEITHER placeholder appears below, and there is no third placeholder that could carry a
+// direction: the only fillable slots are the two metric labels and the fixture disclosure. A
+// direction cannot be expressed through this template even by a caller that wanted to.
+//
+// The wording "moved together" / "move together" and the sentence "Direction of influence was not
+// established." are taken from this repo's own correlational vocabulary
+// (shared/brain/trust_labels.ts CLAIM_KIND_DESCRIPTIONS.correlational), so the card and the
+// claim-strength label a reader sees beside it cannot say different things.
+//
+// The verifier CAVEAT and the paper citation are deliberately NOT interpolated into this body.
+// They travel on the card row's `edge_refs` and are surfaced verbatim by
+// get_insight_provenance -> the card's own paper-evidence panel (title, year, quoted span) and the
+// provenance screen's EVIDENCE QUALIFICATION block. Inlining verifier free text into the body
+// would push untrusted prose through the copy gates, where one word like "higher" in an otherwise
+// perfect caveat would drop the entire card — losing the citation to protect the wording.
+
+export const CO_MOVEMENT_EDGE_CARD_TEMPLATE = {
+  title: "Research-linked pattern: {{metric_a_label}} and {{metric_b_label}} moved together",
+  body:
+    "{{posture_disclosure}}Your {{metric_a_label}} and {{metric_b_label}} data moved together in " +
+    "your recent logs, and published research reports that these two move together. " +
+    "Direction of influence was not established. Worth watching, not a verdict.",
+} as const
+
+export const CO_MOVEMENT_EDGE_CARD_TEMPLATE_WITH_PERSONAL = {
+  title: "Research-linked pattern: {{metric_a_label}} and {{metric_b_label}} moved together",
+  body:
+    "{{posture_disclosure}}Your {{metric_a_label}} and {{metric_b_label}} data moved together in " +
+    "your recent logs, and published research reports that these two move together. The same " +
+    "pairing also holds across your own longer history. Direction of influence was not " +
+    "established. Worth watching, not a verdict.",
+} as const
+
+/**
+ * The co-movement card template. Same A21 honesty split as `edgeCardTemplate`: the "also holds
+ * across your own longer history" clause ships ONLY when a gate-passing personal signal actually
+ * backs it. Both variants share the title, so the (user_id, rule_id) upsert identity does not
+ * change when a personal signal appears or lapses.
+ */
+export function coMovementEdgeCardTemplate(
+  hasGatePassingPersonal: boolean,
+): typeof CO_MOVEMENT_EDGE_CARD_TEMPLATE | typeof CO_MOVEMENT_EDGE_CARD_TEMPLATE_WITH_PERSONAL {
+  return hasGatePassingPersonal
+    ? CO_MOVEMENT_EDGE_CARD_TEMPLATE_WITH_PERSONAL
+    : CO_MOVEMENT_EDGE_CARD_TEMPLATE
 }
 
 export const PERSONAL_CARD_TEMPLATE = {

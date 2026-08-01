@@ -11,15 +11,22 @@ import {
   classifyPattern,
   completenessScore,
   edgeDirectionConsistent,
+  gapStatusFor,
   gradeApplicability,
   insightId,
+  MONOTONIC_RELATIONS,
   pairKey,
   personalPassesGate,
+  rendersCard,
   type CandidatePattern,
   type PersonalSignalRow,
   type ServableEdge,
 } from '../../../supabase/functions/generate-insights/composer.ts';
 import {
+  CO_MOVEMENT_EDGE_CARD_TEMPLATE,
+  CO_MOVEMENT_EDGE_CARD_TEMPLATE_WITH_PERSONAL,
+  coMovementEdgeCardTemplate,
+  directionalTermsIn,
   EDGE_CARD_TEMPLATE,
   EDGE_CARD_TEMPLATE_WITH_PERSONAL,
   edgeCardTemplate,
@@ -29,6 +36,7 @@ import {
   personalRuleId,
   relationPhrase,
   renderCard,
+  renderCoMovementCard,
 } from '../../../supabase/functions/generate-insights/render.ts';
 
 const GATES = { qMax: 0.05, nEffMin: 10 };
@@ -263,6 +271,126 @@ test('producer rule_id namespaces are disjoint and pair-order-stable', () => {
   assert.equal(personalRuleId('b_metric', 'a_metric'), 'personal:a_metric|b_metric');
   assert.equal(personalRuleId('a_metric', 'b_metric'), 'personal:a_metric|b_metric');
   assert.equal(pairKey('b_metric', 'a_metric'), 'a_metric|b_metric');
+});
+
+// ─── the co-movement edge card (correlational edges reach a card, no direction) ───────
+//
+// The three acceptance cases the unit is gated on, as node vectors beside the Deno ones:
+//   (a) correlational edge + coincidence pattern  ⇒ card renders, no directional language
+//   (b) correlational edge + single-metric signal ⇒ still no card
+//   (c) contradiction over the same pair          ⇒ contradiction still wins
+
+const CORRELATES_EDGE_ID = 'a_metric|correlates|b_metric';
+
+function correlates(partial: Partial<ServableEdge> = {}): ServableEdge {
+  return edge({
+    edge_id: CORRELATES_EDGE_ID,
+    relation: 'correlates',
+    edge_score: 0.6,
+    caveat: 'One observational cohort only, so the pairing may not transfer to every setting.',
+    claim: { citations: [{ paperId: 'doi:10.1000/example' }], claimKind: 'correlational' },
+    verification: { claimKindCheck: { matchesClaim: true, supportedKind: 'correlational' } },
+    ...partial,
+  });
+}
+
+const coincidencePair = pattern({
+  patternKey: 'rule:a-b-comove',
+  kind: 'coincidence',
+  metricKeys: ['a_metric', 'b_metric'],
+  states: { a_metric: 'up', b_metric: 'up' },
+});
+
+test('co-movement (a): a correlational edge over a fired coincidence pair renders a cited card', () => {
+  const out = classifyPattern(coincidencePair, [correlates()], () => personal({}), GATES);
+  assert.equal(out?.branch, 'agree');
+  assert.equal(out?.coMovementEdge?.edge_id, CORRELATES_EDGE_ID);
+  assert.equal(out?.topEdge?.edge_id, CORRELATES_EDGE_ID);
+  // The DIRECTIONAL seam stays empty: `cardEdge` feeds relationPhrase(), which throws for a
+  // non-monotonic relation, so a correlational edge must never appear there.
+  assert.equal(out?.cardEdge, null);
+  assert.equal(rendersCard(out!), true);
+  assert.equal(gapStatusFor(out!), null);
+  // The composed edge ref still reports NO direction and NON-monotonic — no sign was synthesised.
+  assert.equal(out?.edges[0]?.direction, null);
+  assert.equal(out?.edges[0]?.monotonic, false);
+  assert.equal(out?.edges[0]?.caveat, correlates().caveat);
+  assert.equal(out?.edges[0]?.citations[0]?.paperId, 'doi:10.1000/example');
+
+  const rendered = renderCoMovementCard(
+    coMovementEdgeCardTemplate(out?.personal !== null),
+    { metric_a_label: 'gut comfort', metric_b_label: 'mood', posture_disclosure: '' },
+    { effectiveKind: 'correlational' },
+  );
+  assert.ok(rendered.ok, JSON.stringify(rendered));
+  assert.ok(rendered.ok && rendered.copy.body.includes('moved together in your recent logs'));
+  assert.ok(rendered.ok && rendered.copy.body.includes('Direction of influence was not established.'));
+  // No directional language anywhere in the FINAL copy.
+  assert.deepEqual(rendered.ok ? directionalTermsIn(rendered.copy.title) : ['unrendered'], []);
+  assert.deepEqual(rendered.ok ? directionalTermsIn(rendered.copy.body) : ['unrendered'], []);
+});
+
+test('co-movement (b): a correlational edge on a SINGLE-metric signal pattern still renders no card', () => {
+  const out = classifyPattern(pattern({}), [correlates()], () => personal({}), GATES);
+  assert.equal(out?.branch, 'research-context');
+  assert.equal(out?.coMovementEdge, null);
+  assert.equal(rendersCard(out!), false);
+  assert.equal(gapStatusFor(out!), 'blocked-completeness');
+});
+
+test('co-movement (c): contradiction still wins over a co-movement edge on the same pair', () => {
+  const out = classifyPattern(
+    coincidencePair,
+    [correlates(), edge({ edge_score: 0.95 })],
+    () => personal({ rho: -0.7 }),
+    GATES,
+  );
+  assert.equal(out?.branch, 'contradiction');
+  assert.equal(out?.coMovementEdge, null);
+  assert.equal(out?.cardEdge, null);
+  assert.equal(rendersCard(out!), false);
+  assert.equal(gapStatusFor(out!), 'needs-review');
+});
+
+test('co-movement: a monotonic direction-consistent edge still outranks the co-movement path', () => {
+  // Rule 2 returns before rule 2b, so an already-serving directional pattern is untouched even
+  // when a higher-scored correlational edge sits on the same pair.
+  const out = classifyPattern(
+    coincidencePair,
+    [correlates({ edge_score: 0.99 }), edge({})],
+    () => null,
+    GATES,
+  );
+  assert.equal(out?.branch, 'agree');
+  assert.equal(out?.cardEdge?.edge_id, 'a_metric|increases|b_metric');
+  assert.equal(out?.coMovementEdge, null);
+});
+
+test('co-movement: the co-movement path never widens MONOTONIC_RELATIONS', () => {
+  assert.deepEqual([...MONOTONIC_RELATIONS].sort(), ['decreases', 'increases']);
+});
+
+test('co-movement: the co-movement templates carry no direction slot and render clean', () => {
+  for (const template of [CO_MOVEMENT_EDGE_CARD_TEMPLATE, CO_MOVEMENT_EDGE_CARD_TEMPLATE_WITH_PERSONAL]) {
+    assert.ok(!template.body.includes('{{direction_phrase}}'));
+    assert.ok(!template.body.includes('{{relation_phrase}}'));
+    const out = renderCoMovementCard(
+      template,
+      { metric_a_label: 'sleep duration', metric_b_label: 'heart-rate variability (SDNN)', posture_disclosure: '' },
+      { effectiveKind: 'correlational' },
+    );
+    assert.ok(out.ok, JSON.stringify(out));
+  }
+});
+
+test('co-movement: the directional-copy gate drops co-movement copy that names a direction', () => {
+  const out = renderCoMovementCard(
+    { title: 'Fine title', body: 'Your {{metric_a_label}} data rose alongside your {{metric_b_label}} data.' },
+    { metric_a_label: 'gut comfort', metric_b_label: 'mood' },
+    { effectiveKind: 'correlational' },
+  );
+  assert.equal(out.ok, false);
+  assert.equal(!out.ok && out.failure.reason, 'directional-copy-gate');
 });
 
 test('fillTemplate reports every missing placeholder', () => {
