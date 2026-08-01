@@ -7,8 +7,14 @@
 // ledger, publish-driven) and writes ONLY cap overrides via /api/models/caps (the
 // locked demo exception). Follows IngestControlPanel/LoaderPanel's fetch/busy/error
 // conventions and reuses the ingest panel styles.
+//
+// R4 viewer read-only UX: everything above the caps editor is a read and stays
+// live for every caller. The editor is the panel's only write, so it is the only
+// thing wrapped — in a <ControlScope> naming the route it posts to, which
+// disables all three of its fields at once and prints the reason underneath.
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import { ControlScope } from './NaoAccess';
 import {
   effectiveCap,
   hasUnpricedCalls,
@@ -21,6 +27,9 @@ import {
   type ModelSpendRow,
   type ModelStatusRow,
 } from '@/lib/modelsControl';
+
+/** The one write this panel makes; the route matrix decides who may use it. */
+const CAPS_ROUTE = 'POST /api/models/caps';
 
 // Provider budget context is DERIVED from the published rows (rollupByProvider),
 // never carried as a constant here. This panel previously hardcoded two run-2 SGD
@@ -291,9 +300,10 @@ export function ModelsPanel() {
           boundary falls back to file caps). Blank clears the override. Bounds: day cap ≤ US$5.00,
           run cap ≤ 200000 tokens. Caps only — models and routes are config-file-owned.
         </p>
-        {rows.map((r) => {
-          const draft = drafts[r.status.node] ?? { day: '', run: '' };
-          return (
+        <ControlScope routes={[CAPS_ROUTE]}>
+          {rows.map((r) => {
+            const draft = drafts[r.status.node] ?? { day: '', run: '' };
+            return (
             <form
               key={r.status.node}
               className="ingest-form"
@@ -329,8 +339,9 @@ export function ModelsPanel() {
                 Save
               </button>
             </form>
-          );
-        })}
+            );
+          })}
+        </ControlScope>
         {savedMessage ? <p className="fmt__cap ingest-success">{savedMessage}</p> : null}
       </div>
 
