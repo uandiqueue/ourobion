@@ -1,13 +1,21 @@
 ---
 title: Ourobion — system connection map (submission-facing projection)
-summary: A submission-facing projection of how Biotope, Supabase, nao, the brain pipeline and CI connect, with an explicit evidence label on every component — separating what is connected now, what is locally proven, what is only a configured target, and what is planned and not serving; it is not architecture authority and never equates configured with deployed.
+summary: A blocked submission-facing projection undergoing evidence verification; its labels and counts are stale in material places and it must not be submitted until the 2026-08-01 audit defects are resolved.
 type: reference
 scope: repo
 status: draft
-updated: 2026-07-31
+updated: 2026-08-01
 ---
 
 # Ourobion — system connection map
+
+> **DO NOT SUBMIT THIS MAP.** Its provider roles, pipeline result, corpus posture, workflow and
+> migration counts, support-model claims, and several built-versus-planned labels require correction.
+> The evidence and exact defects are in
+> [`submission-verification-audit.md`](../../../temp/run4/submission-verification-audit.md). This
+> warning prevents a stale projection from being mistaken for implementation evidence. #307 has
+> measured synthesis at batch scale, but verification remains incomplete and no projection/card
+> result has been reported. Refresh this map only after #307 reports the remaining measured outcome.
 
 > **This document is a submission-facing projection, not architecture authority.**
 > It exists so a reader (judge, reviewer, or new contributor) can see the shape of the system and,
