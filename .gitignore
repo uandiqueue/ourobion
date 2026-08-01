@@ -10,6 +10,7 @@
 .dev.vars
 .dev.vars.*
 .claude/settings.local.json
+test_credential.md
 
 # Test credentials handed to agent sessions (owner-supplied, disposable test account).
 # NOT covered by the .env* rules above — verified with `git check-ignore`, which returned

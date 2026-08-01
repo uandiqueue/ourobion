@@ -96,6 +96,36 @@ export interface GenerateResult {
 }
 
 /**
+ * Keep each static topic's canonical source query in the derived artifact.
+ *
+ * The LLM adds search variants; it must not replace the hand-authored topic
+ * anchor that justified the candidate. This is especially important for named
+ * instruments (IBS-SSS, PHQ-9, and peers), which a plausible paraphrase can
+ * otherwise erase. Anchor-first ordering also makes the behavior deterministic.
+ */
+export function retainTopicAnchorQueries(
+  byId: Map<string, string[]>,
+  topics: readonly TopicInput[],
+  capPerCandidate: number,
+): string[] {
+  if (capPerCandidate <= 0) return [];
+  const retained: string[] = [];
+  for (const topic of topics) {
+    const anchor = topic.query.trim();
+    if (anchor.length === 0) continue;
+    const id = `st:${topic.topic}`;
+    const current = byId.get(id);
+    if (current === undefined) continue;
+    const withoutDuplicate = current.filter(
+      (query) => query.toLowerCase() !== anchor.toLowerCase(),
+    );
+    byId.set(id, [anchor, ...withoutDuplicate].slice(0, capPerCandidate));
+    retained.push(id);
+  }
+  return retained;
+}
+
+/**
  * Full run (design steps 1–3): candidates → batched LLM call → validate → write
  * the artifact. Returns the artifact plus the validation report (rejected /
  * missing) for the caller to log as run evidence.
@@ -122,13 +152,18 @@ export async function generateSeedQueries(opts: SeederOptions = {}): Promise<Gen
 
   const response = await router.route({ nodeId: 'seeder', system, prompt, expectJson: true });
 
-  const { byId, rejectedKeys, missingIds } = validateSeederResponse(response.text, candidates, cap);
+  const validated = validateSeederResponse(response.text, candidates, cap);
+  const { byId, rejectedKeys } = validated;
+  const topics = opts.topics ?? SEEDS;
+  const retainedTopicIds = retainTopicAnchorQueries(byId, topics, cap);
+  const missingIds = validated.missingIds.filter((id) => (byId.get(id)?.length ?? 0) === 0);
   if (rejectedKeys.length > 0) {
     log(`seeder: dropped ${rejectedKeys.length} unknown key(s) (C9): ${rejectedKeys.join(', ')}`);
   }
   if (missingIds.length > 0) {
     log(`seeder: ${missingIds.length} candidate(s) received no queries: ${missingIds.join(', ')}`);
   }
+  log(`seeder: retained ${retainedTopicIds.length} canonical topic query anchor(s)`);
 
   const artifact = assembleArtifact({
     candidates,

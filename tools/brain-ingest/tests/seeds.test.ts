@@ -52,6 +52,22 @@ test('#307 D5: the pool spans every active metric family, not just gut', () => {
   );
 });
 
+test('#344: symptom instruments are explicitly paired with mental-health instruments', () => {
+  const requiredQueries = new Map([
+    ['ibs_sss_phq9_relation', ['IBS-SSS', 'PHQ-9', 'gastrointestinal symptom severity']],
+    ['gsrs_gad7_relation', ['GSRS', 'GAD-7', 'gastrointestinal symptoms']],
+    ['bristol_hads_relation', ['Bristol stool', 'HADS', 'bowel symptoms']],
+    ['bowel_symptom_affect_relation', ['bowel symptom diary', 'affect']],
+  ]);
+
+  for (const [topic, terms] of requiredQueries) {
+    const seed = seedByTopic(topic);
+    assert.ok(seed, `${topic} must remain in the seed pool`);
+    for (const term of terms) assert.ok(seed.query.toLowerCase().includes(term.toLowerCase()));
+  }
+  assert.ok(!SEEDS.some((seed) => /log_completeness/i.test(seed.query)));
+});
+
 test('every seed has a non-empty query and carries its topic in topicTags', () => {
   for (const s of SEEDS) {
     assert.ok(s.query.trim().length > 0, `${s.topic} has a query`);

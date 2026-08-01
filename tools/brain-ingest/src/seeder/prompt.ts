@@ -17,7 +17,7 @@
 import type { SeedCandidate } from './types.js';
 
 /** Bump on any change to the system/prompt text below (artifact provenance). */
-export const PROMPT_VERSION = 'seeder-2026-07-16.1';
+export const PROMPT_VERSION = 'seeder-2026-08-01.2';
 
 export const SEEDER_SYSTEM = [
   'You are the ourobion brain pipeline\'s research-query seeder.',
@@ -34,6 +34,8 @@ export const SEEDER_SYSTEM = [
   '  synonyms of the underlying physiological concept (not the raw snake_case',
   '  metric key), and cover BOTH directions of the relationship where relevant.',
   '- Queries are free-text search strings (2–8 words typical), not boolean DSL.',
+  '- Preserve named instruments and acronyms from a static-topic target verbatim',
+  '  in at least one query for that candidate (for example IBS-SSS or PHQ-9).',
   '- 3 to 6 queries per candidate. No duplicates. No commentary.',
   '- Reply with a SINGLE JSON object and nothing else: keys are candidate ids,',
   '  values are arrays of query strings.',

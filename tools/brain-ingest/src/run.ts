@@ -70,6 +70,7 @@ import { createBudgetGuard } from './limits/budget.js';
 import { resolveDedup, reconcileByIdentifiers, mergeIdentifiers, normalizeIdentifiers } from './identity.js';
 import { SEEDS } from './seeds.js';
 import { Manifest, parseJsonl, type ManifestSummary } from './manifest.js';
+import { ManifestCheckpointBuffer, installManifestCheckpointGuards } from './manifestCheckpoint.js';
 import { R2Store, pdfKey, jatsKey, textKey, sha256, MANIFEST_KEY, metaKey } from './storage/r2.js';
 import { extractFromPdf, extractFromJats } from './extract.js';
 
@@ -907,33 +908,46 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
     }
     log('dry-run: no retrieval / R2 calls issued.');
   } else {
-    for (const rec of limited) {
-      if (rec.status === 'fetched') {
-        skipped++;
-        continue;
-      }
+    const checkpoint = new ManifestCheckpointBuffer(manifest, { log });
+    const removeCheckpointGuards = installManifestCheckpointGuards(checkpoint);
+    try {
+      for (const rec of limited) {
+        if (rec.status === 'fetched') {
+          skipped++;
+          continue;
+        }
 
-      // §5.1 fail-closed is now PER METERED SOURCE (inside that source's own
-      // adapter, e.g. core.ts's own `wouldExceed95` check before it dispatches)
-      // rather than a whole-run early-exit here — see the module docstring for
-      // why: the free steps ahead of CORE must still get a chance even once
-      // CORE itself is capped for the day.
-      if (opts.memoryGuard !== undefined) {
-        await waitForMemory(opts.memoryGuard, log);
-      }
+        // §5.1 fail-closed is now PER METERED SOURCE (inside that source's own
+        // adapter, e.g. core.ts's own `wouldExceed95` check before it dispatches)
+        // rather than a whole-run early-exit here — see the module docstring for
+        // why: the free steps ahead of CORE must still get a chance even once
+        // CORE itself is capped for the day.
+        if (opts.memoryGuard !== undefined) {
+          await waitForMemory(opts.memoryGuard, log);
+        }
 
-      const { record: finalised, stored } = await fetchAndStore(ctx, store, rec, now);
-      if (!sameMetadata(manifest.get(finalised.paperUid), finalised)) {
-        changesSinceSync.set(finalised.paperUid, finalised);
+        const { record: finalised, stored } = await fetchAndStore(ctx, store, rec, now);
+        if (!sameMetadata(manifest.get(finalised.paperUid), finalised)) {
+          changesSinceSync.set(finalised.paperUid, finalised);
+          checkpoint.stage(finalised);
+        }
+        if (stored) {
+          fetched++;
+          log(`  fetched ${finalised.paperUid} → ${finalised.storage.key} (${finalised.fullText.charCount ?? 0} chars)`);
+        } else if (finalised.status === 'failed') {
+          log(`  failed ${finalised.paperUid}: ${finalised.errors[finalised.errors.length - 1] ?? 'unknown'}`);
+        } else {
+          log(`  unretrieved ${finalised.paperUid} [${finalised.retrievability}] — left 'discovered'`);
+        }
       }
-      manifest.upsert(finalised);
-      if (stored) {
-        fetched++;
-        log(`  fetched ${finalised.paperUid} → ${finalised.storage.key} (${finalised.fullText.charCount ?? 0} chars)`);
-      } else if (finalised.status === 'failed') {
-        log(`  failed ${finalised.paperUid}: ${finalised.errors[finalised.errors.length - 1] ?? 'unknown'}`);
-      } else {
-        log(`  unretrieved ${finalised.paperUid} [${finalised.retrievability}] — left 'discovered'`);
+    } finally {
+      // `flush` is synchronous and atomic. The same buffer is also guarded by
+      // exit/SIGINT/SIGTERM handlers, so an external stop loses at most one
+      // bounded interval of changed records.
+      try {
+        checkpoint.flush('retrieval-loop-finally');
+      } finally {
+        removeCheckpointGuards();
       }
     }
 
