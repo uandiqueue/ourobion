@@ -470,7 +470,9 @@ void main() {
         8,
       ]);
       expect(kInlineAnswerableOptions['stool_form'], [1, 2, 3, 4, 5, 6, 7]);
-      expect(kInlineAnswerableOptions['outside_meals'], [0, 1, 2, 3]);
+      expect(kInlineAnswerableOptions['outside_meals'], [
+        for (var value = 0; value <= 10; value++) value,
+      ]);
       expect(kInlineAnswerableOptions['mosquito_bites'], [
         for (var value = 0; value <= 20; value++) value,
       ]);

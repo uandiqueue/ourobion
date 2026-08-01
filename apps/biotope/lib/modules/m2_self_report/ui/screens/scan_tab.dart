@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ourobion_metrics/ourobion_metrics.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/generated_assets.dart';
@@ -12,6 +13,8 @@ import '../../../m6_engagement/index.dart';
 import '../../impl/logging_controller.dart';
 import '../../impl/normaliser.dart';
 import '../widgets/daily_scale_visuals.dart';
+import '../widgets/daily_scale_value_visual.dart';
+import '../widgets/quick_count_control.dart';
 
 enum _SweepState { idle, scanning, done }
 
@@ -1019,14 +1022,30 @@ class GapCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 9),
                       Expanded(
-                        child: Text(
-                          ScanTabCopy.answerLabel(metricKey, currentValue!),
-                          style: GoogleFonts.manrope(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: OurobionColors.onSurface,
-                          ),
-                        ),
+                        child: isDailyScaleMetric(metricKey)
+                            ? DailyScaleValueSummary(
+                                metricKey: metricKey,
+                                value: currentValue!,
+                                style: GoogleFonts.manrope(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: OurobionColors.onSurface,
+                                ),
+                                glyphSize: const Size(24, 18),
+                                bristolColor: OurobionColors.primary,
+                                borderColor: OurobionColors.outlineVariant,
+                              )
+                            : Text(
+                                ScanTabCopy.answerLabel(
+                                  metricKey,
+                                  currentValue!,
+                                ),
+                                style: GoogleFonts.manrope(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: OurobionColors.onSurface,
+                                ),
+                              ),
                       ),
                       Text(
                         ScanTabCopy.gapChange,
@@ -1116,30 +1135,35 @@ class _InlineAnswerControl extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => switch (metricKey) {
-    'urine_colour' => _ArmstrongControl(
-      options: options,
-      saving: saving,
-      onAnswer: onAnswer,
-    ),
-    'stool_form' => _BristolControl(
-      options: options,
-      saving: saving,
-      onAnswer: onAnswer,
-    ),
-    'mosquito_bites' => _MosquitoBiteStepper(
-      options: options,
-      initialValue: currentValue,
-      saving: saving,
-      onAnswer: onAnswer,
-    ),
-    _ => _InlineChipRow(
-      metricKey: metricKey,
-      options: options,
-      saving: saving,
-      onAnswer: onAnswer,
-    ),
-  };
+  Widget build(BuildContext context) {
+    final inputType = metricByKey(metricKey)?.ui?.inputType;
+    return switch (inputType) {
+      'armstrong_1_8' => _ArmstrongControl(
+        options: options,
+        saving: saving,
+        onAnswer: onAnswer,
+      ),
+      'bristol_1_7' => _BristolControl(
+        options: options,
+        saving: saving,
+        onAnswer: onAnswer,
+      ),
+      'quick_count' => QuickCountControl(
+        metricKey: metricKey,
+        value: currentValue,
+        enabled: !saving,
+        onChanged: (value) {
+          if (value != null) onAnswer(value);
+        },
+      ),
+      _ => _InlineChipRow(
+        metricKey: metricKey,
+        options: options,
+        saving: saving,
+        onAnswer: onAnswer,
+      ),
+    };
+  }
 }
 
 /// Compact named Armstrong swatches. The colour and its spoken name travel
@@ -1323,173 +1347,6 @@ class _BristolShape extends StatelessWidget {
         painter: BristolShapePainter(
           type: type,
           color: OurobionColors.primary.withValues(alpha: 0.72),
-        ),
-      ),
-    ),
-  );
-}
-
-/// A 0-20 registry range is a stepper, not 21 miniature buttons. The person
-/// changes a local value first, then deliberately commits it with one Save.
-class _MosquitoBiteStepper extends StatefulWidget {
-  final List<int> options;
-  final int? initialValue;
-  final bool saving;
-  final ValueChanged<int> onAnswer;
-
-  const _MosquitoBiteStepper({
-    required this.options,
-    required this.initialValue,
-    required this.saving,
-    required this.onAnswer,
-  });
-
-  @override
-  State<_MosquitoBiteStepper> createState() => _MosquitoBiteStepperState();
-}
-
-class _MosquitoBiteStepperState extends State<_MosquitoBiteStepper> {
-  late int _value;
-  bool _committing = false;
-
-  int _resolvedInitialValue() =>
-      (widget.initialValue ?? widget.options.first).clamp(
-        widget.options.first,
-        widget.options.last,
-      );
-
-  @override
-  void initState() {
-    super.initState();
-    _value = _resolvedInitialValue();
-  }
-
-  @override
-  void didUpdateWidget(covariant _MosquitoBiteStepper oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final boundsChanged =
-        oldWidget.options.first != widget.options.first ||
-        oldWidget.options.last != widget.options.last;
-    if (oldWidget.initialValue != widget.initialValue || boundsChanged) {
-      _value = _resolvedInitialValue();
-      _committing = false;
-    } else if (oldWidget.saving && !widget.saving) {
-      // A failed save leaves the card open. Re-enable exactly one retry.
-      _committing = false;
-    }
-  }
-
-  void _change(int delta) {
-    final next = (_value + delta).clamp(
-      widget.options.first,
-      widget.options.last,
-    );
-    if (next != _value) setState(() => _value = next);
-  }
-
-  void _save() {
-    if (widget.saving || _committing) return;
-    setState(() => _committing = true);
-    widget.onAnswer(_value);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final inert = widget.saving || _committing;
-    return Row(
-      children: [
-        _StepperButton(
-          semanticLabel: 'Decrease mosquito bites',
-          icon: Icons.remove_rounded,
-          enabled: !inert && _value > widget.options.first,
-          onPressed: () => _change(-1),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Semantics(
-            // The value readout must be its own node so assistive tech can
-            // announce the pending count on its own. Without `container` the
-            // annotation has no child node to attach to (the visual subtree is
-            // excluded) and the label silently merges into the card's node.
-            container: true,
-            liveRegion: true,
-            label: 'Mosquito bites, $_value selected',
-            child: ExcludeSemantics(
-              child: Container(
-                key: const ValueKey('mosquito-selected-value'),
-                height: 48,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: OurobionColors.surfaceContainer,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Text(
-                  ScanTabCopy.answerLabel('mosquito_bites', _value),
-                  style: GoogleFonts.manrope(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: OurobionColors.onSurface,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        _StepperButton(
-          semanticLabel: 'Increase mosquito bites',
-          icon: Icons.add_rounded,
-          enabled: !inert && _value < widget.options.last,
-          onPressed: () => _change(1),
-        ),
-        const SizedBox(width: 10),
-        SizedBox(
-          height: 48,
-          child: FilledButton(
-            key: const ValueKey('mosquito-save'),
-            onPressed: inert ? null : _save,
-            style: FilledButton.styleFrom(
-              backgroundColor: OurobionColors.primary,
-              foregroundColor: OurobionColors.onPrimary,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-            ),
-            child: const Text('Save'),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StepperButton extends StatelessWidget {
-  final String semanticLabel;
-  final IconData icon;
-  final bool enabled;
-  final VoidCallback onPressed;
-
-  const _StepperButton({
-    required this.semanticLabel,
-    required this.icon,
-    required this.enabled,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 48,
-    height: 48,
-    child: Semantics(
-      button: true,
-      enabled: enabled,
-      label: semanticLabel,
-      child: IconButton(
-        tooltip: semanticLabel,
-        onPressed: enabled ? onPressed : null,
-        icon: Icon(icon),
-        style: IconButton.styleFrom(
-          backgroundColor: OurobionColors.surfaceContainer,
-          foregroundColor: OurobionColors.onSurface,
-          disabledBackgroundColor: OurobionColors.surfaceContainer,
         ),
       ),
     ),

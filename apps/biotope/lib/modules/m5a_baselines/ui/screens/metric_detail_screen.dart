@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/theme.dart';
 import '../../../../core/widgets/gold_card.dart';
+import '../../../m2_self_report/index.dart';
 import '../../impl/baseline_service.dart';
 import '../../impl/chart_math.dart';
 import '../../impl/metric_series_models.dart';
@@ -428,6 +429,12 @@ class _LatestReadingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final suffix = metricValueSuffix(metricKey);
     final source = _sourceLine;
+    final rounded = latest.value.round();
+    final namedScaleValue =
+        latest.value == rounded.toDouble() &&
+            isDailyScaleValue(metricKey, rounded)
+        ? rounded
+        : null;
     return GoldCard(
       emphasized: true,
       child: Column(
@@ -443,32 +450,46 @@ class _LatestReadingCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                formatMetricValue(metricKey, latest.value),
-                style: GoogleFonts.manrope(
-                  fontSize: 31,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -1,
-                  color: OurobionColors.onSurface,
-                ),
+          if (namedScaleValue != null)
+            DailyScaleValueSummary(
+              metricKey: metricKey,
+              value: namedScaleValue,
+              style: GoogleFonts.manrope(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: OurobionColors.onSurface,
               ),
-              if (suffix != null) ...[
-                const SizedBox(width: 4),
+              glyphSize: const Size(34, 24),
+              bristolColor: OurobionColors.primary,
+              borderColor: OurobionColors.outlineVariant,
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
                 Text(
-                  suffix,
+                  formatMetricValue(metricKey, latest.value),
                   style: GoogleFonts.manrope(
-                    fontSize: 13,
+                    fontSize: 31,
                     fontWeight: FontWeight.w600,
-                    color: OurobionColors.onSurfaceVariant,
+                    letterSpacing: -1,
+                    color: OurobionColors.onSurface,
                   ),
                 ),
+                if (suffix != null) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    suffix,
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: OurobionColors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ],
-            ],
-          ),
+            ),
           const SizedBox(height: 9),
           Text(
             '$_recency · ${shortDateLabel(latest.date)}',

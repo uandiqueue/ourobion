@@ -3,8 +3,7 @@ import 'package:src/modules/m5a_baselines/impl/metric_value_format.dart'; import
   'armstrong_',
   'bristol_',
   'likert_',
-  'segmented_',
-  'stepper_',
+  'quick_count',
 ]; const kCategoryLabelledOrdinals = <String>{'urine_colour', 'stool_form'}; Directory _repoRoot() {
   var dir = Directory.current; for (var i = 0; i < 8; i++) {
     if (Directory('${dir.path}/shared').existsSync() &&

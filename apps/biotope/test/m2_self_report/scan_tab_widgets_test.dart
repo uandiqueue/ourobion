@@ -9,6 +9,7 @@ import 'package:src/modules/m2_self_report/ui/widgets/daily_scale_visuals.dart';
 import 'package:src/modules/m3_passive_health/index.dart';
 import 'package:src/modules/m5a_baselines/index.dart' show metricDisplayLabel;
 import 'scan_test_support.dart';
+
 class _RouteLog extends NavigatorObserver {
   final pushed = <Route<dynamic>>[];
   @override
@@ -17,12 +18,14 @@ class _RouteLog extends NavigatorObserver {
     super.didPush(route, previousRoute);
   }
 }
+
 class _AnsweringList extends StatefulWidget {
   final List<String> metricKeys;
   const _AnsweringList(this.metricKeys);
   @override
   State<_AnsweringList> createState() => _AnsweringListState();
 }
+
 class _AnsweringListState extends State<_AnsweringList> {
   final Map<String, int?> _row = {};
   @override
@@ -32,6 +35,7 @@ class _AnsweringListState extends State<_AnsweringList> {
     onAnswer: (key, value) => setState(() => _row[key] = value),
   );
 }
+
 class _ScanRuntime {
   _ScanRuntime({required this.row, this.failSave = false});
   final Map<String, dynamic> row;
@@ -50,10 +54,12 @@ class _ScanRuntime {
     row['log_completeness'] = total.toDouble();
     return total.toDouble();
   }
+
   Future<void> updateEngagement(double completeness) async {
     engagementUpdates.add(completeness);
   }
 }
+
 Map<String, dynamic> _scanRowWithGaps(Iterable<String> gaps) => {
   for (final key in kDailyCoreDqsWeights.keys)
     key: gaps.contains(key) ? null : 3,
@@ -89,6 +95,7 @@ Future<String> _renderSignature(
   });
   return signature!;
 }
+
 void main() {
   group('the real ScanTab state machine', () {
     testWidgets(
@@ -298,11 +305,20 @@ void main() {
       );
       expect(find.text(ScanTabCopy.gapLogged), findsOneWidget);
       expect(
-        find.text(ScanTabCopy.answerLabel('stool_form', 4)),
+        find.text('Type 4 - Smooth sausage'),
         findsOneWidget,
         reason:
-            'a logged card must say WHAT was logged, not just that '
+            'a logged card must say what was logged, not just that '
             'something was',
+      );
+      expect(
+        find.byKey(const ValueKey('daily-scale-stool_form-4')),
+        findsOneWidget,
+        reason: 'the collapsed value must keep the Bristol shape',
+      );
+      expect(
+        find.bySemanticsLabel('Stool form type 4, Smooth sausage'),
+        findsOneWidget,
       );
       expect(find.text(ScanTabCopy.gapSaved), findsOneWidget);
       expect(
@@ -602,45 +618,6 @@ void main() {
           },
         );
       }
-      testWidgets('mosquito_bites is the one stepper, and its increment, '
-          'decrement and pending value are all announced', (tester) async {
-        final handle = tester.ensureSemantics();
-        await tester.pumpWidget(
-          scanHarness(gapCard('mosquito_bites', expanded: true)),
-        );
-        const stepLabels = [
-          'Increase mosquito bites',
-          'Decrease mosquito bites',
-        ];
-        for (final label in stepLabels) {
-          expect(
-            tester.getSemantics(find.bySemanticsLabel(label)),
-            isSemantics(label: label, isButton: true),
-          );
-        }
-        final options = kInlineAnswerableOptions['mosquito_bites']!;
-        expect(
-          tester.getSemantics(
-            find.bySemanticsLabel(stepperReadoutLabel(options.first)),
-          ),
-          isSemantics(
-            label: stepperReadoutLabel(options.first),
-            isLiveRegion: true,
-          ),
-          reason:
-              'the pending count must be its own live node, not text merged '
-              'into the card that announced it once and never again',
-        );
-        for (final value in options) {
-          await stepStepperTo(tester, value);
-          expect(
-            find.bySemanticsLabel(stepperReadoutLabel(value)),
-            findsOneWidget,
-            reason: 'stepping to $value must announce $value',
-          );
-        }
-        handle.dispose();
-      });
       testWidgets('no other metric grew an unlabelled stepper or slider', (
         tester,
       ) async {
@@ -833,95 +810,6 @@ void main() {
         reason: 'two Bristol types that rasterise identically are not a scale',
       );
       expect(answers, [1, 2, 3, 4, 5, 6, 7]);
-      handle.dispose();
-    });
-    testWidgets('mosquito stepper covers both bounds with labelled 48dp taps', (
-      tester,
-    ) async {
-      final handle = tester.ensureSemantics();
-      final answers = <int>[];
-      await tester.pumpWidget(
-        scanHarness(
-          gapCard('mosquito_bites', expanded: true, onAnswer: answers.add),
-        ),
-      );
-      expect(tester.widget<IconButton>(findStepperDecrease).onPressed, isNull);
-      expect(find.bySemanticsLabel(stepperReadoutLabel(0)), findsOneWidget);
-      expect(find.bySemanticsLabel('Increase mosquito bites'), findsOneWidget);
-      expect(tester.getSize(findStepperIncrease), const Size.square(48));
-      expect(tester.getSize(findStepperDecrease), const Size.square(48));
-      expect(answers, isEmpty);
-      await stepStepperTo(tester, 20);
-      expect(find.bySemanticsLabel(stepperReadoutLabel(20)), findsOneWidget);
-      expect(tester.widget<IconButton>(findStepperIncrease).onPressed, isNull);
-      expect(
-        answers,
-        isEmpty,
-        reason: 'stepping never writes implicitly — Save commits',
-      );
-      handle.dispose();
-    });
-    testWidgets(
-      'mosquito edit preserves value and commits only once per Save',
-      (tester) async {
-        final handle = tester.ensureSemantics();
-        final answers = <int>[];
-        Widget card(int value, {bool saving = false}) => scanHarness(
-          gapCard(
-            'mosquito_bites',
-            expanded: true,
-            currentValue: value,
-            saving: saving,
-            onAnswer: answers.add,
-          ),
-        );
-        await tester.pumpWidget(card(12));
-        expect(find.bySemanticsLabel(stepperReadoutLabel(12)), findsOneWidget);
-        expect(find.text('12 bites'), findsOneWidget);
-        expect(answers, isEmpty);
-        final saveSize = tester.getSize(findStepperSave);
-        expect(saveSize.width, greaterThanOrEqualTo(48));
-        expect(saveSize.height, greaterThanOrEqualTo(48));
-        await tester.tap(findStepperSave);
-        await tester.tap(findStepperSave);
-        await tester.pump();
-        expect(answers, [12], reason: 'a rapid duplicate Save is ignored');
-        await tester.pumpWidget(card(15));
-        expect(find.bySemanticsLabel(stepperReadoutLabel(15)), findsOneWidget);
-        await tester.tap(findStepperSave);
-        await tester.pump();
-        expect(answers, [12, 15]);
-        handle.dispose();
-      },
-    );
-    testWidgets('mosquito initial values clamp and saving stays inert', (
-      tester,
-    ) async {
-      final handle = tester.ensureSemantics();
-      final answers = <int>[];
-      Widget card(int value, {bool saving = false}) => scanHarness(
-        gapCard(
-          'mosquito_bites',
-          expanded: true,
-          currentValue: value,
-          saving: saving,
-          onAnswer: answers.add,
-        ),
-      );
-      await tester.pumpWidget(card(-4));
-      expect(find.bySemanticsLabel(stepperReadoutLabel(0)), findsOneWidget);
-      await tester.pumpWidget(card(12, saving: true));
-      expect(find.bySemanticsLabel(stepperReadoutLabel(12)), findsOneWidget);
-      expect(tester.widget<IconButton>(findStepperDecrease).onPressed, isNull);
-      expect(tester.widget<IconButton>(findStepperIncrease).onPressed, isNull);
-      expect(tester.widget<FilledButton>(findStepperSave).onPressed, isNull);
-      expect(answers, isEmpty);
-      await tester.pumpWidget(card(12));
-      await tester.tap(findStepperSave);
-      await tester.pump();
-      expect(answers, [12], reason: 'saving completion enables one retry');
-      await tester.pumpWidget(card(99));
-      expect(find.bySemanticsLabel(stepperReadoutLabel(20)), findsOneWidget);
       handle.dispose();
     });
     testWidgets('special controls fit the 390x844 target viewport', (
