@@ -41,7 +41,8 @@ import {
   parseVerifierResponse,
   type EnforceResult,
 } from './enforce.js';
-import { loadVerificationValidator } from './load.js';
+import { loadCopyValidator, loadVerificationValidator, type CopyValidator } from './load.js';
+import { chooseCaveat } from './caveat.js';
 import { appendVerificationsToDir, appendVerificationsToR2, type WriteResult } from './artifact.js';
 import { loadConfig } from '../config.js';
 import { R2Store } from '../storage/r2.js';
@@ -99,6 +100,12 @@ export interface VerifyClaimOptions {
   texts?: ReadonlyMap<string, string>;
   /** The shared zod gate (injected in tests); default loaded from shared/brain. */
   validateVerification?: VerificationValidator;
+  /**
+   * #300 §E · The shared copy gate for a MODEL-authored `caveat` (injected in tests); default
+   * loaded from shared/constants. Only ever screens the verifier's own phrasing — the DERIVED
+   * caveat sentences are authored clean and guarded by their own test.
+   */
+  validateCopy?: CopyValidator;
   /**
    * Provenance stamp written to `verifierModel` (MOCK proofs override this).
    * This is the CONFIGURED id — a config echo, NOT attestation (B-BR1). What the
@@ -168,6 +175,27 @@ function buildFallbackUncertain(
 ): VerifyRecord {
   // Retrieval sources kept (with their neutral 'mentions' stance) — no verdict trusted.
   const sources: VerifyCitation[] = retrieval.sources.map((s) => ({ ...s, stance: 'mentions' as const }));
+  // #300 §E · DERIVED only, and deliberately so: this record exists BECAUSE the model's reply could
+  // not be enforced, so its words have already been discarded — reusing its caveat here would be
+  // salvaging phrasing from the one answer we refused to trust. What fired is the corroboration
+  // state we can still state honestly (nothing retrieved, or retrieved but none of it counted).
+  const caveat = chooseCaveat(
+    {
+      retrievalPerformed: retrieval.performed,
+      sourceCount: sources.length,
+      supporting: 0,
+      contradicting: 0,
+      evidenceTier: 1,
+      scopeMismatch: false,
+      claimKindMatches: false,
+      claimedKind: claim.claimKind,
+      supportedKind: claim.claimKind,
+      directionMatches: false,
+      effectSizeMatches: false,
+      confidence: 0.3,
+    },
+    null,
+  ).caveat;
   const record: VerifyRecord = {
     edgeId: claim.edgeId,
     verdict: 'uncertain',
@@ -181,6 +209,7 @@ function buildFallbackUncertain(
     evidenceTier: 1,
     confidence: 0.3,
     dqs: { weight: 0.15 },
+    caveat,
     verifierModel: ctx.verifierModel,
     promptVersion: VERIFIER_PROMPT_VERSION,
     verifiedAt: ctx.verifiedAt,
@@ -298,6 +327,7 @@ export async function verifyClaim(
 
   let lastReject: EnforceResult | { ok: false; reason: 'no-response'; detail: string } | undefined;
   let response: LlmResponse | undefined;
+  let validateCopy: CopyValidator | undefined;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     response = await opts.router.route({
       nodeId: 'verifier',
@@ -340,6 +370,10 @@ export async function verifyClaim(
     // could tell attestation from a config echo. The provider-returned identity now
     // travels in `attestation`, which carries its own `attested` flag.
     const attestation = buildAttestation(response);
+    // #300 §E · the copy gate is loaded lazily, on the FIRST enforced reply only: it is needed
+    // solely to screen model-authored caveat text, so the triage-only / dry-run / quoteCheck-only
+    // rungs never pay a dynamic import for it.
+    validateCopy ??= opts.validateCopy ?? (await loadCopyValidator());
     const enforced = enforceVerification(reply, {
       claim,
       quoteCheck,
@@ -348,11 +382,16 @@ export async function verifyClaim(
       promptVersion: VERIFIER_PROMPT_VERSION,
       verifiedAt,
       validateVerification,
+      validateCopy,
       ...(attestation !== undefined ? { attestation } : {}),
       ...(opts.artifactRevision !== undefined ? { artifactRevision: opts.artifactRevision } : {}),
     });
     if (enforced.ok) {
-      log(`verify: ${claim.edgeId} — verdict ${enforced.record.verdict} (conf ${enforced.record.confidence}) via ${response.route}`);
+      const caveatNote = enforced.record.caveat ? ` — caveat: ${enforced.record.caveat}` : '';
+      log(
+        `verify: ${claim.edgeId} — verdict ${enforced.record.verdict} (conf ${enforced.record.confidence}) ` +
+          `via ${response.route}${caveatNote}`,
+      );
       return { claim, triage, quoteCheck, retrieval, record: enforced.record, response };
     }
     lastReject = enforced;
@@ -531,7 +570,22 @@ export {
   type ParsedVerifierReply,
   type EnforceResult,
 } from './enforce.js';
-export { loadVerificationValidator } from './load.js';
+export { loadCopyValidator, loadVerificationValidator } from './load.js';
+export {
+  caveatSentence,
+  chooseCaveat,
+  composeCaveat,
+  corroboratesAFiredFlag,
+  firedCaveatFlags,
+  CAVEAT_SEVERITY_ORDER,
+  LOW_CONFIDENCE_CAVEAT_THRESHOLD,
+  MAX_CAVEAT_SENTENCES,
+  MAX_MODEL_CAVEAT_CHARS,
+  type CaveatChoice,
+  type CaveatFlag,
+  type CaveatInput,
+  type CaveatSource,
+} from './caveat.js';
 export {
   buildArtifactRef,
   buildAttestation,

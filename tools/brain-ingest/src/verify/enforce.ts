@@ -18,6 +18,11 @@
  *      from the reply.
  *   5. The rebuilt record is then run through the shared zod `validateVerification`
  *      hard-gate (belt-and-suspenders: the same invariants, at the contract).
+ *   6. #300 §E · `caveat` is populated from the limitations those re-derived facts
+ *      show (`caveat.ts`), so low credibility is SURFACED as user-facing text rather
+ *      than collapsed into a bare `uncertain`. It is a report ON the enforced record,
+ *      never an input to the verdict: no threshold below decides a caveat, and no
+ *      caveat decides a verdict.
  *
  * A rejected reply is retried once by the caller, then falls back to `uncertain`
  * (§A10 failure mode 7) — enforcement never emits an invalid record.
@@ -37,7 +42,9 @@ import type {
   VerifyVerdict,
 } from './types.js';
 import type { QuoteCheckBlock } from './quoteCheck.js';
+import type { CopyValidator } from '../synth/load.js';
 import { buildArtifactRef, posturefor } from './attest.js';
+import { chooseCaveat, type CaveatInput } from './caveat.js';
 
 const CLAIM_KINDS: readonly VerifyClaimKind[] = ['causal', 'correlational', 'mechanistic'];
 const STANCES = ['supports', 'refutes', 'mixed', 'mentions'] as const;
@@ -53,6 +60,12 @@ export interface ParsedVerifierReply {
   effectSizeCheck: { matchesClaim: boolean; extractedSize: number | null };
   evidenceTier: number;
   confidence: number;
+  /**
+   * #300 §E · the verifier's own one-sentence statement of the limitation it found. UNTRUSTED
+   * like every other field: `caveat.ts` keeps it only if a limitation actually fired AND the text
+   * names one of them, else the derived sentence is used instead.
+   */
+  caveat: string | null;
 }
 
 /**
@@ -125,6 +138,7 @@ export function parseVerifierResponse(rawText: string): ParsedVerifierReply {
     effectSizeCheck: { matchesClaim: bool(ec['matchesClaim']), extractedSize: num(ec['extractedSize']) },
     evidenceTier: num(o['evidenceTier']) ?? 1,
     confidence: num(o['confidence']) ?? 0,
+    caveat: typeof o['caveat'] === 'string' && o['caveat'].trim().length > 0 ? (o['caveat'] as string) : null,
   };
 }
 
@@ -178,6 +192,16 @@ export interface EnforceContext {
    * ref is stamped, which leaves the record unservable — never invented here.
    */
   artifactRevision?: string;
+  /**
+   * #300 §E · the shared copy gate (`shared/constants/copy_guidelines.ts`), used to screen a
+   * MODEL-authored `caveat` before it is placed on the record. Absent ⇒ fail-closed: the model's
+   * words are not used and the derived sentence is emitted instead (see `caveat.ts`).
+   *
+   * Screening here rather than only at the contract is deliberate. The shared zod gate rejects a
+   * caveat with diagnostic language by failing the WHOLE record — one bad adjective would cost the
+   * verdict and burn a retry. This gate costs only the model's phrasing.
+   */
+  validateCopy?: CopyValidator;
 }
 
 /**
@@ -238,6 +262,27 @@ export function enforceVerification(reply: ParsedVerifierReply, ctx: EnforceCont
       : asEvidenceTier(reply.evidenceTier);
 
   const confidence = clamp01(reply.confidence);
+  const supportedKind = asClaimKind(reply.claimKindCheck.supportedKind, ctx.claim.claimKind);
+
+  // #300 §E · the caveat is computed from the ENFORCED facts (re-derived corroboration, the tier
+  // taken from the strongest supporting source, the retrieval WE performed) — never from the
+  // reply's own verdict or counts. The model's sentence is offered as phrasing only; `caveat.ts`
+  // keeps it exclusively when it names a limitation these facts show. No limitation ⇒ null.
+  const caveatInput: CaveatInput = {
+    retrievalPerformed: ctx.retrieval.performed,
+    sourceCount: sources.length,
+    supporting,
+    contradicting,
+    evidenceTier,
+    scopeMismatch: reply.scopeCheck.mismatch,
+    claimKindMatches: reply.claimKindCheck.matchesClaim,
+    claimedKind: ctx.claim.claimKind,
+    supportedKind,
+    directionMatches: reply.directionCheck.matchesClaim,
+    effectSizeMatches: reply.effectSizeCheck.matchesClaim,
+    confidence,
+  };
+  const caveat = chooseCaveat(caveatInput, reply.caveat, ctx.validateCopy).caveat;
 
   const record: VerifyRecord = {
     edgeId: ctx.claim.edgeId,
@@ -248,13 +293,14 @@ export function enforceVerification(reply: ParsedVerifierReply, ctx: EnforceCont
     directionCheck: { matchesClaim: reply.directionCheck.matchesClaim },
     claimKindCheck: {
       matchesClaim: reply.claimKindCheck.matchesClaim,
-      supportedKind: asClaimKind(reply.claimKindCheck.supportedKind, ctx.claim.claimKind),
+      supportedKind,
     },
     scopeCheck: { mismatch: reply.scopeCheck.mismatch, supportedPopulation: reply.scopeCheck.supportedPopulation },
     effectSizeCheck: { matchesClaim: reply.effectSizeCheck.matchesClaim, extractedSize: reply.effectSizeCheck.extractedSize },
     evidenceTier,
     confidence,
     dqs: { weight: computeDqsWeight(verdict, confidence, evidenceTier) },
+    caveat,
     verifierModel: ctx.verifierModel,
     promptVersion: ctx.promptVersion,
     verifiedAt: ctx.verifiedAt,
@@ -295,6 +341,27 @@ export interface QuoteOnlyContext {
  * default for a well-corroborated, low-impact edge until budget frees up.
  */
 export function buildQuoteOnlyRecord(ctx: QuoteOnlyContext): VerifyRecord {
+  const evidenceTier = strongestCitationTier(ctx.claim);
+  const confidence = 0.3;
+  // #300 §E · DERIVED only — no provider spoke on this rung, so there are no model words to
+  // prefer. What fired is exactly "not checked independently" (retrieval was never performed).
+  const caveat = chooseCaveat(
+    {
+      retrievalPerformed: false,
+      sourceCount: 0,
+      supporting: 0,
+      contradicting: 0,
+      evidenceTier,
+      scopeMismatch: false,
+      claimKindMatches: false,
+      claimedKind: ctx.claim.claimKind,
+      supportedKind: ctx.claim.claimKind,
+      directionMatches: false,
+      effectSizeMatches: false,
+      confidence,
+    },
+    null,
+  ).caveat;
   const record: VerifyRecord = {
     edgeId: ctx.claim.edgeId,
     verdict: 'uncertain',
@@ -306,9 +373,10 @@ export function buildQuoteOnlyRecord(ctx: QuoteOnlyContext): VerifyRecord {
     scopeCheck: { mismatch: false, supportedPopulation: null },
     effectSizeCheck: { matchesClaim: false, extractedSize: null },
     // Structural: the strongest tier the claim's own citations assert (not a verdict).
-    evidenceTier: strongestCitationTier(ctx.claim),
-    confidence: 0.3,
+    evidenceTier,
+    confidence,
     dqs: { weight: 0.2 },
+    caveat,
     verifierModel: ctx.verifierModel,
     promptVersion: ctx.promptVersion,
     verifiedAt: ctx.verifiedAt,

@@ -86,6 +86,15 @@ export interface VerifyRecord {
   confidence: number;
   dqs: { weight: number };
   /**
+   * #300 §E · approve-with-caveat — the user-facing limitation that actually fired
+   * (`verify/caveat.ts`). Mirrors `EdgeVerification.caveat`, INCLUDING its three-state
+   * semantics: a string = "approved, with this qualification"; `null` = "no limitation
+   * fired"; ABSENT = "this producer predates caveats". Every producer in this package
+   * emits the key (string or `null`), so absence in an artifact line is a real signal
+   * about its age, never a shrug about its quality.
+   */
+  caveat?: string | null;
+  /**
    * The CONFIGURED verifier id (router config / a MOCK or INTERIM provenance stamp).
    * This is a config echo, NOT attestation (B-BR1) — it is whatever the caller asked
    * for, never proof of what answered. The provider-returned identity lives in

@@ -37,6 +37,15 @@ const u4MigrationFile = readdirSync(migrationsDir).find((f) =>
 assert.ok(u4MigrationFile, 'R4-U4 artifact-trust migration not found in supabase/migrations');
 const u4Sql = readFileSync(path.join(migrationsDir, u4MigrationFile), 'utf8');
 
+// #300 §E added `edge_verifications.caveat` by a further ALTER TABLE, and the loader now projects
+// it (the column existed for weeks with nothing writing it — that is the regression this line
+// exists to prevent recurring). Same union rule as the U4 file above.
+const caveatMigrationFile = readdirSync(migrationsDir).find((f) =>
+  /edge_verifications_caveat_column\.sql$/.test(f),
+);
+assert.ok(caveatMigrationFile, 'edge_verifications caveat migration not found in supabase/migrations');
+const caveatSql = readFileSync(path.join(migrationsDir, caveatMigrationFile), 'utf8');
+
 /** Columns an `alter table public.<table> add column ...` block introduces. */
 function alterAddedColumns(source: string, table: string): Set<string> {
   const cols = new Set<string>();
@@ -100,8 +109,20 @@ test('edge_verifications columns equal the loader verification-row keys (+ loade
   const dbColumns = new Set<string>([
     ...tableColumns(sql, 'edge_verifications'),
     ...alterAddedColumns(u4Sql, 'edge_verifications'),
+    ...alterAddedColumns(caveatSql, 'edge_verifications'),
   ]);
   assert.deepEqual([...dbColumns].sort(), [...rowKeys].sort());
+});
+
+// #300 §E · the caveat column and the loader row must stay joined. A caveat that reaches the
+// artifact but not the column is invisible to every card — which is precisely the state this
+// change fixed, and it failed silently rather than loudly.
+test('#300 §E: the caveat column the migration added is written by the loader', () => {
+  const verificationKeys = new Set<string>(Object.keys(verificationRows[0]!));
+  for (const col of alterAddedColumns(caveatSql, 'edge_verifications')) {
+    assert.ok(verificationKeys.has(col), `loader verification row does not write caveat column '${col}'`);
+  }
+  assert.ok(verificationKeys.has('caveat'), 'loader verification row is missing "caveat"');
 });
 
 // The point of THIS unit: the U4 columns exist AND the loader writes them. A regression that

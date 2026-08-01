@@ -258,6 +258,12 @@ export function joinEdges(claims, verifications) {
         status: superseded ? 'superseded' : v.status,
         edge_score: brain.edgeScore(v),
         serving_band: brain.servingBand(v),
+        // #300 §E · approve-with-caveat, projected verbatim. `?? null` covers BOTH contract
+        // states that mean "no text" — an explicit `caveat: null` and an absent key on a record
+        // written before caveats existed. The loader does not compose, translate or default a
+        // caveat: only the producer knows which limitation actually fired, exactly as with the
+        // artifact/attestation columns above.
+        caveat: v.caveat ?? null,
         ...artifactColumns(v.artifact),
         ...attestationColumns(v.attestation),
       });

@@ -3,9 +3,19 @@
  *
  * The verifier is ADVERSARIAL and REFUTE-FIRST: it is told to actively hunt for
  * contradiction, to trust only the retrieved sentences it is shown (never its own
- * priors), and to DEFAULT to `uncertain` whenever the retrieved evidence does not
+ * priors), and to answer `uncertain` whenever the retrieved evidence does not
  * ground the claim. This is what makes the second pass non-redundant rather than a
  * rubber stamp (docs/memory/0012, brain-synthesis-design "The safeguard").
+ *
+ * #300 §E · APPROVE-WITH-CAVEAT narrows WHEN `uncertain` is produced, without loosening
+ * anything that produces an approval. Thin-but-real grounding (one supporting source, a
+ * weak design, a population mismatch) is now asked for as `partial` + a `caveat` naming
+ * that limitation, instead of the blanket "default to uncertain when unsure" this prompt
+ * used to carry — which was turning every qualification into silence on the card. The
+ * mechanical floor is UNCHANGED and still decides the outcome: `partial` continues to
+ * require independent retrieval AND ≥1 source the model itself marked "supports", both
+ * re-derived in `enforce.ts` and re-checked by the shared schema. The prompt can only ask
+ * for a verdict; it cannot grant one.
  *
  * The LLM's reply is UNTRUSTED. The prompt asks for a strict JSON verdict + a
  * per-source stance assessment + the failure-mode check blocks; the schema
@@ -23,7 +33,7 @@
 import type { SynthClaim, VerifyCitation } from './types.js';
 
 /** Bump on ANY change to the system/prompt text below (artifact provenance). */
-export const VERIFIER_PROMPT_VERSION = 'verifier-2026-07-24.1';
+export const VERIFIER_PROMPT_VERSION = 'verifier-2026-08-01.1';
 
 export const VERIFIER_SYSTEM = [
   "You are the ourobion brain pipeline's adversarial edge-verification node (A10).",
@@ -43,7 +53,22 @@ export const VERIFIER_SYSTEM = [
   '    supported / partial → needs ≥1 source you marked "supports";',
   '    contradicted → needs ≥1 source you marked "refutes";',
   '    if no sources were retrieved at all → the verdict can only be "uncertain".',
-  '- Default to "uncertain" when unsure. A confident wrong verdict is the worst outcome.',
+  '- APPROVE WITH A CAVEAT rather than retreating to "uncertain". When the shown evidence',
+  '  DOES ground the claim but only thinly — one supporting source, a weak study design, a',
+  '  population that does not match, a correlation carrying a causal claim — answer "partial"',
+  '  and NAME that exact limitation in "caveat". Weak-but-real support is a qualified yes, not',
+  '  a shrug; burying it in "uncertain" hides the limitation instead of stating it.',
+  '- Reserve the non-approving verdicts for what they actually mean:',
+  '    unsupported → the shown evidence does not address this claim (it is irrelevant to it);',
+  '    contradicted → the shown evidence argues AGAINST the claim;',
+  '    uncertain → nothing was retrieved, or the shown passages genuinely cannot settle it.',
+  '  Never use "uncertain" merely because the support is thin — that is what "caveat" is for.',
+  '- The caveat must name a limitation you actually observed in the shown evidence. Do NOT',
+  '  invent one, and do NOT write a generic reassurance; it is shown to a person as a real',
+  '  qualification. No limitation ⇒ "caveat": null. Write it in plain, non-clinical language,',
+  '  one or two short sentences, about the EVIDENCE — not about you or your process.',
+  '- A confident wrong verdict is still the worst outcome. Approving thin evidence WITH its',
+  '  caveat is not a confident verdict; approving it silently would be.',
   '- Reply with a SINGLE JSON object and nothing else (no prose, no code fences).',
 ].join('\n');
 
@@ -60,13 +85,16 @@ const CONTRACT = [
   '  "scopeCheck": { "mismatch": <bool>, "supportedPopulation": "<string|null>" },',
   '  "effectSizeCheck": { "matchesClaim": <bool>, "extractedSize": <number|null> },',
   '  "evidenceTier": 1,',
-  '  "confidence": <0..1>',
+  '  "confidence": <0..1>,',
+  '  "caveat": "<the limitation you observed, or null>"',
   '}',
   '',
   'Notes: evidenceTier = study-design strength of the STRONGEST supporting source',
   '(1 mechanistic/in-vitro, 2 cross-sectional, 3 cohort, 4 RCT, 5 meta-analysis/review).',
   'confidence is your calibrated belief in the verdict, 0..1. Only reference paperIds',
-  'shown below — inventing a source is a rejected answer.',
+  'shown below — inventing a source is a rejected answer. caveat is a short plain-language',
+  'sentence naming a limitation the shown evidence really has, or null when it has none;',
+  'a caveat naming something you did not observe is discarded and replaced.',
 ].join('\n');
 
 /**
