@@ -135,3 +135,111 @@ export function isStale(publishedAt: string, nowMs: number): boolean {
   if (Number.isNaN(t)) return true; // unparsable = unaccountable = stale
   return nowMs - t > STALE_AFTER_MS;
 }
+
+// ── Provider rollup (derived from the published rows only) ────────────────────
+//
+// The panels used to carry hardcoded provider budget figures (an "owner ceiling
+// snapshot" literal stamped with a fresh date, plus two run-2 SGD constants).
+// Both read as live governance telemetry that no code path produced. They are
+// replaced by this rollup, which is computed ENTIRELY from llm_router_status +
+// llm_router_spend + llm_router_cap_overrides — the same published rows the rest
+// of the panel shows, with the same published_at and staleness caveats.
+
+/**
+ * Model-id prefix → provider family, mirroring the `providers` table in
+ * tools/llm-router/router.config.json. nao never reads that file (O10 locked),
+ * so the prefixes are duplicated here on purpose: this mapping is the ONLY
+ * provider fact nao asserts. Every number beside it comes from a published row.
+ */
+export const PROVIDER_PREFIXES = [
+  { prefix: 'claude-', family: 'anthropic' },
+  { prefix: 'gpt-', family: 'openai' },
+  { prefix: 'o3', family: 'openai' },
+  { prefix: 'o4', family: 'openai' },
+  { prefix: 'gemini-', family: 'google' },
+  { prefix: 'agnes-', family: 'agnes' },
+] as const;
+
+export type ProviderFamily = (typeof PROVIDER_PREFIXES)[number]['family'] | 'unrecognized';
+
+/** Family of a published model id; unknown prefixes are named, never guessed. */
+export function providerFamilyOf(modelId: string): ProviderFamily {
+  const id = modelId.trim().toLowerCase();
+  for (const entry of PROVIDER_PREFIXES) {
+    if (id.startsWith(entry.prefix)) return entry.family;
+  }
+  return 'unrecognized';
+}
+
+/**
+ * Calls were recorded but the ledger booked US$0.00. A real and load-bearing
+ * state, not missing data: a node priced at zero is not bounded by the USD
+ * ledger at all, so its "% of cap" stays 0 however much it is used. Callers
+ * must surface this rather than render the zero as headroom.
+ */
+export function hasUnpricedCalls(calls: number, usd: number): boolean {
+  return calls > 0 && usd === 0;
+}
+
+/** One provider family's published position for the snapshot's day. */
+export interface ProviderRollup {
+  family: ProviderFamily;
+  /** Nodes in the published status carrying a model id of this family. */
+  nodes: LlmRouterNode[];
+  calls: number;
+  usd: number;
+  /** Sum of the family's effective per-day USD caps (overrides applied). */
+  dayCapUsd: number;
+  fraction: number;
+  /** {@link hasUnpricedCalls} for the family total. */
+  unpricedCalls: boolean;
+  /** No call was recorded against this family in the published snapshot. */
+  noRecordedCalls: boolean;
+}
+
+/**
+ * Roll the published rows up by provider family. `spend` is expected to be
+ * already scoped to the snapshot's day (the /api/models route filters on the
+ * UTC ledger day). An empty `status` yields an empty array — callers render
+ * their honest empty state rather than a row of zeros.
+ */
+export function rollupByProvider(
+  status: readonly ModelStatusRow[],
+  spend: readonly ModelSpendRow[],
+  overrides: readonly CapOverrideRow[],
+): ProviderRollup[] {
+  const byFamily = new Map<ProviderFamily, ProviderRollup>();
+  for (const row of status) {
+    const family = providerFamilyOf(row.model_id);
+    let entry = byFamily.get(family);
+    if (entry === undefined) {
+      entry = {
+        family,
+        nodes: [],
+        calls: 0,
+        usd: 0,
+        dayCapUsd: 0,
+        fraction: 0,
+        unpricedCalls: false,
+        noRecordedCalls: true,
+      };
+      byFamily.set(family, entry);
+    }
+    entry.nodes.push(row.node);
+    const override = overrides.find((o) => o.node === row.node)?.per_day_usd_cap;
+    entry.dayCapUsd += effectiveCap(row.per_day_usd_cap, override).value;
+    for (const s of spend) {
+      if (s.node !== row.node) continue;
+      entry.calls += s.calls;
+      entry.usd += s.usd;
+    }
+  }
+  return [...byFamily.values()]
+    .map((entry) => ({
+      ...entry,
+      fraction: spendFraction(entry.usd, entry.dayCapUsd),
+      unpricedCalls: hasUnpricedCalls(entry.calls, entry.usd),
+      noRecordedCalls: entry.calls === 0,
+    }))
+    .sort((a, b) => a.family.localeCompare(b.family));
+}

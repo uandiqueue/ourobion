@@ -163,6 +163,22 @@
   min-width: 130px;
 }
 
+/* Provider-family rollup: derived from the published rows, so it reads as a list
+   of observations rather than a headline figure. */
+.models-providers {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.models-providers strong {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
 /* The nodes table wants the full row; keep the two summary panels side by side. */
 .models-nodes-panel {
   grid-column: 1 / -1;

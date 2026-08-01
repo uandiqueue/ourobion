@@ -5,6 +5,7 @@ import type { FormEvent } from 'react';
 import { BRAIN_PIPELINE_CORPORA, BRAIN_PIPELINE_METRICS } from '@/lib/brainPipelineControl';
 import type { BrainPipelineRun } from '@/lib/brainPipelineControl';
 import type { ClaimView } from '@/lib/claimsControl';
+import { isStale, rollupByProvider } from '@/lib/modelsControl';
 import type { CapOverrideRow, ModelSpendRow, ModelStatusRow } from '@/lib/modelsControl';
 
 type Dispatchability = 'active' | 'not_on_default_branch' | 'unregistered_or_invalid';
@@ -25,16 +26,6 @@ interface DispatchResponse {
   operationId: string;
   dispatch: { run: { id: number; apiUrl: string; htmlUrl: string } | null };
 }
-
-const OWNER_SNAPSHOT = {
-  observedAt: '2026-08-01',
-  openAiUsd: 1.118,
-  openAiCapUsd: 20,
-  anthropicSgd: 0,
-  anthropicCapSgd: 2,
-  agnesCalls: 19,
-  agnesCapCalls: 50,
-} as const;
 
 function when(iso: string | null): string {
   if (iso === null) return 'time unavailable';
@@ -118,6 +109,16 @@ export function BrainPipelinePanel() {
       publishedAt: status.published_at,
     };
   }, [models]);
+
+  // Provider position for the snapshot's day, derived entirely from the published
+  // llm_router_status / llm_router_spend / llm_router_cap_overrides rows. Never a
+  // literal: when nothing is published this is empty and the panel says so.
+  const providers = useMemo(
+    () => (models === null ? [] : rollupByProvider(models.status, models.spend, models.overrides)),
+    [models],
+  );
+  const publishedAt = models?.status[0]?.published_at ?? null;
+  const snapshotStale = publishedAt !== null && isStale(publishedAt, Date.now());
 
   const verifierModel = models?.status.find((row) => row.node === 'verifier')?.model_id ?? null;
   const verified = claims
@@ -299,13 +300,42 @@ export function BrainPipelinePanel() {
             ) : (
               <span>Live cost cannot be bounded from the published model snapshot, so dispatch remains unsafe.</span>
             )}
-            <span>
-              Dated owner ceiling snapshot ({OWNER_SNAPSHOT.observedAt}): OpenAI {'US$'}
-              {OWNER_SNAPSHOT.openAiUsd.toFixed(3)} of {OWNER_SNAPSHOT.openAiCapUsd};
-              Anthropic {OWNER_SNAPSHOT.anthropicSgd} of SGD {OWNER_SNAPSHOT.anthropicCapSgd} — do not use;
-              Agnes {OWNER_SNAPSHOT.agnesCalls} of {OWNER_SNAPSHOT.agnesCapCalls} calls.
-              The reviewed workflow chooses providers; this UI offers no provider or cap override.
-            </span>
+            {models !== null && providers.length > 0 ? (
+              <>
+                <strong>Published provider spend ({models.today})</strong>
+                {providers.map((provider) => (
+                  <span key={provider.family}>
+                    {provider.family} · {provider.nodes.length} node
+                    {provider.nodes.length === 1 ? '' : 's'} ·{' '}
+                    {provider.noRecordedCalls
+                      ? 'no calls recorded in this snapshot'
+                      : provider.calls + (provider.calls === 1 ? ' call' : ' calls')}
+                    {provider.noRecordedCalls ? null : (
+                      <>
+                        {' · '}{'US$'}{provider.usd.toFixed(8)} of a {'US$'}
+                        {provider.dayCapUsd.toFixed(2)} combined day cap
+                        {provider.unpricedCalls
+                          ? ' — the ledger books this family at zero, so the USD cap is not what bounds it'
+                          : ' (' + (provider.fraction * 100).toFixed(3) + '%)'}
+                      </>
+                    )}
+                  </span>
+                ))}
+                <span>
+                  Rolled up from the published router rows by model-id family, not from a stored
+                  provider total. Snapshot published {when(publishedAt)}
+                  {snapshotStale
+                    ? ' — over an hour old; re-publish the router snapshot for current figures.'
+                    : '.'}{' '}
+                  The reviewed workflow chooses providers; this UI offers no provider or cap override.
+                </span>
+              </>
+            ) : (
+              <span>
+                No published router status is available, so provider spend is not shown. Nao does not
+                fill that gap with a figure of its own.
+              </span>
+            )}
           </div>
 
           <button type="submit" className="ingest-btn" disabled={busy || !formReady || (!dryRun && synthesisBudget === null)}>

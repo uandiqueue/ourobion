@@ -13,7 +13,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { searchPapers, facetCounts, getPaperRow, buildFtsMatchQuery } from '../src/lib/d1.ts';
+import {
+  searchPapers,
+  facetCounts,
+  getPaperRow,
+  getPaperDetailRow,
+  buildFtsMatchQuery,
+} from '../src/lib/d1.ts';
 import {
   assertSqlLimits,
   createImportSnapshot,
@@ -168,6 +174,102 @@ test('getPaperRow: binds uid and parses JSON array columns', async () => {
   assert.deepEqual(row?.authors, ['Ada', 'Grace']);
   assert.deepEqual(row?.topicTags, ['dengue']);
   assert.equal(row?.oaStatus, 'gold');
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getPaperDetailRow — the paper-detail fallback read
+//
+// Selects four columns PAPER_COLUMNS omits (the detail page renders them, the
+// list does not). Null still means "no such paper in the index", which is the
+// one case where the detail page's 404 is honest.
+// ─────────────────────────────────────────────────────────────────────────────
+test('getPaperDetailRow: binds uid and maps the four detail-only columns', async () => {
+  const raw = {
+    paper_uid: 'doi:10.1/x',
+    title: 'T',
+    authors_json: '["Ada"]',
+    year: 2020,
+    venue: 'V',
+    abstract: null,
+    oa_status: 'gold',
+    retrievability: 'pdf',
+    work_type: 'article',
+    cited_by_count: 5,
+    journal_publisher: 'Pub',
+    topic_tags: '["dengue"]',
+    concepts: '["immunology"]',
+    doi: '10.1/x',
+    pmid: null,
+    pmcid: null,
+    status: 'fetched',
+    discovered_via: 'openalex',
+    full_text_extracted: 1,
+    full_text_method: 'pdf',
+    full_text_char_count: 41234,
+    storage_kind: 'object',
+    storage_size_bytes: 2048,
+    fetched_at: '2026-06-29T07:58:04.045Z',
+  };
+  const { db, captured } = makeFakeDb([], raw);
+  const row = await getPaperDetailRow('doi:10.1/x', db);
+  assert.match(captured[0].sql, /paper_uid = \?/);
+  assert.deepEqual(captured[0].binds, ['doi:10.1/x']);
+  // The four columns the narrower list projection does not select.
+  for (const column of [
+    'full_text_char_count',
+    'storage_kind',
+    'storage_size_bytes',
+    'fetched_at',
+  ]) {
+    assert.ok(captured[0].sql.includes(column), 'missing column ' + column);
+  }
+  assert.equal(row?.fullTextCharCount, 41234);
+  assert.equal(row?.storageKind, 'object');
+  assert.equal(row?.storageSizeBytes, 2048);
+  assert.equal(row?.fetchedAt, '2026-06-29T07:58:04.045Z');
+  // Still inherits the base mapping.
+  assert.deepEqual(row?.authors, ['Ada']);
+  assert.equal(row?.fullTextExtracted, true);
+});
+
+test('getPaperDetailRow: an absent uid yields null (the honest 404 case)', async () => {
+  const { db } = makeFakeDb([], null);
+  assert.equal(await getPaperDetailRow('doi:missing', db), null);
+});
+
+test('getPaperDetailRow: null detail columns stay null, never coerced to 0', async () => {
+  const raw = {
+    paper_uid: 'doi:10.1/y',
+    title: 'T',
+    authors_json: '[]',
+    year: null,
+    venue: null,
+    abstract: null,
+    oa_status: 'closed',
+    retrievability: 'unknown',
+    work_type: null,
+    cited_by_count: null,
+    journal_publisher: null,
+    topic_tags: '[]',
+    concepts: '[]',
+    doi: null,
+    pmid: null,
+    pmcid: null,
+    status: 'discovered',
+    discovered_via: 'openalex',
+    full_text_extracted: 0,
+    full_text_method: null,
+    full_text_char_count: null,
+    storage_kind: null,
+    storage_size_bytes: null,
+    fetched_at: null,
+  };
+  const { db } = makeFakeDb([], raw);
+  const row = await getPaperDetailRow('doi:10.1/y', db);
+  assert.equal(row?.fullTextCharCount, null);
+  assert.equal(row?.storageKind, null);
+  assert.equal(row?.storageSizeBytes, null);
+  assert.equal(row?.fetchedAt, null);
 });
 
 test('facetCounts: issues grouped queries and shapes buckets', async () => {
