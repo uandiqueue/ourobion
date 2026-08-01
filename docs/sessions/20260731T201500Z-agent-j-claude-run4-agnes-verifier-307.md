@@ -1,6 +1,6 @@
 ---
 title: Run 4 — flip the router verifier to Agnes, and pin that Agnes stays acceptance-only
-summary: Flipped the verifier node from claude-sonnet-5 to agnes-2.5-flash as the only family the decorrelation invariant leaves legal now that Anthropic is off-limits, and updated the four posture tests to assert the new posture plus its two real consequences — the verifier escapes USD budget accounting, and it is refused outright on the plain route because Agnes is acceptance-only.
+summary: Flipped the verifier node to agnes-2.5-flash and implemented owner-directed option (d) — exposing the acceptance context on the plain verify CLI so the Agnes guard stays fully intact; flipped from claude-sonnet-5 as the only family the decorrelation invariant leaves legal now that Anthropic is off-limits, and updated the four posture tests to assert the new posture plus its two real consequences — the verifier escapes USD budget accounting, and it is refused outright on the plain route because Agnes is acceptance-only.
 type: session
 scope: shared
 status: canonical
@@ -63,6 +63,57 @@ device: `agent-j`; agent: `claude` (Opus 5, 1M context).
   Consequence for #307 task 2: **verification must run through the live-acceptance path**
   (`liveAcceptance.ts`; `verify()` already takes `acceptance`, `verifier.ts:115`), not the plain
   route. Whole-paper **synthesis** is unaffected — `gpt-5` is metered and runs on the plain route.
+
+
+## Option (d) — exposing the acceptance context on the plain `verify` CLI
+
+Owner-directed on #307 after I reported the deadlock, and **better than all three options I
+proposed**. The capability was already there and merely unreachable: `verify()` declares
+`acceptance` (`verifier.ts:115`) and uses it (`:276-279`); `cli.ts` never set it.
+
+- `tools/brain-ingest/src/cli.ts` — `verify --acceptance-authorization <file> --acceptance-run-id
+  <id>`, loaded via `loadAcceptanceContext()` and validated by the router's own
+  `validateAcceptanceAuthorization`, so a malformed, expired or over-spent descriptor **fails closed
+  before any provider call**. The two flags are a **pair** — half an authorization is refused rather
+  than silently ignored, because a lone flag would let an operator believe a run was journal-bounded
+  when it was not.
+- **The `Agnes is acceptance-only` guard is untouched.** That is the whole point: Agnes is free-priced
+  and reserves US$0, so the per-day USD ledger cannot bound the verifier node; the attempt journal,
+  the validated descriptor and the per-logical-call POST cap are the only remaining bound. Relaxing
+  the guard would have removed all three at once.
+- `tests/verify.cli.integration.test.ts` — `ACCEPTANCE (i)` now supplies a test authorization and
+  keeps **every original assertion** (evidence TEXT + `paperId @ chars:N-M` provenance, the crux O15
+  closes). Adapting a test to a new required calling convention, not weakening it. Plus **two new
+  guard tests**: the plain route refuses an Agnes verifier with no authorization (before any HTTP
+  call, and unbilled), and a lone flag is refused.
+
+### Three defects found while wiring it, each fixed rather than worked around
+
+1. **UTF-8 BOM in the descriptor.** PowerShell's `Out-File`/`Set-Content` emit a BOM by default, and
+   `JSON.parse` rejects it with an opaque `Unexpected token` that reads like a malformed
+   authorization rather than an encoding artifact. An operator on this platform will hit it
+   immediately — I did. Now stripped, matching the tolerance `synth/artifact.ts` already applies.
+2. **The attempt journal persists per `authorizationId`, so a fixed test id is flaky-by-design.**
+   The journal lives at `data/brain-ingest/live-acceptance/<authorizationId>/attempts.jsonl` and
+   survives the run. Because the authorization **hash** covers `issuedAt`/`authorizationBasis`, a
+   test with a fixed id but a moving window fails on its *second* execution with
+   `journal contains an event from a different authorization` — green once, then flaky. The test now
+   mints a **unique id per run** and removes its own journal afterwards: the same fresh-id/fresh-journal
+   discipline the owner set for real runs. Verified no stray journal is left behind.
+3. **The response stub was the wrong wire shape.** It returned Anthropic Messages JSON because the
+   verifier used to be `claude-sonnet-5`. Agnes speaks the **OpenAI chat-completions** wire, so the
+   stub no longer parsed and the CLI exited non-zero before reaching any real assertion — the failure
+   looked like the guard but was not.
+
+### Verification
+
+| Gate | Result |
+|---|---|
+| `tools/brain-ingest` typecheck / tests | clean / **461/461** |
+| `tools/llm-router` tests | **121/121** |
+| stray acceptance journals after the run | none (only the pre-existing `test-authorization`) |
+
+**No provider calls for this unit.** Spend unchanged at US$0.204.
 
 ## Verification
 

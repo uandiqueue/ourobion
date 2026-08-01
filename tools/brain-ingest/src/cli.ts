@@ -6,7 +6,7 @@
  * / `resume`, which delegate to `run.ts` (the §10.6 orchestrator).
  */
 
-import { realpathSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { inspectConfig, loadConfig, sourceEnablement, REQUIRED_VARS } from './config.js';
@@ -35,7 +35,8 @@ import { R2Store } from './storage/r2.js';
 import { r2TextLoader } from './verify/quoteCheck.js';
 import { verify } from './verify/verifier.js';
 import { corpusTexts, loadCorpusFromFile } from './verify/corpus.js';
-import { LlmRouter } from '../../llm-router/src/index.js';
+import { LlmRouter, validateAcceptanceAuthorization } from '../../llm-router/src/index.js';
+import type { AcceptanceCallContext } from '../../llm-router/src/index.js';
 import { runSinglePaper } from './singlePaper.js';
 import { runOfflineAcceptance } from './offlineAcceptance.js';
 import { runLiveAcceptance, type LiveAcceptanceLeg } from './liveAcceptance.js';
@@ -79,6 +80,20 @@ Commands:
                                                    appends claims.jsonl + blueprints.jsonl
   verify [--from-claims <path>] [--corpus <path>] [--edge <edgeId>]
          [--edges-dir <dir>] [--artifact-revision <id>] [--dry-run] [--triage-only]
+         [--acceptance-authorization <file> --acceptance-run-id <id>]
+                                                   the two acceptance flags are given TOGETHER and
+                                                   carry an owner-issued authorization into the
+                                                   verifier call. REQUIRED whenever the verifier
+                                                   node is a family the router restricts to the
+                                                   acceptance path (Agnes): free pricing means the
+                                                   USD ledger cannot bound that node, so the attempt
+                                                   journal + validated descriptor + per-logical-call
+                                                   POST cap are the only bound. Without them an
+                                                   Agnes verifier is refused BEFORE dispatch, which
+                                                   is the guard working, not a fault. The descriptor
+                                                   is validated by the router, so a malformed,
+                                                   expired or over-spent authorization fails closed
+                                                   before any provider call
                                                    A10 adversarial verification: A9 quoteCheck →
                                                    budget triage (C7) → verifier-owned retrieval →
                                                    refute-first LLM (router node 'verifier', in a
@@ -400,6 +415,64 @@ async function runSynthesize(
  *    verifier vendor's key — ANTHROPIC_API_KEY under the C13 posture) and appends
  *    edges/verifications.jsonl plus edges/verification-raw.jsonl (R4-U3 raw evidence).
  */
+/**
+ * #307 option (d) · Load an owner-issued acceptance authorization for the plain `verify` route.
+ *
+ * WHY THIS EXISTS. `verify()` has always declared an acceptance context (`verifier.ts:115`) and
+ * used it (`:276-279`), but only `liveAcceptance.ts` ever supplied one — `cli.ts` never did. That
+ * gap became load-bearing the moment the verifier moved to Agnes: `callApiWorker` refuses family
+ * `agnes` without `req.acceptance` ("Agnes is acceptance-only"), so the ordinary `verify` command
+ * could not dispatch at all.
+ *
+ * The fix is to make the authorization REACHABLE, not to weaken the guard. Agnes is priced free and
+ * reserves US$0, so the per-day USD ledger cannot bound the verifier node; the attempt journal, the
+ * validated descriptor and the per-logical-call POST cap are the only remaining bound. Relaxing the
+ * acceptance-only check would have removed all three at once. This keeps every one of them and
+ * simply lets an operator hand in the descriptor the owner issued.
+ *
+ * The descriptor is validated by the router's own `validateAcceptanceAuthorization`, so a malformed,
+ * expired or over-spent authorization fails closed HERE, before any provider call.
+ */
+function loadAcceptanceContext(
+  options: Map<string, string>,
+  log: (line: string) => void,
+): Omit<AcceptanceCallContext, 'logicalCallId'> | undefined {
+  const file = options.get('acceptance-authorization');
+  const runId = options.get('acceptance-run-id');
+  if (file === undefined && runId === undefined) return undefined;
+  if (file === undefined || runId === undefined) {
+    throw new Error(
+      'verify: --acceptance-authorization <file> and --acceptance-run-id <id> must be given together',
+    );
+  }
+
+  let raw: unknown;
+  try {
+    // Strip a UTF-8 BOM: an operator on Windows writing this descriptor with PowerShell's
+    // `Out-File`/`Set-Content` gets one by default, and `JSON.parse` rejects it with an opaque
+    // "Unexpected token" that reads like a malformed authorization rather than an encoding artifact.
+    // Same tolerance the JSONL readers in synth/artifact.ts already apply.
+    const text = readFileSync(file, 'utf8');
+    raw = JSON.parse(text.charCodeAt(0) === 0xfeff ? text.slice(1) : text);
+  } catch (error: unknown) {
+    throw new Error(
+      `verify: cannot read acceptance authorization '${file}' — ` +
+        `${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+
+  // Fails closed on a bad window, a bad id, or prior use exceeding the cap.
+  const authorization = validateAcceptanceAuthorization(raw, Date.now());
+  const perProvider = Object.entries(authorization.providers)
+    .map(([family, limit]) => `${family} ${limit.priorPostStarts}/${limit.maxPostStarts} starts`)
+    .join(', ');
+  log(
+    `verify: acceptance authorization '${authorization.authorizationId}' accepted ` +
+      `(run ${runId}) — ${perProvider}`,
+  );
+  return { acceptanceRunId: runId, authorization };
+}
+
 async function runVerify(flags: Set<string>, options: Map<string, string>): Promise<number> {
   const log = (line: string) => process.stdout.write(line + '\n');
   const root = repoRoot();
@@ -407,6 +480,7 @@ async function runVerify(flags: Set<string>, options: Map<string, string>): Prom
   const claimsFile = options.get('from-claims') ?? claimsPath(edgesDir);
   const triageOnly = flags.has('triage-only');
   const dryRun = flags.has('dry-run');
+  const acceptance = loadAcceptanceContext(options, log);
 
   const runOpts: Parameters<typeof verify>[0] = {
     claimsPath: claimsFile,
@@ -414,6 +488,9 @@ async function runVerify(flags: Set<string>, options: Map<string, string>): Prom
     triageOnly,
     dryRun,
     log,
+    // #307 (d): present only when the operator supplied an owner-issued authorization. Absent, the
+    // Agnes verifier is refused before dispatch — which is the guard working, not a bug.
+    ...(acceptance !== undefined ? { acceptance } : {}),
   };
   const edge = options.get('edge');
   if (edge !== undefined) runOpts.edgeId = edge;
