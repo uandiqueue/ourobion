@@ -645,10 +645,27 @@ async function runSynthesizePapersCli(
   const b = result.budget;
   log('');
   log(`synthesize-papers stopped: ${b.stopReason}`);
+  // #307 · All FOUR buckets, and they must sum to papersRequested. Reporting only three printed
+  // `2 synthesised, 0 already done, 0 not reached (of 3 requested)` on a real run — a failed paper
+  // counted nowhere. The reconciliation line makes any future gap impossible to miss.
+  const accounted =
+    b.papersSynthesised + b.papersSkippedAlreadyDone + b.papersNotReached + b.papersFailed;
   log(
     `  papers: ${b.papersSynthesised} synthesised, ${b.papersSkippedAlreadyDone} already done, ` +
-      `${b.papersNotReached} not reached (of ${b.papersRequested} requested)`,
+      `${b.papersFailed} failed, ${b.papersNotReached} not reached ` +
+      `(of ${b.papersRequested} requested)`,
   );
+  if (accounted !== b.papersRequested) {
+    log(
+      `  WARNING: accounting gap — ${accounted} papers accounted for of ${b.papersRequested} ` +
+        'requested; some paper is unreported',
+    );
+  }
+  if (b.papersFailed > 0) {
+    for (const p of result.perPaper.filter((x) => x.status === 'failed')) {
+      log(`  FAILED ${p.paperUid}: ${p.detail ?? 'no detail recorded'}`);
+    }
+  }
   log(
     `  provider: ${b.providerCalls} call(s), US$${b.usdSpent.toFixed(6)}` +
       `${b.maxUsd !== null ? ` of US$${b.maxUsd} ceiling` : ''}` +

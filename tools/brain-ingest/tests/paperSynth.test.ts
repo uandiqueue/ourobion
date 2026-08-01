@@ -231,7 +231,7 @@ test('#300 §B: the mechanism rides quoteSpans as a SECOND VERBATIM quote, marke
       claim({
         quoteSpans: [
           { paperId: PAPER_UID, role: 'evidence', quote: EVIDENCE_QUOTE },
-          { paperId: PAPER_UID, role: 'mechanism', quote: MECHANISM_QUOTE },
+          { paperId: PAPER_UID, role: 'mechanism', mechanismIsPathway: true, quote: MECHANISM_QUOTE },
         ],
       }),
     ]),
@@ -259,6 +259,62 @@ test('#300 §B: the mechanism rides quoteSpans as a SECOND VERBATIM quote, marke
   assert.equal((mechanism as unknown as Record<string, unknown>)['role'], undefined);
 });
 
+test('#307 D2: an UNDECLARED mechanism span is demoted to evidence, not labelled a mechanism', () => {
+  // A live run quoted "This lack of association may be due to the limited variability in sleep
+  // quality in this population and the small sample size." — verbatim, so the quote gate passed it,
+  // and labelled it a mechanism. That is a statement about the STUDY; on a card it would tell a
+  // reader their body works a certain way when the paper only said its sample was too small.
+  //
+  // Judging biology-vs-methodology is a JUDGEMENT, so it belongs to the model, which holds the whole
+  // paper. The label is now applied only on an explicit `mechanismIsPathway: true` declaration.
+  // Without it the span is DEMOTED — the quote survives as ordinary evidence, we simply stop
+  // asserting it is the mechanism. Under-claiming, never mislabelling.
+  const result = processPaperSynthesisResponse(
+    reply([
+      claim({
+        quoteSpans: [
+          { paperId: PAPER_UID, role: 'evidence', quote: EVIDENCE_QUOTE },
+          // role says mechanism, but the model did NOT declare it a pathway
+          { paperId: PAPER_UID, role: 'mechanism', quote: MECHANISM_QUOTE },
+        ],
+      }),
+    ]),
+    ctx(),
+  );
+
+  assert.equal(result.rejected.length, 0, 'the claim itself must still be accepted');
+  assert.equal(result.accepted.length, 1);
+  const spans = result.accepted[0]!.quoteSpans;
+  assert.equal(spans.length, 2, 'the quote is kept, not dropped');
+  assert.equal(
+    spans.filter((s) => isMechanismLocator(s.locator)).length,
+    0,
+    'an undeclared span must NOT carry the mechanism label',
+  );
+  // ...and it is still a usable, verbatim evidence span at exact offsets.
+  const demoted = spans[1]!;
+  assert.equal(PAPER_TEXT.slice(demoted.charStart!, demoted.charEnd!), MECHANISM_QUOTE);
+});
+
+test('#307 D2: a DECLARED mechanism span keeps the label', () => {
+  const result = processPaperSynthesisResponse(
+    reply([
+      claim({
+        quoteSpans: [
+          { paperId: PAPER_UID, role: 'evidence', quote: EVIDENCE_QUOTE },
+          { paperId: PAPER_UID, role: 'mechanism', mechanismIsPathway: true, quote: MECHANISM_QUOTE },
+        ],
+      }),
+    ]),
+    ctx(),
+  );
+  assert.equal(result.accepted.length, 1);
+  assert.equal(
+    result.accepted[0]!.quoteSpans.filter((s) => isMechanismLocator(s.locator)).length,
+    1,
+  );
+});
+
 test('#300 §B: a PARAPHRASED mechanism is rejected — invented biology cannot survive', () => {
   const paraphrased =
     'Gut bacteria produce serotonin which crosses the blood-brain barrier and lifts mood.';
@@ -269,7 +325,7 @@ test('#300 §B: a PARAPHRASED mechanism is rejected — invented biology cannot 
       claim({
         quoteSpans: [
           { paperId: PAPER_UID, role: 'evidence', quote: EVIDENCE_QUOTE },
-          { paperId: PAPER_UID, role: 'mechanism', quote: paraphrased },
+          { paperId: PAPER_UID, role: 'mechanism', mechanismIsPathway: true, quote: paraphrased },
         ],
       }),
     ]),
@@ -321,7 +377,7 @@ test('#300 §C: evidence quoted from the leading intro zone is rejected; the mec
       claim({
         quoteSpans: [
           { paperId: PAPER_UID, role: 'evidence', quote: EVIDENCE_QUOTE },
-          { paperId: PAPER_UID, role: 'mechanism', quote: introSentence },
+          { paperId: PAPER_UID, role: 'mechanism', mechanismIsPathway: true, quote: introSentence },
         ],
       }),
     ]),

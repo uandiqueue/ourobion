@@ -333,6 +333,16 @@ export interface BatchBudgetReport {
   papersSynthesised: number;
   papersSkippedAlreadyDone: number;
   papersNotReached: number;
+  /**
+   * #307 · Papers that errored — no canonical text, missing manifest metadata, a router failure, or
+   * an unparseable reply.
+   *
+   * Added because the summary reported only the three buckets above, so a real run printed
+   * `2 synthesised, 0 already done, 0 not reached (of 3 requested)`: a paper had failed and was
+   * counted nowhere. The four buckets must now sum to `papersRequested`, so a run cannot silently
+   * lose a paper from its own accounting.
+   */
+  papersFailed: number;
   providerCalls: number;
   usdSpent: number;
   /** The ceilings this run was held to (absent = uncapped). */
