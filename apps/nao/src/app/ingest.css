@@ -85,6 +85,39 @@
   color: var(--text-secondary);
 }
 
+/* ── Unavailable controls (R4 viewer read-only UX) ───────────────────────── */
+/*
+ * <ControlScope> renders a native <fieldset disabled>, which disables every
+ * control inside it. The element is reset to a plain flex column so wrapping a
+ * region changes what it does, never how it looks — the panel's own gap/stretch
+ * behaviour is preserved and the browser's default fieldset chrome is removed.
+ */
+.control-scope {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+/*
+ * The reason line beside an inactive control. Muted, one line, no icon: a
+ * disabled control does not fire hover events, so this — not the title
+ * attribute — is what a person actually reads.
+ */
+.control-note {
+  color: var(--text-muted);
+}
+
+/* An inactive input/select reads the same way an inactive button already does. */
+.ingest-form input:disabled,
+.ingest-form select:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* ── Forms ───────────────────────────────────────────────────────────────── */
 .ingest-form {
   display: flex;

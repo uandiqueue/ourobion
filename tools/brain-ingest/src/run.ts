@@ -145,6 +145,16 @@ export interface RunOptions {
    * the Supabase boundary, keeping it hermetic.
    */
   seedPool?: readonly Seed[];
+  /**
+   * Whether `seedPool` actually includes the `ingestion_seeds` rows, i.e.
+   * `MergedSeeds.dbAvailable`. The boundary is fail-soft by design, so a
+   * missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY silently shrinks the pool
+   * to static topics; without this flag an explicit `--seed` for a real,
+   * enabled nao seed is reported as an unknown topic — a configuration
+   * failure wearing the costume of an operator typo. Defaults to `true` so
+   * programmatic callers that pass no pool keep the plain message.
+   */
+  seedPoolDbAvailable?: boolean;
 }
 
 /** Outcome of a {@link run} — the numbers the CLI prints. */
@@ -718,10 +728,25 @@ function selectSeeds(
   corpusDir: string,
   log: (line: string) => void,
   pool: readonly Seed[] = SEEDS,
+  dbAvailable = true,
 ): Seed[] {
   if (seedTopic !== undefined) {
     const seed = pool.find((s) => s.topic === seedTopic);
     if (seed === undefined) {
+      // Two genuinely different failures share this one branch, so name which
+      // one happened. When the `ingestion_seeds` boundary did not load, the
+      // pool is static-only and CANNOT contain a seed added in nao — that is a
+      // configuration fault, and calling it an unknown topic sends the
+      // operator to fix a slug that was never wrong.
+      if (!dbAvailable) {
+        throw new Error(
+          `--seed '${seedTopic}' cannot be resolved: the nao ingestion_seeds boundary did not ` +
+            'load this run (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY absent or unreachable — see ' +
+            'the db-seeds warning above), so the topic pool is STATIC topics only and no seed ' +
+            'added in nao is present. This is a configuration failure, not an unknown topic. ' +
+            `Static topics: ${pool.map((s) => s.topic).join(', ')}`,
+        );
+      }
       throw new Error(
         `unknown --seed '${seedTopic}'. Known topics: ${pool.map((s) => s.topic).join(', ')}`,
       );
@@ -795,7 +820,7 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
     await hydrateManifestFromR2(manifest, store, log);
   }
 
-  const seeds = selectSeeds(opts.seed, corpusDir, log, opts.seedPool);
+  const seeds = selectSeeds(opts.seed, corpusDir, log, opts.seedPool, opts.seedPoolDbAvailable);
   log(`ingest: seeds=[${seeds.map((s) => s.topic).join(', ')}]${opts.dryRun ? ' (dry-run)' : ''}`);
 
   // ── Steps 1–4: discover → dedup → record → OA-locate → classify ─────────────

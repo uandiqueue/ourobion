@@ -73,8 +73,8 @@ const fakeFiles = {
   repoRoot: resolve('C:/repo-fixture'),
 };
 
-test('per-unit landing base is the accepted PR #347 integration merge', () => {
-  assert.equal(RUN4_UNIT_BASE_SHA, 'e0c6077dd887fe277a3468130f0c44c909a86875');
+test('per-unit landing base is the accepted PR #362 integration merge', () => {
+  assert.equal(RUN4_UNIT_BASE_SHA, '545c10440acb46a3d836ef84c94e317e8526a3ff');
 });
 
 test('real TOML parser accepts quoted dotted names and rejects redefinitions', () => {

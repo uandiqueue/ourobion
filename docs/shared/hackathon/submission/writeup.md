@@ -1,21 +1,34 @@
 ---
 title: Ourobion — Launchpad 2026 AI Challenge Write-up
-summary: A blocked submission draft undergoing evidence verification; it is not the final narrative and must not be submitted until the Run 4 provider, synthesis, lineage, and model-claim defects are resolved.
+summary: A submission draft whose every quantitative claim was re-measured on 2026-08-01 and whose hosted figures were read from Supabase on 2026-08-02; the research pipeline has produced 14 verified edges of which 11 are servable, but it is not yet submittable, because model claims remain quarantined behind issue #277 and no insight card yet carries producer='edge'.
 type: reference
 scope: repo
 status: draft
-updated: 2026-08-01
+updated: 2026-08-02
 ---
 
 # Ourobion — Launchpad 2026 AI Challenge Write-up
 
-> **DO NOT SUBMIT THIS DRAFT.** The 2026-08-01 audit found material stale, overclaimed, and
-> now-wrong statements. Issue #307 has now measured the post-#300 synthesizer: a 15-paper completed
-> batch emitted 10 claims and one blueprint, but verification did not complete at batch scale and no
-> projection/card result has been reported. Wait for the remaining Agnes verification → projection →
-> card stages, including any zero-result stage, before rewriting this prose. Model-training and
-> evaluation claims are quarantined behind issue #277. Use
-> [`submission-verification-audit.md`](../../../temp/run4/submission-verification-audit.md) as the
+> **DO NOT SUBMIT THIS DRAFT.** Every quantitative sentence below was re-measured, and the hosted
+> figures were read directly from the Supabase demo project on **2026-08-02**. Two blockers remain, and
+> neither is a missing measurement:
+>
+> 1. **Model-training and evaluation claims are still quarantined behind issue #277.** This draft
+>    therefore states only that the support models are research-only and non-serving; it publishes no
+>    training or evaluation figure.
+> 2. **The pipeline now produces servable verified edges, but no card has been made from one.** Hosted
+>    `verified_edges` holds 14 rows, 11 of them servable. `insight_cards` holds 45 rows and **0 of them
+>    have `producer='edge'`**. The last mile — servable edge to rendered card — has not run. That is a
+>    narrower and more accurate blocker than the "zero verified edges" this draft previously carried.
+>
+> **A correction to the previous revision of this file, recorded rather than quietly overwritten.** It
+> stated `verified_edges = 0`, called that "derivable by schema", and described the card caveats as
+> unreachable template strings. All three are now false. The pipeline ran between that revision being
+> drafted and being committed; the `supporting >= 1` contract rule it relied on was removed by PR #355,
+> which rebound verdicts to single-paper fidelity. An honest document that understates is still
+> inaccurate, and those specific claims understated.
+>
+> Use [`submission-verification-audit.md`](../../../temp/run4/submission-verification-audit.md) as the
 > current defect ledger; it is an audit, not replacement submission prose.
 
 *Track: Agentic Systems*
@@ -27,101 +40,96 @@ relationship; a second, adversarial AI has to prove it against fresh literature 
 
 ## Problem
 
-Health apps surface patterns — *"your gut comfort dips on low-hydration days"* — but the correlations are
-generic and unexplained: a user cannot judge coincidence from signal. The obvious upgrade — an LLM that
-explains *why* — is the most dangerous thing to put in front of a health claim: LLMs confidently state
-correlation as causation, reverse cause and effect, generalise an animal study to a person. The real
-problem isn't data or model access; it's **grounding the interpretation**, when the best tool for
-grounding is also the least trustworthy component available.
+Health apps surface patterns — *"your gut comfort dips on low-hydration days"* — but they are generic
+and unexplained: a user cannot tell coincidence from signal. The obvious upgrade, an LLM that explains *why*, is
+the most dangerous thing to put in front of a health claim: LLMs state correlation as causation, reverse cause
+and effect, generalise an animal study to a person. The real problem isn't data or model access; it's
+**grounding the interpretation**, when the best tool for grounding is the least trustworthy component available.
 
-Existing approaches fall short: trusting the model begs the question; the same model asked "are you
-sure?" inherits its own blind spots; retrieval-augmented citation still lets a model misread its sources;
-manual evidence grading (GRADE, Cochrane) is rigorous but costs experts months per question.
+Existing approaches fall short: trusting the model begs the question; the same model asked "are you sure?"
+inherits its blind spots; retrieval-augmented citation still lets a model misread sources; manual grading
+(GRADE, Cochrane) costs experts months per question.
 
 We target the gap: **automated, evidence-grounded verification of LLM-proposed relationships** — cheap at
-ingestion, honest enough to refuse when ungroundable. We did not pre-register numeric success
-criteria; the operating point was set after our first run, and we say so rather than retrofit a number.
-This needs an agent, not one call: verification demands independent retrieval and an adversarial second
-pass. We demonstrate on health-metric relationships, where an ungrounded claim harms most; our prebuild
-app (*biotope*) is the consumer of this layer, not the contribution.
+ingestion, honest enough to refuse when ungroundable. We did not pre-register success criteria; the operating
+point was set after our first run. This needs an agent, not one call. *biotope* is prebuild — the consumer of
+this layer, not the contribution.
 
 ## Approach
 
-Two decorrelated LLMs, not one clever prompt. A synthesis model (OpenAI) proposes a relationship from a
-paper; a second, adversarial model from a different vendor family (Anthropic, in the run we executed) must
-refute it via its **own independent retrieval**, defaulting to `uncertain` when it cannot ground the claim
-— enforced as a schema invariant (`independentRetrieval.performed`), not a prompt request. A single call
-can't cross-examine itself; the same model re-asked "are you sure?" inherits its own blind spots.
+Two decorrelated LLMs, not one clever prompt. A synthesis model (OpenAI `gpt-5`) proposes a relationship from a
+paper; a second, adversarial model from a different vendor (Agnes `agnes-2.5-flash` — the verifier that actually
+ran) judges whether the claim is faithful to that paper, on quote spans a deterministic gate already proved
+verbatim. Independent retrieval stays mandatory but, since PR #355, informs the caveat rather than the verdict.
+`llm-router check-config` at head reports `Decorrelation: OK — synthesis=openai, verifier=agnes`.
 
-We deliberately **cut** agent count rather than grow it. The first sketch over-agentified the pipeline; we
-kept only the roles needing judgment — synthesis, adversarial verification, presentation, human curation —
-and made extraction, passage selection, and gating deterministic. Cheapest checks run first: a
-deterministic `quoteCheck` against the source text before any verifier token is spent. Two evidence
-ladders stay uncollapsed — `evidenceTier` (study design) and `impactTier` (venue) — rigor and notability
-aren't the same axis. The served graph is a relational `verified_edges` 1-hop lookup, not a graph database;
-at our scale a graph DB would be complexity for its own sake (Neo4j considered, dropped).
+We deliberately **cut** agent count rather than grow it: we kept only the roles needing judgment — synthesis,
+adversarial verification, presentation, curation — and made extraction and gating deterministic. Cheapest checks
+run first: a deterministic `quoteCheck` against the source text before any verifier token is spent. Two evidence ladders stay uncollapsed — `evidenceTier` (study design)
+and `impactTier` (venue) — because rigor and notability aren't the same axis.
 
-**Honest weakness:** `edgeScore` weights and `EDGE_GATES` thresholds (0.8/0.5) are uncalibrated —
-provisional pending a labelled set, not derived numbers.
+**Honest weakness:** `edgeScore` weights and `EDGE_GATES` thresholds (0.8/0.5) are uncalibrated — provisional
+pending a labelled set, not derived.
 
 ## Evidence
 
-The deterministic gate (`quoteCheck`, schema validation) is unit-tested — contract-level, prebuild. On top
-of it we ran the full pipeline end to end once: a canonical paper was extracted in full (91,162 characters),
-and synthesis reasoned over 12 selected passages, not the whole text. The verifier then ran its own
-retrieval and returned `uncertain`, with **zero independent sources found** — the proposed edge was
-**held, not served**. That refusal is our strongest artifact: a system saying "I don't know" instead of
-rubber-stamping its own synthesis.
+Machine artifacts re-measured **2026-08-01**; hosted tables read **2026-08-02** (Appendices D, E, I).
 
-Serving integrity was proven separately from paper-authoring: a fixed-edge local harness passed **20/20**,
-and cards rendered on a physical Android device from 21 days of **simulated** health data (4 rule-based
-cards plus two research cards). Both are real runs; the data is simulated, not from real users.
+**Corpus: 21,823 records — 20,912 `discovered`, 911 `fetched`, 894 with usable full text.** Only *usable full
+text* can ground a claim, so calling 21,823 a corpus of readable papers overstates our synthesisable base by
+roughly 24×.
 
-What we do not have yet: **a baseline comparison.** We have not measured our verifier against a single-LLM
-"does this look right?" baseline on labelled good/bad relationships — even 15–25 hand-labelled claims is
-the first thing we would run next, turning this from a demonstrated mechanism into a measured one.
+**Synthesis: 40 papers sent whole** — we deleted the keyword prefilter rather than tune it — yielding **20 claims
+over 20 distinct edges and 12 cited rule blueprints**, the first not hand-authored, at **~US$0.04 per
+paper**. We designed for 3–5 blueprints per paper; we measured **0.3**.
+
+**Verification: Agnes checked 14 edges**, judged on fidelity to the cited paper. Verdicts: **1 `supported`, 10
+`partial`, 2 `uncertain`, 1 `unsupported`**, confidence 0.72–0.92. Hosted `verified_edges` holds **14 rows, 11
+servable** (8 `high`, 3 `mid`); three are held. Corroboration stays thin — our defect, not the literature's:
+retrieval splits metric keys on underscores, so `resting_hr_bpm` never searches "heart rate". It reaches the
+reader only as a caveat, and those are real model-written prose (Appendix E).
+
+**No card has yet come from an edge.** `insight_cards` holds **45 rows — 43 `producer='personal'`, 2
+`producer='rules'`, 0 `producer='edge'`.** The step rendering a servable edge as a card has not run — and the
+app shows that gap rather than hiding it: personal cards are titled *"Still researching"* and state they are
+*"an unverified personal observation from your own data only"*. They are real correlations passing the real
+serve gate over **60 days of simulated data** labelled `data_origin: 'simulated:run4-demo'`, shaped to satisfy
+that gate, not bypass it. No baseline or gold set exists: 14 verdicts are not an accuracy rate.
 
 ## Constraints
 
-Cost is paid once at ingestion, amortised over every later read, so verification spend is tiered — full
-independent-retrieval verification is reserved for high-impact, low-corroboration edges, not run on
-everything. Budget guardrails fail closed: a hard stop at 95% of any provider quota, per-source token
-buckets, a deterministic ~$0.004 OpenAlex cost model. In our one measured run, spend reconstructed locally
-was roughly **SGD 0.0648 (OpenAI)** and **SGD 0.1340 (Anthropic)**, including superseded attempts —
-provider billing is the authority, not this reconstruction.
+Cost is paid once at ingestion and amortised over every later read, so verification spend is tiered — full
+independent-retrieval verification is reserved for high-impact, low-corroboration edges. Guardrails fail closed:
+a hard stop at 95% of any provider quota, plus per-source token buckets. The machine-local ledger records
+**US$1.80 over 59 calls** (Appendix D). **Agnes is priced at zero**, so no USD ledger can bound it; an
+append-only hash-chained journal reserving every billable POST does. That pricing expires **2026-08-08**.
 
-Platform limits shaped the design directly: *nao* runs on Cloudflare Workers, whose CPU ceiling can't
-sustain a long ingestion job, so it dispatches a GitHub Actions run instead. An earlier R2-based "mailbox"
-design was **killed** once we found it couldn't actually invoke a run. A host-memory guard was added after
-a real low-RAM failure during a live run, not pre-emptively. Retrieval is OA-first; we do not redistribute
-closed-access text. We have no local GPU, so the three planned support models that would cheapen
-verification stay roadmap, untrained. We do not claim PDPA compliance or data isolation for the hosted
-demo.
+Platform limits shaped the design: *nao* runs on Cloudflare Workers, whose CPU ceiling can't sustain a long
+ingestion job, so it dispatches GitHub Actions instead — an earlier R2 "mailbox" design was **killed** once we
+found it couldn't invoke a run. Retrieval is OA-first; we don't redistribute closed-access text. No local GPU, so
+the support models are not in what we submit, and we claim no PDPA compliance for the hosted demo.
+
+Two workflows this run added **cannot be dispatched at all**: `workflow_dispatch` resolves from the default branch
+and neither file is there (Appendix I). So the hosted projection cannot be refreshed from CI, and the
+deployed console still shows an earlier pass's figure.
 
 ## Honesty & Trajectory
 
-**What we did not build, plainly.** *biotope* is prior work — **118 commits** before 3 Jul 2026, versus
-**248** since; it's the backdrop, not the delta. The verified graph is **one held edge from one paper** —
-small by design, not a knowledge graph. Two research checkpoints **were** trained after this section was
-first drafted — Zebra v1 (claim/evidence entailment, SciFact) and Viceroy v0 (causal wording) — but
-neither serves anything: both are frozen, privately stored, `validated=false`, `serving_ready=false`, and
-have zero imports from `apps/`, `supabase/`, `shared/` or `tools/brain-ingest`, enforced in CI. Zebra
-failed two of its three readiness gates (mean macro-F1 0.5991 vs the ≥0.70 bar; every-class minimum-seed
-recall ≥0.60 missed on contradicted 0.4348 and supported 0.5796). Only calibration passed. HealthVer and
-BioRED remain roadmap data only. Our evaluation is a **single end-to-end run**, not a
-labelled study: one refusal observed, zero
-baseline comparisons — a demonstrated mechanism, not a measured accuracy rate. The grounding invariant is
-**schema-plus-prompt, not proof**: we require an independent-retrieval flag before a supported verdict, but
-cannot prove the retrieval was truly independent — cross-model checking reports residual error correlation
-in the literature, so decorrelated verification **reduces** joint failure, not eliminates it. Ourobion is
-non-diagnostic throughout, not a medical device.
+**What we did not build, plainly.** *biotope* is prior work — **118 commits** before 3 Jul 2026 versus **248**
+since; the backdrop, not the delta. **The verified graph is small and serves nothing: 14 edges, 11 servable,
+0 cards from one.** Support-model checkpoints are frozen and non-serving, CI-enforced against import;
+**all their training and evaluation figures are excluded pending issue #277**, in either direction. The batch
+surfaced four real defects, in Appendix I. Our evaluation is **not a labelled study**: 14
+verdicts, zero baselines. The grounding invariant is **schema-plus-prompt, not proof** — we require an
+independent-retrieval flag before a servable verdict but cannot prove that retrieval was truly independent, and
+cross-model checking reports residual error correlation, so decorrelation **reduces** joint failure rather than
+eliminating it. Ourobion is non-diagnostic, not a medical device.
 
-**Two more weeks:** build a hand-labelled gold set (injected direction-flip,
-correlation-as-causation, scope-overgeneralisation errors) and run the baseline-vs-verifier comparison
-this write-up is missing; measure per-edge cost/latency; run the verifier across more metric pairs; ship
-*nao*'s evidence panel and human curation step. `EdgeVerification` has nothing health-specific in it —
-corpus and ontology are the only domain-bound parts, checkable in `shared/brain/relationships.ts`. That
-portability is a direction, not a claim we're making today.
+**Two more weeks:** the edge-to-card projection, the only reason 11 servable edges show a user nothing; a metric
+alias map, so `resting_hr_bpm` actually searches "heart rate" and corroboration stops measuring our vocabulary;
+the two undispatchable workflows onto the default branch; the four Appendix I defects; then a hand-labelled gold
+set and the missing baseline-vs-verifier comparison. `EdgeVerification` has nothing health-specific in it, but
+portability is a direction.
 
 ---
 
@@ -130,14 +138,22 @@ portability is a direction, not a claim we're making today.
 | Claim | File / PR |
 |---|---|
 | Grounding invariant, `EdgeVerification`, `independentRetrieval` | `shared/brain/relationships.ts`, `shared/brain/index.ts`, `shared/brain/relationships.schema.ts` |
-| The one end-to-end run (91,162-char extraction, 12 passages, held edge) | PR #190 (merged) |
-| Synthesis + passage selection | `tools/brain-ingest/src/synth/` |
+| `supported`/`partial` require fidelity to the cited paper (not a corroboration headcount) | `shared/brain/relationships.schema.ts:236,245` — PR #355 removed the former `supporting >= 1` rule |
+| Caveat may be model-authored, kept only if it names a measured limitation | `tools/brain-ingest/src/verify/caveat.ts` — `chooseCaveat()`, `corroboratesAFiredFlag()` |
+| Personal cards declare themselves unverified to the user | `supabase/functions/generate-insights/render.ts` — `PERSONAL_CARD_TEMPLATE` |
+| Whole-paper synthesis (no passage prefilter) | `tools/brain-ingest/src/synth/paperPrompt.ts`, `paperRun.ts`, `paperPostprocess.ts` |
+| 20 claims / 12 cited blueprints, 40 papers | `data/corpus/edges/claims.jsonl`, `blueprints.jsonl` (machine artifacts) |
+| 14 verifications → 14 verified edges, 11 servable | Hosted `edge_verifications` / `verified_edges`, read 2026-08-02; `verification-raw.jsonl` for provider attestation |
+| 45 insight cards, 0 with `producer='edge'` | Hosted `insight_cards`, read 2026-08-02 |
+| Corpus counts (20,912 discovered / 911 fetched / 894 usable) | `data/corpus/papers.jsonl` |
+| US$1.80 all-time spend | `data/llm-router/ledger.json` |
+| Decorrelation enforced (openai vs agnes) | `tools/llm-router/router.config.json`; `llm-router check-config` output |
+| Free-priced node bounded by attempt journal | `tools/llm-router/src/attemptJournal.ts` |
 | Verification + retrieval | `tools/brain-ingest/src/verify/` |
 | Deterministic insight engine | `tools/rules/`, `supabase/functions/generate-insights/` |
 | App surface | `apps/biotope/lib/` |
 | Ingestion control plane (GitHub Actions dispatch) | `apps/nao/`, `.github/workflows/brain-ingest.yml` |
 | Decision log / Approach source | `docs/nao/brain-synthesis-design.md`, `brain-ingestion-design.md`, `nao-app-design.md`, `brain-support-models-design.md` |
-| Fixed-edge serving harness (20/20) | see Run-4 cockpit session logs |
 
 ## Appendix B — Prebuild / delta split
 
@@ -165,19 +181,82 @@ git push origin pre-hackathon-baseline
 
 ## Appendix D — Cost (measured, aggregate only)
 
-| Provider | Role | Reconstructed spend (SGD) |
+From `data/llm-router/ledger.json`, every LLM call this project has ever made:
+
+| Date | Node | Calls | Spend (USD) |
+|---|---|---|---|
+| 2026-07-16 | seeder | 2 | 0.041646 |
+| 2026-07-16 | synthesis | 1 | 0.063840 |
+| 2026-07-25 | verifier | 2 | 0.000725 |
+| 2026-07-31 | synthesis | 2 | 0.093090 |
+| 2026-08-01 | seeder | 2 | 0.020233 |
+| 2026-08-01 | synthesis | 40 | 1.584520 |
+| 2026-08-01 | verifier (Agnes) | 10 | 0.000000 |
+| **Total** | | **59** | **≈ 1.804** |
+
+Agnes rows are an exact zero, not a missing figure: its plan is priced at zero per token until 2026-08-08.
+The 2026-08-01 synthesis batch works out to ≈ US$0.040 per paper. Locally reconstructed; provider billing is
+authoritative. Per-edge, per-stage latency was not captured — named as the next measurement to take, not
+invented here.
+
+**Two limits on this table, stated rather than smoothed over.** The ledger is **gitignored and
+machine-local**, so it is not a repository artifact a judge can re-derive. And it records **10** Agnes
+verifier calls on 2026-08-01 against **14** hosted verifications — those do not reconcile from here, most
+likely because the verification pass ran on another machine or worktree with its own ledger. The USD total
+is unaffected either way, since the Agnes leg is priced at zero; but **do not present 59 as the pipeline's
+call count.** It is this ledger's call count.
+
+## Appendix E — The verifier's actual output (all 14 edges)
+
+Read directly from the hosted `verified_edges` / `edge_verifications` tables on **2026-08-02**, after
+PR #355 rebound the verdict to single-paper fidelity. Provider-attested `agnes-2.5-flash`.
+
+**Verdict distribution:** 1 `supported`, 10 `partial`, 2 `uncertain`, 1 `unsupported`. Confidence
+0.72–0.92. Servable verdicts are `supported` and `partial`, giving **11 servable of 14**.
+
+| Band | Score | Edge |
 |---|---|---|
-| OpenAI | Synthesis | ≈ 0.0648 |
-| Anthropic | Verifier | ≈ 0.1340 |
+| `high` | 0.779 | `gut_comfort_score \| correlates \| mood_score` |
+| `high` | 0.697 | `hrv_sdnn_ms \| correlates \| spo2_pct` |
+| `high` | 0.690 | `stool_form \| correlates \| anxiety_score` |
+| `high` | 0.680 | `stool_form \| correlates \| mood_score` |
+| `mid` | 0.663 | `urine_colour \| correlates \| energy_score` |
+| `high` | 0.656 | `stool_form \| correlates \| symptom_flags` |
+| `high` | 0.656 | `stool_form \| correlates \| stool_count` |
+| `mid` | 0.648 | `anxiety_score \| correlates \| symptom_flags` |
+| `high` | 0.637 | `hrv_sdnn_ms \| correlates \| anxiety_score` |
+| `mid` | 0.612 | `sleep_duration_min \| correlates \| resting_hr_bpm` |
+| `high` | 0.574 | `resting_hr_bpm \| correlates \| anxiety_score` |
+| `hold` | 0.000 | `sleep_duration_min \| decreases \| resting_hr_bpm` |
+| `hold` | 0.000 | `sleep_duration_min \| correlates \| hrv_sdnn_ms` |
+| `hold` | 0.000 | `resting_hr_bpm \| correlates \| hrv_sdnn_ms` |
 
-Locally reconstructed, including superseded attempts; provider billing is authoritative. Per-edge,
-per-stage latency was not captured in this run — named as the next measurement to take, not invented here.
+**What a verdict here does and does not assert.** Since PR #355 it answers one question: *is this claim a
+faithful reading of the single paper it cites?* — judged against quote spans the deterministic A9 gate
+already proved verbatim. It is **not** a finding that the relationship is true, nor that the wider
+literature agrees. Corroboration, impact tier and evidence tier are still computed and stored, but they
+reach the user only through the caveat. Three edges sit at `hold` with score 0.000, so the refusal path is
+live, not vestigial.
 
-## Appendix E — The verifier's actual output (the one held edge)
+**The caveats are real, and some are the model's own words.** `chooseCaveat()` keeps the verifier's
+sentence when it passes the non-diagnostic copy gate *and* names a limitation that actually fired;
+otherwise it emits a derived sentence. Both paths occur on the stored records. Verbatim examples:
 
-Verdict: `uncertain`. `independentRetrieval.performed: true`, `sources: []` (zero independent sources
-found). Edge status: held, not served. This is a refusal, observed once — not a percentage, not a
-wrong-accept/wrong-reject miss (that requires the labelled set described in Evidence/Honesty above).
+- *"Only one source (S7) addresses both resting HR and anxiety, and its quoted passages report that…"*
+- *"The only source reporting a correlation between resting heart rate and SDNN (S7) studied lung c[ancer patients]…"*
+- *"Only S4 supports the claim, and it studies GI-specific anxiety in IBS patients — it does not ad[dress]…"*
+- *"Only one other study backed this up. The people studied may not be a close match for you."*
+
+The fourth is a composed *derived* caveat — two template sentences joined — and it is reachable precisely
+because corroboration was non-zero on that record. **An earlier revision of this write-up claimed these
+sentences were unreachable template strings and must not be quoted as verifier output. That was wrong**,
+on two counts: model-authored caveats are kept whenever they qualify, and PR #355's `citedPaperAssessed`
+opens the quality-of-backing flags even at zero corroboration.
+
+**What is still not proven.** Nothing about accuracy. 14 verdicts, no labelled gold set, no baseline to
+compare against — that is not a rate and not a wrong-accept/wrong-reject measurement. Corroboration counts
+also remain depressed by our own retrieval defect (no metric alias map), so they measure our vocabulary
+coverage rather than the literature.
 
 ## Appendix F — Prior art (Problem-pillar positioning)
 
@@ -188,16 +267,17 @@ cross-examining one model with another.
 
 ## Appendix G — Attribution (summary; not yet committed as `ATTRIBUTION.md` in the repo root — see below)
 
-- **OpenAI** (GPT family) — synthesis LLM, used.
-- **Anthropic** (Claude family) — adversarial verifier, used; this is the verifier that actually ran.
-- **Agnes AI**, **GMI Cloud** — not used; no run and no training exists behind either, so neither is
-  credited or claimed.
-- **SciFact** — training data for the Zebra v1 entailment checkpoint (research-only, frozen, not serving,
-  weights not distributed). **HealthVer, BioRED** — roadmap data only; no training performed on either.
-- **Yu, Li & Wang causal-language corpus** — training data for the Viceroy v0 causal-wording checkpoint,
-  same research-only posture. Its repository is marked GPL-3.0 with no separate data licence, and whether
-  those terms propagate to trained weights is **unresolved**; public weight release is blocked pending
-  model-specific licence clearance. Base model: Microsoft BiomedBERT (MIT).
+- **OpenAI** (`gpt-5`, `gpt-5-mini`) — synthesis and seeder LLM, used. 45 calls, US$1.80.
+- **Agnes AI** (`agnes-2.5-flash`) — adversarial verifier, used; **this is the verifier that actually ran**,
+  producing the 14 verifications in Appendix E, priced at zero. (The local ledger records 10 calls; see
+  Appendix D on why that does not reconcile with 14 and should not be quoted as the call count.)
+- **Anthropic** (Claude family) — declared in the router's provider table and used by one older synthesis
+  call on 2026-07-16 that still contributes one claim on disk. It is **not** the verifier, and earlier
+  drafts of this write-up saying so were wrong.
+- **GMI Cloud** — not used; no run exists behind it, so nothing is credited or claimed.
+- **Support-model training data** — the datasets and checkpoints are excluded from this submission pending
+  issue #277, so no dataset is credited here as training a submitted artifact. Nothing in that line
+  influences any output described above, and CI enforces that with an import ban.
 - **OpenAlex, CORE, PubMed, Semantic Scholar, Lens, Unpaywall** — paper discovery / retrieval, prebuild.
 - 25 AI-generated image assets in `apps/biotope/assets/images/generated/` — generator and terms to be
   confirmed and named in the repo's `ATTRIBUTION.md` before submission.
@@ -213,10 +293,46 @@ evidence behind it, using a fixed label set that keeps "configured target" separ
 
 Read it before making any infrastructure claim in a submission or demo. Its §9 lists the statements
 that are safe to make and the ones that are not — including that no component of this system is
-proven deployed, and that the adversarial verifier's real decorrelated verdict has never run. Like
-this write-up, it is a submission-facing projection, not architecture authority; the canonical docs it
-links to win any disagreement.
+proven deployed. Its verifier row has now been corrected twice: it said the verifier had never run, then
+that it ran but promoted nothing, and both are out of date — it has produced 11 servable verdicts of 14
+(Appendix E). Like this write-up, it is a submission-facing projection, not architecture authority; the
+canonical docs it links to win any disagreement.
+
+## Appendix I — Defects this batch found, stated rather than filtered
+
+Running synthesis at 40 papers surfaced four faults that one paper never would. All four are measured from
+the artifacts in Appendix A, not inferred.
+
+1. **A claim was emitted on `log_completeness`** — an app-internal bookkeeping metric measuring how fully a
+   user filled in their log. No paper can speak to it. It was filtered downstream, but the synthesis gate
+   should have barred the key outright and did not.
+2. **The edge dedupe key is order-sensitive.** Both `stool_form|correlates|stool_count` and its mirror
+   `stool_count|correlates|stool_form` were stored as distinct edges. For a symmetric relation like
+   `correlates`, those are one edge.
+3. **Contradictory relations on the same pair are retained side by side.** `sleep_duration_min` against
+   `resting_hr_bpm` exists three times — `correlates`, `no_effect`, and `decreases`; `sleep_duration_min`
+   against `hrv_sdnn_ms` exists as both `correlates` and `no_effect`. Reconciling disagreeing papers is
+   precisely the job we claim to do, and today we store the disagreement instead of resolving it.
+4. **The manifest writer was O(n²).** `Manifest.upsert()` rewrote the entire 60 MB manifest per record,
+   roughly 21,000 times. Invisible at 1,232 records; the dominant cost at 21,823. Patched with batched atomic
+   checkpoints. A related integrity bug survives it: one record's title contains raw newlines, so that record
+   spans four physical lines and breaks the one-record-per-line invariant the file's streamability depends on.
+
+**One adjacent caveat, and one retraction.** `supabase/deploy-attestation.json` asserts entrypoint hashes
+that no longer match the tree for three of its four edge functions (`generate-insights`, `evaluate-signals`,
+`run-pipeline`; `compute-baselines` still matches). Regenerating them needs Docker, which no session had, so
+PR #347 merged with that gate red on an explicit owner decision.
+
+**Retracted:** an earlier revision listed a fifth defect claiming the card caveat sentences were unreachable
+hardcoded templates that must never be quoted as verifier output. That was wrong — see Appendix E. Caveats
+are produced, stored, and frequently the model's own words.
 
 ---
 
-*Word count, five pillar sections only (appendices excluded, per the rules): 997 whitespace-delimited tokens.*
+*Word count, five pillar sections only: **999** whitespace-delimited tokens against the 1,000-word cap,
+counted 2026-08-02. **Method, stated so it is reproducible:** the bodies of `## Problem`, `## Approach`,
+`## Evidence`, `## Constraints` and `## Honesty & Trajectory` — excluding the five heading lines themselves,
+the banner above them, and every appendix — split on whitespace, with markdown emphasis markers left
+attached to their token. Stripping `**`/`*` does **not** change the total, because no token in the pillars
+is a bare marker; an earlier revision's note that a looser count "gives fewer" was wrong. One token of
+headroom: any further addition must be paid for by a deletion.*

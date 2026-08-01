@@ -83,6 +83,39 @@ test('inspect: returns only validated recent workflow_dispatch runs', async () =
   });
 });
 
+test('inspect: a failed recent-runs lookup degrades the list, never dispatchability', async () => {
+  await withEnv({ GH_ACTIONS_TOKEN: 'secret-token', GH_REPO: 'uandiqueue/ourobion' }, async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = responseSequence([
+      response(200, { default_branch: 'main' }), response(200, { state: 'active' }), response(500),
+    ]);
+    try {
+      const result = await inspectBrainPipeline();
+      assert.equal(result.ok, true);
+      assert.equal(result.dispatchability, 'active');
+      assert.deepEqual(result.runs, []);
+    } finally { globalThis.fetch = realFetch; }
+  });
+});
+
+test('inspect: names the failing step and its status instead of one opaque sentence', async () => {
+  await withEnv({ GH_ACTIONS_TOKEN: 'secret-token', GH_REPO: 'uandiqueue/ourobion' }, async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = responseSequence([response(403)]);
+    try {
+      const result = await inspectBrainPipeline();
+      assert.equal(result.ok, false);
+      if (!result.ok) assert.match(result.error, /403.*repository/);
+    } finally { globalThis.fetch = realFetch; }
+    globalThis.fetch = responseSequence([response(200, { default_branch: 'main' }), response(401)]);
+    try {
+      const result = await inspectBrainPipeline();
+      assert.equal(result.ok, false);
+      if (!result.ok) assert.match(result.error, /401.*workflow/);
+    } finally { globalThis.fetch = realFetch; }
+  });
+});
+
 test('dispatch: posts only after preflight, pins ref to default branch, and returns validated 200 run identity', async () => {
   await withEnv({ GH_ACTIONS_TOKEN: 'secret-token', GH_REPO: 'uandiqueue/ourobion' }, async () => {
     const realFetch = globalThis.fetch;

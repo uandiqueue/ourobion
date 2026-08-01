@@ -33,7 +33,7 @@
   },
   "budget": {
     "perRunOutputTokens": 60000,
-    "perDayUsdPerNode": 1.0,
+    "perDayUsdPerNode": 8.0,
     "hardStopFraction": 0.95,
     "ledgerPath": "data/llm-router/ledger.json",
     "retentionDays": 30

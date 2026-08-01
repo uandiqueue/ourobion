@@ -15,8 +15,15 @@
 // Used twice: the /claims page (all claims) and the per-paper "Claims &
 // verdicts" section on /paper/[uid] (paperUid prop → citation containment
 // filter server-side).
+//
+// R4 viewer read-only UX: reading claims and verdicts is open to every caller
+// who can reach this page, so the cards, quotes and citations stay live. REJECT
+// is the panel's only write and is gated on the route it posts to.
 import { useCallback, useEffect, useState } from 'react';
 import { TEST_MODE_LABEL, type ClaimView } from '@/lib/claimsControl';
+import { ControlNote, useControlGate } from './NaoAccess';
+
+const REJECT_ROUTE = 'POST /api/claims/reject';
 
 interface ClaimsPanelProps {
   /** When set, only claims whose citations include this paper are shown. */
@@ -32,6 +39,7 @@ function fmtWhen(iso: string): string {
 }
 
 export function ClaimsPanel({ paperUid }: ClaimsPanelProps) {
+  const gate = useControlGate();
   const [state, setState] = useState<LoadState>('loading');
   const [claims, setClaims] = useState<ClaimView[]>([]);
   const [busyEdge, setBusyEdge] = useState<string | null>(null);
@@ -120,6 +128,8 @@ export function ClaimsPanel({ paperUid }: ClaimsPanelProps) {
           verifier default stands unless a human records a REJECT (O13); nothing here is an
           independent verification claim.
         </p>
+        {/* Once, here, rather than under every card: the reason is the same for all of them. */}
+        <ControlNote route={REJECT_ROUTE} />
       </div>
 
       {claims.map((c) => {
@@ -199,12 +209,13 @@ export function ClaimsPanel({ paperUid }: ClaimsPanelProps) {
                   placeholder="Reason (optional)"
                   maxLength={2000}
                   aria-label={`Reason for rejecting ${c.edgeId}`}
+                  {...gate(REJECT_ROUTE)}
                 />
                 <button
                   type="button"
                   className="ingest-btn claims-reject__btn"
-                  disabled={busyEdge !== null}
                   onClick={() => void reject(c.edgeId)}
+                  {...gate(REJECT_ROUTE, busyEdge !== null)}
                 >
                   {busyEdge === c.edgeId ? 'Rejecting…' : 'Reject'}
                 </button>
