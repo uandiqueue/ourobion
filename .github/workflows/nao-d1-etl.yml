@@ -1,0 +1,179 @@
+# nao — rebuild the D1 search index from the R2 manifest (DRAFT for Session B review)
+#
+# WHY THIS EXISTS
+# nao's paper list reads the D1/FTS5 index and explicitly "NEVER R2 per request"
+# (apps/nao/src/app/(app)/papers/page.tsx). R2 + manifest/papers.jsonl are the TRUTH tier;
+# D1 is a DERIVED, rebuildable projection (AGENTS.md §2). Nothing syncs them: there is no
+# wrangler cron, no scheduled() handler, and no CI job — `npm run etl` is hand-run only.
+#
+# Observed consequence: a bounded ingestion pass wrote 5,335 records to R2 and nao kept showing
+# the pre-run state, because the projection was never rebuilt. Nothing was broken; the link
+# simply is not wired.
+#
+# WHY CI AND NOT A CLOUDFLARE CRON
+# `scripts/etl.mjs` says it plainly: "This script runs LOCALLY or in CI — never inside the
+# Worker (the Worker has no S3 creds; it uses the native CORPUS binding)." It reads R2 over the
+# S3 HTTP API and shells out to `wrangler d1 execute`. A Worker has neither the CLI nor S3
+# credentials, so a cron trigger would need the ETL rewritten against the CORPUS + D1 bindings.
+# That is arguably the better end state — zero credentials anywhere — but it is a rewrite, and
+# Workers CPU/subrequest limits are a real risk for thousands of UPSERTs in one invocation.
+#
+# ⚠️ THIS IS A DRAFT IN SESSION B's TERRITORY (apps/nao/**, .github/workflows/nao-*.yml).
+# Drafted by the brain/synthesis session at the owner's request, for Session B to review, adjust
+# and land. It is deliberately NOT self-merged.
+#
+# ⚠️ SEQUENCING CAVEAT — worth reading before enabling the schedule.
+# A cron shortens the staleness window; it does not remove it. It fires when nothing changed and
+# lags when something did. The staleness CLASS disappears only when the D1 rebuild is the final
+# step of whatever writes R2, so the two always travel together. There is no CI ingestion job to
+# append to today (ingestion currently runs locally; brain-pipeline.yml is synthesis/verification,
+# workflow_dispatch-only, and not yet on the default branch). So: treat `workflow_dispatch` as the
+# real entry point now, and the `schedule` below as an interim safety net — or delete the schedule
+# entirely and call this workflow from the ingestion job once one exists.
+
+name: nao — D1 search-index ETL
+
+on:
+  workflow_dispatch:
+    inputs:
+      sql_only:
+        description: 'Generate + measure the SQL but do NOT touch D1 (safe first run)'
+        type: boolean
+        default: true
+      max_sql_bytes:
+        description: 'Refuse to execute if the generated SQL exceeds this many bytes'
+        default: '20000000'
+  # Interim safety net. Comment out once the ETL is chained to the ingestion job.
+  schedule:
+    - cron: '17 3 * * *' # 03:17 UTC daily — off-peak, and not on the hour
+
+# One rebuild at a time: two concurrent `wrangler d1 execute` runs against the same index would
+# interleave UPSERTs. Not cancel-in-progress — a half-applied index is worse than a late one.
+concurrency:
+  group: nao-d1-etl
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  etl:
+    name: Rebuild D1 index from R2 manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+
+      # FAIL CLOSED on missing secrets, with the names spelled out. Without this the ETL would
+      # read an empty endpoint and fail deep inside SigV4 signing with an opaque error.
+      - name: Verify required secrets are present
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          missing=""
+          for v in R2_ENDPOINT R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET \
+                   CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+            if [ -z "${!v}" ]; then missing="$missing $v"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::missing repository secret(s):$missing"
+            echo "R2_* are the S3-compatible creds etl.mjs signs with; CLOUDFLARE_* are for"
+            echo "\`wrangler d1 execute --remote\`. All six are required."
+            exit 1
+          fi
+          echo "all six secrets present"
+
+      - name: Install nao dependencies
+        working-directory: apps/nao
+        run: npm ci
+
+      # etl.mjs reads R2_* from apps/nao/.env (or the generated .dev.vars). That file is
+      # gitignored and absent in CI, so project the secrets into it here rather than changing
+      # the script's contract.
+      - name: Project R2 credentials into apps/nao/.env
+        working-directory: apps/nao
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          umask 077
+          {
+            printf 'R2_ENDPOINT=%s\n' "$R2_ENDPOINT"
+            printf 'R2_ACCESS_KEY_ID=%s\n' "$R2_ACCESS_KEY_ID"
+            printf 'R2_SECRET_ACCESS_KEY=%s\n' "$R2_SECRET_ACCESS_KEY"
+            printf 'R2_BUCKET=%s\n' "$R2_BUCKET"
+          } > .env
+          echo "wrote apps/nao/.env (values not echoed)"
+
+      # MEASURE BEFORE EXECUTING. etl.mjs does NOT chunk: it emits one SQL file and relies on
+      # `wrangler d1 execute --file` applying the whole thing as a single batch. That held at
+      # ~1,300 rows; the corpus is now 5,335 and growing toward ~3,000 more. So generate first,
+      # report the size, and refuse an execute that looks likely to exceed D1's limits — rather
+      # than discovering it as a half-applied index.
+      - name: Generate SQL and measure it
+        id: measure
+        working-directory: apps/nao
+        run: |
+          npm run etl -- --sql-only
+          sql=$(find . -maxdepth 3 -name '*.sql' -newermt '-10 minutes' -print -quit)
+          if [ -z "$sql" ]; then
+            echo "::error::--sql-only produced no .sql file; the ETL's output path may have moved"
+            exit 1
+          fi
+          bytes=$(wc -c < "$sql")
+          stmts=$(grep -c 'INSERT INTO' "$sql" || true)
+          echo "sql_path=$sql" >> "$GITHUB_OUTPUT"
+          echo "bytes=$bytes"   >> "$GITHUB_OUTPUT"
+          echo "::notice::generated $sql — $bytes bytes, ~$stmts UPSERT statements"
+          limit='${{ inputs.max_sql_bytes || 20000000 }}'
+          if [ "$bytes" -gt "$limit" ]; then
+            echo "::error::generated SQL is $bytes bytes, over the $limit guard."
+            echo "etl.mjs does not chunk. Add batching before executing at this scale."
+            exit 1
+          fi
+
+      - name: Upload generated SQL as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nao-d1-etl-sql
+          path: ${{ steps.measure.outputs.sql_path }}
+          retention-days: 7
+          if-no-files-found: warn
+
+      # Default is sql_only=true, so a first manual run measures and uploads without touching D1.
+      # The scheduled run has no inputs, so `inputs.sql_only` is empty there and this DOES execute
+      # — Session B should confirm that is the intent before enabling the schedule.
+      - name: Rebuild the remote D1 index
+        if: ${{ inputs.sql_only != true }}
+        working-directory: apps/nao
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run etl -- --remote
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### nao D1 ETL'
+            echo ''
+            echo "- generated SQL: ${{ steps.measure.outputs.bytes }} bytes"
+            if [ '${{ inputs.sql_only }}' = 'true' ]; then
+              echo '- **D1 NOT modified** (sql_only run)'
+            else
+              echo '- D1 rebuild attempted against the remote index'
+            fi
+            echo ''
+            echo 'D1 is a rebuildable projection of the R2 manifest; re-run this to refresh it.'
+          } >> "$GITHUB_STEP_SUMMARY"
