@@ -34,6 +34,7 @@ import type {
   TopicInput,
 } from '../src/seeder/index.js';
 import type { LlmRequest, LlmResponse } from '../../llm-router/src/index.js';
+import { SEEDS } from '../src/seeds.js';
 
 // ── fixtures ─────────────────────────────────────────────────────────────────
 
@@ -375,5 +376,5 @@ test('enumerateSeederCandidates: real registry+blueprints → 8 derivedFrom + 2 
   // hrv_rise_after_sleep_rise (U12) and gut_comfort_mood_comove (U13, the L6 slice) —
   // each co-name a distinct pair the seeder rightly enumerates as a rule_blueprint candidate.
   assert.equal(counts.rule_blueprint, 2);
-  assert.equal(counts.static_topic, 6);
+  assert.equal(counts.static_topic, SEEDS.length);
 });
