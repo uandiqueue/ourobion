@@ -46,9 +46,12 @@ test('the shipped router.config.json loads: run-4 OpenAI + Agnes-verifier postur
   );
   // No test-mode escape hatch survives in the shipped file (R4-U3).
   assert.equal((config as unknown as Record<string, unknown>).testMode, undefined);
-  // C7 caps set LOW for the 20-SGD run: US$1/day/node, 60k output tokens/run.
+  // C7 caps. US$8/day/node, 60k output tokens/run. The day cap was US$1 until a real
+  // 60-paper synthesis batch stopped after 12 papers; at ~US$0.04/paper US$1 buys ~22.
+  // It is 8 and not the owner's stated US$20 account ceiling because this value applies to
+  // EVERY node, and five nodes route to OpenAI — 20 each would permit ~US$100/day.
   assert.equal(config.budget.perRunOutputTokens, 60000);
-  assert.equal(config.budget.perDayUsdPerNode, 1.0);
+  assert.equal(config.budget.perDayUsdPerNode, 8.0);
   assert.equal(config.budget.hardStopFraction, 0.95);
   const agnesPrice = config.prices['agnes-2.5-flash']!;
   assert.equal(billingModeOf(agnesPrice), 'free');
