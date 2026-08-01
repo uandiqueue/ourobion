@@ -143,7 +143,10 @@ export default async function OverviewPage() {
   const sourceMax = maxCount(s.discoveredVia);
   const methodMax = maxCount(s.method);
   const oaMax = maxCount(s.oaStatus);
-  const years = [...s.year].sort((a, b) => Number(a.value) - Number(b.value));
+  // Display order only. `scalarFacet` orders every facet by count desc (a contract the
+  // Papers-page facet UI also relies on), so the year axis is re-sorted here rather than
+  // in the query: newest year first, so the most recent years read without scrolling.
+  const years = [...s.year].sort((a, b) => Number(b.value) - Number(a.value));
   const yearMax = maxCount(years);
   const storage = humanBytes(s.storageBytes); // e.g. "42.0 GB"
   const [storageNum, storageUnit] = storage === '—' ? ['—', ''] : storage.split(' ');
@@ -319,20 +322,30 @@ export default async function OverviewPage() {
 
       {/* Year histogram + format conversion */}
       <div className="ov-grid-year ov__row">
-        <div className="panel">
+        <div className="panel panel--hist">
           <PanelLabel>By publication year</PanelLabel>
           {years.length > 0 ? (
-            <div className="hist">
-              {years.map((b) => (
-                <div key={b.value} className="hist__col">
-                  <div
-                    className="hist__bar"
-                    style={{ height: `${(b.count / yearMax) * 100}%` }}
-                    title={`${b.value}: ${b.count.toLocaleString()}`}
-                  />
-                  <span className="hist__label">{`'${String(b.value).slice(-2)}`}</span>
-                </div>
-              ))}
+            // Every year is rendered — nothing is dropped. The axis scrolls inside this
+            // container so a long tail of years never widens the page itself. tabIndex
+            // makes the scroll region reachable by keyboard.
+            <div
+              className="hist-scroll"
+              role="group"
+              aria-label="Papers by publication year, newest first"
+              tabIndex={0}
+            >
+              <div className="hist">
+                {years.map((b) => (
+                  <div key={b.value} className="hist__col">
+                    <div
+                      className="hist__bar"
+                      style={{ height: `${(b.count / yearMax) * 100}%` }}
+                      title={`${b.value}: ${b.count.toLocaleString()}`}
+                    />
+                    <span className="hist__label">{`'${String(b.value).slice(-2)}`}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <p className="fmt__cap">No year data.</p>
