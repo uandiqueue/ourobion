@@ -9,9 +9,20 @@
 //      identical — a field added to one but not the other fails `tsc`.
 //
 // The superRefine invariants are where the SAFEGUARD's philosophy is made executable: a verdict can
-// only be `supported` / `contradicted` if the verifier actually retrieved evidence independently
-// (no grounding ⇒ `uncertain`), `supported`/`partial` require corroboration, `contradicted` requires
-// a contradicting source, and scores stay in range. See docs/nao/brain-synthesis-design.md.
+// only be `supported` / `partial` / `contradicted` if the verifier actually retrieved evidence
+// independently (no grounding ⇒ `uncertain`), an approving verdict requires a PASSING quote check and
+// a direction the cited paper reports, `contradicted` requires a direction that does NOT match,
+// corroboration counts cannot exceed the retrieved stances, and scores stay in range. See
+// docs/nao/brain-synthesis-design.md.
+//
+// WHAT THESE INVARIANTS DELIBERATELY DO NOT DO (owner instruction 2026-08-01): they no longer make an
+// approving verdict conditional on OTHER papers agreeing. `corroboration` is still validated (it may
+// not exceed what the retrieved stances support) and still feeds `edgeScore` and the user-facing
+// `caveat`, but a faithful reading of a single paper with zero corroborating studies is a legitimate
+// `supported`-with-caveat record. The clause of docs/memory/0012 that read "`supported`/`partial`
+// need ≥1 corroborating source" is superseded by that instruction; the clause that matters — a
+// servable verdict REQUIRES `independentRetrieval.performed` — is untouched, so the second pass is
+// still forced to do its own search. It just no longer votes with the result.
 
 import { z } from 'zod';
 import { validateCopyString } from '../constants/copy_guidelines';
@@ -217,13 +228,25 @@ export const edgeVerificationSchema = z
         message: `${v.edgeId}: verdict '${v.verdict}' requires independentRetrieval.performed === true`,
       });
     }
-    // supported / partial must have at least one corroborating source.
-    if ((v.verdict === 'supported' || v.verdict === 'partial') && v.corroboration.supporting < 1) {
-      ctx.addIssue({ code: 'custom', message: `${v.edgeId}: '${v.verdict}' requires ≥1 supporting source` });
+    // FIDELITY, NOT CORROBORATION (owner instruction 2026-08-01). An approving verdict asserts that
+    // the claim is a faithful reading of the paper it cites, so the contract binds it to the check
+    // that expresses fidelity — the direction the cited paper reports — instead of to a headcount of
+    // other papers. A record that approves a claim while recording that its direction does not match
+    // is internally contradictory and cannot be stored.
+    if ((v.verdict === 'supported' || v.verdict === 'partial') && !v.directionCheck.matchesClaim) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `${v.edgeId}: '${v.verdict}' requires directionCheck.matchesClaim === true (fidelity to the cited paper)`,
+      });
     }
-    // contradicted must have at least one contradicting source.
-    if (v.verdict === 'contradicted' && v.corroboration.contradicting < 1) {
-      ctx.addIssue({ code: 'custom', message: `${v.edgeId}: 'contradicted' requires ≥1 contradicting source` });
+    // `contradicted` means the CITED paper reports the opposite — so its direction check must
+    // disagree with the claim. (It used to mean "≥1 retrieved source refutes it", which let external
+    // evidence decide the verdict; that is precisely what the instruction above removes.)
+    if (v.verdict === 'contradicted' && v.directionCheck.matchesClaim) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `${v.edgeId}: 'contradicted' requires directionCheck.matchesClaim === false`,
+      });
     }
     // Corroboration counts can't exceed what the retrieved source stances can support — the LLM cannot
     // invent corroboration the retrieval didn't yield (A2). Mirrors brain-ingest enforce()'s stance

@@ -322,7 +322,9 @@ export async function verifyClaim(
     throw new Error('verify: full-retrieval mode needs a router (inject one, or use --dry-run/--triage-only)');
   }
 
-  const { system, prompt } = buildVerifierPrompt(claim, retrieval.sources);
+  // The A9 block is passed so the prompt can state that the cited quotes were verified verbatim —
+  // which is a fact on this path (the gate above returns early when they were not).
+  const { system, prompt } = buildVerifierPrompt(claim, retrieval.sources, quoteCheck);
   const maxAttempts = opts.maxAttempts ?? 2;
 
   let lastReject: EnforceResult | { ok: false; reason: 'no-response'; detail: string } | undefined;
