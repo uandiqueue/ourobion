@@ -43,6 +43,7 @@ const _edgeCardJson = '''
       "edgeScore": 0.82,
       "verdict": "agree",
       "verifiedAt": "2026-07-10T00:00:00Z",
+      "caveat": "The evidence comes from one observational cohort, so the relationship may not transfer to every setting.",
       "derivation": "Synthesised from two cohort studies reporting the association.",
       "population": "healthy adults 18-40",
       "quoteSpans": [
@@ -227,6 +228,7 @@ void main() {
       expect(e.edgeScore, 0.82);
       expect(e.verdict, 'agree');
       expect(e.verifiedAt, '2026-07-10T00:00:00Z');
+      expect(e.caveat, contains('observational cohort'));
       expect(e.derivation, contains('cohort studies'));
       expect(e.population, 'healthy adults 18-40');
     });
@@ -304,6 +306,7 @@ void main() {
             "subject": null, "object": null, "relation": null,
             "direction": null, "servingBand": null, "edgeScore": null,
             "verdict": null, "verifiedAt": "2026-07-10T00:00:00Z",
+            "caveat": null,
             "derivation": null, "population": null,
             "quoteSpans": [], "citations": []
           }
@@ -315,6 +318,7 @@ void main() {
       expect(e.edgeId, 'a->b');
       expect(e.subject, isNull);
       expect(e.verdict, isNull);
+      expect(e.caveat, isNull);
       expect(e.edgeScore, isNull);
       expect(e.quoteSpans, isEmpty);
       expect(e.citations, isEmpty);

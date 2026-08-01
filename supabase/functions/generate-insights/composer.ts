@@ -50,6 +50,8 @@ export interface ServableEdge {
   verified_at: string
   edge_score: number
   serving_band: string
+  /** #300 §E — verifier-authored qualification, already copy-gated at artifact load. */
+  caveat?: string | null
   /**
    * RelationshipClaim jsonb — citations surfaced onto the insight payload, and (R4-U4/B-SCI1)
    * the synthesised `claimKind`. The claim kind was previously NOT read here at all: the row
@@ -238,6 +240,8 @@ export interface ComposedTrustPosture {
 export interface ComposedEdgeRef {
   edgeId: string
   verifiedAt: string
+  /** Verifier-authored qualification carried unchanged to card provenance. */
+  caveat: string | null
   servingBand: string
   edgeScore: number
   relation: string
@@ -457,6 +461,7 @@ function toEdgeRef(edge: ServableEdge, states: Record<string, "up" | "down">): C
   return {
     edgeId: edge.edge_id,
     verifiedAt: edge.verified_at,
+    caveat: edge.caveat ?? null,
     servingBand: edge.serving_band,
     edgeScore: edge.edge_score,
     relation: edge.relation,

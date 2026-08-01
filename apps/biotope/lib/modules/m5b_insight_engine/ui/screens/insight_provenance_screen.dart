@@ -45,6 +45,7 @@ abstract final class ProvenanceCopy {
 
   static const verdictPrefix = 'Verifier verdict: ';
   static const verifiedAsOfPrefix = 'as of ';
+  static const caveatLabel = 'EVIDENCE QUALIFICATION';
 
   /// TEST-MODE verdict posture stamp. Hardcoded mirror of TEST_MODE_LABEL in
   /// tools/llm-router/src/types.ts (no cross-language import exists — keep
@@ -103,6 +104,7 @@ abstract final class ProvenanceCopy {
     noEdgesRules,
     verdictPrefix,
     verifiedAsOfPrefix,
+    caveatLabel,
     testModeVerdictLabel,
     servingBandPrefix,
     edgeScorePrefix,
@@ -657,6 +659,33 @@ class _EdgeCard extends StatelessWidget {
                 fontWeight: FontWeight.w600,
                 color: OurobionColors.outline,
                 height: 1.4,
+              ),
+            ),
+          ],
+          if (edge.caveat != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              decoration: BoxDecoration(
+                color: OurobionColors.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: OurobionColors.primaryFixedDim),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _eyebrow(ProvenanceCopy.caveatLabel),
+                  const SizedBox(height: 5),
+                  Text(
+                    edge.caveat!,
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: OurobionColors.onSurfaceVariant,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
