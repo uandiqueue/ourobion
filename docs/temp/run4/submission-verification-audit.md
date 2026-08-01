@@ -1,6 +1,6 @@
 ---
 title: Hackathon submission evidence audit
-summary: Claim-by-claim evidence audit of the existing hackathon write-up and connection map; #300 is built, but final narrative work remains blocked until #307 reports the measured full-flow outcome.
+summary: Claim-by-claim evidence audit of the existing hackathon write-up and connection map; post-#300 synthesis is measured, but final narrative work remains blocked on verification, projection, and card evidence.
 type: audit
 scope: run4
 status: draft
@@ -12,8 +12,9 @@ updated: 2026-08-01
 This is the submission defect ledger, **not final submission prose**. The initial audit used
 `253e0ad6db31bb2a134e47546ddaba84bf284639`; implementation-sensitive findings were refreshed after
 Session A landed at integration merge `dea055c8155c1e9c6851931f4de9816a88d66b2d`, then refreshed
-again at the post-#300 integration head `abcba95f8386d31c49f62f20f4b623de180e29c0`. Re-run every
-result-bearing command after #307's full-flow test. Do not promote any model-training or evaluation
+again at the post-#300 integration head `abcba95f8386d31c49f62f20f4b623de180e29c0` and after the
+Agnes CLI integration at `57cf3bdb3785d16e037902d08abc6eca3b79a5d5`. Re-run every
+result-bearing command after #307 completes verification, projection, and cards. Do not promote any model-training or evaluation
 claim until issue #277's gate is satisfied.
 
 ## Classification
@@ -43,7 +44,9 @@ or a machine artifact; each accepted fact also names the observation that must b
 | Live provider acceptance | [`tools/brain-ingest/src/liveAcceptance.ts`](../../../tools/brain-ingest/src/liveAcceptance.ts), [`tests/liveAcceptance.test.ts`](../../../tools/brain-ingest/tests/liveAcceptance.test.ts) | Authorized acceptance output: ordered Anthropic `claude-sonnet-5`, OpenAI provider-attested `gpt-5-2025-08-07`, Agnes `agnes-2.5-flash`; four POST responses were 200; provider-leg cost **$0.0182055**, session total **$0.044**; journal hash chain intact; a fourth invocation refused without dispatch; no `GET /models`. | `verified for provider transport under binding authentication only`. The test proves ordering/refusal offline; the live values must be attached as a durable artifact before final copy. |
 | Verification disposition | Live acceptance output from the same bounded run | Verdict: `uncertain`, confidence **0.3**, **0** supporting sources, independent-source stance mentions; edge held and no card emitted. | `overclaim guard`: this is fail-closed transport evidence, not scientific validation of a relationship. |
 | Pre-#300 synthesis output | Two authorized live `gpt-5` run outputs on well-matched papers | Both runs: **0 accepted / 0 rejected claims**. | `verified historical baseline`: it proves the passage-prefilter path failed to emit claims, not that the new whole-paper path does. |
-| Post-#300 synthesis implementation | [`paperPrompt.ts`](../../../tools/brain-ingest/src/synth/paperPrompt.ts), [`paperRun.ts`](../../../tools/brain-ingest/src/synth/paperRun.ts), [`paperPostprocess.ts`](../../../tools/brain-ingest/src/synth/paperPostprocess.ts), [`blueprintArtifact.ts`](../../../tools/brain-ingest/src/synth/blueprintArtifact.ts) | Code inspection at `abcba95`: `synthesize-papers` sends canonical whole text, gates `ownFinding`, stores an optional verbatim `mechanism:` quote span, batches/resumes/dedupes, and writes `claims.jsonl` + `blueprints.jsonl`. | `verified built, outcome unmeasured`: do not infer a claim, edge, projection, or card until #307 reports its real flow. |
+| Post-#300 synthesis implementation | [`paperPrompt.ts`](../../../tools/brain-ingest/src/synth/paperPrompt.ts), [`paperRun.ts`](../../../tools/brain-ingest/src/synth/paperRun.ts), [`paperPostprocess.ts`](../../../tools/brain-ingest/src/synth/paperPostprocess.ts), [`blueprintArtifact.ts`](../../../tools/brain-ingest/src/synth/blueprintArtifact.ts) | Code inspection through `57cf3bd`: `synthesize-papers` sends canonical whole text, quotes metric keys separately from units, gates `ownFinding`, stores an optional verbatim `mechanism:` quote span, batches/resumes/dedupes, and writes `claims.jsonl` + `blueprints.jsonl`. | `verified built and synthesis-measured`; this does not prove verification, projection, or cards. |
+| Measured post-#300 synthesis | [#307 batch command output](https://github.com/uandiqueue/ourobion/issues/307#issuecomment-5148881245) | 16 papers requested; **15 synthesised, 1 resumably skipped**; **10 claims, 1 blueprint**; one copy-gate rejection; four `no_effect` claims; **US$0.622151** for the batch. Four claims carried verbatim mechanism-labelled spans, but two spans were study limitations rather than biological/behavioural pathways. | `verified measured synthesis, not a successful full flow`: whole-paper reading and deterministic gates emit real claims; the assumed 3–5-blueprint-per-paper yield and mechanism semantics were not demonstrated. |
+| Measured Agnes verification | [#307 batch failure](https://github.com/uandiqueue/ourobion/issues/307#issuecomment-5148881245), [bounded diagnostic follow-up](https://github.com/uandiqueue/ourobion/issues/307#issuecomment-5148943783) | The batch spent **14 Agnes POST starts** and produced zero records because all replies were code-fenced and unparseable; a duplicate-edge `logicalCallId` collision then aborted the run. A separately authorised two-call diagnostic captured the fenced shape and completed one no-corpus verification as `uncertain [full] (fallback)`, writing local `verifications.jsonl` and raw evidence. | `verified fail-closed transport and diagnosis only`: the one verdict had zero retrieved sources and is not servable evidence; the parser/id fixes and artifacts were still local when reported, and no projection/card result exists. |
 | Paper lineage in cards | [`supabase/functions/generate-insights/index.ts`](../../../supabase/functions/generate-insights/index.ts) and the eight blueprint records above | Inspect current generated/fixture outputs → only edge-produced cards currently carry paper lineage. Cross-rule code can accept edge references, but no current output demonstrates that path. | `verified bounded claim`: current observed lineage is edge-card-only; do not generalize potential code paths into shipped evidence. |
 | Release-envelope facts | [`tools/run4_release_gate.mjs`](../../../tools/run4_release_gate.mjs), [`supabase/deploy-attestation.json`](../../../supabase/deploy-attestation.json) | `product-cap --head f8cb75251f0602395bdf88285e18d00525b88db4` → **512 paths / 71,841 additions**, `withinCap:false`; audited head → **533 / 75,645**, `withinCap:false`. | `verified`: the per-unit base advanced; whole-product acceptance and hosted parity remain false. |
 
@@ -82,7 +85,7 @@ GitHub; it has not.
 | 39 migrations and 2 workflows | `now-wrong`: inventory is 41 and 5 after Session A. |
 | Real verifier never ran | `now-wrong`: Agnes ran under the bounded live acceptance. The resulting verdict remained uncertain and held. |
 | Provider/model topology | `stale`: it conflates default routing, the older provider run, and acceptance overrides. Draw those as three evidence layers. |
-| One accepted/held research edge | `overclaimed`: no synthesis claim survived either pre-#300 live `gpt-5` attempt; no post-#300 live result exists yet. |
+| One accepted/held research edge | `overclaimed`: no synthesis claim survived either pre-#300 live `gpt-5` attempt. Post-#300 synthesis now emits claims, but no independently grounded verified edge, projection, or card has been demonstrated. |
 | R2 target only / no safe corpus count | `stale` when the 1,298/739 durable manifest lands; still do not claim the workflow executed. |
 | All support models planned/untrained | `now-wrong` against repository history and prohibited from the submission until #277. Remove rather than replace with ungated performance claims. |
 | Test totals such as nao “327” | `stale-unverified`: rerun at final integration head; do not copy forward from an older session. |
@@ -100,20 +103,21 @@ GitHub; it has not.
   `supabase` finds design/comment mentions, not a type declaration or runtime consumer.
 - `derivation` remains a reasoning/provenance trace (“how quotes produce this claim”), not the
   paper's biology. #300 added mechanism evidence separately as an optional verbatim quote whose
-  locator starts `mechanism:` and passes the same quote-offset gate. Do not relabel `derivation` as
-  that mechanism span, and do not claim every output has a mechanism.
+  locator starts `mechanism:` and passes the same quote-offset gate. The live batch proved that
+  verbatim-ness alone does not establish mechanism semantics: two of four labelled spans were study
+  limitations. Do not relabel `derivation`, and do not claim every labelled span explains a pathway.
 
 ## Submission-blocking defect list
 
 1. **P0 — result truth:** replace the old “successful held edge” story with the honest split between
    provider transport acceptance, uncertain fail-closed verification, the pre-#300 zero-claim
-   baseline, and whatever #307 actually measures on the new path.
+   baseline, the measured 10-claim/1-blueprint batch, and the still-incomplete verified-card path.
 2. **P0 — evidence durability:** land and cite machine-readable provider, synthesis, corpus, and
    lineage outputs. Session prose is not sufficient submission evidence.
 3. **P0 — model-claim quarantine:** remove evaluation/training claims pending #277; do not substitute
    new model metrics from another draft.
-4. **P0 — measured full flow:** #300 is built; wait for #307's paper-to-card result before drafting
-   the final research-pipeline narrative.
+4. **P0 — measured full flow:** synthesis is measured; wait for #307's grounded verification,
+   projection, and card result before drafting the final research-pipeline narrative.
 5. **P1 — provider identity:** preserve configured model, requested model, and provider-attested model
    as distinct fields; the OpenAI response attested `gpt-5-2025-08-07`, not plain `gpt-5`.
 6. **P1 — lineage:** state that only current edge cards carry paper lineage and that eight rule
@@ -122,13 +126,14 @@ GitHub; it has not.
    final integration head.
 8. **P1 — planned architecture:** remove present-tense claims for `METRIC_TERMS`, `StructuredPaper`,
    queue/callback behavior, and any other design-only component; distinguish the implemented optional
-   `mechanism:` quote from the still-non-mechanistic `derivation` field.
+   `mechanism:` quote from the still-non-mechanistic `derivation` field and from a semantically checked
+   biological/behavioural pathway.
 9. **P2 — historical docs:** do not use the Run 4 cockpit or older freshness audit as current status;
    consult the dedicated 2026-08-01 freshness sweep.
 
 ## Final rewrite gate
 
-The final narrative may begin only after #307 comments its measured post-#300 synthesis,
-verification, projection, and card result; #277 clears or excludes model claims; and every
+The final narrative may begin only after #307 comments its remaining grounded verification,
+projection, and card result; #277 clears or excludes model claims; and every
 quantitative sentence is reproduced from the then-current integration head. Until then, the warning
 banners in the write-up and map are intentional controls.

@@ -10,10 +10,11 @@ updated: 2026-08-01
 # Ourobion — Launchpad 2026 AI Challenge Write-up
 
 > **DO NOT SUBMIT THIS DRAFT.** The 2026-08-01 audit found material stale, overclaimed, and
-> now-wrong statements. Issue #300's whole-paper synthesis revamp is now built, but its first measured
-> full flow has not reported: issue #307 must publish paper → synthesis → mechanism quote → gates →
-> Agnes verification → projection → card output, including any zero-result stage, before this prose is
-> rewritten. Model-training and evaluation claims are quarantined behind issue #277. Use
+> now-wrong statements. Issue #307 has now measured the post-#300 synthesizer: a 15-paper completed
+> batch emitted 10 claims and one blueprint, but verification did not complete at batch scale and no
+> projection/card result has been reported. Wait for the remaining Agnes verification → projection →
+> card stages, including any zero-result stage, before rewriting this prose. Model-training and
+> evaluation claims are quarantined behind issue #277. Use
 > [`submission-verification-audit.md`](../../../temp/run4/submission-verification-audit.md) as the
 > current defect ledger; it is an audit, not replacement submission prose.
 

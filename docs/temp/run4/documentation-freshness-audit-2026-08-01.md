@@ -19,7 +19,7 @@ GitHub state outrank all documents listed here.
 
 | Document | Freshness defect | Disposition |
 |---|---|---|
-| [`writeup.md`](../../shared/hackathon/submission/writeup.md) | Mixes older provider roles/costs with current acceptance; calls a held uncertain edge an end-to-end result; says Agnes was unused; describes 12-passage synthesis as current; carries contradictory support-model claims; cites prose/logs for evaluation. | `blocked`; warning updated. #300 is built, but rewrite only after #307 reports its measured full flow; exclude model claims pending #277. |
+| [`writeup.md`](../../shared/hackathon/submission/writeup.md) | Mixes older provider roles/costs with current acceptance; calls a held uncertain edge an end-to-end result; says Agnes was unused; describes 12-passage synthesis as current; carries contradictory support-model claims; cites prose/logs for evaluation. | `blocked`; warning updated. Post-#300 synthesis is measured, but rewrite only after #307 reports grounded verification, projection, and cards; exclude model claims pending #277. |
 | [`system-connection-map.md`](../../shared/hackathon/submission/system-connection-map.md) | 39 migrations / 2 workflows is now 41 / 5; real-verifier, corpus, provider-role, synthesis-result, support-model, and built/planned labels are stale. | `blocked`; warning added. Regenerate labels/counts at final head. |
 | [`hackathon-direction.md`](../../shared/hackathon/hackathon-direction.md) | Strategy snapshot from 2026-07-26 includes then-current status, 1,200-corpus target, model/pricing assumptions, unbuilt delta/evaluation, old commit counts, and immediate actions. | Keep as strategy history, not current-state or evidence authority. |
 | [`hackathon-rules.md`](../../shared/hackathon/hackathon-rules.md) | Raw event rules remain a reference, but their presence does not prove implementation, eligibility, or current sponsor/model availability. | Retain; validate externally at final submission time. |
@@ -29,7 +29,7 @@ GitHub state outrank all documents listed here.
 | Document | Freshness defect | Disposition |
 |---|---|---|
 | [`insight-engine-architecture.md`](../../shared/insight-engine-architecture.md) | Present-tense A2/A3/A4/A4b/A6 prose blurs planned and built components. `METRIC_TERMS` and `StructuredPaper` remain unimplemented as named; #300 instead added a separate paper-scoped whole-text path and optional `mechanism:` quote span. | Add a built/planned overlay in the owning architecture session; submission must not quote it as code evidence. |
-| [`brain-synthesis-design.md`](../../nao/brain-synthesis-design.md) | Says graph persistence/app rendering and guards are deferred even though later migrations/loaders/provenance UI exist; it omits #300's `synthesize-papers`, whole-text prompt, own-finding gate, mechanism span, blueprint artifact, budget/resume, and batch dedupe; provider assignments are historical. | Refresh after #307 measures the new flow; retain design rationale separately from runtime status. |
+| [`brain-synthesis-design.md`](../../nao/brain-synthesis-design.md) | Says graph persistence/app rendering and guards are deferred even though later migrations/loaders/provenance UI exist; it omits #300's `synthesize-papers`, whole-text prompt, own-finding gate, mechanism span, blueprint artifact, budget/resume, and batch dedupe; provider assignments are historical. The measured batch also disproves the assumed 3–5-blueprint-per-paper yield and shows verbatim mechanism labels can contain study limitations. | Refresh after #307 completes the new flow; retain design rationale separately from runtime status. |
 | [`brain-ingestion-design.md`](../../nao/brain-ingestion-design.md) | Describes the cloud pipeline operationally although the workflow has never executed; planned browser capture/build sequence and implemented paths are mixed; old open-items say synthesis/verifier are deferred. | Mark workflow “defined, never run” and recut the implementation matrix. |
 | [`brain-support-models-design.md`](../../nao/brain-support-models-design.md) | “No model trained” / three-model framing conflicts with later repository history and known dataset-assumption defects. | Do not repair inside submission work. Route all model/evaluation truth through #277. |
 | [`biotope-nao-link.md`](../../shared/biotope-nao-link.md) | Calls nao auth the only blocker although role gating later landed; planned gap-ledger/runtime writers are described too broadly as current. | Re-audit the actual runtime seam before reuse. |
@@ -42,7 +42,7 @@ GitHub state outrank all documents listed here.
 | [`phase-2-plan.md`](../../shared/phase-2-plan.md) | Mixes intended scope with shipped state; intended metric breadth exceeds the 24 active registry entries. | Preserve as plan authority but require current-state qualifiers. |
 | `docs/temp/run4/README.md`, `continuation-status.md`, `unit-signoff-index.md`, `decisions-signoff.md`, `pending-build-register.md`, `orchestrator-prompt.md` | Old bases, open-PR ledgers, merge states, and blockers are historical after hundreds of later commits. | Treat as point-in-time coordination records, not live GitHub status. Do not mass rewrite. |
 | [`provider-e2e-status.md`](./provider-e2e-status.md) | Records the older #190 provider run, not the 2026-08-01 live acceptance. | Keep historical; do not copy its roles/costs into final prose. |
-| [`hack-submission-277.md`](./hack-submission-277.md) | Model-heavy draft is gate-blocked and carries the pre-revamp provider/synthesis story. | Never use as final prose until #277 resolves and #307 supplies post-#300 flow evidence. |
+| [`hack-submission-277.md`](./hack-submission-277.md) | Model-heavy draft is gate-blocked and carries the pre-revamp provider/synthesis story. | Never use as final prose until #277 resolves and #307 supplies grounded verified-card evidence. |
 | [`documentation-freshness-audit-2026-07-26.md`](../documentation-freshness-audit-2026-07-26.md) | Its “reliable/current” conclusions predate the subsequent implementation wave. | Superseded as a current-state sweep by this report; retain historically. |
 | [`docs/INDEX.md`](../../INDEX.md) | Generated summaries can faithfully reproduce stale front-matter language; generation proves index consistency, not factual freshness. | Run `--fix-index`, but still repair source front matter when an owning session updates a doc. |
 
@@ -51,9 +51,9 @@ generalizes “no real decorrelated verdict in that slice” into “a real veri
 
 ## Required follow-up order
 
-1. Keep the submission and map blocked; #300 code is integrated but has no live outcome yet.
-2. Wait for #307 to record what whole-paper synthesis, Agnes verification, projection, and cards
-   actually emit, including zero-result stages.
+1. Keep the submission and map blocked; synthesis has a measured batch outcome, but the full flow does not.
+2. Wait for #307 to complete grounded Agnes verification, projection, and cards, including any
+   remaining zero-result stages.
 3. Resolve #277 or remove all model-performance material.
 4. Re-run inventories, tests, provider/corpus artifact checks, lineage checks, and cost aggregation.
 5. Rewrite the submission and connection map from those outputs, then run one final stale-claim sweep.

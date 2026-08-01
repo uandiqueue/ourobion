@@ -35,18 +35,20 @@ updated: 2026-08-01
 - Added the new records to the Run 4 document table and regenerated `docs/INDEX.md`.
 - After PR #292 landed, merged integration head `dea055c`, refreshed the implementation-sensitive
   audit facts, and kept this PR's comparison diff docs-only.
-- Resumed under issue #309, rebased first onto post-#300 head `abcba95` and again after PR #312 landed
-  at `aef9bc1`, refreshed the audit for the new whole-paper/mechanism/blueprint path, expanded #297
-  into a 22-topic execution handoff, and remeasured the final docs head at 550 paths / 79,788
-  additions before the mechanical snapshot refresh.
+- Resumed under issue #309, rebased repeatedly through the serialized integration queue and most
+  recently onto `57cf3bd`, refreshed the audit for the measured whole-paper/mechanism/blueprint path,
+  and expanded #297 into a 22-topic execution handoff.
+- Recorded #307's measured batch honestly: 15 papers synthesised plus one resumable skip, 10 claims,
+  one blueprint, incomplete Agnes verification, and no projection/card result.
 
 ## Decided
 
 - Provider acceptance is evidence of authenticated ordered transport and fail-closed behavior only;
   an uncertain 0.3 verdict with zero supporting sources, a held edge, and no card is not evidence of a
   scientifically successful research edge.
-- The two zero-claim live attempts are the pre-#300 baseline. #300 is built, but the final pipeline
-  narrative remains blocked until #307 reports the new path's measured full-flow result.
+- The two zero-claim live attempts are the pre-#300 baseline. Post-#300 synthesis now emits real
+  quote-gated claims, but the final narrative remains blocked until grounded verification,
+  projection, and cards are measured.
 - Issue #297 requires no `seeds.ts` edit or ingestion in this docs session. The current generator
   enumerates only ten metric pairs, eight of which are product derivations/provenance rather than
   discovery questions; the accepted audit hands Session A a 22-topic instrument-aware pool.
@@ -56,9 +58,9 @@ updated: 2026-08-01
 
 ## Left
 
-- Rewrite the final submission narrative and connection map only after #307 comments its measured
-  post-#300 full-flow result and #277 resolves or excludes all model claims. The cloud workflow remains
-  built but never executed.
+- Rewrite the final submission narrative and connection map only after #307 comments its remaining
+  grounded verification, projection, and card result and #277 resolves or excludes all model claims.
+  The cloud workflow remains built but never executed.
 - Re-run all counts, machine artifacts, costs, lineage outputs, and tests from the final integration
   head; the 533-path / 75,645-line product measurement is point-in-time only.
 - Owning architecture sessions should later separate built/planned state in the stale brain-path docs;
@@ -66,13 +68,13 @@ updated: 2026-08-01
 
 ## Blockers
 
-- Final narrative: #307 has not yet reported the post-#300 full-flow result.
+- Final narrative: #307 has measured synthesis but not a grounded verified edge, projection, or card.
 - Any support-model performance/training prose: issue #277.
 - A submission-ready live provider/corpus statement: durable machine outputs must land on the target
   branch and be reproduced there.
-- PR #305's measured snapshot line is locally verified, but committing its one-line `tools/**` update
-  requires explicit confirmation that Task 1 overrides this session's otherwise docs-only territory.
-  The narrative hold is intentional sequencing, not a merge blocker for the audit records.
+- None for PR #305: #309 explicitly authorized the two forced product-union literals as a mechanical
+  exception to this session's otherwise docs-only territory. The narrative hold is intentional
+  sequencing, not a merge blocker for the audit records.
 
 ## Verification
 
@@ -82,7 +84,7 @@ updated: 2026-08-01
 - GitHub issue #303 carries the pre-PR evidence summary and territory declaration.
 - PR #292 / Session A merged at `dea055c`; the target was merged into this branch and product-cap
   output was remeasured at 536 paths / 76,360 additions for that integration head.
-- Rebased through `aef9bc1`; `seed-queries --candidates-only` reproduced 6 static topics + 16 total
+- Rebased through `57cf3bd`; `seed-queries --candidates-only` reproduced 6 static topics + 16 total
   candidates (8 derived, 2 rule, 6 topic); active registry load reproduced 24 keys.
 - `node --test tools/run4_release_gate.test.mjs` — 18/18 with the locally refreshed candidate
   snapshot; `product-cap --head aa2595e7cbb3774f07f64c405550da85b1adbc7e` — 550 paths / 79,788

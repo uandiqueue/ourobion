@@ -13,9 +13,9 @@ updated: 2026-08-01
 > migration counts, support-model claims, and several built-versus-planned labels require correction.
 > The evidence and exact defects are in
 > [`submission-verification-audit.md`](../../../temp/run4/submission-verification-audit.md). This
-> warning prevents a stale projection from being mistaken for implementation evidence. The #300
-> whole-paper path is built but remains unmeasured end to end; refresh this map only after #307 reports
-> the actual synthesis, verification, projection, and card outcome.
+> warning prevents a stale projection from being mistaken for implementation evidence. #307 has
+> measured synthesis at batch scale, but verification remains incomplete and no projection/card
+> result has been reported. Refresh this map only after #307 reports the remaining measured outcome.
 
 > **This document is a submission-facing projection, not architecture authority.**
 > It exists so a reader (judge, reviewer, or new contributor) can see the shape of the system and,
