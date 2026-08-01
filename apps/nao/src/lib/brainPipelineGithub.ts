@@ -76,6 +76,22 @@ function githubUrl(repo: string, suffix: string): string {
   return `${GH_API_BASE}/repos/${repo}${suffix}`;
 }
 
+/**
+ * Name the failing preflight step and its HTTP status, and nothing else.
+ *
+ * Every inspection failure used to collapse into one of two fixed sentences,
+ * so an operator staring at a disabled form could not tell a transport failure
+ * from a 401 from a 403 — and neither could anyone reading the panel later.
+ * The step name and the numeric status are our own, not remote content: no
+ * response body and no configured secret can reach this string, which is what
+ * the redaction test pins.
+ */
+function stepFailure(step: string, response: Response | null): string {
+  return response === null
+    ? `GitHub could not be reached while checking ${step}.`
+    : `GitHub returned HTTP ${response.status} while checking ${step}.`;
+}
+
 async function request(url: string, init: RequestInit): Promise<Response | null> {
   try {
     return await fetch(url, init);
@@ -148,7 +164,7 @@ export async function inspectBrainPipeline(): Promise<BrainPipelineInspection> {
   const init = { headers: headers(settings.token) };
   const repoResponse = await request(githubUrl(settings.repo, ''), init);
   if (!repoResponse || !repoResponse.ok) {
-    return { ok: false, dispatchability: 'unknown', error: 'Unable to inspect the GitHub repository.', runs: [] };
+    return { ok: false, dispatchability: 'unknown', error: stepFailure('the repository', repoResponse), runs: [] };
   }
   const repoInfo = object(await json(repoResponse));
   const defaultBranch = repoInfo?.default_branch;
@@ -161,7 +177,7 @@ export async function inspectBrainPipeline(): Promise<BrainPipelineInspection> {
     init,
   );
   if (!workflowResponse) {
-    return { ok: false, dispatchability: 'unknown', error: 'Unable to inspect the GitHub workflow.', runs: [] };
+    return { ok: false, dispatchability: 'unknown', error: stepFailure('the workflow', null), runs: [] };
   }
 
   if (workflowResponse.status === 404) {
@@ -170,18 +186,23 @@ export async function inspectBrainPipeline(): Promise<BrainPipelineInspection> {
       init,
     );
     if (!contentsResponse) {
-      return { ok: false, dispatchability: 'unknown', error: 'Unable to inspect the default-branch workflow file.', runs: [] };
+      return { ok: false, dispatchability: 'unknown', error: stepFailure('the default-branch workflow file', null), runs: [] };
     }
     if (contentsResponse.status === 404) {
       return { ok: true, dispatchability: 'not_on_default_branch', defaultBranch, runs: [] };
     }
     if (!contentsResponse.ok) {
-      return { ok: false, dispatchability: 'unknown', error: 'Unable to inspect the default-branch workflow file.', runs: [] };
+      return {
+        ok: false,
+        dispatchability: 'unknown',
+        error: stepFailure('the default-branch workflow file', contentsResponse),
+        runs: [],
+      };
     }
     return { ok: true, dispatchability: 'unregistered_or_invalid', defaultBranch, runs: [] };
   }
   if (!workflowResponse.ok) {
-    return { ok: false, dispatchability: 'unknown', error: 'Unable to inspect the GitHub workflow.', runs: [] };
+    return { ok: false, dispatchability: 'unknown', error: stepFailure('the workflow', workflowResponse), runs: [] };
   }
 
   const workflow = object(await json(workflowResponse));
@@ -189,14 +210,19 @@ export async function inspectBrainPipeline(): Promise<BrainPipelineInspection> {
     return { ok: true, dispatchability: 'unregistered_or_invalid', defaultBranch, runs: [] };
   }
 
+  // Registration is now settled: the workflow exists on the default branch and
+  // GitHub reports it active, which is the whole fail-closed question. Listing
+  // recent runs is reporting, not a gate — it used to return `unknown` and
+  // disable the form whenever this one cosmetic query failed, so a throttled or
+  // transiently failing history lookup could present itself as "this workflow
+  // cannot be dispatched". An empty list is already a valid, expected state
+  // (the panel says so), and a workflow that has never run must stay
+  // dispatchable. Failure here degrades the list, never the verdict.
   const runsResponse = await request(
     githubUrl(settings.repo, `/actions/workflows/${WORKFLOW_FILE}/runs?event=workflow_dispatch&per_page=10`),
     init,
   );
-  if (!runsResponse || !runsResponse.ok) {
-    return { ok: false, dispatchability: 'unknown', error: 'Unable to inspect recent pipeline runs.', runs: [] };
-  }
-  const runsPayload = object(await json(runsResponse));
+  const runsPayload = runsResponse !== null && runsResponse.ok ? object(await json(runsResponse)) : null;
   const runs = Array.isArray(runsPayload?.workflow_runs)
     ? runsPayload.workflow_runs.map((item) => asRun(item, settings.repo)).filter((item): item is BrainPipelineRun => item !== null)
     : [];
@@ -210,7 +236,13 @@ export async function inspectBrainPipeline(): Promise<BrainPipelineInspection> {
 export async function dispatchBrainPipeline(inputs: BrainPipelineDispatchInputs): Promise<BrainPipelineDispatchResult> {
   const preflight = await inspectBrainPipeline();
   if (!preflight.ok) {
-    return { ok: false, outcome: 'unknown', error: 'Brain pipeline dispatch could not be confirmed.' };
+    // `preflight.error` is composed here, from a step name and a numeric
+    // status — never from a remote body — so passing it on stays redacted.
+    return {
+      ok: false,
+      outcome: 'unknown',
+      error: `Brain pipeline dispatch could not be confirmed. ${preflight.error}`,
+    };
   }
   if (preflight.dispatchability !== 'active') {
     return {

@@ -953,6 +953,9 @@ export async function main(argv: string[]): Promise<number> {
           // Opt-in: read control/ingest-config.json from R2 (src/control.ts).
           controlFromR2: flags.has('remote-control'),
           seedPool: pool.seeds,
+          // So an explicit --seed that the STATIC pool cannot contain reports
+          // the unloaded boundary rather than an "unknown topic".
+          seedPoolDbAvailable: pool.dbAvailable,
         });
         printRunResult(result);
         return 0;
@@ -970,6 +973,9 @@ export async function main(argv: string[]): Promise<number> {
           memoryGuard: {},
           controlFromR2: flags.has('remote-control'),
           seedPool: pool.seeds,
+          // So an explicit --seed that the STATIC pool cannot contain reports
+          // the unloaded boundary rather than an "unknown topic".
+          seedPoolDbAvailable: pool.dbAvailable,
         });
         printRunResult(result);
         return 0;
