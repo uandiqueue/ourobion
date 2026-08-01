@@ -107,6 +107,21 @@ class InsightCard {
   bool get isStillResearching =>
       producer == InsightProducer.personal && edgeRefs.isEmpty;
 
+  /// Whether this card's serving window has already closed at [nowUtc]. A row
+  /// with no `expires_at` never closes.
+  ///
+  /// Deliberately the same relation [InsightService.getInsights] and
+  /// [InsightService.filterEmission] apply (`expires_at > cutoff` keeps the
+  /// row), so "expired" here means exactly "the deck would not serve this even
+  /// if it read `active`". The Archive tab needs that distinction: returning an
+  /// expired saved card to the deck takes it out of the archive without putting
+  /// it anywhere the user can see, and the confirmation has to say so instead
+  /// of promising a return that will not happen.
+  bool isExpiredAt(DateTime nowUtc) {
+    final expiry = expiresAt;
+    return expiry != null && !expiry.toUtc().isAfter(nowUtc.toUtc());
+  }
+
   factory InsightCard.fromJson(Map<String, dynamic> json) {
     return InsightCard(
       id: (json['id'] as num).toInt(),
@@ -278,5 +293,67 @@ class InsightService {
         .from('insight_cards')
         .update({'status': statusValue(status)})
         .eq('id', cardId);
+  }
+
+  /// The user-held statuses [resetCurrentPeriodDeck] returns to
+  /// [InsightStatus.active] — every value the `status` CHECK allows EXCEPT
+  /// `active` itself.
+  ///
+  /// [InsightStatus.dismissed] is the one that matters. A dismissed card is
+  /// visible nowhere: [getInsights] filters on `active`, [archiveStatuses]
+  /// deliberately excludes it, and generate-insights counts it in
+  /// `dismissedSkipped` so the nightly pass never brings it back either. Before
+  /// this reset, a single swipe-left was unrecoverable inside the app — only a
+  /// direct database write got the card back. [InsightStatus.archived] /
+  /// [InsightStatus.snoozed] are included because the reset is "put this
+  /// period's deck back the way it was", which includes cards the user saved;
+  /// those leave the Archive tab until they are saved again, and the
+  /// confirmation copy says so.
+  ///
+  /// Order is fixed so the PostgREST filter is deterministic in tests.
+  /// insight_status_contract_test.dart pins this against the DB CHECK: a new
+  /// held status that reset cannot reach would be a new black hole.
+  static const resettableStatuses = <InsightStatus>[
+    InsightStatus.archived,
+    InsightStatus.snoozed,
+    InsightStatus.dismissed,
+  ];
+
+  /// Returns THIS PERIOD's held cards to [InsightStatus.active] and answers
+  /// with the rows that actually moved.
+  ///
+  /// ── What "this period" means ────────────────────────────────────────────
+  /// A card's period is its own serving window: generate-insights stamps
+  /// `expires_at = now + expiry_days` on every (re)generation, and the composer
+  /// uses `COMPOSER_EXPIRY_DAYS = 7`. So "this week's deck" is already recorded
+  /// on the row — the unexpired set IS the current period — and no new notion
+  /// of a week is invented here. The predicate is CHARACTER-FOR-CHARACTER the
+  /// one [getInsights] applies (`expires_at is null OR expires_at > cutoff`),
+  /// which is what makes the guarantee exact in both directions:
+  ///   * everything this restores is something [getInsights] will then serve;
+  ///   * nothing past its `expires_at` is resurrected — an expired row is not
+  ///     matched, so it is not written at all.
+  ///
+  /// ── What it cannot do ───────────────────────────────────────────────────
+  /// This is an UPDATE with a WHERE clause. It has no INSERT and no upsert, so
+  /// it cannot create a card; it flips `status` on rows that already exist. A
+  /// reset that could conjure a row would be inventing an insight. It is also
+  /// non-destructive: no row is deleted, and re-running it is a no-op once
+  /// everything in scope already reads `active`.
+  ///
+  /// RLS: an ordinary authenticated write over the user's own rows, through the
+  /// same `Users can update own insight card status` policy the deck's swipe
+  /// uses. `.eq('user_id', userId)` narrows the statement; the policy is what
+  /// enforces it.
+  Future<List<InsightCard>> resetCurrentPeriodDeck(String userId) async {
+    final cutoff = expiryCutoffUtcIso(_nowUtc());
+    final rows = await _client
+        .from('insight_cards')
+        .update({'status': statusValue(InsightStatus.active)})
+        .eq('user_id', userId)
+        .inFilter('status', resettableStatuses.map(statusValue).toList())
+        .or('expires_at.is.null,expires_at.gt.$cutoff')
+        .select();
+    return rows.map(InsightCard.fromJson).toList();
   }
 }

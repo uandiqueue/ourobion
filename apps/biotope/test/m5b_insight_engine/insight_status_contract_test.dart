@@ -282,4 +282,80 @@ void main() {
               'rows — the pre-migration saves would vanish from the Archive tab');
     });
   });
+
+  group('Deck reset surface (resetCurrentPeriodDeck)', () {
+    test('resettableStatuses reaches every status the DB can hold', () {
+      // Parsed from the migration chain, not restated. A new held status that
+      // reset cannot reach is a NEW black hole: the user can enter it with a
+      // gesture and has no way out, which is exactly the `dismissed` failure
+      // this reset was added to fix.
+      final allowed = effectiveInsightCardsStatusCheck();
+      expect(
+        InsightService.resettableStatuses.map(InsightService.statusValue).toSet(),
+        equals(allowed.difference({'active'})),
+        reason: 'every non-active status the DB allows must be recoverable in-app',
+      );
+    });
+
+    test("resettableStatuses includes 'dismissed' specifically", () {
+      // Named separately so the failure says which regression happened. `dismissed`
+      // is the one status no other surface can undo: getInsights filters it out,
+      // archiveStatuses excludes it, and generate-insights counts it in
+      // `dismissedSkipped` so the nightly pass never revives it either.
+      expect(
+        InsightService.resettableStatuses,
+        contains(InsightStatus.dismissed),
+        reason: 'without this, swipe-left stays a one-way door and recovery still '
+            'needs a manual database write',
+      );
+    });
+
+    test('resettableStatuses never touches active rows', () {
+      expect(
+        InsightService.resettableStatuses,
+        isNot(contains(InsightStatus.active)),
+        reason: 'matching active rows would rewrite rows that need no change',
+      );
+    });
+
+    test('the reset query is a filtered UPDATE — no insert, upsert or delete', () {
+      // Source-text guard, same technique as getArchivedInsights above. The
+      // behavioural proof lives in deck_recovery_service_test.dart (real query,
+      // real row store); this pins the shape so a later refactor cannot reach
+      // for an upsert and still leave that suite green by other means.
+      // A reset that could create a row would be inventing an insight.
+      final body = dartMethodBody(
+              dartService, 'Future<List<InsightCard>> resetCurrentPeriodDeck(String userId)')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+      expect(body, contains('.update('),
+          reason: 'reset flips status on rows that already exist');
+      for (final forbidden in ['.insert(', '.upsert(', '.delete(']) {
+        expect(body, isNot(contains(forbidden)),
+            reason: 'reset must never $forbidden a row');
+      }
+      expect(body, contains('resettableStatuses'),
+          reason: 'the status filter must be driven by resettableStatuses');
+      expect(body, contains('expiryCutoffUtcIso'),
+          reason: 'reset must reuse the same expiry cutoff getInsights applies, or it '
+              'can resurrect a card past its expires_at');
+      expect(body, contains("expires_at.gt."),
+          reason: 'the expiry predicate must be in the WHERE clause, not applied after '
+              'the write — a row filtered client-side has already been updated');
+      expect(body, contains("'user_id'"),
+          reason: 'the statement must narrow to the caller as well as relying on RLS');
+    });
+
+    test('reset writes only `active` — it never re-dates a card', () {
+      final body = dartMethodBody(
+              dartService, 'Future<List<InsightCard>> resetCurrentPeriodDeck(String userId)')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+      for (final column in ['generated_at', 'expires_at\':', 'title', 'body\':', 'rule_id']) {
+        expect(body, isNot(contains("'$column")),
+            reason: 'rewriting $column would re-date or rewrite a card the engine '
+                'produced days ago — a quieter way of fabricating one');
+      }
+    });
+  });
 }
