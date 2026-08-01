@@ -418,16 +418,86 @@ test('product cap measures the immutable union, reports breach without throwing,
   assert.ok(recoveredPaths.includes('tools/brain-ingest/src/verify/artifact.ts'), 'product-cap must exercise source-text recovery for artifact.ts');
   assert.equal(delta.allowlistedBinaryPaths, 15);
   assert.ok(delta.allowlistedBinaryBytes > 0 && delta.allowlistedBinaryBytes <= RUN4_MAX_ALLOWLISTED_BINARY_BYTES);
-  assert.deepEqual({ changedPaths: delta.changedPaths, addedLines: delta.addedLines }, { changedPaths: 574, addedLines: 84992 });
-  assert.ok(delta.changedPaths > RUN4_MAX_CHANGED_PATHS);
-  assert.ok(delta.addedLines > RUN4_MAX_ADDED_LINES);
+  // #307 A5 · The measured union is COMPUTED and RECORDED, never pinned in source.
+  //
+  // It used to be `assert.deepEqual(…, { changedPaths: N, addedLines: M })`. That pin was refreshed
+  // NINE times in one day — 533 → 535 → 536 → 544 → 545 → 546 → 558 → 559 → 560 — and not once did
+  // it carry information: the caps never moved, and the assertions that the delta EXCEEDS them never
+  // changed. It also counted the very commits that refreshed it, so it had to be the last edit before
+  // every push; and `productLandingDelta()` reads committed HEAD rather than the working tree, so
+  // measuring with an uncommitted edit returned the pre-edit number and looked like convergence.
+  //
+  // Worse than friction, it was a CORRECTNESS risk. With several sessions merging into one line the
+  // pin conflicts on every landing, and resolving that conflict correctly requires re-MEASURING —
+  // yet it presents as a trivial one-line pick between two numbers. A stale value that happened to
+  // survive CI would be a FALSE RECORDED MEASUREMENT in the one file whose purpose is to record
+  // measurements accurately.
+  //
+  // So: assert the load-bearing invariants and write the number to a report artifact instead. Caps,
+  // the landing gate, `productCapAcceptanceClaimed`, and the exclusion/binary logic are untouched.
+  assert.ok(delta.changedPaths > RUN4_MAX_CHANGED_PATHS, 'measured union must exceed the path cap');
+  assert.ok(delta.addedLines > RUN4_MAX_ADDED_LINES, 'measured union must exceed the added-lines cap');
   // Measurement reports breach as data; only the enforcement wrapper throws. This is the whole
   // "record, don't gate" split — if these two ever agree, the measurement has become a gate.
   assert.equal(delta.withinCap, false);
   assert.throws(
     () => checkProductLandingDelta({ base: RUN4_PRODUCT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES }),
-    /product landing delta has 574 paths; cap is 115/
+    // Number deliberately NOT pinned; the shape and the cap are what matter.
+    /product landing delta has \d+ paths; cap is 115/
   );
+
+  // Record, don't gate: the measured union goes to an artifact CI can upload, never into source.
+  const reportPath = join(process.env.RUNNER_TEMP ?? tmpdir(), 'run4-product-union.json');
+  writeFileSync(
+    reportPath,
+    `${JSON.stringify(
+      {
+        base: delta.base,
+        changedPaths: delta.changedPaths,
+        addedLines: delta.addedLines,
+        excludedPaths: delta.excludedPaths,
+        allowlistedBinaryPaths: delta.allowlistedBinaryPaths,
+        allowlistedBinaryBytes: delta.allowlistedBinaryBytes,
+        withinCap: delta.withinCap,
+        caps: { maxChangedPaths: RUN4_MAX_CHANGED_PATHS, maxAddedLines: RUN4_MAX_ADDED_LINES },
+        productCapAcceptanceClaimed: false,
+      },
+      null,
+      2,
+    )}\n`,
+    'utf8',
+  );
+  const recorded = JSON.parse(readFileSync(reportPath, 'utf8'));
+  assert.equal(recorded.changedPaths, delta.changedPaths, 'the artifact records the measured union');
+  assert.equal(recorded.withinCap, false, 'the artifact never records the breach as acceptance');
+});
+
+test('#307 A5: removing the pin does NOT let product-cap acceptance be claimed', () => {
+  // The pin sat next to a denial, and deleting a recorded measurement must not quietly delete the
+  // refusal beside it. Enforcement still throws on the real union, and still refuses a base or cap
+  // that does not match the accepted constants — so nothing can measure its way to a pass.
+  assert.throws(
+    () => checkProductLandingDelta({ base: RUN4_PRODUCT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES }),
+    /product landing delta has \d+ paths; cap is 115/,
+    'the real union still breaches, and enforcement still throws',
+  );
+  // A moving base is refused outright rather than measured against.
+  assert.throws(
+    () => checkProductLandingDelta({ base: RUN4_UNIT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: RUN4_MAX_ADDED_LINES }),
+    /base must equal immutable product SHA/,
+  );
+  // A widened cap is refused, so acceptance cannot be manufactured by raising the ceiling.
+  assert.throws(
+    () => checkProductLandingDelta({ base: RUN4_PRODUCT_BASE_SHA, maxPaths: 100000, maxAdded: RUN4_MAX_ADDED_LINES }),
+    /maxPaths must equal accepted cap/,
+  );
+  assert.throws(
+    () => checkProductLandingDelta({ base: RUN4_PRODUCT_BASE_SHA, maxPaths: RUN4_MAX_CHANGED_PATHS, maxAdded: 10000000 }),
+    /maxAdded must equal accepted cap/,
+  );
+  // And the shipped attestation still declares non-acceptance.
+  const attestation = JSON.parse(readFileSync(resolve('supabase/deploy-attestation.json'), 'utf8'));
+  assert.equal(attestation.productCapAcceptanceClaimed, false);
 });
 
 const productGitWithSyntheticBinaryRows = (records) => (command, args, options) => {
