@@ -7,18 +7,11 @@
  * default branch, so every dispatch starts with that fail-closed preflight.
  */
 
+import type { BrainPipelineRun } from './brainPipelineControl.ts';
+
 const GH_API_BASE = 'https://api.github.com';
 const WORKFLOW_FILE = 'brain-pipeline.yml';
 const API_VERSION = '2026-03-10';
-
-export interface BrainPipelineRun {
-  id: number;
-  status: string;
-  conclusion: string | null;
-  htmlUrl: string;
-  createdAt: string | null;
-  updatedAt: string | null;
-}
 
 export type BrainPipelineInspection =
   | {

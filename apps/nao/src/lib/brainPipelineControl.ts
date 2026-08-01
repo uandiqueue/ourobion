@@ -40,6 +40,15 @@ export interface BrainPipelineWorkflowInputs {
   confirm_spend: string;
 }
 
+export interface BrainPipelineRun {
+  id: number;
+  status: string;
+  conclusion: string | null;
+  htmlUrl: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
 export type BrainPipelineParseResult =
   | { ok: true; value: BrainPipelineRequest; workflowInputs: BrainPipelineWorkflowInputs }
   | { ok: false; error: string };

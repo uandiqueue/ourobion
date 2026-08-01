@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { BRAIN_PIPELINE_CORPORA, BRAIN_PIPELINE_METRICS } from '@/lib/brainPipelineControl';
-import type { BrainPipelineRun } from '@/lib/brainPipelineGithub';
+import type { BrainPipelineRun } from '@/lib/brainPipelineControl';
 import type { ClaimView } from '@/lib/claimsControl';
 import type { CapOverrideRow, ModelSpendRow, ModelStatusRow } from '@/lib/modelsControl';
 

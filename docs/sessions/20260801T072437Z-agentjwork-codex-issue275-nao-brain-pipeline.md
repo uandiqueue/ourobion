@@ -7,6 +7,7 @@ memory: none
 - Implemented issue #275's Nao operator control for the existing `brain-pipeline.yml` workflow without adding provider calls, provider credentials, or direct imports from `tools/**`.
 - Exercised the Nao package with TypeScript checking, the full Node test suite, a production Next.js build, the non-diagnostic copy gate, and browser regression at 1440x900 and 390x844.
 - Kept Docker and the local Supabase stack stopped throughout this session, as explicitly requested.
+- Fixed the first PR run's fail-closed client-surface finding: a type-only import made the server GitHub module conservatively client-reachable. The shared run-view shape now lives in the already-client-safe control module, so GH_ACTIONS_TOKEN remains server-only without weakening the guard.
 
 ## Changed
 
@@ -25,7 +26,7 @@ memory: none
 
 ## Left
 
-- Rebase onto the current `origin/dev-phase2-run4`, rerun all gates against the exact rebased head, publish the evidence to issue #275, and self-merge the PR after CI passes.
+- Push the focused client-surface correction, rerun exact-head build/browser and release checks, and self-merge PR #340 after CI passes.
 - The control remains intentionally non-dispatchable until `.github/workflows/brain-pipeline.yml` exists and is registered on GitHub's default branch.
 
 ## Blockers
