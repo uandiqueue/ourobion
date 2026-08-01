@@ -191,15 +191,15 @@ git config core.hooksPath .githooks
   (Recent history uses `m3`, `m5a`, `db`, `docs`.) Keep commits `flutter analyze`-green.
 - **Branches:** `feat/m<n>-<area>/<slug>` for module work (e.g. `feat/m3-wearables/healthkit-read`),
   or `fix/…`, `docs/…`, `ci/…`, `refactor/…`. **One short-lived branch per session, cut from
-  `dev-phase2`, inside its own worktree (§7).** There are **no personal `dev-<name>` lines** — every
+  `dev-phase2-run4`, inside its own worktree (§7).** There are **no personal `dev-<name>` lines** — every
   session is its own session branch that lives only until its PR merges. Refine the name **only before
   the first push**.
 - **`gh` for everything GitHub sees** (issues, PRs); **`git` only for local work `gh` can't do**
   (worktree, staging, commits, local branch rename). Never push a branch or open/merge a PR with raw
   `git` when a `gh` command exists.
-- **PRs are the integration seam.** `dev-phase2` is the **single working / integration line** — every
-  session branch PRs into **`dev-phase2`** at session end, **never directly into `main`**. **Only
-  `dev-phase2` PRs into `main`**, at phase/milestone completion. `main` stays always-deployable; tests
+- **PRs are the integration seam.** `dev-phase2-run4` is the **single working / integration line** — every
+  session branch PRs into **`dev-phase2-run4`** at session end, **never directly into `main`**. **Only
+  `dev-phase2-run4` PRs into `main`**, at phase/milestone completion. `main` stays always-deployable; tests
   required before any merge to `main`.
 - **Non-diagnostic language** — every user-facing string must use observational phrasing and pass the
   copy rules in `shared/constants/copy_guidelines.{ts,dart}`. See SHARED-CONTEXT "Non-Diagnostic Copy
@@ -245,13 +245,15 @@ GitHub issue, branch, and **git worktree** (a separate working directory, not ju
    ```bash
    gh issue create --title "<session goal>"        # note the issue number, e.g. 42
    ```
-2. **Create the isolated worktree + branch (cut from `dev-phase2`)**, then work there:
+2. **Create the isolated worktree + branch (cut from `dev-phase2-run4`)**, then work there:
    ```bash
-   node tools/setup_agent_worktree.mjs --branch feat/m<n>-<area>/<slug> --path <absolute-path-outside-repo>
+   node tools/setup_agent_worktree.mjs --branch feat/m<n>-<area>/<slug> --base dev-phase2-run4 --path <absolute-path-outside-repo>
    cd <worktree-path>      # do ALL of this session's work inside this worktree
    ```
-   The branch is always cut from `dev-phase2` (the tool's default base) and is short-lived — it exists
-   only until its PR merges into `dev-phase2`. There are no long-running personal branches.
+   The branch is always cut from `dev-phase2-run4` (pass `--base dev-phase2-run4` explicitly — the
+   tool's own default base is still the stale `dev-phase2`; see `tools/setup_agent_worktree.mjs`) and
+   is short-lived — it exists only until its PR merges into `dev-phase2-run4`. There are no
+   long-running personal branches.
 3. **Refine names only before the first push.** Rename the issue with `gh issue edit <n> --title`
    and the branch with `git branch -m <old> <new>`. After a PR is open the branch is hard to rename.
 
@@ -260,13 +262,13 @@ GitHub issue, branch, and **git worktree** (a separate working directory, not ju
    ```bash
    gh issue comment <n> --body "<what changed / decided / left>"
    ```
-2. **Open the PR with `gh`, linking the issue — base it on `dev-phase2`, never `main`:**
+2. **Open the PR with `gh`, linking the issue — base it on `dev-phase2-run4`, never `main`:**
    ```bash
-   gh pr create --base dev-phase2 --title "..." --body "<summary>
+   gh pr create --base dev-phase2-run4 --title "..." --body "<summary>
 
    Closes #<n>"
    ```
-   (Only `dev-phase2 → main` PRs target `main`, at phase/milestone completion.)
+   (Only `dev-phase2-run4 → main` PRs target `main`, at phase/milestone completion.)
    The session log (below) + the issue summary are the durable record of what shipped.
 
 ### Session log — `docs/sessions/` (REQUIRED — enforced)
