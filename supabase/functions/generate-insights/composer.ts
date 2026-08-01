@@ -8,7 +8,10 @@
 //
 // HARD INVARIANT (architecture §1.3): edge joins are 1-hop, MONOTONIC-ONLY — only
 // `increases`/`decreases` relations may set a card's direction; `modulates`/`correlates` edges
-// attach as context-only citations, never a directional claim.
+// attach as context-only citations, never a directional claim. THIS INVARIANT IS UNCHANGED by the
+// co-movement path added below: that path renders a card with NO direction at all, and
+// `MONOTONIC_RELATIONS` / `relationSign()` are untouched — a correlational relation still has no
+// sign and can still never be verbalised directionally.
 //
 // Branch truth table AS IMPLEMENTED (the doc's four rules, made disjoint + exhaustive — the doc
 // leaves `agree`(personal-null) vs `research-context`(no personal) overlapping; resolution
@@ -17,6 +20,10 @@
 //   1. any servable edge whose gate-passing personal signal has the OPPOSITE sign -> contradiction
 //   2. any MONOTONIC direction-consistent edge (its personal signal absent, non-gate-passing, or
 //      sign-consistent)                                                           -> agree
+//  2b. NO monotonic edge can carry the direction, but a CO-MOVEMENT edge (a sign-free
+//      `correlates` relation) spans exactly the pattern's observed pair and both endpoints were
+//      observed moving the SAME way                                               -> agree,
+//      with `cardEdge` null and `coMovementEdge` set (a DIRECTIONLESS card — see below)
 //   3. any servable edge at all (context-only relations, or direction-inconsistent
 //      without a personal contradiction)                                          -> research-context
 //   4. no servable edge, but a gate-passing personal signal on the pair           -> idiosyncratic
@@ -27,8 +34,37 @@
 // O16 ORIENTATION INVARIANT (backlog, verdict B2): a directional card may only be driven by a
 // SUBJECT-endpoint signal — `cardEdge` is null when a single-metric pattern's fired metric sits
 // only on OBJECT endpoints, and `rendersCard` is the single surfacing policy (O18: only `agree`
-// with a cardEdge, plus `idiosyncratic`, ever render; research-context/contradiction are
-// gap-only).
+// with a cardEdge or a coMovementEdge, plus `idiosyncratic`, ever render;
+// research-context/contradiction are gap-only).
+//
+// ─── THE CO-MOVEMENT PATH (branch rule 2b) ────────────────────────────────────────────
+//
+// WHY IT EXISTS: 13 of 14 verified edges carry `relation: 'correlates'`, which is the DOMINANT
+// output of synthesis. Rule 2 can never match them (they are not monotonic and have no sign), so
+// every correlational edge fell to rule 3 (`research-context`, deliberately gap-only) and NO
+// `producer='edge'` card was reachable at all. That made the entire cited-card surface dead for
+// the common case.
+//
+// WHAT IT IS ALLOWED TO SAY: co-movement, and nothing else. "These two moved together, and
+// research reports they move together." It may never state which one moved which way, nor which
+// one acted on the other.
+//
+// WHAT IT DELIBERATELY DOES NOT DO — the three things that would make it a causality leak:
+//   * it does NOT widen MONOTONIC_RELATIONS. That set still holds exactly increases/decreases;
+//   * it does NOT map `correlates` onto `increases`/`decreases`. `relationSign('correlates')`
+//     still returns null, and `edgeDirectionConsistent` still returns null for it, so the edge
+//     ref this path attaches carries `direction: null` and `monotonic: false` — a downstream
+//     reader cannot mistake it for a directional edge;
+//   * it does NOT set `cardEdge`. `cardEdge` is the DIRECTIONAL-card seam (the render path calls
+//     `relationPhrase(cardEdge.relation, …)`, which THROWS for a non-monotonic relation). Keeping
+//     `cardEdge` null means the directional template is structurally unreachable from here; the
+//     co-movement edge travels in its own field to its own template.
+//
+// PRECONDITIONS (all required, `coMovementEdgeFor` below): the pattern is a `coincidence` pattern
+// over exactly two metrics (so BOTH endpoints are observed by construction — O16 is satisfied
+// because neither endpoint is a non-fired one); the edge spans exactly that pair; the relation is
+// sign-free; and both endpoints were observed moving the SAME way, so "moved together" is a
+// literal description of what happened rather than a paraphrase of the research.
 
 import {
   effectiveClaimKind,
@@ -135,8 +171,23 @@ export interface CandidatePattern {
 
 // ─── Monotonicity + direction ──────────────────────────────────────────────────────────────
 
-/** The only relations allowed to set a direction (§1.3). */
+/** The only relations allowed to set a direction (§1.3). NEVER widen this set. */
 export const MONOTONIC_RELATIONS: ReadonlySet<string> = new Set(["increases", "decreases"])
+
+/**
+ * Relations that assert CO-MOVEMENT WITHOUT A DIRECTION — the two variables vary together
+ * and the research states nothing about which way, or which one acts on the other.
+ *
+ * Only `correlates` qualifies. The other context-only relations are excluded on purpose:
+ *   * `modulates` is ASYMMETRIC (the subject conditions the object), so "moved together" would be
+ *     a mistranslation of it, not a weaker reading of it;
+ *   * `confounds` describes a third-variable artefact, i.e. a reason NOT to show a pairing;
+ *   * `no_effect` asserts the absence of a relationship — a card would invert it.
+ *
+ * This set is DISJOINT from MONOTONIC_RELATIONS by construction (asserted by the unit vectors):
+ * no relation may be both a direction carrier and a co-movement carrier.
+ */
+export const CO_MOVEMENT_RELATIONS: ReadonlySet<string> = new Set(["correlates"])
 
 /** +1 / −1 for monotonic relations; null for context-only ones. */
 export function relationSign(relation: string): 1 | -1 | null {
@@ -184,6 +235,57 @@ function personalOpposesEdge(row: PersonalSignalRow, edge: ServableEdge): boolea
   const sign = relationSign(edge.relation)
   if (sign === null || row.rho === 0) return false
   return (row.rho > 0 ? 1 : -1) !== sign
+}
+
+// ─── Co-movement edge selection (branch rule 2b) ─────────────────────────────────────
+
+/**
+ * True when this edge may back a DIRECTIONLESS co-movement card for this pattern. Every clause is
+ * load-bearing; see the file header for why. In order:
+ *
+ *  1. the pattern is a fired `coincidence` pattern over exactly two metrics. A single-metric
+ *     signal pattern is excluded: only one endpoint fired, so "these two moved together" would
+ *     state movement the data never observed (that is O16, and it applies to co-movement wording
+ *     just as it applies to directional wording);
+ *  2. the edge spans EXACTLY the pattern's pair. A 1-hop edge that merely touches one of the two
+ *     metrics describes a different pairing than the one that fired;
+ *  3. the relation is a CO-MOVEMENT relation and is NOT monotonic. The second half is redundant
+ *     with the first while the two sets stay disjoint, and it is written anyway so that widening
+ *     either set can never silently route a direction carrier through the directionless path;
+ *  4. the relation has NO SIGN. A third, independent statement of the same rule, phrased against
+ *     `relationSign` — the function the directional path actually uses — so this predicate cannot
+ *     drift from it;
+ *  5. both endpoints were observed, moving the SAME way. This is what makes "moved together" a
+ *     literal report of the user's own two series. Opposite movements are NOT co-movement, and
+ *     they get no card here: a `correlates` relation carries no sign, so nothing in the research
+ *     licenses calling an up/down pairing a match.
+ */
+function isCoMovementEdgeFor(pattern: CandidatePattern, edge: ServableEdge): boolean {
+  if (pattern.kind !== "coincidence" || pattern.metricKeys.length !== 2) return false
+  if (pairKey(edge.subject, edge.object) !== pairKey(pattern.metricKeys[0]!, pattern.metricKeys[1]!)) {
+    return false
+  }
+  if (!CO_MOVEMENT_RELATIONS.has(edge.relation) || MONOTONIC_RELATIONS.has(edge.relation)) return false
+  if (relationSign(edge.relation) !== null) return false
+  const subjectState = pattern.states[edge.subject]
+  const objectState = pattern.states[edge.object]
+  if (subjectState === undefined || objectState === undefined) return false
+  return subjectState === objectState
+}
+
+/**
+ * The best co-movement edge for this pattern (highest edge_score), or null when none qualifies.
+ * Ordering is by `edge_score` alone — there is no orientation preference to express, because the
+ * card names both metrics symmetrically and asserts nothing about either one's role.
+ */
+export function coMovementEdgeFor(
+  pattern: CandidatePattern,
+  edges: readonly ServableEdge[],
+): ServableEdge | null {
+  const candidates = edges
+    .filter((e) => isCoMovementEdgeFor(pattern, e))
+    .sort((a, b) => b.edge_score - a.edge_score)
+  return candidates[0] ?? null
 }
 
 // ─── U1 applicability stub ─────────────────────────────────────────────────────────────────
@@ -492,8 +594,21 @@ export interface ClassifiedPattern {
    * (backlog O16: a card never states the non-fired endpoint as having moved). For pair
    * patterns (both endpoints observed by construction) cardEdge === topEdge. Non-agree
    * branches always carry null.
+   *
+   * A co-movement (`correlates`) edge NEVER appears here. It has no direction to drive, and
+   * the render path that consumes `cardEdge` throws on a non-monotonic relation by design.
    */
   cardEdge: ServableEdge | null
+  /**
+   * The edge allowed to drive a DIRECTIONLESS CO-MOVEMENT card, or null. Set only by
+   * branch rule 2b, and only when NO monotonic edge could carry a direction (rule 2 returns
+   * first), so this never changes the outcome of an already-serving directional pattern.
+   *
+   * `cardEdge` and `coMovementEdge` are mutually exclusive by construction: the two rules return
+   * from different branches of the classifier. That mutual exclusion is what keeps the directional
+   * template and the co-movement template from ever seeing each other's edge.
+   */
+  coMovementEdge: ServableEdge | null
 }
 
 /**
@@ -512,7 +627,18 @@ export function classifyPattern(
   for (const edge of edges) {
     const personal = personalFor(pairKey(edge.subject, edge.object))
     if (personal !== null && personalPassesGate(personal, gates) && personalOpposesEdge(personal, edge)) {
-      return { branch: "contradiction", edges: refs, personal, topEdge: null, cardEdge: null }
+      // Co-movement path: contradiction is checked FIRST and returns FIRST, so it still wins over the
+      // co-movement path below. A pair whose gate-passing personal signal opposes a monotonic
+      // edge is 'needs-review' even when a `correlates` edge over the same pair would otherwise
+      // have rendered — a co-movement card must not paper over a live disagreement.
+      return {
+        branch: "contradiction",
+        edges: refs,
+        personal,
+        topEdge: null,
+        cardEdge: null,
+        coMovementEdge: null,
+      }
     }
   }
 
@@ -542,13 +668,46 @@ export function classifyPattern(
       personal: personal !== null && personalPassesGate(personal, gates) ? personal : null,
       topEdge: top,
       cardEdge: subjectDriven[0] ?? null,
+      coMovementEdge: null,
+    }
+  }
+
+  // 2b. co-movement agree: no monotonic edge could carry a direction (rule 2 returned
+  //     already if one could), but a sign-free `correlates` edge spans exactly this coincidence
+  //     pattern's observed pair and both endpoints moved the same way. That is a real, citable
+  //     agreement — about CO-MOVEMENT, not about direction — so it is `agree` rather than
+  //     `research-context`, and it renders through its own directionless template.
+  //
+  //     `cardEdge` stays null (nothing here may drive directional copy) and `coMovementEdge`
+  //     carries the edge. `branch` deliberately reuses `agree`: composed_insights.branch has a
+  //     four-value CHECK constraint, and inventing a fifth value would need a migration against a
+  //     live database to say something the existing value already says truthfully.
+  const coMovement = coMovementEdgeFor(pattern, edges)
+  if (coMovement !== null) {
+    const personal = personalFor(pairKey(coMovement.subject, coMovement.object))
+    return {
+      branch: "agree",
+      edges: refs,
+      personal: personal !== null && personalPassesGate(personal, gates) ? personal : null,
+      topEdge: coMovement,
+      cardEdge: null,
+      coMovementEdge: coMovement,
     }
   }
 
   // 3. research-context: edges exist but none can carry the direction (context-only relations,
-  //    or inconsistent direction without a personal contradiction).
+  //    or inconsistent direction without a personal contradiction) AND none qualifies as a
+  //    co-movement edge for this pattern. Still gap-only (O18) — rule 2b narrowed what reaches
+  //    here, it did not make this branch surfaceable.
   if (edges.length > 0) {
-    return { branch: "research-context", edges: refs, personal: null, topEdge: null, cardEdge: null }
+    return {
+      branch: "research-context",
+      edges: refs,
+      personal: null,
+      topEdge: null,
+      cardEdge: null,
+      coMovementEdge: null,
+    }
   }
 
   // 4. idiosyncratic: no edge, but the user's own data holds (pair patterns only — a
@@ -556,7 +715,14 @@ export function classifyPattern(
   if (pattern.metricKeys.length === 2) {
     const personal = personalFor(pairKey(pattern.metricKeys[0]!, pattern.metricKeys[1]!))
     if (personal !== null && personalPassesGate(personal, gates)) {
-      return { branch: "idiosyncratic", edges: [], personal, topEdge: null, cardEdge: null }
+      return {
+        branch: "idiosyncratic",
+        edges: [],
+        personal,
+        topEdge: null,
+        cardEdge: null,
+        coMovementEdge: null,
+      }
     }
   }
 
@@ -569,13 +735,21 @@ export function classifyPattern(
 /**
  * O18 (Jayden 2026-07-24, decision (a): gap-only) + O16 — the ONE place that says which
  * classified patterns may render a user card:
- *   - `agree` renders the cited edge card ONLY with a subject-endpoint cardEdge (O16);
+ *   - `agree` renders the cited DIRECTIONAL edge card only with a subject-endpoint cardEdge (O16);
+ *   - `agree` renders the cited DIRECTIONLESS co-movement card with a coMovementEdge;
  *   - `idiosyncratic` renders the uncited "still researching" card (architecture §S7);
  *   - `research-context` and `contradiction` NEVER render — composed row + gap event only
  *     (architecture §S7 / the composed_insights migration comment; verdict H1).
+ *
+ * The co-movement path keeps this function the SINGLE surfacing policy: the new path added a disjunct here rather
+ * than a second gate at a call site, so there is still exactly one predicate to read and to test.
+ * Which TEMPLATE a renderable `agree` pattern gets is then decided by which of the two mutually
+ * exclusive fields is set — never by re-deriving the relation at the call site.
  */
 export function rendersCard(classified: ClassifiedPattern): boolean {
-  if (classified.branch === "agree") return classified.cardEdge !== null
+  if (classified.branch === "agree") {
+    return classified.cardEdge !== null || classified.coMovementEdge !== null
+  }
   return classified.branch === "idiosyncratic"
 }
 
@@ -593,7 +767,10 @@ export type GapStatus =
  *   - `contradiction` → 'needs-review';
  *   - `idiosyncratic` → 'personal-signal-no-edge' (card AND gap event — §S7 does both);
  *   - `agree` with cardEdge null (O16 object-only signal) → 'personal-signal-no-edge': the
- *     fired signal has no servable edge in the orientation that could serve it.
+ *     fired signal has no servable edge in the orientation that could serve it;
+ *   - co-movement: `agree` with a coMovementEdge → null: that pattern DOES serve a card, so it is not a
+ *     gap. Reading only `cardEdge` here would have logged unmet demand for a pair the run just
+ *     served, double-counting it against the very edge that satisfied it.
  * The fifth serve-path status, 'personal-null' (pair with a computed-but-non-gate-passing
  * personal signal and no edge — branch 5), is written by the handler's idiosyncratic sweep,
  * which never constructs a ClassifiedPattern.
@@ -601,7 +778,9 @@ export type GapStatus =
 export function gapStatusFor(classified: ClassifiedPattern): GapStatus | null {
   switch (classified.branch) {
     case "agree":
-      return classified.cardEdge === null ? "personal-signal-no-edge" : null
+      return classified.cardEdge === null && classified.coMovementEdge === null
+        ? "personal-signal-no-edge"
+        : null
     case "research-context":
       return "blocked-completeness"
     case "contradiction":

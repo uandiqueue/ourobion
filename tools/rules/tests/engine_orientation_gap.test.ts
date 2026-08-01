@@ -272,26 +272,40 @@ test('O18: idiosyncratic renders the personal card (architecture §S7 does BOTH 
 test('gapStatusFor maps branches to the architecture §A1 statuses', () => {
   const served: ClassifiedPattern = {
     branch: 'agree', edges: [], personal: null, topEdge: edge({}), cardEdge: edge({}),
+    coMovementEdge: null,
   };
   assert.equal(gapStatusFor(served), null); // a served card is not a gap
 
   const objectOnly: ClassifiedPattern = {
     branch: 'agree', edges: [], personal: null, topEdge: edge({}), cardEdge: null,
+    coMovementEdge: null,
   };
   assert.equal(gapStatusFor(objectOnly), 'personal-signal-no-edge');
 
+  // Co-movement: an agree pattern served by a CO-MOVEMENT edge is likewise not a gap — reading only
+  // cardEdge here would log unmet demand for a pair the same run just served.
+  const coMovementServed: ClassifiedPattern = {
+    branch: 'agree', edges: [], personal: null, topEdge: edge({ relation: 'correlates' }),
+    cardEdge: null, coMovementEdge: edge({ relation: 'correlates' }),
+  };
+  assert.equal(gapStatusFor(coMovementServed), null);
+  assert.equal(rendersCard(coMovementServed), true);
+
   const researchContext: ClassifiedPattern = {
     branch: 'research-context', edges: [], personal: null, topEdge: null, cardEdge: null,
+    coMovementEdge: null,
   };
   assert.equal(gapStatusFor(researchContext), 'blocked-completeness'); // §S7: completeness-gated
 
   const contradiction: ClassifiedPattern = {
     branch: 'contradiction', edges: [], personal: personal({}), topEdge: null, cardEdge: null,
+    coMovementEdge: null,
   };
   assert.equal(gapStatusFor(contradiction), 'needs-review');
 
   const idiosyncratic: ClassifiedPattern = {
     branch: 'idiosyncratic', edges: [], personal: personal({}), topEdge: null, cardEdge: null,
+    coMovementEdge: null,
   };
   assert.equal(gapStatusFor(idiosyncratic), 'personal-signal-no-edge');
 });
