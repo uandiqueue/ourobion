@@ -130,8 +130,8 @@ test('full actor x route matrix (5 actor classes x every ROUTE_POLICY entry)', (
   }
   // 14 routes x 5 actor classes (verified count — see ROUTE_POLICY's header
   // comment for why this is 14, not the brief's "13").
-  assert.equal(routeCount, 14, `expected 14 declared routes, found ${routeCount}`);
-  assert.equal(assertions, 70);
+  assert.equal(routeCount, 16, `expected 16 declared routes, found ${routeCount}`);
+  assert.equal(assertions, 80);
 });
 
 test('every admin-gated route denies both viewer and curator', () => {
@@ -307,12 +307,12 @@ function discoverHandlers(): DiscoveredHandler[] {
 // for the machine-to-machine leg to the `run-pipeline` edge function — the two
 // are distinct authorization questions (which human may press the button, vs.
 // which caller the edge function accepts) and both are satisfied. There is no
-// longer any guard-presence exclusion: all 14 discovered handlers are checked.
+// longer any guard-presence exclusion: all 16 discovered handlers are checked.
 const GUARD_PRESENCE_EXCLUDED_ROUTES = new Set<string>([]);
 
 test('source-conformance: ROUTE_POLICY matches every discovered handler exactly (no missing, no stale entries)', () => {
   const handlers = discoverHandlers();
-  assert.equal(handlers.length, 14, `expected 14 discovered handlers, found ${handlers.length}`);
+  assert.equal(handlers.length, 16, `expected 16 discovered handlers, found ${handlers.length}`);
 
   const discoveredKeys = new Set(handlers.map((h) => `${h.method} ${h.routePath}`));
   for (const key of discoveredKeys) {
@@ -346,7 +346,7 @@ test('source-conformance: every non-excluded handler calls requireRole/guardRole
     );
     checked += 1;
   }
-  assert.equal(checked, 14, `expected all 14 handlers guard-checked (no exclusions), checked ${checked}`);
+  assert.equal(checked, 16, `expected all 16 handlers guard-checked (no exclusions), checked ${checked}`);
 });
 
 test('source-conformance: the run-pipeline route is present in ROUTE_POLICY with the correct role', () => {
@@ -509,7 +509,7 @@ test('source-conformance: the role gate is the FIRST statement of every handler,
     }
     checked += 1;
   }
-  assert.equal(checked, 14);
+  assert.equal(checked, 16);
 });
 
 // ── Every mutating handler records a control event (R4-U2 review finding 2) ──
@@ -521,6 +521,7 @@ test('source-conformance: the role gate is the FIRST statement of every handler,
 // updated_by/created_by by pointing at that always-empty log. This test is what
 // stops the writers from disappearing again.
 const MUTATING_ACTIONS: Readonly<Record<string, string>> = Object.freeze({
+  'POST /api/brain-pipeline': 'ingest.trigger',
   'POST /api/claims/reject': 'claims.reject',
   'POST /api/ingest-control': 'ingest_control.patch',
   'POST /api/ingest-control/trigger': 'ingest.trigger',
@@ -534,7 +535,7 @@ const MUTATING_ACTIONS: Readonly<Record<string, string>> = Object.freeze({
 test('source-conformance: every mutating handler uses a lifecycle boundary with its declared action', () => {
   const handlers = discoverHandlers();
   const mutating = handlers.filter((h) => h.method !== 'GET' && h.method !== 'HEAD' && h.method !== 'OPTIONS');
-  assert.equal(mutating.length, 8, `expected 8 mutating handlers, found ${mutating.length}`);
+  assert.equal(mutating.length, 9, `expected 9 mutating handlers, found ${mutating.length}`);
 
   for (const h of mutating) {
     const key = `${h.method} ${h.routePath}`;
@@ -599,7 +600,7 @@ test("source-conformance: the recorded actions are exactly nao_control_events' C
     migration.indexOf('target        text'),
   );
   const declared = [...checkBlock.matchAll(/'([a-z_]+\.[a-z_]+)'/g)].map((m) => m[1]).sort();
-  assert.deepEqual(declared, Object.values(MUTATING_ACTIONS).sort());
+  assert.deepEqual(declared, [...new Set(Object.values(MUTATING_ACTIONS))].sort());
 });
 
 test('source-conformance: recordControlEvent redacts detail and target, and never takes an actor argument', () => {

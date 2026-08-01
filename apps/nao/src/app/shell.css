@@ -162,9 +162,13 @@
   top: 68px;
   z-index: 19;
   backdrop-filter: blur(10px);
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .subnav__item {
+  flex: none;
   padding: 8px 16px;
   border-radius: 9px;
   font-family: var(--font-ui);
@@ -173,6 +177,7 @@
   color: var(--text-secondary);
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
+  white-space: nowrap;
 }
 
 .subnav__item:hover {
@@ -231,6 +236,10 @@
     padding: 0 16px;
   }
   .subnav__status {
+    display: none;
+  }
+  .subnav__spacer,
+  .subnav__dot {
     display: none;
   }
 }

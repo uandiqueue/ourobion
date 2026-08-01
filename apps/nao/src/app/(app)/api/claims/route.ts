@@ -57,7 +57,7 @@ export async function GET(req: Request): Promise<Response> {
     if (claimRows.length > 0) {
       const edges = await supabase
         .from('verified_edges')
-        .select('edge_id, verdict, serving_band, edge_score, verified_at, human_verdict, human_verdict_at')
+        .select('edge_id, verification, verdict, serving_band, edge_score, verified_at, human_verdict, human_verdict_at')
         .in(
           'edge_id',
           claimRows.map((c) => c.edge_id),

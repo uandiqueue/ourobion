@@ -62,6 +62,18 @@ export interface ClaimRow {
 /** Row of the verified_edges view (verdict + O13 human-verdict columns). */
 export interface VerifiedEdgeRow {
   edge_id: string;
+  verification: {
+    quoteCheck?: { spansFound: number; spansTotal: number; allPresent: boolean };
+    corroboration?: { supporting: number; contradicting: number };
+    confidence?: number;
+    verifierModel?: string;
+    attestation?: {
+      returnedModel?: string;
+      family?: string;
+      decorrelated?: boolean;
+      attested?: boolean;
+    };
+  };
   verdict: string;
   serving_band: string;
   edge_score: number | string; // numeric arrives as string over PostgREST
@@ -88,6 +100,12 @@ export interface ClaimView {
     servingBand: string;
     edgeScore: number;
     verifiedAt: string;
+    confidence: number | null;
+    quoteCheck: { spansFound: number; spansTotal: number; allPresent: boolean } | null;
+    corroboration: { supporting: number; contradicting: number } | null;
+    verifierIdentity: string | null;
+    providerFamily: string | null;
+    decorrelated: boolean | null;
   } | null;
   /** O13 human layer: 'reject' | null (null = no human action, verifier default stands). */
   humanVerdict: string | null;
@@ -133,6 +151,20 @@ export function mergeClaimsWithVerdicts(
             servingBand: e.serving_band,
             edgeScore: typeof e.edge_score === 'string' ? Number.parseFloat(e.edge_score) : e.edge_score,
             verifiedAt: e.verified_at,
+            confidence: typeof e.verification.confidence === 'number'
+              ? e.verification.confidence
+              : null,
+            quoteCheck: e.verification.quoteCheck ?? null,
+            corroboration: e.verification.corroboration ?? null,
+            verifierIdentity:
+              e.verification.attestation?.returnedModel ??
+              e.verification.verifierModel ??
+              null,
+            providerFamily: e.verification.attestation?.family ?? null,
+            decorrelated:
+              typeof e.verification.attestation?.decorrelated === 'boolean'
+                ? e.verification.attestation.decorrelated
+                : null,
           }
         : null,
       humanVerdict: e?.human_verdict ?? null,
