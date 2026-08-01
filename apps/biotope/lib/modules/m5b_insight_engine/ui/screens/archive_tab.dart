@@ -25,7 +25,42 @@ abstract final class ArchiveTabCopy {
       'Your saved insights could not load right now — check your connection and try again.';
   static const retry = 'Try again';
 
-  static const all = [savedEyebrow, loadFailed, retry];
+  // ── Remove-a-saved-card affordance ────────────────────────────────────────
+  // "Remove" here means RETURN TO THE DECK (status → active), not delete and
+  // not dismiss. See [_ArchiveTabState._removeSaved] for why.
+  static const removeTooltip = 'Remove from saved';
+  static const removeTitle = 'Remove from saved?';
+
+  /// The ordinary case: the card is still inside its serving window, so
+  /// returning it to `active` genuinely puts it back in the deck.
+  static const removeBody =
+      'This card goes back to your Insights deck, where you can swipe it again. '
+      'Nothing is deleted.';
+
+  /// The card is past its window. Returning it to the deck would take it out of
+  /// your saved list without putting it anywhere you could reach it, so say
+  /// that plainly rather than promising a return that will not happen.
+  static const removeExpiredBody =
+      'This card is past its window, so it will not come back to the deck. '
+      'Removing it takes it out of your saved list and you will not see it in '
+      'the app again.';
+  static const removeConfirm = 'Remove';
+  static const removeCancel = 'Cancel';
+  static const removeFailed =
+      'That card could not be removed right now — check your connection and try again.';
+
+  static const all = [
+    savedEyebrow,
+    loadFailed,
+    retry,
+    removeTooltip,
+    removeTitle,
+    removeBody,
+    removeExpiredBody,
+    removeConfirm,
+    removeCancel,
+    removeFailed,
+  ];
 }
 
 /// Archive tab — the deck's "saved" (swipe-right) cards, now backed by the real
@@ -38,13 +73,24 @@ abstract final class ArchiveTabCopy {
 /// same reused trend widget/service/chart-math as Home's "TRENDS" section —
 /// under its own eyebrow, so PRESERVED covers both halves of "look back".
 class ArchiveTab extends StatefulWidget {
-  /// [service] / [seriesService] / [userId] are injectable for widget tests
-  /// only — production passes none and falls back to `Supabase.instance`.
-  const ArchiveTab({super.key, this.service, this.seriesService, this.userId});
+  /// [service] / [seriesService] / [userId] / [nowUtc] are injectable for
+  /// widget tests only — production passes none and falls back to
+  /// `Supabase.instance` and the system UTC clock.
+  const ArchiveTab({
+    super.key,
+    this.service,
+    this.seriesService,
+    this.userId,
+    this.nowUtc,
+  });
 
   final InsightService? service;
   final MetricSeriesService? seriesService;
   final String? userId;
+
+  /// Same seam as [InsightService]'s injectable clock. Only the remove
+  /// confirmation reads it, to tell an in-window card from an expired one.
+  final DateTime Function()? nowUtc;
 
   @override
   State<ArchiveTab> createState() => _ArchiveTabState();
@@ -94,6 +140,83 @@ class _ArchiveTabState extends State<ArchiveTab> {
       _loading = true;
       _loadFailed = false;
     });
+    await _load();
+  }
+
+  DateTime _now() => (widget.nowUtc ?? () => DateTime.now().toUtc())().toUtc();
+
+  /// Un-saves one card, after confirming.
+  ///
+  /// ── Why "remove" writes [InsightStatus.active] ──────────────────────────
+  /// The two honest readings of "remove from saved" were `active` (back to the
+  /// deck) and `dismissed`. This writes `active`:
+  ///
+  ///   * it is the exact inverse of the gesture that put the card here.
+  ///     Swipe-right wrote `archived` over `active`; un-saving writes it back.
+  ///     No third state, no new lifecycle value.
+  ///   * `dismissed` is the unrecoverable status — filtered out of
+  ///     [InsightService.getInsights], excluded from
+  ///     [InsightService.archiveStatuses], and skipped by generate-insights.
+  ///     Routing the ONLY un-save affordance into it would push cards into the
+  ///     precise black hole this change exists to close.
+  ///   * `active` stays reversible in-app with no bulk action: the card is in
+  ///     the deck, and one swipe-right saves it again.
+  ///
+  /// Nothing is hard-deleted. The row is the record of what the engine served
+  /// and provenance hangs off it; a delete could not be undone by the user
+  /// either, which is the failure being fixed.
+  ///
+  /// The write goes through the same [InsightService.updateStatus] the deck's
+  /// swipe uses — an ordinary authenticated update on the user's own row under
+  /// the existing RLS policy, not a new privileged route.
+  Future<void> _removeSaved(InsightCard card) async {
+    final expired = card.isExpiredAt(_now());
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          ArchiveTabCopy.removeTitle,
+          style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+        ),
+        content: Text(
+          expired ? ArchiveTabCopy.removeExpiredBody : ArchiveTabCopy.removeBody,
+          style: GoogleFonts.manrope(
+            fontSize: 13,
+            height: 1.5,
+            color: OurobionColors.onSurfaceVariant,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text(ArchiveTabCopy.removeCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(
+              ArchiveTabCopy.removeConfirm,
+              style: GoogleFonts.manrope(),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await _service.updateStatus(card.id, InsightStatus.active);
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text(ArchiveTabCopy.removeFailed)),
+      );
+      return;
+    }
+    // Re-read rather than removing from `_cards` locally: the archive list has
+    // exactly one source of truth, and a local splice would drift from it the
+    // same way the SAVED header's `+= 1` counter did.
     await _load();
   }
 
@@ -164,6 +287,7 @@ class _ArchiveTabState extends State<ArchiveTab> {
                                 _ArchiveTile(
                                   card: _cards[i],
                                   onTap: () => _openDetail(_cards[i]),
+                                  onRemove: () => _removeSaved(_cards[i]),
                                 ),
                               ],
                             ],
@@ -271,7 +395,15 @@ class _ArchiveLoadError extends StatelessWidget {
 class _ArchiveTile extends StatelessWidget {
   final InsightCard card;
   final VoidCallback onTap;
-  const _ArchiveTile({required this.card, required this.onTap});
+
+  /// Un-save. Sits on the tile itself rather than behind a swipe, so the one
+  /// affordance that undoes a swipe is not itself a swipe.
+  final VoidCallback onRemove;
+  const _ArchiveTile({
+    required this.card,
+    required this.onTap,
+    required this.onRemove,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -335,6 +467,20 @@ class _ArchiveTile extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(width: 4),
+          // The icon is an undo, not a bin: this returns the card to the deck.
+          IconButton(
+            onPressed: onRemove,
+            tooltip: ArchiveTabCopy.removeTooltip,
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+            icon: const Icon(
+              Icons.undo_rounded,
+              size: 19,
+              color: OurobionColors.onSurfaceVariant,
             ),
           ),
         ],
