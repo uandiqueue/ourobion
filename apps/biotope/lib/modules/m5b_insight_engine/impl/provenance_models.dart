@@ -334,6 +334,10 @@ class ProvenanceEdge {
   final String? verdict;
   final String? verifiedAt;
 
+  /// Verifier-authored qualification attached to this exact verification.
+  /// It is surfaced verbatim and never folded into the insight body.
+  final String? caveat;
+
   /// Synthesis reasoning trace (copy-gated at production time).
   final String? derivation;
 
@@ -352,6 +356,7 @@ class ProvenanceEdge {
     this.edgeScore,
     this.verdict,
     this.verifiedAt,
+    this.caveat,
     this.derivation,
     this.population,
     this.quoteSpans = const [],
@@ -369,6 +374,7 @@ class ProvenanceEdge {
       edgeScore: (json['edgeScore'] as num?)?.toDouble(),
       verdict: json['verdict'] as String?,
       verifiedAt: json['verifiedAt'] as String?,
+      caveat: _nonEmptyString(json['caveat']),
       derivation: json['derivation'] as String?,
       population: json['population'] as String?,
       quoteSpans: _asList(json['quoteSpans'])

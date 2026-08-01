@@ -4,6 +4,7 @@ import 'package:src/modules/m5b_insight_engine/impl/insight_service.dart';
 import 'package:src/modules/m5b_insight_engine/impl/provenance_models.dart';
 import 'package:src/modules/m5b_insight_engine/impl/provenance_service.dart';
 import 'package:src/modules/m5b_insight_engine/ui/screens/insight_provenance_screen.dart';
+import 'package:src/modules/m5b_insight_engine/ui/widgets/insight_card_visual.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const kPaperId = '10.1016/j.isci.2026.116224';
@@ -22,6 +23,9 @@ const kMechanismQuote =
     'independently generates neuroactive metabolites acting on the ENS, '
     'illustrating the bidirectional gut-brain nature of IBS pathophysiology.';
 const kCanonicalPaperExcerpt = '$kEvidenceQuote $kMechanismQuote';
+const kCaveat =
+    'The evidence comes from one observational cohort, so the relationship '
+    'may not transfer to every setting.';
 
 const kEvidenceSpan = ProvenanceQuoteSpan(
   paperId: kPaperId,
@@ -91,6 +95,7 @@ InsightProvenance _provenance({bool includeMechanism = true}) {
         subject: 'gut_comfort_score',
         object: 'mood_score',
         relation: 'correlates',
+        caveat: kCaveat,
         quoteSpans: [kEvidenceSpan, if (includeMechanism) kMechanismSpan],
         citations: const [
           ProvenanceCitation(
@@ -119,6 +124,33 @@ Future<void> _pump(WidgetTester tester, {bool includeMechanism = true}) async {
     ),
   );
   await tester.pumpAndSettle();
+}
+
+Future<List<Uri>> _pumpDeckEvidence(
+  WidgetTester tester, {
+  bool includeMechanism = true,
+}) async {
+  final opened = <Uri>[];
+  await tester.pumpWidget(
+    MaterialApp(
+      home: Scaffold(
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: ResearchBasis(
+            cardId: 319,
+            loadProvenance: (_) async =>
+                _provenance(includeMechanism: includeMechanism),
+            openExternalPaper: (uri) async {
+              opened.add(uri);
+              return true;
+            },
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  return opened;
 }
 
 void main() {
@@ -210,6 +242,8 @@ void main() {
         await _pump(tester);
 
         expect(find.text(ProvenanceCopy.citationsLabel), findsOneWidget);
+        expect(find.text(ProvenanceCopy.caveatLabel), findsOneWidget);
+        expect(find.text(kCaveat), findsOneWidget);
         expect(find.textContaining(kPaperTitle), findsOneWidget);
         expect(find.text(ProvenanceCopy.openPaper), findsOneWidget);
         expect(find.text(ProvenanceCopy.verbatimEvidenceLabel), findsOneWidget);
@@ -235,6 +269,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining(kPaperTitle), findsOneWidget);
+      expect(find.text(kCaveat), findsOneWidget);
       expect(find.text(kEvidenceQuote), findsOneWidget);
       expect(find.text(kMechanismQuote), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -249,6 +284,52 @@ void main() {
       expect(find.text(ProvenanceCopy.mechanismLabel), findsOneWidget);
       expect(find.text(ProvenanceCopy.mechanismUnavailable), findsOneWidget);
       expect(find.text(kMechanismQuote), findsNothing);
+    });
+  });
+
+  group('deck-card evidence chain', () {
+    testWidgets(
+      'paper title, verbatim sentence, source link, and optional mechanism are surfaced',
+      (tester) async {
+        final opened = await _pumpDeckEvidence(tester);
+
+        expect(find.text(InsightCardCopy.paperEvidenceLabel), findsOneWidget);
+        expect(find.textContaining(kPaperTitle), findsOneWidget);
+        expect(
+          find.text(InsightCardCopy.verbatimEvidenceLabel),
+          findsOneWidget,
+        );
+        expect(find.text(kEvidenceQuote), findsOneWidget);
+        expect(find.text(InsightCardCopy.mechanismLabel), findsOneWidget);
+        expect(find.text(kMechanismQuote), findsOneWidget);
+        expect(find.text(InsightCardCopy.openSource), findsOneWidget);
+        expect(
+          find.textContaining('gut_comfort_score|correlates|mood_score'),
+          findsNothing,
+        );
+
+        await tester.tap(find.text(InsightCardCopy.openSource));
+        await tester.pump();
+        expect(opened, [Uri.parse('https://doi.org/$kPaperId')]);
+      },
+    );
+
+    testWidgets('an absent mechanism leaves a complete compact card at 390px', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await _pumpDeckEvidence(tester, includeMechanism: false);
+
+      expect(find.textContaining(kPaperTitle), findsOneWidget);
+      expect(find.text(kEvidenceQuote), findsOneWidget);
+      expect(find.text(InsightCardCopy.openSource), findsOneWidget);
+      expect(find.text(InsightCardCopy.mechanismLabel), findsNothing);
+      expect(find.text(kMechanismQuote), findsNothing);
+      expect(tester.takeException(), isNull);
     });
   });
 }

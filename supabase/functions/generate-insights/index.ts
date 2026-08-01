@@ -243,6 +243,7 @@ interface CardRow {
   edge_refs: {
     edgeId: string
     verifiedAt: string
+    caveat?: string | null
     claimKind?: ComposedClaimKind
     trust?: ComposedTrustPosture
     studyDesignTier?: number | null
@@ -490,7 +491,7 @@ Deno.serve(async (req) => {
         // serving path never read them. Adding them is what makes the gate evaluate real data
         // instead of uniform absence — it does not loosen the gate by one bit.
         .select(
-          "edge_id, subject, object, relation, verified_at, edge_score, serving_band, claim, " +
+          "edge_id, subject, object, relation, verified_at, edge_score, serving_band, caveat, claim, " +
             "verification, " +
             "claim_artifact_revision, claim_artifact_content_hash, claim_artifact_posture, " +
             "verification_artifact_revision, verification_artifact_content_hash, " +
@@ -894,6 +895,7 @@ Deno.serve(async (req) => {
         edge_refs: monotonicConsistent.map((e) => ({
           edgeId: e.edge_id,
           verifiedAt: e.verified_at,
+          caveat: e.caveat ?? null,
         })),
       })
     }
@@ -1033,6 +1035,7 @@ Deno.serve(async (req) => {
                   {
                     edgeId: cardEdge.edge_id,
                     verifiedAt: cardEdge.verified_at,
+                    caveat: cardEdge.caveat ?? null,
                     claimKind: edgeClaimKind,
                     trust: edgeTrust,
                     studyDesignTier: cardEdge.verification?.evidenceTier ?? null,

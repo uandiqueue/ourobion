@@ -16,6 +16,8 @@ class InsightDeck extends StatefulWidget {
   final Future<void> Function(InsightCard card) onSave;
   final Future<void> Function(InsightCard card) onDismiss;
   final void Function(InsightCard card) onOpenDetail;
+  final ProvenanceLoader? loadProvenance;
+  final ExternalPaperOpener? openExternalPaper;
 
   /// Re-read the servable set from the backend. Required, not optional: the
   /// empty-deck action MUST go back to `insight_cards` rather than rewind a
@@ -30,6 +32,8 @@ class InsightDeck extends StatefulWidget {
     required this.onDismiss,
     required this.onOpenDetail,
     required this.onReplay,
+    this.loadProvenance,
+    this.openExternalPaper,
   });
 
   @override
@@ -76,19 +80,16 @@ class _InsightDeckState extends State<InsightDeck>
   }
 
   void _advance() => setState(() {
-        _idx += 1;
-        _dx = 0;
-        _exitController.reset();
-        _settleController.reset();
-      });
+    _idx += 1;
+    _dx = 0;
+    _exitController.reset();
+    _settleController.reset();
+  });
 
   Future<void> _save(InsightCard card) async {
     if (_busy) return;
     setState(() => _busy = true);
-    await Future.wait([
-      widget.onSave(card),
-      _animateAcceptedExit(1),
-    ]);
+    await Future.wait([widget.onSave(card), _animateAcceptedExit(1)]);
     if (!mounted) return;
     setState(() => _busy = false);
     _advance();
@@ -97,10 +98,7 @@ class _InsightDeckState extends State<InsightDeck>
   Future<void> _dismiss(InsightCard card) async {
     if (_busy) return;
     setState(() => _busy = true);
-    await Future.wait([
-      widget.onDismiss(card),
-      _animateAcceptedExit(-1),
-    ]);
+    await Future.wait([widget.onDismiss(card), _animateAcceptedExit(-1)]);
     if (!mounted) return;
     setState(() => _busy = false);
     _advance();
@@ -208,7 +206,12 @@ class _InsightDeckState extends State<InsightDeck>
                   offset: Offset(dx, 0),
                   child: Transform.rotate(
                     angle: dx * 0.00035,
-                    child: _FrontCard(card: current, dx: dx),
+                    child: _FrontCard(
+                      card: current,
+                      dx: dx,
+                      loadProvenance: widget.loadProvenance,
+                      openExternalPaper: widget.openExternalPaper,
+                    ),
                   ),
                 ),
               ),
@@ -238,7 +241,9 @@ class _GhostCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: OurobionColors.surfaceLowest,
             borderRadius: BorderRadius.circular(kCardRadius),
-            border: Border.all(color: OurobionColors.primary.withValues(alpha: 0.3)),
+            border: Border.all(
+              color: OurobionColors.primary.withValues(alpha: 0.3),
+            ),
           ),
         ),
       ),
@@ -249,7 +254,14 @@ class _GhostCard extends StatelessWidget {
 class _FrontCard extends StatelessWidget {
   final InsightCard card;
   final double dx;
-  const _FrontCard({required this.card, required this.dx});
+  final ProvenanceLoader? loadProvenance;
+  final ExternalPaperOpener? openExternalPaper;
+  const _FrontCard({
+    required this.card,
+    required this.dx,
+    this.loadProvenance,
+    this.openExternalPaper,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -261,7 +273,9 @@ class _FrontCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: OurobionColors.surfaceLowest,
         borderRadius: BorderRadius.circular(kCardRadius),
-        border: Border.all(color: OurobionColors.primary.withValues(alpha: 0.5)),
+        border: Border.all(
+          color: OurobionColors.primary.withValues(alpha: 0.5),
+        ),
         boxShadow: [
           BoxShadow(
             color: OurobionColors.primary.withValues(alpha: 0.22),
@@ -317,7 +331,9 @@ class _FrontCard extends StatelessWidget {
                           color: Colors.white.withValues(alpha: 0.88),
                           borderRadius: BorderRadius.circular(13),
                           border: Border.all(
-                            color: OurobionColors.primary.withValues(alpha: 0.45),
+                            color: OurobionColors.primary.withValues(
+                              alpha: 0.45,
+                            ),
                           ),
                         ),
                         child: Icon(
@@ -337,7 +353,10 @@ class _FrontCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: OurobionColors.surfaceContainer,
                           borderRadius: BorderRadius.circular(999),
@@ -373,24 +392,37 @@ class _FrontCard extends StatelessWidget {
                       ),
                       if (card.isResearchLinked) ...[
                         const SizedBox(height: 13),
-                        ResearchBasis(edgeRefs: card.edgeRefs),
+                        ResearchBasis(
+                          key: ValueKey('paper-evidence-${card.id}'),
+                          cardId: card.id,
+                          loadProvenance: loadProvenance,
+                          openExternalPaper: openExternalPaper,
+                        ),
                       ] else if (card.isStillResearching) ...[
                         const SizedBox(height: 13),
                         const StillResearchingNote(),
                       ],
                       const SizedBox(height: 14),
-                      Container(height: 1, color: OurobionColors.primary.withValues(alpha: 0.25)),
+                      Container(
+                        height: 1,
+                        color: OurobionColors.primary.withValues(alpha: 0.25),
+                      ),
                       const SizedBox(height: 12),
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: OurobionColors.surfaceContainer,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              InsightCardVisual.confidenceLabel(card.confidenceScore),
+                              InsightCardVisual.confidenceLabel(
+                                card.confidenceScore,
+                              ),
                               style: GoogleFonts.manrope(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
@@ -425,10 +457,15 @@ class _FrontCard extends StatelessWidget {
                 child: Transform.rotate(
                   angle: stampSave ? 0.16 : -0.16,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 7,
+                    ),
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: stampSave ? OurobionColors.brandGold : const Color(0xFFb26844),
+                        color: stampSave
+                            ? OurobionColors.brandGold
+                            : const Color(0xFFb26844),
                         width: 2,
                       ),
                       borderRadius: BorderRadius.circular(10),
@@ -440,7 +477,9 @@ class _FrontCard extends StatelessWidget {
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 2,
-                        color: stampSave ? OurobionColors.brandGoldDark : const Color(0xFF8a4a2c),
+                        color: stampSave
+                            ? OurobionColors.brandGoldDark
+                            : const Color(0xFF8a4a2c),
                       ),
                     ),
                   ),
@@ -472,7 +511,8 @@ class _EmptyDeck extends StatelessWidget {
               BiotopeGeneratedAssets.emptyInsightsSeedpod,
               width: 126,
               height: 174,
-              errorBuilder: (context, error, stack) => const SizedBox(width: 126, height: 174),
+              errorBuilder: (context, error, stack) =>
+                  const SizedBox(width: 126, height: 174),
             ),
             const SizedBox(height: 20),
             Text(

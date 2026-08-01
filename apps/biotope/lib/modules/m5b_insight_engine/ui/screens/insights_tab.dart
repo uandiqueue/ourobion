@@ -11,9 +11,15 @@ class InsightsTab extends StatefulWidget {
   /// passes neither and falls back to `Supabase.instance`, which cannot be
   /// touched under `flutter test` (no initialize). Same seam as
   /// InsightProvenanceScreen's.
-  const InsightsTab({super.key, this.service, this.userId});
+  const InsightsTab({
+    super.key,
+    this.service,
+    this.provenanceService,
+    this.userId,
+  });
 
   final InsightService? service;
+  final ProvenanceService? provenanceService;
   final String? userId;
 
   @override
@@ -22,6 +28,7 @@ class InsightsTab extends StatefulWidget {
 
 class _InsightsTabState extends State<InsightsTab> {
   late final InsightService _service;
+  late final ProvenanceService? _provenanceService;
   List<InsightCard> _cards = [];
   int _savedCount = 0;
   bool _loading = true;
@@ -30,6 +37,11 @@ class _InsightsTabState extends State<InsightsTab> {
   void initState() {
     super.initState();
     _service = widget.service ?? InsightService(Supabase.instance.client);
+    _provenanceService =
+        widget.provenanceService ??
+        (widget.service == null
+            ? ProvenanceService(Supabase.instance.client)
+            : null);
     _load();
   }
 
@@ -91,9 +103,7 @@ class _InsightsTabState extends State<InsightsTab> {
   /// Demo main-loop step 5: tapping a card opens its provenance detail.
   void _openProvenance(InsightCard card) {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => InsightProvenanceScreen(card: card),
-      ),
+      MaterialPageRoute(builder: (_) => InsightProvenanceScreen(card: card)),
     );
   }
 
@@ -173,6 +183,7 @@ class _InsightsTabState extends State<InsightsTab> {
                         onSave: _save,
                         onDismiss: _dismiss,
                         onOpenDetail: _openProvenance,
+                        loadProvenance: _provenanceService?.getProvenance,
                         // The empty-deck action re-reads Supabase; it must not
                         // rewind a local index over already-held cards.
                         onReplay: _load,
