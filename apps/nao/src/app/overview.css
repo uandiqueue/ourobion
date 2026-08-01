@@ -284,14 +284,41 @@
 }
 
 /* ── Year histogram ──────────────────────────────────────────────────────── */
+/*
+ * The corpus spans far more distinct publication years than the panel is wide, so the
+ * axis scrolls sideways inside its own container (same idiom as .subnav) instead of
+ * pushing the page out. Grid items default to min-width:auto, which would let the wide
+ * axis inflate the .ov-grid-year track and scroll the whole page — min-width:0 on the
+ * panel is what actually confines the overflow to .hist-scroll.
+ */
+.panel--hist {
+  min-width: 0;
+}
+.hist-scroll {
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Room for the 10px scrollbar so it never sits on top of the year labels. */
+  padding-bottom: 6px;
+}
 .hist {
   display: flex;
   align-items: flex-end;
   gap: 10px;
+  /* Bounded height: the bars are always a percentage of this, never of their content. */
   height: 140px;
+  /* Fill the panel when the years fit; grow to the axis width (and scroll) when not. */
+  width: max-content;
+  min-width: 100%;
 }
 .hist__col {
-  flex: 1;
+  /* Bounded on both ends: never narrower than the basis (it scrolls instead of
+     squishing), never wider than the max-width (no unbounded flex growth). */
+  --hist-col-w: 26px;
+  flex: 1 0 var(--hist-col-w);
+  width: var(--hist-col-w);
+  min-width: var(--hist-col-w);
+  max-width: 44px;
   display: flex;
   flex-direction: column;
   align-items: center;
