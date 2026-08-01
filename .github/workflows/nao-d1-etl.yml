@@ -1,0 +1,209 @@
+# Rebuild nao's D1 search index as an exact derived projection of the R2 manifest.
+# The workflow is intentionally manual. It becomes runnable only when this file
+# reaches the repository default branch; remote execution also requires an exact
+# confirmation phrase and a dispatch from main.
+
+name: nao - D1 search-index ETL
+
+on:
+  workflow_dispatch:
+    inputs:
+      execute:
+        description: 'Execute the measured snapshot against remote D1'
+        type: boolean
+        default: false
+      confirm:
+        description: 'For remote execution, enter REBUILD_D1_FROM_R2'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nao-d1-etl
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  etl:
+    name: Project the R2 manifest into D1
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out trusted projection code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: refs/heads/main
+          persist-credentials: false
+
+      - name: Reject an unconfirmed remote rebuild
+        if: ${{ inputs.execute == true && ( inputs.confirm != 'REBUILD_D1_FROM_R2' || github.ref != 'refs/heads/main' ) }}
+        run: |
+          set -euo pipefail
+          echo '::error::remote D1 rebuild requires the exact confirmation phrase and refs/heads/main'
+          exit 1
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: apps/nao/package-lock.json
+
+      - name: Verify R2 credentials
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          set -euo pipefail
+          missing=''
+          for name in R2_ENDPOINT R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET; do
+            if [ -z "${!name:-}" ]; then
+              missing="${missing} ${name}"
+            fi
+          done
+          if [ -n "${missing}" ]; then
+            echo "::error::missing repository secret(s):${missing}"
+            exit 1
+          fi
+          case "${R2_ENDPOINT}" in
+            https://*) ;;
+            *)
+              echo '::error::R2_ENDPOINT must use HTTPS'
+              exit 1
+              ;;
+          esac
+
+      - name: Install nao dependencies
+        working-directory: apps/nao
+        run: |
+          set -euo pipefail
+          npm ci
+
+      - name: Generate the exact R2 projection once
+        working-directory: apps/nao
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          set -euo pipefail
+          npm run etl -- --sql-only
+
+      - name: Verify the measured snapshot
+        id: snapshot
+        working-directory: apps/nao
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, readFileSync } from 'node:fs';
+
+          const metadata = JSON.parse(readFileSync('scratch/etl.meta.json', 'utf8'));
+          const sql = readFileSync('scratch/etl.sql');
+          const sqlSha256 = createHash('sha256').update(sql).digest('hex');
+
+          if (metadata.schemaVersion !== 1) throw new Error('unexpected ETL metadata schema');
+          if (metadata.sqlRelativePath !== 'scratch/etl.sql') throw new Error('unexpected SQL path');
+          if (!Number.isSafeInteger(metadata.rowCount) || metadata.rowCount < 1) {
+            throw new Error('snapshot row count must be a positive safe integer');
+          }
+          if (metadata.statementCount !== metadata.rowCount + 1) {
+            throw new Error('snapshot must contain one DELETE plus one UPSERT per row');
+          }
+          if (metadata.totalBytes !== sql.byteLength) throw new Error('snapshot byte count changed');
+          if (metadata.sqlSha256 !== sqlSha256) throw new Error('snapshot hash changed');
+          if (metadata.maxStatementBytes > 100000) throw new Error('D1 statement limit exceeded');
+          if (metadata.totalBytes > 5000000000) throw new Error('D1 import limit exceeded');
+
+          appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            [
+              `row_count=${metadata.rowCount}`,
+              `total_bytes=${metadata.totalBytes}`,
+              `max_statement_bytes=${metadata.maxStatementBytes}`,
+              `sql_sha256=${metadata.sqlSha256}`,
+              '',
+            ].join('\n'),
+          );
+          NODE
+
+      - name: Verify Cloudflare credentials
+        if: ${{ inputs.execute == true && inputs.confirm == 'REBUILD_D1_FROM_R2' && github.ref == 'refs/heads/main' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          missing=''
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+            if [ -z "${!name:-}" ]; then
+              missing="${missing} ${name}"
+            fi
+          done
+          if [ -n "${missing}" ]; then
+            echo "::error::missing repository secret(s):${missing}"
+            exit 1
+          fi
+
+      - name: Rebuild and verify remote D1
+        if: ${{ inputs.execute == true && inputs.confirm == 'REBUILD_D1_FROM_R2' && github.ref == 'refs/heads/main' }}
+        working-directory: apps/nao
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          EXPECTED_ROWS: ${{ steps.snapshot.outputs.row_count }}
+          EXPECTED_SHA256: ${{ steps.snapshot.outputs.sql_sha256 }}
+        run: |
+          set -euo pipefail
+          actual_sha256="$(sha256sum scratch/etl.sql | cut -d ' ' -f 1)"
+          if [ "${actual_sha256}" != "${EXPECTED_SHA256}" ]; then
+            echo '::error::measured SQL changed before remote execution'
+            exit 1
+          fi
+
+          npx wrangler d1 execute ourobion-nao-index --remote --file scratch/etl.sql --yes
+          npx wrangler d1 execute ourobion-nao-index --remote --command 'SELECT COUNT(*) AS projected_count FROM papers;' --json > scratch/d1-count.json
+
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+
+          const payload = JSON.parse(readFileSync('scratch/d1-count.json', 'utf8'));
+          const projected = payload?.[0]?.results?.[0]?.projected_count;
+          const expected = Number(process.env.EXPECTED_ROWS);
+          if (projected !== expected) {
+            throw new Error(`remote D1 count ${projected} does not match R2 snapshot ${expected}`);
+          }
+          console.log(`verified remote D1 row count: ${projected}`);
+          NODE
+
+      - name: Summary
+        if: always()
+        env:
+          EXECUTE_REMOTE: ${{ inputs.execute }}
+          ROW_COUNT: ${{ steps.snapshot.outputs.row_count }}
+          TOTAL_BYTES: ${{ steps.snapshot.outputs.total_bytes }}
+          MAX_STATEMENT_BYTES: ${{ steps.snapshot.outputs.max_statement_bytes }}
+          SQL_SHA256: ${{ steps.snapshot.outputs.sql_sha256 }}
+        run: |
+          set -euo pipefail
+          {
+            echo '### nao D1 ETL'
+            echo ''
+            echo "- R2 manifest rows: ${ROW_COUNT:-not generated}"
+            echo "- SQL bytes: ${TOTAL_BYTES:-not generated}"
+            echo "- largest statement bytes: ${MAX_STATEMENT_BYTES:-not generated}"
+            echo "- SQL SHA-256: ${SQL_SHA256:-not generated}"
+            if [ "${EXECUTE_REMOTE}" = 'true' ]; then
+              echo '- remote D1 rebuild requested'
+            else
+              echo '- remote D1 not modified'
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"

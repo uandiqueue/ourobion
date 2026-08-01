@@ -14,7 +14,20 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { searchPapers, facetCounts, getPaperRow, buildFtsMatchQuery } from '../src/lib/d1.ts';
-import { recordToRow, rowToUpsertSql, manifestToSql, sqlValue } from '../scripts/etl.mjs';
+import {
+  assertSqlLimits,
+  createImportSnapshot,
+  ETL_SCHEMA_VERSION,
+  loadEnv,
+  MANIFEST_KEY,
+  manifestToSql,
+  MAX_SQL_STATEMENT_BYTES,
+  parseManifestRecords,
+  recordToRow,
+  rowToUpsertSql,
+  sqlValue,
+  SQL_RELATIVE_PATH,
+} from '../scripts/etl.mjs';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Fake D1 — records every prepared SQL string and the values bound to it.
@@ -262,17 +275,108 @@ test('rowToUpsertSql: idempotent UPSERT with ON CONFLICT and escaped values', ()
   assert.ok(!/paper_uid=excluded\.paper_uid/.test(sql));
 });
 
-test('manifestToSql: parses JSONL, skips blank + unparseable + keyless lines', () => {
+test('manifestToSql: generates one exact DELETE-plus-UPSERT replacement snapshot', () => {
   const jsonl = [
     JSON.stringify(FIXTURE_RECORD),
-    '',
-    '   ',
-    'not json at all',
-    JSON.stringify({ title: 'no uid here' }),
     JSON.stringify({ paperUid: 'doi:second', title: 'Second' }),
   ].join('\n');
   const stmts = manifestToSql(jsonl);
-  assert.equal(stmts.length, 2, 'only the two records with a paperUid map');
-  assert.ok(stmts[0].includes('doi:10.1234/abc.def'));
-  assert.ok(stmts[1].includes('doi:second'));
+  assert.deepEqual(stmts.slice(0, 1), ['DELETE FROM papers;']);
+  assert.equal(stmts.length, 3);
+  assert.match(stmts[1], /doi:10\.1234\/abc\.def/);
+  assert.match(stmts[2], /doi:second/);
+
+  const snapshot = createImportSnapshot(jsonl);
+  assert.ok(snapshot.sql.startsWith('DELETE FROM papers;\n'));
+  assert.equal(snapshot.sql, `${stmts.join('\n')}\n`);
+});
+
+test('manifest parsing fails closed for malformed, keyless, duplicate, and empty truth data', () => {
+  const cases: Array<[string, RegExp]> = [
+    ['{not json}', /malformed JSON/],
+    [JSON.stringify({ title: 'No primary key' }), /missing a non-empty string paperUid/],
+    [JSON.stringify({ paperUid: 42 }), /missing a non-empty string paperUid/],
+    [
+      [
+        JSON.stringify({ paperUid: 'doi:duplicate' }),
+        JSON.stringify({ paperUid: 'doi:duplicate' }),
+      ].join('\n'),
+      /duplicate paperUid/,
+    ],
+    ['', /zero valid rows/],
+    ['\n  \n', /zero valid rows/],
+  ];
+
+  for (const [manifest, expected] of cases) {
+    assert.throws(() => parseManifestRecords(manifest), expected);
+    assert.throws(() => manifestToSql(manifest), expected);
+  }
+});
+
+test('SQL limits enforce the documented 100,000-byte statement boundary', () => {
+  assert.doesNotThrow(() => assertSqlLimits(['x'.repeat(MAX_SQL_STATEMENT_BYTES)]));
+  assert.throws(
+    () => assertSqlLimits(['x'.repeat(MAX_SQL_STATEMENT_BYTES + 1)]),
+    /SQL statement is 100001 bytes; limit is 100000/,
+  );
+});
+
+test('createImportSnapshot rejects total imports over the configured limit', () => {
+  const manifest = JSON.stringify({ paperUid: 'doi:one', title: 'One' });
+  assert.throws(
+    () => createImportSnapshot(manifest, { maxImportBytes: 1 }),
+    /import is .* bytes; limit is 1/,
+  );
+});
+
+test('createImportSnapshot has deterministic, content-free metadata', () => {
+  const manifest = [
+    JSON.stringify(FIXTURE_RECORD),
+    JSON.stringify({ paperUid: 'doi:second', title: 'Second' }),
+  ].join('\n');
+  const first = createImportSnapshot(manifest);
+  const second = createImportSnapshot(manifest);
+
+  assert.deepEqual(first, second);
+  assert.equal(first.metadata.schemaVersion, ETL_SCHEMA_VERSION);
+  assert.equal(first.metadata.rowCount, 2);
+  assert.equal(first.metadata.statementCount, 3);
+  assert.equal(first.metadata.totalBytes, Buffer.byteLength(first.sql, 'utf8'));
+  assert.equal(first.metadata.sqlRelativePath, SQL_RELATIVE_PATH);
+  assert.match(first.metadata.manifestSha256, /^[a-f0-9]{64}$/);
+  assert.match(first.metadata.sqlSha256, /^[a-f0-9]{64}$/);
+  assert.ok(first.metadata.maxStatementBytes <= MAX_SQL_STATEMENT_BYTES);
+  assert.ok(!JSON.stringify(first.metadata).includes(FIXTURE_RECORD.title));
+});
+
+test('createImportSnapshot produces a complete 5,335-row import without chunking', () => {
+  const count = 5_335;
+  const manifest = Array.from(
+    { length: count },
+    (_, index) =>
+      JSON.stringify({
+        paperUid: `doi:fixture-${index}`,
+        title: `Fixture ${index}`,
+      }),
+  ).join('\n');
+
+  const snapshot = createImportSnapshot(manifest);
+  assert.equal(snapshot.metadata.rowCount, count);
+  assert.equal(snapshot.metadata.statementCount, count + 1);
+  assert.equal(snapshot.sql.split('\n').filter(Boolean).length, count + 1);
+  assert.ok(snapshot.sql.startsWith('DELETE FROM papers;\n'));
+});
+
+test('loadEnv gives CI process credentials precedence over file configuration', () => {
+  const env = loadEnv({
+    R2_ENDPOINT: 'https://ci.example.invalid',
+    R2_ACCESS_KEY_ID: 'ci-access',
+    R2_SECRET_ACCESS_KEY: 'ci-secret',
+    R2_BUCKET: 'ci-bucket',
+  });
+  assert.equal(env.R2_ENDPOINT, 'https://ci.example.invalid');
+  assert.equal(env.R2_ACCESS_KEY_ID, 'ci-access');
+  assert.equal(env.R2_SECRET_ACCESS_KEY, 'ci-secret');
+  assert.equal(env.R2_BUCKET, 'ci-bucket');
+  assert.equal(MANIFEST_KEY, 'manifest/papers.jsonl');
 });

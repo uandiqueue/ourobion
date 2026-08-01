@@ -21,8 +21,8 @@
 //   npm run etl -- --remote     # remote D1  (requires wrangler auth — opt in)
 //   npm run etl -- --sql-only   # just emit scratch/etl.sql, run nothing
 //
-// Idempotent: each row is an INSERT ... ON CONFLICT(paper_uid) DO UPDATE, so a
-// re-run refreshes existing rows and adds new ones without duplication.
+// Every run is an exact replacement snapshot: it begins by deleting the D1
+// projection, then UPSERTs every truth-tier R2 manifest row.
 
 import { createHmac, createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
@@ -33,14 +33,23 @@ import { spawnSync } from 'node:child_process';
 const here = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(here, '..');
 
-const MANIFEST_KEY = 'manifest/papers.jsonl';
-const D1_NAME = 'ourobion-nao-index';
+export const MANIFEST_KEY = 'manifest/papers.jsonl';
+export const D1_NAME = 'ourobion-nao-index';
+export const ETL_SCHEMA_VERSION = 1;
+export const SQL_RELATIVE_PATH = 'scratch/etl.sql';
+export const META_RELATIVE_PATH = 'scratch/etl.meta.json';
+export const MAX_SQL_STATEMENT_BYTES = 100_000;
+export const MAX_IMPORT_BYTES = 5_000_000_000;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Config — read R2 S3 creds from .dev.vars (generated) or .env (source).
 // ─────────────────────────────────────────────────────────────────────────────
-function loadEnv() {
+/**
+ * @param {Record<string, string | undefined>} processEnvironment
+ */
+export function loadEnv(processEnvironment = process.env) {
   const files = [resolve(appRoot, '.dev.vars'), resolve(appRoot, '.env')];
+  /** @type {Record<string, string | undefined>} */
   const env = {};
   for (const file of files) {
     if (!existsSync(file)) continue;
@@ -53,6 +62,16 @@ function loadEnv() {
       const v = line.slice(eq + 1).trim();
       if (k !== '' && env[k] === undefined) env[k] = v;
     }
+  }
+  // CI supplies these directly. File values remain a local-development
+  // fallback, but can never override process environment values.
+  for (const key of [
+    'R2_ENDPOINT',
+    'R2_ACCESS_KEY_ID',
+    'R2_SECRET_ACCESS_KEY',
+    'R2_BUCKET',
+  ]) {
+    if (processEnvironment[key] !== undefined) env[key] = processEnvironment[key];
   }
   return env;
 }
@@ -193,9 +212,18 @@ export function rowToUpsertSql(row) {
   return `INSERT INTO papers (${cols}) VALUES (${vals}) ON CONFLICT(paper_uid) DO UPDATE SET ${updates};`;
 }
 
-/** Parse a JSONL manifest body → array of UPSERT statements (skips blank/bad lines). */
-export function manifestToSql(jsonl) {
-  const stmts = [];
+/**
+ * Parse the R2 truth-tier manifest. A partial derived index is worse than a
+ * failed rebuild, so malformed, anonymous, duplicate, and empty manifests
+ * fail closed.
+ */
+export function parseManifestRecords(jsonl) {
+  if (typeof jsonl !== 'string') {
+    throw new Error('etl: manifest body must be a string');
+  }
+
+  const records = [];
+  const paperUids = new Set();
   let lineNo = 0;
   for (const raw of jsonl.split(/\r?\n/)) {
     lineNo += 1;
@@ -204,17 +232,113 @@ export function manifestToSql(jsonl) {
     let rec;
     try {
       rec = JSON.parse(line);
-    } catch {
-      console.warn(`[etl] WARN: skipping unparseable manifest line ${lineNo}`);
-      continue;
+    } catch (error) {
+      throw new Error(`etl: malformed JSON at manifest line ${lineNo}`, {
+        cause: error,
+      });
     }
-    if (!rec || typeof rec.paperUid !== 'string') {
-      console.warn(`[etl] WARN: skipping line ${lineNo} (no paperUid)`);
-      continue;
+    if (
+      !rec ||
+      typeof rec !== 'object' ||
+      typeof rec.paperUid !== 'string' ||
+      rec.paperUid.trim() === ''
+    ) {
+      throw new Error(
+        `etl: manifest line ${lineNo} is missing a non-empty string paperUid`,
+      );
     }
-    stmts.push(rowToUpsertSql(recordToRow(rec)));
+    if (paperUids.has(rec.paperUid)) {
+      throw new Error(
+        `etl: duplicate paperUid at manifest line ${lineNo}: ${rec.paperUid}`,
+      );
+    }
+    paperUids.add(rec.paperUid);
+    records.push(rec);
   }
-  return stmts;
+  if (records.length === 0) {
+    throw new Error('etl: manifest has zero valid rows');
+  }
+  return records;
+}
+
+/**
+ * Measure an already-built import before any file write or D1 execution.
+ * Optional limits make the production invariant fixture-testable without
+ * allocating a multi-gigabyte test string.
+ */
+export function assertSqlLimits(statements, limits = {}) {
+  const maxStatementBytes = limits.maxStatementBytes ?? MAX_SQL_STATEMENT_BYTES;
+  const maxImportBytes = limits.maxImportBytes ?? MAX_IMPORT_BYTES;
+  let maxObservedStatementBytes = 0;
+
+  for (const statement of statements) {
+    const bytes = Buffer.byteLength(statement, 'utf8');
+    maxObservedStatementBytes = Math.max(maxObservedStatementBytes, bytes);
+    if (bytes > maxStatementBytes) {
+      throw new Error(
+        `etl: SQL statement is ${bytes} bytes; limit is ${maxStatementBytes}`,
+      );
+    }
+  }
+
+  const sql = `${statements.join('\n')}\n`;
+  const totalBytes = Buffer.byteLength(sql, 'utf8');
+  if (totalBytes > maxImportBytes) {
+    throw new Error(
+      `etl: import is ${totalBytes} bytes; limit is ${maxImportBytes}`,
+    );
+  }
+
+  return { sql, totalBytes, maxStatementBytes: maxObservedStatementBytes };
+}
+
+/**
+ * Build one exact replacement snapshot: one DELETE followed by one idempotent
+ * UPSERT for every R2 manifest record. No explicit transaction statements:
+ * remote `wrangler d1 execute --file` owns import rollback.
+ */
+export function manifestToSql(jsonl, limits = {}) {
+  const statements = ['DELETE FROM papers;'];
+  for (const record of parseManifestRecords(jsonl)) {
+    statements.push(rowToUpsertSql(recordToRow(record)));
+  }
+  assertSqlLimits(statements, limits);
+  return statements;
+}
+
+/** Produce deterministic, content-free metadata for the exact import file. */
+export function createImportSnapshot(jsonl, limits = {}) {
+  const statements = manifestToSql(jsonl, limits);
+  const measured = assertSqlLimits(statements, limits);
+  const metadata = {
+    schemaVersion: ETL_SCHEMA_VERSION,
+    manifestSha256: sha256Hex(jsonl),
+    sqlSha256: sha256Hex(measured.sql),
+    rowCount: statements.length - 1,
+    statementCount: statements.length,
+    totalBytes: measured.totalBytes,
+    maxStatementBytes: measured.maxStatementBytes,
+    sqlRelativePath: SQL_RELATIVE_PATH,
+  };
+  return { sql: measured.sql, metadata };
+}
+
+/** Write the exact checked SQL artifact and deterministic metadata artifact. */
+export function writeImportSnapshot(jsonl, root = appRoot) {
+  const snapshot = createImportSnapshot(jsonl);
+  const scratchDir = resolve(root, 'scratch');
+  if (!existsSync(scratchDir)) mkdirSync(scratchDir, { recursive: true });
+
+  const sqlPath = resolve(root, SQL_RELATIVE_PATH);
+  const metaPath = resolve(root, META_RELATIVE_PATH);
+  writeFileSync(sqlPath, snapshot.sql, 'utf8');
+  writeFileSync(
+    metaPath,
+    `${JSON.stringify(snapshot.metadata, null, 2)}\n`,
+    'utf8',
+  );
+
+  return { ...snapshot, sqlPath, metaPath };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -228,21 +352,13 @@ async function main() {
 
   console.log(`[etl] fetching ${MANIFEST_KEY} from R2 …`);
   const jsonl = await r2GetObject(env, MANIFEST_KEY);
-  const stmts = manifestToSql(jsonl);
-  console.log(`[etl] mapped ${stmts.length} paper rows.`);
+  const snapshot = writeImportSnapshot(jsonl);
+  console.log(`[etl] mapped ${snapshot.metadata.rowCount} paper rows.`);
 
-  // NOTE: no explicit BEGIN TRANSACTION/COMMIT — real remote D1 (Durable-Object-
-  // backed) rejects raw SQL transaction-control statements ("please use the
-  // state.storage.transaction() APIs instead"); local D1 (Miniflare) tolerated
-  // them, which is why this only surfaced on a real `--remote` run. Each
-  // statement is an idempotent UPSERT, and `wrangler d1 execute --file` already
-  // applies the whole file as one batch, so dropping the wrapper is safe on both.
-  const sql = stmts.join('\n') + '\n';
-  const scratchDir = resolve(appRoot, 'scratch');
-  if (!existsSync(scratchDir)) mkdirSync(scratchDir, { recursive: true });
-  const sqlPath = resolve(scratchDir, 'etl.sql');
-  writeFileSync(sqlPath, sql);
-  console.log(`[etl] wrote ${sqlPath}`);
+  // NOTE: no explicit BEGIN TRANSACTION/COMMIT — real remote D1 rejects raw
+  // transaction-control statements in imports. The exact DELETE-plus-UPSERT
+  // snapshot is one `wrangler d1 execute --file` import, which owns rollback.
+  console.log(`[etl] wrote ${snapshot.sqlPath} and ${snapshot.metaPath}`);
 
   if (sqlOnly) {
     console.log('[etl] --sql-only: not executing. Apply with wrangler d1 execute --file.');
@@ -252,7 +368,8 @@ async function main() {
   const wranglerArgs = [
     'wrangler', 'd1', 'execute', D1_NAME,
     remote ? '--remote' : '--local',
-    `--file=${sqlPath}`,
+    `--file=${snapshot.sqlPath}`,
+    '--yes',
   ];
   console.log(`[etl] npx ${wranglerArgs.join(' ')}`);
   const res = spawnSync('npx', wranglerArgs, {
