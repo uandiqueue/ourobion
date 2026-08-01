@@ -27,6 +27,8 @@ import {
   recordToIdentifiers,
   IDCONV_BATCH_SIZE,
   IDCONV_MAX_ATTEMPTS,
+  idConvBatches,
+  idConvTypeOf,
 } from '../src/sources/idconv.js';
 import type { Config, PaperRecord, SourceCtx, SourceName } from '../src/types.js';
 
@@ -332,4 +334,60 @@ test('enrichWithIdConverter: a network-level error is retried then (if persisten
 
 test('IDCONV_BATCH_SIZE is capped at 50 (rate-strict converter)', () => {
   assert.equal(IDCONV_BATCH_SIZE, 50);
+});
+
+// ── #307 · homogeneous idconv batches ────────────────────────────────────────
+
+test('idConvTypeOf classifies the three converter id shapes and rejects junk', () => {
+  assert.equal(idConvTypeOf('PMC5334499'), 'pmcid');
+  assert.equal(idConvTypeOf('pmc5334499'), 'pmcid');
+  assert.equal(idConvTypeOf('29083192'), 'pmid');
+  assert.equal(idConvTypeOf('10.1371/journal.pone.0341245'), 'doi');
+  // Unsendable values must be rejected rather than allowed to poison a batch.
+  for (const junk of ['', '   ', 'not-an-id', 'doi:garbage', '10.no-slash']) {
+    assert.equal(idConvTypeOf(junk), null, `${JSON.stringify(junk)} must not be sent`);
+  }
+});
+
+test('#307: every idconv batch is HOMOGENEOUS by id type — a mixed batch is a hard 400', () => {
+  // Measured against the live endpoint before writing this:
+  //   ids=<pmid>,<pmid>   -> 200 ok, idtype=pmid
+  //   ids=<pmcid>,<pmcid> -> 200 ok, idtype=pmcid
+  //   ids=<pmid>,<pmcid>  -> 400 Bad Request   <- the mix actually being sent
+  // collectQueryIds already excludes DOIs, so DOIs were never the cause; it collects PMIDs AND
+  // PMCIDs into one list, and chunking that produced two-type batches. 400 is not transient, so
+  // retries cannot save one — 138 of 138 batches failed and 0 papers were fetched.
+  const ids = [
+    '10.1371/journal.pone.0341245',
+    'PMC5334499',
+    '29083192',
+    '10.3390/nu18091412',
+    'PMC1234567',
+    'not-an-id',
+  ];
+  const batches = idConvBatches(ids);
+  assert.ok(batches.length > 0);
+  for (const batch of batches) {
+    const types = new Set(batch.map((id) => idConvTypeOf(id)));
+    assert.equal(types.size, 1, `batch mixes id types: ${JSON.stringify(batch)}`);
+    assert.ok(!types.has(null), 'no unsendable id may reach a batch');
+  }
+  // Nothing sendable is lost, and the junk id is dropped.
+  const flat = batches.flat();
+  assert.equal(flat.length, 5);
+  assert.ok(!flat.includes('not-an-id'));
+});
+
+test('#307: idconv batches respect IDCONV_BATCH_SIZE within each id type', () => {
+  // 120 dois + 60 pmids: chunked per type, never merged across types to fill a batch.
+  const dois = Array.from({ length: 120 }, (_, i) => `10.1234/test.${i}`);
+  const pmids = Array.from({ length: 60 }, (_, i) => `${1000000 + i}`);
+  const batches = idConvBatches([...dois, ...pmids]);
+  for (const b of batches) {
+    assert.ok(b.length <= IDCONV_BATCH_SIZE, `batch of ${b.length} exceeds ${IDCONV_BATCH_SIZE}`);
+    assert.equal(new Set(b.map((id) => idConvTypeOf(id))).size, 1);
+  }
+  assert.equal(batches.flat().length, 180, 'every id is still sent exactly once');
+  // pmid partition emitted before doi partition, deterministically.
+  assert.equal(idConvTypeOf(batches[0]![0]!), 'pmid');
 });
