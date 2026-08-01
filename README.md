@@ -22,10 +22,74 @@ consent is granular, and community aggregates only publish above per-region thre
 
 | Surface | What it is | Run it |
 |---|---|---|
-| 🌱 **biotope** | The mobile app (Flutter, iOS + Android) — 30-second daily logging + descriptive insight cards. | [`apps/biotope/README.md`](apps/biotope/README.md) |
-| 🧠 **nao** | The web "window into the brain" — a Next.js research/claims operations dashboard built for Cloudflare; production deployment evidence is still pending. | [`apps/nao/README.md`](apps/nao/README.md) |
+| 🌱 **biotope** | The mobile app (Flutter, iOS + Android) — 30-second daily logging + descriptive insight cards. | Build from source — [Launch it](#-launch-it) |
+| 🧠 **nao** | The web "window into the brain" — a Next.js research/claims operations dashboard on Cloudflare. | **Live at [nao.ourobion.com](https://nao.ourobion.com)** |
 
 Product principles in full: [`docs/shared/project-context.md`](docs/shared/project-context.md).
+
+---
+
+## 🚀 Launch it
+
+### 🧠 nao — live, nothing to install
+
+**[https://nao.ourobion.com](https://nao.ourobion.com)** — sign in and it works. This is the fastest
+way to see the brain: the paper corpus, relationship claims, verification verdicts, and the loader.
+
+### 🌱 biotope — build and run locally
+
+biotope is a Flutter app and is **not** hosted, so it has to be built from this repo. Hosting it as a
+web app is deliberately deferred ([#283](https://github.com/uandiqueue/ourobion/issues/283)).
+
+```bash
+# 1 · one-time toolchain setup
+#     Windows:        .\scripts\setup.ps1     then, in EVERY new shell:  . .\scripts\biotope-env.ps1
+#     macOS / Linux:  see apps/biotope/README.md
+
+# 2 · point the app at a backend (see below), then:
+cd apps/biotope
+flutter pub get
+flutter run
+```
+
+Full environment, toolchain and Android/emulator detail — including the Windows build-memory
+envelope — is in **[`apps/biotope/README.md`](apps/biotope/README.md)**.
+
+**Which backend?** Copy [`apps/biotope/.env.public.example`](apps/biotope/.env.public.example) to
+`apps/biotope/.env.public` and fill it in:
+
+| Goal | `SUPABASE_URL` |
+|---|---|
+| **Use the seeded demo account below** | the hosted demo project — `https://bewwvcksgpxoomyjavjp.supabase.co` |
+| Develop against your own stack | `http://10.0.2.2:54321` (Android emulator) or your PC's LAN IP (physical phone) |
+
+`SUPABASE_ANON_KEY` is the matching project's publishable anon key (never a service-role key — that
+would be a backend secret).
+
+---
+
+## 👀 Trying it as a viewer
+
+**Make your own biotope account.** Sign up in the app — it takes seconds, gives you a clean slate,
+and you can log freely without affecting anyone else. This is the recommended path.
+
+**Or use the pre-seeded account,** if you want to see the app already populated with history rather
+than starting empty:
+
+```
+email     test@ourobion.com
+password  test123
+```
+
+This same account signs in to **[nao.ourobion.com](https://nao.ourobion.com)**, where it is
+**view-only** — you can read the corpus, claims and verdicts, but not trigger runs or spend budget.
+
+> ⚠️ **In biotope this account is not read-only — it can write.** It is shared, so anything logged
+> against it is visible to everyone else using it, and it is easy to spoil for the next person.
+> **Please don't abuse it.** If you want to actually log data, make your own account instead.
+
+The demo project holds **simulated, backdated data for one demo user**. It is not real personal
+health data, and it is not a production environment.
 
 ---
 
@@ -60,6 +124,7 @@ Design + rationale: [`docs/nao/brain-synthesis-design.md`](docs/nao/brain-synthe
 
 | You want… | Look in |
 |---|---|
+| **Launch either app / demo credentials** | [Launch it](#-launch-it) · [Trying it as a viewer](#-trying-it-as-a-viewer) |
 | **Run the biotope app** (env, toolchain, Android) | [`apps/biotope/README.md`](apps/biotope/README.md) |
 | **Run the nao web dashboard** (env, D1/ETL, deploy) | [`apps/nao/README.md`](apps/nao/README.md) |
 | **Product design** — principles, goals, phases | [`docs/shared/project-context.md`](docs/shared/project-context.md) · [`docs/shared/phase-2-plan.md`](docs/shared/phase-2-plan.md) |
