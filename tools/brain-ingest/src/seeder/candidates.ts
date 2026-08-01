@@ -57,6 +57,27 @@ function unorderedPairs(keys: readonly string[]): Array<[string, string]> {
  * emitted by an earlier (higher-priority) source is dropped; static-topic
  * anchors dedupe by topic slug.
  */
+/**
+ * #307 · Metrics that measure the APP, not the person, and are therefore never subjects of
+ * SCIENTIFIC discovery.
+ *
+ * Found the hard way. A bounded-ingestion run seeded from the agentic artifact carried SEVEN
+ * `log_completeness__*` candidates — `__mood_score`, `__gut_comfort_score`, `__energy_score`,
+ * `__urine_colour`, `__stool_form`, `__outside_meals`, `__mosquito_bites`. Each asks the literature
+ * about our own logging-completeness metric. The run was killed during discovery, before anything
+ * was resolved, fetched or stored, so no corpus was polluted — but nothing in the code prevented it,
+ * only noticing.
+ *
+ * The exclusion belongs HERE rather than in a hand-maintained artifact, because `buildCandidates`
+ * derives pairs MECHANICALLY from registry `derivedFrom[]`: any metric other metrics derive from
+ * becomes a discovery subject automatically, whether or not it describes a person. The gap ledger
+ * shows the same shape independently — 15 of its 29 rows pair something against `log_completeness`,
+ * which is why it is not a selection input either.
+ *
+ * These stay in the registry and stay derivable. They are excluded only from being asked ABOUT.
+ */
+export const NON_SCIENTIFIC_METRIC_KEYS: ReadonlySet<string> = new Set(['log_completeness', 'notes']);
+
 export function buildCandidates(input: BuildCandidatesInput): SeedCandidate[] {
   const out: SeedCandidate[] = [];
   const seenPairs = new Set<string>();
@@ -67,8 +88,11 @@ export function buildCandidates(input: BuildCandidatesInput): SeedCandidate[] {
   for (const m of input.metrics) {
     if (m.status !== 'active') continue;
     if (m.derivedFrom === null) continue;
+    // #307: an app-measuring metric is not a scientific-discovery subject, on EITHER side of a pair.
+    if (NON_SCIENTIFIC_METRIC_KEYS.has(m.key)) continue;
     for (const inputKey of m.derivedFrom) {
       if (inputKey === m.key) continue;
+      if (NON_SCIENTIFIC_METRIC_KEYS.has(inputKey)) continue;
       const key = pairKey(m.key, inputKey);
       if (seenPairs.has(key)) continue;
       seenPairs.add(key);
@@ -89,6 +113,10 @@ export function buildCandidates(input: BuildCandidatesInput): SeedCandidate[] {
   for (const bp of orderedBlueprints) {
     if (bp.status !== undefined && bp.status !== 'active') continue;
     for (const [a, b] of unorderedPairs(bp.metricKeys)) {
+      // #307: same exclusion as the derivedFrom source above. A blueprint may legitimately name an
+      // app-measuring metric (a completeness-gated rule is a real rule), but that does not make it a
+      // scientific-discovery subject — so the RULE stays valid while the discovery pair is dropped.
+      if (NON_SCIENTIFIC_METRIC_KEYS.has(a) || NON_SCIENTIFIC_METRIC_KEYS.has(b)) continue;
       const key = pairKey(a, b);
       if (seenPairs.has(key)) continue;
       seenPairs.add(key);
