@@ -43,7 +43,11 @@ const METRICS: RegistryMetricInput[] = [
   { key: 'stool_form', status: 'active', derivedFrom: null },
   { key: 'stool_variability', status: 'active', derivedFrom: ['stool_form'] },
   { key: 'energy_score', status: 'active', derivedFrom: null },
-  { key: 'log_completeness', status: 'active', derivedFrom: ['urine_colour', 'energy_score'] },
+  // #307: this slot used to be `log_completeness`, which is now excluded from scientific discovery
+  // (NON_SCIENTIFIC_METRIC_KEYS). Swapped for a real HEALTH metric with two derivation inputs so the
+  // test still exercises what it is for — multiple derivedFrom inputs, ordering, direction — instead
+  // of being weakened. The exclusion has its own dedicated test below.
+  { key: 'gut_comfort_score', status: 'active', derivedFrom: ['urine_colour', 'energy_score'] },
   // deprecated derived metric must NOT contribute a candidate:
   { key: 'old_derived', status: 'deprecated', derivedFrom: ['urine_colour'] },
 ];
@@ -70,8 +74,8 @@ test('candidates: derivedFrom pairs, direction preserved, deprecated skipped', (
   const ids = c.map((x) => x.id);
   assert.deepEqual(ids, [
     'df:stool_variability__stool_form',
-    'df:log_completeness__urine_colour',
-    'df:log_completeness__energy_score',
+    'df:gut_comfort_score__urine_colour',
+    'df:gut_comfort_score__energy_score',
   ]);
   // direction: [derived, input]
   const first = c[0]!;
@@ -360,7 +364,7 @@ test('buildSeederPrompt: lists every candidate id and instructs JSON-only output
 test('loaders: registry exposes derivedFrom metrics and blueprints load from disk', async () => {
   const metrics = await loadRegistryMetrics();
   const derived = metrics.filter((m) => m.derivedFrom !== null);
-  assert.ok(derived.some((m) => m.key === 'log_completeness'), 'log_completeness present');
+  assert.ok(derived.some((m) => m.key === 'log_completeness'), 'log_completeness present in the REGISTRY (it is excluded from discovery, not from the registry)');
   assert.ok(derived.some((m) => m.key === 'stool_variability'), 'stool_variability present');
 
   const blueprints = loadBlueprints();
@@ -368,13 +372,63 @@ test('loaders: registry exposes derivedFrom metrics and blueprints load from dis
   assert.ok(blueprints.every((b) => Array.isArray(b.metricKeys)), 'every blueprint has metricKeys');
 });
 
-test('enumerateSeederCandidates: real registry+blueprints → 8 derivedFrom + 2 cross rules + 6 topics', async () => {
+test('enumerateSeederCandidates: real registry+blueprints → 1 derivedFrom + 2 cross rules + every seed topic', async () => {
   const c = await enumerateSeederCandidates();
   const counts = candidateCounts(c);
-  assert.equal(counts.derivedFrom, 8);
+  // #307 · This number dropped from 8 to 1, and the drop IS the finding: seven of the eight
+  // derivedFrom candidates were `log_completeness__*` pairs, each asking the literature about our own
+  // logging-completeness metric. `NON_SCIENTIFIC_METRIC_KEYS` now excludes them, leaving the single
+  // genuine health pair `df:stool_variability__stool_form`.
+  //
+  // The old assertion of 8 was pinning the defect, which is why it had to change rather than the
+  // exclusion being softened to satisfy it.
+  assert.equal(counts.derivedFrom, 1);
+  assert.ok(
+    c.some((x) => x.id === 'df:stool_variability__stool_form'),
+    'the one surviving derivedFrom pair is the genuine health pair',
+  );
+  assert.ok(
+    !c.some((x) => x.id.includes('log_completeness') || x.id.includes('notes')),
+    'no app-measuring metric reaches candidate enumeration',
+  );
   // The 6 ported MVP rules are single-metric; the cross (coincidence) blueprints —
   // hrv_rise_after_sleep_rise (U12) and gut_comfort_mood_comove (U13, the L6 slice) —
   // each co-name a distinct pair the seeder rightly enumerates as a rule_blueprint candidate.
   assert.equal(counts.rule_blueprint, 2);
   assert.equal(counts.static_topic, SEEDS.length);
+});
+
+test('#307: app-measuring metrics are never scientific-discovery subjects', () => {
+  // A bounded-ingestion run carried SEVEN log_completeness__* candidates before this guard existed
+  // (__mood_score, __gut_comfort_score, __energy_score, __urine_colour, __stool_form,
+  // __outside_meals, __mosquito_bites), each asking the literature about our own logging-completeness
+  // metric. Killed during discovery so nothing was stored, but only because it was noticed.
+  //
+  // buildCandidates derives pairs MECHANICALLY from registry derivedFrom[], so any metric other
+  // metrics derive from becomes a discovery subject automatically. The exclusion has to live in code.
+  const candidates = buildCandidates({
+    metrics: [
+      { key: 'log_completeness', status: 'active', derivedFrom: ['mood_score'] },
+      { key: 'notes', status: 'active', derivedFrom: ['mood_score'] },
+      // a metric DERIVED FROM an app metric must also not yield the pair
+      { key: 'engagement_proxy', status: 'active', derivedFrom: ['log_completeness'] },
+      // a genuine scientific pair still comes through
+      { key: 'gut_comfort_score', status: 'active', derivedFrom: ['stool_form'] },
+    ],
+    blueprints: [
+      // a completeness-gated rule stays a valid RULE; only the discovery pair is dropped
+      { ruleId: 'completeness_gated', metricKeys: ['log_completeness', 'mood_score'], status: 'active' },
+      { ruleId: 'real_pair', metricKeys: ['mood_score', 'anxiety_score'], status: 'active' },
+    ],
+    topics: [],
+  });
+
+  const ids = candidates.map((c) => c.id);
+  for (const id of ids) {
+    assert.ok(!id.includes('log_completeness'), `no candidate may name log_completeness: ${id}`);
+    assert.ok(!id.includes('notes'), `no candidate may name notes: ${id}`);
+  }
+  // ...while the legitimate pairs survive, so the guard is not simply suppressing everything.
+  assert.ok(ids.includes('df:gut_comfort_score__stool_form'), 'a real derivedFrom pair survives');
+  assert.ok(ids.includes('rb:anxiety_score__mood_score'), 'a real blueprint pair survives');
 });
