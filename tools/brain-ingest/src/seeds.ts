@@ -123,6 +123,31 @@ export const SEEDS: readonly Seed[] = [
     topicTags: ['gut_brain_axis', 'gut_comfort_score', 'mood_score'],
   },
 
+  // -- symptom-instrument x mental-instrument relations (#344 / #297) -------
+  // Keep these as explicit relation seeds rather than a metric synonym map.
+  // The source query is retained verbatim in seed-queries.json by the seeder,
+  // so named instruments cannot be abstracted away by an LLM paraphrase.
+  {
+    topic: 'ibs_sss_phq9_relation',
+    query: 'IBS-SSS PHQ-9 gastrointestinal symptom severity association',
+    topicTags: ['ibs_sss_phq9_relation', 'gut_comfort_score', 'mood_score'],
+  },
+  {
+    topic: 'gsrs_gad7_relation',
+    query: 'GSRS GAD-7 gastrointestinal symptoms anxiety association',
+    topicTags: ['gsrs_gad7_relation', 'gut_comfort_score', 'anxiety_score'],
+  },
+  {
+    topic: 'bristol_hads_relation',
+    query: 'Bristol stool HADS bowel symptoms psychological distress association',
+    topicTags: ['bristol_hads_relation', 'stool_form', 'mood_score', 'anxiety_score'],
+  },
+  {
+    topic: 'bowel_symptom_affect_relation',
+    query: 'bowel symptom diary affect daily mood association',
+    topicTags: ['bowel_symptom_affect_relation', 'stool_count', 'mood_score'],
+  },
+
   // -- wearable physiology (6 active metrics, previously 0 seeds) -------------
   {
     topic: 'heart_rate_variability_stress',

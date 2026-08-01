@@ -24,7 +24,11 @@ import {
   seedsFromArtifact,
   writeArtifact,
 } from '../src/seeder/artifact.js';
-import { generateSeedQueries, enumerateSeederCandidates } from '../src/seeder/index.js';
+import {
+  generateSeedQueries,
+  enumerateSeederCandidates,
+  retainTopicAnchorQueries,
+} from '../src/seeder/index.js';
 import { loadBlueprints, loadRegistryMetrics } from '../src/seeder/load.js';
 import { buildSeederPrompt } from '../src/seeder/prompt.js';
 import type {
@@ -340,6 +344,11 @@ test('generateSeedQueries: mocked router → validated, capped, written artifact
     for (const entry of result.artifact.candidates) {
       assert.equal(entry.queries.length, 1);
     }
+    assert.deepEqual(
+      result.artifact.candidates.find((entry) => entry.id === 'st:hydration')?.queries,
+      ['hydration water intake'],
+      'static topics retain their canonical source query ahead of LLM variants',
+    );
     assert.deepEqual(result.artifact.counts, { derivedFrom: 3, rule_blueprint: 1, static_topic: 2 });
     assert.equal(result.response.model, 'claude-fable-5');
     // persisted + reloadable
@@ -352,10 +361,25 @@ test('generateSeedQueries: mocked router → validated, capped, written artifact
 
 // ── prompt shape ──────────────────────────────────────────────────────────────
 
+test('#344: static topic anchors are retained, deduped, and capped deterministically', () => {
+  const byId = new Map<string, string[]>([
+    ['st:hydration', ['Hydration water intake', 'fluid intake physiology']],
+    ['st:gut_microbiome', ['microbiome health', 'gut flora health']],
+    ['rb:energy_score__urine_colour', ['unrelated pair query']],
+  ]);
+  const retained = retainTopicAnchorQueries(byId, TOPICS, 2);
+
+  assert.deepEqual(retained, ['st:hydration', 'st:gut_microbiome']);
+  assert.deepEqual(byId.get('st:hydration'), ['hydration water intake', 'fluid intake physiology']);
+  assert.deepEqual(byId.get('st:gut_microbiome'), ['gut microbiome health', 'microbiome health']);
+  assert.deepEqual(byId.get('rb:energy_score__urine_colour'), ['unrelated pair query']);
+});
+
 test('buildSeederPrompt: lists every candidate id and instructs JSON-only output', () => {
   const { system, prompt } = buildSeederPrompt(CANDS);
   for (const c of CANDS) assert.ok(prompt.includes(c.id), `prompt names ${c.id}`);
   assert.match(system, /single JSON object/i);
+  assert.match(system, /Preserve named instruments and acronyms/i);
   assert.match(prompt, /EXACTLY these candidate ids/);
 });
 
