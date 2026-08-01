@@ -34,3 +34,10 @@ export async function loadVerificationValidator(
 }
 
 export { repoRoot } from '../seeder/load.js';
+
+/**
+ * #300 §E · The shared copy gate, re-exported here so the verifier node loads its shared
+ * dependencies from ONE module. Same runtime-import pattern as above; it screens a MODEL-authored
+ * `caveat` before that text is placed on a record (see `enforce.ts` `validateCopy`).
+ */
+export { loadCopyValidator, type CopyValidator } from '../synth/load.js';

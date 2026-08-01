@@ -72,6 +72,11 @@ const VERIFICATION_COLUMNS = [
   'status',
   'edge_score',
   'serving_band',
+  // #300 §E · the approve-with-caveat text, projected out of the jsonb into its own column so a
+  // card can read it without parsing the artifact. NULL is ambiguous BY DESIGN here (no caveat vs
+  // a producer that predates caveats) — the migration header spells out that only the jsonb
+  // key-presence test distinguishes them, so nothing downstream may infer "fine" from a NULL.
+  'caveat',
   'artifact_revision',
   'artifact_content_hash',
   'artifact_posture',

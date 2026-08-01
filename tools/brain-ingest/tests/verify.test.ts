@@ -453,6 +453,112 @@ test('enforce: a valid supported verdict passes; quoteCheck embedded verbatim', 
   assert.equal(res.record.evidenceTier, 4); // strongest SUPPORTING source's tier
 });
 
+// ── #300 §E · approve-with-caveat ───────────────────────────────────────────────
+//
+// The defect these units close: a live Agnes run wrote 7 records with NO `caveat` key at all, so
+// the only way the pipeline could express "thin evidence" was the `uncertain` verdict — i.e. by
+// saying nothing on the card. The mechanical floor is unchanged (see the four `enforce:` rejection
+// units above, which still pass); what changed is that a limitation is now NAMED.
+
+/** A copy gate that accepts everything — the shared gate has its own unit in caveat.test.ts. */
+const ACCEPT_COPY = (): boolean => true;
+
+test('#300 §E: an APPROVED verdict on thin evidence carries a caveat naming the thin part', async () => {
+  const validate = await loadVerificationValidator();
+  const res = enforceVerification(parseVerifierResponse(reply({ verdict: 'partial' })), {
+    claim: makeClaim(), quoteCheck: QC, retrieval: RETRIEVED,
+    verifierModel: 'MOCK', promptVersion: 'v', verifiedAt: '2026-07-16T00:00:00Z',
+    validateVerification: validate, validateCopy: ACCEPT_COPY,
+  });
+  assert.ok(res.ok);
+  assert.equal(res.record.verdict, 'partial'); // approving, not a retreat to uncertain
+  assert.equal(res.record.corroboration.supporting, 1);
+  assert.equal(res.record.caveat, 'Only one other study backed this up.');
+});
+
+test('#300 §E: the verifier\'s OWN words are kept when they name the limitation that fired', async () => {
+  const validate = await loadVerificationValidator();
+  const own = 'Only one cross-sectional study backed this up.';
+  const res = enforceVerification(parseVerifierResponse(reply({ caveat: own })), {
+    claim: makeClaim(), quoteCheck: QC, retrieval: RETRIEVED,
+    verifierModel: 'MOCK', promptVersion: 'v', verifiedAt: '2026-07-16T00:00:00Z',
+    validateVerification: validate, validateCopy: ACCEPT_COPY,
+  });
+  assert.ok(res.ok);
+  assert.equal(res.record.caveat, own);
+});
+
+test('#300 §E: a caveat naming a limitation that did NOT fire is replaced, never emitted', async () => {
+  const validate = await loadVerificationValidator();
+  const res = enforceVerification(
+    parseVerifierResponse(reply({ caveat: 'The follow-up window was too short to be sure.' })),
+    {
+      claim: makeClaim(), quoteCheck: QC, retrieval: RETRIEVED,
+      verifierModel: 'MOCK', promptVersion: 'v', verifiedAt: '2026-07-16T00:00:00Z',
+      validateVerification: validate, validateCopy: ACCEPT_COPY,
+    },
+  );
+  assert.ok(res.ok);
+  // Follow-up length is not a check this pipeline runs, so that sentence is not evidence-backed.
+  assert.equal(res.record.caveat, 'Only one other study backed this up.');
+});
+
+test('#300 §E: a well-corroborated verdict emits caveat NULL — present as a key, empty of content', async () => {
+  const validate = await loadVerificationValidator();
+  const res = enforceVerification(
+    parseVerifierResponse(
+      reply({
+        sourceStances: [
+          { paperId: 'corpus:s1', stance: 'supports' },
+          { paperId: 'corpus:s2', stance: 'supports' },
+        ],
+        caveat: 'This looks solid to me.',
+      }),
+    ),
+    {
+      claim: makeClaim(), quoteCheck: QC, retrieval: RETRIEVED,
+      verifierModel: 'MOCK', promptVersion: 'v', verifiedAt: '2026-07-16T00:00:00Z',
+      validateVerification: validate, validateCopy: ACCEPT_COPY,
+    },
+  );
+  assert.ok(res.ok);
+  assert.equal(res.record.corroboration.supporting, 2);
+  // The key exists (so "predates caveats" stays distinguishable) but the model's reassurance is
+  // NOT carried through — nothing fired, so there is nothing to qualify.
+  assert.ok('caveat' in res.record);
+  assert.equal(res.record.caveat, null);
+});
+
+test('#300 §E: the caveat is inside the artifact content hash, not bolted on after it', async () => {
+  const validate = await loadVerificationValidator();
+  const ctx = {
+    claim: makeClaim(), quoteCheck: QC, retrieval: RETRIEVED,
+    verifierModel: 'MOCK', promptVersion: 'v', verifiedAt: '2026-07-16T00:00:00Z',
+    validateVerification: validate, validateCopy: ACCEPT_COPY, artifactRevision: 'rev-1',
+  };
+  const withOwnWords = enforceVerification(
+    parseVerifierResponse(reply({ caveat: 'Only one study of older adults backed this up.' })),
+    ctx,
+  );
+  const withDerived = enforceVerification(parseVerifierResponse(reply()), ctx);
+  assert.ok(withOwnWords.ok && withDerived.ok);
+  assert.notEqual(withOwnWords.record.caveat, withDerived.record.caveat);
+  assert.notEqual(
+    withOwnWords.record.artifact?.contentHash,
+    withDerived.record.artifact?.contentHash,
+    'a different caveat must produce a different content hash',
+  );
+});
+
+test('#300 §E: the prompt asks for approve-with-caveat and declares the caveat field', () => {
+  const { system, prompt } = buildVerifierPrompt(makeClaim(), []);
+  assert.match(system, /APPROVE WITH A CAVEAT/);
+  assert.match(system, /Never use "uncertain" merely because the support is thin/);
+  assert.match(system, /unsupported → the shown evidence does not address this claim/);
+  assert.match(system, /Do NOT\n\s*invent one/);
+  assert.match(prompt, /"caveat"/);
+});
+
 // ── verifyClaim orchestration ───────────────────────────────────────────────────
 
 test('verifyClaim --triage-only: returns the decision, no record, no LLM', async () => {
@@ -479,6 +585,9 @@ test('verifyClaim quoteCheck-only rung: uncertain record, no retrieval, no LLM',
   assert.equal(res.triage.mode, 'quoteCheck-only');
   assert.equal(res.record?.verdict, 'uncertain');
   assert.equal(res.record?.independentRetrieval.performed, false);
+  // #300 §E · the cheap rung is still an honest rung: the record says WHY it is uncertain
+  // instead of leaving a bare verdict for the reader to interpret.
+  assert.equal(res.record?.caveat, 'This has not been checked against other studies yet. This check was not conclusive.');
 });
 
 test('verifyClaim: a failing quoteCheck rejects without any LLM spend', async () => {
@@ -517,6 +626,40 @@ test('verifyClaim full end-to-end: mocked router → schema-valid supported veri
   assert.equal(res.record?.corroboration.supporting, 1);
   // The record round-trips through the REAL shared zod validator (already applied by enforce).
   assert.doesNotThrow(() => validate(res.record));
+  // #300 §E · end-to-end, through the REAL copy gate (no validateCopy injected here): one
+  // supporting source is thin, and the record says so.
+  assert.equal(res.record?.caveat, 'Only one other study backed this up.');
+});
+
+test('#300 §E: the unenforceable-reply FALLBACK still states its own limitation', async () => {
+  const validate = await loadVerificationValidator();
+  const res = await verifyClaim(makeClaim(), {
+    texts: texts(),
+    retrieve: { corpus: [corpusDoc()] },
+    // Unparseable every time → retries exhaust → the safe uncertain fallback (§A10 failure 7).
+    router: {
+      async route(): Promise<LlmResponse> {
+        return {
+          text: 'not json at all',
+          model: 'MOCK:mock-verifier (NOT a real verdict)',
+          modelIdentity: mockIdentity('MOCK:mock-verifier (NOT a real verdict)'),
+          route: 'api_worker',
+          usage: { inputTokens: 1, outputTokens: 1 },
+        };
+      },
+    },
+    validateVerification: validate,
+    now: () => Date.parse('2026-07-16T00:00:00.000Z'),
+  });
+  assert.equal(res.fallback, true);
+  assert.equal(res.record?.verdict, 'uncertain');
+  // Retrieval DID run and DID return a source — but nothing in the refused reply could mark it
+  // supporting, so the honest statement is "none of it backed this up", not "nothing was found".
+  assert.equal(res.record?.independentRetrieval.performed, true);
+  assert.equal(
+    res.record?.caveat,
+    'The other studies found did not back this up. This check was not conclusive.',
+  );
 });
 
 test('verifyClaim acceptance: valid adverse verdict returns once, without retry or uncertain fallback', async () => {
