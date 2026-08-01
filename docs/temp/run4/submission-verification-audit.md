@@ -1,10 +1,10 @@
 ---
 title: Hackathon submission evidence audit
-summary: Claim-by-claim evidence audit of the existing hackathon write-up and connection map; post-#300 synthesis is measured, but final narrative work remains blocked on verification, projection, and card evidence.
+summary: Claim-by-claim evidence audit of the hackathon write-up and connection map, with a 2026-08-01 measured-state block and a 2026-08-02 direct hosted read that together supersede the earlier point-in-time rows; verification has produced 14 edges of which 11 are servable, two rows and one defect finding are retracted as wrong, and the remaining blockers are the #277 model-claim quarantine and the absence of any card with producer='edge'.
 type: audit
 scope: run4
 status: draft
-updated: 2026-08-01
+updated: 2026-08-02
 ---
 
 # Hackathon submission evidence audit
@@ -136,9 +136,96 @@ GitHub; it has not.
 9. **P2 — historical docs:** do not use the Run 4 cockpit or older freshness audit as current status;
    consult the dedicated 2026-08-01 freshness sweep.
 
+## Measured state at 2026-08-01 (supersedes the point-in-time rows above)
+
+Every figure here was produced by reading a committed machine artifact or executing a tool in-session at
+`e0c6077`. Nothing in this block is carried forward from an earlier session's prose.
+
+| Fact | Measurement | Command / artifact |
+|---|---|---|
+| Corpus, per tier | **21,823 records = 20,912 `discovered` + 911 `fetched`**; all 911 fetched have extracted full text; **894 over 5,000 chars**, 768 over 20,000 | streamed `data/corpus/papers.jsonl` (60 MB) |
+| Manifest integrity | **21,827 physical lines for 21,824 logical records** — one record's title contains raw newlines and spans 4 lines, breaking the one-record-per-line invariant | same stream; 4 lines fail `JSON.parse` |
+| Synthesis output | **20 claims, 20 distinct `edgeId`s, 17 distinct source papers**; all `claimKind: correlational` | `data/corpus/edges/claims.jsonl` |
+| Claim provenance is mixed | 18 of 20 from `gpt-5-2025-08-07` / `synthesis-whole-paper-2026-08-01.2`; 1 from `gpt-5` on the older prompt; **1 from `claude-fable-5` dated 2026-07-16**. The artifact is not purely today's batch | same |
+| Blueprints | **12, every one `provenance.tier: "extracted"` with `citation.paperId` + locator**, over 11 distinct papers | `blueprints.jsonl` |
+| Yield | **0.30 blueprints/paper** (12 ÷ 40). The 3–5 design assumption is disproven by ~10× | ledger call count + blueprint count |
+| Verification (artifact, at `e0c6077`) | **7 Agnes records + 1 older interim placeholder.** All 7: `verdict: uncertain`, `independentRetrieval {performed: true, sources: []}`, `corroboration {0,0}`. Confidences 0.00–0.95. **Superseded:** this is the pre-#355 artifact state. The hosted result after #355 is 14 verifications, 11 servable, confidence 0.72–0.92 | `verifications.jsonl`; hosted read 2026-08-02 |
+| Verifier attestation | `attestedModel: agnes-2.5-flash`, `attested: true`. Model's own reasoning: *"Since no sources were retrieved, I must return 'uncertain'."* | `verification-raw.jsonl` |
+| ~~**Zero verified edges is derivable**~~ — **RETRACTED 2026-08-02** | This row asserted that `supported`/`partial` require `corroboration.supporting ≥ 1`, so zero verified edges followed by schema. **That rule no longer exists.** PR #355 removed it and bound the verdict to single-paper fidelity instead (`directionCheck.matchesClaim`). The hosted result is 14 verified edges, 11 servable. The retracted claim was drafted against `e0c6077`, which predates #355 | `shared/brain/relationships.schema.ts:236,245` at `origin/dev-phase2-run4`; hosted read 2026-08-02 |
+| Decorrelation | **`Decorrelation: OK — synthesis=openai, verifier=agnes (independent families enforced)`.** The TEST-MODE override block no longer exists in `tools/llm-router/src/` | executed `llm-router check-config` |
+| Spend, all time | **US$1.8040535 over 59 calls.** 2026-08-01: synthesis 40 calls US$1.58452 (≈US$0.0396/paper), verifier 10 calls **US$0**, seeder 2 calls US$0.0202325 | `data/llm-router/ledger.json` |
+| Agnes pricing | `inputUsdPerMTok: 0`, `outputUsdPerMTok: 0`, `billingMode: "free"`, **`expiresAt: 2026-08-08`** | `tools/llm-router/router.config.json` |
+| Free node bounding | Acceptance-only, append-only hash-chained attempt journal reserving every billable POST before dispatch, under a validated `AcceptanceAuthorization`. A USD cap cannot bound a zero-priced node | `tools/llm-router/src/attemptJournal.ts` |
+| Migrations | **44 `.sql` files**, `20260313_…` → `20260801091500_…` | `find supabase/migrations -maxdepth 1 -type f` |
+| Workflows | **6 files**: `brain-ingest`, `brain-pipeline`, `ci`, `model-inference`, `nao-d1-etl`, `run4-u6b-evidence` | `find .github/workflows -maxdepth 1 -type f` |
+| **Two workflows cannot be dispatched** | `brain-pipeline.yml` and `nao-d1-etl.yml` → **`HTTP 404: workflow not found on the default branch`**. `origin/main` carries only `ci.yml` + `brain-ingest.yml` | `gh run list --workflow=…`; `git ls-tree origin/main .github/workflows/` |
+| Attestation drift | **3 of 4 entrypoint hashes mismatch** (`generate-insights`, `evaluate-signals`, `run-pipeline`); `compute-baselines` matches | recomputed SHA-256 vs `supabase/deploy-attestation.json` |
+| nao surface | **7 sections** (`SubNav.tsx:11-27`); paper detail `notFound()`s on a null `getPaperMeta`; ingest badge is `paused ? 'PAUSED' : 'RUNNING'` over `DEFAULT_INGEST_CONTROL` (`types.ts:131-136`), returned *when no control document exists in R2* | source read |
+
+### Newly found defects
+
+1. **`log_completeness|confounds|anxiety_score` was emitted.** An app-internal bookkeeping metric no paper
+   can speak to. Filtered downstream; the synthesis gate should bar the key and does not.
+2. **The edge dedupe key is order-sensitive.** `stool_form|correlates|stool_count` *and*
+   `stool_count|correlates|stool_form` are both stored. For a symmetric relation these are one edge.
+3. **Contradictory relations on one pair are retained.** `sleep_duration_min`↔`resting_hr_bpm` appears as
+   `correlates`, `no_effect`, **and** `decreases`; `sleep_duration_min`↔`hrv_sdnn_ms` as both `correlates`
+   and `no_effect`. Reconciliation is the advertised job and is not happening.
+4. **`Manifest.upsert()` was O(n²)** — full 60 MB rewrite per record, ~21k times. Invisible at 1,232
+   records, dominant at 21,823. Patched with batched atomic checkpoints.
+5. **Verifier retrieval has no alias map.** Snake_case keys are split on underscores, so `resting_hr_bpm`
+   searches "resting"+"hr", never "heart rate". **This is the proximate cause of every zero above** — the
+   corroboration counts measure our lexical coverage, not the literature.
+6. ~~**The caveat sentences circulating as "real Agnes output" are template strings.**~~ **RETRACTED
+   2026-08-02 — this finding was wrong on the substance.** It concluded the caveats were unreachable
+   hardcoded strings. Two errors: (a) `chooseCaveat()` returns `source: 'model'` and keeps the model's own
+   prose whenever it passes the copy gate and names a limitation that actually fired, so a caveat is not
+   necessarily a template at all; (b) PR #355 added `citedPaperAssessed`, which opens the quality-of-backing
+   flags when the cited paper's quotes were shown — so population/direction/kind limitations surface **even
+   at zero corroboration**, which is exactly the reachability the finding denied. Live examples now stored
+   on `edge_verifications`: *"Only one source (S7) addresses both resting HR and anxiety, and its quoted
+   passages report that…"*; *"Only S4 supports the claim, and it studies GI-specific anxiety in IBS
+   patients…"*. These are quotable as real verifier output. **What survives:** derived template sentences
+   do exist and do get used when the model's phrasing is rejected, so a given caveat may be either — check
+   `source` before attributing wording to the model.
+
+### Could not verify
+
+- ~~**Hosted table counts.**~~ **RESOLVED 2026-08-02 — read directly from the hosted Supabase project**
+  (out of band; this worktree still has no link file or service credential, so the read is not reproducible
+  from the repo alone). The `0/0/0/0 + insight_cards 1` figures carried forward from #309 were stale:
+
+  | `relationship_claims` | `edge_verifications` | `verified_edges` | `insight_cards` | `composed_insights` |
+  |---|---|---|---|---|
+  | 14 | 14 | **14 — 11 servable** (8 `high`, 3 `mid`, 3 `hold`) | **45** — 43 `personal`, 2 `rules`, **0 `edge`** | populated |
+
+  Verdicts: 1 `supported`, 10 `partial`, 2 `uncertain`, 1 `unsupported`; confidence 0.72–0.92. The
+  projection workflow is still undispatchable, so CI did not produce this — a local run did.
+- **The "Agnes 18 of 50 calls" quota.** The ledger shows 10 Agnes calls; the plan quota is vendor-side and
+  unobservable here. Removed from the submission docs rather than restated.
+- **The nao test-suite count** (previously "327 tests"). Not re-run at this head, so the number was removed
+  rather than copied forward.
+
 ## Final rewrite gate
 
-The final narrative may begin only after #307 comments its remaining grounded verification,
-projection, and card result; #277 clears or excludes model claims; and every
-quantitative sentence is reproduced from the then-current integration head. Until then, the warning
-banners in the write-up and map are intentional controls.
+**Partially satisfied as of 2026-08-02.** The measurement precondition is met, and more strongly than the
+previous revision recorded: verification has run, produced 14 edges of which 11 are servable, and the hosted
+state has been read directly rather than inferred. Two conditions remain unmet:
+
+1. **#277 has not cleared or excluded model claims.** The drafts therefore *exclude* all support-model
+   training and evaluation figures rather than restate them in either direction. This also means the
+   owner's §8 runbook slide cannot name Zebra and Viceroy.
+2. **No card has been produced from an edge.** `insight_cards` has 45 rows and **0 with `producer='edge'`**.
+   The chain is real up to `verified_edges` and stops one step short. This is stated as a measured fact in
+   all three submission docs, not left as a placeholder.
+
+**A note on how this ledger got it wrong, since the failure is instructive.** The previous revision was
+drafted without database credentials and stated hosted state from a stale prior record while the pipeline
+was in fact running. It then reasoned *from* that stale zero to a stronger claim — "zero verified edges is
+derivable by schema" — using a contract rule that PR #355 had removed. An honest document that understates
+is still inaccurate, and a derivation is only as current as the code it cites. Two rows and one defect above
+are retracted on that basis.
+
+Quantitative sentences sourced from machine artifacts are reproduced from `e0c6077`; hosted counts are from
+a 2026-08-02 direct read; code references are against `origin/dev-phase2-run4`. The corpus is still growing,
+so its counts are timestamps: re-measure before any recording or submission.
