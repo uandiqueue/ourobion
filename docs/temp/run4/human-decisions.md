@@ -67,9 +67,46 @@ updated: 2026-07-28
 - Historical model-training bundles are already present on `dev-phase2-run4`; they remain separate,
   non-serving, and must not become a runtime dependency.
 
+## Hackathon MVP demo rehearsal — hosted demo project (2026-07-28)
+
+Jayden directed a hosted demo migration for the one-hour hackathon MVP run, via
+[`hack-mvp-prompt-cloud.md`](./hack-mvp-prompt-cloud.md). This is the "separate approval of named
+isolated rehearsal resources" that [`pending-build-register.md`](./pending-build-register.md) B-PL19
+requires, and it narrowly overrides the standing hosted-writes prohibition below, for this scope only.
+
+- **Named resource, and only this one:** demo project `bewwvcksgpxoomyjavjp`. The clean production
+  reserve `jscxvnettbvkboijczav` stays untouched.
+- **Approved scope:** apply the repo's append-only migrations; deploy edge functions; set function
+  secrets; load the brain serving projection from pinned R2 edge JSONL; seed one demo auth user with
+  simulated backdated history; invoke `compute-baselines` then `generate-insights`.
+- **Limits that still hold:** no real personal health rows (simulated only, kept flagged as
+  simulated); never weaken a cap, gate, test, scanner, RLS policy or assertion to make something work;
+  no live LLM/provider calls; `model-training/` untouched; no production-readiness or
+  scientific-validation claim.
+- **Demo rehearsal, not a release promotion.** It does not close B-PL19 and makes no O29 claim.
+  B-PL19's missing pieces — exact migration ledger, explicit release selector, immutable
+  namespace/manifest, checksummed promotion, target-load provenance, rollback, cross-environment
+  verdict policy — still do not exist.
+
+**Executed 2026-07-28, and the approval is now spent.** A first attempt from host `UaNdIQueue` was
+blocked by a network-level block on the Postgres wire protocol and wrote nothing. A later attempt the
+same day, from a host where that block was absent, ran end to end: 30 of 30 migrations, 26 base
+tables, 2 views, 4 app RPCs, 4 edge functions, the internal secret, demo auth user
+`demo@ourobion.com`, 8 rules, and 21 simulated days with derived baselines and one insight card.
+
+Two things stayed within scope but are worth reading before anyone treats this project as complete:
+the brain serving projection was **not** loaded (`relationship_claims` / `edge_verifications` are
+still 0 rows), and the rules loader ran with `sslmode=no-verify` because Supabase's published CA URL
+404s. No repo gate, cap, policy or assertion was weakened. Full measured before/after state,
+decisions and traps are in
+[`20260728T091140Z-…-hack-mvp-hosted-demo-executed.md`](../../sessions/20260728T091140Z-uandiqueue-claude-hack-mvp-hosted-demo-executed.md);
+the portable procedure is [`hosted-demo-migration-runbook.md`](./hosted-demo-migration-runbook.md).
+
 ## External actions not authorized
 
-- Hosted Supabase writes or demo-database promotion.
+- Hosted Supabase writes or demo-database promotion — **except** the narrowly scoped, named hackathon
+  demo rehearsal on `bewwvcksgpxoomyjavjp` recorded in the section above, which is now executed and
+  spent; it does not authorize any further hosted write.
 - Cloudflare/R2 writes, deployment, production traffic, hosting changes, or key rotation/mutation.
 - Model promotion or serving.
 - Scientific-validation, diagnostic, or production-readiness claims.
