@@ -391,3 +391,41 @@ test('#307: idconv batches respect IDCONV_BATCH_SIZE within each id type', () =>
   // pmid partition emitted before doi partition, deterministically.
   assert.equal(idConvTypeOf(batches[0]![0]!), 'pmid');
 });
+
+// ── #307 · the converter emits `pmid` as a JSON number ───────────────────────
+
+test('#307: recordToIdentifiers survives the unquoted numeric pmid the converter really sends', () => {
+  // This is the VERBATIM live payload for ids=29083192,31142281 (idtype=pmid), captured
+  // 2026-08-01. Note `"pmid":31142281` has no quotes while `doi`/`pmcid` do:
+  //   {"doi":"10.1186/s12864-019-5764-4","pmcid":"PMC6542083","pmid":31142281,
+  //    "requested-id":"31142281"}
+  // identity.ts's normalizers guard only `== null` and then call .trim(), so a number
+  // slipped through and threw `raw.trim is not a function` — which killed the whole
+  // ingest run at the crosswalk stage, AFTER discovery had already succeeded.
+  const ids = recordToIdentifiers({
+    doi: '10.1186/s12864-019-5764-4',
+    pmcid: 'PMC6542083',
+    pmid: 31142281,
+  });
+  assert.deepEqual(ids, {
+    doi: '10.1186/s12864-019-5764-4',
+    pmid: '31142281',
+    pmcid: 'PMC6542083',
+  });
+});
+
+test('#307: a numeric pmid is COERCED, not dropped — the crosswalk still gap-fills', () => {
+  // Regressing to a silent drop would be worse than the crash: the run would finish
+  // "successfully" having linked nothing. Assert the id is actually carried through.
+  const ids = recordToIdentifiers({ pmid: 29083192 });
+  assert.equal(ids?.pmid, '29083192', 'a number-typed pmid must survive as its digits');
+
+  // A per-record error still short-circuits ahead of any coercion.
+  assert.equal(
+    recordToIdentifiers({ pmid: 29083192, status: 'error', errmsg: 'Identifier not found in PMC' }),
+    null,
+  );
+  // Non-finite / empty values yield nothing rather than the string "NaN".
+  assert.equal(recordToIdentifiers({ pmid: Number.NaN }), null);
+  assert.equal(recordToIdentifiers({ pmid: '   ' }), null);
+});

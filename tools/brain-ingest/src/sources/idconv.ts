@@ -52,11 +52,20 @@ interface HttpStatusError extends Error {
   status: number;
 }
 
-/** One crosswalk record the converter returns (only the fields we read). */
+/**
+ * One crosswalk record the converter returns (only the fields we read).
+ *
+ * `pmid` is `number` on the wire. Measured against the live endpoint:
+ *   {"doi":"10.1186/s12864-019-5764-4","pmcid":"PMC6542083","pmid":31142281,"requested-id":"31142281"}
+ * — `doi`/`pmcid`/`requested-id` are quoted, `pmid` is NOT. `number` is therefore the
+ * observed shape, not a defensive guess. The other id fields are typed permissively
+ * because this is untrusted JSON and one unquoted field proves the envelope is not
+ * self-consistent; `asIdString` is what actually makes them safe to normalize.
+ */
 interface IdConvRecord {
-  pmcid?: string | null;
-  pmid?: string | null;
-  doi?: string | null;
+  pmcid?: string | number | null;
+  pmid?: string | number | null;
+  doi?: string | number | null;
   status?: string | null;
   errmsg?: string | null;
 }
@@ -105,12 +114,31 @@ export function collectQueryIds(records: PaperRecord[]): string[] {
  * per-record errors (`status:"error"` / `errmsg`). Returns `null` when nothing
  * usable is present.
  */
+/**
+ * Coerce one converter id field to the `string` the `identity.ts` normalizers require.
+ *
+ * Those normalizers are typed `string | undefined | null` and call `.trim()` after a bare
+ * `== null` check, so a JSON *number* slips past the guard and throws
+ * `raw.trim is not a function`. Coercing here — at the untrusted-JSON boundary — keeps the
+ * id rather than dropping it, and leaves the normalizers strict on purpose: a throw on a
+ * genuinely unexpected shape is louder than a silent id drop, so we do not want to widen
+ * them to swallow non-strings corpus-wide.
+ */
+function asIdString(v: string | number | null | undefined): string | undefined {
+  if (v == null) return undefined;
+  const s = typeof v === 'number' ? (Number.isFinite(v) ? String(v) : '') : v;
+  return s.trim() === '' ? undefined : s;
+}
+
 export function recordToIdentifiers(r: IdConvRecord): Identifiers | null {
   if ((r.status != null && r.status.toLowerCase() === 'error') || r.errmsg != null) return null;
   const raw: Identifiers = {};
-  if (r.doi != null && r.doi !== '') raw.doi = r.doi;
-  if (r.pmid != null && r.pmid !== '') raw.pmid = r.pmid;
-  if (r.pmcid != null && r.pmcid !== '') raw.pmcid = r.pmcid;
+  const doi = asIdString(r.doi);
+  if (doi !== undefined) raw.doi = doi;
+  const pmid = asIdString(r.pmid);
+  if (pmid !== undefined) raw.pmid = pmid;
+  const pmcid = asIdString(r.pmcid);
+  if (pmcid !== undefined) raw.pmcid = pmcid;
   const norm = normalizeIdentifiers(raw);
   return Object.keys(norm).length > 0 ? norm : null;
 }
