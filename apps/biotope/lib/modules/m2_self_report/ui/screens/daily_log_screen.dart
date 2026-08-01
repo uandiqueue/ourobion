@@ -13,6 +13,7 @@ import 'symptom_flags_screen.dart';
 import 'urine_color_screen.dart';
 import 'stool_form_screen.dart';
 import '../widgets/likert_check_in_card.dart';
+import '../widgets/quick_count_control.dart';
 
 // Urine swatch colors — mirrors urine_color_screen.dart
 const _kUrineColors = [
@@ -27,21 +28,48 @@ const _kUrineColors = [
 ];
 
 const _kUrineLabels = [
-  'Very pale', 'Pale yellow', 'Yellow', 'Dark yellow',
-  'Amber', 'Dark amber', 'Orange-brown', 'Dark brown',
+  'Very pale',
+  'Pale yellow',
+  'Yellow',
+  'Dark yellow',
+  'Amber',
+  'Dark amber',
+  'Orange-brown',
+  'Dark brown',
 ];
 
 const _kStoolLabels = [
-  'Separate lumps', 'Lumpy sausage', 'Cracked sausage', 'Smooth sausage',
-  'Soft blobs', 'Fluffy pieces', 'Watery',
+  'Separate lumps',
+  'Lumpy sausage',
+  'Cracked sausage',
+  'Smooth sausage',
+  'Soft blobs',
+  'Fluffy pieces',
+  'Watery',
 ];
 
 const _kDayNames = [
-  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
 ];
 const _kMonthNames = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 class DailyLogScreen extends StatefulWidget {
@@ -78,22 +106,22 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
   // Pure logic lives in impl/normaliser.dart; weights are sourced from the
   // metrics registry (shared/metrics/registry.ts). See kDailyCoreDqsWeights.
   int get _dqs => computeDqs({
-        'urine_colour': _urineColour,
-        'stool_form': _stoolForm,
-        'outside_meals': _outsideMeals,
-        'mosquito_bites': _mosquitoBites,
-        'energy_score': _energy,
-        'mood_score': _mood,
-        'gut_comfort_score': _gutComfort,
-      });
+    'urine_colour': _urineColour,
+    'stool_form': _stoolForm,
+    'outside_meals': _outsideMeals,
+    'mosquito_bites': _mosquitoBites,
+    'energy_score': _energy,
+    'mood_score': _mood,
+    'gut_comfort_score': _gutComfort,
+  });
 
   bool get _hasWellbeingCheckIn => hasWellbeingCheckInValues(
-        appetite: _appetite,
-        anxiety: _anxiety,
-        brainClarity: _brainClarity,
-        focus: _focus,
-        socialInteractionQuality: _socialInteractionQuality,
-      );
+    appetite: _appetite,
+    anxiety: _anxiety,
+    brainClarity: _brainClarity,
+    focus: _focus,
+    socialInteractionQuality: _socialInteractionQuality,
+  );
 
   bool get _canSave =>
       canSaveDailyLog(dqs: _dqs, hasWellbeingCheckIn: _hasWellbeingCheckIn);
@@ -101,8 +129,8 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
   String get _saveCtaLabel => _dqs > 0
       ? 'Save log · $_dqs pts →'
       : _hasWellbeingCheckIn
-          ? 'Save optional check-in →'
-          : 'Save log →';
+      ? 'Save optional check-in →'
+      : 'Save log →';
 
   Color get _dqsColor {
     final pts = _dqs;
@@ -135,8 +163,9 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
 
     final rowFuture = DailyLogService(client).getTodayLog(userId, date);
     final courseFuture = AntibioticService(client).getActiveCourse(userId);
-    final lastStandingWaterFuture =
-        StandingWaterService(client).getLastAnsweredDate(userId);
+    final lastStandingWaterFuture = StandingWaterService(
+      client,
+    ).getLastAnsweredDate(userId);
     WearableService(client).syncToday(userId).ignore();
     final row = await rowFuture;
     final course = await courseFuture;
@@ -146,16 +175,18 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
     setState(() {
       _isInitialLoading = false;
       _activeCourse = course;
-      _standingWaterPromptDue =
-          isStandingWaterPromptDue(lastStandingWaterCheck, DateTime.now());
+      _standingWaterPromptDue = isStandingWaterPromptDue(
+        lastStandingWaterCheck,
+        DateTime.now(),
+      );
       if (row != null) {
         _urineColour = row['urine_colour'] as int?;
-        _stoolForm   = row['stool_form'] as int?;
-        _stoolCount  = row['stool_count'] as int?;
-        _outsideMeals  = row['outside_meals'] as int?;
+        _stoolForm = row['stool_form'] as int?;
+        _stoolCount = row['stool_count'] as int?;
+        _outsideMeals = row['outside_meals'] as int?;
         _mosquitoBites = row['mosquito_bites'] as int?;
-        _energy     = row['energy_score'] as int?;
-        _mood       = row['mood_score'] as int?;
+        _energy = row['energy_score'] as int?;
+        _mood = row['mood_score'] as int?;
         _gutComfort = row['gut_comfort_score'] as int?;
         _appetite = row['appetite_score'] as int?;
         _anxiety = row['anxiety_score'] as int?;
@@ -163,9 +194,11 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
         _focus = row['focus_score'] as int?;
         _socialInteractionQuality =
             row['social_interaction_quality_score'] as int?;
-        _symptomFlags = (row['symptom_flags'] as List<dynamic>?)
-            ?.map((e) => e as String)
-            .toList() ?? [];
+        _symptomFlags =
+            (row['symptom_flags'] as List<dynamic>?)
+                ?.map((e) => e as String)
+                .toList() ??
+            [];
         _notesCtrl.text = row['notes'] as String? ?? '';
         _standingWaterPresent = row['standing_water_present'] as bool?;
       }
@@ -181,14 +214,18 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
   // ── Navigation ─────────────────────────────────────────────────
   Future<void> _openUrine() async {
     final result = await Navigator.of(context).push<int?>(
-      MaterialPageRoute(builder: (_) => UrineColorScreen(initialValue: _urineColour)),
+      MaterialPageRoute(
+        builder: (_) => UrineColorScreen(initialValue: _urineColour),
+      ),
     );
     if (result != null) setState(() => _urineColour = result);
   }
 
   Future<void> _openStool() async {
     final result = await Navigator.of(context).push<int?>(
-      MaterialPageRoute(builder: (_) => StoolFormScreen(initialValue: _stoolForm)),
+      MaterialPageRoute(
+        builder: (_) => StoolFormScreen(initialValue: _stoolForm),
+      ),
     );
     if (result != null) setState(() => _stoolForm = result);
   }
@@ -203,13 +240,14 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
   }
 
   Future<void> _openAntibiotics() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const AntibioticCourseScreen()),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const AntibioticCourseScreen()));
     if (!mounted) return;
     final client = Supabase.instance.client;
-    final course = await AntibioticService(client)
-        .getActiveCourse(client.auth.currentUser!.id);
+    final course = await AntibioticService(
+      client,
+    ).getActiveCourse(client.auth.currentUser!.id);
     if (!mounted) return;
     setState(() => _activeCourse = course);
   }
@@ -243,17 +281,24 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
           logCompleteness: _dqs.toDouble(),
         ),
       );
-      await EngagementService(client).updateOnLogWrite(userId, _logDate, _dqs.toDouble());
+      await EngagementService(
+        client,
+      ).updateOnLogWrite(userId, _logDate, _dqs.toDouble());
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             _dqs > 0 ? 'Log saved — $_dqs pts' : 'Optional check-in saved',
-            style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: Colors.white),
+            style: GoogleFonts.manrope(
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
           ),
           backgroundColor: OurobionColors.primary,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -295,16 +340,20 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
                         Text(
                           'DAILY LOG',
                           style: GoogleFonts.manrope(
-                            fontSize: 10, fontWeight: FontWeight.w700,
-                            letterSpacing: 1.6, color: OurobionColors.primary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.6,
+                            color: OurobionColors.primary,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           _todayLabel,
                           style: GoogleFonts.manrope(
-                            fontSize: 20, fontWeight: FontWeight.w600,
-                            letterSpacing: -0.2, color: OurobionColors.onSurface,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.2,
+                            color: OurobionColors.onSurface,
                           ),
                         ),
                       ],
@@ -328,217 +377,226 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
               child: _isInitialLoading
                   ? const Center(child: CircularProgressIndicator())
                   : SingleChildScrollView(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // ── GUT SIGNALS ──────────────────────────────
+                          const _SectionLabel('GUT SIGNALS'),
 
-                    // ── GUT SIGNALS ──────────────────────────────
-                    const _SectionLabel('GUT SIGNALS'),
+                          _NavigatorCard(
+                            icon: Icons.water_drop_outlined,
+                            label: 'Urine colour',
+                            valueWidget: _urineColour != null
+                                ? Row(
+                                    children: [
+                                      Container(
+                                        width: 14,
+                                        height: 14,
+                                        decoration: BoxDecoration(
+                                          color:
+                                              _kUrineColors[_urineColour! - 1],
+                                          borderRadius: BorderRadius.circular(
+                                            3,
+                                          ),
+                                          border: Border.all(
+                                            color:
+                                                OurobionColors.outlineVariant,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        _kUrineLabels[_urineColour! - 1],
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: OurobionColors.onSurface,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : null,
+                            onTap: _openUrine,
+                          ),
 
-                    _NavigatorCard(
-                      icon: Icons.water_drop_outlined,
-                      label: 'Urine colour',
-                      valueWidget: _urineColour != null
-                          ? Row(children: [
-                              Container(
-                                width: 14,
-                                height: 14,
-                                decoration: BoxDecoration(
-                                  color: _kUrineColors[_urineColour! - 1],
-                                  borderRadius: BorderRadius.circular(3),
-                                  border: Border.all(color: OurobionColors.outlineVariant),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                _kUrineLabels[_urineColour! - 1],
-                                style: GoogleFonts.manrope(
-                                  fontSize: 12, fontWeight: FontWeight.w600,
-                                  color: OurobionColors.onSurface,
-                                ),
-                              ),
-                            ])
-                          : null,
-                      onTap: _openUrine,
-                    ),
+                          _NavigatorCard(
+                            icon: Icons.bar_chart_rounded,
+                            label: 'Stool form',
+                            valueWidget: _stoolForm != null
+                                ? Text(
+                                    'Type $_stoolForm — ${_kStoolLabels[_stoolForm! - 1]}',
+                                    style: GoogleFonts.manrope(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: OurobionColors.onSurface,
+                                    ),
+                                  )
+                                : null,
+                            onTap: _openStool,
+                          ),
 
-                    _NavigatorCard(
-                      icon: Icons.bar_chart_rounded,
-                      label: 'Stool form',
-                      valueWidget: _stoolForm != null
-                          ? Text(
-                              'Type $_stoolForm — ${_kStoolLabels[_stoolForm! - 1]}',
-                              style: GoogleFonts.manrope(
-                                fontSize: 12, fontWeight: FontWeight.w600,
-                                color: OurobionColors.onSurface,
-                              ),
-                            )
-                          : null,
-                      onTap: _openStool,
-                    ),
+                          _QuickCountCard(
+                            icon: Icons.format_list_numbered_rounded,
+                            label: 'Stool count',
+                            metricKey: 'stool_count',
+                            value: _stoolCount,
+                            onChanged: (v) => setState(() => _stoolCount = v),
+                          ),
 
-                    _StepperCard(
-                      icon: Icons.format_list_numbered_rounded,
-                      label: 'Stool count',
-                      value: _stoolCount,
-                      max: 10,
-                      onChanged: (v) => setState(() => _stoolCount = v),
-                    ),
+                          // ── BEHAVIOUR ────────────────────────────────
+                          const _SectionLabel('BEHAVIOUR'),
 
-                    // ── BEHAVIOUR ────────────────────────────────
-                    const _SectionLabel('BEHAVIOUR'),
+                          _QuickCountCard(
+                            icon: Icons.restaurant_rounded,
+                            label: 'Outside meals',
+                            metricKey: 'outside_meals',
+                            value: _outsideMeals,
+                            onChanged: (v) => setState(() => _outsideMeals = v),
+                          ),
 
-                    _SegmentCard(
-                      icon: Icons.restaurant_rounded,
-                      label: 'Outside meals',
-                      options: const [0, 1, 2, 3],
-                      value: _outsideMeals,
-                      onChanged: (v) => setState(
-                        () => _outsideMeals = _outsideMeals == v ? null : v,
+                          _QuickCountCard(
+                            icon: Icons.pest_control_rounded,
+                            label: 'Mosquito bites',
+                            metricKey: 'mosquito_bites',
+                            value: _mosquitoBites,
+                            onChanged: (v) =>
+                                setState(() => _mosquitoBites = v),
+                          ),
+
+                          if (_standingWaterPromptDue)
+                            _YesNoCard(
+                              icon: Icons.water_outlined,
+                              label: 'Standing water nearby',
+                              sublabel:
+                                  'Weekly check — buckets, trays, blocked drains',
+                              value: _standingWaterPresent,
+                              onChanged: (v) =>
+                                  setState(() => _standingWaterPresent = v),
+                            ),
+
+                          _NavigatorCard(
+                            icon: Icons.warning_amber_rounded,
+                            label: 'Symptom signals',
+                            valueWidget: _symptomFlags.isNotEmpty
+                                ? Text(
+                                    '${_symptomFlags.length} signal${_symptomFlags.length == 1 ? '' : 's'} noted',
+                                    style: GoogleFonts.manrope(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: OurobionColors.onSurface,
+                                    ),
+                                  )
+                                : null,
+                            onTap: _openSymptomFlags,
+                          ),
+
+                          // ── DAILY CHECK-IN ────────────────────────────
+                          const _SectionLabel('DAILY CHECK-IN'),
+
+                          _LikertCard(
+                            icon: Icons.bolt_rounded,
+                            label: 'Energy',
+                            lowLabel: 'Drained',
+                            highLabel: 'Energised',
+                            value: _energy,
+                            onChanged: (v) => setState(
+                              () => _energy = _energy == v ? null : v,
+                            ),
+                          ),
+
+                          _LikertCard(
+                            icon: Icons.sentiment_satisfied_alt_outlined,
+                            label: 'Mood',
+                            lowLabel: 'Low',
+                            highLabel: 'Great',
+                            value: _mood,
+                            onChanged: (v) =>
+                                setState(() => _mood = _mood == v ? null : v),
+                          ),
+
+                          _LikertCard(
+                            icon: Icons.favorite_border_rounded,
+                            label: 'Gut comfort',
+                            lowLabel: 'Uncomfortable',
+                            highLabel: 'Comfortable',
+                            value: _gutComfort,
+                            onChanged: (v) => setState(
+                              () => _gutComfort = _gutComfort == v ? null : v,
+                            ),
+                          ),
+
+                          const _SectionLabel('WELLBEING CHECK-IN (OPTIONAL)'),
+                          LikertCheckInCard(
+                            icon: Icons.restaurant_outlined,
+                            label: 'Appetite',
+                            lowLabel: 'Less appetite',
+                            highLabel: 'More appetite',
+                            value: _appetite,
+                            onChanged: (v) => setState(
+                              () => _appetite = _appetite == v ? null : v,
+                            ),
+                          ),
+                          LikertCheckInCard(
+                            icon: Icons.self_improvement_outlined,
+                            label: 'Feeling anxious',
+                            lowLabel: 'Not at all',
+                            highLabel: 'Very',
+                            value: _anxiety,
+                            onChanged: (v) => setState(
+                              () => _anxiety = _anxiety == v ? null : v,
+                            ),
+                          ),
+                          LikertCheckInCard(
+                            icon: Icons.visibility_outlined,
+                            label: 'Mental clarity',
+                            lowLabel: 'Foggy',
+                            highLabel: 'Clear',
+                            value: _brainClarity,
+                            onChanged: (v) => setState(
+                              () =>
+                                  _brainClarity = _brainClarity == v ? null : v,
+                            ),
+                          ),
+                          LikertCheckInCard(
+                            icon: Icons.center_focus_strong_outlined,
+                            label: 'Focus',
+                            lowLabel: 'Hard to focus',
+                            highLabel: 'Easy to focus',
+                            value: _focus,
+                            onChanged: (v) =>
+                                setState(() => _focus = _focus == v ? null : v),
+                          ),
+                          LikertCheckInCard(
+                            icon: Icons.people_outline_rounded,
+                            label: 'Social interaction quality',
+                            lowLabel: 'Unsatisfying',
+                            highLabel: 'Satisfying',
+                            value: _socialInteractionQuality,
+                            onChanged: (v) => setState(
+                              () => _socialInteractionQuality =
+                                  _socialInteractionQuality == v ? null : v,
+                            ),
+                          ),
+
+                          // ── NOTES ────────────────────────────────────
+                          const _SectionLabel('NOTES'),
+                          _NotesCard(controller: _notesCtrl),
+
+                          // ── MEDICATIONS ──────────────────────────────
+                          const _SectionLabel('MEDICATIONS'),
+                          if (_activeCourse != null)
+                            _ActiveCourseCard(course: _activeCourse!),
+                          _NavigatorCard(
+                            icon: Icons.medication_rounded,
+                            label: 'Antibiotic course',
+                            onTap: _openAntibiotics,
+                          ),
+
+                          const SizedBox(height: 8),
+                        ],
                       ),
                     ),
-
-                    _StepperCard(
-                      icon: Icons.pest_control_rounded,
-                      label: 'Mosquito bites',
-                      value: _mosquitoBites,
-                      max: 20,
-                      onChanged: (v) => setState(() => _mosquitoBites = v),
-                    ),
-
-                    if (_standingWaterPromptDue)
-                      _YesNoCard(
-                        icon: Icons.water_outlined,
-                        label: 'Standing water nearby',
-                        sublabel: 'Weekly check — buckets, trays, blocked drains',
-                        value: _standingWaterPresent,
-                        onChanged: (v) => setState(() => _standingWaterPresent = v),
-                      ),
-
-                    _NavigatorCard(
-                      icon: Icons.warning_amber_rounded,
-                      label: 'Symptom signals',
-                      valueWidget: _symptomFlags.isNotEmpty
-                          ? Text(
-                              '${_symptomFlags.length} signal${_symptomFlags.length == 1 ? '' : 's'} noted',
-                              style: GoogleFonts.manrope(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: OurobionColors.onSurface,
-                              ),
-                            )
-                          : null,
-                      onTap: _openSymptomFlags,
-                    ),
-
-                    // ── DAILY CHECK-IN ────────────────────────────
-                    const _SectionLabel('DAILY CHECK-IN'),
-
-                    _LikertCard(
-                      icon: Icons.bolt_rounded,
-                      label: 'Energy',
-                      lowLabel: 'Drained',
-                      highLabel: 'Energised',
-                      value: _energy,
-                      onChanged: (v) => setState(
-                        () => _energy = _energy == v ? null : v,
-                      ),
-                    ),
-
-                    _LikertCard(
-                      icon: Icons.sentiment_satisfied_alt_outlined,
-                      label: 'Mood',
-                      lowLabel: 'Low',
-                      highLabel: 'Great',
-                      value: _mood,
-                      onChanged: (v) => setState(
-                        () => _mood = _mood == v ? null : v,
-                      ),
-                    ),
-
-                    _LikertCard(
-                      icon: Icons.favorite_border_rounded,
-                      label: 'Gut comfort',
-                      lowLabel: 'Uncomfortable',
-                      highLabel: 'Comfortable',
-                      value: _gutComfort,
-                      onChanged: (v) => setState(
-                        () => _gutComfort = _gutComfort == v ? null : v,
-                      ),
-                    ),
-
-                    const _SectionLabel('WELLBEING CHECK-IN (OPTIONAL)'),
-                    LikertCheckInCard(
-                      icon: Icons.restaurant_outlined,
-                      label: 'Appetite',
-                      lowLabel: 'Less appetite',
-                      highLabel: 'More appetite',
-                      value: _appetite,
-                      onChanged: (v) => setState(
-                        () => _appetite = _appetite == v ? null : v,
-                      ),
-                    ),
-                    LikertCheckInCard(
-                      icon: Icons.self_improvement_outlined,
-                      label: 'Feeling anxious',
-                      lowLabel: 'Not at all',
-                      highLabel: 'Very',
-                      value: _anxiety,
-                      onChanged: (v) => setState(
-                        () => _anxiety = _anxiety == v ? null : v,
-                      ),
-                    ),
-                    LikertCheckInCard(
-                      icon: Icons.visibility_outlined,
-                      label: 'Mental clarity',
-                      lowLabel: 'Foggy',
-                      highLabel: 'Clear',
-                      value: _brainClarity,
-                      onChanged: (v) => setState(
-                        () => _brainClarity = _brainClarity == v ? null : v,
-                      ),
-                    ),
-                    LikertCheckInCard(
-                      icon: Icons.center_focus_strong_outlined,
-                      label: 'Focus',
-                      lowLabel: 'Hard to focus',
-                      highLabel: 'Easy to focus',
-                      value: _focus,
-                      onChanged: (v) => setState(
-                        () => _focus = _focus == v ? null : v,
-                      ),
-                    ),
-                    LikertCheckInCard(
-                      icon: Icons.people_outline_rounded,
-                      label: 'Social interaction quality',
-                      lowLabel: 'Unsatisfying',
-                      highLabel: 'Satisfying',
-                      value: _socialInteractionQuality,
-                      onChanged: (v) => setState(
-                        () => _socialInteractionQuality =
-                            _socialInteractionQuality == v ? null : v,
-                      ),
-                    ),
-
-                    // ── NOTES ────────────────────────────────────
-                    const _SectionLabel('NOTES'),
-                    _NotesCard(controller: _notesCtrl),
-
-                    // ── MEDICATIONS ──────────────────────────────
-                    const _SectionLabel('MEDICATIONS'),
-                    if (_activeCourse != null)
-                      _ActiveCourseCard(course: _activeCourse!),
-                    _NavigatorCard(
-                      icon: Icons.medication_rounded,
-                      label: 'Antibiotic course',
-                      onTap: _openAntibiotics,
-                    ),
-
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              ),
             ),
 
             // ── Save CTA ─────────────────────────────────────────
@@ -586,7 +644,9 @@ class _DqsBadge extends StatelessWidget {
       child: Text(
         '$pts pts',
         style: GoogleFonts.manrope(
-          fontSize: 12, fontWeight: FontWeight.w700, color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: color,
         ),
       ),
     );
@@ -616,8 +676,10 @@ class _ProgressCard extends StatelessWidget {
               Text(
                 'LOG COMPLETENESS',
                 style: GoogleFonts.manrope(
-                  fontSize: 10, fontWeight: FontWeight.w700,
-                  letterSpacing: 1.4, color: OurobionColors.onSurfaceVariant,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.4,
+                  color: OurobionColors.onSurfaceVariant,
                 ),
               ),
               AnimatedSwitcher(
@@ -626,7 +688,9 @@ class _ProgressCard extends StatelessWidget {
                   pts >= 60 ? 'Streak-worthy ✓' : '$pts / 100',
                   key: ValueKey(pts >= 60),
                   style: GoogleFonts.manrope(
-                    fontSize: 11, fontWeight: FontWeight.w700, color: color,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: color,
                   ),
                 ),
               ),
@@ -664,8 +728,10 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         label,
         style: GoogleFonts.manrope(
-          fontSize: 10, fontWeight: FontWeight.w700,
-          letterSpacing: 1.6, color: OurobionColors.primary,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.6,
+          color: OurobionColors.primary,
         ),
       ),
     );
@@ -698,13 +764,18 @@ class _NavigatorCard extends StatelessWidget {
           color: OurobionColors.surfaceLowest,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: logged ? OurobionColors.primaryContainer : OurobionColors.outlineVariant,
+            color: logged
+                ? OurobionColors.primaryContainer
+                : OurobionColors.outlineVariant,
           ),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 18,
-                color: logged ? OurobionColors.primary : OurobionColors.outline),
+            Icon(
+              icon,
+              size: 18,
+              color: logged ? OurobionColors.primary : OurobionColors.outline,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -713,7 +784,8 @@ class _NavigatorCard extends StatelessWidget {
                   Text(
                     label,
                     style: GoogleFonts.manrope(
-                      fontSize: 13, fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
                       color: OurobionColors.onSurface,
                     ),
                   ),
@@ -725,7 +797,8 @@ class _NavigatorCard extends StatelessWidget {
                     Text(
                       'Tap to log',
                       style: GoogleFonts.manrope(
-                        fontSize: 11, color: OurobionColors.outline,
+                        fontSize: 11,
+                        color: OurobionColors.outline,
                       ),
                     ),
                   ],
@@ -735,7 +808,9 @@ class _NavigatorCard extends StatelessWidget {
             Icon(
               logged ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
               size: 20,
-              color: logged ? OurobionColors.primary : OurobionColors.outlineVariant,
+              color: logged
+                  ? OurobionColors.primary
+                  : OurobionColors.outlineVariant,
             ),
           ],
         ),
@@ -744,18 +819,18 @@ class _NavigatorCard extends StatelessWidget {
   }
 }
 
-class _StepperCard extends StatelessWidget {
+class _QuickCountCard extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String metricKey;
   final int? value;
-  final int max;
   final ValueChanged<int?> onChanged;
 
-  const _StepperCard({
+  const _QuickCountCard({
     required this.icon,
     required this.label,
+    required this.metricKey,
     required this.value,
-    required this.max,
     required this.onChanged,
   });
 
@@ -770,173 +845,38 @@ class _StepperCard extends StatelessWidget {
         color: OurobionColors.surfaceLowest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: logged ? OurobionColors.primaryContainer : OurobionColors.outlineVariant,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 18,
-              color: logged ? OurobionColors.primary : OurobionColors.outline),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              style: GoogleFonts.manrope(
-                fontSize: 13, fontWeight: FontWeight.w600,
-                color: OurobionColors.onSurface,
-              ),
-            ),
-          ),
-          // −
-          _StepBtn(
-            icon: Icons.remove_rounded,
-            onTap: logged
-                ? (value! > 0
-                    ? () => onChanged(value! - 1)
-                    : () => onChanged(null))
-                : null,
-          ),
-          SizedBox(
-            width: 40,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 150),
-              child: Text(
-                logged ? '$value' : '—',
-                key: ValueKey(value),
-                textAlign: TextAlign.center,
-                style: GoogleFonts.manrope(
-                  fontSize: 16, fontWeight: FontWeight.w700,
-                  color: logged
-                      ? OurobionColors.onSurface
-                      : OurobionColors.outlineVariant,
-                ),
-              ),
-            ),
-          ),
-          // +
-          _StepBtn(
-            icon: Icons.add_rounded,
-            onTap: !logged
-                ? () => onChanged(1)
-                : (value! < max ? () => onChanged(value! + 1) : null),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StepBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback? onTap;
-  const _StepBtn({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: enabled
-              ? OurobionColors.surfaceContainer
-              : OurobionColors.surfaceLow,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(
-          icon,
-          size: 16,
-          color: enabled
-              ? OurobionColors.onSurface
+          color: logged
+              ? OurobionColors.primaryContainer
               : OurobionColors.outlineVariant,
-        ),
-      ),
-    );
-  }
-}
-
-class _SegmentCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final List<int> options;
-  final int? value;
-  final ValueChanged<int> onChanged;
-
-  const _SegmentCard({
-    required this.icon,
-    required this.label,
-    required this.options,
-    required this.value,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final logged = value != null;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: OurobionColors.surfaceLowest,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: logged ? OurobionColors.primaryContainer : OurobionColors.outlineVariant,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            Icon(icon, size: 18,
-                color: logged ? OurobionColors.primary : OurobionColors.outline),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: GoogleFonts.manrope(
-                fontSize: 13, fontWeight: FontWeight.w600,
-                color: OurobionColors.onSurface,
-              ),
-            ),
-          ]),
-          const SizedBox(height: 10),
           Row(
-            children: List.generate(options.length, (i) {
-              final opt = options[i];
-              final isSelected = value == opt;
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () => onChanged(opt),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    margin: EdgeInsets.only(
-                      right: i < options.length - 1 ? 6 : 0,
-                    ),
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? OurobionColors.primary
-                          : OurobionColors.surfaceContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '$opt',
-                        style: GoogleFonts.manrope(
-                          fontSize: 14, fontWeight: FontWeight.w700,
-                          color: isSelected
-                              ? OurobionColors.onPrimary
-                              : OurobionColors.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ),
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: logged ? OurobionColors.primary : OurobionColors.outline,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                label,
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: OurobionColors.onSurface,
                 ),
-              );
-            }),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          QuickCountControl(
+            metricKey: metricKey,
+            value: value,
+            allowClear: true,
+            onChanged: onChanged,
           ),
         ],
       ),
@@ -970,37 +910,46 @@ class _YesNoCard extends StatelessWidget {
         color: OurobionColors.surfaceLowest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: logged ? OurobionColors.primaryContainer : OurobionColors.outlineVariant,
+          color: logged
+              ? OurobionColors.primaryContainer
+              : OurobionColors.outlineVariant,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            Icon(icon, size: 18,
-                color: logged ? OurobionColors.primary : OurobionColors.outline),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: GoogleFonts.manrope(
-                      fontSize: 13, fontWeight: FontWeight.w600,
-                      color: OurobionColors.onSurface,
-                    ),
-                  ),
-                  Text(
-                    sublabel,
-                    style: GoogleFonts.manrope(
-                      fontSize: 11, color: OurobionColors.outline,
-                    ),
-                  ),
-                ],
+          Row(
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: logged ? OurobionColors.primary : OurobionColors.outline,
               ),
-            ),
-          ]),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.manrope(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: OurobionColors.onSurface,
+                      ),
+                    ),
+                    Text(
+                      sublabel,
+                      style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        color: OurobionColors.outline,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 10),
           Row(
             children: [
@@ -1021,7 +970,8 @@ class _YesNoCard extends StatelessWidget {
                       child: Text(
                         'No',
                         style: GoogleFonts.manrope(
-                          fontSize: 14, fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
                           color: value == false
                               ? OurobionColors.onPrimary
                               : OurobionColors.onSurfaceVariant,
@@ -1047,7 +997,8 @@ class _YesNoCard extends StatelessWidget {
                       child: Text(
                         'Yes',
                         style: GoogleFonts.manrope(
-                          fontSize: 14, fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
                           color: value == true
                               ? OurobionColors.onPrimary
                               : OurobionColors.onSurfaceVariant,
@@ -1093,24 +1044,32 @@ class _LikertCard extends StatelessWidget {
         color: OurobionColors.surfaceLowest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: logged ? OurobionColors.primaryContainer : OurobionColors.outlineVariant,
+          color: logged
+              ? OurobionColors.primaryContainer
+              : OurobionColors.outlineVariant,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            Icon(icon, size: 18,
-                color: logged ? OurobionColors.primary : OurobionColors.outline),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: GoogleFonts.manrope(
-                fontSize: 13, fontWeight: FontWeight.w600,
-                color: OurobionColors.onSurface,
+          Row(
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: logged ? OurobionColors.primary : OurobionColors.outline,
               ),
-            ),
-          ]),
+              const SizedBox(width: 12),
+              Text(
+                label,
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: OurobionColors.onSurface,
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 10),
           Row(
             children: List.generate(5, (i) {
@@ -1133,7 +1092,8 @@ class _LikertCard extends StatelessWidget {
                       child: Text(
                         '$val',
                         style: GoogleFonts.manrope(
-                          fontSize: 14, fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
                           color: isSelected
                               ? OurobionColors.onPrimary
                               : OurobionColors.onSurfaceVariant,
@@ -1149,12 +1109,20 @@ class _LikertCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(lowLabel, style: GoogleFonts.manrope(
-                fontSize: 10, color: OurobionColors.outline,
-              )),
-              Text(highLabel, style: GoogleFonts.manrope(
-                fontSize: 10, color: OurobionColors.outline,
-              )),
+              Text(
+                lowLabel,
+                style: GoogleFonts.manrope(
+                  fontSize: 10,
+                  color: OurobionColors.outline,
+                ),
+              ),
+              Text(
+                highLabel,
+                style: GoogleFonts.manrope(
+                  fontSize: 10,
+                  color: OurobionColors.outline,
+                ),
+              ),
             ],
           ),
         ],
@@ -1184,7 +1152,11 @@ class _ActiveCourseCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.medication_rounded, size: 18, color: OurobionColors.primary),
+          const Icon(
+            Icons.medication_rounded,
+            size: 18,
+            color: OurobionColors.primary,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -1193,7 +1165,8 @@ class _ActiveCourseCard extends StatelessWidget {
                 Text(
                   course.drugName,
                   style: GoogleFonts.manrope(
-                    fontSize: 13, fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                     color: OurobionColors.onSurface,
                   ),
                 ),
@@ -1201,7 +1174,8 @@ class _ActiveCourseCard extends StatelessWidget {
                 Text(
                   'Day $dayOf of ${course.durationDays} · $daysLeft day${daysLeft == 1 ? '' : 's'} remaining',
                   style: GoogleFonts.manrope(
-                    fontSize: 11, color: OurobionColors.primary,
+                    fontSize: 11,
+                    color: OurobionColors.primary,
                   ),
                 ),
               ],
@@ -1216,8 +1190,10 @@ class _ActiveCourseCard extends StatelessWidget {
             child: Text(
               'ACTIVE',
               style: GoogleFonts.manrope(
-                fontSize: 9, fontWeight: FontWeight.w700,
-                letterSpacing: 1.2, color: OurobionColors.primary,
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+                color: OurobionColors.primary,
               ),
             ),
           ),
@@ -1275,7 +1251,8 @@ class _NotesCardState extends State<_NotesCard> {
             maxLines: 3,
             minLines: 1,
             style: GoogleFonts.manrope(
-              fontSize: 14, fontWeight: FontWeight.w400,
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
             ),
             decoration: InputDecoration(
               hintText: 'Anything unusual today? (optional)',
@@ -1291,7 +1268,8 @@ class _NotesCardState extends State<_NotesCard> {
             child: Text(
               '$len / 140',
               style: GoogleFonts.manrope(
-                fontSize: 10, fontWeight: FontWeight.w600,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
                 color: len > 120
                     ? Theme.of(context).colorScheme.error
                     : OurobionColors.outline,

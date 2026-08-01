@@ -12,7 +12,7 @@ import 'normaliser.dart';
 const Map<String, List<int>> kInlineAnswerableOptions = {
   'urine_colour': [1, 2, 3, 4, 5, 6, 7, 8],
   'stool_form': [1, 2, 3, 4, 5, 6, 7],
-  'outside_meals': [0, 1, 2, 3],
+  'outside_meals': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
   'mosquito_bites': [
     0,
     1,

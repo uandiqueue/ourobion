@@ -1,11 +1,13 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ourobion_metrics/ourobion_metrics.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/theme.dart';
+import '../../../m2_self_report/index.dart';
 import '../../index.dart';
 
 /// User-facing copy for the trend section. Public so the copy gate test can
@@ -380,23 +382,11 @@ class TrendChartPainter extends CustomPainter {
     final scale = trendAxisBounds(metricKey, values, ticks);
 
     // Tick labels first — their width fixes the plot area's left edge.
-    final labels = <TextPainter>[];
-    var labelWidth = 0.0;
-    for (final t in ticks) {
-      final tp = TextPainter(
-        text: TextSpan(
-          text: trendAxisLabel(metricKey, t),
-          style: GoogleFonts.manrope(
-            fontSize: 9,
-            fontWeight: FontWeight.w600,
-            color: OurobionColors.outline,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      labels.add(tp);
-      labelWidth = math.max(labelWidth, tp.width);
-    }
+    final labels = _buildTickVisuals(metricKey, ticks);
+    final labelWidth = labels.fold<double>(
+      0,
+      (width, label) => math.max(width, label.width),
+    );
 
     final plotLeft = labelWidth + 8;
     final plotRight = size.width - 4;
@@ -418,7 +408,7 @@ class TrendChartPainter extends CustomPainter {
     for (var i = 0; i < ticks.length; i++) {
       final y = yFor(ticks[i]);
       canvas.drawLine(Offset(plotLeft, y), Offset(plotRight, y), grid);
-      labels[i].paint(canvas, Offset(0, y - labels[i].height / 2));
+      labels[i].paint(canvas, y);
     }
 
     // Polyline.
@@ -444,7 +434,127 @@ class TrendChartPainter extends CustomPainter {
   }
 
   @override
+  SemanticsBuilderCallback get semanticsBuilder => (size) {
+    if (points.isEmpty) return const <CustomPainterSemantics>[];
+    final values = [for (final point in points) point.value];
+    final ticks = trendAxisTicks(metricKey, values);
+    final scale = trendAxisBounds(metricKey, values, ticks);
+    final labels = _buildTickVisuals(metricKey, ticks);
+    final labelWidth = labels.fold<double>(
+      0,
+      (width, label) => math.max(width, label.width),
+    );
+    final plotLeft = labelWidth + 8;
+    const plotTop = 6.0;
+    final plotBottom = size.height - 6;
+    if (size.width - 4 <= plotLeft || plotBottom <= plotTop) {
+      return const <CustomPainterSemantics>[];
+    }
+    double yFor(double value) =>
+        plotBottom - normalizeValue(value, scale) * (plotBottom - plotTop);
+    return [
+      for (var index = 0; index < ticks.length; index++)
+        CustomPainterSemantics(
+          rect: Rect.fromLTWH(
+            0,
+            math.max(0, yFor(ticks[index]) - 12),
+            labelWidth,
+            24,
+          ),
+          properties: SemanticsProperties(
+            label: labels[index].semanticLabel,
+            textDirection: TextDirection.ltr,
+          ),
+        ),
+    ];
+  };
+
+  @override
+  bool shouldRebuildSemantics(TrendChartPainter oldDelegate) =>
+      shouldRepaint(oldDelegate);
+  @override
   bool shouldRepaint(TrendChartPainter oldDelegate) =>
       oldDelegate.metricKey != metricKey ||
       !identical(oldDelegate.points, points);
+}
+
+List<_TrendTickVisual> _buildTickVisuals(
+  String metricKey,
+  List<double> ticks,
+) => [
+  for (final tick in ticks) _TrendTickVisual(metricKey: metricKey, tick: tick),
+];
+
+class _TrendTickVisual {
+  final String metricKey;
+  final double tick;
+  late final TextPainter text = TextPainter(
+    text: TextSpan(
+      text: trendAxisLabel(metricKey, tick),
+      style: GoogleFonts.manrope(
+        fontSize: 9,
+        fontWeight: FontWeight.w600,
+        color: OurobionColors.outline,
+      ),
+    ),
+    textDirection: TextDirection.ltr,
+  )..layout();
+
+  _TrendTickVisual({required this.metricKey, required this.tick});
+
+  int? get scaleValue {
+    final rounded = tick.round();
+    return (tick - rounded).abs() < 1e-9 &&
+            isDailyScaleValue(metricKey, rounded)
+        ? rounded
+        : null;
+  }
+
+  String? get inputType => metricByKey(metricKey)?.ui?.inputType;
+
+  double get glyphWidth {
+    if (scaleValue == null) return 0;
+    return switch (inputType) {
+      'armstrong_1_8' => 11,
+      'bristol_1_7' => 22,
+      _ => 0,
+    };
+  }
+
+  double get width => text.width + (glyphWidth == 0 ? 0 : glyphWidth + 4);
+
+  String get semanticLabel => scaleValue == null
+      ? trendAxisLabel(metricKey, tick)
+      : dailyScaleSemanticLabel(metricKey, scaleValue!)!;
+
+  void paint(Canvas canvas, double centerY) {
+    final value = scaleValue;
+    if (value == null) {
+      text.paint(canvas, Offset(0, centerY - text.height / 2));
+      return;
+    }
+    if (inputType == 'armstrong_1_8') {
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(0, centerY - 5.5, 11, 11),
+        const Radius.circular(3),
+      );
+      canvas.drawRRect(rect, Paint()..color = kArmstrongColors[value - 1]);
+      canvas.drawRRect(
+        rect,
+        Paint()
+          ..color = OurobionColors.outlineVariant
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.8,
+      );
+    } else if (inputType == 'bristol_1_7') {
+      canvas.save();
+      canvas.translate(0, centerY - 7);
+      ScaledBristolShapePainter(
+        type: value,
+        color: OurobionColors.primary,
+      ).paint(canvas, const Size(22, 14));
+      canvas.restore();
+    }
+    text.paint(canvas, Offset(glyphWidth + 4, centerY - text.height / 2));
+  }
 }
