@@ -1,6 +1,6 @@
 ---
 title: Brain-ingest seed coverage audit (issue #297)
-summary: Audits seed-query generation against all 24 active metrics, finds only two scientifically useful generated pairs, and hands Session A a reviewed 22-topic expansion decision without editing seeds or running ingestion.
+summary: Audits all 24 active metrics against the implemented 33-topic balanced seed pool and three remaining metric-pair candidates; a repaired bounded-ingestion probe is in flight and measured corpus coverage remains outstanding.
 type: audit
 scope: run4
 status: accepted
@@ -9,120 +9,96 @@ updated: 2026-08-01
 
 # Brain-ingest seed coverage audit (issue #297)
 
-This is an audit and decision record only. It performs no provider call, ingestion, seed edit, R2
-write, database write, or deployment. Evidence was collected at
-`253e0ad6db31bb2a134e47546ddaba84bf284639` and rechecked after Session A landed at
-`dea055c8155c1e9c6851931f4de9816a88d66b2d`, then rerun at post-#300 head
-`abcba95f8386d31c49f62f20f4b623de180e29c0`; the candidate set did not change.
+This docs session performed no provider call, ingestion, seed edit, R2 write, database write, or
+deployment. The initial audit used `253e0ad6db31bb2a134e47546ddaba84bf284639`; the current-state
+rerun uses integration head `d97a686e461ab0aa265d11f733d724c87ea8415c`, after the balanced seed
+pool, scientific-discovery exclusion, identifier conversion fixes, and D1 projection workflow landed.
 
-## What `seed-queries` actually covers
+## Current `seed-queries` surface
 
-The candidate builder in
-[`tools/brain-ingest/src/seeder/candidates.ts`](../../../tools/brain-ingest/src/seeder/candidates.ts)
-enumerates only registry `derivedFrom` pairs, pairs co-named by a rule blueprint, and six static
-topics. Running it with the real registry and blueprints produced:
+Running `npx tsx src/cli.ts seed-queries --candidates-only` in `tools/brain-ingest` produced:
 
 ```text
-topics: 6 static + 0 db (db seeds unavailable — static only)
-candidates: 16 (derivedFrom=8 rule_blueprint=2 static_topic=6)
+brain-ingest db-seeds: boundary not configured ... STATIC only
+topics: 33 static + 0 db
+candidates: 36 (derivedFrom=1 rule_blueprint=2 static_topic=33)
 ```
 
-That is ten metric-pair candidates plus six domain anchors. The result agrees with the real-data
-assertion in [`tools/brain-ingest/tests/seeder.test.ts`](../../../tools/brain-ingest/tests/seeder.test.ts).
-No `data/corpus/seed-queries.json` exists at the refreshed head. Neither the ingestion workflow nor
-the new [brain pipeline](../../../.github/workflows/brain-pipeline.yml) runs `seed-queries`, so cloud
-execution cannot silently fill this gap. Ingest therefore falls back to the static/manual seed path
-unless a reviewed artifact is generated separately.
+No `data/corpus/seed-queries.json` exists at this head. Neither the ingestion workflow nor
+[`brain-pipeline.yml`](../../../.github/workflows/brain-pipeline.yml) runs `seed-queries`, so the
+implemented static pool is the current reviewed discovery input; an agentic query artifact still
+requires a separate generation-and-inspection step.
 
-## All generated metric pairs
+## Remaining generated metric pairs
+
+[`buildCandidates`](../../../tools/brain-ingest/src/seeder/candidates.ts) now excludes `notes` and
+`log_completeness` on either side of both deterministic pair sources. That removes seven
+`log_completeness` pairs which asked the literature about the product's own completeness graph.
 
 | Pair | Source | Coverage judgment |
 |---|---|---|
-| `stool_variability` ↔ `stool_form` | `derivedFrom` | Deterministic product derivation, not itself a scientific relationship to retrieve. |
-| `log_completeness` ↔ `urine_colour` | `derivedFrom` | Product completeness math; should not become a literature edge. |
-| `log_completeness` ↔ `stool_form` | `derivedFrom` | Product completeness math; should not become a literature edge. |
-| `log_completeness` ↔ `outside_meals` | `derivedFrom` | Product completeness math; should not become a literature edge. |
-| `log_completeness` ↔ `mosquito_bites` | `derivedFrom` | Product completeness math; should not become a literature edge. |
-| `log_completeness` ↔ `energy_score` | `derivedFrom` | Product completeness math; should not become a literature edge. |
-| `log_completeness` ↔ `mood_score` | `derivedFrom` | Product completeness math; should not become a literature edge. |
-| `log_completeness` ↔ `gut_comfort_score` | `derivedFrom` | Product completeness math; should not become a literature edge. |
-| `gut_comfort_score` ↔ `mood_score` | `rule_blueprint` | Scientifically plausible topic, but current microbiome-heavy corpus and generic vocabulary did not yield a surviving pre-#300 claim. Needs instrument-aware retrieval terms; whole-paper synthesis does not repair corpus coverage. |
-| `hrv_sdnn_ms` ↔ `sleep_duration_min` | `rule_blueprint` | Plausible direct literature target and the strongest current generated metric pair. |
+| `stool_variability` ↔ `stool_form` | `derivedFrom` | A product derivation as well as a scientifically recognizable bowel-pattern pair; do not treat the derivation alone as evidence. |
+| `gut_comfort_score` ↔ `mood_score` | `rule_blueprint` | A plausible gut-brain target. The pre-#300 zero-claim runs show that broad microbiome papers did not evidence these subjective endpoints. |
+| `hrv_sdnn_ms` ↔ `sleep_duration_min` | `rule_blueprint` | A plausible direct literature target. |
 
-Eight of ten pairs are therefore implementation/provenance relationships, not useful discovery
-questions. Candidate count is not coverage.
+Candidate count is still not a corpus-coverage result: 33 candidates are topic anchors without a
+metric pair, and the three pairs above arise from product metadata rather than a measured gap report.
 
-## Active-metric coverage
+## Implemented 33-topic pool
 
-The active registry was loaded from [`shared/metrics/registry.ts`](../../../shared/metrics/registry.ts)
-and filtered by `status === 'active'` → **24 metrics**.
+PR #323 retained the six original domains and added 27 family-balanced topics, including five
+relation seeds. The exact current pool is:
 
-| Coverage class | Active metrics | Reason |
-|---|---|---|
-| Plausible direct current anchor | `urine_colour`, `mosquito_bites`, `standing_water_present`, `resting_hr_bpm`, `hrv_sdnn_ms`, `sleep_duration_min` | Hydration, dengue/vector, and sleep/HRV anchors can name these concepts without inventing a symptom instrument. This is retrieval plausibility, not proof of corpus support. |
-| Weak or indirect current anchor | `stool_form`, `stool_count`, `stool_variability`, `outside_meals`, `energy_score`, `mood_score`, `gut_comfort_score`, `appetite_score`, `anxiety_score`, `brain_clarity_score`, `focus_score`, `social_interaction_quality_score`, `symptom_flags`, `spo2_pct`, `body_temp_c`, `step_count` | A general gut-microbiome or health anchor is too broad to guarantee the instrument, construct, population, or pair. The current corpus is microbiome-heavy and lacks an established subjective-symptom instrument layer. |
-| Do not seed as a scientific variable | `notes`, `log_completeness` | Free text and product completeness metadata are not literature endpoints. Their product semantics should stay outside relationship discovery. |
+```text
+gut_microbiome, hydration, antibiotics, sleep_hrv, dengue_vector, environmental_health,
+bristol_stool_form_scale, ibs_sss, gsrs, bowel_symptom_diary, gut_brain_axis,
+heart_rate_variability_stress, resting_heart_rate_recovery, sleep_duration_daytime_function,
+sleep_quality_actigraphy, physical_activity_step_count, circadian_body_temperature,
+mood_affect_daily_diary, anxiety_daily_functioning, cognitive_clarity_attention,
+focus_attention_sleep, social_connection_wellbeing, energy_fatigue_daily,
+mosquito_exposure_behaviour, standing_water_breeding_sites, vector_borne_environmental_risk,
+hydration_urine_colour_status, dietary_pattern_daily_wellbeing,
+sleep_hrv_recovery_relation, anxiety_autonomic_relation, activity_mood_relation,
+hydration_cognition_relation, vector_environment_relation
+```
 
-The direct class is only a query-plausibility judgment. This audit does **not** assert that the
-1,298-paper corpus contains usable evidence for those metrics; that requires a reproducible
-metric-to-paper coverage report after the seed expansion and bounded ingestion.
+The `topicTags` in [`seeds.ts`](../../../tools/brain-ingest/src/seeds.ts) map these topics to **20 of
+21 seedable active metrics** across all five families. `spo2_pct` is deliberately unseeded because a
+broad query would pull diagnostic literature; `body_temp_c` is limited to circadian variation.
+`notes` and `log_completeness` remain registered product metrics but are excluded from scientific
+discovery. The balanced-pool test fails if a family is unseeded or gut topics become a majority.
 
-## Vocabulary gap
+## What this does and does not prove
 
-The current prompt may ask an LLM for synonyms and MeSH terms, but the generator can only expand the
-candidates it receives. It cannot cover omitted metrics or distinguish product-derived pairs from
-scientific relationships. Candidate vocabulary for the next reviewed design includes **IBS-SSS,
-GSRS, Bristol Stool Form Scale, bowel diary, PHQ-9, GAD-7, and HADS**. These are vocabulary candidates,
-not adopted measures or product claims.
+The original six-topic pool was structurally insufficient. That implementation gap is now closed:
+the static pool exceeds the issue's ≥20-topic execution target, is balanced across metric families,
+and prevents app-measuring metrics from reappearing as discovery subjects.
 
-## Reviewed topic expansion for Session A
+The first discovery pass also produced a useful, bounded seeding-doctrine result: relation topics led
+the metadata yields (`activity_mood_relation` **213**, `vector_environment_relation` **170**), above
+every gut instrument (`ibs_sss` 146, `gsrs` 124, `bristol_stool_form_scale` 123). Pair-focused queries
+were more findable in this pass than single-instrument queries. These are discovery counts, not proof
+of full-text availability, evidence quality, or a relationship.
 
-`seed-queries` is **not suitable on its own**: eight of its ten pairs describe product derivation,
-and six broad anchors do not cover the subjective instruments or several active endpoints. The
-following 22-topic pool is the #297 decision handed to Session A for its separate implementation and
-bounded-ingestion session. Slugs are proposed data identifiers, not new product metrics.
+Landing code did **not** change the corpus by itself. A subsequent discovery pass raised the remote
+manifest from 1,298 to 6,158 records, but its mixed PMID/PMCID converter batches failed 138/138 times;
+the synthesisable corpus stayed at 756 fetched records and 739 with full text longer than 5,000
+characters. PR #327 fixed mixed identifier batching and numeric-PMID coercion. At this audit's close,
+#307 is running a sequential 10-paper-per-seed probe and explicitly measuring `fetched` and >5k text,
+not metadata count. There is still no durable post-expansion metric-to-paper coverage artifact, and
+the current `seed-queries.json` absence means agentic candidate phrasing has not been reviewed.
 
-| Proposed topic | Query focus | Active coverage intent |
-|---|---|---|
-| `gut_microbiome` | gut microbiome human health | retain existing broad anchor |
-| `hydration` | hydration water intake urine colour physiology | `urine_colour` |
-| `antibiotics` | antibiotics microbiome recovery | corpus balance / context |
-| `sleep_hrv` | sleep duration HRV SDNN resting heart rate | `sleep_duration_min`, `hrv_sdnn_ms`, `resting_hr_bpm` |
-| `dengue_vector` | Aedes bites standing water dengue exposure | `mosquito_bites`, `standing_water_present` |
-| `environmental_health` | environmental and heat exposure health | environmental context, `body_temp_c` scope screening |
-| `bristol_stool_form_scale` | Bristol Stool Form Scale validation | `stool_form` |
-| `bowel_movement_frequency` | bowel movement frequency diary | `stool_count` |
-| `bowel_habit_variability` | day-to-day bowel habit variability | `stool_variability` |
-| `ibs_sss` | IBS Severity Scoring System abdominal pain bloating bowel habit | `gut_comfort_score`, `symptom_flags` |
-| `gsrs` | Gastrointestinal Symptom Rating Scale | `gut_comfort_score`, `symptom_flags` |
-| `bowel_symptom_diary` | bowel symptom diary validation | stool metrics, `symptom_flags` |
-| `gut_brain_axis` | gastrointestinal symptoms mood gut-brain axis | `gut_comfort_score`, `mood_score` |
-| `phq9_gastrointestinal` | PHQ-9 depressive symptoms gastrointestinal | `mood_score`, `energy_score` |
-| `gad7_gastrointestinal` | GAD-7 anxiety gastrointestinal symptoms | `anxiety_score`, `gut_comfort_score` |
-| `hads_gastrointestinal` | HADS anxiety depression gastrointestinal | `anxiety_score`, `mood_score`, gut comfort |
-| `appetite_gut_symptoms` | appetite change gastrointestinal symptoms | `appetite_score` |
-| `fatigue_energy_gut` | fatigue energy gastrointestinal symptoms | `energy_score` |
-| `cognitive_function_gut_brain` | cognition focus brain fog gut-brain | `brain_clarity_score`, `focus_score` |
-| `social_functioning_gut_symptoms` | social functioning gastrointestinal symptom burden | `social_interaction_quality_score` |
-| `food_away_from_home_diet` | food away from home diet quality gastrointestinal | `outside_meals` as context, not a causal endpoint |
-| `physical_activity_gut_mood` | step count physical activity gut symptoms mood | `step_count`, mood/gut pairs |
+## Decision and remaining execution
 
-`notes` and `log_completeness` stay excluded. `spo2_pct` and standalone `body_temp_c` need a narrower
-product/research question before receiving dedicated seeds; broad medical queries would invite
-diagnostic literature unrelated to Ourobion's descriptive scope.
+1. Make no seed or ingestion change in this docs session; PRs #323 and #324 own the implementation.
+2. Treat the earlier 22-topic proposal as superseded by the implemented 33-topic balanced pool.
+3. Generate and inspect `seed-queries.json` before using agentic queries; deterministic exclusions
+   must remain in code, not depend on deleting an artifact.
+4. Let #307 complete and validate its bounded post-fix probe before authorizing the larger pass, then
+   publish a reproducible per-family metric-to-paper coverage artifact. Missing metrics and intended
+   pairs must be explicit.
+5. Re-screen synthesis candidates after ingestion; do not reuse the pre-expansion candidate count or
+   the earlier US$6–10 projection without measurement.
 
-## Decision
-
-1. Do **not** edit `seeds.ts` or add static seeds in this session.
-2. #300 has landed. Session A may now implement the reviewed topic pool and bounded ingestion as its
-   MVP goal 1; this docs session still makes no seed edit, provider call, or ingestion run.
-3. Separate product-derivation pairs from scientific candidate pairs, add instrument-aware vocabulary
-   as versioned seed data, generate `seed-queries.json`, and inspect it before ingest.
-4. Require a coverage artifact over all active metrics and intended insight pairs. Missing metrics
-   must be explicit; a total candidate count is not an adequacy result.
-5. Keep `notes` and `log_completeness` out of scientific discovery unless a later design records a
-   concrete, reviewed reason.
-
-Issue #297 is therefore an audit decision, not an execution request: the current seeder is
-structurally insufficient for the active registry, and the 22-topic handoff above is ready for
-Session A's separately authorized execution.
+Issue #297's audit and seed-design decision are therefore resolved at the implementation layer. The
+remaining ingestion and measured-coverage work belongs to #307's separately authorized flow run.

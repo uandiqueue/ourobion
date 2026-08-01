@@ -61,7 +61,7 @@ The complete live snapshot, check counts, dependencies, and required order are i
 | [`provider-e2e-status.md`](./provider-e2e-status.md) | Issue-189 provider spend, full canonical extraction plus passage synthesis, matched health data, generated cards, Android render evidence, and blockers |
 | [`product-envelope-deviation-264.md`](./product-envelope-deviation-264.md) | Issue-264 owner-approved product-envelope deviation: exact whole-product union measurement, why the per-unit gate stays 115/8,500 fail-closed, and why a per-unit pass is not a product-cap pass |
 | [`per-unit-release-base-290.md`](./per-unit-release-base-290.md) | Exact issue-290/PR-296 per-unit base advance, local-only attestation posture, and point-in-time product measurements |
-| [`seed-coverage-audit-297.md`](./seed-coverage-audit-297.md) | Issue-297 audit of all active metrics and generated seed-query pairs; records why execution waits for #300 |
+| [`seed-coverage-audit-297.md`](./seed-coverage-audit-297.md) | Issue-297 current-state audit of all active metrics, the implemented 33-topic balanced pool, and the remaining bounded-ingestion/coverage work |
 | [`submission-verification-audit.md`](./submission-verification-audit.md) | Submission claim/evidence ledger and blocking defect list; explicitly not final narrative prose |
 | [`documentation-freshness-audit-2026-08-01.md`](./documentation-freshness-audit-2026-08-01.md) | Cross-doc stale/mixed-state sweep for submission and brain-path records; report-only, no mass rewrite |
 | [`run4-deferrals.md`](./run4-deferrals.md) | Explicit "not done and why" record for #222 (metric collector families), #283 (biotope web hosting), and #275 (nao synthesis/verification operator UI) |
