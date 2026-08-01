@@ -491,3 +491,59 @@ export async function getPaperRow(
   const res = await db(injectedDb).prepare(sql).bind(uid).first<PaperRowRaw>();
   return res === null ? null : mapRow(res);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Detail-row read (the paper-detail fallback)
+//
+// The paper-detail page reads the full PaperRecord from the R2 corpus object.
+// When that object is not reachable (the local `next dev` R2 simulator holds no
+// objects — see apps/nao/README.md), the page falls back to this row so a paper
+// the index demonstrably lists does not answer with a bare 404. It selects four
+// columns `PAPER_COLUMNS` omits, which the detail page renders but the list does
+// not; PAPER_COLUMNS and the search path are deliberately left untouched.
+//
+// This row is STRICTLY thinner than the corpus object — nine rendered fields have
+// no column in `papers` at all (see D1_UNAVAILABLE_FIELDS in lib/paperDetail.ts).
+// Callers MUST label the difference; that is why this is a separate type.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** `PaperRow` plus the four detail-only columns. */
+export interface PaperDetailRow extends PaperRow {
+  fullTextCharCount: number | null;
+  storageKind: string | null;
+  storageSizeBytes: number | null;
+  fetchedAt: string | null;
+}
+
+interface PaperDetailRowRaw extends PaperRowRaw {
+  full_text_char_count: number | null;
+  storage_kind: string | null;
+  storage_size_bytes: number | null;
+  fetched_at: string | null;
+}
+
+const PAPER_DETAIL_COLUMNS = `
+  ${PAPER_COLUMNS.trim()},
+  p.full_text_char_count, p.storage_kind, p.storage_size_bytes, p.fetched_at
+`;
+
+/**
+ * Fetch the widened detail row by paperUid (parameterized). Null when absent —
+ * which, unlike an unreachable corpus object, genuinely means the index has no
+ * such paper and a 404 is the honest answer.
+ */
+export async function getPaperDetailRow(
+  uid: string,
+  injectedDb?: D1Database,
+): Promise<PaperDetailRow | null> {
+  const sql = `SELECT ${PAPER_DETAIL_COLUMNS} FROM papers p WHERE p.paper_uid = ? LIMIT 1`;
+  const res = await db(injectedDb).prepare(sql).bind(uid).first<PaperDetailRowRaw>();
+  if (res === null) return null;
+  return {
+    ...mapRow(res),
+    fullTextCharCount: res.full_text_char_count,
+    storageKind: res.storage_kind,
+    storageSizeBytes: res.storage_size_bytes,
+    fetchedAt: res.fetched_at,
+  };
+}

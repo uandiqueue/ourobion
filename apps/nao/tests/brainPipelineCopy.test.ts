@@ -14,6 +14,15 @@ const COPY_FILES = [
   'src/components/SubNav.tsx',
 ] as const;
 
+// The other two surfaces whose copy changed when the hardcoded budget literals
+// and the paper-detail 404 were replaced. Both now carry provenance sentences
+// that a viewer reads, so they belong under the same gate.
+const PROVENANCE_COPY_FILES = [
+  'src/components/ModelsPanel.tsx',
+  'src/app/(app)/paper/[uid]/page.tsx',
+  'src/lib/paperDetail.ts',
+] as const;
+
 function literalCopy(relativePath: string): string[] {
   const sourceText = readFileSync(path.join(NAO_ROOT, relativePath), 'utf8');
   const source = ts.createSourceFile(
@@ -39,8 +48,8 @@ function literalCopy(relativePath: string): string[] {
   return values;
 }
 
-test('every literal on the brain-pipeline surface passes the non-diagnostic copy gate', () => {
-  for (const relativePath of COPY_FILES) {
+function assertCopyGate(files: readonly string[]): void {
+  for (const relativePath of files) {
     for (const value of literalCopy(relativePath)) {
       assert.equal(
         validateCopyString(value),
@@ -49,4 +58,12 @@ test('every literal on the brain-pipeline surface passes the non-diagnostic copy
       );
     }
   }
+}
+
+test('every literal on the brain-pipeline surface passes the non-diagnostic copy gate', () => {
+  assertCopyGate(COPY_FILES);
+});
+
+test('the spend and paper-detail provenance copy passes the non-diagnostic gate', () => {
+  assertCopyGate(PROVENANCE_COPY_FILES);
 });

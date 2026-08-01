@@ -11,8 +11,10 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
   effectiveCap,
+  hasUnpricedCalls,
   isHardStopped,
   isStale,
+  rollupByProvider,
   spendFraction,
   type CapOverrideRow,
   type LlmRouterNode,
@@ -20,12 +22,10 @@ import {
   type ModelStatusRow,
 } from '@/lib/modelsControl';
 
-// RUN budget context (labelled constants, NOT read from the boundary): the Phase-2
-// Run 2.0 caps set by Jayden — see docs/temp/run2/orchestration-log.md
-// "Budget" (20 SGD total OpenAI; 2 SGD Anthropic, verifier-decorrelation only).
-// The per-day USD caps below live in router.config.json; these run caps frame them.
-const RUN_CAP_SGD_OPENAI = 20;
-const RUN_CAP_SGD_ANTHROPIC = 2;
+// Provider budget context is DERIVED from the published rows (rollupByProvider),
+// never carried as a constant here. This panel previously hardcoded two run-2 SGD
+// run ceilings that no code path measured and that named a provider the router no
+// longer routes to; they read as governance telemetry and are gone.
 
 interface ModelsState {
   today: string;
@@ -143,18 +143,27 @@ export function ModelsPanel() {
     const o = overrideByNode.get(s.node);
     const dayCap = effectiveCap(s.per_day_usd_cap, o?.per_day_usd_cap);
     const runCap = effectiveCap(s.per_run_token_cap, o?.per_run_token_cap);
-    const usdToday = spendByNode.get(s.node)?.usd ?? 0;
+    const spendRow = spendByNode.get(s.node);
+    const usdToday = spendRow?.usd ?? 0;
+    const callsToday = spendRow?.calls ?? 0;
     return {
       status: s,
       dayCap,
       runCap,
       usdToday,
+      callsToday,
+      // Recorded work at US$0.00 — a real state, not a gap. Rendering this row as
+      // plain "OK / 0.00%" would read as unused headroom.
+      unpriced: hasUnpricedCalls(callsToday, usdToday),
       fraction: spendFraction(usdToday, dayCap.value),
       hardStopped: isHardStopped(usdToday, dayCap.value, s.hard_stop_fraction),
     };
   });
   const totalUsdToday = rows.reduce((sum, r) => sum + r.usdToday, 0);
   const totalDayCap = rows.reduce((sum, r) => sum + r.dayCap.value, 0);
+  const totalCallsToday = rows.reduce((sum, r) => sum + r.callsToday, 0);
+  const providers = rollupByProvider(data.status, data.spend, data.overrides);
+  const unpricedNodes = rows.filter((r) => r.unpriced).map((r) => r.status.node);
 
   return (
     <div className="ingest-grid">
@@ -181,6 +190,7 @@ export function ModelsPanel() {
                 <th>Max out</th>
                 <th>Day cap (US$)</th>
                 <th>Run cap (tok)</th>
+                <th>Calls today</th>
                 <th>Today US$</th>
                 <th>% of cap</th>
                 <th>Status</th>
@@ -201,13 +211,16 @@ export function ModelsPanel() {
                     {r.runCap.value}
                     {r.runCap.overridden ? <span className="models-override"> (override)</span> : null}
                   </td>
+                  <td>{r.callsToday}</td>
                   <td>{r.usdToday.toFixed(8)}</td>
-                  <td>{(r.fraction * 100).toFixed(2)}%</td>
+                  <td>{r.unpriced ? 'n/a' : `${(r.fraction * 100).toFixed(2)}%`}</td>
                   <td>
                     {r.hardStopped ? (
                       <span className="ingest-pause__badge ingest-pause__badge--paused">
                         HARD-STOP ≥{Math.round(r.status.hard_stop_fraction * 100)}%
                       </span>
+                    ) : r.unpriced ? (
+                      <span className="ingest-pause__badge">NOT USD-BOUND</span>
                     ) : (
                       <span className="ingest-pause__badge ingest-pause__badge--running">OK</span>
                     )}
@@ -235,13 +248,38 @@ export function ModelsPanel() {
         <p className="fmt__cap">
           Today across all nodes: <strong>US${totalUsdToday.toFixed(8)}</strong> of a combined
           per-day cap of <strong>US${totalDayCap.toFixed(2)}</strong> (
-          {(spendFraction(totalUsdToday, totalDayCap) * 100).toFixed(3)}%).
+          {(spendFraction(totalUsdToday, totalDayCap) * 100).toFixed(3)}%) across{' '}
+          <strong>{totalCallsToday}</strong> recorded call{totalCallsToday === 1 ? '' : 's'}.
         </p>
         <p className="fmt__cap">
-          Run 2.0 budget context: <strong>{RUN_CAP_SGD_OPENAI} SGD</strong> total OpenAI ·{' '}
-          <strong>{RUN_CAP_SGD_ANTHROPIC} SGD</strong> Anthropic (verifier decorrelation only) —
-          per docs/temp/run2/orchestration-log.md §Budget. Per-day caps above are
-          router.config.json values; spend is the router&apos;s own ledger, republished on demand.
+          By provider family, grouped from the published model ids above — no provider total is
+          stored, so this is a rollup of these same rows:
+        </p>
+        <ul className="models-providers">
+          {providers.map((p) => (
+            <li key={p.family}>
+              <strong>{p.family}</strong> · {p.nodes.join(', ')} ·{' '}
+              {p.noRecordedCalls
+                ? 'no calls recorded today'
+                : `${p.calls} call${p.calls === 1 ? '' : 's'}, US$${p.usd.toFixed(8)} of a US$${p.dayCapUsd.toFixed(2)} combined day cap`}
+              {p.unpricedCalls
+                ? ' — booked at zero, so the USD cap is not what bounds this family'
+                : p.noRecordedCalls
+                  ? ''
+                  : ` (${(p.fraction * 100).toFixed(3)}%)`}
+            </li>
+          ))}
+        </ul>
+        {unpricedNodes.length > 0 ? (
+          <p className="fmt__cap">
+            {unpricedNodes.join(', ')} recorded calls at US$0.00. That zero is a measurement, not a
+            missing value — the published ledger prices the node at nothing, so its day cap and
+            hard-stop line can never be reached. Whatever bounds its use is not in this boundary.
+          </p>
+        ) : null}
+        <p className="fmt__cap">
+          Per-day caps above are router.config.json values; spend is the router&apos;s own ledger,
+          republished on demand.
         </p>
       </div>
 
