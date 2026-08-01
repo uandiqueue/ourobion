@@ -14,8 +14,12 @@
  *     warning is gone, and a config still carrying one is refused outright.
  *
  * Plus the shipped posture itself: the checked-in router.config.json loads with
- * an Anthropic verifier against OpenAI synthesis, and dispatches each node to its
- * own vendor's endpoint. node:test via tsx — mocked fetch, NO network, NO keys.
+ * an AGNES verifier against OpenAI synthesis (#307 — Anthropic is off-limits for
+ * this run, so Agnes is the only remaining legal verifier family), and dispatches
+ * each node to its own vendor's endpoint. Point 1 above is exactly why that swap
+ * needed no change to the invariant: it is a pairwise family comparison, not a
+ * vendor list, so a new verifier family satisfies it without special-casing.
+ * node:test via tsx — mocked fetch, NO network, NO keys.
  */
 
 import { test } from 'node:test';
@@ -28,6 +32,7 @@ import { defaultConfigPath, familyOf, loadConfig, validateConfig } from '../src/
 import { RouterConfigError } from '../src/errors.js';
 import { LlmRouter } from '../src/router.js';
 import {
+  AGNES_CHAT_COMPLETIONS_URL,
   ANTHROPIC_MESSAGES_URL,
   OPENAI_CHAT_COMPLETIONS_URL,
   type FetchLike,
@@ -145,12 +150,15 @@ test('a testMode block is refused even on a perfectly decorrelated config', () =
 
 // ── 4 · the shipped posture ──────────────────────────────────────────────────────────────────
 
-test('SHIPPED CONFIG LOADS: OpenAI synthesis, Anthropic verifier, decorrelated', () => {
+test('SHIPPED CONFIG LOADS: OpenAI synthesis, Agnes verifier, decorrelated', () => {
   const config = loadConfig(defaultConfigPath());
   assert.equal(config.nodes.synthesis.model, 'gpt-5');
   assert.equal(familyOf(config, config.nodes.synthesis.model), 'openai');
-  assert.equal(config.nodes.verifier.model, 'claude-sonnet-5');
-  assert.equal(familyOf(config, config.nodes.verifier.model), 'anthropic');
+  // #307: Anthropic is off-limits this run, so Agnes is the only remaining legal verifier family.
+  // The INVARIANT is unchanged — the verifier must not share a family with synthesis; only which
+  // family satisfies it has moved.
+  assert.equal(config.nodes.verifier.model, 'agnes-2.5-flash');
+  assert.equal(familyOf(config, config.nodes.verifier.model), 'agnes');
   assert.notEqual(
     familyOf(config, config.nodes.synthesis.model),
     familyOf(config, config.nodes.verifier.model),
@@ -173,7 +181,21 @@ test('SHIPPED CONFIG REFUSES to load when verifier and synthesis share a family'
   );
 });
 
-test('shipped config: the verifier hits Anthropic, every other node hits OpenAI', async () => {
+/**
+ * #307 · The Agnes verifier is ACCEPTANCE-ONLY, and that is the point.
+ *
+ * `callApiWorker` refuses family `agnes` when `req.acceptance` is undefined
+ * (`apiWorker.ts`: "Agnes is acceptance-only"), while the acceptance branch immediately below it
+ * sanctions exactly `nodeId === 'verifier' && family === 'agnes'`. So Agnes-as-verifier is a
+ * DESIGNED combination that must carry an acceptance context — which brings the attempt journal,
+ * the validated authorization, and the per-logical-call POST cap with it.
+ *
+ * That matters more than usual here: Agnes is priced free, so the per-day USD ledger cannot bound
+ * this node. The acceptance journal and call cap are what bound it instead. Relaxing this guard to
+ * let Agnes onto the plain route would remove the journal AND the USD bound at the same time,
+ * leaving the verifier completely unconstrained — so the guard stays, and this test pins it.
+ */
+test('shipped config: the Agnes verifier is REFUSED on the plain route, every other node hits OpenAI', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'llm-router-decorr-'));
   try {
     const config = loadConfig(defaultConfigPath());
@@ -181,6 +203,8 @@ test('shipped config: the verifier hits Anthropic, every other node hits OpenAI'
     const fetchFn: FetchLike = async (url, init) => {
       const body = JSON.parse(String(init.body)) as { model: string };
       calls.push({ url, model: body.model });
+      // Agnes speaks the OpenAI chat-completions wire shape, so its response body is the
+      // OpenAI-shaped one; only the URL differs.
       return url === ANTHROPIC_MESSAGES_URL
         ? jsonResponse(200, anthropicBody('ok', 100, 50))
         : jsonResponse(200, openaiBody('ok', 100, 50));
@@ -189,34 +213,51 @@ test('shipped config: the verifier hits Anthropic, every other node hits OpenAI'
       config,
       runId: 'run-decorr',
       ledgerPath: join(dir, 'ledger.json'),
-      env: { OPENAI_API_KEY: 'test-openai-key', ANTHROPIC_API_KEY: 'test-anthropic-key' },
+      env: {
+        OPENAI_API_KEY: 'test-openai-key',
+        ANTHROPIC_API_KEY: 'test-anthropic-key',
+        AGNES_API_KEY: 'test-agnes-key',
+      },
       fetchFn,
       now: () => DAY1_NOON,
     });
 
-    for (const nodeId of LLM_NODE_IDS) {
+    const meteredNodes = LLM_NODE_IDS.filter((nodeId) => nodeId !== 'verifier');
+
+    // The verifier is refused OUTRIGHT on the plain route — no fetch, no ledger entry.
+    await assert.rejects(
+      () => router.route({ nodeId: 'verifier', prompt: 'hello from verifier' }),
+      (err: unknown) =>
+        err instanceof RouterConfigError && /Agnes is acceptance-only/.test(err.message),
+      'a free-priced Agnes verifier must never dispatch without an acceptance context',
+    );
+    assert.equal(calls.length, 0, 'the refusal happens BEFORE any HTTP call');
+
+    for (const nodeId of meteredNodes) {
       const res = await router.route({ nodeId, prompt: `hello from ${nodeId}` });
       assert.equal(res.route, 'api_worker');
-      // Only the verifier is decorrelated from synthesis; synthesis is not from itself.
+      // None of these is decorrelated from synthesis — they are all OpenAI, as is synthesis.
       assert.equal(
         res.modelIdentity.decorrelatedFromSynthesis,
-        nodeId === 'verifier',
+        false,
         `${nodeId} decorrelation verdict`,
       );
     }
 
-    assert.equal(calls.length, LLM_NODE_IDS.length);
-    for (const [i, nodeId] of LLM_NODE_IDS.entries()) {
-      const expectedUrl = nodeId === 'verifier' ? ANTHROPIC_MESSAGES_URL : OPENAI_CHAT_COMPLETIONS_URL;
-      assert.equal(calls[i]!.url, expectedUrl, `${nodeId} endpoint`);
+    assert.equal(calls.length, meteredNodes.length);
+    for (const [i, nodeId] of meteredNodes.entries()) {
+      assert.equal(calls[i]!.url, OPENAI_CHAT_COMPLETIONS_URL, `${nodeId} endpoint`);
       assert.equal(calls[i]!.model, config.nodes[nodeId].model, `${nodeId} sends its configured model`);
     }
 
+    // Every node that DID dispatch is counted in the ledger with a positive metered cost. The
+    // verifier appears nowhere, because it never dispatched.
     const state = router.budgetState();
-    for (const nodeId of LLM_NODE_IDS) {
+    for (const nodeId of meteredNodes) {
       assert.equal(state.nodes[nodeId]?.calls, 1, `${nodeId} recorded in ledger`);
       assert.ok((state.nodes[nodeId]?.usd ?? 0) > 0, `${nodeId} recorded USD spend`);
     }
+    assert.equal(state.nodes.verifier?.calls ?? 0, 0, 'the refused verifier call is not billed');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

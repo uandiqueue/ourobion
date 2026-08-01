@@ -3,7 +3,7 @@
   "nodes": {
     "seeder": { "model": "gpt-5-mini", "route": "api_worker", "maxOutputTokens": 8000 },
     "synthesis": { "model": "gpt-5", "route": "api_worker", "maxOutputTokens": 8000 },
-    "verifier": { "model": "claude-sonnet-5", "route": "api_worker", "maxOutputTokens": 8000 },
+    "verifier": { "model": "agnes-2.5-flash", "route": "api_worker", "maxOutputTokens": 8000 },
     "phrasing_card": { "model": "gpt-5-mini", "route": "api_worker", "maxOutputTokens": 2000 },
     "report_narrative": { "model": "gpt-5-mini", "route": "api_worker", "maxOutputTokens": 4000 },
     "extract_assist": { "model": "gpt-5-mini", "route": "api_worker", "maxOutputTokens": 2000 }
