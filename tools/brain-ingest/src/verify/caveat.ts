@@ -22,8 +22,17 @@
  *      that names something we did not measure falls back to the derived sentence. See
  *      {@link chooseCaveat} for the residual limitation this does not close.
  *   4. QUALITY-OF-BACKING flags (tier, population, direction, effect size, claim kind) fire ONLY
- *      when there is backing to describe (`supporting >= 1`). With zero supporting sources those
- *      checks are the model's ungrounded opinion, and the absence flag is the honest statement.
+ *      when there is backing to describe — either a retrieved supporting source (`supporting >= 1`)
+ *      or the CITED PAPER itself (`citedPaperAssessed`, i.e. its verbatim quotes were shown to the
+ *      verifier and the quote gate passed). With neither, those checks are the model's ungrounded
+ *      opinion and the absence flag is the honest statement.
+ *
+ *      `citedPaperAssessed` exists because the verdict is now a single-paper faithfulness judgement
+ *      (owner instruction 2026-08-01): population, direction, effect size and claim kind are read
+ *      against the cited paper, so gating them on OTHER studies corroborating would hide exactly the
+ *      limitations the verdict was reasoned over. Optional and defaulting to false, so the producers
+ *      where no model saw the paper (the quoteCheck-only rung, the unenforceable-reply fallback) keep
+ *      claiming nothing about backing.
  *
  * The derived sentences are USER-FACING CARD COPY, so they are plain-language and pass
  * `validateCopyString` (memory 0003 — no diagnostic language). `tests/caveat.test.ts` asserts
@@ -62,6 +71,12 @@ export type CaveatFlag =
 export interface CaveatInput {
   /** `independentRetrieval.performed`. */
   retrievalPerformed: boolean;
+  /**
+   * True when the CITED paper's verbatim quotes were shown to the verifier and the deterministic
+   * quote gate passed — i.e. the check blocks below are a judgement about a real, quoted paper.
+   * Optional (default false) so producers that never showed a paper to a model claim nothing.
+   */
+  citedPaperAssessed?: boolean;
   /** `independentRetrieval.sources.length`. */
   sourceCount: number;
   /** `corroboration.supporting` (re-derived from retrieved stances, not the reply). */
@@ -122,8 +137,8 @@ export const CAVEAT_SEVERITY_ORDER: readonly CaveatFlag[] = [
  * Which limitations actually fired for this record, most severe first.
  *
  * The four "absence" flags are mutually exclusive and describe the corroboration we hold; the
- * quality-of-backing flags describe the corroboration's WEAKNESSES and are gated on there being
- * backing at all (see the file header, point 4).
+ * quality-of-backing flags describe the WEAKNESSES of what backs the claim — a retrieved supporting
+ * source or the cited paper itself — and are gated on there being backing at all (file header, 4).
  */
 export function firedCaveatFlags(input: CaveatInput): CaveatFlag[] {
   const fired = new Set<CaveatFlag>();
@@ -143,7 +158,8 @@ export function firedCaveatFlags(input: CaveatInput): CaveatFlag[] {
   if (input.contradicting >= 1) fired.add('contradicting-source');
 
   // ── Weaknesses OF the backing — only meaningful when backing exists ──
-  if (input.supporting >= 1) {
+  // Backing = a retrieved supporting source OR the cited paper the verifier actually read.
+  if (input.supporting >= 1 || input.citedPaperAssessed === true) {
     if (!input.claimKindMatches) fired.add('claim-kind-mismatch');
     if (input.scopeMismatch) fired.add('population-mismatch');
     if (input.evidenceTier === 1) fired.add('mechanistic-evidence');

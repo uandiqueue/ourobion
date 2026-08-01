@@ -362,9 +362,50 @@ test('buildVerifierPrompt: a source with no evidence is marked ungroundable', ()
   assert.match(prompt, /no passages available/);
 });
 
-test('buildVerifierPrompt: zero sources tells the model to answer uncertain', () => {
+test('buildVerifierPrompt: the CITED PAPER\'s own quotes are the declared basis of the verdict', () => {
+  const { prompt } = buildVerifierPrompt(makeClaim(), [], { spansFound: 1, spansTotal: 1, allPresent: true });
+  assert.match(prompt, /CITED PAPER — its own words\. THE ONLY BASIS FOR YOUR VERDICT/);
+  assert.match(prompt, new RegExp(QUOTE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))); // the paper's words reach the prompt
+  // The A9 gate passed, so the prompt may state that as a FACT (it ran before this call).
+  assert.match(prompt, /verified present verbatim in this paper/);
+  // The retrieved-studies block is labelled as caveat context, never as the verdict's basis.
+  assert.match(prompt, /OTHER STUDIES retrieved independently — CAVEAT CONTEXT ONLY, not the verdict/);
+});
+
+test('buildVerifierPrompt: without a passing quote block the prompt claims NO verification', () => {
+  const { prompt } = buildVerifierPrompt(makeClaim(), [], { spansFound: 0, spansTotal: 1, allPresent: false });
+  assert.doesNotMatch(prompt, /verified present verbatim/);
+  assert.match(prompt, /not confirmed present by this call/);
+});
+
+test('buildVerifierPrompt: zero retrieved sources is verdict-NEUTRAL, not a reason to withhold approval', () => {
   const { prompt } = buildVerifierPrompt(makeClaim(), []);
-  assert.match(prompt, /no sources retrieved/);
+  assert.match(prompt, /no other studies were retrieved/);
+  // The measured defect: an empty search was being read as "unsupported". It is now explicitly not.
+  assert.match(prompt, /cannot make the claim unsupported/);
+  assert.doesNotMatch(prompt, /answer "uncertain"/);
+});
+
+test('buildVerifierPrompt: the system prompt forbids letting other studies decide the verdict', () => {
+  const { system } = buildVerifierPrompt(makeClaim(), []);
+  assert.match(system, /Is this claim a faithful reading of the paper it cites\?/);
+  assert.match(system, /CONTEXT FOR THE CAVEAT ONLY/);
+  assert.match(system, /NEVER answer "unsupported" because other studies did/);
+});
+
+test('buildVerifierPrompt: the check blocks are declared answerable WITHOUT any other studies', () => {
+  // MEASURED, not guessed. Every one of the 8 records of the live zero-corpus run answered `false`
+  // to directionCheck, claimKindCheck AND effectSizeCheck (with `supportedKind: null`,
+  // `evidenceTier: 0`), because the old prompt left the check blocks implicitly about the RETRIEVED
+  // set — so with nothing retrieved, "false" was the coherent answer. Those three fields are what
+  // shared/brain `singlePaperGate` serves on, so a blanket `false` holds the edge even once the
+  // verdict is approving. The prompt now says where to read them from, and that a claim asserting no
+  // effect size cannot mismatch one.
+  const { prompt } = buildVerifierPrompt(makeClaim(), []);
+  assert.match(prompt, /with no other studies retrieved these are still fully answerable/);
+  assert.match(prompt, /answering "false" to every check because nothing external was found is a WRONG answer/);
+  assert.match(prompt, /effect: none stated.*there is nothing to mismatch/s);
+  assert.match(prompt, /never null/); // supportedKind: null was also out of contract
 });
 
 // ── post-enforcement (the LLM output is UNTRUSTED) ──────────────────────────────
@@ -409,34 +450,46 @@ test('enforce: no independent retrieval ⇒ verdict FORCED to uncertain', async 
   assert.equal(res.record.independentRetrieval.performed, false);
 });
 
-test('enforce: supported with zero supporting sources is REJECTED', async () => {
+test('enforce: contradicted while its OWN directionCheck matches the claim is REJECTED', async () => {
   const validate = await loadVerificationValidator();
   const res = enforceVerification(
-    parseVerifierResponse(reply({ verdict: 'supported', sourceStances: [{ paperId: 'corpus:s1', stance: 'mentions' }] })),
+    // Direction matches the cited paper, so nothing in that paper opposes the claim — 'contradicted'
+    // is incoherent, however many retrieved strangers were marked refuting.
+    parseVerifierResponse(
+      reply({ verdict: 'contradicted', sourceStances: [{ paperId: 'corpus:s1', stance: 'refutes' }] }),
+    ),
     { claim: makeClaim(), quoteCheck: QC, retrieval: RETRIEVED, verifierModel: 'MOCK', promptVersion: 'v', verifiedAt: '2026-07-16T00:00:00Z', validateVerification: validate },
   );
   assert.equal(res.ok, false);
-  if (!res.ok) assert.equal(res.reason, 'enforcement-violation');
+  if (!res.ok) assert.match(res.detail, /directionCheck\.matchesClaim is true/);
 });
 
-test('enforce: contradicted without a contradicting source is REJECTED', async () => {
+test('enforce: contradicted by the CITED paper stands with ZERO refuting other studies', async () => {
   const validate = await loadVerificationValidator();
   const res = enforceVerification(
-    parseVerifierResponse(reply({ verdict: 'contradicted', sourceStances: [{ paperId: 'corpus:s1', stance: 'supports' }] })),
+    parseVerifierResponse(
+      reply({ verdict: 'contradicted', directionCheck: { matchesClaim: false }, sourceStances: [] }),
+    ),
     { claim: makeClaim(), quoteCheck: QC, retrieval: RETRIEVED, verifierModel: 'MOCK', promptVersion: 'v', verifiedAt: '2026-07-16T00:00:00Z', validateVerification: validate },
   );
-  assert.equal(res.ok, false);
-  if (!res.ok) assert.equal(res.reason, 'enforcement-violation');
+  assert.ok(res.ok);
+  assert.equal(res.record.verdict, 'contradicted');
+  assert.equal(res.record.corroboration.contradicting, 0); // no external headcount was needed
 });
 
 test('enforce: the LLM cannot invent sources; corroboration re-derived from retrieved set only', async () => {
   const validate = await loadVerificationValidator();
   const res = enforceVerification(
-    // The reply "supports" a paperId that was NEVER retrieved → ignored → 0 supporting → reject.
+    // The reply "supports" a paperId that was NEVER retrieved. The invented source must not appear
+    // and must not be counted — but (unlike before #300 §E's completion) its absence no longer sinks
+    // the verdict, because corroboration does not decide verdicts at all.
     parseVerifierResponse(reply({ verdict: 'supported', sourceStances: [{ paperId: 'ghost:invented', stance: 'supports' }] })),
     { claim: makeClaim(), quoteCheck: QC, retrieval: RETRIEVED, verifierModel: 'MOCK', promptVersion: 'v', verifiedAt: '2026-07-16T00:00:00Z', validateVerification: validate },
   );
-  assert.equal(res.ok, false);
+  assert.ok(res.ok);
+  assert.equal(res.record.corroboration.supporting, 0);
+  assert.ok(!res.record.independentRetrieval.sources.some((s) => s.paperId === 'ghost:invented'));
+  assert.equal(res.record.independentRetrieval.sources.every((s) => s.stance === 'mentions'), true);
 });
 
 test('enforce: a valid supported verdict passes; quoteCheck embedded verbatim', async () => {
@@ -554,9 +607,169 @@ test('#300 §E: the prompt asks for approve-with-caveat and declares the caveat 
   const { system, prompt } = buildVerifierPrompt(makeClaim(), []);
   assert.match(system, /APPROVE WITH A CAVEAT/);
   assert.match(system, /Never use "uncertain" merely because the support is thin/);
-  assert.match(system, /unsupported → the shown evidence does not address this claim/);
+  assert.match(system, /unsupported → the cited paper does not address this claim/);
   assert.match(system, /Do NOT\n\s*invent one/);
   assert.match(prompt, /"caveat"/);
+});
+
+// ── SINGLE-PAPER VERDICTS · corroboration must not steer the verdict ─────────────
+//
+// The defect these units close, measured on a live run:
+//
+//   hrv_sdnn_ms|correlates|spo2_pct   — verdict unsupported (conf 0.92)
+//   urine_colour|correlates|energy_score — verdict unsupported (conf 0.92)
+//     caveat: "The other studies found did not back this up."
+//
+// Both were faithful readings of their cited paper, killed by a question nobody asked: do OTHER
+// papers agree? The verdict now answers only "is this claim faithful to the paper it cites?", and
+// weak external support reaches the user through the CAVEAT instead (owner instruction 2026-08-01).
+
+/** The reply a faithful reading produces: every check block matches, nothing external supports. */
+function faithfulReply(over: Record<string, unknown> = {}): string {
+  return reply({ verdict: 'supported', sourceStances: [], ...over });
+}
+
+test('single-paper (a): ZERO corroboration + a faithful reading ⇒ APPROVING verdict WITH a caveat', async () => {
+  const validate = await loadVerificationValidator();
+  // Retrieval RAN and returned two sources; the verifier marked none of them supporting. This is
+  // exactly the live case that produced `unsupported` (conf 0.92).
+  const res = enforceVerification(parseVerifierResponse(faithfulReply()), {
+    claim: makeClaim(), quoteCheck: QC, retrieval: RETRIEVED,
+    verifierModel: 'MOCK', promptVersion: 'v', verifiedAt: '2026-07-16T00:00:00Z',
+    validateVerification: validate,
+  });
+  assert.ok(res.ok);
+  assert.equal(res.record.verdict, 'supported');
+  assert.equal(res.record.corroboration.supporting, 0); // still recorded, honestly
+  // …and the corroboration limitation is SURFACED as the caveat rather than as a rejection.
+  assert.equal(res.record.caveat, 'The other studies found did not back this up.');
+  assert.doesNotThrow(() => validate(res.record)); // the shared contract accepts it
+});
+
+test('single-paper (a): a faithful reading with NO other studies found at all is still approving', async () => {
+  const validate = await loadVerificationValidator();
+  const res = enforceVerification(parseVerifierResponse(faithfulReply()), {
+    claim: makeClaim(), quoteCheck: QC,
+    retrieval: { performed: true, sources: [], corpusHits: [], externalCount: 0 },
+    verifierModel: 'MOCK', promptVersion: 'v', verifiedAt: '2026-07-16T00:00:00Z',
+    validateVerification: validate,
+  });
+  assert.ok(res.ok);
+  assert.equal(res.record.verdict, 'supported');
+  assert.equal(res.record.caveat, 'No other studies were found to check this against.');
+  // The tier is structural — the CLAIM's own cited paper, never a number the model asserted.
+  assert.equal(res.record.evidenceTier, 4);
+});
+
+test('single-paper: corroboration cannot move the verdict in EITHER direction', async () => {
+  const validate = await loadVerificationValidator();
+  const ctx = {
+    claim: makeClaim(), quoteCheck: QC,
+    verifierModel: 'MOCK', promptVersion: 'v', verifiedAt: '2026-07-16T00:00:00Z',
+    validateVerification: validate,
+  };
+  const none = enforceVerification(parseVerifierResponse(faithfulReply()), { ...ctx, retrieval: RETRIEVED });
+  const both = enforceVerification(
+    parseVerifierResponse(
+      faithfulReply({
+        sourceStances: [
+          { paperId: 'corpus:s1', stance: 'supports' },
+          { paperId: 'corpus:s2', stance: 'refutes' },
+        ],
+      }),
+    ),
+    { ...ctx, retrieval: RETRIEVED },
+  );
+  assert.ok(none.ok && both.ok);
+  assert.equal(none.record.verdict, both.record.verdict); // same fidelity ⇒ same verdict
+  assert.equal(both.record.verdict, 'supported');
+  // The corroboration difference is real and recorded — it just lands in the caveat, not the verdict.
+  assert.deepEqual(none.record.corroboration, { supporting: 0, contradicting: 0 });
+  assert.deepEqual(both.record.corroboration, { supporting: 1, contradicting: 1 });
+  assert.notEqual(none.record.caveat, both.record.caveat);
+});
+
+test('single-paper (b): a DIRECTION mismatch is still rejected, and corroboration cannot rescue it', async () => {
+  const validate = await loadVerificationValidator();
+  const ctx = {
+    claim: makeClaim(), quoteCheck: QC, retrieval: RETRIEVED,
+    verifierModel: 'MOCK', promptVersion: 'v', verifiedAt: '2026-07-16T00:00:00Z',
+    validateVerification: validate,
+  };
+  const bare = enforceVerification(
+    parseVerifierResponse(reply({ verdict: 'supported', directionCheck: { matchesClaim: false }, sourceStances: [] })),
+    ctx,
+  );
+  assert.equal(bare.ok, false);
+  if (!bare.ok) {
+    assert.equal(bare.reason, 'enforcement-violation');
+    assert.match(bare.detail, /inverts its cited paper/);
+  }
+  // Two supporting sources do NOT buy an approval for a claim that reads its paper backwards.
+  const corroborated = enforceVerification(
+    parseVerifierResponse(
+      reply({
+        verdict: 'supported',
+        directionCheck: { matchesClaim: false },
+        sourceStances: [
+          { paperId: 'corpus:s1', stance: 'supports' },
+          { paperId: 'corpus:s2', stance: 'supports' },
+        ],
+      }),
+    ),
+    ctx,
+  );
+  assert.equal(corroborated.ok, false);
+});
+
+test('single-paper (b): an association dressed as CAUSATION is still rejected', async () => {
+  const validate = await loadVerificationValidator();
+  const res = enforceVerification(
+    parseVerifierResponse(
+      reply({
+        verdict: 'partial',
+        claimKindCheck: { matchesClaim: false, supportedKind: 'correlational' },
+        sourceStances: [{ paperId: 'corpus:s1', stance: 'supports' }],
+      }),
+    ),
+    {
+      claim: makeClaim({ claimKind: 'causal' }), quoteCheck: QC, retrieval: RETRIEVED,
+      verifierModel: 'MOCK', promptVersion: 'v', verifiedAt: '2026-07-16T00:00:00Z',
+      validateVerification: validate,
+    },
+  );
+  assert.equal(res.ok, false);
+  if (!res.ok) assert.match(res.detail, /'causal' claim is only licensed as 'correlational'/);
+});
+
+test('single-paper (c): a MISSING quote is still rejected — an approving verdict needs the A9 gate', async () => {
+  const validate = await loadVerificationValidator();
+  const res = enforceVerification(parseVerifierResponse(faithfulReply()), {
+    claim: makeClaim(),
+    // The claim's quote was NOT found verbatim in its cited paper.
+    quoteCheck: { spansFound: 0, spansTotal: 1, allPresent: false },
+    retrieval: RETRIEVED,
+    verifierModel: 'MOCK', promptVersion: 'v', verifiedAt: '2026-07-16T00:00:00Z',
+    validateVerification: validate,
+  });
+  assert.equal(res.ok, false);
+  if (!res.ok) {
+    assert.equal(res.reason, 'enforcement-violation');
+    assert.match(res.detail, /quote gate did not pass/);
+  }
+});
+
+test('single-paper (c): a faithful-looking reply of a FABRICATED quote never reaches the verifier', async () => {
+  const validate = await loadVerificationValidator();
+  const res = await verifyClaim(makeClaim(), {
+    // The cited paper does not contain the claim's quote → the pre-spend gate refuses it.
+    texts: new Map([[PAPER_ID, 'a paper that never says anything of the kind']]),
+    retrieve: { corpus: [corpusDoc()] },
+    validateVerification: validate,
+    router: { async route() { throw new Error('LLM must not be called when the quote is absent'); } },
+  });
+  assert.equal(res.record, undefined);
+  assert.equal(res.rejected?.reason, 'quote-check-failed');
 });
 
 // ── verifyClaim orchestration ───────────────────────────────────────────────────
