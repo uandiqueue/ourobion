@@ -214,4 +214,38 @@ still has never run as a workflow.
   and scope G) were opened from these findings. #240, #179 and #246 are all blocked on #300 —
   they are one problem with three trackers: synthesis emits no claims at all.
 
+## Amendment 2026-08-01 · the `/model-training/experiments/` ignore rule I promised on #311
+
+The read-only audit in **#334 (finding B3)** checked this against the branch and found the rule
+absent. Correct, and it was my miss: on **#311** I wrote that `/model-training/experiments/` was a
+gap #312 did not cover and that I would "land it separately once the merge queue is clear." The
+queue cleared several times over; I never came back to it. Landed here.
+
+Why a wholesale directory ignore rather than another extension rule: the licence risk in that
+directory is **the `.py` itself**, not a dataset sitting beside it. Those scripts are written
+against licence-restricted corpora (SciFact is CC BY-NC) and quote them in fixtures and
+docstrings, so the source file carries the problem alone. The existing patterns are
+`*.py[cod]`-shaped and match no bare `.py` — which is exactly how `git add -A` swept four such
+files into PR #311. CI caught that only as a `model-training — lint / format / type-check`
+failure, i.e. by accident of style rather than by any licence gate.
+
+Verified after the change: `git check-ignore -v model-training/experiments/foo.py` resolves to
+`.gitignore:158`, and `git ls-files model-training/experiments/` is empty, so no tracked file is
+untracked by this and nothing already committed changes state.
+
+### Other #334 findings that land on issues I own
+
+- **B4 (verified).** #233 acceptance criterion 3 says the verifier family must differ from "every
+  other node in the suite"; `tools/llm-router/src/config.ts` enforces exactly one pairwise
+  comparison, `family(verifier) !== family(synthesis)`. The narrow rule is the right one and its
+  reasoning is sound in-code, but the criterion was never amended and reads DONE against a rule
+  that is not enforced. Today it passes only incidentally — verifier is agnes, every other node is
+  openai.
+- **B1.** #246's hard requirement was recorded as met on a `verifications.jsonl` produced with no
+  `--corpus` (zero retrieved sources), on a different edge than the runner asserts, while hosted
+  `edge_verifications` is 0. #246 reads unblocked when it is not.
+- **A3.** #240 authorized 2 calls; 4 POSTs executed (Anthropic 1, OpenAI 1, Agnes 2). The OpenAI
+  leg was authorized in the orchestrator brief's ordered ladder, not in #240's thread — a
+  record-keeping gap, not unauthorized spend, and the itemisation (US$0.0182055) is complete.
+
 memory: none

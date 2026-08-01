@@ -147,6 +147,16 @@ data/llm-router/
 /model-training/.ruff_cache/
 /model-training/.pytest_cache/
 
+# Scratch experiment code. Ignored WHOLESALE, extensions included, because the
+# risk here is the .py itself rather than a dataset: these scripts are written
+# against licence-restricted corpora (SciFact is CC BY-NC) and quote them in
+# fixtures and docstrings, so the source file carries the licence problem even
+# when no corpus file sits beside it. The extension rules below deliberately do
+# not match a bare .py, which is exactly how `git add -A` swept four of these
+# into PR #311 — caught only as a model-training lint failure, not as a licence
+# gate. Promised on #311 and landed here; see also #277 for the licence scope.
+/model-training/experiments/
+
 # Raw datasets. Every training plan's licence gate treats PMIDs/labels/
 # manifests as the committed artifact and the underlying corpus text/files
 # as never-committed — see docs/temp/model-training/*-training-plan.md.
