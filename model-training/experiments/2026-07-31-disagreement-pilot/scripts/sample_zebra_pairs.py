@@ -99,7 +99,7 @@ def main() -> None:
             continue
         rng.shuffle(pool)
         made = 0
-        for i, claim_paper in enumerate(pool):
+        for _i, claim_paper in enumerate(pool):
             if made >= per:
                 break
             cued = [s for s in claim_paper["sents"][2:] if CUE.search(s) and is_usable(s)]
