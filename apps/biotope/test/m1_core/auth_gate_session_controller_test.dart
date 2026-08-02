@@ -56,20 +56,36 @@ void main() {
     });
   });
 
-  test(
-    'the gate routes directly from auth events and recovers both failures',
-    () {
-      final source = _mainSource();
+  test('first password sign-in does not wait for a later stream event', () {
+    final source = _mainSource();
 
-      expect(source, contains('state.session?.user.id'));
-      expect(source, contains('onError: _handleAuthError'));
-      expect(source, contains('snapshot.hasError'));
-      expect(
-        source,
-        contains('AuthGateRecoveryScreen(onRetry: _retryOnboarding)'),
-      );
-    },
-  );
+    expect(source, contains('onSignedIn: _handlePasswordSignIn'));
+    expect(source, contains('void _handlePasswordSignIn(String userId)'));
+    expect(source, contains('state.session?.user.id'));
+  });
+
+  test('the gate routes auth and onboarding failures to recovery', () {
+    final source = _mainSource();
+
+    expect(source, contains('onError: _handleAuthError'));
+    expect(source, contains('snapshot.hasError'));
+    expect(
+      source,
+      contains('AuthGateRecoveryScreen(onRetry: _retryOnboarding)'),
+    );
+  });
+
+  test('the auth service clears a confirmed-invalid cached session', () {
+    final authService = File('lib/modules/m1_core/impl/auth_service.dart');
+    final source = authService.readAsStringSync();
+
+    expect(source, contains('validateCurrentSession'));
+    expect(source, contains('_client.auth.getUser(session.accessToken)'));
+    expect(source, contains("case '401':"));
+    expect(source, contains("case '403':"));
+    expect(source, contains("case '404':"));
+    expect(_mainSource(), contains('await _authService.signOut()'));
+  });
 
   test('recovery copy stays concise and non-diagnostic', () {
     for (final copy in AuthGateRecoveryCopy.all) {

@@ -60,7 +60,7 @@ class OurobionApp extends StatelessWidget {
 
 // ─── Onboarding state ────────────────────────────────────────────────────────
 
-enum _OnboardStep { consent, profile, done }
+enum _OnboardStep { signedOut, consent, profile, done }
 
 Future<_OnboardStep> _checkOnboarding(String userId) async {
   final client = Supabase.instance.client;
@@ -96,12 +96,13 @@ class AuthGate extends StatefulWidget {
   State<AuthGate> createState() => _AuthGateState();
 }
 
-class _AuthGateState extends State<AuthGate> {
+class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   late final AuthService _authService;
   late final AuthGateSessionController _session;
   StreamSubscription<AuthState>? _authSubscription;
   Future<_OnboardStep>? _onboardingFuture;
   String? _onboardingUserId;
+  bool _revalidateOnResume = false;
 
   @override
   void initState() {
@@ -113,6 +114,7 @@ class _AuthGateState extends State<AuthGate> {
     );
     _startOnboardingFor(_session.userId);
     _listenForAuthChanges();
+    WidgetsBinding.instance.addObserver(this);
   }
 
   void _listenForAuthChanges() {
@@ -135,6 +137,16 @@ class _AuthGateState extends State<AuthGate> {
     });
   }
 
+  void _handlePasswordSignIn(String userId) {
+    if (!mounted) return;
+    setState(() {
+      // `signInWithPassword` saved this session before returning. This direct
+      // handoff closes the gap before its async `signedIn` stream event.
+      _session.receiveSession(userId);
+      _startOnboardingFor(userId);
+    });
+  }
+
   void _handleAuthError(Object error, StackTrace _) {
     if (!mounted) return;
     setState(() => _session.receiveError(error));
@@ -145,7 +157,18 @@ class _AuthGateState extends State<AuthGate> {
     _onboardingUserId = userId;
     _onboardingFuture = userId == null
         ? null
-        : _checkOnboardingWithMinDisplay(userId);
+        : _checkSessionAndOnboarding(userId);
+  }
+
+  Future<_OnboardStep> _checkSessionAndOnboarding(String userId) async {
+    final validity = await _authService.validateCurrentSession();
+    if (validity == AuthSessionValidation.invalid) {
+      // GoTrue removes the local token and publishes signedOut before its
+      // remote call, including when the hosted user was already deleted.
+      await _authService.signOut();
+      return _OnboardStep.signedOut;
+    }
+    return _checkOnboardingWithMinDisplay(userId);
   }
 
   void _retryOnboarding() {
@@ -169,7 +192,23 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      _revalidateOnResume = true;
+      return;
+    }
+    if (state == AppLifecycleState.resumed &&
+        _revalidateOnResume &&
+        _session.phase == AuthGateSessionPhase.signedIn) {
+      _revalidateOnResume = false;
+      _retryOnboarding();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _authSubscription?.cancel();
     super.dispose();
   }
@@ -180,7 +219,10 @@ class _AuthGateState extends State<AuthGate> {
       case AuthGateSessionPhase.recoverableError:
         return AuthGateRecoveryScreen(onRetry: _retryAuthStream);
       case AuthGateSessionPhase.signedOut:
-        return SignInScreen(authService: _authService);
+        return SignInScreen(
+          authService: _authService,
+          onSignedIn: _handlePasswordSignIn,
+        );
       case AuthGateSessionPhase.signedIn:
         final onboardingFuture = _onboardingFuture;
         if (onboardingFuture == null) {
@@ -194,6 +236,11 @@ class _AuthGateState extends State<AuthGate> {
             }
             if (!snapshot.hasData) return const WakingScreen();
             switch (snapshot.data!) {
+              case _OnboardStep.signedOut:
+                return SignInScreen(
+                  authService: _authService,
+                  onSignedIn: _handlePasswordSignIn,
+                );
               case _OnboardStep.consent:
                 return const ConsentScreen();
               case _OnboardStep.profile:
