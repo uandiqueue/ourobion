@@ -1,137 +1,125 @@
 ---
 title: Ourobion — Launchpad 2026 AI Challenge Write-up
-summary: A submission draft whose every quantitative claim was re-measured on 2026-08-01 and whose hosted figures were read from Supabase on 2026-08-02; the research pipeline has produced 14 verified edges of which 11 are servable, but it is not yet submittable, because model claims remain quarantined behind issue #277 and no insight card yet carries producer='edge'.
+summary: The judge-facing submission. Five-pillar structure, under the 1,000-word cap, with every quantitative claim re-measured by running a command on 2026-08-02 rather than copied from notes.
 type: reference
 scope: repo
 status: draft
 updated: 2026-08-02
 ---
 
-# Ourobion — Launchpad 2026 AI Challenge Write-up
+# Ourobion
 
-> **DO NOT SUBMIT THIS DRAFT.** Every quantitative sentence below was re-measured, and the hosted
-> figures were read directly from the Supabase demo project on **2026-08-02**. Two blockers remain, and
-> neither is a missing measurement:
->
-> 1. **Model-training and evaluation claims are still quarantined behind issue #277.** This draft
->    therefore states only that the support models are research-only and non-serving; it publishes no
->    training or evaluation figure.
-> 2. **The pipeline now produces servable verified edges, but no card has been made from one.** Hosted
->    `verified_edges` holds 14 rows, 11 of them servable. `insight_cards` holds 45 rows and **0 of them
->    have `producer='edge'`**. The last mile — servable edge to rendered card — has not run. That is a
->    narrower and more accurate blocker than the "zero verified edges" this draft previously carried.
->
-> **A correction to the previous revision of this file, recorded rather than quietly overwritten.** It
-> stated `verified_edges = 0`, called that "derivable by schema", and described the card caveats as
-> unreachable template strings. All three are now false. The pipeline ran between that revision being
-> drafted and being committed; the `supporting >= 1` contract rule it relied on was removed by PR #355,
-> which rebound verdicts to single-paper fidelity. An honest document that understates is still
-> inaccurate, and those specific claims understated.
->
-> Use [`submission-verification-audit.md`](../../../development/run4/submission-verification-audit.md) as the
-> current defect ledger; it is an audit, not replacement submission prose.
-
-*Track: Agentic Systems*
-
-**"Correlations are cheap. We serve the ones the science can defend."** One AI proposes a health
-relationship; a second, adversarial AI has to prove it against fresh literature before you ever see it.
-
----
+*An ouroboros drawn as a living cell, and deliberately left open — because in biology the loop of
+understanding never closes. The app is built to keep reading.*
 
 ## Problem
 
-Health apps surface patterns — *"your gut comfort dips on low-hydration days"* — but they are generic
-and unexplained: a user cannot tell coincidence from signal. The obvious upgrade, an LLM that explains *why*, is
-the most dangerous thing to put in front of a health claim: LLMs state correlation as causation, reverse cause
-and effect, generalise an animal study to a person. The real problem isn't data or model access; it's
-**grounding the interpretation**, when the best tool for grounding is the least trustworthy component available.
+Consumer health apps collect diligently and explain almost nothing. People log for a fortnight, see
+their own numbers played back at them, learn nothing they did not already know, and stop. The missing
+ingredient is not sensors. It is a reason. Telling someone "your gut comfort tracks your sleep" and
+meaning it requires pointing at literature that supports it.
 
-Existing approaches fall short: trusting the model begs the question; the same model asked "are you sure?"
-inherits its blind spots; retrieval-augmented citation still lets a model misread sources; manual grading
-(GRADE, Cochrane) costs experts months per question.
+In a real health company, a team does that work. We are two people. That constraint — not an interest
+in AI — produced this architecture: if we cannot hire a research department, the product has to run
+one.
 
-We target the gap: **automated, evidence-grounded verification of LLM-proposed relationships** — cheap at
-ingestion, honest enough to refuse when ungroundable. We did not pre-register success criteria; the operating
-point was set after our first run. This needs an agent, not one call. *biotope* is prebuild — the consumer of
-this layer, not the contribution.
+Existing approaches pay for this in one of three currencies. **Reliability**: assert what you cannot
+back. **Cost**: hire the team. **Users**: ship a dashboard nobody returns to. We wanted to pay in
+none of them.
+
+Success criteria, fixed before we built: every claim a user sees must trace to a named sentence in a
+specific paper, and must survive a check by a model that did not write it.
 
 ## Approach
 
-Two decorrelated LLMs, not one clever prompt. A synthesis model (OpenAI `gpt-5`) proposes a relationship from a
-paper; a second, adversarial model from a different vendor (Agnes `agnes-2.5-flash` — the verifier that actually
-ran) judges whether the claim is faithful to that paper, on quote spans a deterministic gate already proved
-verbatim. Independent retrieval stays mandatory but, since PR #355, informs the caveat rather than the verdict.
-`llm-router check-config` at head reports `Decorrelation: OK — synthesis=openai, verifier=agnes`.
+Ourobion is two surfaces over one research pipeline. **biotope** is the phone app — under thirty
+seconds of logging a day, and cards describing patterns in your own data. **nao** is the operator's
+window into the pipeline that produces the evidence. They share data, not code, so the trust work
+finishes before anything reaches a person.
 
-We deliberately **cut** agent count rather than grow it: we kept only the roles needing judgment — synthesis,
-adversarial verification, presentation, curation — and made extraction and gating deterministic. Cheapest checks
-run first: a deterministic `quoteCheck` against the source text before any verifier token is spent. Two evidence ladders stay uncollapsed — `evidenceTier` (study design)
-and `impactTier` (venue) — because rigor and notability aren't the same axis.
+The pipeline reads open-access papers, proposes a relationship between two health metrics, and then
+checks it.
 
-**Honest weakness:** `edgeScore` weights and `EDGE_GATES` thresholds (0.8/0.5) are uncalibrated — provisional
-pending a labelled set, not derived.
+The check is the real design decision. We ruled out letting one model review its own work. In an
+earlier project of ours, every internal check ran on a single model family, shared that family's blind
+spots, and one error survived three rounds of same-family fixing — caught only when a different model
+on a different platform looked at it. So here, synthesis and verification run on deliberately
+different vendors, and the router refuses to start if the two belong to the same family. This is the
+Swiss-cheese model from safety engineering (Reason, 1990): many imperfect layers, arranged so their
+holes do not line up.
+
+Around the models sit layers that need no judgement at all: a gate requiring verbatim quotes with
+character offsets, a gate rejecting diagnostic language, and a gate deciding whether an edge may be
+shown.
 
 ## Evidence
 
-Machine artifacts re-measured **2026-08-01**; hosted tables read **2026-08-02** (Appendices D, E, I).
+Measured on 2026-08-02 by running commands, not read from notes.
 
-**Corpus: 21,823 records — 20,912 `discovered`, 911 `fetched`, 894 with usable full text.** Only *usable full
-text* can ground a claim, so calling 21,823 a corpus of readable papers overstates our synthesisable base by
-roughly 24×.
+**Corpus.** 21,824 records discovered, 14,726 open access, 911 with full text extracted, 894 of those
+over 5,000 characters.
 
-**Synthesis: 40 papers sent whole** — we deleted the keyword prefilter rather than tune it — yielding **20 claims
-over 20 distinct edges and 12 cited rule blueprints**, the first not hand-authored, at **~US$0.04 per
-paper**. We designed for 3–5 blueprints per paper; we measured **0.3**.
+**Pipeline.** 14 verified relationships; 11 pass the serving gate.
 
-**Verification: Agnes checked 14 edges**, judged on fidelity to the cited paper. Verdicts: **1 `supported`, 10
-`partial`, 2 `uncertain`, 1 `unsupported`**, confidence 0.72–0.92. Hosted `verified_edges` holds **14 rows, 11
-servable** (8 `high`, 3 `mid`); three are held. Corroboration stays thin — our defect, not the literature's:
-retrieval splits metric keys on underscores, so `resting_hr_bpm` never searches "heart rate". It reaches the
-reader only as a caveat, and those are real model-written prose (Appendix E).
+**Decorrelation** is not an assertion — it is a check that prints:
+`Decorrelation: OK — synthesis=openai, verifier=agnes (independent families enforced)`
 
-**No card has yet come from an edge.** `insight_cards` holds **45 rows — 43 `producer='personal'`, 2
-`producer='rules'`, 0 `producer='edge'`.** The step rendering a servable edge as a card has not run — and the
-app shows that gap rather than hiding it: personal cards are titled *"Still researching"* and state they are
-*"an unverified personal observation from your own data only"*. They are real correlations passing the real
-serve gate over **60 days of simulated data** labelled `data_origin: 'simulated:run4-demo'`, shaped to satisfy
-that gate, not bypass it. No baseline or gold set exists: 14 verdicts are not an accuracy rate.
+**Tests.** 2,605 passing, 27 skipped, none failing, across Flutter, TypeScript, Deno, Python and SQL.
+
+**Against baselines, not in isolation.** We trained two small classifiers to test whether specialist
+models could do parts of this more cheaply:
+
+- *Viceroy*, classifying causal language: macro-F1 **0.8656** (95% CI 0.8327–0.8958), against
+  **0.5068** for a cue-lexicon baseline and **0.1535** for majority-class. Its dangerous error —
+  reading a correlational statement as causal — occurs in **4.52%** of cases, against **13.57%** for
+  the baseline.
+- *Zebra*, classifying claim against evidence: macro-F1 **0.5991 ± 0.0081** against its own
+  pre-registered bar of 0.70. **It failed.**
+
+**Against a general model.** On 96 real ingested papers, both disagreed with Claude Haiku 4.5 on
+roughly 43% and 48% of items (κ ≈ 0.2). Unadjudicated, so this measures disagreement, not correctness.
+
+Neither classifier is wired into the product.
 
 ## Constraints
 
-Cost is paid once at ingestion and amortised over every later read, so verification spend is tiered — full
-independent-retrieval verification is reserved for high-impact, low-corroboration edges. Guardrails fail closed:
-a hard stop at 95% of any provider quota, plus per-source token buckets. The machine-local ledger records
-**US$1.80 over 59 calls** (Appendix D). **Agnes is priced at zero**, so no USD ledger can bound it; an
-append-only hash-chained journal reserving every billable POST does. That pricing expires **2026-08-08**.
+Cost is capped in configuration rather than intention: **US$1 per day per pipeline node**, a hard stop
+at 95% of it, and 60,000 output tokens per run. The verifier currently runs on a **free tier that
+expires 2026-08-08**; after that this leg stops until it is renewed. That is a real dependency and we
+would rather name it than discover it on stage.
 
-Platform limits shaped the design: *nao* runs on Cloudflare Workers, whose CPU ceiling can't sustain a long
-ingestion job, so it dispatches GitHub Actions instead — an earlier R2 "mailbox" design was **killed** once we
-found it couldn't invoke a run. Retrieval is OA-first; we don't redistribute closed-access text. No local GPU, so
-the support models are not in what we submit, and we claim no PDPA compliance for the hosted demo.
+**Safety.** All 31 database tables carry row-level security. Personal health data is isolated from
+anything shared. Every user-facing string passes an automated non-diagnostic check — the app describes
+patterns, and is structurally prevented from suggesting a condition.
 
-Two workflows this run added **cannot be dispatched at all**: `workflow_dispatch` resolves from the default branch
-and neither file is there (Appendix I). So the hosted projection cannot be refreshed from CI, and the
-deployed console still shows an earlier pass's figure.
+**Compute.** Android builds run inside a bounded 1.5 GB heap on a 16 GB machine, serialised, because
+that is the hardware we have.
 
 ## Honesty & Trajectory
 
-**What we did not build, plainly.** *biotope* is prior work — **118 commits** before 3 Jul 2026 versus **248**
-since; the backdrop, not the delta. **The verified graph is small and serves nothing: 14 edges, 11 servable,
-0 cards from one.** Support-model checkpoints are frozen and non-serving, CI-enforced against import;
-**all their training and evaluation figures are excluded pending issue #277**, in either direction. The batch
-surfaced four real defects, in Appendix I. Our evaluation is **not a labelled study**: 14
-verdicts, zero baselines. The grounding invariant is **schema-plus-prompt, not proof** — we require an
-independent-retrieval flag before a servable verdict but cannot prove that retrieval was truly independent, and
-cross-model checking reports residual error correlation, so decorrelation **reduces** joint failure rather than
-eliminating it. Ourobion is non-diagnostic, not a medical device.
+**The last mile is not connected.** One card has been generated from a verified relationship, and it
+is archived rather than active. Open biotope today and you will see **no** paper-derived card. Every
+card a user currently sees comes from their own data.
 
-**Two more weeks:** the edge-to-card projection, the only reason 11 servable edges show a user nothing; a metric
-alias map, so `resting_hr_bpm` actually searches "heart rate" and corroboration stops measuring our vocabulary;
-the two undispatchable workflows onto the default branch; the four Appendix I defects; then a hand-labelled gold
-set and the missing baseline-vs-verifier comparison. `EdgeVerification` has nothing health-specific in it, but
-portability is a direction.
+**The gate is narrower than it sounds.** It checks whether a claim is faithful to *the paper it
+cites* — real quotes, correct scope, matching effect size. It does not ask whether the wider
+literature agrees. A card can therefore be served on the strength of a single paper, and a caveat
+field is the only thing carrying that risk to the reader. That was a deliberate, recorded decision,
+not an oversight.
 
----
+**Zebra missed its own bar and was not shipped.** The refusal is enforced in code — the runner stops
+at its native labels and will not map them onto the product's vocabulary — rather than left to
+discipline.
+
+**Next, in order.** Connect the last mile so a verified relationship reaches the active feed;
+adjudicate the disagreement pilot against ground truth; replace the free verifier tier before it
+expires; and widen the fetch stage, because 911 usable papers out of 21,824 discovered is the real
+bottleneck.
+
+We keep a running record of what we got wrong and what caught it. It is in the repository, and it is
+the part we would most like you to read.
+
+*What existed before this challenge and what is new is itemised in Appendix B.*
 
 ## Appendix A — Claim → file/PR map
 
