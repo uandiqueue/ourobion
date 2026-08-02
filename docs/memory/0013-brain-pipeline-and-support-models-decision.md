@@ -5,7 +5,7 @@ summary: Fixes the brain build shape — agentic seeder → deterministic ingest
 type: memory
 status: accepted
 decided: 2026-07-01
-updated: 2026-07-13
+updated: 2026-08-02
 ---
 
 # 0013 — Brain pipeline + support-models decision (the anchor)

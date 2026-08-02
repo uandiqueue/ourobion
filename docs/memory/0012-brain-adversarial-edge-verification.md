@@ -5,7 +5,7 @@ summary: Every brain edge is synthesised then re-checked by an independent, adve
 type: memory
 status: accepted
 decided: 2026-07-13
-updated: 2026-08-01
+updated: 2026-08-02
 ---
 
 # 0012 — The brain verifies synthesised edges with a second, grounded, adversarial LLM

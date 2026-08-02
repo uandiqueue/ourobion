@@ -5,7 +5,7 @@ summary: Grow the metric registry from ~19 to 100 metrics in collector-gated wav
 type: memory
 status: accepted
 decided: 2026-07-01
-updated: 2026-07-13
+updated: 2026-08-02
 ---
 
 # 0014 — Metric-catalog 100-expansion decision

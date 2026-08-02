@@ -75,6 +75,25 @@ mentions were retargeted across 87 files.
 memory: none — this rearranges where documentation lives and updates the tooling that enforces it;
 it establishes no new architectural fact about the system itself.
 
+## CI corrections (added after the first CI run)
+
+The first CI run on PR #378 failed two jobs. Both were caused by this change and both are fixed here;
+neither required redoing the reorganisation.
+
+- **`metric-view` drift.** The bare-path rewrite also edited a doc path inside
+  `tools/metric-view/lib/view.mjs`, which is a **SQL generator** — so its output no longer matched the
+  committed migration and the drift guard fired. The guard's instruction is to point at a *new
+  timestamped migration*, but adding a production migration purely to edit a header comment is
+  disproportionate for a zero-schema change. The generator string was reverted instead, keeping output
+  byte-identical. **Known residue:** that one comment still names the pre-reorg path; fold it in when
+  the view next changes for a real reason.
+- **Memory `updated:` not bumped.** Eight `docs/memory/*.md` files had their links retargeted, which
+  counts as a modification, so the check required their front-matter dates to move. Bumped.
+- **Secret-scan guard fix pulled in from Phase 3.** The allowlist decision recorded below was proven
+  wrong by a real gitleaks 8.30.1 history scan, so the corrected guard (`existedAtCommit()`) and the
+  restored historical fingerprint are included here rather than only in the follow-up PR — otherwise
+  this branch would be independently incorrect even though its secret-scan job is skipped.
+
 ## Verification
 
 - `node tools/context_sync.mjs --check` — passed

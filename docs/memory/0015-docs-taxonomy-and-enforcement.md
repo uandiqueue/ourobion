@@ -5,7 +5,7 @@ summary: The docs tree has a fixed taxonomy (shared/nao/biotope/memory/sessions/
 type: memory
 status: accepted
 decided: 2026-07-13
-updated: 2026-07-13
+updated: 2026-08-02
 ---
 
 # 0015 — Docs taxonomy and enforcement
