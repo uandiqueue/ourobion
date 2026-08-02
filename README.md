@@ -38,6 +38,7 @@ Health domain is already implemented.
 | Document | What it holds |
 |---|---|
 | [`writeup.txt`](docs/hackathon/the_launchpad_challenge/submission/writeup.txt) | The 1,000-word write-up, five pillars, plain text as the portal requires |
+| [`project-summary.md`](docs/hackathon/the_launchpad_challenge/submission/project-summary.md) | The whole picture in one read — what it is, how the loop works, what is measured, and what is not claimed |
 | [`appendix.md`](docs/hackathon/the_launchpad_challenge/submission/appendix.md) | Evidence table, the prebuild-versus-delta commit boundary, and what is explicitly not claimed |
 | [`references.md`](docs/hackathon/the_launchpad_challenge/submission/references.md) | External works cited by the write-up |
 
