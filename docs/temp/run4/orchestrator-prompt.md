@@ -143,9 +143,14 @@ THE DESIGN FILE
 6. DEVICE SETUP (Windows, host UaNdIQueue) — machine-local, does not travel between devices
 ===============================================================================
 
-There is NO macOS machine in this project. This section previously prescribed a macOS setup
-(`/Applications/Docker.app`, `~/Library/Android/sdk`, zsh word-splitting) for a machine that does not
-exist; it was corrected on 2026-07-28 against the real box.
+This section is for the ORCHESTRATOR'S box, which is Windows (host `UaNdIQueue`). It previously
+prescribed a macOS setup (`/Applications/Docker.app`, `~/Library/Android/sdk`, zsh word-splitting)
+that does not apply here; corrected on 2026-07-28 against the real box.
+
+A macOS machine DOES exist in this project — Alton's (`altonmac`, see
+`docs/sessions/20260728T150859Z-altonmac-*`), and the demo runbook records the recording host as
+macOS `darwin-arm64`. So macOS instructions are not fiction; they are simply not this box. Do not
+delete them as dead — check which host a step is for.
 
 - NOTHING is on the base PATH — not node, not flutter, not java. Activate the bounded toolchain once
   per PowerShell shell, from the repo root:

@@ -1,0 +1,49 @@
+{
+  "_comment": "Owner waiver, not a legal review. Jayden (repo owner) elected on 2026-07-27 not to conduct a formal GPL-3.0 determination for this personal-scale research run. The answers below record that decision honestly; they do not claim a review took place. If this artifact is ever distributed, served, published, or made commercial, this file must be replaced by an actual determination first.",
+
+  "status": "approved",
+  "approved_by": "uandiqueue (repo owner)",
+  "date": "2026-07-27",
+
+  "sources": [
+    {
+      "name": "junwang4/causal-language-use-in-science",
+      "pinned_commit": "7ca243a00ec07f1c63fd9ac5b0acc9cac3a6a596",
+      "licence": "GPL-3.0 on the repository. No separate data-licence statement exists upstream; the README's 'About the data' section is only a label legend, and 'How to cite' is an academic norm rather than a licence term.",
+      "url": "https://github.com/junwang4/causal-language-use-in-science",
+      "paper": "Yu, Li & Wang, EMNLP 2019 — https://aclanthology.org/D19-1473/"
+    },
+    {
+      "name": "microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext",
+      "licence": "MIT",
+      "url": "https://huggingface.co/microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext"
+    }
+  ],
+
+  "gpl3_determination": {
+    "_comment": "Recorded as a waiver by the repo owner. No lawyer was consulted and no formal review was performed.",
+
+    "determined_by": "uandiqueue (repo owner) — self-assessed, no formal review",
+    "date": "2026-07-27",
+
+    "covers_annotations_as_data": "Not determined. GPL-3.0 sits on a repository containing both code (main.py) and data, with no separate data-licence statement, so whether it reaches the annotations is ambiguous. Left unresolved deliberately: the run stays inside the non-distribution boundary where the question does not need an answer.",
+    "weights_are_derivative_work": "Not determined; the question is legally unsettled and actively litigated. No position is asserted in either direction. The run does not rely on this resolving favourably.",
+    "accepts_obligations_for_non_distributed_research_artifact": "Yes. GPL-3.0 s2 permits making, running and propagating covered works that are not conveyed, without conditions, and s0 excludes mere network interaction from 'conveying'. This artifact is trained locally, is non-serving, and is never distributed, so the source-disclosure obligations in s5/s6 are not triggered regardless of how the two questions above would resolve.",
+    "may_move_to_served_or_commercial_context": "No. Any serving, publication of weights, shipping inside an application, or commercial use requires a fresh determination first, and most likely retraining from a differently-licensed corpus. Note that distributing the weights WOULD be conveying even though network serving alone would not.",
+
+    "permits_intended_use": true
+  },
+
+  "approved_uses": [
+    "local, non-commercial research pilot (viceroy-causal-language-risk-v0) — non-serving, no production traffic, artifact never distributed or published",
+    "NOT approved: serving, publishing or shipping the weights, redistribution of the corpus, commercial use, or merging these weights or this data with any other model in the roster"
+  ],
+
+  "risk_containment": [
+    "weights, code, and release prefix stay in a namespace separate from every other model in the roster — no shared checkpoints, no merged artifacts, no joint release manifest",
+    "the release manifest names the GPL-3.0 dependency explicitly",
+    "the corpus and any trained weights stay out of git (see this bundle's .gitignore)"
+  ],
+
+  "notes": "The upstream sentences are verbatim excerpts from PubMed abstracts, i.e. third-party copyrighted material the corpus authors redistributed themselves. That is a further reason to keep the artifact undistributed, independent of the GPL-3.0 question."
+}

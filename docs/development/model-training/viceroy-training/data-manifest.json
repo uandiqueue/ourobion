@@ -1,0 +1,24 @@
+{
+  "config_hash": "9fb84309811a320b",
+  "corpus_commit": "7ca243a00ec07f1c63fd9ac5b0acc9cac3a6a596",
+  "data_hashes": {
+    "LICENSE": {
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "size_bytes": 35149
+    },
+    "pubmed_causal_language_use.csv": {
+      "sha256": "f3e50fb07bfe9c9dcbbe3bbfcf0a27e71d460e06895b2867002a61c34ee1f202",
+      "size_bytes": 414298
+    }
+  },
+  "licences": {
+    "junwang4/causal-language-use-in-science": "GPL-3.0 on the repository. Whether copyleft on a DATA repository propagates to model weights trained on it is legally unsettled; this bundle does not assert an answer. A written human determination on the four questions in the training plan \u00a74.2 is required before any training runs \u2014 cli.py's licence gate enforces it.",
+    "microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext": "MIT"
+  },
+  "model_hashes": {},
+  "retrieved_at_utc": "2026-07-27T18:41:26Z",
+  "sources": {
+    "data": "https://github.com/junwang4/causal-language-use-in-science @ 7ca243a00ec07f1c63fd9ac5b0acc9cac3a6a596 (pinned commit)",
+    "model": "microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext (via the `transformers` library)"
+  }
+}
