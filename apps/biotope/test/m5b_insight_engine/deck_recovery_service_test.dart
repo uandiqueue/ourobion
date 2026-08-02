@@ -176,6 +176,12 @@ final _inWindow = _now.add(const Duration(days: 4)).toIso8601String();
 final _pastWindow = _now.subtract(const Duration(days: 2)).toIso8601String();
 
 void main() {
+  // InsightService's session status overlay is static — it is shared across the
+  // three tabs that each construct their own service. That makes it outlive a
+  // single test, so a case that saves or dismisses a card would otherwise leak
+  // into the next one. Cleared before every test to keep these hermetic.
+  setUp(InsightService.resetSessionOverrides);
+
   group('resetCurrentPeriodDeck recovers held cards', () {
     test('a dismissed card — the unrecoverable one — comes back active', () async {
       final backend = _OfflineInsightCards([

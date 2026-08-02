@@ -191,6 +191,57 @@ class InsightService {
 
   static DateTime _systemNowUtc() => DateTime.now().toUtc();
 
+  // ─── Session status overlay ─────────────────────────────────────────────
+  //
+  // Save / dismiss / return-to-deck are shown from THIS MAP, not from the row
+  // the database hands back. The database write still happens and still has to
+  // succeed — the overlay is only recorded after `updateStatus` returns without
+  // throwing — but the read paths no longer depend on the write having CHANGED
+  // anything for the UI to move.
+  //
+  // Why: the shared demo account (`test@ourobion.com`) has its writes silently
+  // discarded by a database trigger (migration 20260802030000), so its cards
+  // never actually change status. Without an overlay a viewer swipes a card and
+  // the SAVED count does not move and the Archive tab stays empty, which reads
+  // as a broken app. With it, every deck interaction is demonstrable, and none
+  // of it persists: the map dies with the process, so the next viewer opens the
+  // seeded deck exactly as it was.
+  //
+  // For a NORMAL account the overlay and the database always agree — the write
+  // lands, and the overlay says the same thing the next fetch would — so this
+  // changes nothing about real behaviour. It is not a cache: nothing is served
+  // from it that the database was not already asked for, and a failed write
+  // (which throws) records no override, so a genuine error is never masked.
+  //
+  // STATIC because insights_tab, archive_tab and home_tab each construct their
+  // own [InsightService]; a per-instance map would let the Archive tab disagree
+  // with the deck about the card just saved. Cleared by [resetSessionOverrides].
+
+  static final Map<int, InsightStatus> _sessionStatus = {};
+  static final Map<int, InsightCard> _sessionSeen = {};
+
+  /// Drops every session override. Called by the deck reset, and by tests that
+  /// need a clean slate between cases (the maps are static, so they otherwise
+  /// outlive a single test).
+  static void resetSessionOverrides() {
+    _sessionStatus.clear();
+    _sessionSeen.clear();
+  }
+
+  /// The status a card should be TREATED as having right now: the session
+  /// override if the user moved it, otherwise whatever the database says.
+  static InsightStatus _effectiveStatus(InsightCard card) =>
+      _sessionStatus[card.id] ?? card.status;
+
+  /// Remember every card we have seen, so a card the user saved can still be
+  /// listed in the Archive tab even when the database never recorded the move.
+  static List<InsightCard> _remember(List<InsightCard> cards) {
+    for (final card in cards) {
+      _sessionSeen[card.id] = card;
+    }
+    return cards;
+  }
+
   /// Expiry cutoff for the PostgREST filter, always UTC with an explicit `Z`.
   /// A naive local ISO string (the old `DateTime.now().toIso8601String()`) is
   /// read as UTC by the timestamptz comparison, skewing the cutoff by the local
@@ -301,8 +352,14 @@ class InsightService {
         .eq('user_id', userId)
         .eq('status', 'active')
         .or('expires_at.is.null,expires_at.gt.$cutoff') as List<dynamic>;
-    return sortedForDeck(data
+    final rows = _remember(data
         .map((row) => InsightCard.fromJson(row as Map<String, dynamic>))
+        .toList());
+    // A card the user saved or swiped away this session leaves the deck even if
+    // the database still reports it active (the demo account's writes are
+    // discarded). Everything else is served exactly as fetched.
+    return sortedForDeck(rows
+        .where((card) => _effectiveStatus(card) == InsightStatus.active)
         .toList());
   }
 
@@ -332,9 +389,20 @@ class InsightService {
         .eq('user_id', userId)
         .inFilter('status', archiveStatuses.map(statusValue).toList())
             as List<dynamic>;
-    return sortedForDeck(data
+    _remember(data
         .map((row) => InsightCard.fromJson(row as Map<String, dynamic>))
         .toList());
+    // Built from every card seen this session, not just the rows the database
+    // returned, so a card saved against the demo account appears here too.
+    // Keyed by id, so a card the database already reports archived is not also
+    // added by the overlay.
+    final archived = <int, InsightCard>{};
+    for (final card in _sessionSeen.values) {
+      if (archiveStatuses.contains(_effectiveStatus(card))) {
+        archived[card.id] = card;
+      }
+    }
+    return sortedForDeck(archived.values.toList());
   }
 
   /// Realtime stream of active insight cards. Updates whenever the nightly job
@@ -362,11 +430,19 @@ class InsightService {
       };
 
   /// Writes a card's status (archive / dismiss / reactivate).
+  ///
+  /// The session override is recorded ONLY after the write returns. A write
+  /// that throws — a real network or permission failure — records nothing and
+  /// still propagates, so the overlay can never paper over a genuine error. A
+  /// write that succeeds but changes no row (the demo account, whose writes the
+  /// database discards) is indistinguishable from a normal success here, which
+  /// is exactly why the UI can be driven from the override.
   Future<void> updateStatus(int cardId, InsightStatus status) async {
     await _client
         .from('insight_cards')
         .update({'status': statusValue(status)})
         .eq('id', cardId);
+    _sessionStatus[cardId] = status;
   }
 
   /// The user-held statuses [resetCurrentPeriodDeck] returns to
@@ -428,6 +504,22 @@ class InsightService {
         .inFilter('status', resettableStatuses.map(statusValue).toList())
         .or('expires_at.is.null,expires_at.gt.$cutoff')
         .select();
-    return rows.map(InsightCard.fromJson).toList();
+
+    // Cards held only in the session overlay are restored too, and counted
+    // once. Without this the demo account's reset reports "0 cards" — the
+    // database moved nothing, because nothing had moved in it to begin with.
+    // Keyed by id so a card both written AND overridden is reported once.
+    final restored = <int, InsightCard>{};
+    for (final card in rows.map(InsightCard.fromJson)) {
+      restored[card.id] = card;
+    }
+    for (final entry in _sessionStatus.entries) {
+      if (!resettableStatuses.contains(entry.value)) continue;
+      final card = _sessionSeen[entry.key];
+      if (card == null) continue;
+      restored.putIfAbsent(card.id, () => card);
+    }
+    resetSessionOverrides();
+    return sortedForDeck(restored.values.toList());
   }
 }
