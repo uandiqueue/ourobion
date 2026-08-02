@@ -11,7 +11,7 @@ updated: 2026-08-01
 
 Entry format: **value shipped · alternatives considered · rationale.** All values are
 provisional-until-calibrated unless marked otherwise, and every value lives in a config object, never
-an inline literal (ADR-0002 mandate). Companion to `docs/implemented/insight-engine-architecture.md` §11.
+an inline literal (ADR-0002 mandate). Companion to `docs/implemented/shared/insight-engine-architecture.md` §11.
 
 These are *this run's* C-entries. The Phase-2 build run's originals (C1–C12) are archived at
 `docs/archive/runs/run1/config-decisions.md` (`docs/archive/runs/run1/config-decisions.md`, archived) and

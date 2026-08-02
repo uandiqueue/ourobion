@@ -3,14 +3,14 @@ id: "0002"
 title: Anomaly & Personal-Signal Definition
 summary: Defines what counts as an observation insight at serve time — a single-metric daily anomaly (S4) or an unexplained n=1 pairwise co-movement (S5) — as deterministic functions over the user's own series, with literature-justified (provisional) thresholds.
 type: decision
-status: accepted
+status: unverified
 decided: 2026-07-13
-updated: 2026-07-13
+updated: 2026-08-02
 ---
 
 # Anomaly & personal-signal definition — architecture decision
 > **Status: authoritative ground truth** · Date: 2026-07-13 · Refines: S4 / S5
-> Part of the insight-engine architecture — see [`../insight-engine-architecture.md`](../../implemented/insight-engine-architecture.md). Contracts: [`../../../shared/brain/`](../../../shared/brain/).
+> Part of the insight-engine architecture — see [`../insight-engine-architecture.md`](../../implemented/shared/insight-engine-architecture.md). Contracts: [`../../../shared/brain/`](../../../shared/brain/).
 
 # Decision 0002: Anomaly & Personal-Signal Definition for the nao Brain Pipeline (S4 single-metric signal, S5 pairwise co-movement)
 

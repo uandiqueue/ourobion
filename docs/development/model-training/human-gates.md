@@ -1,10 +1,10 @@
 ---
 title: Model-training code build — human gates
-summary: Every unresolved human approval that gates a real execution run of the five planned custom models — GMI-H1-H8, per-model licence approvals, the BioREDirect and Yu/Li/Wang GPL-3.0 questions, frozen audit labels, storage retention, GPU-hour/cost caps, live console prices, and the D4 hash-pinned-lock gap. Code in model-training/ fails closed on every one of these; nothing here is resolved by this build.
+summary: Human approvals and external-access gates for custom-model runs, including the owner-recorded GMI credit redemption and 27 July H100 entitlement request that did not yield container access within the challenge window.
 type: plan
 scope: model-training
 status: draft
-updated: 2026-07-27
+updated: 2026-08-02
 ---
 
 # Model-training code build — human gates
@@ -39,19 +39,29 @@ step.
 ## GMI platform gates (GMI-H1-H8)
 
 Defined once in [`zebra-nli-shadow-v0-training-plan.md`](./zebra-nli-shadow-v0-training-plan.md) §3.1
-and shared by every model that needs a GPU (all except Leafcutter's recommended CPU-only path). None
-have been actioned by this build — no GMI organization, container, key, or bucket has been created.
+and shared by every model that needs a GPU (all except Leafcutter's recommended CPU-only path). The
+MT0 build did not provision any GMI resource. The owner subsequently actioned the credit and access
+steps: the sponsor credit code was redeemed, and the NVIDIA H100 contact-sales form was submitted on
+**2026-07-27**. No reference number or confirmation email was issued, no reply was received, and no
+container entitlement became available within the challenge window. No GMI container, SSH key, or
+bucket was created.
 
-| Gate | What is needed | Who decides | What it blocks |
-|---|---|---|---|
-| GMI-H1 | Create/select a dedicated Ourobion GMI organization; verify account, 2FA | Jayden | Any GPU provisioning for any model |
-| GMI-H2 | Redeem sponsor/credit code or add an approved balance; auto-reload off unless Jayden sets a limit | Jayden | Any paid compute |
-| GMI-H3 | Contact GMI Support, request Container (+ Cold Storage if used) entitlement, confirm SKU/region/price | Jayden (or delegate with recorded evidence) | Container/bare-metal provisioning |
-| GMI-H4 | Import a project-specific Ed25519 SSH key, keep the private key outside git/chat | Jayden | SSH access to any container |
-| GMI-H5 | Choose durable storage (GMI Cold Storage or an approved R2 prefix); scoped read/write credential | Jayden | Any checkpoint/artifact persistence |
-| GMI-H6 | Confirm this repo's `model-training/` workspace (MT0, done) as code location; grant only the identity needed per model | Jayden | Which agent/human may run a given model's execution |
-| GMI-H7 | Approve the frozen licence manifest for **that model's** dataset(s); re-approved per model, stricter for Viceroy (§4.2 of its plan) | Jayden, per model | Any training run for that model |
-| GMI-H8 | Approve GPU-hour and total-cost stop limits after viewing the live console estimate | Jayden | Any GPU-hour spend |
+| Gate | What is needed | Owner-recorded status | Who decides | What it blocks |
+|---|---|---|---|---|
+| GMI-H1 | Create/select a dedicated Ourobion GMI organization; verify account, 2FA | Account exists; dedicated-organization and 2FA evidence not recorded | Jayden | Any GPU provisioning for any model |
+| GMI-H2 | Redeem sponsor/credit code or add an approved balance; auto-reload off unless Jayden sets a limit | **Actioned:** sponsor code redeemed. Available credit covers CPU or GMI-hosted third-party inference, not the needed custom-model GPU container | Jayden | Any paid compute |
+| GMI-H3 | Contact GMI Support, request Container (+ Cold Storage if used) entitlement, confirm SKU/region/price | **Actioned but unresolved:** NVIDIA H100 contact-sales form submitted 2026-07-27; no reference, confirmation, reply, entitlement, SKU, region, or live price received | Jayden (or delegate with recorded evidence) | Container/bare-metal provisioning |
+| GMI-H4 | Import a project-specific Ed25519 SSH key, keep the private key outside git/chat | Pending; no GMI key created | Jayden | SSH access to any container |
+| GMI-H5 | Choose durable storage (GMI Cold Storage or an approved R2 prefix); scoped read/write credential | Pending; no GMI bucket created | Jayden | Any checkpoint/artifact persistence |
+| GMI-H6 | Confirm this repo's `model-training/` workspace (MT0, done) as code location; grant only the identity needed per model | Repo workspace exists; execution identity approval remains unrecorded | Jayden | Which agent/human may run a given model's execution |
+| GMI-H7 | Approve the frozen licence manifest for **that model's** dataset(s); re-approved per model, stricter for Viceroy (§4.2 of its plan) | Pending per model | Jayden, per model | Any training run for that model |
+| GMI-H8 | Approve GPU-hour and total-cost stop limits after viewing the live console estimate | Pending; no live container price was available | Jayden | Any GPU-hour spend |
+
+**Challenge-window outcome.** We requested container entitlement on 27 July and did not receive
+access within the challenge window. The redeemed credit covered CPU and hosted third-party inference,
+neither of which was the custom-model training need. Zebra and Viceroy were therefore trained inside
+a local Apple Silicon compute envelope instead; this is an adaptation to the access constraint, not
+a claim that GMI training occurred.
 
 ## Per-model licence approvals
 

@@ -3,11 +3,15 @@ title: Next Steps & Roadmap
 summary: The single next-steps home — the current top priority, near-term work by area (insight engine, biotope UI, nao go-live), and the backlog. Each item points to its ground-truth doc. Start here to see what to do next; scope/sequencing detail lives in phase-2-plan.md.
 type: plan
 scope: repo
-status: canonical
-updated: 2026-07-16
+status: stale
+updated: 2026-08-02
 ---
 
 # Next Steps & Roadmap
+
+> **Stale roadmap snapshot.** This file still describes the 2026-07-16 branch, pipeline, verifier,
+> and training state. Do not use it to choose current work; use the current issue/session control
+> plane until this roadmap is rebuilt.
 
 The one place to see **what to do next** across the repo. This is a roadmap of concrete moves, each
 linked to the ground-truth doc that specifies it. For full Phase 2 scope, tracks, and the Phase 2→3
@@ -23,7 +27,7 @@ gate, see [`phase-2-plan.md`](./phase-2-plan.md).
 ## Near-term by area
 
 2. **Insight engine — continue the long-shot implementation of the plan.** Build-order graph in
-   [`insight-engine-architecture.md`](../implemented/insight-engine-architecture.md) §9. **L0–L6 are shipped** (the
+   [`insight-engine-architecture.md`](../implemented/shared/insight-engine-architecture.md) §9. **L0–L6 are shipped** (the
    Phase-2 run U1–U13): L0 contract extension, storage/router/quoteCheck primitives, rules-as-data (U5),
    baselines v2 + S2/S3 (U6), S4/S5 signals+evaluator (U7), S6 edge store + A11 loader (U8), the agentic
    seeder (U9), the real A8 synthesis run (U10), the A10 verifier scaffold (U11), the S7 composer + S8
@@ -33,9 +37,10 @@ gate, see [`phase-2-plan.md`](./phase-2-plan.md).
    [`docs/sessions/`](../sessions/).
    **Remaining:** L7 (S9 report + surfaced_cards; A1 ledger + A3 transport + A12 coverage), L8 (the full
    gap→queue→dispatch→new-edge loop), the A4–A7 structure/tiering/mention/gate stages, the U1 real
-   applicability grader, and — gating a real verifier verdict on the L6 edge — the non-Anthropic
-   verifier key ([memory 0016](../memory/0016-insight-engine-l6-one-card-slice.md); L6 ships an interim key-blocked-honest
-   verification). Calibration is item 6.
+   applicability grader, and—at the time—an unavailable different-provider verifier key. The interim
+   run is preserved in the
+   [2026-07-16 session](../sessions/20260716T060410Z-agentjwork-claude-l6-one-card-slice.md), not in
+   durable memory. Calibration is item 6.
 
 3. **biotope UI — develop the app UI using the AI-generated starter assets** in the
    [ai-assets subsystem](../../assets/ui-generation/biomech-botanical/) (asset paths resolve via the
@@ -55,7 +60,7 @@ gate, see [`phase-2-plan.md`](./phase-2-plan.md).
    the b2 venue lookup needs no training and can ship anytime.
 
 6. **Hyperparameter calibration** — the provisional constants enumerated in the architecture's
-   hyperparameter registry ([§11](../implemented/insight-engine-architecture.md)): `edgeScore` weights, `EDGE_GATES`,
+   hyperparameter registry ([§11](../implemented/shared/insight-engine-architecture.md)): `edgeScore` weights, `EDGE_GATES`,
    and the S4/S5 thresholds. All are declared-provisional dummies until calibrated.
 
 7. **Hackathon** — the Priority-0 eval artifacts (baseline-vs-verifier catch-rate, cost/latency curve,

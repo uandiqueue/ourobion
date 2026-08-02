@@ -4,13 +4,13 @@ summary: nao is ourobion's expert web window into the brain (query/visualise the
 type: design
 scope: nao
 status: canonical
-updated: 2026-07-31
+updated: 2026-08-02
 ---
 # Ourobion nao — Design (brain inspection & curation)
 
-> **Authoritative integrated architecture:** [`../shared/insight-engine-architecture.md`](../insight-engine-architecture.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the nao-scoped (brain inspection & curation) view; where it differs, the architecture doc wins.
+> **Authoritative integrated architecture:** [`../shared/insight-engine-architecture.md`](../shared/insight-engine-architecture.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the nao-scoped (brain inspection & curation) view; where it differs, the architecture doc wins.
 
-**Scope.** This doc covers nao's product surface — inspecting, visualising, and curating the brain. The end-to-end 23-stage insight engine and its inter-stage contracts live in [`insight-engine-architecture`](../insight-engine-architecture.md); this doc does not restate them.
+**Scope.** This doc covers nao's product surface — inspecting, visualising, and curating the brain. The end-to-end 23-stage insight engine and its inter-stage contracts live in [`insight-engine-architecture`](../shared/insight-engine-architecture.md); this doc does not restate them.
 
 **nao** (脑 — "brain") is ourobion's human-facing **window into the brain**: query and visualise the
 metric-relationship graph, inspect the *evidence* behind every relationship, and curate the brain — by

@@ -3,16 +3,16 @@ id: "0004"
 title: Local-Day Projection for Event and State Primitives
 summary: Defines the additive local_day_v1 calendar, raw timezone provenance, explicit per-metric reducers, one exclusive projection watermark, half-open non-overlapping state bands, and absent quiet days for S1-to-S2 daily projection.
 type: decision
-status: accepted
+status: unverified
 decided: 2026-07-30
-updated: 2026-07-30
+updated: 2026-08-02
 ---
 
 # Local-day projection for event and state primitives — architecture decision
 
 > **Status: authoritative ground truth** · Date: 2026-07-30 · Refines: S1 / S2 / R4-U6 A4
 > Part of the insight-engine architecture — see
-> [`../insight-engine-architecture.md`](../../implemented/insight-engine-architecture.md). Registry contract:
+> [`../insight-engine-architecture.md`](../../implemented/shared/insight-engine-architecture.md). Registry contract:
 > [`../../../shared/metrics/README.md`](../../../shared/metrics/README.md).
 
 ## Context

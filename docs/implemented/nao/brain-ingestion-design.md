@@ -4,13 +4,13 @@ summary: How ourobion acquires the scientific-literature corpus edges are synthe
 type: design
 scope: nao
 status: canonical
-updated: 2026-07-30
+updated: 2026-08-02
 ---
 # The Brain — Ingestion (paper corpus) Design
 
-> **Authoritative integrated architecture:** [`../shared/insight-engine-architecture.md`](../insight-engine-architecture.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the ingestion-scoped (paper-corpus acquisition) view; where it differs, the architecture doc wins.
+> **Authoritative integrated architecture:** [`../shared/insight-engine-architecture.md`](../shared/insight-engine-architecture.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the ingestion-scoped (paper-corpus acquisition) view; where it differs, the architecture doc wins.
 
-**Scope.** This doc covers the front of the pipeline only — paper-corpus acquisition, up to "text + a `paper_uid` ready to cite." The end-to-end 23-stage insight engine and its inter-stage contracts (the A-stages that extend this CLI) live in [`insight-engine-architecture`](../insight-engine-architecture.md); this doc does not restate them.
+**Scope.** This doc covers the front of the pipeline only — paper-corpus acquisition, up to "text + a `paper_uid` ready to cite." The end-to-end 23-stage insight engine and its inter-stage contracts (the A-stages that extend this CLI) live in [`insight-engine-architecture`](../shared/insight-engine-architecture.md); this doc does not restate them.
 
 How ourobion **acquires the scientific literature** that the brain's edges are synthesised from. This
 doc covers the *front of the pipeline only* — discovering papers, fetching them, giving each a stable
@@ -19,7 +19,7 @@ synthesis → verification → graph steps are [`brain-synthesis-design.md`](bra
 contract is [`shared/brain/`](../../../shared/brain/). The brain's runtime *schema* (how edges are stored
 and served) is **settled** — truth-tier edge artifacts (R2 JSONL + the contract) projected by a
 deterministic loader into a relational `verified_edges` view served as a 1-hop lookup, no graph DB
-(see [`insight-engine-architecture`](../insight-engine-architecture.md) §S6/§A11 and
+(see [`insight-engine-architecture`](../shared/insight-engine-architecture.md) §S6/§A11 and
 [`brain-synthesis-design.md`](brain-synthesis-design.md) "Decisions (resolved) item 2"). This doc
 deliberately stops at "text + a `paper_uid` ready to cite."
 

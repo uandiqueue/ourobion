@@ -32,6 +32,9 @@
 //                         link in docs/INDEX.md, and every INDEX link resolves.
 //                      j. Archive containment — no active doc (docs/{shared,nao,biotope}, AGENTS.md,
 //                         README.md) links into docs/archive/ (links flow archive -> active only).
+//                      k. Owner verification — canonical docs in docs/{memory,development/decisions,
+//                         hackathon} and docs/*.md, plus accepted memory/ADR records, carry Jayden's
+//                         explicit verification stamp; otherwise they remain unverified.
 //
 // Node stdlib + `git` via child_process only — no third-party deps, so it runs anywhere Node 18+ is
 // present. The structural dependency graph is DEFERRED in ourobion (see docs/graph/README.md).
@@ -47,6 +50,7 @@ const MEMORY_DIR = join(REPO_ROOT, "docs", "memory");
 const MEMORY_INDEX = join(MEMORY_DIR, "README.md");
 const DECISIONS_DIR = join(REPO_ROOT, "docs", "development", "decisions");
 const DECISIONS_INDEX = join(DECISIONS_DIR, "README.md");
+const DOCS_DIR = join(REPO_ROOT, "docs");
 const DOCS_INDEX = join(REPO_ROOT, "docs", "INDEX.md");
 const COUPLINGS = join(REPO_ROOT, "docs", "graph", "couplings.yaml");
 // Active ground-truth doc roots (relative to repo root) that INDEX must cover + archive-containment guards.
@@ -61,7 +65,9 @@ const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---/;
 const NNNN_PREFIX = /^(\d{4})-/;
 const GEN_BEGIN = "<!-- BEGIN GENERATED -->";
 const GEN_END = "<!-- END GENERATED -->";
-const RECORD_STATUS = new Set(["accepted", "superseded"]);
+const RECORD_STATUS = new Set(["unverified", "accepted", "superseded"]);
+const OWNER_VERIFIED_STATUS = new Set(["canonical", "accepted"]);
+const OWNER_VERIFIER = "Jayden";
 // Session logs from this date on must carry a `memory:` line (check h); older logs predate the convention.
 const MEMORY_LINE_SINCE = "20260713";
 
@@ -187,7 +193,11 @@ function recordIndexLines(dir, { fromDir }) {
     const status = fm.status || "";
     const rel = fromDir === dir ? name : relative(fromDir, join(dir, name)).replace(/\\/g, "/");
     const tail = summary ? ` — ${summary}` : "";
-    const flag = status === "superseded" ? ` _(superseded → ${fm.superseded_by || "?"})_` : "";
+    const flag = status === "superseded"
+      ? ` _(superseded → ${fm.superseded_by || "?"})_`
+      : status === "unverified"
+        ? " _(unverified — pending Jayden review)_"
+        : "";
     const label = status === "superseded" ? `~~${title}~~` : title;
     lines.push(`- [${label}](${rel})${tail}${flag}`);
   }
@@ -305,7 +315,7 @@ function checkRecordFrontMatter(errors) {
         if (!fm[key]) errors.push(`${rel}: front-matter missing required field \`${key}\`.`);
       }
       if (fm.status && !RECORD_STATUS.has(fm.status)) {
-        errors.push(`${rel}: status \`${fm.status}\` not in {accepted, superseded}.`);
+        errors.push(`${rel}: status \`${fm.status}\` not in {unverified, accepted, superseded}.`);
       }
       const pref = NNNN_PREFIX.exec(name);
       if (pref) {
@@ -329,6 +339,69 @@ function checkRecordFrontMatter(errors) {
           }
         }
       }
+    }
+  }
+}
+
+// (k): owner verification is a separate authority boundary. Agents may draft or mark documents
+// unverified, but only Jayden may promote scoped prose to canonical (or a memory/ADR to accepted).
+function checkOwnerVerification(errors) {
+  const scoped = [
+    ...walkMd(MEMORY_DIR),
+    ...walkMd(DECISIONS_DIR),
+    ...walkMd(join(DOCS_DIR, "hackathon")),
+    ...readdirSync(DOCS_DIR)
+      .filter((name) => name.endsWith(".md"))
+      .map((name) => join(DOCS_DIR, name)),
+  ];
+
+  for (const p of new Set(scoped.map((item) => resolve(item)))) {
+    const rel = relative(REPO_ROOT, p).replace(/\\/g, "/");
+    const fm = frontMatter(read(p));
+    if (!fm) {
+      errors.push(`${rel}: owner-verification scope requires YAML front-matter.`);
+      continue;
+    }
+    if (fm.status === "unverified" && (fm.verified_by || fm.verified_at)) {
+      errors.push(`${rel}: unverified content must not retain an owner-verification stamp.`);
+      continue;
+    }
+    if (!OWNER_VERIFIED_STATUS.has(fm.status)) continue;
+    if (fm.verified_by !== OWNER_VERIFIER || !fm.verified_at) {
+      errors.push(
+        `${rel}: status \`${fm.status}\` requires Jayden's owner stamp ` +
+        "(`verified_by: Jayden` and `verified_at:`); otherwise use `status: unverified`.",
+      );
+    }
+  }
+}
+
+function isOwnerVerificationScoped(rel) {
+  if (rel.startsWith("docs/memory/")) return rel.endsWith(".md");
+  if (rel.startsWith("docs/development/decisions/")) return rel.endsWith(".md");
+  if (rel.startsWith("docs/hackathon/")) return rel.endsWith(".md");
+  return /^docs\/[^/]+\.md$/.test(rel);
+}
+
+// A verified document must visibly pass through unverified after any content change. This prevents
+// an old owner stamp from silently blessing later agent edits. Jayden's subsequent promotion is a
+// separate status/stamp update whose base state is unverified.
+function checkOwnerVerificationTransitions(errors, ctx) {
+  if (ctx.range === null || ctx.nothingToPush) return;
+  const base = ctx.range.split("..")[0];
+  for (const rel of ctx.changed.filter(isOwnerVerificationScoped)) {
+    const abs = join(REPO_ROOT, rel);
+    if (!isFile(abs)) continue;
+    const baseText = git("show", `${base}:${rel}`).out;
+    if (!baseText) continue;
+    const baseFm = frontMatter(baseText) || {};
+    if (!OWNER_VERIFIED_STATUS.has(baseFm.status)) continue;
+    const currentFm = frontMatter(read(abs)) || {};
+    if (OWNER_VERIFIED_STATUS.has(currentFm.status)) {
+      errors.push(
+        `${rel}: changed owner-verified content must first return to \`status: unverified\`; ` +
+        "Jayden may promote and stamp the reviewed revision afterward.",
+      );
     }
   }
 }
@@ -488,6 +561,8 @@ function runCheck() {
   checkIndexFreshness(errors);
   checkIndexCoverage(errors);
   checkArchiveContainment(errors);
+  checkOwnerVerification(errors);
+  checkOwnerVerificationTransitions(errors, ctx);
   checkSessionMemoryDelta(errors, ctx);
   checkEditHonesty(errors, ctx);
 
@@ -497,7 +572,7 @@ function runCheck() {
     console.error("\nFix the above, then push again.\n");
     return 1;
   }
-  console.log("context_sync --check passed: sessions, memory, decisions, index, and couplings are consistent.");
+  console.log("context_sync --check passed: sessions, owner verification, memory, decisions, index, and couplings are consistent.");
   return 0;
 }
 

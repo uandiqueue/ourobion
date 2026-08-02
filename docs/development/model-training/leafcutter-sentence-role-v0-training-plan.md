@@ -19,7 +19,7 @@ updated: 2026-07-26
 `leafcutter-sentence-role-v0` classifies each sentence of a structured paper into
 `'finding' | 'method' | 'background' | 'hedge' | 'other'`, filling
 `StructuredPaper.sentences[].role` at **A4 · Structure**
-([`insight-engine-architecture.md`](../../implemented/insight-engine-architecture.md) §A4).
+([`insight-engine-architecture.md`](../../implemented/shared/insight-engine-architecture.md) §A4).
 
 This model is **not** part of the memory-0013 support-model roster. It comes from the insight-engine
 architecture's own deferred-models table, which names the cold-start substitute (Claude Haiku 4.5) and
@@ -92,7 +92,7 @@ Our five roles are not five rhetorical roles. Four of them —
 
 This collides with the contract itself: the same `sentences[]` element already carries
 `assertion: 'asserted' | 'negated' | 'hedged'`, filled separately at A7
-([`insight-engine-architecture.md`](../../implemented/insight-engine-architecture.md) §A4 output shape). So
+([`insight-engine-architecture.md`](../../implemented/shared/insight-engine-architecture.md) §A4 output shape). So
 "hedged" is representable **twice**, in two fields, with no stated precedence — and a hedged finding
 forces the tagger to discard either the role or the hedge.
 

@@ -18,10 +18,10 @@ test that gates Phase 3**.
 Phase 2 also makes one architectural commitment everything else rides on: ourobion stops being a fixed
 set of ~20 metrics in wide daily tables and becomes a **modifiable metric platform** that scales to
 hundreds of metrics across five sources, where **adding or removing a metric is a localized,
-guard-protected change — never a schema-wide rewrite.** On that platform Phase 2 **grows the registry to
-100 metrics in collector-gated waves** (the adopted
-[100-metric decision · memory 0014](../memory/0014-metric-catalog-100-expansion-decision.md));
-the full ~360-metric [`metrics-catalog.md`](../implemented/biotope/metrics-catalog.md) stays the reference, not the ship target.
+guard-protected change — never a schema-wide rewrite.** The registry grows in collector-gated waves;
+its size follows useful, supportable signals rather than a fixed target. The broader
+[`metrics-catalog.md`](../implemented/biotope/metrics-catalog.md) remains a candidate reference, not a
+commitment to ship every entry.
 
 > **What to do next?** See [`next-steps.md`](./next-steps.md) — the roadmap home for the current top
 > priority, near-term work by area, and the backlog.
@@ -86,10 +86,10 @@ in-moment event > subjective rating > manual count). Baselines and insights conf
 and **triangulate** — a self-report agreeing with its passive correlate raises confidence; divergence
 flags bad data. Low-reliability metrics surface as personal trends only, never cross-user absolutes.
 
-> **Scope.** The registry grows to **100 metrics in collector-gated waves** — a wave promotes only when
+> **Scope.** The registry grows in **collector-gated waves** — a wave promotes only when
 > its collector ships (or the guards go red), and the manual spine stays a thin ~9 daily touches
-> (breadth lives in the free passive/derived layers). It does **not** ship the full ~360-metric catalog;
-> that stays reference. Add/remove remains a localized, guard-protected, per-metric change.
+> (breadth lives in the free passive/derived layers). The catalog is a candidate reference, not a
+> numerical ship target. Add/remove remains a localized, guard-protected, per-metric change.
 >
 > **Demo storage.** All user data lives in **Supabase** for now. PDPA/data-isolation and privacy
 > hardening (on-device processing of raw mic/location/camera, granular per-source consent) are
@@ -342,8 +342,8 @@ and Phase 3. Then Phase 3 opens: the gamification game + UI redesign + Insight L
 - **Registry v2 migration** — extending the registry + generalizing storage touches `shared/` and
   migrations; keep each a small, guarded, 2-reviewer PR and migrate existing tables in place (no rewrite
   of `daily_gut_rows` / `wearable_daily`).
-- **Metric-catalog scope** — the target is 100 metrics in collector-gated waves; resist creeping toward
-  the full ~360 catalog, and never promote a wave ahead of its collector (the guards enforce this).
+- **Metric-catalog scope** — registry size is intentionally variable; never promote a metric ahead of
+  its collector or merely to reach a headline count (the guards enforce the collector boundary).
 - **Brain correctness** — a wrong/overgreedy relationship graph produces spurious correlations; seed
   conservatively (registry `derivedFrom` + curated priors), grow from adversarially-verified extraction.
 - **LLM non-diagnostic risk** — free text can imply diagnosis with no forbidden words; constrain

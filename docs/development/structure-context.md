@@ -4,7 +4,7 @@ summary: The authoritative repo directory layout (apps/, shared/, supabase/, too
 type: context
 scope: repo
 status: canonical
-updated: 2026-07-26
+updated: 2026-08-02
 ---
 
 # structure-context.md — Ourobion Repository Structure
@@ -18,7 +18,8 @@ This is a monolithic repository containing the frontend mobile application, back
 
 ```
 ourobion/
-├── AGENTS.md                  # SINGLE SOURCE OF TRUTH for agents + humans (points to everything)
+├── AGENTS.md                  # Single source of truth for AI coding agents
+├── README.md                  # Human front door; points to docs/repository-guide.md
 ├── CLAUDE.md / GEMINI.md      # Thin pointers to AGENTS.md
 ├── .graphifyignore            # Excludes archive + generated human view from semantic indexing
 ├── assets/                    # Brand assets (design reference, NOT app-bundled)
@@ -43,29 +44,22 @@ ourobion/
 │   └── shared_memory.mjs      # task-claim coordinator (.agents/session-log.json, gitignored)
 ├── docs/                      # General project documentation
 │   ├── INDEX.md               # Generated doc map — every active doc + one-line summary (read first)
-│   ├── shared/                # Cross-app ground truth + process docs
-│   │   ├── insight-engine-architecture.md # AUTHORITATIVE end-to-end insight-engine (serve + authoring)
-│   │   ├── biotope-nao-link.md        # How biotope & nao connect at runtime (the seam)
-│   │   ├── project-context.md         # Key project principles, goals, and phases
-│   │   ├── structure-context.md       # This document
-│   │   ├── phase-2-plan.md             # Current phase plan: goals, workstreams, sequence, gate
-│   │   ├── agent-protocol.md          # AI agent routing table, non-negotiables, PR review checklist
-│   │   ├── dev-workflow.md            # Full dev cycle — what AI does vs what humans must do
-│   │   ├── commit-conventions.md      # Conventional Commits spec
-│   │   ├── decisions/                 # Granular architecture ADRs (citation extraction, anomaly, reliability)
-│   │   └── hackathon/                 # Launchpad 2026 strategy (rules + direction; narrative merged into direction, prior evaluations archived)
-│   ├── nao/                   # The brain feature (knowledge graph of metric relationships)
-│   │   ├── nao-app-design.md              # nao web app: brain inspection/curation surface
-│   │   ├── brain-synthesis-design.md            # Brain design: evidence-tiered edges, second-LLM verification
-│   │   ├── brain-ingestion-design.md  # Paper-corpus ingestion → synthesis → verification pipeline
-│   │   └── brain-support-models-design.md   # Support-model training design (deferred)
-│   ├── biotope/               # The app feature (architecture, insights engine, metrics, UI)
-│   │   ├── architecture-context.md    # System architecture and data flow rules
-│   │   ├── rules-engine-design.md  # biotope-scoped serve engine (defers to shared/insight-engine-architecture.md)
-│   │   ├── metrics-catalog.md         # Candidate-metrics catalog
-│   │   ├── metrics-registry-design.md # Single-source metric registry (safe metric add/remove)
-│   │   └── ui/                # UI design system (ui-design-context.md + mockups)
-│   │       └── ai-assets/      # AI-generated UI asset subsystem (prompts/manifest/reviews) — exempt from the doc index
+│   ├── implemented/           # Authored descriptions of the implemented product and architecture
+│   │   ├── project-context.md # Product principles, goals, and phases
+│   │   ├── system-truth.md    # Timestamped, measured implementation state
+│   │   ├── shared/            # Cross-application architecture
+│   │   │   ├── insight-engine-architecture.md # End-to-end insight engine (serve + authoring)
+│   │   │   └── biotope-nao-link.md # How biotope and nao connect at runtime
+│   │   ├── nao/               # Brain inspection, ingestion, synthesis, and support-model designs
+│   │   └── biotope/           # Flutter architecture, rules, metrics, and UI designs
+│   ├── development/           # Plans, workflows, runbooks, in-flight work, and architecture decisions
+│   │   ├── structure-context.md # This document
+│   │   ├── phase-2-plan.md    # Current phase plan, workstreams, sequence, and gate
+│   │   ├── agent-protocol.md  # Agent routing, non-negotiables, and review checklist
+│   │   ├── dev-workflow.md    # Full human/agent development cycle
+│   │   ├── commit-conventions.md # Conventional Commits specification
+│   │   └── decisions/         # Granular cross-application architecture ADRs
+│   ├── hackathon/             # Launchpad 2026 rules, strategy, and submission material
 │   ├── temp/                  # WIP drafts, promotable to ground truth — NOT authoritative
 │   │   ├── README.md                  # temp lifecycle (draft → promote → archive)
 │   │   └── briefs/                     # dated research/options briefs (YYYY-MM-DD-slug.md)

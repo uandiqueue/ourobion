@@ -42,8 +42,8 @@ This protocol covers work anywhere in the repo — the **biotope** app, the **na
 | Working on M1 | `apps/biotope/lib/modules/m1_core/m1-context.md` + `docs/implemented/biotope/architecture-context.md` |
 | Working on M2 | `apps/biotope/lib/modules/m2_self_report/m2-context.md` + `shared/SHARED-CONTEXT.md` |
 | Touching `shared/types/` or `shared/brain/` | `shared/SHARED-CONTEXT.md` — requires 2-reviewer PR |
-| Working on the insight engine (any stage) | `docs/implemented/insight-engine-architecture.md` (authoritative) + the relevant `docs/development/decisions/` ADR |
-| Working on nao (web app) | `docs/implemented/nao/nao-app-design.md` + `docs/implemented/biotope-nao-link.md` (the seam) |
+| Working on the insight engine (any stage) | `docs/implemented/shared/insight-engine-architecture.md` (authoritative) + the relevant `docs/development/decisions/` ADR |
+| Working on nao (web app) | `docs/implemented/nao/nao-app-design.md` + `docs/implemented/shared/biotope-nao-link.md` (the seam) |
 | Working on the brain (synthesis / verification / ingestion) | `docs/implemented/nao/brain-synthesis-design.md` + `docs/implemented/nao/brain-ingestion-design.md` + `shared/brain/` |
 | Writing user-facing strings | `shared/constants/copy_guidelines.ts` + `shared/constants/copy_guidelines.dart` |
 | Reviewing a PR | This file `§ PR Review Checklist` + module context for the PR scope |

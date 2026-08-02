@@ -38,7 +38,7 @@ only ever run offline.
 | `EdgeVerification.evidenceTier` | `relationships.ts:213` |
 
 Pipeline seam: **A5 · Evidence tiering**
-([`insight-engine-architecture.md`](../../implemented/insight-engine-architecture.md) §A5).
+([`insight-engine-architecture.md`](../../implemented/shared/insight-engine-architecture.md) §A5).
 
 **The model does not replace the rules.** A5 is specified as RULES first — `workType: review` → tier-5
 candidate, plus a keyword registry over methods/abstract ("randomized"→4, "cohort"→3,

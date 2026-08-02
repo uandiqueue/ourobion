@@ -4,7 +4,7 @@ summary: How the three small biomedical encoders (NLI pre-filter, study-design +
 type: design
 scope: nao
 status: deferred
-updated: 2026-07-26
+updated: 2026-08-02
 ---
 # Brain support models — training design (public-data-first)
 
@@ -13,7 +13,7 @@ LLMs (synthesis + verifier). This is a **design doc, not a training run** — no
 It is grounded in **real sample records pulled live on 2026-07-01** from each dataset (schemas, label
 sets, and split sizes below are observed, not assumed).
 
-**Scope.** This doc covers only the three support models. How they slot into synthesis/verification is [`brain-synthesis-design.md`](brain-synthesis-design.md); the end-to-end 23-stage insight engine and its inter-stage contracts live in [`insight-engine-architecture`](../insight-engine-architecture.md).
+**Scope.** This doc covers only the three support models. How they slot into synthesis/verification is [`brain-synthesis-design.md`](brain-synthesis-design.md); the end-to-end 23-stage insight engine and its inter-stage contracts live in [`insight-engine-architecture`](../shared/insight-engine-architecture.md).
 
 - Product framing + why these models: [pipeline decision](../../memory/0013-brain-pipeline-and-support-models-decision.md)
 - The contract fields these models populate/verify: [`brain-synthesis-design.md`](brain-synthesis-design.md) +

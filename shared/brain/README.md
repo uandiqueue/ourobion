@@ -1,6 +1,6 @@
 # The Brain — relationship contract
 
-**Runbook only; rationale in [`docs/implemented/nao/brain-synthesis-design.md`](../../docs/implemented/nao/brain-synthesis-design.md), stages in [`docs/implemented/insight-engine-architecture.md`](../../docs/implemented/insight-engine-architecture.md).**
+**Runbook only; rationale in [`docs/implemented/nao/brain-synthesis-design.md`](../../docs/implemented/nao/brain-synthesis-design.md), stages in [`docs/implemented/shared/insight-engine-architecture.md`](../../docs/implemented/shared/insight-engine-architecture.md).**
 
 `shared/brain/` is the cross-language contract for **the brain**: ourobion's knowledge graph of
 scientifically-derived relationships between metrics. Nodes are metric keys (from

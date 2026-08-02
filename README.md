@@ -1,139 +1,218 @@
 # Ourobion
 
-**A One Health personal ecological health monitor for the ASEAN market.** Ourobion connects human
-physiology, daily behaviour, and environmental context so people can understand patterns in their gut
-health, hydration, vector exposure, and ecological wellbeing — in under 30 seconds of logging a day,
-and **without ever making a diagnostic claim**.
+**A One Health personal ecological health monitor for the ASEAN market.** Ourobion connects daily
+observations about a person's body and behaviour with environmental context, then presents
+descriptive patterns without making diagnostic claims.
 
-> This README is the **human front door** — what ourobion is, and how to run it. AI coding agents
-> have their own front door: **[`AGENTS.md`](AGENTS.md)**.
+**One Health** is the principle that the health of people, animals, and the environment is
+interconnected. Ourobion currently starts with the part an individual can observe and act on:
+personal physiology, daily behaviour, and environmental exposure. It does not claim that every One
+Health domain is already implemented.
 
-**Start here, depending on what you want:**
+> This README is the human front door: where to go, what the two products do, and how to run them
+> from source. AI coding agents start with [`AGENTS.md`](AGENTS.md).
 
-| | |
+## Where to go
+
+| You want to… | Start here |
 |---|---|
-| 📖 **What Ourobion is and why it exists** — the problem that produced it, who it is for, what biotope and nao each are and why they are separate, and what the logo encodes | [`docs/project-overview.md`](docs/project-overview.md) |
-| 🛠 **How we build** — the development cycle, machine-enforced context, executable cross-language contracts, the two-reviewer rule, and how concurrent AI agents coordinate | [`docs/engineering-practice.md`](docs/engineering-practice.md) |
-| 📊 **What actually exists, measured** — tests, schema, corpus and brain-pipeline output, every figure from executed commands | [`docs/implemented/system-truth.md`](docs/implemented/system-truth.md) |
+| **Judge the Launchpad 2026 submission** | [`docs/hackathon/the_launchpad_challenge/submission/`](docs/hackathon/the_launchpad_challenge/submission/) — write-up, appendix, references |
+| **Sign in and look around** | [Shared test account](#shared-test-account) below — `test@ourobion.com` / `test123`, one credential for both apps |
+| Take a guided reviewer route through the repository | [`docs/repository-guide.md`](docs/repository-guide.md) |
+| Understand the product, origin, and two-system design | [`docs/project-overview.md`](docs/project-overview.md) |
+| Review what is actually implemented and measured | [`docs/implemented/system-truth.md`](docs/implemented/system-truth.md) |
+| See what we got wrong along the way | [`docs/development/what-we-got-wrong.md`](docs/development/what-we-got-wrong.md) |
+| Run Biotope | [`apps/biotope/README.md`](apps/biotope/README.md) |
+| Run Nao | [`apps/nao/README.md`](apps/nao/README.md) |
+| Understand the full insight-engine architecture | [`docs/implemented/shared/insight-engine-architecture.md`](docs/implemented/shared/insight-engine-architecture.md) |
+| Navigate all active documentation | [`docs/INDEX.md`](docs/INDEX.md) |
+| Understand the engineering practice | [`docs/engineering-practice.md`](docs/engineering-practice.md) |
+| Work as an AI coding agent | [`AGENTS.md`](AGENTS.md) |
+| Review third-party credits and licences | [`ATTRIBUTION.md`](ATTRIBUTION.md) |
 
----
+### Launchpad 2026 submission
 
-## ✨ What it is
-
-Ourobion surfaces *descriptive* patterns and insight cards from a small set of high-yield signals. It
-never diagnoses — every user-facing string uses observational language ("your data shows a pattern",
-never "you may have X"). Privacy is structural: personal health data is isolated from community data,
-consent is granular, and community aggregates only publish above per-region thresholds.
-
-**Two surfaces, one brain:**
-
-| Surface | What it is | Run it |
-|---|---|---|
-| 🌱 **biotope** | The mobile app (Flutter, iOS + Android) — 30-second daily logging + descriptive insight cards. | [`apps/biotope/README.md`](apps/biotope/README.md) |
-| 🧠 **nao** | The web "window into the brain" — a Next.js research/claims operations dashboard built for Cloudflare; production deployment evidence is still pending. | [`apps/nao/README.md`](apps/nao/README.md) |
-
-Product principles in full: [`docs/implemented/project-context.md`](docs/implemented/project-context.md).
-
----
-
-## 🧬 The brain — an evidence-tiered, verified relationship graph
-
-Ourobion's insights need a *reason*, not just a correlation in one person's data. **The brain** is the
-reusable layer of "what relates to what, and how strongly the science backs it": a knowledge graph
-whose **nodes are metrics** and whose **edges are relationships** synthesised from the scientific
-literature — and it pays its quality cost at ingestion time, by design:
-
-- **Two passes, two records.** A synthesis LLM proposes an edge; a **second, independent LLM**
-  re-checks it against **freshly-retrieved** evidence. Separate records, so verification can re-run
-  with a better verifier without re-synthesising.
-- **Grounded and adversarial — enforced, not just prompted.** A `supported`/`contradicted` verdict
-  *requires* the verifier to have done independent retrieval (a schema invariant); with no fresh
-  grounding the verdict can only be `uncertain`.
-- **Trust is graded, not binary.** A study-design ladder (`evidenceTier` 1–5), a separate venue
-  `impactTier`, corroboration counts, and per-failure-mode checks roll into a 0..1 `edgeScore` that
-  gates whether and how an edge is served.
-- **Rebuildable projection.** The *contract* (`shared/brain/`) is git-tracked truth; the *edges* are a
-  rebuildable projection — never hand-edited. To change a verdict you fix the input and re-run.
-
-Design + rationale: [`docs/implemented/nao/brain-synthesis-design.md`](docs/implemented/nao/brain-synthesis-design.md) ·
-[`docs/implemented/nao/brain-ingestion-design.md`](docs/implemented/nao/brain-ingestion-design.md). Contract:
-[`shared/brain/`](shared/brain/).
-
----
-
-## 🚪 Where to go next
-
-### 👤 Humans — start here
-
-| You want… | Look in |
+| Document | What it holds |
 |---|---|
-| **Run the biotope app** (env, toolchain, Android) | [`apps/biotope/README.md`](apps/biotope/README.md) |
-| **Run the nao web dashboard** (env, D1/ETL, deploy) | [`apps/nao/README.md`](apps/nao/README.md) |
-| **Product design** — principles, goals, phases | [`docs/implemented/project-context.md`](docs/implemented/project-context.md) · [`docs/development/phase-2-plan.md`](docs/development/phase-2-plan.md) |
-| **System architecture & data flows** | [`docs/implemented/biotope/architecture-context.md`](docs/implemented/biotope/architecture-context.md) |
-| **Repository layout & structure rules** | [`docs/development/structure-context.md`](docs/development/structure-context.md) |
-| **UI design** — tokens, components | [`docs/implemented/biotope/ui-design-context.md`](docs/implemented/biotope/ui-design-context.md) (app) · [`docs/implemented/nao/nao-app-design.md`](docs/implemented/nao/nao-app-design.md) (nao) |
-| **The brain** — design + ingestion | [`docs/implemented/nao/brain-synthesis-design.md`](docs/implemented/nao/brain-synthesis-design.md) · [`docs/implemented/nao/brain-ingestion-design.md`](docs/implemented/nao/brain-ingestion-design.md) |
-| **Insight-engine architecture** (authoritative, both apps) | [`docs/implemented/insight-engine-architecture.md`](docs/implemented/insight-engine-architecture.md) · ADRs [`docs/development/decisions/`](docs/development/decisions/) · seam [`docs/implemented/biotope-nao-link.md`](docs/implemented/biotope-nao-link.md) |
-| **Insights engine (biotope serve) / metrics registry** | [`docs/implemented/biotope/rules-engine-design.md`](docs/implemented/biotope/rules-engine-design.md) · [`docs/implemented/biotope/metrics-registry-design.md`](docs/implemented/biotope/metrics-registry-design.md) |
-| **Hackathon** (Launchpad 2026 strategy) | [`docs/hackathon/the_launchpad_challenge/plan/`](docs/hackathon/the_launchpad_challenge/plan/) — direction, narrative, judging self-review |
-| **Shared contracts** (TypeScript ↔ Dart) | [`shared/SHARED-CONTEXT.md`](shared/SHARED-CONTEXT.md) |
-| **Decisions & rationale** | [`docs/memory/`](docs/memory/) (indexed decisions) · [`docs/development/decisions/`](docs/development/decisions/) (architecture ADRs) · [`docs/sessions/`](docs/sessions/) (per-session logs) |
-| **Dev workflow** (Issue → PR → merge) | [`docs/development/dev-workflow.md`](docs/development/dev-workflow.md) · [`docs/development/commit-conventions.md`](docs/development/commit-conventions.md) |
+| [`writeup.txt`](docs/hackathon/the_launchpad_challenge/submission/writeup.txt) | The 1,000-word write-up, five pillars, plain text as the portal requires |
+| [`appendix.md`](docs/hackathon/the_launchpad_challenge/submission/appendix.md) | Evidence table, the prebuild-versus-delta commit boundary, and what is explicitly not claimed |
+| [`references.md`](docs/hackathon/the_launchpad_challenge/submission/references.md) | External works cited by the write-up |
 
-### 🤖 AI agents — start at [`AGENTS.md`](AGENTS.md)
+Prior work versus the challenge delta is stated in the appendix and checkable in commit dates: 117 of
+817 commits predate 3 July 2026; the remaining 700 are the delta.
 
-`AGENTS.md` is the **single, tool-agnostic source of truth** for agentic tools: how to build here and
-the principles to follow. `CLAUDE.md` / `GEMINI.md` are thin pointers to it, so guidance never drifts
-between Claude, Codex, and Gemini. The AI routing table, truth hierarchy, and PR-review checklist live
-in [`docs/development/agent-protocol.md`](docs/development/agent-protocol.md).
+## Two products, different users
 
-> **The split:** humans are pointed to *decisions, rationale, and how to run the apps* (this README).
-> Agents are pointed to *how to build and the principles to follow* (`AGENTS.md`). Neither duplicates
-> the other.
+### Biotope — the personal mobile app
 
----
+**Biotope** is the Flutter app used by the person whose health is being observed. It keeps daily
+logging brief, records signals such as digestion, hydration, and wellbeing, and presents trends and
+descriptive insight cards in non-diagnostic language.
 
-## 🏗 How this repo is built — and why
+The insights are important because logging alone only returns a person's data to them. Ourobion is
+designed to connect observations across time, show when a pattern has enough support to be worth
+surfacing, and say plainly when it does not.
 
-Ourobion is built largely by **AI coding agents** alongside humans — sometimes several on one machine.
-Agents start every session blank, so the repo treats **context as a first-class, version-controlled,
-machine-enforced artifact**. The durable *why* is here; the agent-facing *how* is `AGENTS.md`.
+### Nao — the research and operations interface
 
-1. **The repo is the single source of truth** — nothing important lives in a tool's head; one
-   authoritative file (`AGENTS.md`), thin per-tool pointers.
-2. **Separate stable from in-motion** — a *constant* layer (`docs/*-CONTEXT.md`) apart from a
-   *variable* layer (`docs/sessions/`), so docs don't rot.
-3. **Two-tier truth** — hand-authored inputs are **truth**; anything a job can recompute (baselines,
-   insight cards, the knowledge graph, the nao search index) is a **rebuildable projection**, never
-   hand-edited.
-4. **Append-only, one file per session** — parallel agents never edit a shared status file.
-5. **Executable contracts** — cross-language couplings (TS type ↔ Postgres column ↔ Dart model) are
-   pinned by guard tests ([`docs/graph/couplings.yaml`](docs/graph/couplings.yaml)), so drift fails a
-   test, not production.
-6. **Enforce automatically** — a pre-push hook *and* CI re-run the same checks (session logged, memory
-   index resolves, every coupling guard exists).
-7. **Isolate concurrent work** — issue + branch + git worktree per session.
-8. **Fight context overload** — a semantic knowledge graph (graphify, below) serves agents only the
-   relevant slice.
+**Nao** is the Next.js operator dashboard used by the people maintaining Ourobion's evidence layer.
+It exposes the paper corpus, relationship claims, independent verification, ingestion gaps, pipeline
+controls, and model status. It is not the consumer health app.
 
----
+Nao makes the research process inspectable: operators can see which evidence produced a relationship,
+how it was reviewed, and why it is accepted, held, or rejected before it is allowed to influence the
+product. Nao is intended for authorised operators, not as a general interface for browsing private
+health histories; its production-grade role and row-level-security boundary remains pending
+verification.
 
-## 🧭 Code navigation — graphify
+## How they connect
 
-The repo indexes its **own source** into a queryable semantic graph
-([graphify](https://github.com/safishamsi/graphify)) so an assistant (or you) can pull a small,
-relevant slice instead of grepping the whole tree. It is **dev tooling** — not part of the app —
-bounded to the project toolchain. The machine graph lands in gitignored `graphify-out/`; its single
-tracked, generated human overview is [`docs/graph/semantic-graph.md`](docs/graph/semantic-graph.md).
-
-```bash
-graphify query "<question>"      # the relevant subgraph for a question
-graphify path "<A>" "<B>"        # shortest relationship between two symbols
-graphify explain "<concept>"     # a node and its neighbours
-npm run graph:view:write         # refresh the tracked human view after a direct update
+```text
+scientific literature
+        │
+        ▼
+paper ingestion → relationship synthesis → independent verification
+        │                                      │
+        └──────────── inspected through Nao ───┘
+                                               │
+                                               ▼
+                                   governed evidence and rules
+                                               │
+daily observations → personal baselines ───────┤
+                                               ▼
+                              descriptive insights in Biotope
 ```
 
-Auto-installed by the setup scripts; pre-wired for Claude Code / Codex / Gemini CLI. Full detail
-(rebuild, the optional semantic pass, API-key/cost notes):
-[`docs/graph/README.md`](docs/graph/README.md).
+The **brain** is the research and reasoning layer behind this flow, not a third user-facing product.
+One model proposes relationships from scientific literature; a verifier from a different vendor
+family checks them against independently retrieved evidence. The resulting graph is graded and
+rebuildable rather than treated as unquestionable truth.
+
+Not every verified research relationship is automatically serving a Biotope card today. The current
+measured implementation and explicit gaps are recorded in
+[`docs/implemented/system-truth.md`](docs/implemented/system-truth.md).
+
+Brain design: [`brain-synthesis-design.md`](docs/implemented/nao/brain-synthesis-design.md) ·
+[`brain-ingestion-design.md`](docs/implemented/nao/brain-ingestion-design.md) ·
+[`shared/brain/`](shared/brain/).
+
+## Run from source
+
+There is **no downloadable APK release yet**. Biotope currently runs from source on an Android
+emulator or physical device. Nao runs locally with Node.js. The app-specific READMEs remain the
+authority for prerequisites, environment variables, troubleshooting, verification, and deployment.
+
+### Shared test account
+
+Use the following account when the apps are connected to Ourobion's configured demo environment:
+
+```text
+Email:    test@ourobion.com
+Password: test123
+```
+
+- **In Nao**, the account has **viewer authority**. It can inspect the read-only research and
+  evidence surfaces but does not grant curator or administrator operations.
+- **In Biotope**, the same account is also **view-only**. It opens a preseeded demonstration health
+  profile so reviewers can inspect trends and existing insight cards without first entering days of
+  observations. The seeded data is demonstration data, not a real person's health record.
+- A Biotope user may instead register a separate account and build their own private profile.
+
+This is a public shared account. Do not enter personal or sensitive information into it. A fully
+local Supabase stack has a separate authentication database, so the account is available only when
+the app points to the configured demo environment unless it is provisioned locally as well.
+
+### Run Biotope
+
+Full instructions: [`apps/biotope/README.md`](apps/biotope/README.md).
+
+At minimum, install Flutter, Node.js, Docker, and an Android toolchain. From the repository root:
+
+```bash
+# Linux/macOS project setup. Windows uses .\scripts\setup.ps1 instead.
+chmod +x scripts/setup.sh
+./scripts/setup.sh
+
+# Public client configuration: fill in the URL and anon key after Supabase starts.
+cp apps/biotope/.env.public.example apps/biotope/.env.public
+npx supabase start
+npx supabase db reset
+
+cd apps/biotope
+flutter pub get
+flutter run
+```
+
+For an Android emulator, set `SUPABASE_URL=http://10.0.2.2:54321` in
+`apps/biotope/.env.public`. A physical phone uses the development machine's LAN address. Never place
+private backend secrets in this file; it is bundled into the app.
+
+### Run Nao
+
+Full instructions: [`apps/nao/README.md`](apps/nao/README.md). Nao requires Node.js **26 or newer**.
+
+From `apps/nao/`:
+
+```bash
+cp .env.public.example .env.public
+cp .env.example .env
+# Fill in the selected Supabase project values. R2 credentials are needed for ETL.
+
+npm install
+npm run dev
+# http://localhost:3000
+```
+
+The interface can start without rebuilding the paper index, but corpus search and paper detail depend
+on the documented D1/R2 setup. Follow the app README to initialise D1, run the ETL, or exercise the
+Cloudflare path.
+
+### Verify the applications
+
+```bash
+# Biotope
+cd apps/biotope
+flutter analyze
+flutter test
+
+# Nao
+cd ../nao
+npm run typecheck
+npm test
+```
+
+Repository context and documentation checks run from the root:
+
+```bash
+npm run context:check
+```
+
+## Repository guide
+
+For a map of every top-level directory and a guided reviewer route, see
+[`docs/repository-guide.md`](docs/repository-guide.md). The shortcuts are in
+[Where to go](#where-to-go) at the top of this file.
+
+## Team and contact
+
+| Member | Role | Responsibility |
+|---|---|---|
+| **Jayden** | **Project Lead & Systems Architect** | Leads product direction, system architecture, technical strategy, project planning, and final decision-making. |
+| **Alton** | **Product Design & Submission Lead** | Leads UI/UX design and prepares the public-facing product experience, submission materials, and presentation deliverables. |
+| **Janson** | **Development Enablement & Technical Support** | Supports implementation, provides technical assistance, and provisions access to development tooling, AI services, and project accounts. |
+
+- **Project contact:** agent.j.work@gmail.com
+- **Technical questions and reproducible defects:** use the repository's GitHub Issues.
+
+Third-party services, models, datasets, frameworks, fonts, and generated assets are credited in
+[`ATTRIBUTION.md`](ATTRIBUTION.md). Team membership is recorded here rather than mixed into
+third-party attribution.
+
+---
+
+Ourobion is non-diagnostic by construction. It describes patterns in the available data; it does not
+provide medical diagnosis or replace professional care.
+
+**Reviewed and re-signed by Jayden**
+
+2 August 2026

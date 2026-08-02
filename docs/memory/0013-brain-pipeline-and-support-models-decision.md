@@ -1,49 +1,40 @@
 ---
 id: "0013"
-title: Brain pipeline + support-models decision (the anchor)
-summary: Fixes the brain build shape — agentic seeder → deterministic ingest → synthesis LLM + different-family verifier + 4 small support models → verified_edges truth store (relational 1-hop, Neo4j dropped) → runtime presentation agent; every LLM node has local-agent and API-worker routes.
+title: Brain build, persistence, rule promotion, and serving boundaries
+summary: The brain separates deterministic ingestion, different-family synthesis and verification, canonical R2 artifacts, automatic verified-rule and edge projections, human revocation truth, deterministic serving, and isolated research models.
 type: memory
 status: accepted
 decided: 2026-07-01
 updated: 2026-08-02
+verified_by: Jayden
+verified_at: 2026-08-02T09:21:34Z
 ---
 
-# 0013 — Brain pipeline + support-models decision (the anchor)
+# Brain build, persistence, rule promotion, and serving boundaries
 
-**Decision (adopted 2026-07-01).** The brain's build shape and the four small "self-trained" support
-models are fixed by the anchor brief (2026-07-01 brain-pipeline-and-training-eval); this file is the
-durable pointer for that decision. Design detail: [`../nao/brain-synthesis-design.md`](../implemented/nao/brain-synthesis-design.md) +
-[`../nao/brain-support-models-design.md`](../implemented/nao/brain-support-models-design.md).
+The brain separates build-time evidence work from product-time serving:
 
-**The roster (minimise the LLM surface; deterministic everywhere it's safe):**
-- **Agentic seeder** — reads the metric registry (`derivedFrom[]`) + biotope needs → research queries
-  (supersedes the static topic-seed list, which stays as bootstrap/fallback).
-- **Ingestion + extract** — deterministic (discover → `paper_uid` dedup → OA-location → fetch → R2;
-  JATS/CORE/`unpdf` text). No LLM.
-- **Synthesis LLM** (strongest model) → `RelationshipClaim`; deterministic `quoteCheck`; **verifier LLM**
-  (a **different model family** — decorrelation) → `EdgeVerification` (graded score, not a yes/no gate).
-- **Projection** — a `verified_edges` truth store (Supabase table or R2 JSONL) → deterministic sync →
-  **Neo4j projection** (rebuildable; **not** the source of truth).
-- **Runtime** — biotope's insights **engine stays deterministic** (what fires + the numbers); a
-  haiku-tier **presentation agent** phrases summaries / template copy — grounded, copy-gated, cached,
-  degradable. nao adds **human-in-the-loop curation**.
+1. Discovery, deduplication, retrieval, extraction, quote matching, scoring, and loading are
+   deterministic wherever possible.
+2. A synthesis LLM proposes a `RelationshipClaim`; a different-provider-family verifier performs the
+   adversarial `EdgeVerification` described in [0012](0012-brain-adversarial-edge-verification.md).
+3. Canonical corpus metadata, binaries, claims, verifications, and generated rule-blueprint artifacts
+   live in Cloudflare R2 under their contracts. Deterministic loaders project them into Supabase
+   relational edge and rule tables. There is no graph-database dependency.
+4. A generated rule may be projected automatically after its structural, evidence/verifier, metric,
+   provenance, and copy gates pass. Human pre-approval is not required for every rule. Authorized
+   human revocation or deprecation is separate truth, is audited, and must survive projection rebuilds;
+   see [0007](0007-rules-as-data-two-tier.md).
+5. Biotope decides what fires through deterministic personal-signal and rule evaluation. A verified
+   population edge alone is not permission to show a card; the matching rule, personal pattern,
+   applicability, and serving gates still matter.
+6. Nao provides inspection and authorized human curation. Machine claims, verifications, and generated
+   rule content are rebuildable; human verdicts and revocations are truth.
+7. Custom checkpoints are isolated research artifacts. They cannot short-circuit the verifier or
+   enter product serving without a separate reviewed decision; see
+   [0020](0020-five-custom-model-research-programme.md).
 
-> **Update 2026-07-13:** the Neo4j projection was dropped — the served graph is a relational 1-hop lookup over the Postgres verified_edges view (no graph DB). See docs/implemented/insight-engine-architecture.md §S6.
-
-**The four support models** (fine-tuned on public data — we have no in-house labels yet; label maps +
-recipes in brain-support-models-design): (a) NLI claim-support → `verdict` pre-filter; (b1) study-design →
-`evidenceTier`; (b2) venue lookup → `impactTier` (SJR + OpenAlex, no training; **JCR dropped — paid**);
-(c) relation/direction/claim-kind → cross-checks the claim (`directionCheck`, `claimKindCheck`).
-`no_effect` has **no public training source** — a known gap (source in-house or leave to the LLM).
-
-**Resolves** BRAIN-DESIGN's open decisions on verifier-model choice and persistence. Extends
-[0012](0012-brain-adversarial-edge-verification.md) (adversarial verification); follows
-[0001](0001-two-tier-truth.md) (truth vs projection) + [0002](0002-shared-contract-two-reviewers.md)
-(shared-contract 2-reviewer rule). Non-commercial demo → dataset licences are not a constraint.
-
-**Execution (2026-07-01 constraints).** Every LLM node supports **two routes** — *local-agent* (host
-Opus inside Claude Code, no API/no specialised worker) and *API-worker* (specialised worker via API,
-**OpenAI or Anthropic**, model id in config; synthesis + verifier different families). Build the
-**LLM-router first**. Support-model **training is deferred until GMI credits + GPU** (no local GPU) —
-only the (b2) lookup + the design proceed now. Sequencing:
-[`phase-2-plan.md` 2026-07-01 integrated update](../development/phase-2-plan.md).
+This records the intended architecture, not a claim that every current workflow connection is
+complete. Exact providers, model identifiers, prompt versions, counts, checkpoint status, and run
+routes belong to configuration and measured evidence. Design detail lives in
+[`brain-synthesis-design.md`](../implemented/nao/brain-synthesis-design.md).

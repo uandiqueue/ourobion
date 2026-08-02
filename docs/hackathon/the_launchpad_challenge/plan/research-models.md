@@ -53,6 +53,8 @@ of the serving gate.
 
 Both models are fine-tuned from Microsoft BiomedNLP-BiomedBERT (base model licence: MIT). They were trained on 2026-07-28, each approximately 438 MB in size, and stored on private Cloudflare R2 with byte-for-byte verified upload.
 
+**Where they trained.** An H100 container was requested from GMI Cloud on 27 July and did not arrive within the challenge window; the sponsor credit also covered CPU and hosted inference rather than a custom training job. Both models therefore trained on local Apple Silicon (`device: mps`, fp32) — Zebra in 313 s of wall-clock training. This is not incidental: it bounds model size and training length, and it is the direct reason Viceroy carries one frozen holdout instead of completed cross-validation. Recorded in [`docs/memory/0024`](../../../memory/0024-training-compute-is-local.md).
+
 ### Zebra v1
 
 Zebra performs three-way claim/evidence classification: supported / contradicted / insufficient_evidence.
@@ -76,6 +78,7 @@ Viceroy performs four-way classification of author-stated causal language: no_re
 | Macro F1 | 0.8656 | 95% CI [0.8327, 0.8958] |
 | Balanced Accuracy | 0.8868 | — |
 | ECE | 0.0919 | — |
+| Macro F1, cue-lexicon baseline | 0.5068 | the simple comparison Viceroy had to beat; delta +0.3588 |
 | Dangerous Error Rate (correlational misread as causal) | 4.52% | vs 13.57% for cue-lexicon baseline |
 
 Training data: Yu, Li & Wang causal-language corpus (EMNLP 2019), 3,059 rows, licence GPL-3.0.

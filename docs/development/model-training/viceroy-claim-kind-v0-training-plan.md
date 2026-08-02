@@ -49,7 +49,7 @@ documented `no-go` is a valid completion.
 | `RelationshipClaim.claimKind` | `relationships.ts:147` — cross-check only, never authorship |
 
 Pipeline seam: **A10 · Verification with independent retrieval**
-([`insight-engine-architecture.md`](../../implemented/insight-engine-architecture.md) §A10).
+([`insight-engine-architecture.md`](../../implemented/shared/insight-engine-architecture.md) §A10).
 
 The failure mode this exists to catch is **correlation stated as causation** — the single most damaging
 and most common error a synthesis LLM makes on observational literature, and one the contract already

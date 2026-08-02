@@ -184,7 +184,24 @@ comfortably old mistakes.
   asserting that a correlational co-movement path "has not been implemented". It has been. The
   document now states the measured facts and records explicitly that the per-edge reason has *not*
   been established, rather than substituting a plausible story.
+- **Private context promoted into submission evidence.** The write-up repeated a specific anecdote
+  about an error surviving three same-family fixes in the owner's earlier project. The only in-repo
+  source was a planning note pointing to that separate repository; it was context for understanding
+  the Swiss-cheese analogy, not Launchpad evidence. The anecdote was removed. The submission now
+  justifies decorrelation from Ourobion's own enforced router invariant.
+- **A configured cap copied from an older value.** The submission said the router capped each node at
+  US$1/day. Running `llm-router check-config` reported the current file cap as US$8/day/node. Rather
+  than replace one low-level number with another in a judge-facing narrative, the cap detail was
+  removed from the body; the live configuration remains the authority.
+- **A rule-promotion policy mistaken for implemented wiring.** Memory cleanup initially made human
+  pre-approval mandatory for every generated rule. Jayden corrected the policy: a rule that clears
+  the evidence/verifier and safety gates should project automatically, while an authorized human can
+  revoke it afterward. Code inspection then found the opposite implementation risk: the brain
+  workflow publishes extracted blueprints to R2 and loads verified edges into Supabase, but does not
+  invoke the rule loader, and the current rules table has no regeneration-safe human-revocation
+  overlay. The memories now record the intended boundary without claiming the missing connection is
+  complete.
 
 *The pattern worth noticing:* every one of these was caught by running something rather than by
-reading something. Four of the five were produced by inspection that looked authoritative and was
+reading something. Four of the first five were produced by inspection that looked authoritative and was
 wrong.

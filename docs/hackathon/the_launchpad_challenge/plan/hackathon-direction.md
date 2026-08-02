@@ -3,7 +3,7 @@ title: Ourobion @ Launchpad 2026 — Direction
 summary: The single canonical hackathon-strategy doc — track choice (Agentic Systems), extended prior work as the demo-serving slice, the brain as the scored delta, the "correlations are cheap" hook + adversarial-verifier mechanism, the living-apps trajectory ruling, sponsor integration, and how to win each judging pillar. Owner of all hackathon strategy.
 type: process
 scope: repo
-status: canonical
+status: unverified
 updated: 2026-08-02
 ---
 
@@ -14,8 +14,14 @@ updated: 2026-08-02
 > those rules into a decision: which track, how we position, what counts as prior work vs. the scored
 > delta, which sponsor tools we integrate, and how we win each judging pillar.
 >
-> **Owner:** Jayden · **Status:** direction locked, execution under way; current implementation status
-> lives in sessions and the Run-3 cockpit · **Window:** 3–31 Jul 2026.
+> **Owner:** Jayden · **Status:** direction locked; the build window has closed and the submission is
+> filed · **Window:** 3 Jul – 2 Aug 2026.
+>
+> **This is the strategy record, not the submission.** The final, checked claims live in
+> [`../submission/`](../submission/) — `writeup.txt` (1,000 words), `appendix.md`, `references.md`.
+> **Where this document and the submission disagree, the submission wins.** Planning decisions that
+> were overtaken by what actually happened are marked inline as *superseded*; they are kept rather
+> than deleted, because the reasoning is the point of this file.
 
 ---
 
@@ -44,7 +50,7 @@ against fresh literature before you ever see it."*
 
 ## 0.5 · Self-judgement response (post-adversarial round)
 
-Two internal judging rounds were run (full reports kept for provenance in the archive, not linked here). Round 1 (2026-07-23, primed to *"assume the plan works"*) scored **21/25**. An **adversarial round** (2026-07-26), scoring the **realistic delta a 2-person team can ship by 31 Jul** (no "assume it works," verified against `git log`), scored **16/25**: Problem 3 · Approach 3 · Evidence 3 · Constraints 3 · Honesty 4. **No fundamental flaw survived; Agentic Systems remains correct; the "use a different submission" escape hatch is NOT triggered.** That round's reasoning rested on the premise that the scored delta (verifier, edges, curves, refusals) was unbuilt, so its evidence was *anticipated*, not *run*. **That premise is now superseded.** Measured on 2026-08-02: 14 verified relationships exist, of which 11 pass the serving gate; verdicts spread as 1 supported, 10 partial, 2 uncertain, 1 unsupported, with confidence 0.72–0.92; decorrelation verified by running the config gate; corpus of 21,824 records (14,726 open access, 911 with full text extracted, 894 over 5,000 characters); test suite 2,605 passing, 27 skipped, 0 failing. One card has been generated from a verified relationship and is archived — a user opening the app today still sees no paper-derived card. The last mile is not connected, and must be stated plainly. Treat the **16/25 round as a dated record** of design-stage scoring; the actual position on 2026-08-02 reflects **built and measured artifacts on a curated slice** (not the full graph, but real verified relationships with real verdicts), contrasting with the "anticipated" evidence the adversarial round evaluated.
+Two internal judging rounds were run (full reports kept for provenance in the archive, not linked here). Round 1 (2026-07-23, primed to *"assume the plan works"*) scored **21/25**. An **adversarial round** (2026-07-26), scoring the **realistic delta a 2-person team can ship by 31 Jul** (no "assume it works," verified against `git log`), scored **16/25**: Problem 3 · Approach 3 · Evidence 3 · Constraints 3 · Honesty 4. **No fundamental flaw survived; Agentic Systems remains correct; the "use a different submission" escape hatch is NOT triggered.** That round's reasoning rested on the premise that the scored delta (verifier, edges, curves, refusals) was unbuilt, so its evidence was *anticipated*, not *run*. **That premise is now superseded.** Measured on 2026-08-02: 14 verified relationships exist, of which 11 pass the serving gate; verdicts spread as 1 supported, 10 partial, 2 uncertain, 1 unsupported, with confidence 0.72–0.92; decorrelation verified by running the config gate; corpus of 21,824 records (14,726 open access, 911 with full text extracted, 894 over 5,000 characters); test suite 2,605 passing, 27 skipped, 0 failing. **(Superseded 2026-08-02:** biotope now shows research-backed cards on the seeded, view-only demo account. A self-created account shows none — by design, since it has no logs yet. The "last mile is not connected" line below was true when written and is no longer.**)** Treat the **16/25 round as a dated record** of design-stage scoring; the actual position on 2026-08-02 reflects **built and measured artifacts on a curated slice** (not the full graph, but real verified relationships with real verdicts), contrasting with the "anticipated" evidence the adversarial round evaluated.
 
 ### Priority 0 — protect the eval, even at the cost of breadth
 Ship the depth-first slice **and its measured artifacts** (cut breadth before cutting these):
@@ -86,8 +92,8 @@ answers a final holistic question — **"Would I want to interview this person?"
 | Milestone | Date |
 |---|---|
 | Challenge begins | **3 Jul 2026** (day 0 — today) |
-| Submission deadline | **31 Jul 2026, 23:59** |
-| Finalists announced | 7 Aug 2026 |
+| Submission deadline | **2 Aug 2026, 23:59 SGT** |
+| Finalists announced | 9 Aug 2026 |
 | Symposium (live @ NUS) | 17–18 Aug 2026 |
 
 **Eligibility.** Students at a Singapore tertiary institution; teams of 1–3; one team & one submission
@@ -267,7 +273,7 @@ and we win the Honesty pillar for free.
   they're also a ready-made **Approach section + decision log** (rubric Pillar 2 gold). Cite them; don't
   claim them as built delta.
 
-### 4.2 DELTA — build 3–31 Jul, claim as "new" (the scored artifact)
+### 4.2 DELTA — build 3 Jul – 2 Aug, claim as "new" (the scored artifact)
 Depth-first over a **curated ~30–50 paper slice** of the corpus (the wider corpus — 21,824 discovered, 911 with full text — is extended prior work
 *input*, never the deliverable). The agent/model roster, with build status:
 1. **LLM router** (dual-route: local Claude-Code agent vs. API worker; OpenAI *or* Anthropic *or* Agnes via config) — small, unblocks everything.
@@ -286,6 +292,12 @@ roadmap only): Track A app work (M3 Health Connect e2e, M4 env/API, M7 community
 presentation agent). Leaving these out keeps judges scoring the brain, not the CRUD.
 
 ### 4.3 Draw the line **in git** so the delta is checkable
+
+> **Superseded 2026-08-02.** The `pre-hackathon-baseline` tag was **never pushed**. The boundary is
+> the commit date instead, which is equally checkable: `git log --until=2026-07-03 | wc -l` → **117
+> commits of prior work**; `--since` → **700 commits of delta**. Boundary commit `b5ad0f4`
+> (3 Jul 2026). History was merged without squashing, so the timeline survives. The submission
+> appendix states it this way; do not cite a tag that does not exist.
 Judges do repo spot-checks and read **commit dates** (baked into each commit), not push dates — so a
 normal merge preserves the honest timeline; a **squash would collapse months into one day-0-looking
 commit** (misleading *and* it throws away our best "what existed before" evidence). Do **not** squash the
@@ -315,21 +327,32 @@ the sponsors.
 Our design *already mandates* a decorrelated second model family for verification — Agnes's in-house
 "Claw" is genuinely decorrelated from GPT, so it fills a slot we designed, not a bolt-on. It's
 **OpenAI-API-compatible** (`https://apihub.agnes-ai.com/v1`) → a **config entry in the LLM router, not
-new code** — and `agnes-2.0-flash` is **$0/1M tokens today** with a large context, so the token-heaviest
+new code** — and the Agnes flash tier is **$0/1M tokens today** with a large context, so the token-heaviest
 stage becomes free.
 - **The single strongest "Best Use of Agnes AI" play:** make Agnes the adversarial verifier in a
-  scientific-integrity pipeline **and publish a real cost-accuracy curve — Agnes vs. GPT-5.4-mini vs.
-  GPT-5.5 — on our own held-out verification eval.** This is simultaneously (a) the Best-Use narrative,
-  (b) the rubric's "justify your model choice with a curve, not a point," and (c) load-bearing (Agnes is
-  on the truth path, not rendering a logo). *You cannot lose the argument: if Agnes wins on
-  cost-per-correct-verdict, that's the headline; if OpenAI wins on raw accuracy, the curve explains why
-  we route synthesis to OpenAI and verification to Agnes.*
+  scientific-integrity pipeline — load-bearing on the truth path, not rendering a logo. Agnes is what
+  makes the decorrelation invariant enforceable rather than aspirational: without a genuinely
+  different model family in the reviewer slot, the whole Swiss-cheese argument collapses into one
+  vendor checking itself.
+
+  > **Superseded 2026-08-02.** This bullet originally called for a cost-accuracy curve across Agnes
+  > and two OpenAI tiers. **That curve is moot — Agnes is $0 at our verification volume, so the cost
+  > axis is zero and there is no trade-off to plot.** The model choice was never a point on a curve:
+  > the independence requirement selects the provider, and the price makes the choice free. That is a
+  > better argument than a curve would have been, because it means the reliability discipline costs
+  > nothing and nobody has to justify paying for it.
 - **Caveat to de-risk first:** Agnes's structured-output/JSON-mode is undocumented (function-calling is
-  supported). **Confirm schema-constrained `EdgeVerification` output on `agnes-2.0-flash` before
+  supported). **Confirm schema-constrained `EdgeVerification` output on the Agnes flash tier before
   committing it to the final structured verdict.** Fallback: Agnes as cheap first-pass / second-opinion
-  verifier, OpenAI emits the final structured verdict — we still get the integration *and* the curve.
+  verifier, OpenAI emits the final structured verdict — we still get the integration.
   Also: free tier is rate-limited (~20 RPM) and likely promotional — budget-guard, don't architect
   around "free forever."
+
+> **What actually shipped (2026-08-02).** Synthesis ran on `gpt-5`; verification ran on
+> provider-attested `agnes-2.5-flash`. Decorrelation was confirmed by executing
+> `llm-router check-config` (`Decorrelation: OK — synthesis=openai, verifier=agnes`). The model
+> identifiers planned below (`agnes-2.0-flash`, `GPT-5.5`, `GPT-5.4-mini`) are planning-era names and
+> were not what ran.
 
 ### 5.2 OpenAI → **synthesis LLM + presentation layer** (keep it the visible spine)
 Prizes are denominated in OpenAI credits and OpenAI is a judge, so it stays primary. **Synthesis
@@ -339,6 +362,14 @@ Routing the token-heavy verifier to *Agnes* protects the OpenAI credit budget �
 cost-story talking point.
 
 ### 5.3 GMI Cloud → **support-model training** (trained, evaluated, deliberately not serving)
+
+> **Superseded 2026-08-02.** The H100 container requested from GMI Cloud on 27 July never arrived
+> within the window, and the sponsor credit covered CPU and hosted inference rather than a custom
+> training job. **Both models trained locally on Apple Silicon** (`device: mps`). That bounded model
+> size and is why Viceroy has one frozen holdout instead of completed cross-validation. Recorded in
+> [`docs/memory/0024`](../../../memory/0024-training-compute-is-local.md) and
+> [`model-training/README.md`](../../../development/model-training/README.md).
+
 Two support models were trained: Viceroy (causal-language classification, on the Yu, Li & Wang EMNLP 2019 corpus — macro-F1 0.8656 against 0.5068 for a cue-lexicon baseline, on one frozen holdout rather than a completed cross-validation) and Zebra (claim vs. evidence, on SciFact only — macro-F1 0.5991 ± 0.0081 against a pre-registered bar of 0.70, **which it failed**). Against Claude Haiku 4.5 on 96 real ingested papers they disagreed on 42.7% and 47.9% of items. That comparison is **unadjudicated and has no ground truth**, so it measures disagreement, not correctness — do not claim either model beat or lost to the LLM. **Neither is wired into the product** — both carry `validated=false` / `serving_ready=false`, and the refusal to connect them is enforced in code. This is the intellectual-honesty story: a model was built, measured, found wanting, and not shipped. That's a green flag on a reasoning-track rubric, not a failure to deliver.
 
 ### 5.4 Credits — how to claim
@@ -389,8 +420,8 @@ only on high-impact/low-corroboration edges); **fail-closed budget guardrails** 
 quota, per-source token buckets, deterministic ~$0.004 OpenAlex cost model); **platform-limit honesty**
 (nao is a Cloudflare Worker with a CPU ceiling → it triggers a GitHub Actions run instead; the first
 "R2 mailbox" control design was *killed* when it couldn't actually invoke a run); a **host-memory guard**
-added after a real low-RAM incident; OA-first licensing discipline; no-local-GPU → training deferred to
-GMI. *Don't:* claim PDPA/data-isolation (deferred past demo) or production scale.
+added after a real low-RAM incident; OA-first licensing discipline; **no GPU arrived, so training ran
+on local Apple Silicon and the models are laptop-bounded** (§5.3). *Don't:* claim PDPA/data-isolation (deferred past demo) or production scale.
 
 **Pillar 5 — Honesty & Trajectory (win it by going first).** State up front: non-diagnostic always, not
 a medical device, not clinically validated; biotope is prebuild; the two-LLM loop is
@@ -444,9 +475,9 @@ and *show one real failure*:
   `EdgeVerification`; `verified_edges` store; hand-label the gold set; first baseline-vs-treatment numbers.
 - **Week 3 (17–23 Jul):** nao v2 graph + evidence panel; v3 curation loop; run Agnes-vs-OpenAI curve;
   the "show a refusal" and baseline-loses cases; (stretch) GMI NLI fine-tune if credits landed.
-- **Week 4 (24–31 Jul):** freeze scope; record demo; write the 1,000-word write-up from the decision log
-  + measured numbers; finalize profile; verify all links; submit **before** the 31 Jul 23:59 deadline
-  (no late submissions).
+- **Week 4 (24 Jul – 2 Aug):** freeze scope; record demo; write the 1,000-word write-up from the
+  decision log + measured numbers; finalize profile; verify all links; submit **before** the
+  2 Aug 23:59 SGT deadline (no late submissions).
 
 ---
 
@@ -456,7 +487,7 @@ and *show one real failure*:
 |---|---|
 | Over-claiming medical accuracy | Lead every surface non-diagnostic; never show a diagnosis; say "evidence-grounded ≠ clinically validated" out loud. |
 | **"It's just a wrapper / just RAG"** (biggest reputational risk) | Our architecture *is* the rebuttal: decorrelated families, adversarial refutation, a grounding invariant that can't be prompted away, per-failure-mode checks, rebuildable two-tier truth. "A wrapper *trusts* the model; we structurally *distrust* it." Say it. |
-| Implying the full system runs as a live product | Ingestion proven @ 21,824 records (14,726 open access); 14 verified relationships exist, 11 pass the serving gate; graph serving is not yet live (one archived card, not active). The honesty *is* the pitch; a caught overclaim tanks the pillar we're otherwise strongest on. |
+| Implying the full system runs as a live product | Ingestion proven @ 21,824 records (14,726 open access); 14 verified relationships exist, 11 pass the serving gate, 3 withheld. **Cards do surface on the seeded, view-only demo account; a self-created account is empty by design.** The honesty *is* the pitch; a caught overclaim tanks the pillar we're otherwise strongest on. |
 | Cherry-picked demo | Show a refusal + the baseline losing — a demo that includes its own failure mode reads as confidence. |
 | Corpus volume mistaken for the achievement | Never lead with a raw discovery count (21,824); depth beats breadth (our own brief says so). Volume = evidence the pipeline works, framed as such. |
 | Over-agentification suspicion | Turn it into a green flag: we kept the genuine agent roles (planner, synthesis, adversarial verifier, presentation, curation) and made the rest deterministic — every boundary defensible. |
@@ -470,15 +501,23 @@ and *show one real failure*:
 ## 10 · Immediate next actions (this week)
 
 1. **Register on Luma + submit the credits Google Form** (same email throughout); **create Agnes account** for free credits.
-2. **Merge PR #38, then `git tag -a pre-hackathon-baseline` + push** — freeze the prebuild line (§4.3).
+2. ~~**Merge PR #38, then `git tag -a pre-hackathon-baseline` + push**~~ — *not done; the commit-date
+   boundary carries this instead, see §4.3.*
 3. **Write success criteria + open the decision log** (`docs/` — feeds Pillars 1 & 2).
-4. **Confirm Agnes `agnes-2.0-flash` schema-constrained output** (go/no-go for the verifier role, §5.1).
+4. **Confirm Agnes schema-constrained output** (go/no-go for the verifier role, §5.1) — *done;
+   `agnes-2.5-flash` shipped as the verifier.*
 5. **Build the LLM router** (OpenAI + Agnes routes) — the foundation everything else needs.
 6. **Turn on cost/latency logging** before the first synthesis/verify run.
 
 ---
 
 ## 11 · Draft write-up sections — Pillar 1 & Pillar 5
+
+> **Superseded 2026-08-02 — drafts only, do not submit from here.** The filed write-up is
+> [`../submission/writeup.txt`](../submission/writeup.txt) (exactly 1,000 words, five pillars,
+> plain text). It opens on the Swiss-cheese framing rather than the drafts below, and the
+> `[bracketed]` placeholders were resolved or the claims dropped. Kept as a record of how the
+> pillars were reasoned about, not as copy.
 
 Drop-in drafts for the ≤1,000-word submission write-up, implementing the §0.5 fixes: the layered
 problem (generic insights → the dangerous AI fix → the missing verified substrate), pre-registered

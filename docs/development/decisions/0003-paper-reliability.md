@@ -3,14 +3,14 @@ id: "0003"
 title: Paper-Reliability Scoring
 summary: The evidence-tier ladder and reliability axis behind A5 tiering and edgeScore/EDGE_GATES — grounded in GRADE/CEBM, keeping study-design trust (evidenceTier) and venue notability (impactTier) as separate axes because notability ≠ trust.
 type: decision
-status: accepted
+status: unverified
 decided: 2026-07-13
-updated: 2026-07-13
+updated: 2026-08-02
 ---
 
 # Paper-reliability scoring — architecture decision
 > **Status: authoritative ground truth** · Date: 2026-07-13 · Refines: A5 / edgeScore / U1
-> Part of the insight-engine architecture — see [`../insight-engine-architecture.md`](../../implemented/insight-engine-architecture.md). Contracts: [`../../../shared/brain/`](../../../shared/brain/).
+> Part of the insight-engine architecture — see [`../insight-engine-architecture.md`](../../implemented/shared/insight-engine-architecture.md). Contracts: [`../../../shared/brain/`](../../../shared/brain/).
 
 # ADR: Paper-reliability scoring — the evidence-tier ladder and the reliability axis
 

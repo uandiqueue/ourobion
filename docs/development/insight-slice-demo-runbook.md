@@ -1,24 +1,29 @@
 ---
-title: Insight Slice Demo Runbook (L6 one-card end-to-end)
-summary: Exact, reproducible command sequence for the L6 one-card slice — one metric pair (gut_comfort_score × mood_score) driven through the whole brain + engine pipeline into one user-facing card with its source-panel dataset, on the local stack. Records the interim (key-blocked-honest) verification and exactly what flips when the B5 verifier key lands.
+title: Historical Insight Slice Demo Runbook (L6 one-card end-to-end)
+summary: Historical command sequence for the 2026-07-16 L6 one-card local slice; its interim verifier blocker and card result describe that run only and are not current system state.
 type: runbook
 scope: repo
-status: canonical
-updated: 2026-07-28
+status: stale
+updated: 2026-08-02
 ---
 
 # Insight Slice Demo Runbook — L6 one-card end-to-end
 
+> **Historical runbook.** This preserves the 2026-07-16 execution. Its verifier blocker, schema
+> behaviour, and resulting card state are not current claims. Use current pipeline documentation and
+> measured system evidence for a new run; provenance is in the
+> [original session](../sessions/20260716T060410Z-agentjwork-claude-l6-one-card-slice.md).
+
 Drives **one pair** — `gut_comfort_score × mood_score` — through A2→A11 and S2→S8 into one
 user-facing card plus its §S8 source-panel dataset, on the **local stack**, no metered API spend.
-Slice definition: [`insight-engine-architecture.md`](../implemented/insight-engine-architecture.md) §9 (L6).
+Slice definition: [`insight-engine-architecture.md`](../implemented/shared/insight-engine-architecture.md) §9 (L6).
 
 ## What this slice honestly is (read first)
 
-The real synthesised edge is `gut_comfort_score|correlates|mood_score` (A8 run U10, verbatim-quote
-grounded, A9-gated). The decorrelated **A10 verifier cannot run for real** — it needs a non-Anthropic
-key (run decision D4, durable caveat [memory 0016](../memory/0016-insight-engine-l6-one-card-slice.md)) and must not use the
-Anthropic-family local-agent route (decorrelation). So the slice ships an **interim, key-blocked-honest
+The real synthesised edge was `gut_comfort_score|correlates|mood_score` (A8 run U10,
+verbatim-quote-grounded, A9-gated). At the time, the decorrelated A10 verifier could not run because a
+different-provider key was unavailable. It could not use the Anthropic-family local-agent route
+without defeating decorrelation. The slice therefore used an **interim, key-blocked-honest
 verification**:
 
 - Its deterministic halves run **for real** — the A9 quoteCheck (over the paper's canonical text

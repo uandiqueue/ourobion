@@ -4,7 +4,7 @@ summary: The constant-layer module map for biotope's Flutter app (M1–M7 depend
 type: context
 scope: biotope
 status: canonical
-updated: 2026-07-13
+updated: 2026-08-02
 ---
 # architecture-context.md — Ourobion
 > **CONSTANT LAYER** — system structure, data flow, and module interface rules. Update only at phase
@@ -13,7 +13,7 @@ updated: 2026-07-13
 > **Engine v2 / brain flow.** The module map and self-report loop below are the *constant structure* of
 > the biotope app. The end-to-end **insight-engine v2** (deterministic serve path + offline authoring/
 > brain edge flow) — which extends the MVP self-report loop diagrammed below — is owned by
-> [`insight-engine-architecture`](../insight-engine-architecture.md). Contract **types** are
+> [`insight-engine-architecture`](../shared/insight-engine-architecture.md). Contract **types** are
 > enumerated in [`SHARED-CONTEXT`](../../../shared/SHARED-CONTEXT.md), not here.
 
 ---

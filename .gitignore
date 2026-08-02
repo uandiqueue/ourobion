@@ -10,6 +10,9 @@
 .dev.vars
 .dev.vars.*
 .claude/settings.local.json
+
+# Machine-local project memory (never commit; repo-wide durable facts live in docs/memory/)
+/PROJECT_MEMORY.local.md
 test_credential.md
 
 # Test credentials handed to agent sessions (owner-supplied, disposable test account).

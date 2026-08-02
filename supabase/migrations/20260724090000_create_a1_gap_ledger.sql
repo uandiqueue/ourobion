@@ -1,5 +1,5 @@
 -- A1 · gap_ledger — per-pair record of *why* each candidate pair isn't served; the loop's
--- demand signal (docs/shared/insight-engine-architecture.md §A1; docs/shared/biotope-nao-link.md
+-- demand signal (docs/implemented/shared/insight-engine-architecture.md §A1; docs/implemented/shared/biotope-nao-link.md
 -- §6). Table shape follows §A1 VERBATIM (column names, status enum, PK) — backlog O9's
 -- demand-side slice plus O18's gap-only research-context/contradiction routing and O16's
 -- object-only-signal routing all land their events here.

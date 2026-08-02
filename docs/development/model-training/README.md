@@ -1,10 +1,10 @@
 ---
 title: Model training — isolated research workstreams
-summary: Staging home for custom-model experiments that are operationally independent from Ourobion product build runs. Code lives in this repository's isolated model-training/ workspace; each model still owns its own compute, budget, data, evaluation, and closeout, and no training is executed here — only code, manifests, and frozen evaluation artifacts belong in this repository.
+summary: Staging home for custom-model experiments that are operationally independent from Ourobion product build runs. Code lives in this repository's isolated model-training/ workspace; each model owns its own compute, budget, data, evaluation, and closeout. Zebra and Viceroy were trained and evaluated on local Apple Silicon after the requested GPU container did not arrive; only code, manifests, and frozen evaluation artifacts are committed here — never weights or raw datasets.
 type: plan
 scope: model-training
 status: draft
-updated: 2026-07-26
+updated: 2026-08-02
 ---
 
 # Model training — isolated research workstreams
@@ -20,10 +20,10 @@ cannot consume a product unit or silently become product integration work.
 
 | Model | State | Plan | Runtime posture |
 |---|---|---|---|
-| `zebra-nli-shadow-v0` | planned; no training or GMI provisioning performed | [`zebra-nli-shadow-v0-training-plan.md`](./zebra-nli-shadow-v0-training-plan.md) | research-only; no serving or shadow telemetry |
+| `zebra-nli-shadow-v0` | **trained and evaluated (v1)** on local Apple Silicon; macro-F1 0.599 ± 0.008 against a pre-registered 0.70 bar — **failed its bar**, `serving_ready=false` | [`zebra-nli-shadow-v0-training-plan.md`](./zebra-nli-shadow-v0-training-plan.md) · [results](../../../model-training/evidence/publication-results/zebra-v1-results.md) | research-only; no serving or shadow telemetry |
 | `giraffe-study-design-v0` | planned; dataset and licence gates remain | [`giraffe-study-design-v0-training-plan.md`](./giraffe-study-design-v0-training-plan.md) | research-only; offline evidence-tier evaluation |
 | `salmon-relation-direction-v0` | planned; BioREDirect licence is unresolved | [`salmon-relation-direction-v0-training-plan.md`](./salmon-relation-direction-v0-training-plan.md) | research-only; offline relation/direction evaluation |
-| `viceroy-claim-kind-v0` | planned; GPL-3.0 review is required | [`viceroy-claim-kind-v0-training-plan.md`](./viceroy-claim-kind-v0-training-plan.md) | research-only; offline causal-language evaluation |
+| `viceroy-claim-kind-v0` | **trained and evaluated (v0, rescoped)** on local Apple Silicon; macro-F1 0.866 vs 0.507 cue-lexicon baseline on one frozen fold-0 holdout, five-fold cross-validation not completed; not validated, not serving; public weight release still blocked pending GPL-3.0 clearance | [`viceroy-claim-kind-v0-training-plan.md`](./viceroy-claim-kind-v0-training-plan.md) · [results](../../../model-training/evidence/publication-results/viceroy-v0-results.md) | research-only; offline causal-language evaluation |
 | `leafcutter-sentence-role-v0` | planned; CPU-first baseline precedes any GPU | [`leafcutter-sentence-role-v0-training-plan.md`](./leafcutter-sentence-role-v0-training-plan.md) | research-only; no serving or pipeline substitution |
 
 The full train/do-not-train decision record is [`model-roster.md`](./model-roster.md). The current
@@ -39,12 +39,31 @@ needed to interpret a result without repo access.
 
 | Bundle | Model | State |
 |---|---|---|
-| [`zebra-training/`](./zebra-training/) | `zebra-nli-shadow-v0` | code written; no training run |
-| [`viceroy-training/`](./viceroy-training/) | `viceroy-causal-language-risk-v0` (rescoped) | code written and split pipeline verified against the real corpus; blocked on the GPL-3.0 determination; no training run |
+| [`zebra-training/`](./zebra-training/) | `zebra-nli-shadow-v0` | training run completed on local Apple Silicon; results published |
+| [`viceroy-training/`](./viceroy-training/) | `viceroy-causal-language-risk-v0` (rescoped) | training run completed on local Apple Silicon; results published; public weight release still blocked on the GPL-3.0 determination |
 
 The Viceroy bundle's [`LEAKAGE.md`](./viceroy-training/LEAKAGE.md) records a finding that affects
 the plan rather than only the bundle: the released corpus carries **no PMID**, so the plan's
 "group folds by PMID" requirement is not implementable and same-paper leakage stays uncontrolled.
+
+## Compute — where these actually trained
+
+An NVIDIA H100 container was requested from **GMI Cloud on 27 July 2026** and did not arrive within
+the challenge window. The sponsor credit also covered CPU and hosted third-party inference rather
+than a custom training job, so it would not have funded this work in any case. Both checkpoints were
+therefore trained **locally on Apple Silicon** (`device: mps`, fp32) — Zebra in 313 s of wall-clock
+training, Viceroy on the same substrate.
+
+Consequences to carry forward rather than re-litigate:
+
+- Model size and training length are bounded by a laptop, not by the GPU assumptions the training
+  plans were written against. [`code-build-decisions.md`](./code-build-decisions.md) D3 still pins CI
+  to Python 3.10 to match the documented GMI runtime; that pin is now **defensive, not descriptive**.
+- Viceroy has one frozen fold-0 holdout instead of completed five-fold cross-validation. That is a
+  direct consequence of available compute, and it is stated as a limitation in the results rather
+  than smoothed over.
+- **Do not plan further model work around GMI provisioning** until a container is actually in hand.
+  Recorded durably as [`docs/memory/0024`](../../memory/0024-training-compute-is-local.md).
 
 ## Repository boundary
 

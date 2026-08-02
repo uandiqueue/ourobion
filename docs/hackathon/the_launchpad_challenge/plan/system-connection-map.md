@@ -35,8 +35,8 @@ updated: 2026-08-02
 > Canonical authorities, in order of precedence:
 > - Module graph, data flow, interface rules — [`docs/implemented/biotope/architecture-context.md`](../../../implemented/biotope/architecture-context.md)
 > - Cross-language contracts — [`shared/SHARED-CONTEXT.md`](../../../../shared/SHARED-CONTEXT.md)
-> - Insight-engine architecture — [`docs/implemented/insight-engine-architecture.md`](../../../implemented/insight-engine-architecture.md)
-> - The Biotope↔nao runtime seam — [`docs/implemented/biotope-nao-link.md`](../../../implemented/biotope-nao-link.md)
+> - Insight-engine architecture — [`docs/implemented/shared/insight-engine-architecture.md`](../../../implemented/shared/insight-engine-architecture.md)
+> - The Biotope↔nao runtime seam — [`docs/implemented/shared/biotope-nao-link.md`](../../../implemented/shared/biotope-nao-link.md)
 > - Brain design — [`docs/implemented/nao/brain-synthesis-design.md`](../../../implemented/nao/brain-synthesis-design.md), [`brain-ingestion-design.md`](../../../implemented/nao/brain-ingestion-design.md)
 > - Durable facts — [`docs/memory/`](../../../memory/README.md), decisions — [`docs/development/decisions/`](../../../development/decisions/README.md)
 > - The write-up this appendix serves — [`writeup.md`](../submission/writeup.md)
@@ -266,7 +266,7 @@ request
 ```
 
 Two independent enforcement layers, deliberately: the middleware is a UX/defense-in-depth gate, and
-each `/api/` handler enforces its own role. **`docs/implemented/biotope-nao-link.md` (stamped
+each `/api/` handler enforces its own role. **`docs/implemented/shared/biotope-nao-link.md` (stamped
 `updated: 2026-07-26`) is stale on this point** — it says *"the current middleware enforces
 authentication only"* and treats role enforcement as an open blocker. The R4-U2 source is stronger
 than that prose: tiered, DB-re-verified, CI-enforced role checks exist. The doc's general warning
@@ -325,7 +325,7 @@ provisioned or deployed system, and nothing in this document depends on it.
 7. **The five support models are research-only and influence nothing served.**
 8. **iOS is unbuilt** (needs Mac + paid Apple account + device), so HealthKit/Apple Sign In are
    untested on real hardware.
-9. **`docs/implemented/biotope-nao-link.md` is stale** on nao role enforcement (§5) — the code is stronger
+9. **`docs/implemented/shared/biotope-nao-link.md` is stale** on nao role enforcement (§5) — the code is stronger
    than the prose.
 10. **Non-diagnostic by construction, and not a medical device.** Every user-facing string is
     observational and gated by `CopyRules.validateCopyString` —
@@ -348,7 +348,8 @@ Statements below are supported by the evidence in this document. Use these; do n
   synthesis, checked at router config load — and `check-config` reports it satisfied
   (`synthesis=openai, verifier=agnes`), verified by running the tool, not by reading the config.
 - Synthesis has run at batch scale: 40 papers, 20 claims over 20 distinct edges, 12 rule blueprints, every
-  blueprint carrying a paper citation, for ~US$0.04 per paper.
+  blueprint carrying a paper citation; API cost per paper is
+  `{{PENDING:openai-usd-per-paper}}` pending provider reconciliation.
 - The measured blueprint yield is **0.3 per paper**, against a design assumption of 3–5. Stating that the
   assumption was wrong by an order of magnitude is safe; the 3–5 figure is not.
 - The adversarial verifier has run against a real second-vendor model across 14 edges and produced
@@ -360,8 +361,10 @@ Statements below are supported by the evidence in this document. Use these; do n
 - The 43 `producer='personal'` cards state in their own user-facing copy that they are *"an unverified
   personal observation from your own data only"* and are titled *"Still researching"*. Describing the app as
   drawing that distinction for the user is safe — it is enforced in `PERSONAL_CARD_TEMPLATE`, not aspirational.
-- Total LLM spend for the project is US$1.80, of which the Agnes verifier leg is exactly US$0 because that
-  plan is priced at zero until 2026-08-08.
+- Measured API usage is pending provider reconciliation: OpenAI calls
+  `{{PENDING:openai-calls}}`, Agnes calls `{{PENDING:agnes-calls}}`, OpenAI spend
+  `{{PENDING:openai-usd}}`, total spend `{{PENDING:total-usd}}`. Agnes is configured at zero per token
+  until 2026-08-08.
 - nao enforces authentication at the edge and re-reads a tiered role from the database on every API
   call, with a CI test that fails on drift.
 - 44 migrations apply cleanly, in order, to a clean Postgres.
@@ -406,13 +409,13 @@ Statements below are supported by the evidence in this document. Use these; do n
 | Decorrelation enforced at config load, and satisfied | `tools/llm-router/src/config.ts:112,148-181`; `router.ts:357,391-408`; `router.config.json` (synthesis `gpt-5` / verifier `agnes-2.5-flash`); `llm-router check-config` output |
 | Corpus counts per tier | `data/corpus/papers.jsonl` — 21,823 records / 20,912 discovered / 911 fetched / 894 usable full text |
 | 20 claims, 12 cited blueprints from 40 papers | `data/corpus/edges/claims.jsonl`, `blueprints.jsonl` (all 12 `provenance.tier: "extracted"` with a `citation`) |
-| US$1.80 total spend; Agnes leg exactly US$0 | `data/llm-router/ledger.json`; `router.config.json` prices (`billingMode: "free"`, expires 2026-08-08) |
+| API calls and spend `{{PENDING:openai-calls}}` / `{{PENDING:agnes-calls}}` / `{{PENDING:openai-usd}}` / `{{PENDING:total-usd}}` | `data/llm-router/ledger.json` pending provider reconciliation; `router.config.json` confirms Agnes `billingMode: "free"` through 2026-08-08 |
 | Free-priced node bounded by a journal, not a USD cap | `tools/llm-router/src/attemptJournal.ts` (append-only, hash-chained, reserves before dispatch) |
 | Caveats may be model-written, and are kept only when they name a limitation we measured | `tools/brain-ingest/src/verify/caveat.ts` — `chooseCaveat()` returns `source: 'model'` when the model's sentence passes the copy gate **and** `corroboratesAFiredFlag()`; otherwise it falls back to `composeCaveat()`, `source: 'derived'`. Both paths are real and both occur on the stored records |
 | Quality-of-backing caveats are reachable at zero corroboration | `caveat.ts` `firedCaveatFlags()` — the `supporting >= 1 \|\| citedPaperAssessed === true` gate. PR #355 added `citedPaperAssessed`, which is what makes a population/direction limitation surface even with no corroborating source |
 | Pipeline + support-model shape | [memory 0013](../../../memory/0013-brain-pipeline-and-support-models-decision.md) |
 | Support models are non-serving | `docs/development/model-training/README.md:13-20`; `model-roster.md` §8; `tools/check_arch_boundaries.mjs` |
-| Insight path (tables + functions) | `supabase/functions/evaluate-signals/index.ts`, `generate-insights/index.ts`; [`insight-engine-architecture.md`](../../../implemented/insight-engine-architecture.md) |
+| Insight path (tables + functions) | `supabase/functions/evaluate-signals/index.ts`, `generate-insights/index.ts`; [`insight-engine-architecture.md`](../../../implemented/shared/insight-engine-architecture.md) |
 | nao tiered authorization | `apps/nao/src/lib/authz.ts`, `authzServer.ts`; `apps/nao/tests/authz.test.ts` |
 | Public explainer leaks nothing | `apps/nao/src/app/page.tsx`; `apps/nao/src/components/OurobionExplainer.tsx`; `apps/nao/tests/howItWorks.test.ts` |
 | Local-only deploy posture | `supabase/deploy-attestation.json`; `apps/nao/README.md:5-6,82-84,159-169` |

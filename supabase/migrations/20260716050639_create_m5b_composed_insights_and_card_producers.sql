@@ -1,5 +1,5 @@
 -- M5b · S7 + S8: composed_insights store + the insight_cards producer columns
--- (docs/shared/insight-engine-architecture.md §S7 store / §S8 card-table migration).
+-- (docs/implemented/shared/insight-engine-architecture.md §S7 store / §S8 card-table migration).
 --
 -- S7: composed_insights — the composer's branch-classified output (append-only; insight_id is a
 -- deterministic hash of (user_id, patternKey, edgeId|'none', period_start), so re-runs are

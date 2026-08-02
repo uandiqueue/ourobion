@@ -1,5 +1,5 @@
 -- Brain · S6: D1 edge read store + gating — relationship_claims, edge_verifications,
--- verified_edges (docs/shared/insight-engine-architecture.md §S6; rationale in
+-- verified_edges (docs/implemented/shared/insight-engine-architecture.md §S6; rationale in
 -- docs/nao/brain-synthesis-design.md).
 --
 -- DERIVED PROJECTION of the truth-tier R2 edge artifacts (edges/claims.jsonl +

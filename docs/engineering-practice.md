@@ -1,153 +1,270 @@
 ---
 title: How Ourobion is built — development cycle and engineering practice
-summary: The working method behind the project — AI-agent collaboration with machine-enforced context, session logs as an append-only record, executable cross-language contracts, the two-reviewer rule for shared contracts, and the CI gates that enforce all of it.
+summary: The working method behind Ourobion — owner-verified context, isolated worktrees, orchestrated agents, executable boundaries, measured tests, and evidence-led correction.
 type: reference
 scope: repo
-status: canonical
+status: accepted
 updated: 2026-08-02
+verified_by: Jayden
+verified_at: 2026-08-02T09:41:06Z
 ---
 
 # How Ourobion is Built
 
-This project demonstrates a development cycle built to handle AI coding agents alongside human builders, where no single tool or agent retains memory across sessions. The organising principle: **treat context as version-controlled**, enforce it in code, and let automation catch what drifts.
+Ourobion is built by three human teammates working with AI agents across tools, sessions, and
+devices. No agent is assumed to remember yesterday, and no confident sentence is treated as true
+because an agent wrote it. The method is therefore simple at its core: keep context with the code,
+isolate concurrent work, make boundaries executable, and measure claims before publishing them.
 
-## Context as Version Control
+## 1. Establish Authority Before Work Begins
 
-Ourobion runs on AI agents (Claude Code sessions) that start with zero memory. Rather than rely on agent recall or tool-specific settings, the repo itself carries all durable context:
+### Context travels with the repository
 
-- **AGENTS.md** — the cross-tool single source of truth. It names every instruction, convention, module boundary, and phase gate. CLAUDE.md and GEMINI.md are ~20-line pointers to it. When guidance changes, it changes in one place.
-- **docs/sessions/** — one append-only log per session (264 at the time of writing), timestamped and device-tagged, recording what attempted, changed, decided, and why. No shared mutable status files; parallel agents cannot collide.
-- **docs/memory/** — numbered durable facts and gotchas, indexed, immutable once filed.
-- **docs/development/decisions/** — numbered ADRs for cross-app architecture, indexed, immutable once accepted (new decisions supersede old ones).
+Durable context lives in version control rather than in one model's memory:
 
-Session logs matter because the *why* is unreconstructable from the diff. A future agent reading the git log sees `chore: bump Flutter version`, but only the session log says `needed for Health Connect parity on Android 14` or `discovered HealthKit SDNN unavailable on simulator, iOS-only`.
+- **`AGENTS.md`** is the cross-tool authority for architecture, commands, conventions, and operating
+  rules. `CLAUDE.md` and `GEMINI.md` are thin pointers to it, so guidance changes once.
+- **`docs/implemented/`** describes the system that exists.
+- **`docs/development/`** holds plans, process, in-flight work, and architecture decisions.
+- **`docs/sessions/`** is an append-only ledger: one timestamped, device-tagged file per session,
+  recording Attempted / Changed / Decided / Left / Blockers.
+- **`docs/memory/`** stores one durable fact or gotcha per numbered file.
+- **`docs/archive/`** preserves history but is never used as an implementation source.
 
-## One Source of Truth
+The diff shows *what* changed; the session record preserves *why*. That distinction matters when a
+future agent must decide whether an odd-looking constraint is obsolete or the result of a production
+failure that should not be repeated.
 
-**No guidance drifts between Claude Code, Codex, or future agents.** AGENTS.md is the authority for architecture, commands, protocol, and boundaries. Tool-specific setup files (`CLAUDE.md`, `GEMINI.md`) point to it. When a subagent or human reads tool-local settings, they find "see AGENTS.md §X" — a thin redirection, never duplication.
+### Documentation has an owner-verification gate
 
-Result: updating protocol happens once. A bot could auto-sync the tool files, but humans don't need to remember which file lives where.
+Structural consistency is not the same as truth. Files in `docs/memory/`,
+`docs/development/decisions/`, `docs/hackathon/`, and the root of `docs/` begin or return to
+`status: unverified` when created or materially changed. Only Jayden can promote them to `canonical`
+or, for memories and decisions, `accepted`; the front matter then records `verified_by: Jayden` and
+`verified_at:`.
 
-## Machine-Enforced Context
+Agents may gather evidence and prepare the wording, but they cannot award or preserve that stamp on
+content they changed. Draft, stale, and superseded remain distinct lifecycle states. This keeps a
+well-formatted agent claim from quietly becoming project truth.
 
-**`tools/context_sync.mjs`** runs as a pre-push hook (skippable) and in CI (non-bypassable). It enforces:
+### Truth and projections are treated differently
 
-1. **Session coverage** — every push carries a `docs/sessions/` log with a `memory:` line
-2. **Memory index integrity** — every memory file is indexed in `docs/memory/README.md`
-3. **Couplings exist** — every `docs/graph/couplings.yaml` guard test file exists on disk
-4. **Front-matter valid** — memory and decision records carry correct id/title/status/updated headers
-5. **Supersede chains resolve** — if status is `superseded`, a `superseded_by` link exists with no cycles
-6. **Index freshness** — generated sections in `docs/INDEX.md` and memory/decision readmes match what `--fix-index` would produce
-7. **Edit honesty** — edited files bump `updated:`; accepted decisions are immutable (supersede instead)
-8. **Session memory delta** — if the push changes memory or decisions, the session logs must declare a `memory:` line
-9. **Active doc coverage** — every active doc (under `docs/implemented`, `docs/development`, `docs/hackathon`) is linked in `docs/INDEX.md`
-10. **Archive containment** — no active doc links into `docs/archive/` (links flow archive → active only)
+Ourobion separates unreconstructable truth from rebuildable projections.
 
-If any check fails, the push is blocked. Documentation rot fails a gate, not discovered months later.
+| Truth | Derived projection |
+|---|---|
+| Supabase migrations | `baseline_snapshots` |
+| User-entered raw rows | `insight_cards` |
+| Shared contracts | Brain relationship instances |
+| Curated graph rules | Generated semantic-graph output |
 
-## Executable Cross-Language Contracts
+To correct a projection, we change its input or generating logic and rerun it. We do not hand-edit
+the result. This is both a product-data rule and an engineering rule: provenance remains visible,
+and regeneration cannot silently erase a manual fix.
 
-The system is Dart (mobile) + TypeScript (backend) + SQL. Contracts crossing the boundary live in `shared/`:
+## 2. Orchestrate the Work, Isolate the Writes
 
-- `shared/types/` — the interface every API and database operation honors
-- `shared/brain/` — the relationship graph structure (TS and Dart both implement)
-- `shared/metrics/` — the metrics registry used by baselines and insights
+### One human-facing orchestrator
 
-**The two-reviewer rule:** any change to a `shared/` type requires two human reviewers. Fields are added optional-with-default. Nothing is removed or renamed without a migration plan. The coupling enforcement layer is **guard tests**: a test in `apps/biotope/test/guards/` declares that a Dart model's fields match a TypeScript contract's fields and a Postgres column's type. If they drift, `flutter test` fails.
+For a multi-agent or multi-device run, one main orchestrator is the human's coordination surface.
+The human sets direction, resolves product choices, and retains approval and merge authority. The
+orchestrator decomposes the goal, assigns bounded ownership, records dependencies, monitors GitHub
+issues and PR comments, unblocks workers, and reviews their evidence before integration.
 
-Result: Dart↔TypeScript skew reaches a test failure, not production.
+GitHub is the live control plane. A worker posts progress, test output, decisions, and blockers on
+its issue or PR; the orchestrator can resume the run from that record even if a device or process
+disappears. Workers do not depend on a private chat transcript to understand shared state.
 
-This has real teeth: PR #199 touched nine `shared/` files and was blocked because "no agent can supply them; Jayden and Alton must both be recorded as reviewers. Test evidence does not substitute for review" (`session: 20260728`). The rule forces human eyes on shared contracts before they ship.
+### One issue, branch, and worktree per session
 
-## Two-Tier Truth
+Every work session gets three linked identities:
 
-The repo treats data into two tiers:
+1. A GitHub issue defining the bounded task.
+2. A short-lived branch cut from `main`, named for the work (`feat/...`, `fix/...`, `docs/...`).
+3. A separate git worktree at an explicit path outside the primary checkout.
 
-**TRUTH** (git-tracked, user-authored, unreconstructable):
-- Supabase migrations (`supabase/migrations/`)
-- Raw logged rows (`daily_gut_rows`, `antibiotic_courses`, later wearable/env rows)
-- Shared contract types (`shared/`)
+The standard setup is:
 
-**DERIVED PROJECTION** (rebuildable, never hand-edited):
-- `baseline_snapshots` — recomputed by edge functions
-- `insight_cards` — regenerated by the insight pipeline
-- The knowledge graph (AST and semantic) — rebuilt from source
+```bash
+gh issue create --title "<session goal>"
+node tools/setup_agent_worktree.mjs \
+  --branch docs/<area>/<slug> \
+  --base main \
+  --path <absolute-path-outside-repo>
+cd <worktree-path>
+```
 
-To change a derived value, fix the input and re-run the pipeline. Never hand-edit a projection; the next job run overwrites it. This makes the system auditable: there is one source per derived output, and it is traceable.
+All session edits, tests, commits, and its single `docs/sessions/` entry happen in that worktree. The
+branch is renamed only before its first push, targets `main`, and is removed after its PR merges.
+The primary checkout is not a shared scratchpad.
 
-## Semantic Context Graph
+Parallel readers are safe. Parallel writers are safe only in separate worktrees with non-overlapping
+ownership; writers sharing one worktree run serially. Before touching a shared planning document, an
+agent refreshes its view of GitHub and the integration branch rather than relying on what was true at
+session start.
 
-**graphify** indexes the repo into a queryable semantic graph so an agent can pull a relevant subgraph instead of grepping the whole tree. It is built locally (AST only, no LLM, no network), machine-local, and gitignored. A single **tracked Markdown view** (`docs/graph/semantic-graph.md`) is version-controlled so an agent on a fresh clone has orientation even if the interactive graph is absent.
+This rule came from a concrete failure: three agents wrote through one branch, and one worktree was
+stale within an hour. It then reported that a file did not exist when another agent had already
+created it. Isolation turns that class of race into an integration question instead of silent loss.
 
-An interactive HTML view (`graphify-out/semantic-graph.html`) is generated for humans but never shown to agents — it is a ~1.3MB blob of embedded JSON and minified JS.
+### Delegate by task shape, not prestige
 
-The structural import graph (Dart + TypeScript + SQL) is intentionally **deferred** because no single tool spans all three. When boundaries are worth auto-enforcing, it will be generated per side, merged, and treated as a rebuildable projection (never hand-edited).
+The orchestrator reserves its strongest reasoning for decomposition, architecture, adversarial
+review, dependency resolution, synthesis, and final quality control. Bounded inventory, mechanical
+edits, routine tests, and device checks go to cheaper agents when appropriate.
 
-## Issue and PR Coordination
+Every delegation names its scope, artifact, validation rule, and stop condition. Context is passed
+narrowly, and the orchestrator inspects the result rather than accepting a worker's report as fact.
+Model tier rises when validation rejects the cheaper attempt or the task truly needs deeper
+reasoning. Token efficiency comes from assigning the smallest capable worker, not lowering the bar.
 
-Work is isolated by **session**: one GitHub issue + one branch + one git worktree per session. Parallel agents on the same device never share mutable files. Agents coordinate through GitHub issues and PR comments using **Conventional Commits** (type/scope/subject format). PRs target `main`, which is the single integration line. (Through Run 4 an intermediate `dev-phase2-run4` branch sat between session branches and `main`; it was promoted into `main` and deleted, so older session logs describing that two-tier flow are records of what was true then.)
+## 3. Make Boundaries Executable
 
-The hard lesson: three agents writing the same branch caused one agent's worktree to go "stale within the hour", causing it to report a file absent that actually existed (`session: 20260727`). The rule that came out of it: **read-only subagents may run in parallel; writers must run strictly serial**. Concurrent writers in one worktree corrupt each other. Fetch before touching shared planning docs, not just at session start.
+### Cross-language contracts
 
-## CI Gates
+The product crosses Flutter/Dart, TypeScript, and Postgres. Anything that must agree across those
+surfaces lives in `shared/`: API and data types, brain relationship contracts, metric definitions,
+and copy rules.
 
-Every push and PR runs the CI pipeline. Ten of its jobs are the day-to-day gates (the workflow defines thirteen in total, the remainder being release-evidence jobs that run conditionally):
+A shared-contract change requires two human reviewers. Fields are added as optional-with-default;
+removal or renaming needs a migration plan. Guard tests compare Dart models, TypeScript contracts,
+registry entries, SQL columns, and non-diagnostic copy rules. Drift therefore reaches a failing test
+instead of a user.
 
-1. **context** — session coverage, memory integrity, couplings, front-matter, index freshness, archive containment
-2. **flutter** — `flutter analyze` + `flutter test`
-3. **typescript** — `tsc --noEmit` over shared contracts
-4. **node-tools** (matrix) — six packages (brain-ingest, llm-router, rules, edge-loader, engine-stats, metric-view): npm ci, typecheck, test, and drift guards
-5. **nao** — typecheck + node:test suites (no build — needs Cloudflare bindings)
-6. **deno-check** — four edge functions (compute-baselines, generate-insights, run-pipeline, evaluate-signals)
-7. **migrations-apply** — shadow-apply all supabase migrations in order against vanilla postgres:17
-8. **model-training** — core (stdlib-only unit tests) + lint/format/type-check (ruff + mypy)
-9. **arch-boundaries** — module /impl guard + model-training isolation
-10. **secret-scan** — gitleaks history + working tree, client-surface leak guard
+The rule has stopped real work: PR #199 changed nine shared files and could not proceed until Jayden
+and Alton were recorded as reviewers. Passing tests did not substitute for human review of a shared
+boundary.
 
-A **run-4 gate** aggregates: if any stage fails, the PR is red and cannot merge. The run4 release gate adds provenance checks and frozen-graph attestation for phase completions.
+### Semantic and structural awareness
 
-The gates catch what humans miss. Two concurrent budget-ledger writers could lose one call's accounting (last-write-wins); both ledgers now merge element-wise on every write, with the hard stop firing on merged totals (`session: 20260718`). Attestation proved its value when a regenerated graph differed from the recorded one by exactly two lines—both under one function, with every other hash byte-identical—independent evidence that only that function changed (`session: 20260728`).
+`graphify` builds a queryable semantic graph so an agent can retrieve the relevant subgraph rather
+than load the whole repository. Its machine output is gitignored and rebuildable; a compact Markdown
+view travels in `docs/graph/semantic-graph.md` for fresh clones and human review.
 
-## The Cycle
+A single generated structural graph is intentionally deferred because Dart, TypeScript, and SQL need
+different parsers. Today, curated module rules plus architecture guard tests enforce the boundaries
+that matter. Any future generated structural graph will remain a projection, never hand-edited
+truth.
 
-1. Open issue (`gh issue create`)
-2. Create branch in isolated worktree (`node tools/setup_agent_worktree.mjs`)
-3. Code inside the worktree
-4. Stage, commit with Conventional Commits, and write a session log (`docs/sessions/`)
-5. Push — pre-push hook runs `context_sync.mjs --check`
-6. CI runs automatically, shows results on the PR
-7. PR review (two reviewers for shared changes)
-8. Merge into `main`
+## 4. Verify Before Integration
 
-The session log and the issue summary are the durable record. The diff is searchable; the *why* is in the log.
+### Context is a machine gate
 
-## Where the process caught us
+`node tools/context_sync.mjs --check` runs in the pre-push hook and again in CI. It checks session
+coverage, the required `memory:` declaration, memory and decision front matter, supersession chains,
+generated-index freshness, coupling-guard paths, active-document coverage, archive containment,
+updated dates, decision immutability, and Jayden's verification stamp on canonical material.
 
-The mechanisms above are only worth describing if they actually catch things. They do, and the record
-is kept separately: **[What we got wrong, and what caught it](development/what-we-got-wrong.md)** — a
-running list of reversed decisions, disproved assumptions and defects caught before shipping,
-organised by *the mechanism that caught each*, with a session-log citation for every entry.
+A local hook can be skipped; the CI copy is the non-bypassable backstop. Documentation rot is a
+failed check, not a cleanup task deferred to the next person.
 
-Two examples give the flavour.
+### Test counts are dated evidence
 
-A design document stated that the CORE API allowed "1000 tokens/day, hard-stop 950", and the rate
-limiter was built to match. On the first real ingestion run, the live `X-RateLimit-*` headers showed
-the truth — roughly a ten-request bucket refilling after sixty seconds. The documented model was
-invented. It had been written confidently, propagated into code, and survived review, because nobody
-had asked the API (`session: 20260703`).
+Test totals change whenever code or coverage changes, so every number needs a date and revision. The
+consolidated release snapshot recorded on **2026-08-02 against `main` at `5a5af7c`** was:
 
-A request to ship a hand-rolled implementation of the xDF effective-sample-size method was refused by
-a deliberate throw rather than an approximation: *"must not ship unverified"*. An approximate version
-would have produced confident-looking statistics with nothing behind them (`session: 20260719`).
+| Executed suite | Passed | Skipped |
+|---|---:|---:|
+| biotope / Flutter | 827 | 26 |
+| nao / Node 26 | 407 | 1 |
+| Node tools: brain-ingest | 549 | 0 |
+| Node tools: llm-router | 121 | 0 |
+| Node tools: rules | 179 | 0 |
+| Node tools: edge-loader | 75 | 0 |
+| Node tools: engine-stats | 49 | 0 |
+| Node tools: metric-view | 20 | 0 |
+| Root release and guard suites | 78 | 0 |
+| model-training / Python | 300 | 0 |
+| **Total** | **2,605** | **27** |
 
-Read down that document's headings — live verification, independent review, literature, automated
-gates, humans — and you are reading the defence in depth. Each layer catches a different class of
-error and none catches all of them.
+The active product and training suites were rerun during this documentation update and reproduced
+**2,527 passing and 27 skipped** tests: Flutter 827/26, nao 407/1, Node tools 993/0, and model
+training 300/0. The remaining 78 are frozen Run 4 release/guard evidence. They are deliberately
+branch-bound: from this later documentation branch, three product-cap fixtures reject the changed
+historical MT4 path status. The recorded 2,605 is therefore a release snapshot, not an evergreen
+claim about every future branch.
 
-## Scale and Cadence
+**Do not cite these totals as current state.** They were correct when measured, at the revision
+named above, and nowhere else. Anything that needs a live number must re-run the suites and record
+its own date and revision — that is the whole point of dating them.
 
-The system operates at a measurable scale: 264 session logs spanning 2026-06 to 2026-08-02; roughly 32 in June, 194 in July, 38 in the first two days of August. Multiple distinct agent identities appear (`uandiqueue-claude`, `uandiqueue-codex`, `agentjwork-claude`, `agentjwork-codex`, `agent-j-claude`), plus occasional collaborator machines. One build was orchestrated across many parallel agents producing 22 source files, 24 test files, and 22 fixtures. The session log itself is the append-only ledger of what each agent attempted, changed, decided, and why.
+The **27 skipped tests are individually accounted for**:
+
+- **25 Flutter asset-size tests** — one for each generated biomechanical-botanical PNG. The files
+  total roughly 31 MB and are larger than needed for their rendered phone sizes. A measured
+  downscale produced roughly 7.9 MB without a visible difference at render size, but replacing the
+  binary assets trips the Run 4 binary-diff guard. The tests remain skipped until the assets land in
+  a separate human-reviewed binary change; this is known performance/package-size debt, not a
+  platform limitation.
+- **1 Flutter accessibility test** — `MetricTile` overflows at 1.6× text scaling: approximately
+  17 px horizontally and 15 px vertically in the test fixture. The fix requires scale-aware tile
+  typography and remains explicitly deferred as O28 accessibility work.
+- **1 nao platform test** — parses the changed PowerShell operator scripts without executing them.
+  It runs only on Windows and is skipped by condition on Linux/macOS; this is platform-conditional
+  coverage, not known failing behaviour.
+
+Counts describe breadth, not confidence by themselves. They also exclude non-test verification such
+as `flutter analyze`, TypeScript type-checks, four frozen Deno handler checks, SQL migration shadow
+application, Python lint/format/type-check, graph drift checks, architecture enforcement, and secret
+scanning. Those gates can fail a PR even when every counted test passes.
+
+### CI reflects the repository as it is
+
+The workflow defines nine core jobs for `main`: context and graph-view checks; Flutter analysis and
+tests; shared TypeScript checking; a six-package Node-tools matrix; nao checking and tests; a
+four-function Deno matrix; migration shadow application on Postgres 17; model-training core tests;
+and model-training lint/type checks.
+
+Four further jobs are scoped to the historical Run 4 integration branch: release evidence, its
+aggregate gate, architecture-boundary enforcement, and the full secret/client-surface scan. Describing
+them as conditional matters; a workflow file containing a check does not mean that check runs on
+every branch.
+
+## 5. Close the Loop Through GitHub
+
+The complete development cycle is:
+
+1. Open and claim a GitHub issue.
+2. Cut a session branch from `main` in its own worktree.
+3. Read the routed context, then implement only the claimed scope.
+4. Run the relevant tests and checks; preserve command output as evidence.
+5. Write one append-only session log and post the outcome on the issue.
+6. Commit with Conventional Commits and push through the context gate.
+7. Open a PR to `main`; obtain two human reviews when shared contracts changed.
+8. Let CI reproduce the evidence, resolve review, and merge.
+9. Regenerate indexes/semantic context where required and remove the short-lived worktree.
+
+The issue says what was requested, the diff says what changed, the tests say what was exercised, and
+the session log says why. No single artifact is asked to tell the whole story.
+
+## 6. Keep a Record of Being Wrong
+
+The process is useful only if it changes decisions. The running record is
+**[What we got wrong, and what caught it](development/what-we-got-wrong.md)**, organised by the layer
+that exposed each error and linked to its session evidence.
+
+One early rate-limit design claimed the CORE API allowed 1,000 tokens per day with a hard stop at
+950. A live request showed a roughly ten-request bucket refilling after sixty seconds. The confident
+document and matching implementation were both wrong; measurement corrected them.
+
+In another case, an approximate xDF effective-sample-size implementation would have produced
+plausible statistics without verified scientific footing. The code threw deliberately instead. A
+visible refusal was more reliable than an unsupported result.
+
+These are the point of the system: repository context, independent review, executable contracts,
+live verification, and human authority catch different errors. None is sufficient alone.
+
+## 7. Scale Without Losing the Thread
+
+As of 2026-08-02 the repository contains **268 session records**: 32 from June, 194 from July, and 42
+from the first two days of August. They span multiple agents and devices, yet each can be traced to a
+bounded attempt, decision, result, and handoff.
+
+The aim is not more process. It is a development environment where additional agents increase
+throughput without multiplying hidden state: context travels, writes are isolated, evidence is
+reproducible, and the human owner can see what became truth.
 
 ---
 
-**Craft is in the constraints.** These tools and rules exist because working with memory-free AI agents required them. The result is a repo where context never silently rots, contracts are enforced across languages, decisions are recorded and indexed, and the next agent (or the next human) can resume without guessing.
+**Craft is in the constraints.** The rules exist because memory-free agents made their absence
+costly. Together they let the next human or agent resume without guessing.

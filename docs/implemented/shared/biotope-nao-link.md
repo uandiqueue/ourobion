@@ -4,7 +4,7 @@ summary: The seam view of how biotope (consumer app) and nao (brain curation sur
 type: architecture
 scope: shared
 status: canonical
-updated: 2026-07-26
+updated: 2026-08-02
 ---
 
 # biotope ↔ nao — the runtime link
@@ -12,9 +12,9 @@ updated: 2026-07-26
 > **Status: authoritative ground truth (cross-app).** How **biotope** (the consumer app) and **nao**
 > (the brain's curation/ingestion surface) actually connect at runtime. The full 23-stage design lives
 > in [`insight-engine-architecture.md`](insight-engine-architecture.md); the brain's synthesis +
-> verification pipeline is [`../nao/brain-synthesis-design.md`](nao/brain-synthesis-design.md); the front of the paper
-> pipeline is [`../nao/brain-ingestion-design.md`](nao/brain-ingestion-design.md); the deterministic
-> serve engine is [`../biotope/rules-engine-design.md`](biotope/rules-engine-design.md). This
+> verification pipeline is [`../nao/brain-synthesis-design.md`](../nao/brain-synthesis-design.md); the front of the paper
+> pipeline is [`../nao/brain-ingestion-design.md`](../nao/brain-ingestion-design.md); the deterministic
+> serve engine is [`../biotope/rules-engine-design.md`](../biotope/rules-engine-design.md). This
 > doc is the *seam* view — it does not repeat those.
 >
 > **Supersedes** the earlier `docs/biotope-nao-link.md` draft (branch `docs/biotope-nao-link-plan`),
@@ -76,11 +76,11 @@ readings). The composer (§S7) then joins that fired pattern to the **1-hop serv
 
 If no servable edge for `hrv_ms` exists, the card still renders with its plain deterministic template —
 missing brain data silently no-ops, it never blocks a card (same posture as
-[wearable sync best-effort](../memory/0006-wearable-sync-best-effort.md)).
+[wearable sync best-effort](../../memory/0006-wearable-sync-best-effort.md)).
 
 **Grounding + gate.** The phrasing prompt contains only the composed-insight payload; it introduces no
 number or relation not in the input, is cached per `insight_id` (fire-triggered, not per-render), and
-passes `validateCopyString` ([non-diagnostic copy](../memory/0003-non-diagnostic-copy.md)) before
+passes `validateCopyString` ([non-diagnostic copy](../../memory/0003-non-diagnostic-copy.md)) before
 storage. Server-side only; keys never reach the client.
 
 ## 4 · Edge selection & trust gating at the seam
@@ -145,12 +145,12 @@ context-only role above.
 ## 5 · Who writes a relationship, and how it reaches biotope
 
 `verified_edges` has **three writers**, distinguished by `RelationshipClaim.provenance`. nao is only one,
-and not the expected majority — full detail in [`../nao/brain-synthesis-design.md`](nao/brain-synthesis-design.md):
+and not the expected majority — full detail in [`../nao/brain-synthesis-design.md`](../nao/brain-synthesis-design.md):
 
 1. **`provenance:'llm'` — the automated pipeline, doesn't touch nao's UI.** A seeder/queue picks a pair;
    a synthesis LLM proposes a claim (§A8); a **second, decorrelated non-Anthropic** adversarial verifier
    re-grounds it with its own retrieval (§A10) before it can leave `uncertain`
-   ([adversarial edge verification](../memory/0012-brain-adversarial-edge-verification.md)). Expected
+   ([adversarial edge verification](../../memory/0012-brain-adversarial-edge-verification.md)). Expected
    majority over time.
 2. **`provenance:'human'` — a curator working in nao.** Attaches a paper or approves a proposed edge
    before it's trusted (nao's real write role — a check layer, not the primary source).

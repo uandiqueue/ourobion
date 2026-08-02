@@ -4,13 +4,13 @@ summary: The deterministic PDF → JSON-blueprint → Postgres rules pipeline th
 type: design
 scope: biotope
 status: canonical
-updated: 2026-07-26
+updated: 2026-08-02
 ---
 # Insights Engine — Design (Phase 2, W2 / Track B)
 
-> **Authoritative integrated architecture:** [`../shared/insight-engine-architecture.md`](../insight-engine-architecture.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the biotope-scoped (insights-engine) view; where it differs, the architecture doc wins.
+> **Authoritative integrated architecture:** [`../shared/insight-engine-architecture.md`](../shared/insight-engine-architecture.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the biotope-scoped (insights-engine) view; where it differs, the architecture doc wins.
 
-**Scope.** This doc covers the deterministic rules-engine card producer (one producer among the engine's several). The end-to-end 23-stage insight engine and its inter-stage contracts live in [`insight-engine-architecture`](../insight-engine-architecture.md); this doc does not restate them.
+**Scope.** This doc covers the deterministic rules-engine card producer (one producer among the engine's several). The end-to-end 23-stage insight engine and its inter-stage contracts live in [`insight-engine-architecture`](../shared/insight-engine-architecture.md); this doc does not restate them.
 
 The detailed design for ourobion's **data-driven insights engine**: a PDF → structured-rules → engine
 pipeline that replaces the MVP's hardcoded rules. Sequencing, ownership, and the gate live in
@@ -45,7 +45,7 @@ as rebuildable PROJECTIONS.
 
 `trend` + `threshold` + `coincidence` cover all 6 current rules plus the cross-metric requirement.
 `deviation`/`all`/`any` are deferred until a real rule needs them. (`coincidence` was the MVP's
-`correlation` leaf, renamed per [`insight-engine-architecture`](../insight-engine-architecture.md)
+`correlation` leaf, renamed per [`insight-engine-architecture`](../shared/insight-engine-architecture.md)
 §S4 to distinguish this rule-blueprint conjunction from the real D1/D2 personal relations.)
 
 ## Steps (engine refactor is LAST)

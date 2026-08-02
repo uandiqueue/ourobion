@@ -1,27 +1,27 @@
 ---
 id: "0005"
-title: pg_cron migrations need app config set in the Supabase dashboard first
-summary: Before pushing pg_cron migrations to production, set app.supabase_url and app.service_role_key in the Supabase dashboard or the scheduled jobs are created but fail silently at run time.
+title: Scheduled internal calls separate routing credentials from authorization
+summary: Scheduled calls use a low-privilege project key for gateway routing and a separate rotatable internal secret for authorization; the service-role key must never travel in the request.
 type: memory
 status: accepted
 decided: 2026-07-13
-updated: 2026-07-13
+updated: 2026-08-02
+verified_by: Jayden
+verified_at: 2026-08-02T09:00:58Z
 ---
 
-# pg_cron migrations need app config set in the Supabase dashboard first
+# Scheduled internal calls separate routing credentials from authorization
 
-**Gotcha (backend / M5a / M5b).** Migrations that schedule `pg_cron` jobs (the nightly
-`compute-baselines` and `generate-insights` runs) require two database settings to exist **before** the
-migration is applied to production:
+A scheduler or internal operator may need to call a Supabase Edge Function, but it must not send the
+project's service-role credential. Gateway routing and Ourobion authorization are separate concerns:
 
-- `app.supabase_url`
-- `app.service_role_key`
+- a publishable/anonymous project key permits the request to reach the function;
+- a dedicated Ourobion internal secret authorizes the internal operation;
+- the function may use its server-side service-role credential for its own database work, but that
+  credential never leaves the function environment.
 
-Set them in the Supabase dashboard: **Settings → Database → Configuration**.
-
-**Why.** The cron jobs call back into the project (edge functions) using these values; if they are
-unset when the migration runs, the scheduled job is created but fails silently at run time.
-
-**How to apply.** Before `npx supabase db push` against production, confirm both settings are present.
-This is part of why the derived tables are rebuildable projections, not truth — a misconfigured cron
-just means re-running the job later ([0001-two-tier-truth](0001-two-tier-truth.md)).
+The internal secret is rotatable with current/previous values, with the receiver updated before the
+sender. Missing configuration must fail closed before a request is emitted. Exact setting, secret,
+and header names belong to the latest migrations and deployment runbook; never copy them from an
+older migration. The current replacement is
+[`20260728060000_supersede_cron_publishable_apikey.sql`](../../supabase/migrations/20260728060000_supersede_cron_publishable_apikey.sql).

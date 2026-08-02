@@ -4,7 +4,7 @@ summary: The single authoritative end-to-end insight-engine spec — every stage
 type: architecture
 scope: shared
 status: canonical
-updated: 2026-07-30
+updated: 2026-08-02
 ---
 
 # Insight-engine architecture — ground truth
@@ -17,11 +17,11 @@ conflicts with older design docs, this document wins (see [What this supersedes]
 
 Related docs and contracts:
 
-- [`../nao/brain-synthesis-design.md`](nao/brain-synthesis-design.md) — brain rationale (synthesis/verification split).
-- [`../nao/brain-ingestion-design.md`](nao/brain-ingestion-design.md) — the ingest CLI this doc's A-stages extend.
-- [`../biotope/rules-engine-design.md`](biotope/rules-engine-design.md) — the rules-engine card producer (IED), retained as one producer among three.
-- [`../../shared/brain/`](../../shared/brain/) — the TRUTH contract types and gating functions (`relationships.ts`, `index.ts`, `relationships.schema.ts`).
-- [`decisions/0004-local-day-projection.md`](../development/decisions/0004-local-day-projection.md) — the accepted
+- [`../nao/brain-synthesis-design.md`](../nao/brain-synthesis-design.md) — brain rationale (synthesis/verification split).
+- [`../nao/brain-ingestion-design.md`](../nao/brain-ingestion-design.md) — the ingest CLI this doc's A-stages extend.
+- [`../biotope/rules-engine-design.md`](../biotope/rules-engine-design.md) — the rules-engine card producer (IED), retained as one producer among three.
+- [`../../../shared/brain/`](../../../shared/brain/) — the TRUTH contract types and gating functions (`relationships.ts`, `index.ts`, `relationships.schema.ts`).
+- [`decisions/0004-local-day-projection.md`](../../development/decisions/0004-local-day-projection.md) — the accepted
   S1→S2 calendar, provenance, reducer, watermark, interval, and quiet-day policy for event/state
   primitives; its implementation slices remain pending.
 
@@ -61,7 +61,7 @@ These are settled and are not re-argued anywhere downstream:
    GROBID-style structure/reference parser as a CLI-orchestrated sidecar (A4). Everything
    downstream of the structured artifact is TS-native.
 8. **Captured local-day provenance.** Event/state local days are derived from immutable raw
-   capture provenance under [ADR-0004](../development/decisions/0004-local-day-projection.md), never from the
+   capture provenance under [ADR-0004](../../development/decisions/0004-local-day-projection.md), never from the
    user's current profile timezone. One exclusive S1 watermark bounds an evaluation; primitive
    quiet days remain absent rather than becoming synthetic zeroes.
 
@@ -142,7 +142,7 @@ inside the ingest CLI on GitHub Actions runners, metered API calls, budget-guard
 interactively by a **developer-run terminal LLM session** (e.g. Claude Code), consuming **no
 metered API budget** (see §8, budget split). S8/S9 phrasing runs **server-side at generation
 time** (fire-triggered, cached — the IED presentation-agent discipline,
-[`rules-engine-design`](biotope/rules-engine-design.md) §E). U1 applicability grading runs **server-side at
+[`rules-engine-design`](../biotope/rules-engine-design.md) §E). U1 applicability grading runs **server-side at
 S7 generation time** (fire-triggered, cached to `applicability_grades`; serve-time reads are
 deterministic table reads, so the two-tier-truth invariant holds). Nothing else touches an LLM.
 The consolidated per-stage model assignment is §10.
@@ -243,7 +243,7 @@ accepted in ADR-0004; the migration and runtime proof remain later slices.
 
 > **[Superseded statistics — see ADR-0002.]** The mean/SD baseline, `deadbandSigma = 0.5` and
 > the missing minimum-baseline guard below were the doc-12 dummies;
-> [decision 0002](../development/decisions/0002-anomaly-definition.md) replaces them with a robust
+> [decision 0002](../../development/decisions/0002-anomaly-definition.md) replaces them with a robust
 > median/MAD baseline (σ̂ = MAD/0.6745, 28-day window, `baselineMinDays = 14`, |M| > 3.5
 > artifact rejection, MAD-degeneracy fallback). The shipped registry extension field is
 > `signal: { deadbandK: number }` (deadband in robust-σ̂ units, 1.0 provisional) — not
@@ -272,7 +272,7 @@ accepted in ADR-0004; the migration and runtime proof remain later slices.
    *absence* is recorded by A1 as `blocked-completeness`.
 
 The IED cross-metric conjunction leaf (two per-metric tests,
-[`rules-engine-design`](biotope/rules-engine-design.md) §B1 condition union) is named
+[`rules-engine-design`](../biotope/rules-engine-design.md) §B1 condition union) is named
 **`coincidence`** in the blueprint contract — **renamed** from the MVP's `correlation`; genuine
 cross-metric relations are exclusively D1/D2 territory.
 
@@ -339,7 +339,7 @@ cross-metric relations are exclusively D1/D2 territory.
    Servability logic stays in `shared/brain/index.ts:25-69` — the loader precomputes
    `edge_score`/`serving_band` with those exact functions so reads never re-derive gating. **No
    Neo4j**: 1-hop lookup = `where subject = $k or object = $k` with two btree indexes; the IED
-   ([`rules-engine-design`](biotope/rules-engine-design.md) §The pattern) already carries this
+   ([`rules-engine-design`](../biotope/rules-engine-design.md) §The pattern) already carries this
    no-graph-DB serving model.
 3. **Compute:** DET. 4. **Generalization:** G. 5. **Transport:** table read by S7, A1; RLS:
    readable by authenticated users (population data, no user rows). 6. **Store:** above; claims
@@ -392,7 +392,7 @@ cross-metric relations are exclusively D1/D2 territory.
    **from S2 raw**, reproducible. Weights are provisional pending calibration (§11).
 3. **Compute:** DET + RULES. 4. **Generalization:** G. 5. **Transport:** runs inside the nightly
    `generate-insights` edge function (existing job, refactored per
-   [`rules-engine-design`](biotope/rules-engine-design.md) §C); writes `composed_insights`; emits gap events
+   [`rules-engine-design`](../biotope/rules-engine-design.md) §C); writes `composed_insights`; emits gap events
    to A1 in the same transaction.
 6. **Store:**
    ```sql
@@ -442,7 +442,7 @@ cross-metric relations are exclusively D1/D2 territory.
 3. **Compute:** DET assembly + **LLM phrasing** (Claude Haiku 4.5 presentation agent — grounded:
    prompt contains only the ComposedInsight payload; introduces no number/relation not in input;
    output through `validateCopyString`; cached per `(insight_id)`; fire-triggered not per-render —
-   the IED §E discipline, [`rules-engine-design`](biotope/rules-engine-design.md) §E). Claim register: causal wording
+   the IED §E discipline, [`rules-engine-design`](../biotope/rules-engine-design.md) §E). Claim register: causal wording
    only inside quoted-citation framing; personal causal claims blocked by the copy gate (opaque
    here). The still-researching variant's phrasing prompt additionally REQUIRES the
    unverified-personal-observation framing and forbids any citation-like wording; its rendered

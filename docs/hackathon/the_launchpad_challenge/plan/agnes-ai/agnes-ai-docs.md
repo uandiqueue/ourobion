@@ -1,3 +1,14 @@
+---
+title: Agnes AI API reference
+summary: Local reference copy of the Agnes AI API documentation verified by Jayden.
+type: reference
+scope: hackathon
+status: accepted
+updated: 2026-08-02
+verified_by: Jayden
+verified_at: 2026-08-02T09:27:00Z
+---
+
 > ## Documentation Index
 > Fetch the complete documentation index at: https://wiki.agnes-ai.com/llms.txt
 > Use this file to discover all available pages before exploring further.

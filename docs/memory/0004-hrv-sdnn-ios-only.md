@@ -5,7 +5,9 @@ summary: hrv_sdnn_ms comes only from Apple HealthKit and stays null on Android (
 type: memory
 status: accepted
 decided: 2026-07-13
-updated: 2026-07-13
+updated: 2026-08-02
+verified_by: Jayden
+verified_at: 2026-08-02T09:00:58Z
 ---
 
 # HRV SDNN is iOS-only

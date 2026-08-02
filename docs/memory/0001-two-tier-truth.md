@@ -1,33 +1,30 @@
 ---
 id: "0001"
-title: Two-tier truth
-summary: Raw rows + migrations + shared contracts are truth; baselines/insights/engagement are rebuildable projections — fix the input and re-run, never hand-edit derived tables.
+title: Two-tier truth, including mixed records
+summary: Preserve authored inputs and user choices; rebuild analytical outputs. Insight cards are mixed records whose generated content is projection but whose user-controlled lifecycle state is truth.
 type: memory
 status: accepted
 decided: 2026-06-08
-updated: 2026-07-13
+updated: 2026-08-02
+verified_by: Jayden
+verified_at: 2026-08-02T09:00:58Z
 ---
 
-# Two-tier truth
+# Two-tier truth, including mixed records
 
-**Decision (recorded 2026-06-08).** ourobion has a **source-of-truth tier** and a **derived tier**, and
-they must be treated differently.
+Ourobion distinguishes authored or non-reconstructable truth from rebuildable projections.
 
-- **Truth (git-tracked or user-authored, not reconstructable):** Supabase **migrations**
-  (`supabase/migrations/`), the **raw logged rows** users enter (`daily_gut_rows`,
-  `antibiotic_courses`, later `wearable_daily` / `env_daily`), and the **shared contracts** in
-  `shared/`.
-- **Derived projection (rebuildable, never hand-edit):** `baseline_snapshots` (rebuilt by
-  `compute-baselines`), `insight_cards` (rebuilt by `generate-insights`), `engagement_state` (rebuilt
-  by M6 from raw completeness).
+- **Truth:** migrations, shared contracts, source rule blueprints, raw observations and their
+  provenance, explicit human curation verdicts, and user choices such as whether an insight is active,
+  snoozed, dismissed, or archived.
+- **Derived projection:** baselines, personal signals, generated insight content and provenance,
+  recomputable engagement fields, model-synthesised relationship claims and machine verification
+  output, loaded rule rows, D1 search indexes, and generated semantic graphs.
 
-**Why.** project-context states it outright: *"store all raw daily rows, never derive-only. Raw data
-is the asset."* The descriptive insights are only as trustworthy as the raw inputs, and they must be
-regenerable when rules change — so the raw rows + migrations are the asset, and everything computed
-from them is a disposable projection.
+`insight_cards` is deliberately a **mixed record**. Its analytical payload is generated, but its
+user-controlled lifecycle state is not disposable. Any regeneration path must preserve that state.
 
-**How to apply.** To change a derived value, fix the **input** (a raw row, a migration, or the
-edge-function logic) and re-run the job. **Never hand-edit `baseline_snapshots` / `insight_cards` /
-`engagement_state` in the database** — the next job run overwrites them. Same idea applies to
-`docs/graph/`: the curated graph is truth; any future auto-generated graph is a rebuildable projection
-(see [../graph/README.md](../graph/README.md)).
+Correct a projection by changing its source data or generating logic and rerunning the owning
+pipeline. Never patch analytical output as the lasting fix. Equally, never erase or reset user-held
+state merely because the surrounding generated payload is rebuilt. Concrete table ownership and
+regeneration paths live in the applicable migration and implemented architecture.

@@ -3,8 +3,10 @@ title: Launchpad 2026 AI Challenge — Rules (raw)
 summary: The verbatim event rules for the Launchpad 2026 AI Challenge — tracks, timeline, deliverables, the five judging pillars, green/red flags, prizes and sponsor-judges. Reference only, never submitted; the strategy derived from it lives in hackathon-direction.md.
 type: reference
 scope: repo
-status: canonical
-updated: 2026-07-13
+status: accepted
+updated: 2026-08-02
+verified_by: Jayden
+verified_at: 2026-08-02T09:27:00Z
 ---
 
 Launchpad 2026 AI Challenge
@@ -246,4 +248,3 @@ Get started with the docs:
 Quickstart: agnes-ai.com/en/docs/cid1
 API overview: agnes-ai.com/en/docs/overview
 Building with the Agnes API also puts you in the running for the Best Use of Agnes AI award ($500 cash).
-

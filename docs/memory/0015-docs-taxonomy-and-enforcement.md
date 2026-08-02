@@ -1,39 +1,33 @@
 ---
 id: "0015"
-title: Docs taxonomy and enforcement
-summary: The docs tree has a fixed taxonomy (shared/nao/biotope/memory/sessions/graph, temp=in-building, archive=frozen/superseded), a kebab + type-suffix + front-matter naming rule, docs/INDEX.md as the enforced map, and context_sync.mjs --check enforces front-matter, supersede reciprocity, index freshness, and archive-containment.
+title: Documentation roles and lifecycle
+summary: Implemented, development, session, memory, hackathon, graph, and archive documents have distinct authority; generated indexes and structural checks do not substitute for owner verification or executable evidence.
 type: memory
 status: accepted
 decided: 2026-07-13
 updated: 2026-08-02
+verified_by: Jayden
+verified_at: 2026-08-02T09:00:58Z
 ---
 
-# 0015 — Docs taxonomy and enforcement
+# Documentation roles and lifecycle
 
-**Decision (adopted 2026-07-13).** The `docs/` tree was reorganised into a single, enforced
-information architecture. This file records the shape as a durable fact.
+The `docs/` tree separates intent, work in progress, history, and durable memory:
 
-**The taxonomy** — every doc lives in exactly one place by audience/scope:
+- `docs/implemented/` — intended implemented architecture; volatile claims still require executable
+  or hosted verification.
+- `docs/development/` — plans, process, ADRs, and in-flight material.
+- `docs/memory/` — durable one-fact-per-file decisions, boundaries, and gotchas.
+- `docs/sessions/` — append-only event and handoff records; dated run state belongs here.
+- `docs/hackathon/` — submission material and its plans.
+- `docs/graph/` — curated relationships/couplings plus explicitly generated projections.
+- `docs/archive/` — frozen or superseded provenance; never a build authority.
 
-- `docs/shared/` — cross-app engine, contracts, decisions, hackathon.
-- `docs/nao/` and `docs/biotope/` — per-app design/context.
-- `docs/memory/` — durable one-fact-per-file records (this directory).
-- `docs/sessions/` — chronological work logs.
-- `docs/graph/` — curated knowledge-graph truth.
-- `docs/development/` — in-building drafts (work not yet promoted to a canonical home).
-- `docs/archive/` — frozen / superseded material, kept only for provenance.
+Each topic has one owning document; other documents point to it instead of copying volatile detail.
+`docs/INDEX.md` is the navigation map. Generated indexes, front-matter validation, supersession links,
+archive containment, and session coverage enforce structure, not semantic truth.
 
-**Naming + front-matter.** Active docs use kebab-case filenames with a type suffix
-(`-architecture`, `-design`, `-context`, `-plan`, `-protocol`, `-catalog`/`-rules`) and carry
-YAML front-matter (`title`, `summary`, `type`, `scope`, `status`, `updated`). Memory and decision
-records use the id/title/summary/type/status/decided/updated schema instead.
-
-**Canonical owners.** Each topic has one owner doc; every other doc points to it rather than
-restating it. The insight-engine stages live in
-[../shared/insight-engine-architecture.md](../implemented/insight-engine-architecture.md); shared
-contract types in [../../shared/SHARED-CONTEXT.md](../../shared/SHARED-CONTEXT.md).
-
-**Enforcement.** `docs/INDEX.md` is the authoritative map of the tree, and
-`node tools/context_sync.mjs --check` (pre-push hook + CI) now enforces front-matter validity,
-supersede reciprocity (`supersedes` ↔ `superseded_by`), index freshness, and **archive-containment**:
-no active doc may link into `docs/archive/` — links flow archive → active only.
+Documents under the owner-verification gate remain `unverified` after agent-authored or material
+changes until Jayden reviews and signs that revision; see
+[0022](0022-owner-verification-is-an-authority-boundary.md). Active documents must not link into
+`docs/archive/`.

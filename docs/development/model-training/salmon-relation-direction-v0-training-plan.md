@@ -48,9 +48,9 @@ This is a bounded research pilot on the same terms as the NLI pilot:
 | `EdgeVerification.claimKindCheck` | `relationships.ts:205` | **not this model** — see the claim-kind plan |
 
 Pipeline seam: **A10 · Verification with independent retrieval**
-([`insight-engine-architecture.md`](../../implemented/insight-engine-architecture.md) §A10), which fills the
+([`insight-engine-architecture.md`](../../implemented/shared/insight-engine-architecture.md) §A10), which fills the
 check blocks. A secondary future seam is **A8 synthesis**, where
-[`insight-engine-architecture.md` §10.2](../../implemented/insight-engine-architecture.md) lists a
+[`insight-engine-architecture.md` §10.2](../../implemented/shared/insight-engine-architecture.md) lists a
 "Relation/direction extractor" intended to be split out of the synthesis prompt.
 
 > **Doc discrepancy to resolve before promotion, not now.** §10.2 scopes the extractor to A8 and proposes

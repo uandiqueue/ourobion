@@ -310,16 +310,14 @@ Read directly from the hosted Supabase demo project on **2026-08-02**:
 **The pipeline has produced published edges. It has not produced a card from one.** That is the line to
 hold — §1's promise section states it in full, and Slide 5 narrates it.
 
-**Spend — from the machine-local `data/llm-router/ledger.json`, all-time:** **US$1.80 over 59 calls** ·
-45 OpenAI calls (of which US$1.58 is the 40-call 2026-08-01 synthesis batch, ≈US$0.04/paper) · **Agnes
-10 calls at exactly US$0**, that plan being priced at zero until 2026-08-08.
+**API usage — pending definitive provider reconciliation:** OpenAI calls
+`{{PENDING:openai-calls}}` · OpenAI spend `{{PENDING:openai-usd}}` · Agnes calls
+`{{PENDING:agnes-calls}}` · total spend `{{PENDING:total-usd}}`. Agnes is configured at zero per token
+until 2026-08-08.
 
-> Two cautions on that figure. Earlier drafts said *"US$1.118 OpenAI · Agnes 18/50 calls"* — the spend was
-> stale and **"18 of 50" is not verifiable from this repository**; the plan quota is vendor-side. Second,
-> the ledger is **gitignored and machine-local**, and it records 10 Agnes verifier calls on 2026-08-01
-> against **14** hosted verifications. Those two do not reconcile from here — the verification pass may
-> have run on another machine or worktree with its own ledger. Quote the USD total as "measured locally,
-> provider billing authoritative", and do not present the ledger call count as the pipeline's call count.
+> The ledger is **gitignored and machine-local**, and its pending Agnes call count does not presently
+> reconcile with **14** hosted verifications. The pass may span another machine or worktree ledger.
+> Provider billing is authoritative; do not quote any pending placeholder on camera.
 
 ---
 
@@ -530,17 +528,18 @@ and different weights, which is what makes the blind spots independent.
 
 **Agnes is the right model to name, and it is genuinely in the path.** The adversarial role is precisely
 the one that requires a model whose training data and weights are *not* shared with the writer. Agnes AI
-is a sponsor whose team is among the judges (`hackathon-rules.md:78,81`). The ledger records **10 Agnes
-calls on 2026-08-01 at US$0**, and the raw responses carry provider attestation `agnes-2.5-flash`. The
-earlier "18 of 50 calls" figure is not reproducible from this repository — do not use it; the 50-call
-plan quota is a vendor-side number we cannot observe.
+is a sponsor whose team is among the judges (`hackathon-rules.md:78,81`). The raw responses carry
+provider attestation `agnes-2.5-flash`; the definitive call count is
+`{{PENDING:agnes-calls}}`. The plan quota is vendor-side and cannot be verified from this repository.
 
 ### Slide 5 · The honest slide · 25s — **never cut**
 Headline: **14 verified edges. 0 cards made from one.**
 - The corpus is real: **21,823 records, 894 with usable full text** — and those are different numbers
-- Synthesis ran at batch scale: **40 papers → 20 claims, 12 cited blueprints**, US$0.04 a paper
+- Synthesis ran at batch scale: **40 papers → 20 claims, 12 cited blueprints**; API cost per paper is
+  `{{PENDING:openai-usd-per-paper}}`
 - The verifier ran: **14 edges checked, 11 servable** — judged on fidelity to the paper each one cites
-- **The last mile is missing.** No card carries `producer='edge'` yet. Spend to date: **US$1.80**
+- **The last mile is missing.** No card carries `producer='edge'` yet. Spend to date:
+  `{{PENDING:total-usd}}`
 
 > **Wording is load-bearing on this slide; do not improvise it.** Three failure modes:
 > - Saying **"blocked"** or **"zero verified edges"** — both false now. 14 exist, 11 servable.

@@ -1,403 +1,264 @@
 # AGENTS.md — Ourobion
 
-> **This file is the single source of truth for every agent and human working in this repo.**
-> `CLAUDE.md` and `GEMINI.md` are thin pointers here. Keep all durable, cross-tool instructions in
-> this file so guidance never drifts between tools. Device-local `~/.claude` / `~/.gemini` memory does
-> **not** travel — everything that must survive across machines and agents lives in the repo (this
-> file, the CONSTANT-LAYER docs it points to, `docs/sessions/`, `docs/memory/`, `docs/graph/`).
+> **This is the durable, cross-tool instruction and routing file for AI agents in this repository.**
+> `CLAUDE.md` and `GEMINI.md` point here. Humans start with [`README.md`](README.md) and
+> [`docs/repository-guide.md`](docs/repository-guide.md).
 
-ourobion's context lives in two layers:
+This file deliberately contains only stable instructions, boundaries, role definitions, and pointers.
+It must not become a snapshot of current implementation or project status. Phase status, team
+assignments, active branches/PRs, released models, function inventories, credentials, tool versions,
+test totals, and other fast-changing facts belong in their owning documents, code, configuration, or
+GitHub record—not here.
 
-- **CONSTANT LAYER** (architecture, contracts, conventions) — authored docs that change only at phase
-  transitions. AGENTS.md **points** to them; it never duplicates them. See §1, §3, §5.
-- **VARIABLE LAYER** (what happened, what's next) — append-only **one-file-per-session** logs under
-  `docs/sessions/` plus durable facts under `docs/memory/`. See §6, §7.
+## 1. How an agent finds current truth
 
----
+Do not rely on model memory or assume that a linked document is current merely because it exists.
 
-## 1. What this is
+1. Run `node tools/context_sync.mjs --session-start`.
+2. Determine whether this is a continuation of an existing issue/session/worktree. If it is, continue
+   those artifacts; a restarted agent process or compacted conversation is not a new session.
+3. Read the active issue/PR and the latest relevant files in `docs/sessions/`.
+4. Use the routing table below to find the owning document.
+5. For implementation claims, inspect the current code, contracts, migrations, tests, and CI
+   configuration before acting.
 
-Ourobion is a **One Health personal ecological health monitor** for the ASEAN market — a Flutter mobile
-app + Supabase backend that connects human physiology, daily behaviour, and environmental context to
-surface **descriptive** patterns in gut health, hydration, and vector exposure. It is
-**non-diagnostic by construction**.
+Use this authority order:
 
-- **Full product brief, principles, scope, module map, expansion hints:** [`docs/implemented/project-context.md`](docs/implemented/project-context.md)
-- **Non-negotiable product principles** (non-diagnostic always; 30-second logging; graceful
-  degradation; PDPA; privacy-safe community) live there — read them before touching user-facing copy
-  or data isolation.
+1. Explicit current direction from Jayden.
+2. A document carrying Jayden's valid signature or `verified_by: Jayden` stamp in its applicable
+   verified state—including an accepted memory record. Trust it within its stated scope. If
+   implementation differs, report drift rather than silently discarding the owner-verified source.
+3. Executable artifacts—contracts, migrations, current code, tests, and CI—for implemented behaviour.
+4. A recent `docs/development/` document whose `updated` date is relevant to the work and whose claims
+   do not contradict owner direction, verified records, executable evidence, or the active GitHub
+   record. Ordinary development docs do not need a human-verification stamp to be useful working
+   context.
+5. Active issue/PR evidence and recent session logs for in-flight state.
 
-Repo shape: a Flutter (Dart) app in `apps/biotope/`, a Next.js/TypeScript brain-operations app in
-`apps/nao/`, a Supabase backend in `supabase/` (Postgres migrations + TypeScript edge functions), and
-shared Dart/TS contracts in `shared/`. Node drives nao, the Supabase CLI, and `tools/`.
+`docs/memory/` is maintained again; its verification state determines authority. `docs/implemented/`
+is currently stale. Use it only as older design/context material and verify every claim elsewhere
+before acting. `docs/archive/` is frozen history and is never an implementation source. Report
+material contradictions instead of silently selecting one source.
 
-**Language is task-fit, not blanket-banned.** Python is permitted **only** inside the isolated
-top-level `model-training/` workspace, for the five planned custom models' training, evaluation,
-export, and reproducibility tooling. TypeScript/Node is the choice for ONNX-runtime parity checks and
-runtime-contract verification. Every other surface — `apps/`, `supabase/`, `shared/`, `tools/` — stays
-Flutter/Dart or Node/TypeScript, exactly as before; no other language enters without a concrete
-task-fit reason recorded as a decision. This supersedes the former blanket "no Python in this repo"
-rule and the model-training plans' requirement that training code live only in a separate
-`ourobion-model-lab` repository — both superseded by Jayden's explicit decision (see
-[`docs/development/model-training/code-build-decisions.md`](docs/development/model-training/code-build-decisions.md)
-D1). **It does not weaken any other boundary:** data-isolation, licensing, security, scientific,
-non-serving, and two-tier-truth rules are unchanged. `model-training/` code may only read fixtures and
-manifests it owns, may never be imported by `apps/`, `supabase/`, `shared/`, or `tools/brain-ingest`,
-and never integrates a trained model into product serving — see
-[`docs/development/model-training/README.md`](docs/development/model-training/README.md) and
-[`docs/development/model-training/model-roster.md`](docs/development/model-training/model-roster.md) §8 for the
-standing boundaries.
+## 2. Repository routing table
 
-## 2. Core principle — TWO-TIER TRUTH (read this first)
+AGENTS.md points; the owning sources carry detail.
 
-ourobion has a source-of-truth tier and a derived tier. Treat them differently:
-
-- **TRUTH (git-tracked / user-authored, never reconstructable):**
-  - **Supabase migrations** in `supabase/migrations/` — the schema is defined here, in PRs, diffable.
-  - **Raw logged rows** — the self-report data users enter (`daily_gut_rows`, `antibiotic_courses`,
-    and later `wearable_daily`, `env_daily`). project-context says it plainly: **"store all raw daily
-    rows, never derive-only. Raw data is the asset."**
-  - **Shared contracts** in `shared/` — the cross-language types every boundary crosses.
-- **DERIVED PROJECTION (rebuildable, never hand-edit):**
-  - `baseline_snapshots` — recomputed by the `compute-baselines` edge function.
-  - `insight_cards` — regenerated by the `generate-insights` edge function.
-  - `engagement_state` — recomputed by M6 from raw completeness.
-  - **the brain's edges** (`RelationshipClaim` + `EdgeVerification`) — synthesised from papers by one
-    LLM and verified by a second; rebuilt by re-running the ingestion pipeline. The *contract*
-    (`shared/brain/`) is truth; the *instances* are the projection. See
-    [`docs/implemented/nao/brain-synthesis-design.md`](docs/implemented/nao/brain-synthesis-design.md) and
-    [`docs/memory/0012-brain-adversarial-edge-verification.md`](docs/memory/0012-brain-adversarial-edge-verification.md).
-
-**Rule:** to change a derived value, fix the **input** (a raw row or the edge-function logic) and
-re-run the job. **Never hand-edit `baseline_snapshots` / `insight_cards` / `engagement_state` in the
-database** — those are projections and the next job run will overwrite them. The two-tier analog of
-ourobion's own data graph (`docs/graph/`): the curated graph is truth; any future auto-generated graph
-file is a rebuildable projection (see §8). See [`docs/memory/0001-two-tier-truth.md`](docs/memory/0001-two-tier-truth.md).
-
-## 3. Architecture & module boundaries
-
-ourobion is organized as modules **M1–M7** with a strict dependency order. The **curated, hand-authored
-module graph and the enforced interface rules are the boundary reference** (we deliberately do *not*
-auto-generate a structural import graph yet — see §8 and [`docs/graph/README.md`](docs/graph/README.md)):
-
-- **Module dependency graph + data flow + table overview + interface rules:** [`docs/implemented/biotope/architecture-context.md`](docs/implemented/biotope/architecture-context.md)
-- **Repository directory layout + `shared/` vs `apps/biotope/` rule + env files:** [`docs/development/structure-context.md`](docs/development/structure-context.md)
-- **The shared contract types (the connective tissue every boundary crosses):** [`shared/SHARED-CONTEXT.md`](shared/SHARED-CONTEXT.md) — incl. the metrics registry (`shared/metrics/`) and the brain relationship contract (`shared/brain/`, design in [`docs/implemented/nao/brain-synthesis-design.md`](docs/implemented/nao/brain-synthesis-design.md))
-- **UI design system:** [`docs/implemented/biotope/ui-design-context.md`](docs/implemented/biotope/ui-design-context.md)
-- **Per-feature design docs:** the **nao** brain surface in [`docs/implemented/nao/`](docs/implemented/nao/) — product design [`nao-app-design.md`](docs/implemented/nao/nao-app-design.md), plus [`brain-synthesis-design.md`](docs/implemented/nao/brain-synthesis-design.md) + [`brain-ingestion-design.md`](docs/implemented/nao/brain-ingestion-design.md) + [`brain-support-models-design.md`](docs/implemented/nao/brain-support-models-design.md); the **brain pipeline + support-model decision** in [memory 0013](docs/memory/0013-brain-pipeline-and-support-models-decision.md); the **biotope** app in [`docs/implemented/biotope/`](docs/implemented/biotope/); the **authoritative insight-engine architecture** (spans both apps, the promoted doc-12 design) in [`docs/implemented/insight-engine-architecture.md`](docs/implemented/insight-engine-architecture.md) with granular ADRs in [`docs/development/decisions/`](docs/development/decisions/) and the runtime seam in [`docs/implemented/biotope-nao-link.md`](docs/implemented/biotope-nao-link.md).
-
-**The doc map:** [`docs/INDEX.md`](docs/INDEX.md) lists every active doc with a one-line summary — **read it first to route** to the right doc. **What to build next** is [`docs/development/next-steps.md`](docs/development/next-steps.md). What the system actually **is** lives in [`docs/implemented/`](docs/implemented/) — cross-cutting ground truth at the top, app-scoped truth in [`docs/implemented/nao/`](docs/implemented/nao/) and [`docs/implemented/biotope/`](docs/implemented/biotope/), and the measured state in [`docs/implemented/system-truth.md`](docs/implemented/system-truth.md). Roadmap, process, ADRs and in-flight run material live in [`docs/development/`](docs/development/); hackathon material in [`docs/hackathon/the_launchpad_challenge/`](docs/hackathon/the_launchpad_challenge/); **frozen/superseded material lives in `docs/archive/` — never build from it** (excluded from agent crawl via the root `.aiignore`; links flow archive→active only, never the reverse).
-- **AI routing table, truth hierarchy & PR review checklist:** [`docs/development/agent-protocol.md`](docs/development/agent-protocol.md)
-- **The human dev cycle (Issue → … → Merge):** [`docs/development/dev-workflow.md`](docs/development/dev-workflow.md)
-
-**Boundary rules that matter most** (full set in architecture-context §"Module Interface Rules"):
-
-- **No module imports from another module's `/impl`** — public `index`/façade only.
-- **M6 never reads `insight_cards` directly** — it only reacts to `InsightFiredEvent`.
-- **`shared/` is the only cross-language seam.** Anything that must agree across Dart (app) and
-  TypeScript (backend) lives in `shared/`; the app must not reach into backend scripts, nor vice versa.
-- **Changes to any `shared/` contract type require a PR with 2 reviewers** (SHARED-CONTEXT rule). Add
-  fields as optional-with-default; never remove/rename without a migration plan. See
-  [`docs/memory/0002-shared-contract-two-reviewers.md`](docs/memory/0002-shared-contract-two-reviewers.md).
-
-## 4. Environment & commands
-
-ourobion has **two toolchains for product code**: **Flutter/Dart** (biotope, in `apps/biotope/`) and
-**Node + Supabase CLI** (nao, the backend, and `tools/`). A third, narrowly scoped toolchain — **Python
-≥3.10, isolated to `model-training/`** — exists for the five planned custom-model training/evaluation/
-export pipelines (see §1 and
-[`docs/development/model-training/README.md`](docs/development/model-training/README.md)); it is never installed into,
-or imported by, `apps/`, `supabase/`, `shared/`, or `tools/`.
-
-> **Windows-native dev (no WSL):** `scripts/setup.ps1` installs the whole toolchain **bounded to the
-> project** in a sibling `..\biotope-toolchain\` (Miniconda env = Node + JDK 17, Flutter SDK, Android
-> SDK + emulator/AVD). Activate it per shell with `. .\scripts\biotope-env.ps1` — no global PATH
-> changes. This folder is **build tooling, not a repo/runtime dependency**: machine-local, uncommitted,
-> never deployed (the app compiles to a self-contained artifact; the backend runs on Supabase). See
-> README → "Where dependencies live". macOS/Linux use `scripts/setup.sh`. The commands below assume the
-> toolchain is on PATH (activated on Windows, system-installed elsewhere).
-
-### Flutter app (run from `apps/biotope/`)
-
-| Command | What it does |
+| Need | Start here |
 |---|---|
-| `flutter pub get` | install Dart/Flutter deps |
-| `flutter analyze` | static analysis — **part of the verify gate; must be clean** |
-| `flutter test` | run the widget + guard tests in `apps/biotope/test/` |
-| `flutter run` | launch the app on a connected device/emulator |
+| Product identity, current human orientation, demo/run entry | [`README.md`](README.md) |
+| Human repository navigation | [`docs/repository-guide.md`](docs/repository-guide.md) |
+| Full documentation map and lifecycle state | [`docs/INDEX.md`](docs/INDEX.md) |
+| Product principles and owner-approved orientation | Signed [`README.md`](README.md) and accepted [`docs/memory/`](docs/memory/) records |
+| Durable cross-session facts and gotchas | [`docs/memory/README.md`](docs/memory/README.md), then the relevant accepted, Jayden-verified record |
+| Implemented behaviour and measured state | Current contracts, migrations, code, tests, CI, and dated evidence |
+| Repository layout and environment-file ownership | [`docs/development/structure-context.md`](docs/development/structure-context.md) |
+| Shared cross-language contracts | [`shared/SHARED-CONTEXT.md`](shared/SHARED-CONTEXT.md) and `shared/` |
+| Module boundaries and change blast radius | Public façades, `couplings.yaml`, guard tests, and current contracts |
+| Recent plans, process, design work, and next work | Recently updated [`docs/development/`](docs/development/) documents with no contradiction, plus active issues and PRs |
+| Detailed agent routing/review protocol | [`docs/development/agent-protocol.md`](docs/development/agent-protocol.md) |
+| Human development workflow | [`docs/development/dev-workflow.md`](docs/development/dev-workflow.md) |
+| Engineering and orchestration practice | [`docs/engineering-practice.md`](docs/engineering-practice.md) |
+| Commit format | [`docs/development/commit-conventions.md`](docs/development/commit-conventions.md) |
+| Model-training rules and current roster | [`docs/development/model-training/README.md`](docs/development/model-training/README.md) |
+| Commands and supported versions | nearest `README.md`, package manifest, setup script, and [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
+| Older authored design narrative | [`docs/implemented/`](docs/implemented/) — known stale; background only until refreshed |
 
-> Flutter tests live in `apps/biotope/test/` (Flutter requires tests inside the package); other
-> package tests live beside their code (e.g. `tools/brain-ingest/tests/`). A repo-root `tests/`
-> directory can be added for cross-package integration/e2e harnesses once the first one is written.
-> Coupling **guard tests** live in `apps/biotope/test/guards/` (see §8).
+If routed sources conflict, apply the authority order above. A conflict with an owner-verified source
+may be implementation drift; a conflict in a lower-authority source may be documentation staleness.
+Resolve it in the owning surface and do not copy the volatile correction here unless it changes a
+durable invariant.
 
-### Supabase backend (run from repo root; the CLI is the `supabase` devDependency)
+## 3. Durable product and architecture invariants
 
-| Command | What it does |
-|---|---|
-| `npx supabase start` | start the local Postgres + studio stack |
-| `npx supabase migration new <name>` | scaffold a new migration in `supabase/migrations/` |
-| `npx supabase db push` | apply migrations to the linked project |
-| `npx supabase functions deploy <fn>` | deploy an edge function (`compute-baselines`, `generate-insights`) |
+These rules remain here because every agent must carry them across tools and sessions:
 
-> pg_cron migrations need `app.supabase_url` and `app.service_role_key` set in the Supabase dashboard
-> (Settings → Database → Configuration) **before** applying to production. See
-> [`docs/memory/0005-pgcron-config-prereqs.md`](docs/memory/0005-pgcron-config-prereqs.md).
+- **Non-diagnostic by construction.** User-facing language is observational. Do not claim diagnosis,
+  treatment, prevention, or causation from an association. The executable copy constraints live in
+  `shared/constants/copy_guidelines.{ts,dart}`.
+- **Privacy and isolation are product boundaries.** Preserve consent, RLS/data isolation, PDPA-aware
+  handling, and privacy-safe community/operations surfaces. Never put personal health data or secrets
+  in source, logs, issues, fixtures, or shared demonstration accounts.
+- **Raw truth is preserved; projections are rebuilt.** Fix a projection through its source data or
+  generating logic, then regenerate it. Do not hand-edit rebuildable analytical output as though it
+  were source truth. Preserve user-authored state when regenerating mixed records.
+- **Graceful degradation.** Missing optional data must reduce confidence or capability honestly, not
+  fabricate completeness or break the core logging experience.
+- **Module boundaries are public interfaces.** A module must not import another module's `/impl`; use
+  its public façade.
+- **`shared/` is the cross-language seam.** Anything that must agree across Dart, TypeScript, and SQL
+  belongs in a shared contract or an explicitly guarded boundary. Product surfaces do not import one
+  another's implementation code.
+- **Shared-contract changes require two human reviewers.** Add fields compatibly, normally
+  optional-with-default. Removal or renaming requires a migration plan.
+- **Evidence is not serving permission.** A verified relationship, trained artifact, or generated
+  rule does not automatically become user-facing behaviour. Serving requires the applicable product,
+  safety, provenance, contract, and review gates.
 
-### Local testing — seed instead of logging for a week
+## 4. Agent work protocol
 
-Time-based features (streaks, baselines, insights) read backdated `log_date` rows, not the wall clock,
-so you never log by hand for days. Tune the variables at the top and run:
+### Continue before creating
 
-| Command | What it does |
-|---|---|
-| `.\scripts\seed-test-data.ps1` | inject N backdated days for one user, rebuild `engagement_state`, then invoke `compute-baselines` → `generate-insights` so every UI view renders |
+First determine whether the requested work already belongs to an active issue, branch, worktree, or
+session log. Continue existing artifacts when they exist. Do not open duplicates merely because a new
+agent instance joined the work.
 
-Requires `npx supabase start` running (Docker), and the target user to **already exist** — sign in once
-in the app first (RLS keys on `auth.uid() = user_id`; the seeder resolves the UUID from `auth.users` by
-email). Raw rows are truth, projections are rebuilt — the [0001-two-tier-truth](docs/memory/0001-two-tier-truth.md) model in script form.
-See [`docs/memory/0009-local-test-data-seeding.md`](docs/memory/0009-local-test-data-seeding.md).
+### New leaf session
 
-### Platform & auth constraints (Windows-native dev)
+For a genuinely new independent work unit:
 
-- **iOS can't be built on Windows** (Apple toolchain is macOS/Xcode only) — develop on the **Android
-  emulator**; iOS is a Mac / cloud-CI task. **HealthKit** needs the **paid Apple Developer Program
-  (US$99/yr) + a real iPhone**; so does **Apple Sign In**. Android/Health Connect, local Supabase, and
-  email/password auth are free. See [`docs/memory/0010-ios-build-needs-mac-and-paid-account.md`](docs/memory/0010-ios-build-needs-mac-and-paid-account.md).
-- **Local auth is email/password only** (`enable_confirmations = false` — instant signup). **OAuth
-  (Google/Apple) won't work against local Docker**; test it on a hosted (free-tier) Supabase project.
-  Local DB state persists across `supabase stop`/`start` (restores from a volume); only `db reset` or
-  `stop --no-backup` wipes it. See [`docs/memory/0011-local-supabase-auth-email-only.md`](docs/memory/0011-local-supabase-auth-email-only.md).
-
-### Context enforcement (Node, repo root)
-
-| Command | What it does |
-|---|---|
-| `node tools/context_sync.mjs --session-start` | print the resume briefing (latest sessions, memory index, staleness) |
-| `node tools/context_sync.mjs --check` | run the enforced context checks (used by pre-push + CI) |
-| `npm run context:start` / `npm run context:check` | convenience aliases for the two above |
-
-**Enable the shared git hooks once per clone** (see §9):
+1. Open or claim one bounded GitHub issue.
+2. Create one short-lived branch in one isolated worktree.
+3. Resolve the branch base and PR target from the active run/protocol; do not infer them from an old
+   session log. Pass the chosen base explicitly to the setup tool.
+4. Keep concurrent writers in separate worktrees with non-overlapping ownership.
+5. Write exactly one session record for that leaf session.
 
 ```bash
-git config core.hooksPath .githooks
+gh issue create --title "<work-unit goal>"
+node tools/setup_agent_worktree.mjs \
+  --branch <type>/<area>/<slug> \
+  --base <current-integration-base> \
+  --path <absolute-path-outside-repo>
 ```
 
-## 5. Conventions
+Use `gh` for GitHub issues, PRs, reviews, comments, and checks. Use `git` for local history,
+worktrees, commits, and branch transport. Preserve unrelated dirty-worktree changes; they belong to
+the user or another active work unit unless proven otherwise.
 
-- **Commits:** Conventional Commits — full spec in [`docs/development/commit-conventions.md`](docs/development/commit-conventions.md).
-  Types: `feat` / `fix` / `docs` / `style` / `refactor` / `perf` / `test` / `build` / `ci` / `chore` /
-  `revert`. **Scope = module or area:** `m1`/`m2`/`m3`/`m5a`/`m5b`/`m6`, or `db`/`ui`/`docs`/`auth`.
-  (Recent history uses `m3`, `m5a`, `db`, `docs`.) Keep commits `flutter analyze`-green.
-- **Branches:** `feat/m<n>-<area>/<slug>` for module work (e.g. `feat/m3-wearables/healthkit-read`),
-  or `fix/…`, `docs/…`, `ci/…`, `refactor/…`. **One short-lived branch per session, cut from
-  `main`, inside its own worktree (§7).** There are **no personal `dev-<name>` lines** — every
-  session is its own session branch that lives only until its PR merges. Refine the name **only before
-  the first push**.
-- **`gh` for everything GitHub sees** (issues, PRs); **`git` only for local work `gh` can't do**
-  (worktree, staging, commits, local branch rename). Never push a branch or open/merge a PR with raw
-  `git` when a `gh` command exists.
-- **PRs are the integration seam.** **`main` is the single integration line** — every session branch
-  PRs into **`main`** at session end. `main` stays always-deployable; tests required before any merge.
-  > Historical note: through Run 4 the integration line was `dev-phase2-run4`, and session branches were
-  > forbidden from targeting `main` directly. PR #360 ("release: promote Run 4 to main", 2026-08-01)
-  > merged that branch into `main`, which is now 0 commits behind it. Older session logs and run docs
-  > describing the two-tier `session → dev-phase2-run4 → main` flow are records of what was true then;
-  > do not follow them.
-- **Non-diagnostic language** — every user-facing string must use observational phrasing and pass the
-  copy rules in `shared/constants/copy_guidelines.{ts,dart}`. See SHARED-CONTEXT "Non-Diagnostic Copy
-  Rules" and [`docs/memory/0003-non-diagnostic-copy.md`](docs/memory/0003-non-diagnostic-copy.md).
+### Session record
 
-## 6. Phase & team workstreams
+Each leaf session owns one append-only file:
 
-The repo is in **Phase 2** — turning the shipped MVP self-report loop (M1 auth, M2 logging, M5a
-baselines, M5b insights, M6 engagement) into the real product: Android passive health (M3), a
-data-driven insights engine (M5b), environmental context (M4), and the first community slice (M7).
-**Current scope, sequencing, and the Phase 2 → Phase 3 gate live in
-[`docs/development/phase-2-plan.md`](docs/development/phase-2-plan.md)** (the plan authority); per-session status lives in
-`docs/sessions/`.
-
-### Team workstreams (ownership)
-
-- **Jayden** — M1 (Core & Compliance) + database rules + M2 assist. Owns PDPA consent copy,
-  `shared/constants/copy_guidelines.*` enforcement path, auth/OAuth enablement.
-- **Alton** — M2 (Self-Report Logging) + Flutter UI + M3 (Wearables). Owns the wearable integration
-  (HealthKit / Health Connect → `wearable_daily`) and the M5a wearable extension.
-
-Active gotchas captured as durable facts: HRV SDNN is iOS-only
-([0004](docs/memory/0004-hrv-sdnn-ios-only.md)); wearable sync is best-effort
-([0006](docs/memory/0006-wearable-sync-best-effort.md)).
-
-## 7. Agent collaboration protocol (MANDATORY)
-
-> The detailed **AI routing table, truth hierarchy, and PR review checklist** live in
-> [`docs/development/agent-protocol.md`](docs/development/agent-protocol.md); the **human-facing dev cycle** is in
-> [`docs/development/dev-workflow.md`](docs/development/dev-workflow.md). This section is the authoritative summary they defer to.
-
-### Session start
-1. Run `node tools/context_sync.mjs --session-start` (the Claude Code SessionStart hook in
-   `.claude/settings.json` prints it automatically). It surfaces the latest `docs/sessions/` entries,
-   the `docs/memory/` index, and a staleness flag.
-2. **Read the latest few `docs/sessions/` files** to resume context before changing anything.
-
-### Session isolation — one issue + branch + worktree per session (MANDATORY)
-So two teammates' agents on the **same device** never collide, every session works inside its own
-GitHub issue, branch, and **git worktree** (a separate working directory, not just a branch switch):
-
-1. **Open a session issue** (a provisional title is fine):
-   ```bash
-   gh issue create --title "<session goal>"        # note the issue number, e.g. 42
-   ```
-2. **Create the isolated worktree + branch (cut from `main`)**, then work there:
-   ```bash
-   node tools/setup_agent_worktree.mjs --branch feat/m<n>-<area>/<slug> --base main --path <absolute-path-outside-repo>
-   cd <worktree-path>      # do ALL of this session's work inside this worktree
-   ```
-   The branch is always cut from `main` (pass `--base main` explicitly — the
-   tool's own default base is still the stale `dev-phase2`; see `tools/setup_agent_worktree.mjs`) and
-   is short-lived — it exists only until its PR merges into `main`. There are no
-   long-running personal branches.
-3. **Refine names only before the first push.** Rename the issue with `gh issue edit <n> --title`
-   and the branch with `git branch -m <old> <new>`. After a PR is open the branch is hard to rename.
-
-### Before opening a PR (MANDATORY)
-1. **Post a session summary on its issue** so the issue is the durable record of what shipped:
-   ```bash
-   gh issue comment <n> --body "<what changed / decided / left>"
-   ```
-2. **Open the PR with `gh`, linking the issue — base it on `main`:**
-   ```bash
-   gh pr create --base main --title "..." --body "<summary>
-
-   Closes #<n>"
-   ```
-   (Through Run 4 this was `--base dev-phase2-run4`; that line merged into `main` via PR #360.)
-   The session log (below) + the issue summary are the durable record of what shipped.
-
-### Session log — `docs/sessions/` (REQUIRED — enforced)
-Every session writes **exactly one** append-only file (never edit a shared file — one-file-per-session
-keeps parallel writers conflict-free):
-
-```
+```text
 docs/sessions/<UTC-timestamp>-<device>-<agent>-<slug>.md
-e.g. 20260608T045610Z-uandiqueue-claude-context-system-bootstrap.md
 ```
 
-Timestamp is `YYYYMMDDThhmmssZ` (UTC). Each file records **Attempted / Changed / Decided / Left /
-Blockers** (copy the header from any existing file), **plus a `memory:` line** declaring durable-fact
-deltas — `memory: none`, or `memory: added 0016; superseded 0004`. The pre-push hook and CI **fail**
-unless a `docs/sessions/` entry is added/changed in the push **and** it carries a `memory:` line
-(check h); if the push changes memory/decisions but every touched log says `memory: none`, it fails.
+Record `Attempted / Changed / Decided / Left / Blockers` and a `memory:` line. Use `memory: none`
+unless the session actually adds, changes, or supersedes a durable memory record. Update the same file
+throughout the session; do not create a second log after context compaction or agent restart.
 
-### Durable memory — `docs/memory/` and decisions — `docs/development/decisions/` (ENFORCED)
-Two numbered, one-fact-per-file record stores (memory = durable facts/gotchas; decisions = cross-app
-architecture ADRs), `NNNN-slug.md`, each opening with YAML front-matter
-(`id/title/summary/status/updated`; `status: accepted|superseded`, and `superseded_by` when superseded).
-**Before pushing, run `node tools/context_sync.mjs --fix-index`** — it regenerates the GENERATED
-sections of [`docs/INDEX.md`](docs/INDEX.md), [`docs/memory/README.md`](docs/memory/README.md), and
-[`docs/development/decisions/README.md`](docs/development/decisions/README.md) from that front-matter. `--check`
-(pre-push + CI) then **fails** on: a dangling/unindexed link, invalid/missing front-matter, a
-`superseded` record without a resolving `superseded_by`, a **stale** generated index, a modified record
-that didn't bump `updated:`, an edited **accepted** decision body (supersede instead), any active doc
-missing from `docs/INDEX.md`, or an active doc linking into `docs/archive/`. Memory facts are living
-(edit + bump `updated:`); decisions are immutable once accepted (supersede with a new record).
+Before PR handoff, post the outcome, evidence, and blockers to the issue/PR control plane. Link the
+issue from the PR and request the required reviewers.
 
-### Task coordination
-Claim a task before starting so two agents on the same device never duplicate effort. State lives in a
-small JSON file managed by the Shared Memory Coordinator (`tools/shared_memory.mjs`):
-- **List claims:** `node tools/shared_memory.mjs list`
-- **Claim:** `node tools/shared_memory.mjs claim --task "<name>" --agent "<agent>" --device "<device>"`
-- **Release:** `node tools/shared_memory.mjs release --task "<name>"`
+### Same-device coordination
 
-### Model-tier delegation (Sol Max)
-
-When the primary session uses **`gpt-5.6-sol` at max effort**, reserve it for orchestration,
-architecture/adversarial analysis, synthesis, evaluation, and final quality control. It should choose
-the model and reasoning effort for each delegated task to minimise total tokens and latency while
-preserving the required quality.
-
-- Delegate bounded search, repository inventory, extraction, routine test execution, mechanical edits,
-  and straightforward implementation to appropriately cheaper/faster subagents.
-- Give every subagent a concrete scope, expected artifact, validation rule, and stop condition; use
-  parallel workers only where their work is genuinely independent.
-- The Sol Max primary must inspect and validate material findings or changes before accepting them; a
-  subagent report is evidence to review, not an automatic conclusion.
-- Direct execution by Sol Max is acceptable when delegation is unavailable, the task is too small to
-  justify hand-off, the work is tightly coupled to the primary analysis, or safety/security requires
-  the primary to retain the operation. Record the reason when the exception is material.
-- Do not use a high-cost subagent where a lower-cost model/effort can meet the bounded task's acceptance
-  criteria. Conversely, escalate model or effort when validation shows the cheaper attempt is
-  insufficient.
-
-### Model-tier delegation (orchestrator convention)
-
-Whenever the user says the primary is **"the orchestrator"**, it decomposes work, assigns bounded
-ownership, prevents collisions, reviews evidence, decides architecture and scope, and coordinates the
-PR/merge. It delegates implementation, mechanical edits, routine searches, test execution, and device
-interaction: use Terra low/medium for inventory, docs, routine tests, and device UX; Terra high for
-substantial implementation; and Sol high/max for architecture, adversarial review, synthesis, and hard
-blockers. Explicitly select each subagent's model and effort, minimise full-history forks, and reserve
-direct work for tiny orchestration or safety-critical checks; state any material exception.
-
-## 8. Code-relationship awareness (know a change's blast radius)
-
-Curate what isn't derivable, defer the auto-generated **structural** graph for now, run a **semantic**
-graph for agent context, and enforce what we keep:
-
-- **Structural import graph — DEFERRED.** ourobion is Dart + TypeScript + SQL, so a single import-graph
-  tool is awkward. The **curated** module graph + interface rules in
-  [`docs/implemented/biotope/architecture-context.md`](docs/implemented/biotope/architecture-context.md) are the boundary reference today.
-  [`docs/graph/README.md`](docs/graph/README.md) records exactly how to add a real generated graph
-  later (and that, when added, it is a rebuildable projection — never hand-edited).
-- **Semantic context graph (graphify).** [`graphify`](https://github.com/safishamsi/graphify) indexes
-  the repo into a queryable `graph.json` so an agent pulls only the relevant subgraph instead of the
-  whole tree. **Complementary to — not a substitute for — the deferred structural graph** (it is
-  semantic/multi-modal; AST coverage includes Dart). It is **build tooling, project-bounded** (a venv in
-  `..\biotope-toolchain`, on PATH after `. .\scripts\biotope-env.ps1`, never global/committed); rebuild
-  with **`scripts/graphify-build.ps1`**. The machine output is repo-root **`graphify-out/`**
-  (gitignored — a rebuildable projection, never hand-edited); the wrapper also refreshes the single
-  tracked view at **`docs/graph/semantic-graph.md`**. **That view is Markdown on purpose:** `docs/graph/`
-  is the layer that travels across machines and agents, and everything in `graphify-out/` — `graph.json`,
-  `GRAPH_REPORT.md`, and the interactive `semantic-graph.html` — is machine-local, so on a fresh clone the
-  tracked Markdown is the *only* graph context an agent has. An interactive HTML view is still generated,
-  into gitignored `graphify-out/semantic-graph.html`, for humans; never point an agent at it (it is a
-  ~1.3MB blob of embedded JSON and minified JS). Query it with `graphify query "<question>"`,
-  `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"`; after code changes run
-  `graphify update .`, then `npm run graph:view:write` (the wrapper performs both). `.graphifyignore`
-  excludes `docs/archive/` and the generated view itself. **Pre-wired PreToolUse hooks** remind the agent to consult the graph before
-  grepping/reading source for **Claude Code** (`.claude/settings.json` + `CLAUDE.md` + a `/graphify`
-  skill in `.claude/skills/graphify/`), **Codex** (`.codex/hooks.json`), and **Gemini CLI**
-  (`.gemini/settings.json` + `GEMINI.md`); any other tool runs the CLI manually. In Claude Code,
-  `/graphify .` runs the full pipeline (incl. the LLM semantic pass) using the session model — no key.
-  Refresh the human view after it finishes. Graphify semantic extraction is routine housekeeping: use
-  the **fastest capable subagent model at low effort by default**, escalating only when validation
-  rejects its output. At session close, process only new/invalidated manifest entries so semantic work
-  stays incremental; reserve a full rebuild for extractor/schema changes or repair. The semantic pass
-  needs **no API key** inside an AI assistant (it uses the host session model). Detail:
-  [`docs/graph/README.md`](docs/graph/README.md),
-  [`docs/memory/0008-graphify-context-tool.md`](docs/memory/0008-graphify-context-tool.md).
-
-## 9. Enforced context maintenance (automated, not trust-based)
-
-`tools/context_sync.mjs` (Node stdlib only — no third-party deps) keeps in-repo context accurate,
-wired at two points:
-
-- **Session start** — the Claude Code `SessionStart` hook in `.claude/settings.json` runs
-  `context_sync.mjs --session-start` (add the Gemini CLI equivalent when adopted).
-- **Before every push** — the repo-committed `.githooks/pre-push` hook (shared via
-  `core.hooksPath=.githooks`) runs `context_sync.mjs --check`. Local hooks are skippable with
-  `--no-verify`, so **CI re-runs the identical check plus `flutter analyze` + `flutter test` as the
-  non-bypassable backstop** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
-
-`--check` fails the push unless **all** hold:
-1. **Session coverage** — a `docs/sessions/` file is added/changed in the commits being pushed
-   (`<upstream>..HEAD`, falling back to `origin/main..HEAD`; skipped cleanly when nothing to push).
-2. **Memory index integrity** — every `docs/memory/*.md` (except `README.md`) is linked in
-   `docs/memory/README.md`, and every link in the index resolves to a file.
-3. **Couplings** — every `couplings.yaml` `guard:` names a file that exists on disk.
-
-Enable the hook once per clone (and `setup_agent_worktree.mjs` does it automatically per worktree):
+Use the repository coordinator when work could overlap:
 
 ```bash
-git config core.hooksPath .githooks
+node tools/shared_memory.mjs list
+node tools/shared_memory.mjs claim --task "<name>" --agent "<agent>" --device "<device>"
+node tools/shared_memory.mjs release --task "<name>"
 ```
+
+The coordinator prevents duplicate work; it is not durable project history. GitHub and session logs
+remain the durable record.
+
+## 5. Agent roles
+
+These terms describe responsibility, not a particular model or vendor.
+
+### Worker agent
+
+A worker owns a bounded artifact or investigation. It stays inside the assigned scope, validates its
+result, records evidence and blockers, and does not make integration decisions outside that scope.
+
+### Orchestrator
+
+An orchestrator coordinates a bounded task graph or run. It:
+
+- decomposes the goal into non-overlapping units;
+- assigns scope, expected artifact, validation rule, dependencies, and stop condition;
+- selects worker capability by task shape;
+- monitors progress and resolves or escalates blockers;
+- reviews evidence and diffs rather than accepting status reports as proof;
+- controls sequencing and recommends integration, while leaving owner-only approval to the owner.
+
+An orchestrator may also implement a small, tightly coupled, or safety-critical part directly, but it
+must not let direct editing displace coordination and independent review.
+
+### Master orchestrator
+
+A master orchestrator is the **single human-facing coordinator** for a multi-session, multi-agent, or
+multi-device effort. It has the orchestrator duties above plus responsibility for the global
+dependency graph, issue/PR stack, cross-device ownership, integration order, and final synthesis.
+
+The human communicates run direction to the master orchestrator. Workers and subordinate
+orchestrators report through GitHub issue/PR comments so the run does not depend on private side
+channels. The master continuously monitors that control plane, answers or reassigns blockers, and
+reviews every result before recommending integration.
+
+A master-orchestrated run may use one umbrella issue across multiple sessions and stacked work units.
+That does not relax write isolation: every concurrent writer still needs a distinct branch/worktree,
+clear ownership, and leaf-level verification evidence. Separate leaf issues are optional only when
+the umbrella issue and PR records remain unambiguous.
+
+## 6. Delegation invariants
+
+Delegate by task shape, not prestige. Use the smallest capable worker for bounded inventory,
+mechanical edits, routine tests, and device checks; use stronger reasoning for architecture,
+adversarial review, dependency resolution, and final synthesis.
+
+Every delegated task states:
+
+- bounded scope and ownership;
+- expected artifact;
+- validation rule;
+- dependencies and permitted writes;
+- stop condition and blocker-reporting route.
+
+Parallel work is appropriate only when units are genuinely independent or isolated. The delegating
+agent must inspect material findings and changes before accepting them. Model names and tier mappings
+belong to tool/session configuration, not this durable repository file.
+
+## 7. Documentation and owner verification
+
+Repository documentation has distinct roles:
+
+- `docs/implemented/` is currently stale older design/context material, not present-state authority.
+- `docs/development/` contains plans, process, ADRs, and in-flight material. Ordinary development
+  docs have no human-verification gate: a recent `updated` date plus absence of contradiction makes
+  them usable working context.
+- `docs/sessions/` records what happened and why.
+- `docs/memory/` is the maintained durable-fact/gotcha layer. Trust accepted records carrying
+  Jayden's verification stamp within their scope; treat unverified records as leads pending review.
+- `docs/hackathon/` contains submission material.
+- `docs/archive/` is frozen history and is never an active implementation source.
+
+Where a document class uses the owner-verification gate, material agent edits return it to
+`status: unverified` and remove stale `verified_by`/`verified_at` values. Only Jayden may apply his
+signature or verification stamp and promote a governed record to its verified state. A valid Jayden
+stamp is semantic authority, not merely formatting. Memory and decision records use their defined
+lifecycle; accepted ADR bodies are immutable and must be superseded rather than rewritten.
+
+After changing indexed documents or record front matter, run:
+
+```bash
+node tools/context_sync.mjs --fix-index
+npm run context:check
+```
+
+The context gate checks repository consistency; it does not prove that prose is factually current.
+
+## 8. Change awareness and verification
+
+Before changing code, inspect the relevant public contracts, `couplings.yaml`, migrations, and guard
+tests. Use Graphify when its local projection is installed and current; otherwise use `rg` and the
+owning sources. Generated graph output is a rebuildable aid, never authority and never hand-edited.
+
+Choose verification based on the changed surface. Obtain exact commands and supported versions from
+the owning package, setup scripts, and current CI workflow rather than copying them into this file.
+Report the revision, platform, commands, result, skips, and known gaps. A test count or workflow job
+without its revision and branch conditions is not reusable evidence.
+
+Before handoff:
+
+1. Confirm the diff matches the claimed scope and preserves unrelated work.
+2. Run the relevant product, contract, migration, security, and documentation checks.
+3. Run `git diff --check` and `npm run context:check` when applicable.
+4. Update the existing session log and GitHub control-plane record.
+5. Leave owner-only verification, approval, and merge decisions to the owner.
+
+## Owner verification
+
+Pending Jayden's review and signature.

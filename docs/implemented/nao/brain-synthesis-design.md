@@ -4,13 +4,13 @@ summary: Why brain edges are LLM-synthesised then independently, adversarially r
 type: design
 scope: nao
 status: canonical
-updated: 2026-07-13
+updated: 2026-08-02
 ---
 # The Brain — Design
 
-> **Authoritative integrated architecture:** [`../shared/insight-engine-architecture.md`](../insight-engine-architecture.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the brain-scoped (edge synthesis + verification) view; where it differs, the architecture doc wins.
+> **Authoritative integrated architecture:** [`../shared/insight-engine-architecture.md`](../shared/insight-engine-architecture.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the brain-scoped (edge synthesis + verification) view; where it differs, the architecture doc wins.
 
-**Scope.** This doc covers *why* brain edges are synthesised then adversarially verified (the rationale the architecture doc defers to). The end-to-end 23-stage insight engine and its inter-stage contracts live in [`insight-engine-architecture`](../insight-engine-architecture.md); this doc does not restate them.
+**Scope.** This doc covers *why* brain edges are synthesised then adversarially verified (the rationale the architecture doc defers to). The end-to-end 23-stage insight engine and its inter-stage contracts live in [`insight-engine-architecture`](../shared/insight-engine-architecture.md); this doc does not restate them.
 
 **The brain** is ourobion's knowledge graph of scientifically-derived relationships between metrics.
 Nodes are metric keys ([`shared/metrics/registry.ts`](../../../shared/metrics/registry.ts)); edges are
@@ -189,7 +189,7 @@ Resolved by the pipeline decision ([memory 0013](../../memory/0013-brain-pipelin
 1. **Verifier model choice — DECIDED: a different model family from synthesis.** Synthesis uses a
    strong generative model (Claude Sonnet 5); the verifier a different vendor family, for error
    decorrelation (the whole point of the second pass). Exact model tiers are deferred to
-   [`insight-engine-architecture`](../insight-engine-architecture.md) §10.1. Small trained **support models** additionally pre-check the claim before the
+   [`insight-engine-architecture`](../shared/insight-engine-architecture.md) §10.1. Small trained **support models** additionally pre-check the claim before the
    verifier LLM spends a token — an NLI verdict pre-filter and a relation/direction/claim-kind
    cross-check that feed `directionCheck` / `claimKindCheck`; the study-design + venue models feed
    `evidenceTier` / `impactTier`. See [`brain-support-models-design.md`](brain-support-models-design.md).
