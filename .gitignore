@@ -28,6 +28,18 @@ test_credentials.md
 # Multi-agent task-claim coordination state (machine-local; see tools/shared_memory.mjs).
 .agents/
 
+# Android signing material. `key.properties` carries the keystore password in plain text, and the
+# keystore itself is the signing identity — committing either into a public repository is
+# unrecoverable (the key must then be treated as compromised and every artifact re-signed).
+# Added BEFORE the first release build: the demo APK is currently debug-signed
+# (`signingConfigs.getByName("debug")`), so these files do not exist yet and the moment proper
+# signing is configured is exactly when they appear.
+# Deliberately UNANCHORED, matching the test_credentials.md rule above, so a copy in
+# apps/biotope/android/ or any other subdirectory is covered too.
+*.keystore
+*.jks
+key.properties
+
 # ═══════════════════════════════════════════════════════════════
 # 2. DEPENDENCIES (Common)
 # ═══════════════════════════════════════════════════════════════
@@ -70,6 +82,14 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Packaged Android artifacts. `build/` already covers the default output path, but the reviewer APK
+# gets copied out of it for upload — an unanchored rule keeps that copy out of the repo wherever it
+# lands. The demo APK is distributed as a GitHub Release asset, never as a committed binary.
+# `local.properties` is machine-local SDK paths, not portable.
+*.apk
+*.aab
+local.properties
 
 # ═══════════════════════════════════════════════════════════════
 # 4. LOGS & OS FILES

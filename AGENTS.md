@@ -47,6 +47,7 @@ AGENTS.md points; the owning sources carry detail.
 | Need | Start here |
 |---|---|
 | Product identity, current human orientation, demo/run entry | [`README.md`](README.md) |
+| Public-facing project showcase (a presentation surface, never an evidence source) | [`apps/site/`](apps/site/) — static single page for www.ourobion.com; its copy is derived from `docs/project-overview.md` and the Launchpad `writeup.txt`, so fix those first and let the site follow |
 | Human repository navigation | [`docs/repository-guide.md`](docs/repository-guide.md) |
 | Full documentation map and lifecycle state | [`docs/INDEX.md`](docs/INDEX.md) |
 | Product principles and owner-approved orientation | Signed [`README.md`](README.md) and accepted [`docs/memory/`](docs/memory/) records |
