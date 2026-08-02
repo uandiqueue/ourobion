@@ -3,9 +3,11 @@ id: "0012"
 title: Brain synthesis and verification use different provider families
 summary: Every brain edge is synthesised and then checked adversarially by an LLM from a different provider family with independent retrieval; the router refuses same-family pairing and grounding failures resolve to uncertain.
 type: memory
-status: unverified
+status: accepted
 decided: 2026-07-13
-updated: 2026-08-03
+updated: 2026-08-02
+verified_by: Jayden
+verified_at: 2026-08-02T22:08:41Z
 ---
 
 # Brain synthesis and verification use different provider families

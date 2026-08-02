@@ -3,9 +3,11 @@ id: "0011"
 title: Local Supabase defaults to email/password auth
 summary: The checked-in local Supabase configuration uses immediate email/password auth; OAuth requires real provider credentials and hosted callback configuration, while database reset remains distinct from ordinary stop/start.
 type: memory
-status: unverified
+status: accepted
 decided: 2026-07-13
-updated: 2026-08-03
+updated: 2026-08-02
+verified_by: Jayden
+verified_at: 2026-08-02T22:08:41Z
 ---
 
 # Local Supabase defaults to email/password auth
