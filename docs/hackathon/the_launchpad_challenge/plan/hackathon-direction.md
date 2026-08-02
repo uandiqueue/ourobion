@@ -1,10 +1,10 @@
 ---
 title: Ourobion @ Launchpad 2026 — Direction
-summary: The single canonical hackathon-strategy doc — track choice (Agentic Systems), prebuild-vs-delta framing, the "correlations are cheap" hook + adversarial-verifier mechanism, the living-apps trajectory ruling, sponsor integration, and how to win each judging pillar. Owner of all hackathon strategy.
+summary: The single canonical hackathon-strategy doc — track choice (Agentic Systems), extended prior work as the demo-serving slice, the brain as the scored delta, the "correlations are cheap" hook + adversarial-verifier mechanism, the living-apps trajectory ruling, sponsor integration, and how to win each judging pillar. Owner of all hackathon strategy.
 type: process
 scope: repo
 status: canonical
-updated: 2026-07-26
+updated: 2026-08-02
 ---
 
 # hackathon-direction.md — Ourobion @ Launchpad 2026 AI Challenge
@@ -22,12 +22,11 @@ updated: 2026-07-26
 ## 0 · TL;DR (the direction in one paragraph)
 
 We enter the **Agentic systems** track. The prebuild — the *biotope* self-report app and the
-deterministic paper-ingestion pipeline — is declared, out loud, as prior work: it's the backdrop. **The
-scored delta is "the brain": a multi-role agentic pipeline** — a **planner/seeder agent** generates
-research queries, a **synthesis LLM** proposes edges, small trained models + a deterministic `quoteCheck`
-cross-check them, an **adversarial verifier LLM (a decorrelated model family, doing its own retrieval)**
+deterministic paper-ingestion pipeline — existed before this challenge and are declared, out loud, as such (the rules require it). Both have changed substantially during the challenge period. They are not the *focus*, which is the agentic brain. Their role is precise: they are the **demo-serving slice** — they exist so the brain's output has somewhere to land and can be shown to a person at all. Without them the brain is a pipeline with no visible result. **The scored delta is "the brain": a multi-role agentic pipeline** — a **planner/seeder agent** generates
+research queries, a **synthesis LLM** proposes edges, a deterministic `quoteCheck`
+cross-checks them (the trained support models are **not** in this path — see §4.2), an **adversarial verifier LLM (a decorrelated model family, doing its own retrieval)**
 tries to refute each one, and a **human-in-the-loop curator** in *nao* approves what's served. It turns
-our 1,200-paper corpus into metric-relationship edges *only* when that second, independent LLM can
+our corpus — 21,824 records discovered, 911 with full text extracted as of 2026-08-02 — into metric-relationship edges *only* when that second, independent LLM can
 re-ground them against fresh literature — graded 0..1, gated into serve / serve-with-qualifier /
 withhold, and inspectable edge-by-edge. **The core discipline: exactly two decorrelated adversarial LLMs
 on the truth path, deterministic everything else, small trained models offloading cost — every agent
@@ -45,9 +44,7 @@ against fresh literature before you ever see it."*
 
 ## 0.5 · Self-judgement response (post-adversarial round)
 
-Two internal judging rounds were run (full reports kept for provenance in the archive, not linked here). Round 1 (primed to *"assume the plan works"*) scored **21/25**. An **adversarial round**, scoring the **realistic delta a 2-person team can ship by 31 Jul** (no "assume it works," verified against `git log` — the delta is unbuilt today), scored **16/25**: Problem 3 · Approach 3 · Evidence 3 · Constraints 3 · Honesty 4. **No fundamental flaw survived; Agentic Systems remains correct; the "use a different submission" escape hatch is NOT triggered.** Treat **16/25 as the honest baseline** and the 21↔16 gap as pure **execution risk**.
-
-**The one thing that decides everything: the delta must produce OBSERVED results.** Every point the adversarial round docked traces to one root — the scored delta (verifier, edges, curves, refusals) is unbuilt, so its evidence is *anticipated*, not *run*. A polished design of an unbuilt system is a 16; the same design plus a small real eval is a ~19–20. Priorities are ordered by that leverage.
+Two internal judging rounds were run (full reports kept for provenance in the archive, not linked here). Round 1 (2026-07-23, primed to *"assume the plan works"*) scored **21/25**. An **adversarial round** (2026-07-26), scoring the **realistic delta a 2-person team can ship by 31 Jul** (no "assume it works," verified against `git log`), scored **16/25**: Problem 3 · Approach 3 · Evidence 3 · Constraints 3 · Honesty 4. **No fundamental flaw survived; Agentic Systems remains correct; the "use a different submission" escape hatch is NOT triggered.** That round's reasoning rested on the premise that the scored delta (verifier, edges, curves, refusals) was unbuilt, so its evidence was *anticipated*, not *run*. **That premise is now superseded.** Measured on 2026-08-02: 14 verified relationships exist, of which 11 pass the serving gate; verdicts spread as 1 supported, 10 partial, 2 uncertain, 1 unsupported, with confidence 0.72–0.92; decorrelation verified by running the config gate; corpus of 21,824 records (14,726 open access, 911 with full text extracted, 894 over 5,000 characters); test suite 2,605 passing, 27 skipped, 0 failing. One card has been generated from a verified relationship and is archived — a user opening the app today still sees no paper-derived card. The last mile is not connected, and must be stated plainly. Treat the **16/25 round as a dated record** of design-stage scoring; the actual position on 2026-08-02 reflects **built and measured artifacts on a curated slice** (not the full graph, but real verified relationships with real verdicts), contrasting with the "anticipated" evidence the adversarial round evaluated.
 
 ### Priority 0 — protect the eval, even at the cost of breadth
 Ship the depth-first slice **and its measured artifacts** (cut breadth before cutting these):
@@ -72,7 +69,7 @@ Ship the depth-first slice **and its measured artifacts** (cut breadth before cu
 - **Quarantine Claim 3** (a small trained model cheapens/beats the verifier) as **roadmap** unless GMI credits land and the model actually trains; the Agnes-vs-OpenAI LLM cost curve stands on its own. *(Evidence, Constraints)*
 
 ### Verdict
-**Stay the course — Agentic Systems, this submission.** Both rounds agree the design is genuinely strong (the adversarial floor is 3s, not 1s–2s; Honesty holds a 4 with a clear path to 5). The risk is not the idea — it is **shipping observed delta-side results** and refusing to let prebuild polish or a persuasive write-up stand in for them. Do Priority 0 and the score becomes real; skip it and a sharp judge scores the plumbing, not the brain.
+**Stay the course — Agentic Systems, this submission.** Both rounds agree the design is genuinely strong (the adversarial floor is 3s, not 1s–2s; Honesty holds a 4 with a clear path to 5). The risk is not the idea — it is **completing and verifying the last-mile serving connection** and refusing to let prebuild polish or a persuasive write-up stand in for shipping the full loop. The delta is now measured on a curated slice; the remaining work is depth (more metric pairs) and completeness (wiring the verified output into live user-facing cards). Do Priority 0 and the submission moves from "designed and partially measured" to "designed, measured, and served."
 
 ---
 
@@ -147,14 +144,14 @@ answer:
 
 **Alternatives considered and ruled out** (recording these *is* Approach-pillar hygiene):
 - **Applications** — biotope is a real app, but it's **prebuild**, and the delta (the brain) has no live
-  end users. Application judges ("operators who ship") score user pain, task-success rates, user
+  end users yet — verified relationships exist and are measured, but the serving-to-user loop is not complete. Application judges ("operators who ship") score user pain, task-success rates, user
   testing — evidence we can't honestly produce for the brain in 4 weeks. Ruled out.
 - **Infrastructure & tooling** — the pipeline *could* be framed as "a data/eval pipeline for AI." But
   infra judges score a *workflow bottleneck and who suffers today* + before/after on that workflow. Our
   contribution is a **reasoning pipeline with a novel verification pattern**, not a developer tool.
   Agentic captures the intellectual center; infra would undersell it. Ruled out (kept as a fallback
   framing only if matching signals push us there).
-- **Deep learning research / Embodied AI** — no. (Support-model fine-tunes are roadmap, not the delta.)
+- **Deep learning research / Embodied AI** — no. (Two support models were trained and evaluated: Viceroy [causal-language classification, macro-F1 0.8656 vs. 0.5068 baseline] and Zebra [claim vs. evidence, macro-F1 0.5991 against a pre-registered bar of 0.70, which it failed]. Both carry `validated=false` / `serving_ready=false`, and the refusal to connect them is enforced in code. On a reasoning-track rubric, shipping a model that was trained, evaluated, found below its bar, and deliberately withheld is a strength in intellectual honesty, not a gap.)
 
 **Consequence for how we write:** we will be read by people who recognize agent quality. Lead with the
 *why-an-agent* argument and the single-call baseline; don't dress deterministic steps up as "agents"
@@ -164,11 +161,8 @@ answer:
 
 ## 3 · Positioning & narrative
 
-### 3.1 The backdrop (prebuild — say so, out loud)
-*biotope* is a competent, ordinary self-report health app: 30-second daily logging, non-diagnostic
-insight cards. On its own it does what every health app does — **surface correlations in one person's
-data**. That's the backdrop, and naming it as prior work in the first 20 seconds is itself an honesty
-green flag that pre-empts the "did they just reskin an app?" suspicion.
+### 3.1 The demo-serving slice (prebuild with in-period changes — say so, out loud)
+*biotope* existed before the challenge: a competent, ordinary self-report health app with 30-second daily logging and non-diagnostic insight cards. On its own it does what every health app does — **surface correlations in one person's data**. Naming it as prior work in the first 20 seconds is itself an honesty green flag that pre-empts the "did they just reskin an app?" suspicion. What changed during the challenge: integration with the brain's verified-edges output, gating that enforces non-diagnostic serving, the evidence-panel UI. The app is not the delta; it is the **visible home** where the brain's work lands. Without it, the brain is a pipeline with no user-facing result. So declare what existed before, what changed in it, and what the focus is: *"The app finds the pattern; the brain decides whether the science backs it."*
 
 ### 3.2 The sharp, non-obvious problem
 A correlation in one person's noisy self-report is statistically fragile (n=1, confounded, multiple
@@ -274,7 +268,7 @@ and we win the Honesty pillar for free.
   claim them as built delta.
 
 ### 4.2 DELTA — build 3–31 Jul, claim as "new" (the scored artifact)
-Depth-first over a **curated ~30–50 paper slice** of the corpus (the 1,200-paper corpus is prebuild
+Depth-first over a **curated ~30–50 paper slice** of the corpus (the wider corpus — 21,824 discovered, 911 with full text — is extended prior work
 *input*, never the deliverable). The agent/model roster, with build status:
 1. **LLM router** (dual-route: local Claude-Code agent vs. API worker; OpenAI *or* Anthropic *or* Agnes via config) — small, unblocks everything.
 2. **Planner / seeder agent** — reads metric registry (`derivedFrom[]`) + biotope needs → targeted research queries. The genuine autonomy in the system (supersedes today's static seed list); a real answer to *"why an agent?"*
@@ -285,11 +279,7 @@ Depth-first over a **curated ~30–50 paper slice** of the corpus (the 1,200-pap
 7. **nao v2 graph + evidence panel** — the visible payoff: click an edge → quote spans, citations, `evidenceTier`/`servingBand`.
 8. **nao v3 human-in-the-loop curation** — curator approves/rejects proposed edges (`provenance:'human'`). Strongest *agentic-app* demo angle; cheap on top of v2.
 
-**Stretch delta (only if GMI credits land):** train support **model (a)** (claim-support/NLI on
-SciFact/HealthVer) and wire it in as a **cheap first-pass verifier** — this is the Agnes-vs-OpenAI /
-small-model cost-accuracy story (§5). If credits don't arrive, **declare (a) + (b1) study-design + (c)
-relation/direction as roadmap** — designed and data-prepped (`brain-support-models-design.md`), training
-deferred for lack of GPU. *Never claim a trained model you didn't train — that's the DQ line.*
+**Support models (trained but not shipped):** two models were trained. **Zebra** (claim vs. evidence) on SciFact only — HealthVer, PUBHEALTH and SciNLI are explicitly excluded by its licence gate — and **Viceroy** (causal-language classification) on the Yu, Li & Wang causal-language corpus (EMNLP 2019). Zebra missed its own pre-registered bar (macro-F1 0.5991 ± 0.0081 against 0.70). Viceroy scored macro-F1 0.8656 against 0.5068 for a cue-lexicon baseline, but on one frozen holdout rather than a completed cross-validation. Against Claude Haiku 4.5 on 96 real ingested papers they disagreed on 42.7% and 47.9% of items (Cohen's kappa 0.236 and 0.205), unadjudicated — so that measures disagreement, not correctness, and deliberately **not wired into the product** (`validated=false` / `serving_ready=false` enforced in code). On a reasoning-track rubric, this is a strength: trained and evaluated with integrity, not shipped because the evidence didn't support it. This is the intellectual honesty story, not a gap. The adversarial verifier role remains an LLM.
 
 **Explicitly left OUT of the hackathon claim** (real Phase-2 work, but not the AI delta — mention as
 roadmap only): Track A app work (M3 Health Connect e2e, M4 env/API, M7 community, metric waves, the
@@ -348,12 +338,8 @@ presentation phrasing:** a cheap tier (5.4-nano/mini), grounded + copy-gated + c
 Routing the token-heavy verifier to *Agnes* protects the OpenAI credit budget — which doubles as a
 cost-story talking point.
 
-### 5.3 GMI Cloud → **support-model fine-tuning** (stretch / roadmap)
-1:1 fit for the deferred support models (NLI claim-support, relation/direction, study-design) on
-public datasets (SciFact/HealthVer/BioRED). A single H100 on CE-BMaaS handles these small-encoder jobs
-in credit-hours; host model (a) as a **scale-to-zero serverless pre-filter** that short-circuits before
-the verifier LLM spends a token. **If credits don't land in time, declare it as roadmap** — the brief's
-sequencing gives us the honest next-steps paragraph for free.
+### 5.3 GMI Cloud → **support-model training** (trained, evaluated, deliberately not serving)
+Two support models were trained: Viceroy (causal-language classification, on the Yu, Li & Wang EMNLP 2019 corpus — macro-F1 0.8656 against 0.5068 for a cue-lexicon baseline, on one frozen holdout rather than a completed cross-validation) and Zebra (claim vs. evidence, on SciFact only — macro-F1 0.5991 ± 0.0081 against a pre-registered bar of 0.70, **which it failed**). Against Claude Haiku 4.5 on 96 real ingested papers they disagreed on 42.7% and 47.9% of items. That comparison is **unadjudicated and has no ground truth**, so it measures disagreement, not correctness — do not claim either model beat or lost to the LLM. **Neither is wired into the product** — both carry `validated=false` / `serving_ready=false`, and the refusal to connect them is enforced in code. This is the intellectual-honesty story: a model was built, measured, found wanting, and not shipped. That's a green flag on a reasoning-track rubric, not a failure to deliver.
 
 ### 5.4 Credits — how to claim
 - **OpenAI + GMI Cloud:** register on the **Luma** event page → fill the **Google Form** sent after
@@ -385,17 +371,17 @@ runtime presentation, human-in-the-loop curation** — and made the rest determi
 projection, the insights engine), because turning those into agents only adds cost, nondeterminism, and
 hallucination surface. Every agent boundary is defensible to a colleague — *what we left deterministic is
 as considered as what we made agentic.* *Don't:* claim the full
-pipeline runs in production — it's designed + contract-enforced + ingestion-proven, demonstrated on a slice.
+pipeline runs in production or that verified relationships are actively served to users — it's designed + contract-enforced + ingestion-proven + verified-relationships-measured on a curated slice, but the serving-to-user last mile is not yet complete.
 
 **Pillar 3 — Evidence (spend the best material here).** In ascending persuasiveness: (a) the pipeline is
-real — a live run built **1,200+ papers / ~750 full-text** on R2 across 6 domains; (b) **reality
+real — a live run built **21,824 records discovered, 911 with full text extracted, 894 of those over 5,000 characters** on R2 across 6 domains; (b) **verified relationships exist** — 14 relationships verified, 11 pass the serving gate, verdicts as 1 supported, 10 partial, 2 uncertain, 1 unsupported, confidence 0.72–0.92; (c) **reality
 corrected our own docs** — a *fabricated* CORE rate-limit assumption in our design was caught by live
 header inspection, driven to a real 429, and fixed to match measured behavior (textbook "beat your own
-baseline assumption with evidence"); (c) gating is deterministic + unit-testable; (d) **the money shot:
-show the system REFUSE** (an ungrounded/contradicted edge suppressed or qualified); (e) **beat the simple
+baseline assumption with evidence"); (d) gating is deterministic + unit-testable; (e) **the money shot:
+show the system REFUSE** (an ungrounded/contradicted edge suppressed or qualified); (f) **beat the simple
 baseline** — single-LLM "looks right to me?" rubber-stamps a direction-flip / correlation-as-causation
 that our adversarial+independent-retrieval verifier catches, on the *same* claims. *Don't:* report
-accuracy % you didn't measure, claim clinical validation, a complete graph, or trained support models.
+accuracy % you didn't measure, claim clinical validation, a complete graph, or claim trained support models are serving (ours were trained, evaluated, found below their bars, and deliberately withheld).
 
 **Pillar 4 — Constraints (our strongest pillar — the repo overflows with real trade-offs).** Cost paid
 once at ingestion, amortized over every read; **tiered verification spend** (full independent-retrieval
@@ -409,9 +395,7 @@ GMI. *Don't:* claim PDPA/data-isolation (deferred past demo) or production scale
 **Pillar 5 — Honesty & Trajectory (win it by going first).** State up front: non-diagnostic always, not
 a medical device, not clinically validated; biotope is prebuild; the two-LLM loop is
 designed+enforced+ingestion-proven but demonstrated on a deep slice (edges didn't exist at corpus-build
-time); support models are roadmap (public-dataset fine-tunes — can't train on in-house data because it
-doesn't exist yet, an honest bootstrapping story). **Two-more-weeks plan:** verifier across more metric
-pairs; nao v2 evidence-graph; wire the trained NLI model in as a cheap first-pass verifier; human curation
+time); support models were trained and evaluated (Viceroy, Zebra), found below their pre-registered bars or in disagreement with Claude Haiku on real corpus data, and deliberately not shipped — neither is wired into the product or marked serving-ready. **Two-more-weeks plan:** verifier across more metric pairs; nao v2 evidence-graph; complete the serving-to-user pipeline; human curation
 in nao. It's credible because it's **already written down in phases** (nao v1→v4).
 
 **"Would I want to interview this person?"** — engineered by the story itself: identified that *trust*
@@ -472,13 +456,13 @@ and *show one real failure*:
 |---|---|
 | Over-claiming medical accuracy | Lead every surface non-diagnostic; never show a diagnosis; say "evidence-grounded ≠ clinically validated" out loud. |
 | **"It's just a wrapper / just RAG"** (biggest reputational risk) | Our architecture *is* the rebuttal: decorrelated families, adversarial refutation, a grounding invariant that can't be prompted away, per-failure-mode checks, rebuildable two-tier truth. "A wrapper *trusts* the model; we structurally *distrust* it." Say it. |
-| Implying the full system runs (edges don't exist yet) | Ingestion proven @ 1,200+ papers; verification demonstrated on a deep slice; graph is roadmap. The honesty *is* the pitch; a caught overclaim tanks the pillar we're otherwise strongest on. |
+| Implying the full system runs as a live product | Ingestion proven @ 21,824 records (14,726 open access); 14 verified relationships exist, 11 pass the serving gate; graph serving is not yet live (one archived card, not active). The honesty *is* the pitch; a caught overclaim tanks the pillar we're otherwise strongest on. |
 | Cherry-picked demo | Show a refusal + the baseline losing — a demo that includes its own failure mode reads as confidence. |
-| Corpus volume mistaken for the achievement | Never lead with "1,200 papers!"; depth beats breadth (our own brief says so). Volume = evidence the pipeline works, framed as such. |
+| Corpus volume mistaken for the achievement | Never lead with a raw discovery count (21,824); depth beats breadth (our own brief says so). Volume = evidence the pipeline works, framed as such. |
 | Over-agentification suspicion | Turn it into a green flag: we kept the genuine agent roles (planner, synthesis, adversarial verifier, presentation, curation) and made the rest deterministic — every boundary defensible. |
 | ASEAN / One Health read as gimmick | Keep it genuine problem-scoping (dengue/vector, tropical gut/hydration, env); never let it substitute for the technical story. |
 | Agnes structured-output unproven | Verify schema-constrained output early; fallback = Agnes as pre-filter/second-opinion, OpenAI emits final verdict (§5.1). |
-| Credits/GMI GPU don't arrive in time | Support-model training is already **roadmap**, not delta — declare it; the pipeline stands without it. |
+| Models trained but below bar | Support models (Viceroy, Zebra) were trained and evaluated; both fell below their pre-registered bars or showed high disagreement with Claude Haiku 4.5. Deliberately not shipped — this is intellectual honesty, not a failure. The pipeline stands as an LLM-only verifier. |
 | Squashing / rewriting git history | Merge with `--no-ff`, never squash; tag the baseline (§4.3) — preserve the honest timeline as evidence. |
 
 ---
@@ -529,12 +513,11 @@ contribution.
 
 ### Pillar 5 — Honesty & Trajectory *(draft copy, ~200 words)*
 
-**What we did not build, plainly.** The app (biotope) is prior work — backdrop, not delta; this write-up
+**What we did not build, plainly.** The app (biotope) is prior work — backstop to show results, not the delta; this write-up
 scores the brain. The graph is **small**: `[K]` relationships over `[P]` papers on a few metric pairs, not
-a complete graph. **Support models are roadmap** — designed and data-prepped (SciFact/HealthVer/BioRED),
-training deferred for lack of GPU; nothing here uses a model we did not train. Our **evaluation is
+a complete graph. **Support models were trained and evaluated** — Viceroy on the Yu, Li & Wang causal-language corpus, Zebra on SciFact only. Zebra fell below its pre-registered bar; both disagreed substantially with Claude Haiku 4.5 on real ingested data in an unadjudicated comparison. Deliberately **not shipped** — neither carries `serving_ready=true`. Our **evaluation is
 limited**: ~`[n]` hand-labelled edges, `[labelling method]`, no expert adjudication — directional, not
-statistically powered. The grounding invariant is **schema-plus-prompt, not a hard guarantee**: we require
+statistically powered. The serving-to-user loop is **incomplete**: verified relationships exist and are measured, but cards derived from them are not yet active in the app. The grounding invariant is **schema-plus-prompt, not a hard guarantee**: we require
 an independent-retrieval flag before a supported verdict, but cannot prove the retrieval was truly
 independent. **Ourobion is non-diagnostic** and not a medical device.
 
@@ -543,12 +526,7 @@ datasets are under-represented, so the verifier is weakest exactly where our dom
 `[worked broken-edge example]`. **Reported negative result:** `[a verifier miss — what it wrong-accepted or
 wrong-rejected, and why]`.
 
-**With two more weeks:** run the verifier across more metric pairs; wire the trained NLI model in as a
-cheap first-pass verifier (pending GPU credits); ship the nao evidence-graph and human-in-the-loop
-curation. The brain is a reusable, self-maintaining evidence substrate — beyond the app, the same
-verified-relationship layer could back a non-diagnostic evidence-lookup assistant, a study aid for
-biology/medicine students, or a grounding source for a research agent. **Those are directions, not
-claims.**
+**With two more weeks:** complete the serving-to-user pipeline so verified relationships are active in the app; run the verifier across more metric pairs; ship the nao evidence-graph and human-in-the-loop curation. The brain is a reusable, self-maintaining evidence substrate — beyond the app, the same verified-relationship layer could back a non-diagnostic evidence-lookup assistant, a study aid for biology/medicine students, or a grounding source for a research agent. **Those are directions, not claims.**
 
 > **Fill-in checklist before submission:** `[N]/[M]/[X]/[Y]` from the pre-registered criteria (§7 · P1);
 > `[K]/[P]/[n]` and labelling method from the eval; one real `[broken-edge example]` and one reported

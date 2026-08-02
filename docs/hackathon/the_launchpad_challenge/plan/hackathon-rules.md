@@ -10,35 +10,48 @@ updated: 2026-07-13
 Launchpad 2026 AI Challenge
 Show us your best work. Why you should get hired should be self-justified.
 You might not win the challenge. You might win a job interview.
+
 About the challenge
 The Launchpad AI Challenge is a four-week, open-format AI build sprint. It is also a deliberate redesign of the career fair.
+
 At a career fair, you get minutes with a recruiter and a resume that looks like everyone else's. Hackathons are no better: a handful of judges triaging 50 to 100+ submissions in an hour, where well-reasoned design decisions lose to flashy demos that might not even work.
-We fixed both. Your judges are your potential employers. Over 100 professionals will judge this challenge: founders, engineers, researchers, product leaders, and domain specialists in fields like robotics, agentic systems, and applied ML. Every submission is algorithmically matched to the judges best suited to evaluate it. Your robotics project lands in front of robotics people. Your research lands in front of researchers.
+
+We fixed both. Your judges are your potential employers. Over 100 professionals will judge this challenge: founders, engineers, researchers, product leaders, and domain specialists in fields like robotics, agentic systems, and applied ML. Every submission is algorithmically matched to the judges best suited to evaluate it. Your robotics project lands in front of robotics people. Your research lands in front of researchers.
+
 Every judge has the time to read your reasoning and check your evidence. When they review your project, they unlock your full profile: your work, your reasoning, and who you are beyond the resume. The question each judge answers is simple:
+
 "Is this person sharp and thoughtful enough that I'd want to interview them?"
+
 That question gets answered for every matched submission, not just the finalists.
+
 What to build
 Anything serious, built with AI:
+
 Applications: products and tools solving real problems for real users
 Agentic systems: multi-step, tool-using, autonomous or semi-autonomous workflows
 Embodied AI & robotics: perception, control, sim-to-real, hardware-in-the-loop
 Deep learning research: new methods, architectures, training strategies, or rigorous empirical studies
 Infrastructure & tooling: evals, observability, data pipelines, developer tools for AI
 You will not be judged against projects from other categories. You will be judged by domain-relevant experts on the quality of your thinking within your own domain.
+
 How you will be judged
 Five pillars, each scored 1 to 5:
-Problem. Why does this matter, and what would success look like? Precise problem statement, why existing approaches fall short, success criteria defined before you built.
-Approach. Why this solution, and what did you rule out? Every major decision reasoned, alternatives named. Simplicity with justification beats complexity without it.
-Evidence. How do you know it works? Every claim backed by a measurement, comparison, or demonstration. Compared against a baseline, not reported in isolation.
-Constraints. Does it work under real-world limits? Cost, latency, compute, reliability, safety. Measure trade-offs rather than assuming more resources equals better.
-Honesty & Trajectory. Where does it break, and what is next? Known failure modes, honest limitations, a concrete next-steps plan.
-The one rule: evidence appropriate to the claim. You choose what to claim, and your evidence must match the size of your claim. A modest claim, proven, beats a grand claim, asserted. Blanket statements are the fastest way to lose a judge.
-After scoring, every judge answers one final question: would I want to interview this person?
+
+Problem. Why does this matter, and what would success look like? Precise problem statement, why existing approaches fall short, success criteria defined before you built.
+Approach. Why this solution, and what did you rule out? Every major decision reasoned, alternatives named. Simplicity with justification beats complexity without it.
+Evidence. How do you know it works? Every claim backed by a measurement, comparison, or demonstration. Compared against a baseline, not reported in isolation.
+Constraints. Does it work under real-world limits? Cost, latency, compute, reliability, safety. Measure trade-offs rather than assuming more resources equals better.
+Honesty & Trajectory. Where does it break, and what is next? Known failure modes, honest limitations, a concrete next-steps plan.
+The one rule: evidence appropriate to the claim. You choose what to claim, and your evidence must match the size of your claim. A modest claim, proven, beats a grand claim, asserted. Blanket statements are the fastest way to lose a judge.
+
+After scoring, every judge answers one final question: would I want to interview this person?
+
 What to submit
-Repository. Your code, public or with judge access granted.
-Demo video. Maximum 3 minutes. Mandatory for all tracks.
-Write-up. Maximum 1,000 words, using the five pillars as section headings. Appendices do not count against the cap.
-Each participant also completes a profile at registration: an introduction, a short message to judges, and your resume. Judges see it when they unlock your submission. It is your interview before the interview.
+Repository. Your code, public or with judge access granted.
+Demo video. Maximum 3 minutes. Mandatory for all tracks.
+Write-up. Maximum 1,000 words, using the five pillars as section headings. Appendices do not count against the cap.
+Each participant also completes a profile at registration: an introduction, a short message to judges, and your resume. Judges see it when they unlock your submission. It is your interview before the interview.
+
 Prizes
 1st Place
 $5000 OpenAI Credits
@@ -48,39 +61,38 @@ $3000 OpenAI Credits
 $2000 OpenAI Credits
 Best Use of Agnes AI
 $500 Cash
+
 Launchpad 2026 AI Challenge
+
 Key dates
-Milestone
-Date
-Registration opens
-23 June 2026
-Challenge begins
-3 July 2026
-Submission deadline
-31 July 2026, 23:59 hrs, SGT
-Finalists announced
-7 August 2026
-Symposium: live presentations + networking
-17 to 18 August 2026, NUS
+Milestone	Date
+Registration opens	23 June 2026
+Challenge begins	3 July 2026
+Submission deadline	2 August 2026, 23:59 hrs, SGT
+Finalists announced	9 August 2026
+Symposium: live presentations + networking	17 to 18 August 2026, NUS
 Eligibility
 Open to students currently enrolled in a tertiary institution in Singapore. Teams of 1 to 3, formed on your own. Each participant may join one team and one submission. All submissions are made through the challenge platform.
+
 Rules and integrity
-Original work. Projects must be substantially built during the challenge period. Extensions of prior work are allowed, but your write-up must clearly state what existed before and what is new. Judges score the delta.
-Attribution. All third-party code, models, datasets, and assets must be credited. Uncredited work is grounds for disqualification.
-AI tools. Coding assistants and sponsor APIs are permitted and encouraged. You remain accountable for every claim you make. If you did not verify it, do not claim it.
-Honest evidence. Fabricated results, doctored demos, or evaluations that misrepresent performance lead to immediate disqualification. Getting caught overstating is far worse than reporting a modest result.
-One submission per team. The version on the platform at the deadline is what gets judged. Late submissions are not accepted.
-Working links. You are responsible for ensuring your repository, video, and write-up links remain accessible throughout the judging period.
-Fair play. Do not contact judges about your submission during the judging period. Matched judges will reach out to you, not the other way around.
-Conduct. Submissions must not contain harmful content or violate any applicable laws or platform terms. Organisers' decisions on rule violations are final.
-Your IP stays yours. You retain full ownership of your work. By submitting, you grant the organisers permission to share your submission with matched judges and to feature it in event publicity.
+Original work. Projects must be substantially built during the challenge period. Extensions of prior work are allowed, but your write-up must clearly state what existed before and what is new. Judges score the delta.
+Attribution. All third-party code, models, datasets, and assets must be credited. Uncredited work is grounds for disqualification.
+AI tools. Coding assistants and sponsor APIs are permitted and encouraged. You remain accountable for every claim you make. If you did not verify it, do not claim it.
+Honest evidence. Fabricated results, doctored demos, or evaluations that misrepresent performance lead to immediate disqualification. Getting caught overstating is far worse than reporting a modest result.
+One submission per team. The version on the platform at the deadline is what gets judged. Late submissions are not accepted.
+Working links. You are responsible for ensuring your repository, video, and write-up links remain accessible throughout the judging period.
+Fair play. Do not contact judges about your submission during the judging period. Matched judges will reach out to you, not the other way around.
+Conduct. Submissions must not contain harmful content or violate any applicable laws or platform terms. Organisers' decisions on rule violations are final.
+Your IP stays yours. You retain full ownership of your work. By submitting, you grant the organisers permission to share your submission with matched judges and to feature it in event publicity.
+
 Powered by
-Agnes AI — Agnes AI is a Singapore-based AI model company that designs, trains, and deploys its own full-modality foundation models entirely in-house. Built and trained in Singapore, Agnes AI is the first Singapore-born AI model to be listed on the Artificial Analysis global benchmark leaderboard, and ranks in the global top 10 across text, image, and video generation.
-OpenAI — the company behind GPT and Codex, supporting participants with API credits so you can build without worrying about your token bill.
-GMI Cloud — an NVIDIA Platform Cloud Partner providing GPU infrastructure for production AI, from serverless inference to dedicated clusters. The compute muscle behind this challenge.
+Agnes AI — Agnes AI is a Singapore-based AI model company that designs, trains, and deploys its own full-modality foundation models entirely in-house. Built and trained in Singapore, Agnes AI is the first Singapore-born AI model to be listed on the Artificial Analysis global benchmark leaderboard, and ranks in the global top 10 across text, image, and video generation.
+OpenAI — the company behind GPT and Codex, supporting participants with API credits so you can build without worrying about your token bill.
+GMI Cloud — an NVIDIA Platform Cloud Partner providing GPU infrastructure for production AI, from serverless inference to dedicated clusters. The compute muscle behind this challenge.
+Zo Computer — Zo gives everyone what only tech companies used to have: a personal cloud for your tools, data, APIs, and agents. The future isn't owned by big tech. It's yours.
 Sponsor teams are among your judges. Build well with their tools and you are demonstrating your skills to the very people who made them.
 Organised by Acacia AI Society, SoC AI Society, and StartIT.
-Questions? acaciaaisociety@gmail.com. Now go build something worth interviewing you over.
+Questions? acaciaaisociety@gmail.com. Now go build something worth interviewing you over.
 
 Launchpad 2026 AI Challenge — Judging Criteria
 This page defines how every submission is evaluated.
@@ -234,3 +246,4 @@ Get started with the docs:
 Quickstart: agnes-ai.com/en/docs/cid1
 API overview: agnes-ai.com/en/docs/overview
 Building with the Agnes API also puts you in the running for the Best Use of Agnes AI award ($500 cash).
+
