@@ -64,6 +64,8 @@ export type CorpusTextSource = 'canonical-text' | 'abstract';
 
 /** Why a manifest record produced no CorpusDoc. */
 export type CorpusSkipReason =
+  /** Deliberately withheld so verifier retrieval cannot echo a claim's cited source. */
+  | 'cited-paper-echo'
   /** No canonical text offline AND no abstract — nothing honest to rank over. */
   | 'no-text'
   /** Record carries no usable title, so the doc could not satisfy the contract. */
@@ -124,6 +126,8 @@ export type ImpactTierResolver = (
 ) => { tier: VerifyImpactTier | null; basis: string };
 
 export interface CorpusBuildOptions {
+  /** Paper ids cited by the claims under review; excluded from retrieval by construction. */
+  excludePaperIds?: ReadonlySet<string>;
   /** Canonical-text source. Omitted → every doc falls back to its abstract. */
   loadText?: CanonicalTextLoader;
   /** Venue banding. Omitted → every doc takes the conservative unscored band. */
@@ -234,6 +238,11 @@ export function buildCorpusRows(
       stats.skipped += 1;
       stats.bySkipReason[reason] = (stats.bySkipReason[reason] ?? 0) + 1;
     };
+
+    if (opts.excludePaperIds?.has(paper.paperUid) === true) {
+      skip('cited-paper-echo', 'paper is cited by a claim in this verification run');
+      continue;
+    }
 
     if (seen.has(paper.paperUid)) {
       skip('duplicate-paper-id');

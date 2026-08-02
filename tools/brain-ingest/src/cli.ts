@@ -34,7 +34,7 @@ import {
 import { repoRoot } from './seeder/load.js';
 import { R2Store } from './storage/r2.js';
 import { r2TextLoader } from './verify/quoteCheck.js';
-import { verify } from './verify/verifier.js';
+import { loadClaimsFromFile, verify } from './verify/verifier.js';
 import { corpusTexts, loadCorpusFromFile } from './verify/corpus.js';
 import {
   buildCorpusRows,
@@ -50,8 +50,10 @@ import { runLiveAcceptance, type LiveAcceptanceLeg } from './liveAcceptance.js';
 import {
   normalizeArtifactHashes,
   promoteArtifactBundle,
+  readCurrentR2ArtifactBundle,
   readLocalArtifactBundle,
   readR2ArtifactBundle,
+  writeArtifactBundle,
   type ArtifactHashes,
 } from './artifactPromotion.js';
 
@@ -136,13 +138,16 @@ Commands:
                                                    Every hash and shared contract is checked before
                                                    R2; any non-identical existing key fails closed.
   check-r2-edge-artifacts --claims-sha256 <hex> --blueprints-sha256 <hex>
-                          --verifications-sha256 <hex> [--env-file <path>]
+                          --verifications-sha256 <hex> [--env-file <path>] [--out-dir <dir>]
                                                    fetch and validate the exact pinned three-object
-                                                   R2 bundle; no provider or database access.
+                                                   R2 bundle; optionally materialize its exact bytes.
+  materialize-r2-edge-artifacts --out-dir <dir> [--env-file <path>]
+                                                   fetch, contract-validate, hash, and materialize the
+                                                   current R2 bundle; no provider or database access.
   venue --issn <issn> [--sjr-quartile 1-4]         b2 venue lookup: OpenAlex Source stats +
                                                    C8 impactTier band (per-ISSN cache)
   build-verify-corpus [--manifest <path>] [--out <path>] [--text-dir <dir>]
-                      [--limit N] [--dry-run]
+                      [--exclude-claims <claims.jsonl>] [--limit N] [--dry-run]
                                                    OFFLINE projection of data/corpus/papers.jsonl
                                                    into the REAL CorpusDoc JSONL that 'verify
                                                    --corpus' ranks over (replaces the 5-line test
@@ -157,6 +162,9 @@ Commands:
                                                    --text-dir mirrors R2's text/<uid>.txt, else the
                                                    real abstract; papers with NEITHER are skipped
                                                    and counted. No provider, R2, or network calls.
+                                                   --exclude-claims removes every cited paper id
+                                                   from retrieval while quoteCheck loads canonical
+                                                   cited text from R2 (echo control).
                                                    Default out: data/corpus/verify-corpus.jsonl
                                                    (gitignored — do not commit it).
 
@@ -313,6 +321,35 @@ function runBuildVerifyCorpus(flags: Set<string>, options: Map<string, string>):
   const manifestPath = options.get('manifest') ?? join(corpusDir, MANIFEST_FILENAME);
   const outPath = options.get('out') ?? join(corpusDir, VERIFY_CORPUS_FILENAME);
   const textDir = options.get('text-dir');
+  const excludeClaimsPath = options.get('exclude-claims');
+
+  const excludePaperIds = new Set<string>();
+  if (excludeClaimsPath !== undefined) {
+    const claims = loadClaimsFromFile(excludeClaimsPath);
+    if (claims.length === 0) {
+      process.stderr.write(
+        `build-verify-corpus: no claims at '${excludeClaimsPath}' - cannot prove cited-paper echo exclusion\n`,
+      );
+      return 1;
+    }
+    for (const claim of claims) {
+      if (!Array.isArray(claim.citations) || claim.citations.length === 0) {
+        process.stderr.write(
+          `build-verify-corpus: claim '${claim.edgeId}' has no citations - refusing incomplete echo control\n`,
+        );
+        return 1;
+      }
+      for (const citation of claim.citations) {
+        if (typeof citation?.paperId !== 'string' || citation.paperId.trim() === '') {
+          process.stderr.write(
+            `build-verify-corpus: claim '${claim.edgeId}' has an invalid citation paperId\n`,
+          );
+          return 1;
+        }
+        excludePaperIds.add(citation.paperId);
+      }
+    }
+  }
 
   const records = readAll(manifestPath);
   if (records.length === 0) {
@@ -323,6 +360,7 @@ function runBuildVerifyCorpus(flags: Set<string>, options: Map<string, string>):
   }
 
   const result = buildCorpusRows(records, {
+    ...(excludeClaimsPath !== undefined ? { excludePaperIds } : {}),
     ...(textDir !== undefined ? { loadText: textDirLoader(textDir) } : {}),
     resolveImpact: cachedVenueImpactResolver(VenueCache.open(corpusDir)),
     ...(parseLimit(options) !== undefined ? { limit: parseLimit(options) } : {}),
@@ -347,6 +385,8 @@ function runBuildVerifyCorpus(flags: Set<string>, options: Map<string, string>):
         out: flags.has('dry-run') ? null : outPath,
         dryRun: flags.has('dry-run'),
         textDir: textDir ?? null,
+        excludeClaims: excludeClaimsPath ?? null,
+        excludedPaperIds: excludePaperIds.size,
         ...result.stats,
         skipExamples: result.skips.slice(0, 10),
       },
@@ -913,6 +953,31 @@ async function runCheckR2EdgeArtifacts(options: Map<string, string>): Promise<nu
   for (const kind of ['blueprints', 'claims', 'verifications'] as const) {
     process.stdout.write(`  - ${bundle[kind].objectName}: ${bundle[kind].sha256}\n`);
   }
+  const outDir = options.get('out-dir');
+  if (outDir !== undefined) {
+    writeArtifactBundle(bundle, outDir);
+    process.stdout.write(`Materialized exact validated bundle in ${outDir}.\n`);
+  }
+  process.stdout.write('No provider or database access.\n');
+  return 0;
+}
+
+async function runMaterializeR2EdgeArtifacts(options: Map<string, string>): Promise<number> {
+  const outDir = options.get('out-dir');
+  if (outDir === undefined || outDir.trim().length === 0) {
+    throw new Error('materialize-r2-edge-artifacts requires --out-dir <dir>');
+  }
+  const bundle = await readCurrentR2ArtifactBundle(
+    new R2Store(loadConfig(options.get('env-file'))),
+  );
+  writeArtifactBundle(bundle, outDir);
+  process.stdout.write(
+    `materialized current validated R2 bundle: ${bundle.claims.records} claim(s), ` +
+      `${bundle.blueprints.records} blueprint(s), ${bundle.verifications.records} verification(s)\n`,
+  );
+  for (const kind of ['blueprints', 'claims', 'verifications'] as const) {
+    process.stdout.write(`  - ${bundle[kind].objectName}: ${bundle[kind].sha256}\n`);
+  }
   process.stdout.write('No provider or database access.\n');
   return 0;
 }
@@ -1007,6 +1072,9 @@ export async function main(argv: string[]): Promise<number> {
 
       case 'check-r2-edge-artifacts':
         return await runCheckR2EdgeArtifacts(options);
+
+      case 'materialize-r2-edge-artifacts':
+        return await runMaterializeR2EdgeArtifacts(options);
 
       case 'venue':
         return await runVenueLookup(options);

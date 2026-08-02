@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
 import {
   promoteArtifactBundle,
+  readCurrentR2ArtifactBundle,
   readLocalArtifactBundle,
   readR2ArtifactBundle,
+  writeArtifactBundle,
   type ArtifactBundleValidators,
   type ArtifactHashes,
 } from '../src/artifactPromotion.js';
@@ -154,6 +156,28 @@ test('exact local bundle promotes blueprint first and is byte-idempotent', async
       verifications: 'identical',
     });
     await assert.doesNotReject(() => readR2ArtifactBundle(store, hashes, validators));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('current R2 bundle is contract-validated, hashed, and materialized byte-for-byte', async () => {
+  const client = new MemoryS3();
+  client.objects.set(R2_CLAIMS_KEY, encoder.encode(texts.claims));
+  client.objects.set(R2_BLUEPRINTS_KEY, encoder.encode(texts.blueprints));
+  client.objects.set(R2_VERIFICATIONS_KEY, encoder.encode(texts.verifications));
+  const bundle = await readCurrentR2ArtifactBundle(new R2Store(config(), { client }), validators);
+  assert.deepEqual(
+    { claims: bundle.claims.sha256, blueprints: bundle.blueprints.sha256, verifications: bundle.verifications.sha256 },
+    hashes,
+  );
+
+  const dir = mkdtempSync(join(tmpdir(), 'ourobion-edge-materialize-'));
+  try {
+    writeArtifactBundle(bundle, dir);
+    assert.deepEqual(readFileSync(join(dir, 'claims.jsonl')), Buffer.from(bundle.claims.bytes));
+    assert.deepEqual(readFileSync(join(dir, 'blueprints.jsonl')), Buffer.from(bundle.blueprints.bytes));
+    assert.deepEqual(readFileSync(join(dir, 'verifications.jsonl')), Buffer.from(bundle.verifications.bytes));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

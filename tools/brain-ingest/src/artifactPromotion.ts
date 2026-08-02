@@ -7,7 +7,7 @@
  * record before network I/O, and R2 collisions fail before the first PUT.
  */
 
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { R2Store, sha256 } from './storage/r2.js';
@@ -233,6 +233,35 @@ export async function readR2ArtifactBundle(
   const bytes = {} as Record<keyof ArtifactHashes, Uint8Array>;
   for (const [index, kind] of KINDS.entries()) bytes[kind] = ENCODER.encode(texts[index]!);
   return validateBytes(bytes, expected, validators ?? (await defaultValidators()));
+}
+
+/**
+ * Read and contract-validate the current canonical R2 bundle when no external
+ * hash pin exists (the full synthesis/verification workflow has just written
+ * it). The hashes are calculated from the fetched bytes and returned with the
+ * bundle so every downstream consumer can use one immutable local snapshot.
+ */
+export async function readCurrentR2ArtifactBundle(
+  store: R2Store,
+  validators?: ArtifactBundleValidators,
+): Promise<PinnedArtifactBundle> {
+  const texts = await Promise.all(KINDS.map((kind) => store.getObjectText(SPECS[kind].objectName)));
+  const bytes = {} as Record<keyof ArtifactHashes, Uint8Array>;
+  const hashes = {} as ArtifactHashes;
+  for (const [index, kind] of KINDS.entries()) {
+    bytes[kind] = ENCODER.encode(texts[index]!);
+    hashes[kind] = sha256(bytes[kind]);
+  }
+  return validateBytes(bytes, hashes, validators ?? (await defaultValidators()));
+}
+
+/** Materialize the already-validated bytes without reparsing or refetching. */
+export function writeArtifactBundle(bundle: PinnedArtifactBundle, outDir: string): void {
+  if (outDir.trim().length === 0) throw new Error('--out-dir must not be blank');
+  mkdirSync(outDir, { recursive: true });
+  for (const kind of KINDS) {
+    writeFileSync(join(outDir, bundle[kind].basename), bundle[kind].bytes, { flag: 'w' });
+  }
 }
 
 /**

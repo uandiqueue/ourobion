@@ -7,17 +7,19 @@ name: Brain pipeline (synthesis → verification → edge load)
 #
 #   1. synthesis        WHOLE paper → RelationshipClaim + quote spans  (--push-r2)
 #   2. quoteCheck       deterministic, BEFORE any verifier token is spent
-#   3. verification     decorrelated adversarial verifier, refute-first, independent
-#                       retrieval, defaults to `uncertain`               (--push-r2)
+#   3. verification     decorrelated adversarial verifier, refute-first, over a
+#                       real echo-controlled corpus with finite authorization (--push-r2)
 #   4. artifact write   claims + extracted blueprints + verifications to R2
-#   5. projection       tools/edge-loader/load_edges.mjs --from-r2 → verified_edges
+#   5. snapshot         validate/materialize one immutable three-artifact R2 bundle
+#   6. projection       that snapshot → verified_edges + verified extracted rules
+#   7. card refresh     run-pipeline after both database projections succeed
 #
 # nao's role is unchanged: it dispatches and reports. It never calls a provider and
 # never holds a provider key — the router runs HERE, which is why the LLM keys are
 # repository secrets rather than nao env (see docs/nao/brain-ingestion-design.md §8.1).
 #
 # `operation=full` SPENDS REAL MONEY. `operation=project-only` never reaches a provider:
-# it validates an exact hash-pinned R2 bundle and runs only the edge loader. Defaults are
+# it validates an exact hash-pinned R2 bundle and runs only projection/card refresh. Defaults are
 # fail-closed (`dry_run: true`); live provider and DB paths have separate confirmation words.
 on:
   workflow_dispatch:
@@ -36,8 +38,8 @@ on:
         description: "Full only: artifact revision stamped on every verification"
         required: false
         type: string
-      corpus:
-        description: "Repo-relative JSONL corpus the verifier retrieves over (blank = EMPTY corpus ⇒ every verdict is uncertain)"
+      authorization_operation_id:
+        description: "Full live only: nao control-event UUID that identifies the authorizing curator"
         required: false
         type: string
         default: ""
@@ -102,7 +104,7 @@ jobs:
           CONFIRM_PROJECTION: ${{ inputs.confirm_projection }}
           PAPERS: ${{ inputs.papers }}
           REVISION: ${{ inputs.artifact_revision }}
-          CORPUS: ${{ inputs.corpus }}
+          AUTHORIZATION_OPERATION_ID: ${{ inputs.authorization_operation_id }}
           CLAIMS_SHA: ${{ inputs.expected_claims_sha256 }}
           BLUEPRINTS_SHA: ${{ inputs.expected_blueprints_sha256 }}
           VERIFICATIONS_SHA: ${{ inputs.expected_verifications_sha256 }}
@@ -127,22 +129,23 @@ jobs:
               echo "::error::full operation requires papers and artifact_revision."
               exit 1
             fi
+            IFS=',' read -ra PAPER_LIST <<< "$PAPERS"
+            if [ "${#PAPER_LIST[@]}" -lt 1 ] || [ "${#PAPER_LIST[@]}" -gt 20 ]; then
+              echo "::error::full operation requires between 1 and 20 comma-separated paper UIDs."
+              exit 1
+            fi
             if [ "$DRY_RUN" != "true" ]; then
               if [ "$CONFIRM" != "RUN" ]; then
                 echo "::error::live full run requires confirm_spend=RUN. Refusing to spend."
                 exit 1
               fi
-              if [ -z "${CORPUS:-}" ]; then
-                echo "::error::live full run needs a corpus; empty retrieval would spend and force uncertain."
+              if ! [[ "$AUTHORIZATION_OPERATION_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+                echo "::error::live full run requires nao's audited authorization_operation_id UUID."
                 exit 1
               fi
               echo "Live provider run authorised."
             else
               echo "Full dry run: no provider call, no R2 write, no DB write."
-            fi
-            if [ -n "${CORPUS:-}" ] && [ ! -f "$CORPUS" ]; then
-              echo "::error::corpus '$CORPUS' not found in the checkout."
-              exit 1
             fi
           fi
 
@@ -153,6 +156,39 @@ jobs:
           npm --prefix tools/llm-router ci
           npm --prefix tools/brain-ingest ci
           npm --prefix tools/edge-loader ci
+          npm --prefix tools/rules ci
+
+      # Prove the complete hosted projection is available before any live provider spend.
+      - name: Validate live projection configuration
+        if: inputs.dry_run == false
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          OUROBION_INTERNAL_SECRET: ${{ secrets.OUROBION_INTERNAL_SECRET }}
+        run: |
+          set -eu
+          [ -n "${SUPABASE_DB_URL:-}" ] || { echo "::error::SUPABASE_DB_URL is required."; exit 1; }
+          [ -n "${SUPABASE_ANON_KEY:-}" ] || { echo "::error::SUPABASE_ANON_KEY is required."; exit 1; }
+          [[ "${SUPABASE_URL:-}" =~ ^https://[^/]+$ ]] || { echo "::error::SUPABASE_URL must be a hosted HTTPS URL."; exit 1; }
+          [[ "${OUROBION_INTERNAL_SECRET:-}" =~ ^[A-Za-z0-9_-]{43}$ ]] || { echo "::error::OUROBION_INTERNAL_SECRET is missing or malformed."; exit 1; }
+
+      # Resolve the UUID against the append-only hosted audit log; shape alone
+      # is never authorization for provider spend.
+      - name: Validate completed nao authorization
+        if: inputs.operation == 'full' && inputs.dry_run == false
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PAPERS: ${{ inputs.papers }}
+          REVISION: ${{ inputs.artifact_revision }}
+          AUTHORIZATION_OPERATION_ID: ${{ inputs.authorization_operation_id }}
+        run: |
+          set -eu
+          IFS=, read -ra PAPER_LIST <<< $PAPERS
+          node tools/edge-loader/validate_nao_authorization.mjs \
+            --operation-id $AUTHORIZATION_OPERATION_ID \
+            --artifact-revision $REVISION \
+            --paper-count ${#PAPER_LIST[@]}
 
       # R2-only commands read tools/brain-ingest/.env. Provider credentials stay
       # out of this file and are exposed only to the two full-operation steps.
@@ -217,24 +253,105 @@ jobs:
           npx tsx src/cli.ts "${ARGS[@]}"
 
       # ── 3 + 4 · decorrelated verification, verdicts published to R2 ─────────────
+      # Build verifier-owned retrieval from the hydrated REAL manifest. The
+      # claims' cited paper ids are excluded so retrieval cannot merely echo the
+      # source being checked; quoteCheck still loads those canonical texts from R2.
+      - name: Build echo-controlled verifier corpus
+        if: inputs.operation == 'full' && inputs.dry_run == false
+        working-directory: tools/brain-ingest
+        run: |
+          set -eu
+          npx tsx src/cli.ts build-verify-corpus \
+            --out data/corpus/verify-corpus-workflow.jsonl \
+            --exclude-claims data/corpus/edges/claims.jsonl
+
+      # The repository policy fixes every verifier channel and ceiling. The nao
+      # control-event UUID joins this run to the authenticated curator recorded
+      # by the database without copying curator identity into GitHub.
+      - name: Issue finite Agnes acceptance authorization
+        if: inputs.operation == 'full' && inputs.dry_run == false
+        working-directory: tools/brain-ingest
+        env:
+          PAPERS: ${{ inputs.papers }}
+          AUTHORIZATION_OPERATION_ID: ${{ inputs.authorization_operation_id }}
+        run: |
+          set -eu
+          IFS=',' read -ra PAPER_LIST <<< "$PAPERS"
+          PAPER_COUNT="${#PAPER_LIST[@]}"
+          AGNES_MAX_POST_STARTS="$((PAPER_COUNT * 60))"
+          AUTHORIZATION_ID="brain-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          ACCEPTANCE_RUN_ID="${AUTHORIZATION_ID}-verify"
+          AUTHORIZATION_FILE="$RUNNER_TEMP/agnes-acceptance.json"
+          ISSUED_AT="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+          EXPIRES_AT="$(date -u -d '+3 hours' '+%Y-%m-%dT%H:%M:%SZ')"
+          AUTHORIZATION_BASIS="Owner-approved repository policy #369; authorized by nao curator control event ${AUTHORIZATION_OPERATION_ID}; dispatched by GitHub actor ${GITHUB_ACTOR}; workflow run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}. Agnes is capped at ${AGNES_MAX_POST_STARTS} POST starts and USD 0 reserved; Anthropic and OpenAI verifier starts are forbidden."
+
+          jq -n \
+            --arg authorizationId "$AUTHORIZATION_ID" \
+            --arg authorizationBasis "$AUTHORIZATION_BASIS" \
+            --arg issuedAt "$ISSUED_AT" \
+            --arg expiresAt "$EXPIRES_AT" \
+            --argjson agnesMaxPostStarts "$AGNES_MAX_POST_STARTS" \
+            '{
+              version: 1,
+              authorizationId: $authorizationId,
+              authorizationBasis: $authorizationBasis,
+              issuedAt: $issuedAt,
+              expiresAt: $expiresAt,
+              providers: {
+                anthropic: {maxPostStarts: 0, maxReservedUsd: 0, priorPostStarts: 0, priorReservedUsd: 0},
+                openai: {maxPostStarts: 0, maxReservedUsd: 0, priorPostStarts: 0, priorReservedUsd: 0},
+                agnes: {maxPostStarts: $agnesMaxPostStarts, maxReservedUsd: 0, priorPostStarts: 0, priorReservedUsd: 0}
+              }
+            }' > "$AUTHORIZATION_FILE"
+
+          {
+            echo "ACCEPTANCE_AUTHORIZATION_ID=$AUTHORIZATION_ID"
+            echo "ACCEPTANCE_RUN_ID=$ACCEPTANCE_RUN_ID"
+            echo "ACCEPTANCE_AUTHORIZATION_FILE=$AUTHORIZATION_FILE"
+          } >> "$GITHUB_ENV"
+          {
+            echo "## Agnes acceptance authorization"
+            echo "- Authorization: $AUTHORIZATION_ID"
+            echo "- Authorizing control event: $AUTHORIZATION_OPERATION_ID (authenticated curator is recorded in nao)"
+            echo "- GitHub dispatcher: $GITHUB_ACTOR"
+            echo "- Window: $ISSUED_AT to $EXPIRES_AT"
+            echo "- Agnes ceiling: $AGNES_MAX_POST_STARTS POST starts; USD 0 reserved"
+            echo "- Anthropic/OpenAI verifier ceiling: 0 starts; USD 0 reserved"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Verification
-        if: inputs.operation == 'full'
+        if: inputs.operation == 'full' && inputs.dry_run == false
         working-directory: tools/brain-ingest
         env:
           # Same reason as Synthesis: the router reads process.env, not .env.
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
-          CORPUS: ${{ inputs.corpus }}
           REVISION: ${{ inputs.artifact_revision }}
-          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -eu
-          ARGS=(verify --artifact-revision "$REVISION")
-          if [ -n "${CORPUS:-}" ]; then ARGS+=(--corpus "$GITHUB_WORKSPACE/$CORPUS"); fi
-          if [ "$DRY_RUN" = "true" ]; then ARGS+=(--dry-run); else ARGS+=(--push-r2); fi
+          ARGS=(
+            verify
+            --artifact-revision "$REVISION"
+            --corpus data/corpus/verify-corpus-workflow.jsonl
+            --acceptance-authorization "$ACCEPTANCE_AUTHORIZATION_FILE"
+            --acceptance-run-id "$ACCEPTANCE_RUN_ID"
+            --push-r2
+          )
           echo "Running: npx tsx src/cli.ts ${ARGS[*]}"
           npx tsx src/cli.ts "${ARGS[@]}"
+
+      - name: Retain Agnes authorization and attempt journal
+        if: always() && inputs.operation == 'full' && inputs.dry_run == false
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: agnes-acceptance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ env.ACCEPTANCE_AUTHORIZATION_FILE }}
+            data/brain-ingest/live-acceptance/${{ env.ACCEPTANCE_AUTHORIZATION_ID }}/attempts.jsonl
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Validate exact R2 artifact bundle (no providers)
         if: inputs.operation == 'project-only'
@@ -248,20 +365,23 @@ jobs:
           npx tsx src/cli.ts check-r2-edge-artifacts \
             --claims-sha256 "$CLAIMS_SHA" \
             --blueprints-sha256 "$BLUEPRINTS_SHA" \
-            --verifications-sha256 "$VERIFICATIONS_SHA"
+            --verifications-sha256 "$VERIFICATIONS_SHA" \
+            --out-dir "$RUNNER_TEMP/brain-edge-bundle"
 
-      # ── 5 · projection into verified_edges ─────────────────────────────────────
+      - name: Materialize current validated R2 artifact bundle
+        if: inputs.operation == 'full' && inputs.dry_run == false
+        working-directory: tools/brain-ingest
+        run: npx tsx src/cli.ts materialize-r2-edge-artifacts --out-dir "$RUNNER_TEMP/brain-edge-bundle"
+
+      # ── 6 · projection into verified_edges and rules ────────────────────────────
       #
       # The loader connects with `pg` and needs a PostgreSQL connection string. It does
       # NOT use a Supabase API key, so SUPABASE_SECRET_KEYS cannot drive it — see the
       # note on #233. Without SUPABASE_DB_URL this validates the artifacts and stops,
       # rather than silently reporting a projection that never happened.
       - name: Edge load (projection)
+        if: inputs.operation == 'project-only' || inputs.dry_run == false
         env:
-          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           OPERATION: ${{ inputs.operation }}
           DRY_RUN: ${{ inputs.dry_run }}
@@ -270,45 +390,58 @@ jobs:
         run: |
           set -eu
           if [ "$OPERATION" = "project-only" ]; then
-            ARGS=(--from-r2 --no-prune)
+            ARGS=(--from-dir "$RUNNER_TEMP/brain-edge-bundle" --no-prune)
             if [ "$DRY_RUN" = "true" ]; then
               ARGS+=(--check)
               echo "Project-only dry run — exact bundle validation, no database write."
-            elif [ -z "${SUPABASE_DB_URL:-}" ]; then
-              echo "::error::SUPABASE_DB_URL secret is not set; hosted projection was not attempted."
-              exit 1
             fi
             node tools/edge-loader/load_edges.mjs "${ARGS[@]}"
             exit 0
           fi
+          node tools/edge-loader/load_edges.mjs --from-dir "$RUNNER_TEMP/brain-edge-bundle"
 
+      - name: Verified rule load (projection)
+        if: inputs.operation == 'project-only' || inputs.dry_run == false
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -eu
+          ARGS=(--from-edges-dir "$RUNNER_TEMP/brain-edge-bundle")
           if [ "$DRY_RUN" = "true" ]; then
-            # A dry run deliberately does not push, so on a bucket that has never had a
-            # live run there is legitimately no edges/ object to validate. Treat that one
-            # case as the expected empty state — otherwise a dry run could never go green
-            # on a fresh bucket and would be worthless as a wiring check. Any OTHER loader
-            # failure (bad credentials, malformed artifact) still fails the step.
-            echo "Dry run — validating R2 artifacts without touching the database."
-            set +e
-            OUT=$(node tools/edge-loader/load_edges.mjs --from-r2 --check 2>&1); RC=$?
-            set -e
-            echo "$OUT"
-            if [ $RC -ne 0 ]; then
-              if echo "$OUT" | grep -q "claims.jsonl"; then
-                echo "::notice::No edges/claims.jsonl in R2 yet — expected before the first live run. R2 credentials and connectivity are proven by this probe."
-                exit 0
-              fi
-              echo "::error::edge-loader validation failed for a reason other than the edges artifact being absent."
-              exit $RC
-            fi
-            exit 0
+            ARGS+=(--check)
+            echo "Dry run — validating verified extracted rules without a database write."
           fi
-          if [ -z "${SUPABASE_DB_URL:-}" ]; then
-            node tools/edge-loader/load_edges.mjs --from-r2 --check
-            echo "::error::SUPABASE_DB_URL secret is not set, so the projection into verified_edges was SKIPPED. Artifacts above are validated and published to R2, but the database was not written. Add a PostgreSQL connection string for the demo project as the SUPABASE_DB_URL repository secret (the loader uses pg, not a Supabase API key, so SUPABASE_SECRET_KEYS cannot substitute)."
+          node tools/rules/load_rules.mjs "${ARGS[@]}"
+
+      - name: Regenerate hosted insight cards
+        if: inputs.dry_run == false
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          OUROBION_INTERNAL_SECRET: ${{ secrets.OUROBION_INTERNAL_SECRET }}
+        run: |
+          set -eu
+          RESPONSE="$RUNNER_TEMP/run-pipeline-response.json"
+          STATUS=$(curl --silent --show-error --connect-timeout 15 --max-time 900 \
+            --output "$RESPONSE" --write-out '%{http_code}' \
+            --request POST "${SUPABASE_URL%/}/functions/v1/run-pipeline" \
+            --header "apikey: $SUPABASE_ANON_KEY" \
+            --header "X-Ourobion-Internal-Secret: $OUROBION_INTERNAL_SECRET" \
+            --header "content-type: application/json" \
+            --data '{}')
+          if ! [[ "$STATUS" =~ ^2[0-9][0-9]$ ]]; then
+            echo "::error::hosted run-pipeline returned HTTP $STATUS after rule projection."
             exit 1
           fi
-          node tools/edge-loader/load_edges.mjs --from-r2
+          if ! jq -e '.ok == true and (.stages | length == 3) and all(.stages[]; .ok == true)' "$RESPONSE" >/dev/null; then
+            echo "::error::hosted run-pipeline did not confirm all three stages."
+            exit 1
+          fi
+          {
+            echo "## Hosted card regeneration"
+            jq -r '.stages[] | "- \(.stage): HTTP \(.status), ok=\(.ok)"' "$RESPONSE"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove secrets file
         if: always()
