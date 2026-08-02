@@ -5,6 +5,7 @@ type: session
 scope: repo
 status: canonical
 updated: 2026-08-02
+memory: added 0024 (training compute is local Apple Silicon); renumbered team-composition 0018 → 0025 to clear an id collision with main's 0018-cloud-verifier-authorization; merged 0007 with main's #371 extracted-rule extension and returned it to unverified.
 ---
 
 # Launchpad submission rewrite and governed-document signing

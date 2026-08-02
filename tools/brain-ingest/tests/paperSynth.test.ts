@@ -14,7 +14,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -125,6 +125,20 @@ test('#300 §A: the WHOLE paper reaches the prompt, including sentences the keyw
   // The vocabulary is the registry, not a hand-maintained synonym table.
   assert.ok(prompt.includes('gut_comfort_score'));
   assert.ok(prompt.includes('Gut comfort'), 'registry ui.label grounds the key in prose terms');
+});
+
+test('#371: producer uses the engine phase and renderer-supported template placeholders', () => {
+  const { prompt } = buildPaperSynthesisPrompt(
+    { paperUid: PAPER_UID, title: 'T', text: PAPER_TEXT },
+    METRICS,
+  );
+  assert.ok(prompt.includes('"enabledPhase": "phase2_engine"'));
+  assert.equal(prompt.includes('"enabledPhase": "phase_2"'), false);
+  for (const key of ['{{metric_a_label}}', '{{metric_b_label}}', '{{lag_days}}']) {
+    assert.ok(prompt.includes(key), `prompt must name ${key}`);
+  }
+  assert.ok(prompt.includes('Never put a raw metric key'));
+  assert.ok(prompt.includes('does not supply arbitrary metric-key placeholders'));
 });
 
 test('#300 §A: no METRIC_TERMS-style synonym map is consulted or required', () => {
@@ -434,7 +448,7 @@ const BLUEPRINT = {
   category: 'gut',
   severity: 'info',
   scope: 'cross',
-  enabledPhase: 'phase_2',
+  enabledPhase: 'phase2_engine',
   metricKeys: ['gut_comfort_score', 'mood_score'],
   effectiveFrom: null,
   effectiveTo: null,
@@ -671,6 +685,9 @@ test('#300 whole-paper push publishes the blueprint before its claim', async () 
   const dir = mkdtempSync(join(tmpdir(), 'ourobion-batch-'));
   const puts: string[] = [];
   const r2Store = {
+    async headExists() {
+      return { exists: false };
+    },
     async getObjectText() {
       throw new Error('missing');
     },
@@ -775,6 +792,111 @@ test('#300 G2: resumability — a paper already in claims.jsonl is skipped with 
   assert.equal(router.calls.length, 2, 'p1 must cost nothing on the re-run — never pay twice');
   assert.equal(result.budget.papersSkippedAlreadyDone, 1);
   assert.equal(result.perPaper.find((p) => p.paperUid === 'p1')!.status, 'skipped-already-done');
+});
+
+test('#387 G2: a fresh --push-r2 runner resumes from remote claims with NO provider call', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ourobion-batch-'));
+  const router = routerFor({ inputTokens: 0, outputTokens: 0 });
+  const remoteClaims = JSON.stringify(
+    claim({ citations: [{ paperId: 'p1', stance: 'supports' }] }),
+  ) + '\n';
+  const r2Store = {
+    async headExists(key: string) {
+      assert.equal(key, 'edges/claims.jsonl');
+      return { exists: true };
+    },
+    async getObjectText(key: string) {
+      assert.equal(key, 'edges/claims.jsonl');
+      return remoteClaims;
+    },
+    async putObject() {
+      throw new Error('a skipped run must not publish');
+    },
+  };
+
+  const result = await synthesizePapers(
+    batchOpts({ edgesDir: dir, paperUids: ['p1'], router, pushR2: true, r2Store }) as never,
+  );
+
+  assert.equal(router.calls.length, 0, 'remote resume evidence must stop spend before routing');
+  assert.equal(result.budget.providerCalls, 0);
+  assert.equal(result.budget.papersSkippedAlreadyDone, 1);
+  assert.equal(result.perPaper[0]!.status, 'skipped-already-done');
+  assert.equal(
+    readFileSync(join(dir, 'claims.jsonl'), 'utf8'),
+    remoteClaims,
+    'the fresh runner must hydrate the validated claim for downstream verification',
+  );
+});
+
+test('#387 G2: an R2 resume-check outage fails closed before provider spend', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ourobion-batch-'));
+  const router = routerFor({ inputTokens: 0, outputTokens: 0 });
+  const r2Store = {
+    async headExists() {
+      throw new Error('simulated R2 resume outage');
+    },
+  };
+
+  await assert.rejects(
+    () => synthesizePapers(
+      batchOpts({ edgesDir: dir, paperUids: ['p1'], router, pushR2: true, r2Store }) as never,
+    ),
+    /simulated R2 resume outage/,
+  );
+  assert.equal(router.calls.length, 0, 'an unreadable durable resume boundary cannot trigger spend');
+});
+
+test('#387 G2: malformed remote resume evidence fails closed before provider spend', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ourobion-batch-'));
+  const router = routerFor({ inputTokens: 0, outputTokens: 0 });
+  const r2Store = {
+    async headExists() {
+      return { exists: true };
+    },
+    async getObjectText() {
+      return '{not-json}\n';
+    },
+  };
+
+  await assert.rejects(
+    () => synthesizePapers(
+      batchOpts({ edgesDir: dir, paperUids: ['p1'], router, pushR2: true, r2Store }) as never,
+    ),
+    /invalid JSON during spend-safe resume/,
+  );
+  assert.equal(router.calls.length, 0, 'malformed durable resume evidence cannot trigger spend');
+});
+
+test('#389 G2: contract-invalid remote claims fail before hydration or provider spend', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ourobion-batch-'));
+  const router = routerFor({ inputTokens: 0, outputTokens: 0 });
+  const r2Store = {
+    async headExists() {
+      return { exists: true };
+    },
+    async getObjectText() {
+      return '{}\n';
+    },
+  };
+
+  await assert.rejects(
+    () => synthesizePapers(
+      batchOpts({
+        edgesDir: dir,
+        paperUids: ['p1'],
+        router,
+        pushR2: true,
+        r2Store,
+        validateClaim: () => {
+          throw new Error('schema mismatch');
+        },
+      }) as never,
+    ),
+    /contract validation failed during spend-safe resume: schema mismatch/,
+  );
+  assert.equal(router.calls.length, 0);
+  assert.equal(existsSync(join(dir, 'claims.jsonl')), false);
 });
 
 test('#300 G2: --no-resume re-synthesises an already-present paper', async () => {

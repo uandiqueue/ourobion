@@ -227,6 +227,19 @@ test('a duplicate paperUid is skipped (the loader forbids duplicate paperIds)', 
   assert.equal(loadCorpusFromText(serializeCorpusRows(rows), 'dedup').length, 1);
 });
 
+test('cited papers are excluded before retrieval corpus construction', () => {
+  const cited = paper({ paperUid: 'doi:10/cited' });
+  const independent = paper({ paperUid: 'doi:10/independent' });
+  const { rows, skips, stats } = buildCorpusRows([cited, independent], {
+    excludePaperIds: new Set([cited.paperUid]),
+  });
+
+  assert.deepEqual(rows.map((row) => row.doc.paperId), ['doi:10/independent']);
+  assert.equal(skips[0]?.paperId, 'doi:10/cited');
+  assert.equal(skips[0]?.reason, 'cited-paper-echo');
+  assert.equal(stats.bySkipReason['cited-paper-echo'], 1);
+});
+
 test('textDirLoader reads the R2 text/<uid>.txt layout and falls back when absent or blank', () => {
   const dir = tmpDir();
   const uid = 'doi:10.1234/foo bar';

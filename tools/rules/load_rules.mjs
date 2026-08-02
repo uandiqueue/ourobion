@@ -15,12 +15,15 @@
 //                                                 # legitimately empty the rules table
 //   ... --rules-dir <dir>                         # blueprint tree override (default data/rules —
 //                                                 # tests/ops only)
+//   ... --from-edges-dir <dir>                    # additionally gate edges/blueprints.jsonl
+//                                                 # against that bundle's verified edge artifacts
 //   SUPABASE_DB_URL=postgresql://...  (local stack: `npx supabase status` → DB URL)
 //
 // Root package.json aliases: `npm run rules:load` / `npm run rules:check`.
 
 import process from 'node:process';
 import { buildRows, RULES_DIR } from './lib/blueprints.mjs';
+import { buildExtractedRows, readExtractedArtifactSet } from './lib/extracted.mjs';
 
 const COLUMNS = [
   'rule_id',
@@ -92,7 +95,7 @@ async function loadIntoDb(rows, dbUrl) {
 }
 
 function parseArgs(argv) {
-  const args = { dryRun: false, allowEmpty: false, rulesDir: RULES_DIR };
+  const args = { dryRun: false, allowEmpty: false, rulesDir: RULES_DIR, fromEdgesDir: null };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--dry-run' || a === '--check') args.dryRun = true;
@@ -100,6 +103,9 @@ function parseArgs(argv) {
     else if (a === '--rules-dir') {
       args.rulesDir = argv[++i];
       if (!args.rulesDir) throw new Error('--rules-dir needs a directory path');
+    } else if (a === '--from-edges-dir') {
+      args.fromEdgesDir = argv[++i];
+      if (!args.fromEdgesDir) throw new Error('--from-edges-dir needs a directory path');
     } else throw new Error(`unknown argument '${a}'`);
   }
   return args;
@@ -115,12 +121,53 @@ async function main() {
   }
   const { dryRun } = args;
 
-  const { rows, errors } = buildRows(args.rulesDir);
+  const base = buildRows(args.rulesDir);
+  let rows = base.rows;
+  let errors = base.errors.map((entry) => ({ source: entry.relPath, message: entry.message }));
+  let promotion = null;
+
+  if (args.fromEdgesDir) {
+    let artifacts;
+    try {
+      artifacts = readExtractedArtifactSet(args.fromEdgesDir);
+    } catch (error) {
+      console.error(`extracted artifact source error: ${String(error.message ?? error)}`);
+      process.exit(1);
+    }
+    const { buildLoad } = await import('../edge-loader/lib/artifacts.mjs');
+    const edgeLoad = buildLoad(artifacts.claimsText, artifacts.verificationsText);
+    errors = [
+      ...errors,
+      ...edgeLoad.errors.map((entry) => ({
+        source: `${entry.source}:${entry.line}`,
+        message: entry.message,
+      })),
+    ];
+    if (edgeLoad.errors.length === 0) {
+      promotion = buildExtractedRows({
+        blueprintsText: artifacts.blueprintsText,
+        claimRows: edgeLoad.claimRows,
+        verificationRows: edgeLoad.verificationRows,
+        reservedRuleIds: base.rows.map((row) => row.rule_id),
+      });
+      errors = [
+        ...errors,
+        ...promotion.errors.map((entry) => ({
+          source: `${args.fromEdgesDir}/blueprints.jsonl:${entry.line}`,
+          message: `${entry.reason}: ${entry.detail}`,
+        })),
+      ];
+      rows = [...base.rows, ...promotion.rows].sort((left, right) => left.rule_id.localeCompare(right.rule_id));
+      if (!artifacts.verificationArtifactPresent) {
+        console.warn(`no verifications.jsonl in '${args.fromEdgesDir}' - every extracted rule is withheld`);
+      }
+    }
+  }
 
   if (errors.length > 0) {
     console.error(`✗ ${errors.length} blueprint error(s) in ${args.rulesDir}:`);
-    for (const { relPath, message } of errors) console.error(`  - ${relPath}: ${message}`);
-    console.error('Nothing loaded — fix the blueprints (TRUTH) and re-run.');
+    for (const { source, message } of errors) console.error(`  - ${source}: ${message}`);
+    console.error('Nothing loaded — fix the source blueprints/artifacts and re-run.');
     process.exit(1);
   }
 
@@ -139,6 +186,17 @@ async function main() {
   }
 
   console.log(`✓ ${rows.length} blueprint(s) valid (schema + copy gate + registry keys)`);
+  if (promotion) {
+    console.log(`  ${base.rows.length} hand-authored + ${promotion.rows.length} verified extracted`);
+    for (const entry of promotion.accepted) {
+      const normalized = entry.normalizations.length > 0 ? `; normalized ${entry.normalizations.join(', ')}` : '';
+      console.log(`  + extracted ${entry.ruleId}${normalized}`);
+    }
+    for (const entry of promotion.withheld) {
+      const name = entry.ruleId ?? `line ${entry.line}`;
+      console.log(`  x withheld ${name}: ${entry.reason} - ${entry.detail}`);
+    }
+  }
   for (const row of rows) {
     console.log(
       `  - ${row.rule_id} [${row.scope}/${row.category}] ${row.condition_type} ` +

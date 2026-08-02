@@ -1,5 +1,5 @@
 ---
-id: 0018
+id: "0025"
 title: Ourobion team composition and canonical roles
 summary: The current team is Jayden (Project Lead & Systems Architect), Alton (Product Design & Submission Lead), and Janson (Development Enablement & Technical Support); two-person references are origin history only.
 status: accepted

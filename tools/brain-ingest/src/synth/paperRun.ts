@@ -46,6 +46,7 @@ import {
   buildSynthRawRecord,
   claimsPath,
   defaultEdgesDir,
+  R2_CLAIMS_KEY,
 } from './artifact.js';
 import {
   appendBlueprintsToR2,
@@ -167,6 +168,57 @@ export function paperUidsAlreadySynthesised(path: string): Set<string> {
 }
 
 /**
+ * Strict R2 counterpart to the best-effort local cache reader.
+ *
+ * A malformed remote truth artifact must stop a `--push-r2` resume before spend. Treating it as
+ * empty would repeat provider calls precisely when the durable resume evidence is unreadable.
+ */
+function parseR2ClaimsForResume(
+  text: string,
+  validateClaim: ClaimValidator,
+): { paperUids: Set<string>; claims: SynthClaim[] } {
+  const paperUids = new Set<string>();
+  const claims: SynthClaim[] = [];
+  const clean = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+  for (const [index, line] of clean.split(/\r?\n/).entries()) {
+    if (line.trim() === '') continue;
+    let record: unknown;
+    try {
+      record = JSON.parse(line);
+    } catch (error: unknown) {
+      throw new Error(
+        `${R2_CLAIMS_KEY}:${index + 1}: invalid JSON during spend-safe resume: ` +
+          `${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    let claim: SynthClaim;
+    try {
+      claim = validateClaim(record);
+    } catch (error: unknown) {
+      throw new Error(
+        `${R2_CLAIMS_KEY}:${index + 1}: contract validation failed during spend-safe resume: ` +
+          `${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    const citations = claim.citations;
+    if (!Array.isArray(citations) || citations.length === 0) {
+      throw new Error(`${R2_CLAIMS_KEY}:${index + 1}: missing citations during spend-safe resume`);
+    }
+    for (const citation of citations) {
+      const paperId = (citation as { paperId?: unknown })?.paperId;
+      if (typeof paperId !== 'string' || paperId.trim() === '') {
+        throw new Error(
+          `${R2_CLAIMS_KEY}:${index + 1}: invalid citation paperId during spend-safe resume`,
+        );
+      }
+      paperUids.add(paperId);
+    }
+    claims.push(claim);
+  }
+  return { paperUids, claims };
+}
+
+/**
  * #300 · Whole-paper batch synthesis (the single entry point — G5).
  *
  * Never throws for a per-paper failure: one unparseable reply must not discard the papers that
@@ -195,11 +247,29 @@ export async function synthesizePapers(
   if (metricCatalogue.length === 0) {
     throw new Error('synth: the active metric catalogue is empty — nothing could be proposed');
   }
+  const validateClaim = opts.validateClaim ?? (await loadClaimValidator(root));
 
   // G2 · resumability, decided BEFORE any provider call.
   const alreadyDone = resume ? paperUidsAlreadySynthesised(claimsPath(edgesDir)) : new Set<string>();
+  let sharedR2Store = opts.r2Store;
+  if (resume && opts.pushR2) {
+    sharedR2Store ??= new R2Store(loadConfig());
+    const remote = await sharedR2Store.headExists(R2_CLAIMS_KEY);
+    if (remote.exists) {
+      const remoteResume = parseR2ClaimsForResume(
+        await sharedR2Store.getObjectText(R2_CLAIMS_KEY),
+        validateClaim,
+      );
+      const hydration = appendClaimsToDir(edgesDir, remoteResume.claims);
+      for (const paperUid of remoteResume.paperUids) alreadyDone.add(paperUid);
+      log(
+        `synth: resume checked ${remoteResume.paperUids.size} paper uid(s) in r2 ` +
+          `${R2_CLAIMS_KEY}; hydrated ${hydration.written} claim(s) locally`,
+      );
+    }
+  }
 
-  const loader = opts.textLoader ?? r2TextLoader(new R2Store(loadConfig()));
+  const loader = opts.textLoader ?? r2TextLoader(sharedR2Store ?? new R2Store(loadConfig()));
   const paperMetadata = opts.paperMetadata ?? new Map(
     Manifest.open(corpusDir).all().map((paper) => [
       paper.paperUid,
@@ -211,7 +281,6 @@ export async function synthesizePapers(
     ]),
   );
 
-  const validateClaim = opts.validateClaim ?? (await loadClaimValidator(root));
   const validateCopy = opts.validateCopy ?? (await loadCopyValidator(root));
   const validateBlueprint = emitBlueprints
     ? opts.validateBlueprint ?? (await loadBlueprintValidator(root))
@@ -450,7 +519,7 @@ export async function synthesizePapers(
     );
   }
   if (!opts.dryRun && opts.pushR2) {
-    const store = opts.r2Store ?? new R2Store(loadConfig());
+    const store = sharedR2Store ?? new R2Store(loadConfig());
     // Publish the required blueprint first. If it fails, no new claim becomes
     // visible in R2 without its post-#300 rule artifact.
     if (deduped.toWrite.length > 0) {

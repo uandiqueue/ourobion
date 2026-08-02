@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { BRAIN_PIPELINE_CORPORA, BRAIN_PIPELINE_METRICS } from '@/lib/brainPipelineControl';
+import { BRAIN_PIPELINE_METRICS } from '@/lib/brainPipelineControl';
 import type { BrainPipelineRun } from '@/lib/brainPipelineControl';
 import type { ClaimView } from '@/lib/claimsControl';
 import { isStale, rollupByProvider } from '@/lib/modelsControl';
@@ -56,7 +56,6 @@ export function BrainPipelinePanel() {
   const [papers, setPapers] = useState('');
   const [artifactRevision, setArtifactRevision] = useState('');
   const [dryRun, setDryRun] = useState(true);
-  const [corpus, setCorpus] = useState('');
   const [confirmSpend, setConfirmSpend] = useState('');
 
   const refresh = useCallback(async (): Promise<void> => {
@@ -148,7 +147,7 @@ export function BrainPipelinePanel() {
     leftMetric !== rightMetric &&
     papers.trim() !== '' &&
     artifactRevision.trim() !== '' &&
-    (dryRun || (corpus !== '' && confirmSpend === 'RUN'));
+    (dryRun || confirmSpend === 'RUN');
 
   // Every reason the dispatch button is refusing, in the operator's words. The
   // guards above are unchanged — this only stops them from being invisible. A
@@ -161,11 +160,10 @@ export function BrainPipelinePanel() {
     if (leftMetric === rightMetric) reasons.push('metric A and metric B must differ');
     if (papers.trim() === '') reasons.push('at least one paper UID is required');
     if (artifactRevision.trim() === '') reasons.push('an artifact revision is required');
-    if (!dryRun && corpus === '') reasons.push('a live run needs an approved verification corpus');
     if (!dryRun && confirmSpend !== 'RUN') reasons.push('a live run needs the exact word RUN typed to authorize spend');
     if (!dryRun && synthesisBudget === null) reasons.push('no published synthesis budget is available to bound a live run');
     return reasons;
-  }, [dispatchable, leftMetric, rightMetric, papers, artifactRevision, dryRun, corpus, confirmSpend, synthesisBudget]);
+  }, [dispatchable, leftMetric, rightMetric, papers, artifactRevision, dryRun, confirmSpend, synthesisBudget]);
 
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -188,7 +186,6 @@ export function BrainPipelinePanel() {
           pair: [leftMetric, rightMetric],
           papers,
           artifactRevision,
-          corpus,
           dryRun,
           confirmSpend: dryRun ? '' : confirmSpend,
         }),
@@ -297,13 +294,10 @@ export function BrainPipelinePanel() {
             />
             Dry run — no provider call, R2 write, or database write
           </label>
-          <label>
-            Verification corpus
-            <select value={corpus} onChange={(event) => setCorpus(event.target.value)} required={!dryRun}>
-              <option value="">{dryRun ? 'None (allowed for dry run)' : 'Select a corpus for a live run'}</option>
-              {BRAIN_PIPELINE_CORPORA.map((path) => <option key={path} value={path}>{path}</option>)}
-            </select>
-          </label>
+          <p className="fmt__cap">
+            Live verification builds a real corpus from the hydrated R2 manifest automatically.
+            Papers cited by this run are excluded from retrieval to prevent source echo.
+          </p>
           {!dryRun ? (
             <label>
               Type RUN to authorize live provider spend

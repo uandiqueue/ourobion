@@ -55,11 +55,14 @@ export async function POST(req: Request): Promise<Response> {
         pair: parsed.value.pair,
         paperCount: parsed.value.papers.length,
         artifactRevision: parsed.value.artifactRevision,
-        corpus: parsed.value.corpus || null,
+        verificationCorpus: 'hydrated-manifest-echo-controlled',
         dryRun: parsed.value.dryRun,
       },
       mutate: async () => {
-        const dispatched = await dispatchBrainPipeline(parsed.workflowInputs);
+        const dispatched = await dispatchBrainPipeline({
+          ...parsed.workflowInputs,
+          authorization_operation_id: operation.operationId,
+        });
         if (!dispatched.ok) {
           if (dispatched.outcome === 'unknown') throw new Error('GitHub dispatch outcome unknown');
           throw new NaoControlMutationError(
