@@ -37,7 +37,7 @@ import type { SynthPaperTarget } from './types.js';
 // Bumped for #307: the mechanism-vs-limitation specification (D2) and the strengthened blueprint
 // ask (D1-a) both changed the prompt text, and this stamp is the artifact's provenance — claims
 // synthesised under the two versions are not interchangeable and must not share a dedupe key.
-export const PAPER_PROMPT_VERSION = 'synthesis-whole-paper-2026-08-01.2';
+export const PAPER_PROMPT_VERSION = 'synthesis-whole-paper-2026-08-02.3';
 
 export const PAPER_SYNTHESIS_SYSTEM = [
   "You are the ourobion brain pipeline's relationship-synthesis node, reading ONE paper in full.",
@@ -160,7 +160,7 @@ const BLUEPRINT_CONTRACT = [
   '  "category": "hydration|gut|vector|behaviour|descriptive",',
   '  "severity": "info|notice|watch",',
   '  "scope": "cross",',
-  '  "enabledPhase": "phase_2",',
+  '  "enabledPhase": "phase2_engine",',
   '  "metricKeys": ["<active_metric_key>", "<active_metric_key>"],',
   '  "effectiveFrom": null, "effectiveTo": null,',
   '  "status": "active", "deprecatedAt": null,',
@@ -178,8 +178,9 @@ const BLUEPRINT_CONTRACT = [
   '    "minConfidence": "low|medium|high"',
   '  },',
   '  "template": {',
-  '    "title": "<short observational headline>",',
-  '    "body": "<observational sentence; may use {{snake_case}} placeholders>"',
+  '    "title": "<short observational headline; may use {{metric_a_label}} / {{metric_b_label}}>",',
+  '    "body": "<observational sentence; may use only {{metric_a_label}}, {{metric_b_label}},',
+  '             and {{lag_days}} placeholders>"',
   '  }',
   '}',
   '',
@@ -189,6 +190,8 @@ const BLUEPRINT_CONTRACT = [
   '  imply causation about the person, never name a condition or a treatment.',
   '- Say "these moved together" / "appeared alongside", not "causes", "risk of", "you should",',
   '  "indicates", "symptom of", or "deficiency".',
+  '- Never put a raw metric key such as sleep_duration_min in user-facing copy. Use the supplied',
+  '  label placeholders exactly; the renderer does not supply arbitrary metric-key placeholders.',
   '- The pipeline stamps provenance (tier `extracted` plus the paper citation) — omit it.',
 ].join('\n');
 

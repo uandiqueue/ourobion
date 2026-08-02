@@ -29,8 +29,10 @@ production evidence remain separate work.
 
 Git-tracked JSON **blueprints** = TRUTH (PR-reviewed, human-approved) → loaded into a **derived,
 rebuildable** Postgres `rules` table. Typed model + **Zod** mirror with compile-time drift guards.
-Batch **extract** (PDF → JSON via Claude API + human review) → **load/normalize** → **deterministic
-engine**; the LLM is confined to the offline extract step with cost discipline. (Pattern borrowed from
+A second, rebuildable input is the brain pipeline's paper-extracted blueprint artifact: it is admitted
+only when its metric pair has an active, servable independent-verification result. Batch **extract**
+(paper → JSON via the synthesis model) → **verify/gate** → **load/normalize** → **deterministic
+engine**; the LLMs stay outside the serving path with cost discipline. (Pattern borrowed from
 sister repo NUSPlan; the **rules engine** targets Postgres — the **brain's graph is served as a
 relational 1-hop lookup over the Postgres `verified_edges` view** (no graph DB), see
 [`../nao/brain-synthesis-design.md`](../nao/brain-synthesis-design.md) — and ourobion's serving/runtime
@@ -95,7 +97,15 @@ seed warts) → copy-guard every template → `content_hash` (`node:crypto`) →
 projection). Connect via `SUPABASE_DB_URL` (direct `pg`). Add `rules:load` to root `package.json`.
 Batch, deterministic, **no LLM**.
 
-### B4. Extract — `tools/rules/extract/` (ONLY LLM stage; offline/batch; **skeleton until a paper arrives**)
+With explicit `--from-edges-dir <dir>`, the same rebuild additionally reads
+`blueprints.jsonl` + `claims.jsonl` + optional `verifications.jsonl`. It reuses the edge-loader's
+contract validation and canonical serving-band projection, then admits an extracted cross rule only
+when an active non-hold verification covers the same unordered metric pair. Unsupported phase/copy,
+missing/held verification, duplicate ids, and collisions with hand-authored ids are withheld with an
+audit reason; malformed schema/provenance/citations hard-fail. All hand-authored rows remain in the
+rebuild. Legacy extracted `phase_2` alone normalizes to `phase2_engine`.
+
+### B4. Extract — offline/batch authoring paths
 
 `index.mjs` CLI: paper PDF → *candidate* rule JSON (condition + non-diagnostic templates + citation to
 section/page) into `data/rules/_candidates/` for **human review** (candidates are NOT loadable until a
@@ -104,6 +114,11 @@ source manifest (paperId, title, trust tier, path/URL). **Cost discipline in cod
 hard `OUROBION_EXTRACT_BUDGET_USD` abort, append model+tokens+cost to
 `data/rules/_candidates/usage.jsonl`. **Confirm model id + pricing against the live Claude API reference
 at build time (use the `claude-api` skill) — never hardcode from memory.**
+
+The brain ingestion pipeline is the automated extracted path: its derived `blueprints.jsonl` stays
+beside the derived claim and verification artifacts and never becomes git-tracked rule truth. The
+independent verifier plus B3's pair gate replace manual promotion for this path; failed or unservable
+records remain withheld rather than being copied into `data/rules/`.
 
 ### B5. Guards + couplings
 
@@ -155,13 +170,14 @@ generation — the engine stays the authority for *what is true and the numbers*
 
 ## Determinism + non-diagnostic, end to end
 
-- **Deterministic:** the only LLM is the offline `extract` CLI (B4), human-reviewed before reaching
-  `data/rules`. Loader + engine are pure batch code; evaluators are pure functions.
+- **Deterministic serving:** LLM synthesis and independent verification are offline/batch. The loader,
+  gate, engine, and evaluators are pure functions of their versioned inputs.
 - **Non-diagnostic:** copy lives only in templates, checked at load (B3), at the blueprint guard (B5),
   and at render (C) — three gates, same `FORBIDDEN_WORDS`, with a couplings guard keeping the
   Deno-vendored list synced to the shared one.
-- **Two-tier truth:** `data/rules/**.json` + raw rows + migrations are TRUTH; `rules` + `insight_cards`
-  are rebuildable PROJECTIONS. To change a card, fix a blueprint or raw row and re-run — never hand-edit.
+- **Two-tier truth:** `data/rules/**.json` + raw rows + migrations are TRUTH; brain edge/blueprint
+  artifacts, `rules`, and `insight_cards` are rebuildable PROJECTIONS. To change a card, fix a truth
+  input or producer and re-run — never hand-edit a projection.
 
 ## Open items (confirm at implementation)
 

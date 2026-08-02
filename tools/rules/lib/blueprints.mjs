@@ -18,7 +18,11 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { register } from 'tsx/esm/api';
 
-register();
+const TSX_REGISTERED = Symbol.for('ourobion.tsx-esm-registered');
+if (!globalThis[TSX_REGISTERED]) {
+  register();
+  globalThis[TSX_REGISTERED] = true;
+}
 
 export const REPO_ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 export const RULES_DIR = path.join(REPO_ROOT, 'data', 'rules');

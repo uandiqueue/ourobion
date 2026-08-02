@@ -127,6 +127,20 @@ test('#300 §A: the WHOLE paper reaches the prompt, including sentences the keyw
   assert.ok(prompt.includes('Gut comfort'), 'registry ui.label grounds the key in prose terms');
 });
 
+test('#371: producer uses the engine phase and renderer-supported template placeholders', () => {
+  const { prompt } = buildPaperSynthesisPrompt(
+    { paperUid: PAPER_UID, title: 'T', text: PAPER_TEXT },
+    METRICS,
+  );
+  assert.ok(prompt.includes('"enabledPhase": "phase2_engine"'));
+  assert.equal(prompt.includes('"enabledPhase": "phase_2"'), false);
+  for (const key of ['{{metric_a_label}}', '{{metric_b_label}}', '{{lag_days}}']) {
+    assert.ok(prompt.includes(key), `prompt must name ${key}`);
+  }
+  assert.ok(prompt.includes('Never put a raw metric key'));
+  assert.ok(prompt.includes('does not supply arbitrary metric-key placeholders'));
+});
+
 test('#300 §A: no METRIC_TERMS-style synonym map is consulted or required', () => {
   // The whole-paper prompt builder takes ONLY the paper and the registry catalogue. If a synonym
   // map were reintroduced it would have to appear as another parameter or import here.
@@ -434,7 +448,7 @@ const BLUEPRINT = {
   category: 'gut',
   severity: 'info',
   scope: 'cross',
-  enabledPhase: 'phase_2',
+  enabledPhase: 'phase2_engine',
   metricKeys: ['gut_comfort_score', 'mood_score'],
   effectiveFrom: null,
   effectiveTo: null,
