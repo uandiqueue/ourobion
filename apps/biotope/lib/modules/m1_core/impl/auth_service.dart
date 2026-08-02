@@ -7,6 +7,10 @@ import '../models/user_identity.dart';
 /// All other modules should depend on the public interface defined in
 /// index.dart, not on this implementation directly.
 class AuthService {
+  /// Native callback registered by Biotope for Supabase email confirmations.
+  static const emailConfirmationRedirectTo =
+      'com.ourobion.app://login-callback/';
+
   final SupabaseClient _client;
 
   AuthService(this._client);
@@ -21,7 +25,9 @@ class AuthService {
         password: password,
       );
       final userId = response.user?.id;
-      if (userId == null) return AuthResult.failure('Sign-in returned no user.');
+      if (userId == null) {
+        return AuthResult.failure('Sign-in returned no user.');
+      }
       return AuthResult.success(userId);
     } on AuthException catch (e) {
       return AuthResult.failure(e.message);
@@ -36,9 +42,12 @@ class AuthService {
       final response = await _client.auth.signUp(
         email: email,
         password: password,
+        emailRedirectTo: emailConfirmationRedirectTo,
       );
       final userId = response.user?.id;
-      if (userId == null) return AuthResult.failure('Sign-up returned no user.');
+      if (userId == null) {
+        return AuthResult.failure('Sign-up returned no user.');
+      }
       return AuthResult.success(userId);
     } on AuthException catch (e) {
       return AuthResult.failure(e.message);
@@ -104,6 +113,5 @@ class AuthService {
   }
 
   /// Stream of auth state changes (login, logout, token refresh).
-  Stream<AuthState> get onAuthStateChange =>
-      _client.auth.onAuthStateChange;
+  Stream<AuthState> get onAuthStateChange => _client.auth.onAuthStateChange;
 }
