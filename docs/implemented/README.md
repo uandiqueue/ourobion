@@ -176,21 +176,45 @@ capabilities:
 
 ## Status of the documents below
 
-The present code audit found material drift in the older files. Until they are rewritten and reviewed:
+A reconciliation pass ran on **2026-08-02**. Every file in this directory now carries
+`status: unverified` (or `deferred`), and each drifted file carries an inline evidence-class banner
+naming what is built, what is target, and what was corrected. Nothing here is owner-verified.
 
-- treat [`shared/insight-engine-architecture.md`](shared/insight-engine-architecture.md),
-  [`shared/biotope-nao-link.md`](shared/biotope-nao-link.md),
-  [`nao/brain-synthesis-design.md`](nao/brain-synthesis-design.md),
-  [`nao/nao-app-design.md`](nao/nao-app-design.md),
-  [`nao/brain-support-models-design.md`](nao/brain-support-models-design.md),
-  [`biotope/architecture-context.md`](biotope/architecture-context.md), and
-  [`project-context.md`](project-context.md) as mixed current/target descriptions rather than runtime
-  proof;
-- treat [`biotope/metrics-catalog.md`](biotope/metrics-catalog.md) as a candidate catalogue, not an
-  implemented metric inventory; and
-- treat [`system-truth.md`](system-truth.md) as a dated measurement snapshot. Mutable database,
-  corpus, deployment, and provider claims require a fresh command or live query before reuse.
+Why the status changed: these files previously read `status: canonical`. Under the current taxonomy
+`canonical` denotes **owner verification** (`tools/context_sync.mjs`, `OWNER_VERIFIED_STATUS`), and
+none of them carries a `verified_by: Jayden` stamp. Because `docs/implemented/**` sits outside the
+enforced owner-verification scope, the gate never caught it — the directory was asserting the
+repository's highest trust level unchecked, while `AGENTS.md` §7 simultaneously declared it stale.
 
-The next documentation pass should either rewrite each file around current executable behavior or move
-its unapplied design into `docs/development/`. Only Jayden can promote this README from `unverified`
-after reviewing it.
+Corrections made against code, not prose:
+
+- **[`biotope/architecture-context.md`](biotope/architecture-context.md)** — the M5b→M6
+  `InsightFiredEvent` flow is marked **[TARGET — not implemented]** in all three places it appeared.
+  The type exists in `shared/types/` and a parity test, but nothing emits or consumes it.
+- **[`shared/biotope-nao-link.md`](shared/biotope-nao-link.md)** — the "nao enforces authentication
+  only / role gating is the O25 · B-SEC1 blocker" claim is **resolved**; membership and
+  viewer/curator/admin tiers landed in R4-U2 with negative RLS assertions. The gap ledger is split
+  into its implemented writers and its unimplemented §A3 queue builder.
+- **[`nao/nao-app-design.md`](nao/nao-app-design.md)** — Nao deploys as an **OpenNext Cloudflare
+  Worker, not Cloudflare Pages**; the role/RLS release blocker is struck as resolved.
+- **[`nao/brain-ingestion-design.md`](nao/brain-ingestion-design.md)** — the Run-4 audit's "workflow
+  has never executed" disposition is itself superseded; both `brain-ingest.yml` and
+  `brain-pipeline.yml` have executed, with run history recorded inline.
+- **[`nao/brain-support-models-design.md`](nao/brain-support-models-design.md)** — "no model has been
+  trained" is **false**; Zebra and Viceroy were trained on local Apple Silicon. The three-model
+  framing is superseded by the five-model roster. Performance figures remain routed through #277 and
+  were deliberately not imported.
+- **[`shared/insight-engine-architecture.md`](shared/insight-engine-architecture.md)** — no longer
+  claims "authoritative ground truth"; carries a built/planned overlay. `METRIC_TERMS` and
+  `StructuredPaper` are confirmed unimplemented as named.
+- **[`project-context.md`](project-context.md)** — stale `AGENTS.md` §6/§7 pointers fixed, team table
+  replaced by a pointer to the Jayden-verified `docs/memory/0025-team-composition.md`, and the
+  Biotope-only tech stack extended with the Nao/Cloudflare surfaces it never mentioned.
+- **[`biotope/metrics-catalog.md`](biotope/metrics-catalog.md)** — banner-marked a candidate
+  catalogue against the 24-entry implemented registry.
+- **[`system-truth.md`](system-truth.md)** — separated the figures that still hold at `main` from the
+  mutable ones invalidated by later pipeline runs.
+
+Still outstanding: the remaining unapplied design in these files has **not** been moved into
+`docs/development/`, and no file has been rewritten wholesale around current behaviour. Only Jayden
+can promote this README, or any file here, out of `unverified`.

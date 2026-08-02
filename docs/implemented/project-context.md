@@ -1,16 +1,24 @@
 ---
 title: Project Context
-summary: Constant-layer product brief — what Ourobion is (One Health monitor for ASEAN), the non-negotiable principles (non-diagnostic, 30-second logging, PDPA), tech stack, and a pointer to the module map; changes only at phase transitions.
+summary: Constant-layer product brief — what Ourobion is (One Health monitor for ASEAN), the non-negotiable principles (non-diagnostic, 30-second logging, PDPA), tech stack, and a pointer to the module map. Biotope-centric by origin; it predates Nao and the brain pipeline, which are covered in ../README.md.
 type: context
 scope: repo
-status: canonical
-updated: 2026-07-13
+status: unverified
+updated: 2026-08-02
 ---
 
 # project-context.md — Ourobion
 > **CONSTANT LAYER** — product principles, tech stack, module map, and the shared contract. Change
 > only at formal phase transitions or full team agreement. Current phase scope + sequencing live in
 > [`phase-2-plan.md`](../development/phase-2-plan.md).
+
+> **Evidence class — read before citing.** Authored design narrative, not runtime proof. Per
+> [`AGENTS.md`](../../AGENTS.md) §7, `docs/implemented/` is stale older design material and is not
+> present-state authority; the code, migrations, and contracts win on any disagreement.
+> **Scope warning:** this document was written when Biotope was the whole product. It does not
+> describe **Nao**, the **brain pipeline**, or the Cloudflare surfaces, all of which now exist. For a
+> reconciled whole-system view use [`README.md`](README.md). Points known to describe a target rather
+> than current behaviour are marked **[TARGET — not implemented]** inline.
 
 ---
 
@@ -46,16 +54,22 @@ The app surfaces descriptive patterns and insight cards. It never diagnoses.
 
 | Layer | Choice |
 |---|---|
-| Mobile app | Flutter (iOS + Android) |
+| Mobile app (Biotope) | Flutter (iOS + Android) |
+| Operator app (Nao) | Next.js on an OpenNext **Cloudflare Worker** (not Cloudflare Pages) |
 | Backend / DB | Supabase (Postgres + Auth + Storage + Edge Functions) |
-| Auth providers | Email, Google, Apple |
+| Auth providers | Email; Google and Apple client hooks exist, but provider availability depends on external Supabase configuration and is not proven by this repository |
 | State management | Riverpod |
-| Background jobs | Supabase Edge Functions + pg_cron |
+| Background jobs | Supabase Edge Functions + pg_cron; GitHub Actions for work exceeding a Worker request lifetime |
+| Corpus / artifacts | Cloudflare **R2** (canonical store) with **D1** as a rebuildable Nao search projection |
 | Shared types | Dart (app) + TypeScript (backend/functions) |
 | CI/CD | GitHub Actions |
-| Hosting | Supabase (backend), App Store + Play Store (mobile) |
+| Hosting | Supabase (backend), Cloudflare Workers (Nao). **[TARGET]** No App Store or Play Store release is established in this repository — no release APK or store listing exists. |
 
 > ⚠️ Stack decisions are CONSTANT. Changes require full team agreement and project-context.md update.
+
+> The Nao, Cloudflare, and GitHub-Actions rows postdate this document's original Biotope-only framing
+> and were added during reconciliation. GitHub Actions is an automation bridge for long-running work,
+> not the normal runtime data path for either application.
 
 ---
 
@@ -107,17 +121,18 @@ Defined in `shared/types/`. Changes require team discussion + PR with two review
 
 ## Team & Module Ownership
 
-> Ownership is maintained in `AGENTS.md` §6 (team workstreams) — summary below.
+> **Team composition is owned by [`docs/memory/0025-team-composition.md`](../memory/0025-team-composition.md)**
+> (accepted, Jayden-verified). Read it there; it is not duplicated here.
+>
+> The previous pointer in this file — "`AGENTS.md` §6 (team workstreams)" — was stale in two ways:
+> AGENTS.md §6 is *Delegation invariants*, and AGENTS.md deliberately carries no team assignments at
+> all. The module-ownership table that stood here listed a two-person team and is superseded by 0025,
+> which records **three** members (Jayden, Alton, Janson). Two-person references are origin history
+> only.
 
-| Module | Owner | Notes |
-|---|---|---|
-| M1 Core Platform | Jayden | + database rules, copy-guidelines enforcement, auth/OAuth (PDPA/consent deferred past demo) |
-| M2 Self-Report | Alton (Jayden assists) | Largest MVP surface; Flutter UI |
-| M3 Wearables | Alton | HealthKit / Health Connect → `wearable_daily` + M5a wearable extension |
-| M5a + M5b Intelligence | shared | Depends on M2 being stable |
-| M6 Engagement | shared | Depends on M2 completeness signal |
-| M4 Environmental | Jayden | Env ingestion → `env_daily` (SG-scoped); see `phase-2-plan.md` Track A |
-| M7 Community | shared | Global aggregates + chat first slice; see `phase-2-plan.md` Track A |
+Module *ownership* rotates with the run and is therefore not fixed in this constant layer. For who is
+working on what right now, use the active issue/PR record and the current run docs under
+[`docs/development/`](../development/).
 
 ---
 
@@ -126,7 +141,8 @@ Defined in `shared/types/`. Changes require team discussion + PR with two review
 - Branch naming: `feat/m{n}-{module-name}/{short-description}`
 - No module imports from another module's `/impl` — public `index` only
 - All user-facing strings must pass the non-diagnostic language check
-- One append-only session log per session in `docs/sessions/` (enforced — see `AGENTS.md` §7)
+- One append-only session log per session in `docs/sessions/` (enforced — see `AGENTS.md` §4, *Agent
+  work protocol → Session record*; §7 is *Documentation and owner verification*)
 - Shared types changes require PR with 2 reviewers
 - Tests required before any PR merge to main
 - `main` is always deployable

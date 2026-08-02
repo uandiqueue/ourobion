@@ -3,13 +3,44 @@ title: What Ourobion actually is — measured system truth
 summary: The measured state of the system as of 2026-08-02 — test counts, schema, corpus, brain-pipeline output and model status — with every figure taken from executed command output rather than assertion.
 type: reference
 scope: repo
-status: canonical
+status: unverified
 updated: 2026-08-02
 ---
 
 **Measured 2026-08-02 against `main` @ `5a5af7c`.**
 
 Every number in this document comes from executed command output. Where something was not measured, it is stated plainly.
+
+> **Read this as a dated snapshot, not current state (re-checked 2026-08-02).** A measurement is only
+> true of the revision and the moment it was taken. `5a5af7c` is an ancestor of `main`, which has since
+> advanced by **17 commits** to `94a2790`.
+>
+> **Still accurate at `main` @ `94a2790`** — re-verified: 44 migrations, 4 edge functions
+> (`compute-baselines`, `evaluate-signals`, `generate-insights`, `run-pipeline`), 6 GitHub workflows,
+> and 24 metrics in the shared registry.
+>
+> **The mutable figures below were re-measured on 2026-08-03 and HAVE moved.** The
+> [`brain-pipeline.yml`](../../.github/workflows/brain-pipeline.yml) workflow completed three
+> successful `workflow_dispatch` runs after this snapshot was taken. Superseding values, read
+> directly from the hosted database:
+>
+> | Figure | This snapshot (`5a5af7c`) | Hosted, 2026-08-03 |
+> |---|---|---|
+> | verified edges | 14 | **11** (10 `high`, 1 `hold`) |
+> | current verdicts | — | **1 supported, 10 partial** |
+> | relations | 13 correlates, 1 decreases | **4 correlates, 3 no_effect, 2 modulates, 1 decreases, 1 increases** |
+> | insight cards | 56 (53 personal / 2 rules / 1 edge) | **59** (53 personal / **5** rules / 1 edge) |
+> | cards citing a paper | 1, **archived** | **2, both `active`** |
+> | card statuses | active/dismissed/snoozed/archived | only **`active`** and **`dismissed`** now exist |
+>
+> The section "Why one card, and not fourteen" below is therefore **obsolete** — see the correction
+> boxed inside it. Treat the test totals as revision-bound too: per `AGENTS.md` §8, a test count
+> without its revision and branch conditions is not reusable evidence. The two "Not Measured" entries
+> (D1 index, `rules` visibility) remain open.
+>
+> The test totals (2,605 pass) are likewise revision-bound: per `AGENTS.md` §8, a test count without
+> its revision and branch conditions is not reusable evidence. The two "Not Measured" entries (D1
+> index, `rules` visibility) remain open — they were not resolved by this reconciliation.
 
 ## Test Coverage
 
@@ -67,7 +98,21 @@ status  : archived
 
 But because it is archived it does not appear in the active insights deck. A user opening the app to their current insights sees **no** paper-derived card; the app's Archive surface is where this one lives. Any statement that the demo shows a research-backed card in the normal flow would be false.
 
-### Why one card, and not fourteen
+> **⚠ CORRECTED 2026-08-03 — the paragraph above is no longer true, and it understated the system.**
+> Re-measured against the hosted database: **two** cards carry an `edge_refs` citation and **both are
+> `active`**, sitting in the normal deck rather than an archive. `archived` is no longer even a card
+> status — only `active` and `dismissed` exist now. The two cited cards are:
+>
+> - `edge:gut_comfort_score|correlates|mood_score` — *"Research-linked pattern: Gut comfort and Mood
+>   moved together"* (producer `edge`)
+> - `hrv_rise_after_sleep_rise` — *"Recovery pattern: Sleep duration and Heart-rate variability
+>   (SDNN) rising together"* (producer `rules`, a hand-authored blueprint that cites a brain edge)
+>
+> So the opposite of the sentence above now holds: **the demo does show research-backed cards in the
+> normal flow.** The section below is retained as the historical record of why that was not the case
+> on 2026-08-02.
+
+### Why one card, and not fourteen — *(historical; superseded, see correction above)*
 
 Two things are true at once and both belong in the same breath: **the chain works end to end, and it has so far produced exactly one cited card.**
 
@@ -136,6 +181,12 @@ The `testMode` configuration escape hatch that could downgrade this guarantee wa
 The two consumer-facing surfaces, the schema and the tooling are built and exercised by 2,605 passing tests with none failing. The brain pipeline has run every stage on real data — a corpus fetched and extracted, claims synthesised, verdicts produced by a verifier on a different vendor family, edges projected, and a card rendered and cited back to its evidence.
 
 It has produced **one** such card, out of 56 cards and 14 verified edges. That is small, and it is stated here as small. What it is not is theoretical: the path from a paper in the corpus to a sentence a user reads has been walked, end to end, and it holds.
+
+> **Updated 2026-08-03.** Re-measured on the hosted database: **two** cited cards out of 59, from 11
+> verified edges (10 servable, 1 held) — and unlike the 2026-08-02 snapshot, both cited cards are
+> **active**, not archived. The pipeline has since completed three successful cloud runs. Still
+> small, and still stated as small; the difference is that the cited cards now reach the deck a user
+> actually opens.
 
 The safety properties are the part that is not small. Vendor-family decorrelation between synthesis and verification is enforced in configuration and fails closed, with the escape hatch removed rather than merely unused. Every table carries row-level security. Derived data is rebuildable from inputs rather than hand-maintained.
 

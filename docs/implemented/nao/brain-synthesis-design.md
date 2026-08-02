@@ -3,12 +3,31 @@ title: The Brain — Synthesis & Verification Design
 summary: Why brain edges are LLM-synthesised then independently, adversarially re-verified before serving; agents read this for the anti-hallucination rationale, the evidence/impact tiers, and the servingBand gating — the numbered engine stages live in insight-engine-architecture.
 type: design
 scope: nao
-status: canonical
+status: unverified
 updated: 2026-08-02
 ---
 # The Brain — Design
 
 > **Authoritative integrated architecture:** [`../shared/insight-engine-architecture.md`](../shared/insight-engine-architecture.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the brain-scoped (edge synthesis + verification) view; where it differs, the architecture doc wins.
+
+> **Evidence class — rationale is durable, runtime status is not.** This document's value is the
+> *why*: the anti-hallucination argument for synthesising then adversarially re-verifying an edge. That
+> reasoning still holds. Its *status* claims have drifted, per
+> [`documentation-freshness-audit-2026-08-01`](../../development/run4/documentation-freshness-audit-2026-08-01.md):
+>
+> - It says **graph persistence, app rendering, and guards are deferred**. They are not — later
+>   migrations, the edge loader, and the provenance UI shipped.
+> - It **omits** the #300 whole-text batch path, #322 fence handling, paper-bound verifier call
+>   identity, pathway declaration/demotion, the prompt-provenance bump, and the strengthened blueprint
+>   ask.
+> - **Provider assignments in this doc are historical.** The live router assignment is
+>   configuration, not prose — read it from the router config, not from here.
+> - The assumed **3–5 blueprints per paper** yield was disproved by the measured batch.
+> - **Verifier-side mechanism judgement remains planned.**
+>
+> Keep the rationale; take no runtime status from this file. Confirm against
+> [`shared/brain/`](../../../shared/brain/), [`tools/brain-ingest/`](../../../tools/brain-ingest/),
+> and the migrations.
 
 **Scope.** This doc covers *why* brain edges are synthesised then adversarially verified (the rationale the architecture doc defers to). The end-to-end 23-stage insight engine and its inter-stage contracts live in [`insight-engine-architecture`](../shared/insight-engine-architecture.md); this doc does not restate them.
 

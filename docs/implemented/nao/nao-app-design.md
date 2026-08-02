@@ -3,7 +3,7 @@ title: Ourobion nao — Design (brain inspection & curation)
 summary: nao is ourobion's expert web window into the brain (query/visualise the graph, inspect evidence, curate edges); agents building nao read this for its capability pillars, phasing, auth, and build map — the end-to-end engine lives in insight-engine-architecture.
 type: design
 scope: nao
-status: canonical
+status: unverified
 updated: 2026-08-02
 ---
 # Ourobion nao — Design (brain inspection & curation)
@@ -23,13 +23,22 @@ how edges are synthesised + verified is [`brain-synthesis-design.md`](brain-synt
 acquired is [`brain-ingestion-design.md`](brain-ingestion-design.md); how biotope *consumes* the brain is
 [`../biotope/rules-engine-design.md`](../biotope/rules-engine-design.md) and [`../phase-2-plan.md`](../../development/phase-2-plan.md) (Track B/W2).
 
-> **Status (current reality, 2026-07-26).** The contract, R2 corpus, synthesis/verification tooling,
-> edge artifacts, deterministic Supabase loader/projection, and nao corpus/claims/seed/gap/model/run
-> surfaces now exist in the repo. That does **not** prove a production deployment: hosted migration
-> parity, explicit role/RLS enforcement, real verifier attestation/retrieval, and immutable release
-> promotion remain open. Current build gaps are reconciled in
-> `pending-build-register.md` (`docs/archive/runs/run3/pending-build-register.md`, archived); the phasing below explains the
-> intended product shape, not a live implementation-status ledger.
+> **Status (as written 2026-07-26; corrected 2026-08-02).** The contract, R2 corpus,
+> synthesis/verification tooling, edge artifacts, deterministic Supabase loader/projection, and nao
+> corpus/claims/seed/gap/model/run surfaces exist in the repo. That does **not** prove a production
+> deployment: hosted migration parity, real verifier attestation/retrieval, and immutable release
+> promotion remain open.
+>
+> **Corrected:** the 2026-07-26 text also listed *explicit role/RLS enforcement* as open. It landed in
+> R4-U2 — `public.nao_members` membership with `viewer`/`curator`/`admin` capability tiers
+> ([`20260728010000_nao_staff_roles.sql`](../../../supabase/migrations/20260728010000_nao_staff_roles.sql)),
+> enforced in [`apps/nao/src/lib/authz.ts`](../../../apps/nao/src/lib/authz.ts), with negative RLS
+> assertions in [`supabase/tests/authz`](../../../supabase/tests/authz).
+>
+> The referenced `pending-build-register.md` is archived history
+> (`docs/archive/runs/run3/pending-build-register.md`) and is **not** a live gap ledger — per
+> `AGENTS.md` §7, `docs/archive/` is never an active implementation source. The phasing below explains
+> the intended product shape, not a live implementation-status ledger.
 
 ## 1 · What nao is (three capability pillars)
 
@@ -60,10 +69,13 @@ A clean instance of the repo's core principle ([memory 0001](../../memory/0001-t
 
 ## 3 · Where nao sits (architecture)
 
-- **App:** `apps/nao/` in this monorepo — TypeScript **Next.js (App Router, React)**, hosted on
-  **Cloudflare Pages** (already on Cloudflare for R2). A thin **server data layer** (server routes /
+- **App:** `apps/nao/` in this monorepo — TypeScript **Next.js (App Router, React)**, deployed as an
+  **OpenNext Cloudflare Worker — not Cloudflare Pages** (already on Cloudflare for R2). The build
+  target is set by [`open-next.config.ts`](../../../apps/nao/open-next.config.ts) and
+  [`wrangler.jsonc`](../../../apps/nao/wrangler.jsonc). A thin **server data layer** (server routes /
   Cloudflare Workers) holds all credentials: **R2 keys and LLM keys are server-side only — never
-  shipped in the client bundle.**
+  shipped in the client bundle.** Work that cannot finish inside a Worker request lifetime is
+  dispatched to GitHub Actions instead.
 - **Monorepo:** nao is a *sibling* of the Flutter app, which now lives at `apps/biotope/` (the
   `src/ → apps/biotope/` move is done; both apps sit under `apps/`).
 - **Shared contracts:** nao imports the brain contract from [`shared/brain/`](../../../shared/brain/)
@@ -240,8 +252,13 @@ construction derives from; the sibling system is
 - **Production brain path** — the synthesis/verifier/loader foundation exists; real verifier
   attestation and retrieval, hosted migration parity, immutable release selection/promotion, rollback,
   and production evidence remain open. See [`brain-synthesis-design.md`](brain-synthesis-design.md).
-- **Role and privacy boundary** — explicit viewer/curator/admin membership, direct-write revocation,
-  redacted global-job responses, and negative role/RLS tests remain release blockers.
+- **Role and privacy boundary** — ~~explicit viewer/curator/admin membership, direct-write revocation,
+  redacted global-job responses, and negative role/RLS tests remain release blockers.~~
+  **Resolved in R4-U2 (verified 2026-08-02).** Membership and the viewer/curator/admin tiers ship in
+  [`20260728010000_nao_staff_roles.sql`](../../../supabase/migrations/20260728010000_nao_staff_roles.sql);
+  redaction grants in [`20260728010002_nao_redaction_grants.sql`](../../../supabase/migrations/20260728010002_nao_redaction_grants.sql);
+  negative role/RLS assertions in [`supabase/tests/authz`](../../../supabase/tests/authz) (P-a / P-b / P-c).
+  Membership grants **no** cross-user data authority — no per-user table policy was added or widened.
 - **Source-reliability grading standard** — **decided**: an `evidenceTier` study-design classifier + an
   `impactTier` venue lookup (SJR + OpenAlex; JCR dropped as paid), per
   [`brain-support-models-design.md`](brain-support-models-design.md). Extends `impactTier` (§6) — no new evidence model.

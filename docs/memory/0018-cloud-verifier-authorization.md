@@ -5,7 +5,9 @@ summary: Live brain-pipeline verification receives a short-lived finite Agnes au
 type: memory
 status: accepted
 decided: 2026-08-02
-updated: 2026-08-02
+updated: 2026-08-03
+verified_by: Jayden
+verified_at: 2026-08-02T16:51:13Z
 ---
 
 # 0018 — Cloud Agnes verification is authorized through an audited nao dispatch

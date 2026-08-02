@@ -3,10 +3,17 @@ title: Metrics Registry — Design
 summary: Why the metric registry (shared/metrics/) is a code-registry-plus-parity-guard so adding/removing a metric is a localized, guard-protected change; agents read this for the rationale, the derive-from-registry consumers, the guards, and the add/remove runbook. The MetricDefinition shape itself is owned by shared/metrics/README.md.
 type: design
 scope: biotope
-status: canonical
-updated: 2026-07-31
+status: unverified
+updated: 2026-08-02
 ---
 # Metrics Registry — Design
+
+> **Evidence class.** Design rationale and runbook, not runtime proof. Per
+> [`AGENTS.md`](../../../AGENTS.md) §7, `docs/implemented/` is older design material; the registry
+> itself ([`shared/metrics/registry.ts`](../../../shared/metrics/registry.ts), 24 entries as of
+> 2026-08-02) and its guard tests are the authority. No specific drift was found in this file during
+> the 2026-08-02 reconciliation; it is demoted from `canonical` only because that status now denotes
+> owner verification and this document carries no owner stamp.
 
 A single source of truth for every metric ourobion collects, so **adding or removing a metric is a
 localized, guard-protected change** — incomplete propagation fails a test (`flutter test` /

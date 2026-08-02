@@ -3,10 +3,20 @@ title: Metrics Catalog — Candidate Metrics, Reorganized Around a Logging Budge
 summary: Broad candidate catalog organized around "manual logging is a scarce budget; passive data is free"; it is a reference for choosing supportable metrics, not a fixed registry-size or ship target. Stable IDs map onto the collectibility audit.
 type: reference
 scope: biotope
-status: canonical
-updated: 2026-07-13
+status: unverified
+updated: 2026-08-02
 ---
 # Metrics Catalog — Candidate Metrics, Reorganized Around a Logging Budget (SG/MY)
+
+> **This is a candidate catalogue, not the implemented metric inventory.** Nothing here is evidence
+> that a metric is collected, projected, or served. The implemented inventory is the exported
+> `METRICS` array in [`shared/metrics/registry.ts`](../../../shared/metrics/registry.ts) — **24
+> entries** (`SELF_REPORT` + `WEARABLE`), verified 2026-08-02. This catalogue is deliberately much
+> broader; the gap between it and the registry is intended design space, not a backlog and not drift.
+> Per [`AGENTS.md`](../../../AGENTS.md) §7 this file is older design material rather than
+> present-state authority. To add or remove a metric, follow the runbook in
+> [`metrics-registry-design.md`](metrics-registry-design.md) — the registry, not this page, is what
+> the guards enforce.
 
 A full rebuild of the metrics catalog around one organizing idea: **manual logging is a scarce budget; passive data is free.** The earlier catalog asked *"can an app collect this?"* This version asks the harder product question: *"is it worth spending the user's attention on, and if so, how do we ask so they actually answer — and answer accurately — day after day, in Singapore and Malaysia?"*
 

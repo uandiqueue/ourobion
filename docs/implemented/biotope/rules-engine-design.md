@@ -3,10 +3,17 @@ title: Rules-Engine — Design (Phase 2, W2 / Track B)
 summary: The deterministic PDF → JSON-blueprint → Postgres rules pipeline that replaces biotope's hardcoded insight rules (one of the engine's card producers); agents read this for the rule-blueprint contract, the rules table, the loader/extract steps, and the engine refactor. The full 23-stage engine lives in insight-engine-architecture.
 type: design
 scope: biotope
-status: canonical
+status: unverified
 updated: 2026-08-02
 ---
 # Insights Engine — Design (Phase 2, W2 / Track B)
+
+> **Evidence class.** Design, not runtime proof — see [`AGENTS.md`](../../../AGENTS.md) §7. One
+> boundary is worth stating here because it is easy to misread: authored JSON rule blueprints **can**
+> be loaded into the `rules` projection and evaluated deterministically, but the brain workflow's
+> *generated* rule-blueprint artifacts are **not** automatically promoted into the database — nothing
+> invokes the rules loader for them. A regeneration-safe human rule-revocation overlay is likewise
+> still missing. The authoring loop is therefore not closed end to end.
 
 > **Authoritative integrated architecture:** [`../shared/insight-engine-architecture.md`](../shared/insight-engine-architecture.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the biotope-scoped (insights-engine) view; where it differs, the architecture doc wins.
 

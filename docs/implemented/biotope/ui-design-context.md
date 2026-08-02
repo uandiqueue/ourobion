@@ -3,10 +3,17 @@ title: biotope UI — Design Context
 summary: The source-of-truth visual system for biotope's Flutter app (M3 color tokens, Manrope typography, radii, component specs, living backdrop, motion, layout); agents read this before implementing any UI screen. nao's dark expert sibling system is described in nao-app-design §7.
 type: context
 scope: biotope
-status: canonical
-updated: 2026-07-28
+status: unverified
+updated: 2026-08-02
 ---
 # ui-design-context.md — Ourobion
+> **Evidence class.** This is the intended visual system — a specification to build against, not a
+> record of what every screen currently renders. Per [`AGENTS.md`](../../../AGENTS.md) §7,
+> `docs/implemented/` is older design material; the widgets and theme code in
+> [`apps/biotope/`](../../../apps/biotope/) are the authority for what ships today. No specific drift
+> was found here during the 2026-08-02 reconciliation; the status change from `canonical` reflects
+> only that `canonical` now denotes owner verification and this file carries no owner stamp.
+
 > **REFERENCE LAYER** — Read before implementing any UI screen.
 > Last updated: biomech-botanical reskin — sourced from Claude Design bundle
 > ("Biotope Biomech Botanical", project df5bfd3e-58d9-420c-852f-2aaf9125892b).

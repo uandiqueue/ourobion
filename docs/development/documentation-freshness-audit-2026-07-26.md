@@ -3,11 +3,20 @@ title: Documentation freshness audit — 2026-07-26
 summary: Evidence-backed audit of active docs and root Markdown after Run 2, distinguishing durable design that remains trustworthy from implementation-status and orientation documents that materially lag the repository.
 type: review
 scope: repo
-status: draft
-updated: 2026-07-26
+status: superseded
+superseded_by: run4/documentation-freshness-audit-2026-08-01.md
+updated: 2026-08-03
 ---
 
 # Documentation freshness audit — 2026-07-26
+
+> **Superseded as a current-state sweep** by
+> [`run4/documentation-freshness-audit-2026-08-01.md`](./run4/documentation-freshness-audit-2026-08-01.md),
+> which records that this report's "reliable/current" conclusions predate the subsequent
+> implementation wave. Retained as history — do not use it to judge whether a document is fresh today.
+> Its two graph links were repaired on 2026-08-03 (the human projection is
+> [`docs/graph/semantic-graph.md`](../graph/semantic-graph.md); the interactive `.html` view is
+> machine-local under `graphify-out/` and was never tracked).
 
 ## Verdict
 
@@ -104,7 +113,7 @@ signal; contradiction with truth-tier source is the defect.
   architecture schema pointer, and the time-bounded hackathon snapshot.
 - Added `.graphifyignore` so archive material and the generated graph view cannot pollute semantic
   orientation.
-- Added the one generated [human-readable semantic graph](../graph/semantic-graph.html) plus a local
+- Added the one generated [human-readable semantic graph](../graph/semantic-graph.md) plus a local
   parity/uniqueness gate. This gate detects drift between an available machine graph and its human
   projection; it does not prove semantic freshness. B-PL17 remains the semantic-freshness gap.
 

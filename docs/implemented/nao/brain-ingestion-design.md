@@ -3,12 +3,35 @@ title: The Brain — Ingestion (paper corpus) Design
 summary: How ourobion acquires the scientific-literature corpus edges are synthesised from (discover → fetch → identify → store to R2); agents read this for the source-API catalog, paper_uid scheme, budget guardrails, and the tools/brain-ingest build sequence — the downstream engine stages live in insight-engine-architecture.
 type: design
 scope: nao
-status: canonical
+status: unverified
 updated: 2026-08-02
 ---
 # The Brain — Ingestion (paper corpus) Design
 
 > **Authoritative integrated architecture:** [`../shared/insight-engine-architecture.md`](../shared/insight-engine-architecture.md) is the single source of truth for the end-to-end insight-engine (serve + authoring). This doc is the ingestion-scoped (paper-corpus acquisition) view; where it differs, the architecture doc wins.
+
+> **Evidence class + workflow execution status (measured 2026-08-02).**
+> [`AGENTS.md`](../../../AGENTS.md) §7 classes `docs/implemented/` as stale older design material, so
+> read the operational prose below as design intent and confirm each path against
+> [`tools/brain-ingest/`](../../../tools/brain-ingest/) before citing it.
+>
+> The Run-4 audit
+> ([`documentation-freshness-audit-2026-08-01`](../../development/run4/documentation-freshness-audit-2026-08-01.md))
+> recorded this document's central defect as describing the cloud pipeline operationally "although the
+> workflow has never executed", and directed that it be marked *defined, never run*. **That
+> disposition is itself now out of date — do not apply it.** Measured from the GitHub Actions record:
+>
+> | Workflow | Runs | Outcome |
+> |---|---|---|
+> | [`brain-ingest.yml`](../../../.github/workflows/brain-ingest.yml) | 2 | 1 success (2026-07-15, 12m18s, `dev-phase2`), 1 failure (2026-08-01, `dev-phase2-run4`) |
+> | [`brain-pipeline.yml`](../../../.github/workflows/brain-pipeline.yml) | 6 | **3 success**, 3 failure — all 2026-08-02, all `workflow_dispatch` on `main`; latest success 17:08Z |
+>
+> So both workflows are **defined and executed**, not merely defined. What a green run proves is
+> bounded: that the dispatched stages completed on that revision with those inputs. It is not evidence
+> that any particular corpus size, claim yield, or card is current. The audit's other two findings
+> stand: planned browser-capture/build-sequence material is still interleaved with implemented paths,
+> and the "Open items" section still describes synthesis and the verifier as deferred when both now
+> exist. Re-cut the implementation matrix against code before reuse.
 
 **Scope.** This doc covers the front of the pipeline only — paper-corpus acquisition, up to "text + a `paper_uid` ready to cite." The end-to-end 23-stage insight engine and its inter-stage contracts (the A-stages that extend this CLI) live in [`insight-engine-architecture`](../shared/insight-engine-architecture.md); this doc does not restate them.
 

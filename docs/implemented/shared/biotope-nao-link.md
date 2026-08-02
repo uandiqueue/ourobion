@@ -3,13 +3,21 @@ title: biotope ↔ nao Runtime Link
 summary: The seam view of how biotope (consumer app) and nao (brain curation surface) connect at runtime — they never call each other; everything is shared indirectly via Supabase identity, shared/ code contracts, and the verified_edges Postgres view. Agents read this to understand the app-to-brain boundary; stage detail lives in insight-engine-architecture.md.
 type: architecture
 scope: shared
-status: canonical
+status: unverified
 updated: 2026-08-02
 ---
 
 # biotope ↔ nao — the runtime link
 
-> **Status: authoritative ground truth (cross-app).** How **biotope** (the consumer app) and **nao**
+> **Evidence class.** The seam described here — no app-to-app call path, shared identity, shared
+> `shared/` contracts, `verified_edges` as the meeting point — was re-checked against code on
+> 2026-08-02 and holds. Per [`AGENTS.md`](../../../AGENTS.md) §7 this file is still older design
+> material rather than present-state authority, so verify any specific stage or store against the
+> migrations and app code before citing it. Re-audit prompted by
+> [`documentation-freshness-audit-2026-08-01`](../../development/run4/documentation-freshness-audit-2026-08-01.md),
+> whose "nao auth is the only blocker" defect is fixed below.
+
+> How **biotope** (the consumer app) and **nao**
 > (the brain's curation/ingestion surface) actually connect at runtime. The full 23-stage design lives
 > in [`insight-engine-architecture.md`](insight-engine-architecture.md); the brain's synthesis +
 > verification pipeline is [`../nao/brain-synthesis-design.md`](../nao/brain-synthesis-design.md); the front of the paper
@@ -27,11 +35,22 @@ biotope and nao **never call each other**. No shared API, no cross-app navigatio
 path. Everything they share is indirect, through three things:
 
 1. **Shared identity** — one Supabase Auth project. biotope gates per-user (RLS on personal rows).
-   nao's product contract requires `viewer`/`curator`/`admin`, but the current middleware enforces
-   authentication only; explicit membership/role enforcement and negative RLS tests remain the O25 /
-   B-SEC1 production blocker in the
-   `pending-build-register` (`docs/archive/runs/run3/pending-build-register.md`, archived). Never infer authorization from
-   the current route existing.
+   nao requires `viewer`/`curator`/`admin`. **This landed in R4-U2 and is no longer a blocker.**
+   Membership is a `public.nao_members` row: an `auth.users` row *without* one is a Biotope-only user;
+   *with* an effective one (`status = 'active' AND revoked_at IS NULL`) it is an "ourobion dev" with
+   nao access. `viewer`/`curator`/`admin` are capability tiers *inside* that scope, not separate
+   identities. See [`20260728010000_nao_staff_roles.sql`](../../../supabase/migrations/20260728010000_nao_staff_roles.sql),
+   the enforcement in [`apps/nao/src/lib/authz.ts`](../../../apps/nao/src/lib/authz.ts), and the
+   negative RLS assertions in [`supabase/tests/authz`](../../../supabase/tests/authz) (P-a / P-b / P-c).
+
+   No tier grants cross-user data authority: membership adds no policy to any per-user table and
+   widens no `auth.uid() = user_id` predicate, so an admin cannot read another user's
+   `daily_gut_rows`, `wearable_daily`, `profiles`, or `insight_cards`. Still never infer authorization
+   from a route merely existing.
+
+   > *Superseded text:* this item previously said the middleware "enforces authentication only" and
+   > called role enforcement the open **O25 / B-SEC1** production blocker, citing the archived
+   > `docs/archive/runs/run3/pending-build-register.md`. That was true when written and is now stale.
 2. **Shared code contracts** — both import `shared/brain/` (the `RelationshipClaim`/`EdgeVerification`
    types + `edgeScore`/`servingBand` gating) and `shared/metrics/` via the repo-root npm workspace.
    Either app changing these needs a 2-reviewer PR.
@@ -179,6 +198,21 @@ once the loader has run. No Neo4j projection step exists.
 
 The brain does not only grow from papers researchers happen to pick — one research-query source is what
 biotope users actually need. This is the **gap ledger** (§A1), not an ad-hoc table:
+
+> **Built/planned split (checked 2026-08-02).** The *writing* half is implemented; the *automatic
+> consuming* half is not.
+>
+> - **Implemented** — the `gap_ledger` table
+>   ([`20260724090000_create_a1_gap_ledger.sql`](../../../supabase/migrations/20260724090000_create_a1_gap_ledger.sql),
+>   plus `20260729010003_gap_demand_identity.sql`), gap-event writes from
+>   [`supabase/functions/generate-insights/index.ts`](../../../supabase/functions/generate-insights/index.ts),
+>   and the operator-facing Nao surface (`api/gaps/route.ts`, `GapsPanel.tsx`, `lib/gapsControl.ts`).
+> - **[TARGET — not implemented]** the **§A3 queue builder** described in the third bullet below. No
+>   code ranks ledger rows by `f(personalSignal, litCandidate, demand, servability-gain)` and
+>   dispatches an ingest run from that ranking. `gapsControl.ts` supplies presentation and sort
+>   helpers only (`compareGapDemand`, `shapeGapRows`); `githubDispatch.ts` exists, but dispatch is
+>   operator-triggered from Nao, not driven by the ledger. The gap → targeted-ingest loop is not
+>   closed automatically.
 
 - Every time the composer (§S7) fires a pattern that finds **no servable edge** (or only below-band
   edges), it writes a gap event (`personal-signal-no-edge`, `lit-candidate-no-edge`, `edge-below-band`)

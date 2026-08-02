@@ -21,6 +21,7 @@ Health domain is already implemented.
 | Take a guided reviewer route through the repository | [`docs/repository-guide.md`](docs/repository-guide.md) |
 | Understand the product, origin, and two-system design | [`docs/project-overview.md`](docs/project-overview.md) |
 | Review what is actually implemented and measured | [`docs/implemented/system-truth.md`](docs/implemented/system-truth.md) |
+| Read the research-model results (Zebra, Viceroy) | [Research models](#research-models) below, then [`model-training/evidence/publication-results/`](model-training/evidence/publication-results/) |
 | See what we got wrong along the way | [`docs/development/what-we-got-wrong.md`](docs/development/what-we-got-wrong.md) |
 | Run Biotope | [`apps/biotope/README.md`](apps/biotope/README.md) |
 | Run Nao | [`apps/nao/README.md`](apps/nao/README.md) |
@@ -95,6 +96,33 @@ measured implementation and explicit gaps are recorded in
 Brain design: [`brain-synthesis-design.md`](docs/implemented/nao/brain-synthesis-design.md) ·
 [`brain-ingestion-design.md`](docs/implemented/nao/brain-ingestion-design.md) ·
 [`shared/brain/`](shared/brain/).
+
+## Research models
+
+Two small research checkpoints were trained during the challenge. **Neither serves the product**, and
+that is a deliberate decision rather than an unfinished one — evidence is not serving permission. Both
+were trained on **local Apple Silicon** after the requested GPU container did not arrive.
+
+| Model | What it classifies | Result | Verdict |
+|---|---|---|---|
+| **Zebra v1** | whether evidence supports a claim | macro-F1 **0.599 ± 0.008** against a **pre-registered bar of 0.70** | **Failed its own bar.** The code refuses to promote it. |
+| **Viceroy v0** | causal versus correlational wording | macro-F1 **0.866** against a keyword baseline of **0.507** | Beat its baseline, on **one frozen holdout** — not completed cross-validation. |
+
+Three further models — Giraffe, Salmon and Leafcutter — remain planned and untrained. Both checkpoints
+carry `validated=false`, `serving_ready=false`, `public_weights_cleared=false`. Weights are never
+committed; only manifests, hashes and evaluation artifacts are tracked here.
+
+| To read | Go to |
+|---|---|
+| The canonical reports, aggregate metrics, provenance hashes | [`model-training/evidence/publication-results/`](model-training/evidence/publication-results/) |
+| Why the models exist and why they are not wired in | [`research-models.md`](docs/hackathon/the_launchpad_challenge/plan/research-models.md) — Part 2 |
+| **The caveat we most want read** — same-paper leakage is unsolved, so Viceroy's number carries an unquantified optimistic bias | [`LEAKAGE.md`](docs/development/model-training/viceroy-training/LEAKAGE.md) |
+| What we chose to train, what we did not, and why | [`model-roster.md`](docs/development/model-training/model-roster.md) |
+| Approvals still gating any real training run | [`human-gates.md`](docs/development/model-training/human-gates.md) |
+| The training/evaluation workspace itself | [`model-training/README.md`](model-training/README.md) |
+
+Both models were also compared against Claude Haiku 4.5 on 96 real papers. That comparison has **no
+adjudicated ground truth**, so it measures disagreement, not accuracy.
 
 ## Run from source
 
@@ -203,6 +231,12 @@ For a map of every top-level directory and a guided reviewer route, see
 
 - **Project contact:** agent.j.work@gmail.com
 - **Technical questions and reproducible defects:** use the repository's GitHub Issues.
+- **Want a populated account?** The shared demo account `test@ourobion.com` is view-only, so nothing
+  one visitor does changes what the next one sees. If you would prefer a **separate account
+  pre-loaded with seeded health data** — enough history for baselines, trends and insight cards to
+  appear straight away, instead of logging for weeks — email **agent.j.work@gmail.com** and we will
+  set one up. That data is seeded and marked as simulated in the database, exactly as the shared
+  demo account's is.
 
 Third-party services, models, datasets, frameworks, fonts, and generated assets are credited in
 [`ATTRIBUTION.md`](ATTRIBUTION.md). Team membership is recorded here rather than mixed into

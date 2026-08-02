@@ -1,12 +1,11 @@
 Ourobion
 
 Patient safety does not rely on one perfect check. It stacks imperfect ones so their holes do not
-line up — James Reason's Swiss-cheese model. We built our research pipeline the same way: of fourteen
-health relationships drafted from the literature, three never reached a person.
+line up — James Reason's Swiss-cheese model. We built our research pipeline the same way: of eleven
+health relationships drafted from the literature, one was held back from people.
 
-Submitted as plain text. The README at github.com/uandiqueue/ourobion is the front door: judge
-credentials, references, and an appendix carrying corpus counts, per-verdict tables, model results,
-and the prebuild-versus-delta commit boundary.
+The README at github.com/uandiqueue/ourobion is the front door: judge credentials, references, and
+an appendix carrying corpus counts, per-verdict tables, model results, and the prior-work boundary.
 
 
 Problem
@@ -21,7 +20,7 @@ of a health claim: a model will state a correlation as a cause, reverse which ca
 a mouse study onto a person. The problem is not data or model access. It is grounding the
 interpretation, when the best tool for it is the least trustworthy part of the system.
 
-Existing approaches fall short. Trusting the model assumes the answer. Asking the same model
+Existing approaches fall short: trusting the model assumes the answer. Asking the same model
 "are you sure?" inherits its blind spots. Retrieval with citations still lets it misread the paper it
 cited. Manual evidence grading — GRADE, Cochrane reviews — is rigorous but costs experts months per
 question.
@@ -49,22 +48,23 @@ separation, not call volume, is why Agnes is here; it is also Singapore-built, f
 product.
 
 Models are used only where interpretation is needed. Deterministic code handles identity, quotation
-checks, budgets, routing, non-diagnostic language, and release — the layers that must behave
-identically every run.
+checks, budgets, routing, non-diagnostic language, and release — layers that must behave identically
+every run.
 
 
 Evidence
 
-The corpus holds full text for 911 papers. From a narrow slice, GPT-5 drafted fourteen relationships.
-Agnes returned one supported, ten partial, two uncertain, one unsupported. Eleven passed the serving
-gate — the check deciding whether a relationship may reach a person. Three did not.
+The corpus holds full text for 911 papers. From a narrow slice, GPT-5 drafted eleven relationships;
+Agnes returned one supported and ten partial. Ten cleared the serving gate; one did not. That whole
+loop ran unattended in the cloud, dispatched from nao, three times end to end. Clearing the gate
+makes a relationship eligible, not visible — it reaches someone only when it matches that person's
+own data. Two have.
 
-Fourteen is small, deliberately: depth on a curated slice, not breadth. In nao, any one opens
-onto the drafted claim, its quoted spans, the citation, the reviewer's verdict, and the decision that
-followed.
+Eleven is small, deliberately: depth on a curated slice, not breadth. In nao, any one opens
+onto the drafted claim, its quoted spans, the citation, the verdict, and the decision that followed.
 
 We trained two specialist checkpoints. Viceroy classifies causal versus correlational wording;
-it scored 0.866 where a keyword-matching baseline scored 0.507 (macro-F1, where 1.0 is perfect).
+it scored 0.866 where a keyword-matching baseline scored 0.507 (macro-F1).
 Zebra classifies whether evidence supports a claim; it missed its pre-registered bar of 0.70, so the
 code refuses to promote it. Neither serves the product. Both disagreed substantially with Anthropic's
 Claude Haiku 4.5 on 96 real papers — but without adjudicated truth, that is disagreement, not
@@ -74,8 +74,7 @@ accuracy. A system that can say "not proven" is evidence too.
 Constraints
 
 The independence rule is close to free at our volume — Agnes carries the token-heaviest stage at no
-cost — so the discipline is not bought with credits. It is not free in time: verification adds a
-second model call with its own retrieval. If the reviewer is unavailable, verification stops rather
+cost. It is not free in time: verification adds a second model call with its own retrieval. If the reviewer is unavailable, verification stops rather
 than falling back to the writer.
 
 Retrieval cost is paid once at ingestion and amortised over every read, under budget stops. nao runs
@@ -88,22 +87,21 @@ non-diagnostic.
 
 Honesty & Trajectory
 
-biotope shows research-backed cards today on our synthetic demo account. A new account shows none — by
-design: the app needs your logs before it has anything of yours to say. A judge signing up fresh sees
-an empty app; better said than found later.
+biotope shows research-backed cards today on our seeded demo account. A judge signing up fresh sees
+an empty app — by design: it needs your logs before it has anything of yours to say. Better said
+than found later.
 
 Every layer has holes. "Verified" means only that a claim faithfully reads the paper it cites, not
-that the wider literature agrees. Zebra failed its own bar. The Claude comparison has no ground
-truth. The sample is fourteen relationships on a few metric pairs.
+that the wider literature agrees. Ten relationships are eligible to be shown; two have surfaced, and
+we have not traced why the other eight have not. Zebra failed its own bar. The
+Claude comparison has no ground truth. The sample is eleven relationships on a few metric pairs.
 
 With two more weeks: run the single-call baseline comparison, adjudicate the disagreement set with a
-second labeller, record the trace from verified relationship to visible card, and split
-papers into sections with sentence-level identifiers so drafting quotes precisely. A third, small
-model would then phrase insights for users, inside the same non-diagnostic gate.
+second labeller, record the per-edge trace showing which relationships surface and which do not, and
+split papers into sections with sentence-level identifiers so drafting quotes precisely.
 
-Further out, corroboration. When several papers independently support the same relationship, that
-agreement becomes a reliability score rather than a new claim. The model-call volume for that is
-beyond our budget today, so it stays roadmap.
+Further out, corroboration: when several papers independently support the same relationship,
+agreement becomes a reliability score rather than a new claim — beyond our model-call budget today.
 
 The reviewer never sees a health fact. It sees a claim, sources, and an instruction to refute them —
 readable in the schema. Swap the corpus and metric list and the same gate runs elsewhere.

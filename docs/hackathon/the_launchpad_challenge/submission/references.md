@@ -3,8 +3,10 @@ title: Ourobion — Launchpad 2026 submission references
 summary: External works cited by writeup.txt and appendix.md — the Swiss-cheese reliability model and the evidence-grading approaches named as prior art.
 type: reference
 scope: repo
-status: draft
-updated: 2026-08-02
+status: accepted
+updated: 2026-08-03
+verified_by: Jayden
+verified_at: 2026-08-02T16:51:13Z
 ---
 
 # References

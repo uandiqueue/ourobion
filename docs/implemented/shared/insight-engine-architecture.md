@@ -1,19 +1,39 @@
 ---
 title: Insight-Engine Architecture
-summary: The single authoritative end-to-end insight-engine spec — every stage (S1-S9, U1, A1-A12 incl. A4b), wire, and store across biotope's deterministic serve path and the offline authoring pipeline; canonical owner of all stage definitions and inter-stage contracts. Index source; child design docs point here.
+summary: The end-to-end insight-engine design spec — every stage (S1-S9, U1, A1-A12 incl. A4b), wire, and store across biotope's deterministic serve path and the offline authoring pipeline. Owner of stage definitions and inter-stage contracts as DESIGN; present-tense A-stage prose mixes built and planned components and is not runtime proof.
 type: architecture
 scope: shared
-status: canonical
+status: unverified
 updated: 2026-08-02
 ---
 
-# Insight-engine architecture — ground truth
+# Insight-engine architecture — design spec
 
 **Purpose:** the single authoritative description of the insight engine end-to-end — the
 deterministic serve path (biotope) and the offline authoring/loop pipeline (behind nao) — every
 stage, every wire, every store.
-**Status: authoritative ground truth.** This document states decided architecture. Where it
-conflicts with older design docs, this document wins (see [What this supersedes](#12--what-this-supersedes)).
+
+**Status: decided architecture, not runtime proof.** This document is authoritative for *stage
+definitions and inter-stage contracts* — where it conflicts with older **design** docs, this document
+wins (see [What this supersedes](#12--what-this-supersedes)). It is **not** evidence that a stage is
+built. It previously read "Status: authoritative ground truth", which invited exactly that misreading.
+
+> **Built/planned overlay.** The Run-4 audit
+> [`documentation-freshness-audit-2026-08-01`](../../development/run4/documentation-freshness-audit-2026-08-01.md)
+> found that the present-tense **A2/A3/A4/A4b/A6** prose blurs planned and built components. Two
+> named components are **not implemented as named**, verified against code on 2026-08-02:
+>
+> - **`METRIC_TERMS`** — never implemented, and deliberately so. It survives only in explanatory
+>   comments (`tools/brain-ingest/src/synth/passages.ts`, `paperPrompt.ts`, `types.ts`) and in a guard
+>   test, `tools/brain-ingest/tests/paperSynth.test.ts` §A, that **asserts no synonym map may be
+>   added**. Do not read A6's co-occurrence prose as describing shipped behaviour.
+> - **`StructuredPaper`** — not a declared type. The name appears only inside doc-comments in
+>   `shared/brain/relationships.ts`.
+>
+> What #300 actually added instead is a separate **paper-scoped whole-text path** and an optional
+> `mechanism:` quote span. Treat the A-stage sections as the target design; confirm each stage against
+> `tools/brain-ingest/` and `shared/brain/` before citing it as built. This document must not be
+> quoted as code evidence in submission material.
 
 Related docs and contracts:
 

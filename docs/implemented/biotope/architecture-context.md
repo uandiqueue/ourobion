@@ -1,14 +1,21 @@
 ---
 title: biotope Architecture Context (module map)
-summary: The constant-layer module map for biotope's Flutter app (M1–M7 dependency graph, self-report data flow, table ownership, module-interface rules); the canonical owner of the module map. Contract types live in SHARED-CONTEXT.md; the v2 engine + brain flow live in insight-engine-architecture.md.
+summary: The authored module map for biotope's Flutter app (M1–M7 dependency graph, self-report data flow, table ownership, module-interface rules). Mixed current/target — the M5b→M6 event path is designed but not implemented. Contract types live in SHARED-CONTEXT.md; the v2 engine + brain flow live in insight-engine-architecture.md.
 type: context
 scope: biotope
-status: canonical
+status: unverified
 updated: 2026-08-02
 ---
 # architecture-context.md — Ourobion
 > **CONSTANT LAYER** — system structure, data flow, and module interface rules. Update only at phase
 > transitions. Current phase scope lives in [`phase-2-plan.md`](../../development/phase-2-plan.md).
+
+> **Evidence class — read before citing.** This is authored design narrative, not runtime proof.
+> Per [`AGENTS.md`](../../../AGENTS.md) §7, `docs/implemented/` is stale older design material and is
+> not present-state authority. Where this file and the code disagree, the code wins: see
+> [`supabase/migrations/`](../../../supabase/migrations/), [`shared/`](../../../shared/), and the
+> reconciled summary in [`../README.md`](../README.md). Points where this file is known to describe a
+> target rather than current behaviour are marked **[TARGET — not implemented]** inline.
 
 > **Engine v2 / brain flow.** The module map and self-report loop below are the *constant structure* of
 > the biotope app. The end-to-end **insight-engine v2** (deterministic serve path + offline authoring/
@@ -38,7 +45,7 @@ updated: 2026-08-02
     │     M2     │   │     M3     │   │     M4      │
     │Self-Report │   │  Passive   │   │Environment  │
     │Gut & Behav │   │  Health    │   │& Outbreak   │
-    └─────┬──────┘   └─────┬──────┘   └──────┬──────┘
+    └─────┬──────┘   └─────┬──────┘   └───────┬─────┘
           │                │                  │
           └────────────────┼──────────────────┘
                            │
@@ -53,7 +60,7 @@ updated: 2026-08-02
                     │   Insight   │
                     │   Engine    │
                     └──────┬──────┘
-                           │  InsightFiredEvent
+                           │  InsightFiredEvent [TARGET — not emitted]
                     ┌──────▼──────┐        ┌─────────────┐
                     │     M6      │        │     M7      │
                     │ Engagement  │        │  Community  │
@@ -95,13 +102,18 @@ User taps logging UI
         ▼
   insight_cards table
   (InsightCard shape)
-  + fires InsightFiredEvent
         │
         ▼
   Frontend Insights tab
-  + M6 listens to InsightFiredEvent
-    for reward triggers
 ```
+
+> **[TARGET — not implemented]** The diagram above once showed M5b firing an `InsightFiredEvent` that
+> M6 consumed for reward triggers. That path does not exist in code. `InsightFiredEvent` is declared
+> in [`shared/types/index.ts`](../../../shared/types/index.ts) and
+> [`index.dart`](../../../shared/types/index.dart) and asserted by a parity test, but it is never
+> emitted or consumed by any app, edge function, or SQL. M6 currently recomputes engagement from
+> `daily_gut_rows` after a log write, shown as the right-hand branch above. Keep the contract type —
+> removing it is a shared-contract change — but do not describe the event as a live flow.
 
 ---
 
@@ -133,8 +145,11 @@ User taps logging UI
 2. **M5a → M5b**: M5b reads `baseline_snapshots` table. M5a also exposes
    `getBaseline(userId, metric): BaselineSnapshot` for synchronous lookups.
 
-3. **M5b → M6**: M5b fires `InsightFiredEvent` via Supabase Realtime or Edge Function event.
-   M6 never reads `insight_cards` table directly — it only responds to the event.
+3. **M5b → M6**: **[TARGET — not implemented]** The intended boundary is that M5b fires
+   `InsightFiredEvent` via Supabase Realtime or an Edge Function event and M6 never reads
+   `insight_cards` directly. No emitter or subscriber exists. M6 today derives engagement from
+   `daily_gut_rows` after a log write and does not observe card generation at all. Treat this rule as
+   the boundary to preserve when the event is built, not as a description of current wiring.
 
 4. **M5b → Frontend**: Frontend reads `insight_cards` table directly via Supabase client.
    M5b does not own the UI — it only owns the card data.

@@ -1,6 +1,6 @@
 ---
 title: Brain support models — training design (public-data-first)
-summary: How the three small biomedical encoders (NLI pre-filter, study-design + venue tiers, relation/direction) could be trained on free public data to offload the two brain LLMs; a design only (no model trained), so status is deferred — agents read it when planning that training. The numbered engine stages live in insight-engine-architecture.
+summary: How the three small biomedical encoders (NLI pre-filter, study-design + venue tiers, relation/direction) could be trained on free public data to offload the two brain LLMs. Written as a pre-training design; its "no model trained" and three-model framings are both superseded — Zebra and Viceroy have since been trained, and the roster is now five models. The numbered engine stages live in insight-engine-architecture.
 type: design
 scope: nao
 status: deferred
@@ -8,8 +8,28 @@ updated: 2026-08-02
 ---
 # Brain support models — training design (public-data-first)
 
+> **⚠ Two framings in this document are superseded. Do not cite it for model status.**
+>
+> 1. **"No model has been trained" is false.** Zebra and Viceroy were trained and evaluated — on
+>    local Apple Silicon (`device: mps`, fp32; Zebra in 313 s of wall-clock training), after the
+>    requested GPU container did not arrive. See
+>    [`docs/development/model-training/README.md`](../../development/model-training/README.md) and the
+>    frozen artifacts under `model-training/evidence/`.
+> 2. **The "three support models" framing is superseded.** The durable programme is now five —
+>    Zebra, Giraffe, Salmon, Viceroy, Leafcutter — of which Zebra and Viceroy have trained
+>    checkpoints and the rest remain planned research directions.
+>
+> Per the Run-4 audit
+> ([`documentation-freshness-audit-2026-08-01`](../../development/run4/documentation-freshness-audit-2026-08-01.md)),
+> model and evaluation truth is routed through **#277** and is deliberately **not** repaired inside
+> this file: the body below is left as the original pre-training design so the reasoning stays
+> readable. No performance figure has been imported here. Note also that no checkpoint is validated or
+> authorized for product serving — evidence is not serving permission (`AGENTS.md` §3) — and Viceroy
+> has one frozen fold-0 holdout rather than completed five-fold cross-validation.
+
 How ourobion could train the three small "self-trained" models that offload work from the two brain
-LLMs (synthesis + verifier). This is a **design doc, not a training run** — no model has been trained.
+LLMs (synthesis + verifier). This was written as a **design doc ahead of any training run** (see the
+correction above; Zebra and Viceroy have since been trained).
 It is grounded in **real sample records pulled live on 2026-07-01** from each dataset (schemas, label
 sets, and split sizes below are observed, not assumed).
 

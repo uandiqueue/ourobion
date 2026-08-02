@@ -66,7 +66,7 @@ Where the honest answer is "no evidence found," this document says so. That is a
 >
 > **Division of labour, owner's words:** *"demo is supposed to be flashy, the writeup will be
 > detailed, evidence will be in repo."* So this video's job is to **communicate the mechanism**,
-> not to carry the evidence. Depth belongs in `writeup.md`; proof belongs in the repo.
+> not to carry the evidence. Depth belongs in `writeup.txt`; proof belongs in the repo.
 
 180 seconds. Narration assumes ~150 words/minute.
 
@@ -712,7 +712,7 @@ functions. The pipeline is real; the person is not."*
 
 ---
 
-**Related:** [`writeup.md`](../submission/writeup.md) · [`system-connection-map.md`](./system-connection-map.md) ·
+**Related:** [`writeup.txt`](../submission/writeup.txt) · [`system-connection-map.md`](./system-connection-map.md) ·
 [`hack-mvp-demo-script.md`](../../../development/run4/hack-mvp-demo-script.md) (Run 4, Windows, historical) ·
 [`insight-slice-demo-runbook.md`](../../../development/insight-slice-demo-runbook.md) ·
 [`phase2-demo-runbook.md`](../../../development/phase2-demo-runbook.md)

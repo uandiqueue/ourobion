@@ -39,7 +39,7 @@ updated: 2026-08-02
 > - The Biotope↔nao runtime seam — [`docs/implemented/shared/biotope-nao-link.md`](../../../implemented/shared/biotope-nao-link.md)
 > - Brain design — [`docs/implemented/nao/brain-synthesis-design.md`](../../../implemented/nao/brain-synthesis-design.md), [`brain-ingestion-design.md`](../../../implemented/nao/brain-ingestion-design.md)
 > - Durable facts — [`docs/memory/`](../../../memory/README.md), decisions — [`docs/development/decisions/`](../../../development/decisions/README.md)
-> - The write-up this appendix serves — [`writeup.md`](../submission/writeup.md)
+> - The write-up this appendix serves — [`writeup.txt`](../submission/writeup.txt)
 
 ## 0. The evidence labels
 
@@ -266,13 +266,14 @@ request
 ```
 
 Two independent enforcement layers, deliberately: the middleware is a UX/defense-in-depth gate, and
-each `/api/` handler enforces its own role. **`docs/implemented/shared/biotope-nao-link.md` (stamped
-`updated: 2026-07-26`) is stale on this point** — it says *"the current middleware enforces
-authentication only"* and treats role enforcement as an open blocker. The R4-U2 source is stronger
-than that prose: tiered, DB-re-verified, CI-enforced role checks exist. The doc's general warning
-("never infer authorization from the current route existing") remains good advice; its specific
-factual claim is out of date. Recorded here rather than silently reconciled, because correcting a
-canonical doc is its own reviewed change — and the code is what governs either way.
+each `/api/` handler enforces its own role.
+
+`docs/implemented/shared/biotope-nao-link.md` used to contradict this — it said *"the current
+middleware enforces authentication only"* and treated role enforcement as an open O25 / B-SEC1
+blocker. **That prose was corrected on 2026-08-02 and the two now agree**: membership plus tiered,
+DB-re-verified, CI-enforced role checks exist (R4-U2). The doc's general warning — "never infer
+authorization from the current route existing" — was kept, because it remains good advice. The code
+is what governs either way.
 
 **Label:** Implemented and locally proven.
 
@@ -325,8 +326,9 @@ provisioned or deployed system, and nothing in this document depends on it.
 7. **The five support models are research-only and influence nothing served.**
 8. **iOS is unbuilt** (needs Mac + paid Apple account + device), so HealthKit/Apple Sign In are
    untested on real hardware.
-9. **`docs/implemented/shared/biotope-nao-link.md` is stale** on nao role enforcement (§5) — the code is stronger
-   than the prose.
+9. **`docs/implemented/shared/biotope-nao-link.md` was stale** on nao role enforcement (§5) and was
+   corrected on 2026-08-02; doc and code now agree. Everything under `docs/implemented/` remains
+   `status: unverified` design material by design — read the code for runtime truth.
 10. **Non-diagnostic by construction, and not a medical device.** Every user-facing string is
     observational and gated by `CopyRules.validateCopyString` —
     [memory 0003](../../../memory/0003-non-diagnostic-copy.md).
@@ -422,7 +424,7 @@ Statements below are supported by the evidence in this document. Use these; do n
 | CI gate definitions | `.github/workflows/` — 6 files; only `ci.yml` and `brain-ingest.yml` are on the default branch |
 | Two workflows undispatchable | `gh run list --workflow=brain-pipeline.yml` and `=nao-d1-etl.yml` → `HTTP 404: not found on the default branch` |
 | pg_cron manual prerequisites | [memory 0005](../../../memory/0005-pgcron-config-prereqs.md); migrations `20260515100001`, `20260728020000`, `20260728060000` |
-| 14 verified edges, 11 servable, 0 `producer='edge'` cards | [`writeup.md`](../submission/writeup.md) Appendix E; §4 above; hosted read 2026-08-02 |
+| 14 verified edges, 11 servable, 0 `producer='edge'` cards | [`writeup.txt`](../submission/writeup.txt) Appendix E; §4 above; hosted read 2026-08-02 |
 | Personal cards declare themselves unverified to the user | `supabase/functions/generate-insights/render.ts` — `PERSONAL_CARD_TEMPLATE` title *"Still researching: …"* and body *"an unverified personal observation from your own data only"* |
 | Attestation drift (3 of 4 entrypoint hashes) | `supabase/deploy-attestation.json` vs the tree; `compute-baselines` still matches |
 | No committed secrets | `ci.yml` `secret-scan` job (pinned gitleaks, worktree + full history + canary) |
