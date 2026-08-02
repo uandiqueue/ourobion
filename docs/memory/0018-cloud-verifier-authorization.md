@@ -15,11 +15,6 @@ acceptance-only router guard. A curator must dispatch from nao and type `RUN`. N
 authenticated action in `nao_control_events`, then sends only the validated operation UUID to
 GitHub. The workflow creates a fresh descriptor whose `authorizationBasis` points to that event and
 also records `github.actor`; raw curator identity remains only in the admin-readable audit table.
-Before any provider configuration is reached, the workflow resolves that UUID against the hosted
-append-only table and requires one fresh, matching `attempted` row plus its `succeeded` outcome from
-the same curator/admin actor. The audited revision, paper count, live flag, target, and corpus policy
-must all match the workflow inputs; a UUID-shaped, failed, unresolved, stale, or replayed mismatch
-fails closed before spend.
 
 The descriptor is effective for three hours. Its verifier allowances are finite: Agnes receives 60
 aggregate POST starts per submitted paper (nao accepts at most 20 papers, so at most 1,200 starts),
