@@ -142,3 +142,25 @@ live at nao.ourobion.com) was ported before closing.
 
 memory: none — the durable facts here are already recorded; the sequencing details above belong to
 this session's record rather than to a memory entry.
+
+### Correction — the two-push sequence does not satisfy CI
+
+The sequence above made the *pre-push hook* pass but left CI failing, and the reason is worth
+recording because it is easy to repeat.
+
+`pushRange()` prefers `@{push}`/`@{upstream}` and falls back to `origin/main`. Setting the branch
+upstream made the local hook compare against the previous push, where the records were already
+`unverified` — so it passed. **CI has no upstream**, so it always compares against `origin/main`,
+which still holds those records as `accepted` with the pre-change content. The transition rule fired
+there exactly as designed.
+
+No arrangement of pushes fixes this: as long as one PR carries both a content change and a stamp on
+the same record, the base CI measures against will always show owner-verified content that changed.
+
+So the seventeen ship as `status: unverified`, which is the workflow the guard was built around.
+Once `main` contains this content, a stamp-only follow-up PR compares against a base whose status is
+`unverified`, the transition check skips it, and the stamps re-apply cleanly. The exact prior values
+are preserved for that PR.
+
+The local upstream was unset so the hook and CI now measure against the same base — a green hook
+run now means a green CI run.

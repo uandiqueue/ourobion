@@ -3,11 +3,9 @@ id: "0018"
 title: Cloud Agnes verification is authorized through an audited nao dispatch
 summary: Live brain-pipeline verification receives a short-lived finite Agnes authorization tied to nao's authenticated curator control event; it builds a real retrieval corpus and excludes every cited paper so quote checking still uses canonical R2 text.
 type: memory
-status: accepted
+status: unverified
 decided: 2026-08-02
-updated: 2026-08-02
-verified_by: Jayden
-verified_at: 2026-08-02T16:51:13Z
+updated: 2026-08-03
 ---
 
 # 0018 — Cloud Agnes verification is authorized through an audited nao dispatch

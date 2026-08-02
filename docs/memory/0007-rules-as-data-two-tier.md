@@ -3,11 +3,9 @@ id: "0007"
 title: Verified rules auto-project; humans retain revocation authority
 summary: Insight rules are data, not a hardcoded condition array — hand-authored blueprints are git-tracked truth and gated paper-extracted brain artifacts may auto-project into a rebuildable Postgres rules table; human review is an audited revocation layer rather than a pre-publication bottleneck, and serving stays deterministic.
 type: memory
-status: accepted
+status: unverified
 decided: 2026-06-09
-updated: 2026-08-02
-verified_by: Jayden
-verified_at: 2026-08-02T16:51:13Z
+updated: 2026-08-03
 ---
 
 # Verified rules auto-project; humans retain revocation authority
