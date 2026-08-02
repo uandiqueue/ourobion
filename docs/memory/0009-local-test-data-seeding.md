@@ -3,9 +3,11 @@ id: "0009"
 title: Simulated backdated data tests time-based behaviour
 summary: Time-based behaviour is tested with explicitly simulated, backdated raw observations for a disposable user, followed by the current canonical projection pipeline; provenance and user scope remain enforced.
 type: memory
-status: unverified
+status: accepted
 decided: 2026-07-13
-updated: 2026-08-03
+updated: 2026-08-02
+verified_by: Jayden
+verified_at: 2026-08-02T22:08:41Z
 ---
 
 # Simulated backdated data tests time-based behaviour

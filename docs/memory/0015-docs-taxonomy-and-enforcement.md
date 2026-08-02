@@ -3,9 +3,11 @@ id: "0015"
 title: Documentation roles and lifecycle
 summary: Implemented, development, session, memory, hackathon, graph, and archive documents have distinct authority; generated indexes and structural checks do not substitute for owner verification or executable evidence.
 type: memory
-status: unverified
+status: accepted
 decided: 2026-07-13
-updated: 2026-08-03
+updated: 2026-08-02
+verified_by: Jayden
+verified_at: 2026-08-02T22:08:41Z
 ---
 
 # Documentation roles and lifecycle

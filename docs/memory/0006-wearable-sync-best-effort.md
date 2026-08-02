@@ -3,9 +3,11 @@ id: "0006"
 title: Wearable sync is best-effort
 summary: Wearables are optional confidence inputs, never product gates; missing rows or nullable platform-specific fields represent unavailable data rather than a user or pipeline failure.
 type: memory
-status: unverified
+status: accepted
 decided: 2026-07-13
-updated: 2026-08-03
+updated: 2026-08-02
+verified_by: Jayden
+verified_at: 2026-08-02T22:08:41Z
 ---
 
 # Wearable sync is best-effort

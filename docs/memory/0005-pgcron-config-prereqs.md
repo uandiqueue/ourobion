@@ -3,9 +3,11 @@ id: "0005"
 title: Scheduled internal calls separate routing credentials from authorization
 summary: Scheduled calls use a low-privilege project key for gateway routing and a separate rotatable internal secret for authorization; the service-role key must never travel in the request.
 type: memory
-status: unverified
+status: accepted
 decided: 2026-07-13
-updated: 2026-08-03
+updated: 2026-08-02
+verified_by: Jayden
+verified_at: 2026-08-02T22:08:41Z
 ---
 
 # Scheduled internal calls separate routing credentials from authorization

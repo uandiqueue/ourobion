@@ -3,9 +3,11 @@ id: "0013"
 title: Brain build, persistence, rule promotion, and serving boundaries
 summary: The brain separates deterministic ingestion, different-family synthesis and verification, canonical R2 artifacts, automatic verified-rule and edge projections, human revocation truth, deterministic serving, and isolated research models.
 type: memory
-status: unverified
+status: accepted
 decided: 2026-07-01
-updated: 2026-08-03
+updated: 2026-08-02
+verified_by: Jayden
+verified_at: 2026-08-02T22:08:41Z
 ---
 
 # Brain build, persistence, rule promotion, and serving boundaries
