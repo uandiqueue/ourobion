@@ -2,11 +2,17 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide UserIdentity;
 import '../models/auth_result.dart';
 import '../models/user_identity.dart';
 
+enum AuthSessionValidation { valid, invalid }
+
 /// M1 Authentication Service — wraps Supabase Auth.
 ///
 /// All other modules should depend on the public interface defined in
 /// index.dart, not on this implementation directly.
 class AuthService {
+  /// Native callback registered by Biotope for Supabase email confirmations.
+  static const emailConfirmationRedirectTo =
+      'com.ourobion.app://login-callback/';
+
   final SupabaseClient _client;
 
   AuthService(this._client);
@@ -20,8 +26,13 @@ class AuthService {
         email: email,
         password: password,
       );
-      final userId = response.user?.id;
-      if (userId == null) return AuthResult.failure('Sign-in returned no user.');
+      // GoTrue saves this session before it resolves this future. Requiring it
+      // gives the UI an immediate, authoritative handoff instead of making it
+      // wait for the asynchronous auth-state broadcast.
+      final userId = response.session?.user.id;
+      if (userId == null) {
+        return AuthResult.failure('Sign-in did not establish a session.');
+      }
       return AuthResult.success(userId);
     } on AuthException catch (e) {
       return AuthResult.failure(e.message);
@@ -36,9 +47,12 @@ class AuthService {
       final response = await _client.auth.signUp(
         email: email,
         password: password,
+        emailRedirectTo: emailConfirmationRedirectTo,
       );
       final userId = response.user?.id;
-      if (userId == null) return AuthResult.failure('Sign-up returned no user.');
+      if (userId == null) {
+        return AuthResult.failure('Sign-up returned no user.');
+      }
       return AuthResult.success(userId);
     } on AuthException catch (e) {
       return AuthResult.failure(e.message);
@@ -103,7 +117,32 @@ class AuthService {
     }
   }
 
+  /// Confirms that the cached session still names a hosted auth user.
+  ///
+  /// A deleted or revoked user can leave a locally persisted token behind.
+  /// Only definite server rejections invalidate it; temporary transport and
+  /// service failures are rethrown so callers can offer retry instead of
+  /// signing someone out while offline.
+  Future<AuthSessionValidation> validateCurrentSession() async {
+    final session = _client.auth.currentSession;
+    if (session == null) return AuthSessionValidation.invalid;
+
+    try {
+      final response = await _client.auth.getUser(session.accessToken);
+      return response.user?.id == session.user.id
+          ? AuthSessionValidation.valid
+          : AuthSessionValidation.invalid;
+    } on AuthException catch (error) {
+      switch (error.statusCode) {
+        case '401':
+        case '403':
+        case '404':
+          return AuthSessionValidation.invalid;
+      }
+      rethrow;
+    }
+  }
+
   /// Stream of auth state changes (login, logout, token refresh).
-  Stream<AuthState> get onAuthStateChange =>
-      _client.auth.onAuthStateChange;
+  Stream<AuthState> get onAuthStateChange => _client.auth.onAuthStateChange;
 }

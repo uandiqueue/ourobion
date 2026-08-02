@@ -362,6 +362,45 @@ void main() {
   });
 
   group('ArchiveTab', () {
+    testWidgets('re-reads saved cards when its shell tab becomes active', (
+      tester,
+    ) async {
+      final fake = _FakeInsightService();
+      final archiveKey = GlobalKey();
+
+      Future<void> pumpArchive({required bool active}) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ArchiveTab(
+              key: archiveKey,
+              active: active,
+              service: fake,
+              seriesService: _FakeSeriesService(),
+              userId: 'u-1',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      await pumpArchive(active: false);
+      expect(find.text('Nothing saved yet'), findsOneWidget);
+      expect(fake.getArchivedCalls, ['u-1']);
+
+      fake.archived.add(
+        _card(
+          id: 2,
+          title: 'Saved while Archive was hidden',
+          status: InsightStatus.archived,
+        ),
+      );
+      await pumpArchive(active: true);
+
+      expect(fake.getArchivedCalls, ['u-1', 'u-1']);
+      expect(find.text('Saved while Archive was hidden'), findsOneWidget);
+      expect(find.text('Nothing saved yet'), findsNothing);
+    });
+
     testWidgets('reads the archive query, never the active-cards query', (
       tester,
     ) async {

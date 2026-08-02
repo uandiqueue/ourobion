@@ -15,6 +15,7 @@ $RepoRoot = Split-Path $PSScriptRoot -Parent
 $AppRoot = Join-Path $RepoRoot 'apps\biotope'
 $PublicEnvPath = Join-Path $AppRoot '.env.public'
 $GradlePath = Join-Path $AppRoot 'android\app\build.gradle.kts'
+$MainManifestPath = Join-Path $AppRoot 'android\app\src\main\AndroidManifest.xml'
 $ApkPath = Join-Path $AppRoot 'build\app\outputs\flutter-apk\app-release.apk'
 
 function Read-PublicEnv {
@@ -58,12 +59,20 @@ if (-not (Test-Path -LiteralPath $PublicEnvPath)) {
 if (-not (Test-Path -LiteralPath $GradlePath)) {
     throw "Missing Android Gradle file: $GradlePath"
 }
+if (-not (Test-Path -LiteralPath $MainManifestPath)) {
+    throw "Missing Android main manifest: $MainManifestPath"
+}
 
 $publicEnv = Read-PublicEnv -Lines (Get-Content -LiteralPath $PublicEnvPath)
 Assert-HostedPublicEnv -Values $publicEnv -Source 'apps/biotope/.env.public'
 
 $gradleSource = Get-Content -LiteralPath $GradlePath -Raw
 $usesDebugSigning = $gradleSource -match 'signingConfig\s*=\s*signingConfigs\.getByName\("debug"\)'
+$mainManifestSource = Get-Content -LiteralPath $MainManifestPath -Raw
+$hasReleaseInternetPermission = $mainManifestSource -match '<uses-permission\s+android:name="android\.permission\.INTERNET"\s*/?>'
+if (-not $hasReleaseInternetPermission) {
+    throw 'The Android main manifest must declare android.permission.INTERNET so release APKs can reach the hosted backend.'
+}
 if ($usesDebugSigning -and -not $AcceptDebugSigning) {
     throw @"
 The release variant uses this machine's debug keystore.
@@ -76,6 +85,7 @@ This APK is for sideloading only and is not eligible for Play Store publishing.
 
 Write-Host 'APK preflight passed:' -ForegroundColor Green
 Write-Host "  hosted backend  $ExpectedSupabaseUrl"
+Write-Host '  networking      android.permission.INTERNET present in the release manifest'
 if ($usesDebugSigning) {
     Write-Host '  signing         debug keystore explicitly accepted; one Windows build host; sideload only' -ForegroundColor Yellow
 } else {

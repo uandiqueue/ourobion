@@ -222,8 +222,8 @@ class DailyLogService {
         .from('profiles')
         .select('region')
         .eq('user_id', userId)
-        .single();
-    final region = profileRow['region'] as String? ?? '';
+        .maybeSingle();
+    final region = profileRow?['region'] as String? ?? '';
 
     final today = DateTime.parse(logDate);
     final courses =

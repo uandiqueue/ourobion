@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:src/modules/m2_self_report/impl/logging_controller.dart';
 import 'package:src/modules/m2_self_report/impl/normaliser.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 const _userId = '8f14e45f-ceea-467f-a1d2-91a2b3c4d5e6';
 const _logDate = '2026-07-28';
 final _now = DateTime.utc(2026, 7, 28, 9, 30);
@@ -45,6 +46,7 @@ Set<String> _permittedChanges(String metricKey) => {
   'log_completeness',
   'updated_at',
 };
+
 class _RecordedRequest {
   final String method;
   final Uri uri;
@@ -54,22 +56,33 @@ class _RecordedRequest {
       ? const <String, dynamic>{}
       : jsonDecode(body) as Map<String, dynamic>;
 }
+
 class _OfflinePostgrestClient extends http.BaseClient {
   final List<_RecordedRequest> requests = [];
   final Map<String, dynamic>? existingRow;
-  _OfflinePostgrestClient({this.existingRow});
+  final Map<String, dynamic>? profileRow;
+  final int profileStatusCode;
+
+  _OfflinePostgrestClient({
+    this.existingRow,
+    this.profileRow = const {'region': 'Singapore'},
+    this.profileStatusCode = 200,
+  });
+
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     final body = utf8.decode(await request.finalize().toBytes());
     final recorded = _RecordedRequest(request.method, request.url, body);
     requests.add(recorded);
     Object response = const <Object>[];
+    var statusCode = 200;
     if (request.method == 'GET' &&
         request.url.path.endsWith('daily_gut_rows')) {
       response = existingRow == null ? const <Object>[] : [existingRow];
     } else if (request.method == 'GET' &&
         request.url.path.endsWith('profiles')) {
-      response = const {'region': 'Singapore'};
+      response = profileRow ?? const <Object>[];
+      statusCode = profileStatusCode;
     } else if (request.method == 'GET' &&
         request.url.path.endsWith('antibiotic_courses')) {
       response = const <Object>[];
@@ -77,7 +90,7 @@ class _OfflinePostgrestClient extends http.BaseClient {
     final bytes = utf8.encode(jsonEncode(response));
     return http.StreamedResponse(
       Stream<List<int>>.value(bytes),
-      200,
+      statusCode,
       headers: {
         'content-type': 'application/json',
         'content-length': bytes.length.toString(),
@@ -86,6 +99,7 @@ class _OfflinePostgrestClient extends http.BaseClient {
     );
   }
 }
+
 SupabaseClient _offlineSupabase(_OfflinePostgrestClient client) =>
     SupabaseClient(
       'http://offline.test',
@@ -576,5 +590,44 @@ void main() {
         reason: 'the absent-row path must not pretend an update succeeded',
       );
     });
+    test(
+      'missing profile falls back to an empty region and still inserts',
+      () async {
+        final recorder = _OfflinePostgrestClient(profileRow: null);
+        await DailyLogService(
+          _offlineSupabase(recorder),
+        ).saveFieldAnswer(_userId, _logDate, 'energy_score', 5);
+
+        final write = _onlyWrite(recorder);
+        expect(write.method, 'POST');
+        expect(
+          write.json['region'],
+          '',
+          reason:
+              'an absent ancillary profile must not block the raw daily log',
+        );
+      },
+    );
+    test(
+      'profile fetch failures are not treated as an absent profile',
+      () async {
+        final recorder = _OfflinePostgrestClient(
+          profileStatusCode: 503,
+          profileRow: const {
+            'code': 'PGRST000',
+            'details': null,
+            'hint': null,
+            'message': 'profile service unavailable',
+          },
+        );
+
+        await expectLater(
+          DailyLogService(
+            _offlineSupabase(recorder),
+          ).rowContext(_userId, _logDate),
+          throwsA(isA<PostgrestException>()),
+        );
+      },
+    );
   });
 }
