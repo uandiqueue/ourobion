@@ -48,9 +48,7 @@ def corpus_credentials() -> R2Credentials:
 
 
 def _get(creds: R2Credentials, canonical_uri: str, query: dict | None = None) -> bytes:
-    headers = build_signed_headers(
-        creds, method="GET", canonical_uri=canonical_uri, query=query
-    )
+    headers = build_signed_headers(creds, method="GET", canonical_uri=canonical_uri, query=query)
     url = f"{creds.endpoint}{canonical_uri}"
     if query:
         url += "?" + "&".join(
