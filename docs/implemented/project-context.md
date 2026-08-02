@@ -68,7 +68,7 @@ The app surfaces descriptive patterns and insight cards. It never diagnoses.
 | Corpus / artifacts | Cloudflare **R2** (canonical store) with **D1** as a rebuildable Nao search projection |
 | Shared types | Dart (app) + TypeScript (backend/functions) |
 | CI/CD | GitHub Actions |
-| Hosting | Supabase (backend), Cloudflare Workers (Nao). **[TARGET]** No App Store or Play Store release is established in this repository — no release APK or store listing exists. |
+| Hosting | Supabase (backend), Cloudflare Workers (Nao), GitHub Releases (the debug-signed Android demo APK for reviewers). **[TARGET]** No App Store or Play Store listing exists; iOS is unbuilt. |
 
 > ⚠️ Stack decisions are CONSTANT. Changes require full team agreement and project-context.md update.
 

@@ -3,15 +3,17 @@ title: Temp — in-building and promotable docs
 summary: TEMP is the staging area for active drafts, the current product-build run, independent experimental workstreams, and dated briefs; closed run records move to archive after their actionable debt is reconciled forward.
 type: process
 scope: repo
-status: canonical
-updated: 2026-07-26
+status: unverified
+updated: 2026-08-03
 ---
 
 # Temp — in-building and promotable docs
 
 `docs/development/` is the staging area for work that is still being designed, reviewed, or executed. It is
 not the constant-layer source of truth. Durable outcomes must eventually be promoted into
-`docs/shared/`, `docs/nao/`, `docs/biotope/`, memory, or an accepted decision.
+`docs/implemented/`, memory, or an accepted decision. (The earlier targets `docs/shared/`,
+`docs/nao/` and `docs/biotope/` were abolished by the #328 reorganisation and now live under
+`docs/implemented/`.)
 
 ## Active folders
 

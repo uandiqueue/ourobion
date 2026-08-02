@@ -78,7 +78,10 @@ Important boundaries:
 - M7 community is dormant; there is no community product or aggregation pipeline.
 - `InsightFiredEvent` exists as a shared contract type but is not emitted or consumed. M6 currently
   updates from `daily_gut_rows` after a log write.
-- No release APK, App Store release, or Play Store release is established here.
+- A sideloadable **Android demo APK** is released for reviewers via GitHub Releases, built by
+  [`scripts/build-demo-apk.ps1`](../../scripts/build-demo-apk.ps1). It is debug-signed. No App Store
+  or Play Store release exists, and iOS is unbuilt — it needs a Mac and a paid Apple Developer
+  account.
 
 ## Supabase serve path
 

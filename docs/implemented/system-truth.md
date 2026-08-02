@@ -15,9 +15,14 @@ Every number in this document comes from executed command output. Where somethin
 > true of the revision and the moment it was taken. `5a5af7c` is an ancestor of `main`, which has since
 > advanced by **17 commits** to `94a2790`.
 >
-> **Still accurate at `main` @ `94a2790`** — re-verified: 44 migrations, 4 edge functions
+> **Re-verified and still accurate** — 4 edge functions
 > (`compute-baselines`, `evaluate-signals`, `generate-insights`, `run-pipeline`), 6 GitHub workflows,
 > and 24 metrics in the shared registry.
+>
+> **Changed since the snapshot:** the migration count below reads 44, which was correct at
+> `5a5af7c`. It is **45** now — `20260802030000_demo_readonly_accounts.sql` landed afterwards. The
+> snapshot figure is left as measured rather than edited, because a dated measurement that gets
+> quietly updated stops being a measurement.
 >
 > **The mutable figures below were re-measured on 2026-08-03 and HAVE moved.** The
 > [`brain-pipeline.yml`](../../.github/workflows/brain-pipeline.yml) workflow completed three

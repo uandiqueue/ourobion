@@ -173,7 +173,7 @@ Two constraints on that unit:
 | B-PL1 · evaluate-signals nightly cron (18:15) | IN FLIGHT (H3 approved 2026-07-25 → U14) | prod additionally needs dashboard app.supabase_url/app.service_role_key (memory 0005) |
 | B-PL2 · O1 deadbandK doc reconciliation · O1a drift guard (via O3) | open | doc-only + generated-register property |
 | B-PL3 · O2 Method & Parameter Register (MPR) | open — HARD GATE on all stats sign-offs | enabling artifact for external stats review + B1–B7 calibration |
-| B-PL4 · O3 registry catalog + review surface | open | generated views in docs/shared/registries/ |
+| B-PL4 · O3 registry catalog + review surface | open | generated views in `docs/implemented/registries/` (was `docs/shared/registries/` before the #328 reorganisation; neither exists yet) |
 | B-PL5 · O4 derived_metrics select-only RLS | open | prerequisite to A2 above |
 | B-PL6 · O5 storage-primitive coverage pass + CI guard | open | owns decisions A3/A5 above; matrix from the 100-wave |
 | B-PL7 · O6 CODEOWNERS + branch protection | open | needs Alton's GitHub handle |
