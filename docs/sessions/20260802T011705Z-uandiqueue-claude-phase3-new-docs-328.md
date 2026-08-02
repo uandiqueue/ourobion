@@ -122,6 +122,31 @@ run exists to prevent:
 
 Also corrected "250+ session logs" to the measured 264.
 
+## Follow-up 3 — acting on agentjwork's review (#246, 2026-08-02T02:10Z)
+
+The review reconciled #246 against `main` @ `5a5af7c` and stated: *"Independent corroboration and a
+monotonic relation are no longer serving gates. The later #300 owner decision makes verification a
+single-paper-fidelity decision; other-paper retrieval is retained as metadata/caveat context."*
+
+Checked against the source rather than accepted as-is, because it merges two separate things:
+
+- **Corroboration / evidence tier / venue impact tier — demoted. The review is right.** Session
+  `20260801T143748Z` records the serving gate becoming single-paper faithfulness: those signals are
+  still computed, stored, projected and ranked on, but *"can no longer withhold a card"*.
+- **`independentRetrieval.performed` — NOT demoted. Untouched.** The same session states it
+  explicitly: *"`enforce.ts` still forces `uncertain` when retrieval was not performed … Retrieval is
+  demoted as a scoring input only; it is still mandatory for an affirmative verdict to exist at
+  all."* So the grounding claim in `research-models.md` is correct and stays.
+
+The real gap the review exposed was an **omission**, not an error: neither doc said that **a card can
+now be served on the strength of a single paper**, with the verification `caveat` as the only
+mechanism carrying that risk to the user. That is the honest limit of the design and an explicit
+owner decision; a reviewer should not have to find it in a session log.
+
+Added to both `research-models.md` ("Where the layering deliberately stops") and `system-truth.md`
+("What the serving gate does and does not check"), each stating what did *not* change alongside it —
+retrieval still mandatory for an affirmative verdict, deterministic quote gate still required.
+
 memory: none — the durable facts here (measured system state, the reliability argument) are captured
 in the documents themselves, which is where a future session should read them.
 

@@ -69,6 +69,25 @@ A co-movement rendering path was added specifically to close that gap (`coMoveme
 
 The defensible claim is therefore narrow and worth stating exactly: every stage of the pipeline has run on real data and produced a real, cited, user-visible card. One of them.
 
+### What the serving gate does and does not check
+
+Recorded here because it bounds what any cited card actually means.
+
+The gate asks whether a claim is faithful to **the paper it cites** — real quotes, correct scope,
+matching effect size. It does **not** ask whether the wider literature agrees. Cross-paper
+corroboration, study-design tier and venue impact tier are still computed, still stored, still
+projected to `edge_verifications` and still used to rank edges, but as of the 2026-08-01 decision they
+can no longer withhold a card.
+
+So a card can be served on the strength of a single paper. The only mechanism carrying that risk to
+the user is the verification `caveat` field. This was an explicit owner decision, made after a live
+run produced edges where every check against the cited paper passed and only the other-paper signals
+were thin — the composite score banded them `hold`, which was a rejection with extra steps.
+
+Two things did **not** change and are worth stating alongside it: retrieval is still mandatory for an
+affirmative verdict to exist at all (`enforce.ts` forces `uncertain` when it was not performed), and
+the deterministic quote gate remains a required member of the serving gate.
+
 ## Paper Corpus: Discovery Manifest vs. Extracted Text
 
 The corpus is stored as a discovery manifest in Cloudflare R2 (bucket `ourobion-corpus`, object `manifest/papers.jsonl`):

@@ -26,6 +26,29 @@ Decorrelation: OK — synthesis=openai, verifier=agnes (independent families enf
 
 Additional layers exist below this: deterministic safeguards (a quote gate, a non-diagnostic copy gate, a serving-band gate), and a grounding invariant. A supported or contradicted verdict requires the verifier to have done its own fresh retrieval. Without fresh grounding, the verdict can only be "uncertain."
 
+### Where the layering deliberately stops
+
+One boundary belongs here rather than in a footnote, because it is the honest limit of the design.
+
+**A card can be served on the strength of a single paper.** The serving gate asks whether a claim is
+faithful to *the paper it cites* — are the quotes real, is the scope right, does the effect size
+match. It does not ask whether the wider literature agrees.
+
+Cross-paper corroboration, study-design tier and venue impact tier are all still computed, stored and
+used to *rank* edges. What they can no longer do is withhold a card. That change was made after a live
+run produced edges where every check against the cited paper passed and only the other-paper signals
+were thin — the composite score banded them "hold", which amounted to a rejection with extra steps.
+
+The risk this creates is real: a faithfully-reported claim from one paper may still be a claim the
+field as a whole does not support. The mechanism carrying that risk to the user is the verification
+**caveat**, and it is the only one. This was an explicit, recorded owner decision rather than an
+oversight, and it is written down here for the same reason it is written down in the repository.
+
+What did *not* change: retrieval is still mandatory for an affirmative verdict to exist at all. It was
+demoted as a scoring input, not removed as a precondition — `enforce.ts` still forces `uncertain` when
+retrieval was not performed. Nor did the deterministic quote gate move; it remains a required member
+of the serving gate.
+
 ## Part 2: The Research Models
 
 Both models are fine-tuned from Microsoft BiomedNLP-BiomedBERT (base model licence: MIT). They were trained on 2026-07-28, each approximately 438 MB in size, and stored on private Cloudflare R2 with byte-for-byte verified upload.
