@@ -3,9 +3,11 @@ id: "0008"
 title: Graphify is optional derived context
 summary: Graphify is an optional, rebuildable semantic index for context discovery; it never outranks code, contracts, migrations, curated architecture, or enforced coupling guards.
 type: memory
-status: unverified
+status: accepted
 decided: 2026-07-13
 updated: 2026-08-02
+verified_by: Jayden
+verified_at: 2026-08-02T09:00:58Z
 ---
 
 # Graphify is optional derived context

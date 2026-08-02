@@ -3,9 +3,11 @@ id: "0001"
 title: Two-tier truth, including mixed records
 summary: Preserve authored inputs and user choices; rebuild analytical outputs. Insight cards are mixed records whose generated content is projection but whose user-controlled lifecycle state is truth.
 type: memory
-status: unverified
+status: accepted
 decided: 2026-06-08
 updated: 2026-08-02
+verified_by: Jayden
+verified_at: 2026-08-02T09:00:58Z
 ---
 
 # Two-tier truth, including mixed records

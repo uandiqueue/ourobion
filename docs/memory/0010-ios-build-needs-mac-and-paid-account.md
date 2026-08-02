@@ -3,9 +3,11 @@ id: "0010"
 title: iOS and HealthKit require Apple hardware and provisioning
 summary: Native iOS builds require macOS and Xcode, while meaningful HealthKit validation requires a physical iPhone and the appropriate paid Apple programme; Android remains the cross-platform development path.
 type: memory
-status: unverified
+status: accepted
 decided: 2026-07-13
 updated: 2026-08-02
+verified_by: Jayden
+verified_at: 2026-08-02T09:00:58Z
 ---
 
 # iOS and HealthKit require Apple hardware and provisioning
