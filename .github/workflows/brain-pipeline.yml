@@ -262,8 +262,8 @@ jobs:
         run: |
           set -eu
           npx tsx src/cli.ts build-verify-corpus \
-            --out data/corpus/verify-corpus-workflow.jsonl \
-            --exclude-claims data/corpus/edges/claims.jsonl
+            --out ../../data/corpus/verify-corpus-workflow.jsonl \
+            --exclude-claims ../../data/corpus/edges/claims.jsonl
 
       # The repository policy fixes every verifier channel and ceiling. The nao
       # control-event UUID joins this run to the authenticated curator recorded
@@ -334,7 +334,7 @@ jobs:
           ARGS=(
             verify
             --artifact-revision "$REVISION"
-            --corpus data/corpus/verify-corpus-workflow.jsonl
+            --corpus ../../data/corpus/verify-corpus-workflow.jsonl
             --acceptance-authorization "$ACCEPTANCE_AUTHORIZATION_FILE"
             --acceptance-run-id "$ACCEPTANCE_RUN_ID"
             --push-r2
