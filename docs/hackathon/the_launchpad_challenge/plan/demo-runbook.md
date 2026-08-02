@@ -380,8 +380,9 @@ On Android, allow the browser or file manager to **Install unknown apps** when p
 and open the downloaded file. It connects to the hosted demo Supabase project; no local toolchain or
 backend is required.
 
-Use credentials from the private reviewer/submission handoff. Credentials are deliberately not
-committed to this public repository; contact the project owner if the handoff is missing. iOS is
+Use the shared reviewer account published in the [root README](../../../../README.md#shared-test-account)
+— the same one named elsewhere in this runbook. It is view-only in both products. No backend key is
+published with it; the Supabase publishable key is not committed to this repository. iOS is
 explicitly out of scope because a distributable device build requires a Mac and a paid Apple
 Developer account.
 

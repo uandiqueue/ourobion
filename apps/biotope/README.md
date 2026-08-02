@@ -19,8 +19,10 @@ Android Studio, Docker, or a local backend.
 1. Download the APK on an Android phone.
 2. If prompted, allow the browser or file manager to **Install unknown apps**.
 3. Open the APK and complete the Android install prompt.
-4. Sign in with the credentials supplied in the private reviewer/submission handoff. Credentials are
-   intentionally not stored in this public repository; ask the project owner if the handoff is absent.
+4. Sign in with the shared reviewer account published in the
+   [root README](../../README.md#shared-test-account). It is view-only in both products, so nothing
+   one reviewer does changes what the next one sees. No backend key is published with it — the
+   Supabase publishable key is not committed to this repository.
 
 This hackathon artifact is debug-signed for sideloading, not Play Store publishing. Every demo APK
 must be built on the same Windows host because its debug keystore is machine-specific. If a build from
