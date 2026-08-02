@@ -82,11 +82,13 @@ class ArchiveTab extends StatefulWidget {
     this.seriesService,
     this.userId,
     this.nowUtc,
+    this.active = true,
   });
 
   final InsightService? service;
   final MetricSeriesService? seriesService;
   final String? userId;
+  final bool active;
 
   /// Same seam as [InsightService]'s injectable clock. Only the remove
   /// confirmation reads it, to tell an in-window card from an expired one.
@@ -112,6 +114,14 @@ class _ArchiveTabState extends State<ArchiveTab> {
         widget.seriesService ?? MetricSeriesService(Supabase.instance.client);
     _userId = widget.userId ?? Supabase.instance.client.auth.currentUser!.id;
     _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant ArchiveTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) {
+      _load();
+    }
   }
 
   /// Never let a failed read leave this tab on a spinner forever — the exact

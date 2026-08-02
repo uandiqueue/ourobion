@@ -1,5 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Required in the main manifest so release APKs can reach Supabase. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <!-- Health Connect read permissions for M3 wearable signals -->
     <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
     <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE"/>
