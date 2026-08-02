@@ -1,0 +1,28 @@
+/* Ourobion brand colours */
+:root{
+  /* Light (primary) */
+  --ouro-bg: #FFFFFF;
+  --ouro-ring: #083E49;
+  --ouro-coil-1: #0A5160;
+  --ouro-coil-2: #11788B;
+  --ouro-coil-3: #1C9FB0;
+  --ouro-coil-4: #2D93C6;
+  --ouro-coil-5: #2E66B2;
+  --ouro-nucleus-core: #0A5160;
+  --ouro-nucleus-envelope: #1C9FB0;
+  --ouro-wordmark: #0C5D6E;
+}
+
+.ouro-dark,[data-theme="dark"]{
+  /* Dark (inverted) */
+  --ouro-bg: #0B1D24;
+  --ouro-ring: #2A6B78;
+  --ouro-coil-1: #2BC4BE;
+  --ouro-coil-2: #2FB7D6;
+  --ouro-coil-3: #3FA2E6;
+  --ouro-coil-4: #5E8DF0;
+  --ouro-coil-5: #7C86F2;
+  --ouro-nucleus-core: #2BC4BE;
+  --ouro-nucleus-envelope: #3FA2E6;
+  --ouro-wordmark: #2BC4BE;
+}
