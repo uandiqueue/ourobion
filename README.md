@@ -135,31 +135,35 @@ adjudicated ground truth**, so it measures disagreement, not accuracy.
 
 ## Install Biotope on Android
 
-Reviewers can install the universal
+**You need an Android phone or tablet running Android 8.0 or newer.** An APK is an Android package —
+it does not run on Windows, macOS or Linux. There is no desktop or web build of Biotope, and iOS is
+out of scope (it needs a Mac and a paid Apple Developer account).
+
+The quickest route is to open this link **on the phone itself**:
+
 [`ourobion-biotope-demo.apk`](https://github.com/uandiqueue/ourobion/releases/download/biotope-demo-v1/ourobion-biotope-demo.apk)
-without Flutter, Android Studio, or a local backend. Android may ask the browser or file manager for
-permission to **Install unknown apps** before opening the download.
 
-The APK connects to Ourobion's hosted demo Supabase project — sign in with the
-[shared test account](#shared-test-account) below.
+Android will ask the browser or file manager for permission to **Install unknown apps** before it
+opens the download. No Flutter, Android Studio, or local backend is required — the build is universal
+(every CPU architecture in one file) and connects to Ourobion's hosted demo Supabase project. Sign in
+with the [shared test account](#shared-test-account) below.
 
-Built from `c9ea97b`, and verifiable before you install it:
+**Optional integrity check.** Only relevant if you download to a computer first and copy the file
+across. The release asset was built from `c9ea97b`:
 
 ```text
 SHA-256: 861824d1ecd6be50faf10f4aa21b10fe4a5e5ecae358ac731695894bd52cbd29
 ```
 
 ```bash
-# macOS / Linux
-shasum -a 256 ourobion-biotope-demo.apk
-# Windows PowerShell
-Get-FileHash ourobion-biotope-demo.apk -Algorithm SHA256
+# run on the computer holding the downloaded file, not on the phone
+shasum -a 256 ourobion-biotope-demo.apk              # macOS / Linux
+Get-FileHash ourobion-biotope-demo.apk -Algorithm SHA256   # Windows PowerShell
 ```
 
 This hackathon APK is debug-signed for sideloading and is **not** a Play Store artifact. Demo APK
 updates must be built on the same Windows host; if Android reports an incompatible signature,
-uninstall the older demo first (which deletes its local app data) and then install the new APK. iOS
-distribution is out of scope because it requires a Mac and a paid Apple Developer account. The
+uninstall the older demo first (which deletes its local app data) and then install the new APK. The
 source-build and release process is in [`apps/biotope/README.md`](apps/biotope/README.md).
 
 ## Open Nao in a browser
