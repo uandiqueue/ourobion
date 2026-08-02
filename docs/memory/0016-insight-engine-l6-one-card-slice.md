@@ -5,7 +5,7 @@ summary: The insight engine's L6 one-card end-to-end slice is proven on the loca
 type: memory
 status: accepted
 decided: 2026-07-16
-updated: 2026-07-16
+updated: 2026-08-02
 ---
 
 # 0016 — Insight engine L6 one-card slice shipped (interim-verifier caveat)

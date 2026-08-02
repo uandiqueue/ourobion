@@ -5,9 +5,16 @@ physiology, daily behaviour, and environmental context so people can understand 
 health, hydration, vector exposure, and ecological wellbeing — in under 30 seconds of logging a day,
 and **without ever making a diagnostic claim**.
 
-> This README is the **human front door** — what ourobion is, and where to find how to run it, the
-> decisions behind it, and the design. AI coding agents have their own front door:
-> **[`AGENTS.md`](AGENTS.md)**.
+> This README is the **human front door** — what ourobion is, and how to run it. AI coding agents
+> have their own front door: **[`AGENTS.md`](AGENTS.md)**.
+
+**Start here, depending on what you want:**
+
+| | |
+|---|---|
+| 📖 **What Ourobion is and why it exists** — the problem that produced it, who it is for, what biotope and nao each are and why they are separate, and what the logo encodes | [`docs/project-overview.md`](docs/project-overview.md) |
+| 🛠 **How we build** — the development cycle, machine-enforced context, executable cross-language contracts, the two-reviewer rule, and how concurrent AI agents coordinate | [`docs/engineering-practice.md`](docs/engineering-practice.md) |
+| 📊 **What actually exists, measured** — tests, schema, corpus and brain-pipeline output, every figure from executed commands | [`docs/implemented/system-truth.md`](docs/implemented/system-truth.md) |
 
 ---
 

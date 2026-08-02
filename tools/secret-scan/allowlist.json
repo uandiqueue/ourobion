@@ -39,8 +39,8 @@
     },
     {
       "ruleId": "generic-api-key",
-      "path": "docs/implemented/nao/nao-app-design.md",
-      "fingerprint": "1a69650eda51a6521c9da35785ca6b029c2479ce:docs/implemented/nao/nao-app-design.md:generic-api-key:198",
+      "path": "docs/nao/nao-app-design.md",
+      "fingerprint": "1a69650eda51a6521c9da35785ca6b029c2479ce:docs/nao/nao-app-design.md:generic-api-key:198",
       "justification": "Illustrative placeholder token inside a design document's example payload; historical commit. docs/nao is documentation, not runtime configuration, and the value is not a live credential. Re-review at expiry.",
       "approvedBy": "Jayden via issue #166",
       "addedOn": "2026-07-28",

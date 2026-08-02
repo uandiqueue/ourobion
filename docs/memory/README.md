@@ -4,7 +4,7 @@ summary: Index of the one-fact-per-file durable memory notes (architectural deci
 type: index
 scope: repo
 status: canonical
-updated: 2026-07-13
+updated: 2026-08-02
 ---
 # docs/memory — durable, cross-device memory
 

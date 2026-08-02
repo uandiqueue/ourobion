@@ -22,7 +22,7 @@ app + Supabase backend that connects human physiology, daily behaviour, and envi
 surface **descriptive** patterns in gut health, hydration, and vector exposure. It is
 **non-diagnostic by construction**.
 
-- **Full product brief, principles, scope, module map, expansion hints:** [`docs/shared/project-context.md`](docs/shared/project-context.md)
+- **Full product brief, principles, scope, module map, expansion hints:** [`docs/implemented/project-context.md`](docs/implemented/project-context.md)
 - **Non-negotiable product principles** (non-diagnostic always; 30-second logging; graceful
   degradation; PDPA; privacy-safe community) live there — read them before touching user-facing copy
   or data isolation.
@@ -39,13 +39,13 @@ Flutter/Dart or Node/TypeScript, exactly as before; no other language enters wit
 task-fit reason recorded as a decision. This supersedes the former blanket "no Python in this repo"
 rule and the model-training plans' requirement that training code live only in a separate
 `ourobion-model-lab` repository — both superseded by Jayden's explicit decision (see
-[`docs/temp/model-training/code-build-decisions.md`](docs/temp/model-training/code-build-decisions.md)
+[`docs/development/model-training/code-build-decisions.md`](docs/development/model-training/code-build-decisions.md)
 D1). **It does not weaken any other boundary:** data-isolation, licensing, security, scientific,
 non-serving, and two-tier-truth rules are unchanged. `model-training/` code may only read fixtures and
 manifests it owns, may never be imported by `apps/`, `supabase/`, `shared/`, or `tools/brain-ingest`,
 and never integrates a trained model into product serving — see
-[`docs/temp/model-training/README.md`](docs/temp/model-training/README.md) and
-[`docs/temp/model-training/model-roster.md`](docs/temp/model-training/model-roster.md) §8 for the
+[`docs/development/model-training/README.md`](docs/development/model-training/README.md) and
+[`docs/development/model-training/model-roster.md`](docs/development/model-training/model-roster.md) §8 for the
 standing boundaries.
 
 ## 2. Core principle — TWO-TIER TRUTH (read this first)
@@ -65,7 +65,7 @@ ourobion has a source-of-truth tier and a derived tier. Treat them differently:
   - **the brain's edges** (`RelationshipClaim` + `EdgeVerification`) — synthesised from papers by one
     LLM and verified by a second; rebuilt by re-running the ingestion pipeline. The *contract*
     (`shared/brain/`) is truth; the *instances* are the projection. See
-    [`docs/nao/brain-synthesis-design.md`](docs/nao/brain-synthesis-design.md) and
+    [`docs/implemented/nao/brain-synthesis-design.md`](docs/implemented/nao/brain-synthesis-design.md) and
     [`docs/memory/0012-brain-adversarial-edge-verification.md`](docs/memory/0012-brain-adversarial-edge-verification.md).
 
 **Rule:** to change a derived value, fix the **input** (a raw row or the edge-function logic) and
@@ -80,15 +80,15 @@ ourobion is organized as modules **M1–M7** with a strict dependency order. The
 module graph and the enforced interface rules are the boundary reference** (we deliberately do *not*
 auto-generate a structural import graph yet — see §8 and [`docs/graph/README.md`](docs/graph/README.md)):
 
-- **Module dependency graph + data flow + table overview + interface rules:** [`docs/biotope/architecture-context.md`](docs/biotope/architecture-context.md)
-- **Repository directory layout + `shared/` vs `apps/biotope/` rule + env files:** [`docs/shared/structure-context.md`](docs/shared/structure-context.md)
-- **The shared contract types (the connective tissue every boundary crosses):** [`shared/SHARED-CONTEXT.md`](shared/SHARED-CONTEXT.md) — incl. the metrics registry (`shared/metrics/`) and the brain relationship contract (`shared/brain/`, design in [`docs/nao/brain-synthesis-design.md`](docs/nao/brain-synthesis-design.md))
-- **UI design system:** [`docs/biotope/ui/ui-design-context.md`](docs/biotope/ui/ui-design-context.md)
-- **Per-feature design docs:** the **nao** brain surface in [`docs/nao/`](docs/nao/) — product design [`nao-app-design.md`](docs/nao/nao-app-design.md), plus [`brain-synthesis-design.md`](docs/nao/brain-synthesis-design.md) + [`brain-ingestion-design.md`](docs/nao/brain-ingestion-design.md) + [`brain-support-models-design.md`](docs/nao/brain-support-models-design.md); the **brain pipeline + support-model decision** in [memory 0013](docs/memory/0013-brain-pipeline-and-support-models-decision.md); the **biotope** app in [`docs/biotope/`](docs/biotope/); the **authoritative insight-engine architecture** (spans both apps, the promoted doc-12 design) in [`docs/shared/insight-engine-architecture.md`](docs/shared/insight-engine-architecture.md) with granular ADRs in [`docs/shared/decisions/`](docs/shared/decisions/) and the runtime seam in [`docs/shared/biotope-nao-link.md`](docs/shared/biotope-nao-link.md).
+- **Module dependency graph + data flow + table overview + interface rules:** [`docs/implemented/biotope/architecture-context.md`](docs/implemented/biotope/architecture-context.md)
+- **Repository directory layout + `shared/` vs `apps/biotope/` rule + env files:** [`docs/development/structure-context.md`](docs/development/structure-context.md)
+- **The shared contract types (the connective tissue every boundary crosses):** [`shared/SHARED-CONTEXT.md`](shared/SHARED-CONTEXT.md) — incl. the metrics registry (`shared/metrics/`) and the brain relationship contract (`shared/brain/`, design in [`docs/implemented/nao/brain-synthesis-design.md`](docs/implemented/nao/brain-synthesis-design.md))
+- **UI design system:** [`docs/implemented/biotope/ui-design-context.md`](docs/implemented/biotope/ui-design-context.md)
+- **Per-feature design docs:** the **nao** brain surface in [`docs/implemented/nao/`](docs/implemented/nao/) — product design [`nao-app-design.md`](docs/implemented/nao/nao-app-design.md), plus [`brain-synthesis-design.md`](docs/implemented/nao/brain-synthesis-design.md) + [`brain-ingestion-design.md`](docs/implemented/nao/brain-ingestion-design.md) + [`brain-support-models-design.md`](docs/implemented/nao/brain-support-models-design.md); the **brain pipeline + support-model decision** in [memory 0013](docs/memory/0013-brain-pipeline-and-support-models-decision.md); the **biotope** app in [`docs/implemented/biotope/`](docs/implemented/biotope/); the **authoritative insight-engine architecture** (spans both apps, the promoted doc-12 design) in [`docs/implemented/insight-engine-architecture.md`](docs/implemented/insight-engine-architecture.md) with granular ADRs in [`docs/development/decisions/`](docs/development/decisions/) and the runtime seam in [`docs/implemented/biotope-nao-link.md`](docs/implemented/biotope-nao-link.md).
 
-**The doc map:** [`docs/INDEX.md`](docs/INDEX.md) lists every active doc with a one-line summary — **read it first to route** to the right doc. **What to build next** is [`docs/shared/next-steps.md`](docs/shared/next-steps.md). Cross-cutting / shared ground truth lives in [`docs/shared/`](docs/shared/); app-scoped truth in [`docs/nao/`](docs/nao/) and [`docs/biotope/`](docs/biotope/). Work-in-progress drafts live in [`docs/temp/`](docs/temp/) (promotable); **frozen/superseded material lives in `docs/archive/` — never build from it** (excluded from agent crawl via the root `.aiignore`; links flow archive→active only, never the reverse).
-- **AI routing table, truth hierarchy & PR review checklist:** [`docs/shared/agent-protocol.md`](docs/shared/agent-protocol.md)
-- **The human dev cycle (Issue → … → Merge):** [`docs/shared/dev-workflow.md`](docs/shared/dev-workflow.md)
+**The doc map:** [`docs/INDEX.md`](docs/INDEX.md) lists every active doc with a one-line summary — **read it first to route** to the right doc. **What to build next** is [`docs/development/next-steps.md`](docs/development/next-steps.md). What the system actually **is** lives in [`docs/implemented/`](docs/implemented/) — cross-cutting ground truth at the top, app-scoped truth in [`docs/implemented/nao/`](docs/implemented/nao/) and [`docs/implemented/biotope/`](docs/implemented/biotope/), and the measured state in [`docs/implemented/system-truth.md`](docs/implemented/system-truth.md). Roadmap, process, ADRs and in-flight run material live in [`docs/development/`](docs/development/); hackathon material in [`docs/hackathon/the_launchpad_challenge/`](docs/hackathon/the_launchpad_challenge/); **frozen/superseded material lives in `docs/archive/` — never build from it** (excluded from agent crawl via the root `.aiignore`; links flow archive→active only, never the reverse).
+- **AI routing table, truth hierarchy & PR review checklist:** [`docs/development/agent-protocol.md`](docs/development/agent-protocol.md)
+- **The human dev cycle (Issue → … → Merge):** [`docs/development/dev-workflow.md`](docs/development/dev-workflow.md)
 
 **Boundary rules that matter most** (full set in architecture-context §"Module Interface Rules"):
 
@@ -106,7 +106,7 @@ ourobion has **two toolchains for product code**: **Flutter/Dart** (biotope, in 
 **Node + Supabase CLI** (nao, the backend, and `tools/`). A third, narrowly scoped toolchain — **Python
 ≥3.10, isolated to `model-training/`** — exists for the five planned custom-model training/evaluation/
 export pipelines (see §1 and
-[`docs/temp/model-training/README.md`](docs/temp/model-training/README.md)); it is never installed into,
+[`docs/development/model-training/README.md`](docs/development/model-training/README.md)); it is never installed into,
 or imported by, `apps/`, `supabase/`, `shared/`, or `tools/`.
 
 > **Windows-native dev (no WSL):** `scripts/setup.ps1` installs the whole toolchain **bounded to the
@@ -185,22 +185,25 @@ git config core.hooksPath .githooks
 
 ## 5. Conventions
 
-- **Commits:** Conventional Commits — full spec in [`docs/shared/commit-conventions.md`](docs/shared/commit-conventions.md).
+- **Commits:** Conventional Commits — full spec in [`docs/development/commit-conventions.md`](docs/development/commit-conventions.md).
   Types: `feat` / `fix` / `docs` / `style` / `refactor` / `perf` / `test` / `build` / `ci` / `chore` /
   `revert`. **Scope = module or area:** `m1`/`m2`/`m3`/`m5a`/`m5b`/`m6`, or `db`/`ui`/`docs`/`auth`.
   (Recent history uses `m3`, `m5a`, `db`, `docs`.) Keep commits `flutter analyze`-green.
 - **Branches:** `feat/m<n>-<area>/<slug>` for module work (e.g. `feat/m3-wearables/healthkit-read`),
   or `fix/…`, `docs/…`, `ci/…`, `refactor/…`. **One short-lived branch per session, cut from
-  `dev-phase2-run4`, inside its own worktree (§7).** There are **no personal `dev-<name>` lines** — every
+  `main`, inside its own worktree (§7).** There are **no personal `dev-<name>` lines** — every
   session is its own session branch that lives only until its PR merges. Refine the name **only before
   the first push**.
 - **`gh` for everything GitHub sees** (issues, PRs); **`git` only for local work `gh` can't do**
   (worktree, staging, commits, local branch rename). Never push a branch or open/merge a PR with raw
   `git` when a `gh` command exists.
-- **PRs are the integration seam.** `dev-phase2-run4` is the **single working / integration line** — every
-  session branch PRs into **`dev-phase2-run4`** at session end, **never directly into `main`**. **Only
-  `dev-phase2-run4` PRs into `main`**, at phase/milestone completion. `main` stays always-deployable; tests
-  required before any merge to `main`.
+- **PRs are the integration seam.** **`main` is the single integration line** — every session branch
+  PRs into **`main`** at session end. `main` stays always-deployable; tests required before any merge.
+  > Historical note: through Run 4 the integration line was `dev-phase2-run4`, and session branches were
+  > forbidden from targeting `main` directly. PR #360 ("release: promote Run 4 to main", 2026-08-01)
+  > merged that branch into `main`, which is now 0 commits behind it. Older session logs and run docs
+  > describing the two-tier `session → dev-phase2-run4 → main` flow are records of what was true then;
+  > do not follow them.
 - **Non-diagnostic language** — every user-facing string must use observational phrasing and pass the
   copy rules in `shared/constants/copy_guidelines.{ts,dart}`. See SHARED-CONTEXT "Non-Diagnostic Copy
   Rules" and [`docs/memory/0003-non-diagnostic-copy.md`](docs/memory/0003-non-diagnostic-copy.md).
@@ -211,7 +214,7 @@ The repo is in **Phase 2** — turning the shipped MVP self-report loop (M1 auth
 baselines, M5b insights, M6 engagement) into the real product: Android passive health (M3), a
 data-driven insights engine (M5b), environmental context (M4), and the first community slice (M7).
 **Current scope, sequencing, and the Phase 2 → Phase 3 gate live in
-[`docs/shared/phase-2-plan.md`](docs/shared/phase-2-plan.md)** (the plan authority); per-session status lives in
+[`docs/development/phase-2-plan.md`](docs/development/phase-2-plan.md)** (the plan authority); per-session status lives in
 `docs/sessions/`.
 
 ### Team workstreams (ownership)
@@ -228,8 +231,8 @@ Active gotchas captured as durable facts: HRV SDNN is iOS-only
 ## 7. Agent collaboration protocol (MANDATORY)
 
 > The detailed **AI routing table, truth hierarchy, and PR review checklist** live in
-> [`docs/shared/agent-protocol.md`](docs/shared/agent-protocol.md); the **human-facing dev cycle** is in
-> [`docs/shared/dev-workflow.md`](docs/shared/dev-workflow.md). This section is the authoritative summary they defer to.
+> [`docs/development/agent-protocol.md`](docs/development/agent-protocol.md); the **human-facing dev cycle** is in
+> [`docs/development/dev-workflow.md`](docs/development/dev-workflow.md). This section is the authoritative summary they defer to.
 
 ### Session start
 1. Run `node tools/context_sync.mjs --session-start` (the Claude Code SessionStart hook in
@@ -245,14 +248,14 @@ GitHub issue, branch, and **git worktree** (a separate working directory, not ju
    ```bash
    gh issue create --title "<session goal>"        # note the issue number, e.g. 42
    ```
-2. **Create the isolated worktree + branch (cut from `dev-phase2-run4`)**, then work there:
+2. **Create the isolated worktree + branch (cut from `main`)**, then work there:
    ```bash
-   node tools/setup_agent_worktree.mjs --branch feat/m<n>-<area>/<slug> --base dev-phase2-run4 --path <absolute-path-outside-repo>
+   node tools/setup_agent_worktree.mjs --branch feat/m<n>-<area>/<slug> --base main --path <absolute-path-outside-repo>
    cd <worktree-path>      # do ALL of this session's work inside this worktree
    ```
-   The branch is always cut from `dev-phase2-run4` (pass `--base dev-phase2-run4` explicitly — the
+   The branch is always cut from `main` (pass `--base main` explicitly — the
    tool's own default base is still the stale `dev-phase2`; see `tools/setup_agent_worktree.mjs`) and
-   is short-lived — it exists only until its PR merges into `dev-phase2-run4`. There are no
+   is short-lived — it exists only until its PR merges into `main`. There are no
    long-running personal branches.
 3. **Refine names only before the first push.** Rename the issue with `gh issue edit <n> --title`
    and the branch with `git branch -m <old> <new>`. After a PR is open the branch is hard to rename.
@@ -262,13 +265,13 @@ GitHub issue, branch, and **git worktree** (a separate working directory, not ju
    ```bash
    gh issue comment <n> --body "<what changed / decided / left>"
    ```
-2. **Open the PR with `gh`, linking the issue — base it on `dev-phase2-run4`, never `main`:**
+2. **Open the PR with `gh`, linking the issue — base it on `main`:**
    ```bash
-   gh pr create --base dev-phase2-run4 --title "..." --body "<summary>
+   gh pr create --base main --title "..." --body "<summary>
 
    Closes #<n>"
    ```
-   (Only `dev-phase2-run4 → main` PRs target `main`, at phase/milestone completion.)
+   (Through Run 4 this was `--base dev-phase2-run4`; that line merged into `main` via PR #360.)
    The session log (below) + the issue summary are the durable record of what shipped.
 
 ### Session log — `docs/sessions/` (REQUIRED — enforced)
@@ -286,13 +289,13 @@ deltas — `memory: none`, or `memory: added 0016; superseded 0004`. The pre-pus
 unless a `docs/sessions/` entry is added/changed in the push **and** it carries a `memory:` line
 (check h); if the push changes memory/decisions but every touched log says `memory: none`, it fails.
 
-### Durable memory — `docs/memory/` and decisions — `docs/shared/decisions/` (ENFORCED)
+### Durable memory — `docs/memory/` and decisions — `docs/development/decisions/` (ENFORCED)
 Two numbered, one-fact-per-file record stores (memory = durable facts/gotchas; decisions = cross-app
 architecture ADRs), `NNNN-slug.md`, each opening with YAML front-matter
 (`id/title/summary/status/updated`; `status: accepted|superseded`, and `superseded_by` when superseded).
 **Before pushing, run `node tools/context_sync.mjs --fix-index`** — it regenerates the GENERATED
 sections of [`docs/INDEX.md`](docs/INDEX.md), [`docs/memory/README.md`](docs/memory/README.md), and
-[`docs/shared/decisions/README.md`](docs/shared/decisions/README.md) from that front-matter. `--check`
+[`docs/development/decisions/README.md`](docs/development/decisions/README.md) from that front-matter. `--check`
 (pre-push + CI) then **fails** on: a dangling/unindexed link, invalid/missing front-matter, a
 `superseded` record without a resolving `superseded_by`, a **stale** generated index, a modified record
 that didn't bump `updated:`, an edited **accepted** decision body (supersede instead), any active doc
@@ -343,7 +346,7 @@ graph for agent context, and enforce what we keep:
 
 - **Structural import graph — DEFERRED.** ourobion is Dart + TypeScript + SQL, so a single import-graph
   tool is awkward. The **curated** module graph + interface rules in
-  [`docs/biotope/architecture-context.md`](docs/biotope/architecture-context.md) are the boundary reference today.
+  [`docs/implemented/biotope/architecture-context.md`](docs/implemented/biotope/architecture-context.md) are the boundary reference today.
   [`docs/graph/README.md`](docs/graph/README.md) records exactly how to add a real generated graph
   later (and that, when added, it is a rebuildable projection — never hand-edited).
 - **Semantic context graph (graphify).** [`graphify`](https://github.com/safishamsi/graphify) indexes

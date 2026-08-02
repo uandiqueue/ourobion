@@ -5,7 +5,7 @@ summary: Insight rules move from hardcoded TS to git-tracked JSON blueprints (tr
 type: memory
 status: accepted
 decided: 2026-06-09
-updated: 2026-07-13
+updated: 2026-08-02
 ---
 
 # 0007 — Analysis rules become data, via a two-tier blueprint→table pattern

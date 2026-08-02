@@ -5,7 +5,7 @@ summary: Verified against primary sources — BioRED relations are non-direction
 type: memory
 status: accepted
 decided: 2026-07-26
-updated: 2026-07-26
+updated: 2026-08-02
 ---
 
 # 0017 — Three support-model dataset assumptions are wrong
