@@ -17,7 +17,9 @@ Health domain is already implemented.
 | You want to… | Start here |
 |---|---|
 | **Judge the Launchpad 2026 submission** | [`docs/hackathon/the_launchpad_challenge/submission/`](docs/hackathon/the_launchpad_challenge/submission/) — write-up, appendix, references |
+| **Install Biotope on Android** | [Install Biotope on Android](#install-biotope-on-android) below — sideloadable demo APK, no toolchain needed |
 | **Sign in and look around** | [Shared test account](#shared-test-account) below — `test@ourobion.com` / `test123`, one credential for both apps |
+| See the project at a glance | [www.ourobion.com](https://www.ourobion.com) — the showcase site, or [`apps/site/`](apps/site/) for its source |
 | Take a guided reviewer route through the repository | [`docs/repository-guide.md`](docs/repository-guide.md) |
 | Understand the product, origin, and two-system design | [`docs/project-overview.md`](docs/project-overview.md) |
 | Review what is actually implemented and measured | [`docs/implemented/system-truth.md`](docs/implemented/system-truth.md) |
@@ -124,11 +126,27 @@ committed; only manifests, hashes and evaluation artifacts are tracked here.
 Both models were also compared against Claude Haiku 4.5 on 96 real papers. That comparison has **no
 adjudicated ground truth**, so it measures disagreement, not accuracy.
 
+## Install Biotope on Android
+
+Reviewers can install the universal
+[`ourobion-biotope-demo.apk`](https://github.com/uandiqueue/ourobion/releases/download/biotope-demo-v1/ourobion-biotope-demo.apk)
+without Flutter, Android Studio, or a local backend. Android may ask the browser or file manager for
+permission to **Install unknown apps** before opening the download.
+
+The APK connects to Ourobion's hosted demo Supabase project — sign in with the
+[shared test account](#shared-test-account) below.
+
+This hackathon APK is debug-signed for sideloading and is **not** a Play Store artifact. Demo APK
+updates must be built on the same Windows host; if Android reports an incompatible signature,
+uninstall the older demo first (which deletes its local app data) and then install the new APK. iOS
+distribution is out of scope because it requires a Mac and a paid Apple Developer account. The
+source-build and release process is in [`apps/biotope/README.md`](apps/biotope/README.md).
+
 ## Run from source
 
-There is **no downloadable APK release yet**. Biotope currently runs from source on an Android
-emulator or physical device. Nao runs locally with Node.js. The app-specific READMEs remain the
-authority for prerequisites, environment variables, troubleshooting, verification, and deployment.
+Biotope also runs from source on an Android emulator or physical device, and Nao runs locally with
+Node.js. The app-specific READMEs remain the authority for prerequisites, environment variables,
+troubleshooting, verification, and deployment.
 
 ### Shared test account
 

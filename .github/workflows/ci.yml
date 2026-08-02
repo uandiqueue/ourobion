@@ -48,6 +48,9 @@ jobs:
       - name: Context check
         run: node tools/context_sync.mjs --check
 
+      - name: Reviewer APK release contract
+        run: node --test scripts/tests/build-demo-apk-regression.test.mjs
+
       - name: Human graph view — renderer tests and single-view invariant
         run: |
           node --test tools/graph-view/tests/*.test.mjs

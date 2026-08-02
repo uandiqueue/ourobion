@@ -9,6 +9,45 @@ This README is the **how-to-run home** for biotope; product/architecture/UI rati
 
 ---
 
+## Reviewer APK (Android)
+
+Download the universal
+[`ourobion-biotope-demo.apk`](https://github.com/uandiqueue/ourobion/releases/download/biotope-demo-v1/ourobion-biotope-demo.apk).
+It is self-contained and connects to the hosted demo Supabase project; reviewers do not need Flutter,
+Android Studio, Docker, or a local backend.
+
+1. Download the APK on an Android phone.
+2. If prompted, allow the browser or file manager to **Install unknown apps**.
+3. Open the APK and complete the Android install prompt.
+4. Sign in with the credentials supplied in the private reviewer/submission handoff. Credentials are
+   intentionally not stored in this public repository; ask the project owner if the handoff is absent.
+
+This hackathon artifact is debug-signed for sideloading, not Play Store publishing. Every demo APK
+must be built on the same Windows host because its debug keystore is machine-specific. If a build from
+another host must be installed, first uninstall the older demo (which deletes its local app data).
+iOS distribution is out of scope: building and installing it requires a Mac and a paid Apple
+Developer account.
+
+### Maintainer release build
+
+The release script refuses accidental debug signing and refuses any backend other than the approved
+hosted demo project. First copy the approved public-only `apps/biotope/.env.public` into the build
+worktree, then run:
+
+```powershell
+# If this worktree is not beside the bounded toolchain, point to the existing one:
+$env:BIOTOPE_TOOLCHAIN = 'C:\path\to\biotope-toolchain'
+.\scripts\build-demo-apk.ps1 -PreflightOnly -AcceptDebugSigning
+.\scripts\build-demo-apk.ps1 -AcceptDebugSigning
+```
+
+Run the full build only from a clean, committed, reviewed checkout; it refuses a dirty Git tree. The
+second command builds one universal `app-release.apk`, re-opens it to verify the embedded hosted
+config, verifies its Android signature, and prints its byte size, SHA-256, and source commit. Do not
+use `--split-per-abi` for the reviewer artifact.
+
+---
+
 ## Local config (env)
 
 The app loads `apps/biotope/.env.public` via `flutter_dotenv`. It is **bundled as public client

@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ourobion — a health app that grew its own research department</title>
+<meta name="description" content="Ourobion is a One Health personal ecological health monitor for ASEAN. One AI proposes a health relationship from the literature; a second AI, from a different company, must independently prove it before anyone sees it.">
+<link rel="icon" href="assets/favicon/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/colors.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav">
+  <a class="nav__brand" href="#top">
+    <img src="assets/logo/ourobion-mark-dark.svg" alt="" class="nav__mark" data-swap-mark>
+    <span>Ourobion</span>
+  </a>
+  <nav class="nav__links">
+    <a href="#problem">Problem</a>
+    <a href="#brain">The brain</a>
+    <a href="#evidence">Evidence</a>
+    <a href="#products">Products</a>
+    <a href="#limits">Limits</a>
+  </nav>
+  <button class="theme" type="button" aria-label="Toggle colour theme" data-theme-toggle>
+    <span data-theme-icon>☾</span>
+  </button>
+</header>
+
+<main id="main">
+
+<!-- ───────────────────────────── HERO ───────────────────────────── -->
+<section class="hero" id="top">
+  <canvas class="hero__canvas" aria-hidden="true"></canvas>
+  <div class="hero__inner">
+    <p class="eyebrow">One Health · personal ecological health monitor · ASEAN</p>
+    <h1 class="hero__title">
+      The most useful thing<br>our system does is <em>refuse</em>.
+    </h1>
+    <p class="hero__lede">
+      Health apps collect well and explain badly. Ourobion reads the scientific literature for you —
+      then makes a second AI, from a different company, try to prove the finding wrong before it ever
+      reaches a person.
+    </p>
+    <div class="hero__cta">
+      <a class="btn btn--primary" href="#brain">How it works</a>
+      <a class="btn" href="https://github.com/uandiqueue/ourobion" target="_blank" rel="noopener">Repository ↗</a>
+    </div>
+    <p class="hero__note">Non-diagnostic by construction. Not a medical device.</p>
+  </div>
+  <div class="hero__scroll" aria-hidden="true"><span></span></div>
+</section>
+
+<!-- ───────────────────────────── PROBLEM ───────────────────────────── -->
+<section class="band" id="problem">
+  <div class="wrap">
+    <p class="kicker">The problem</p>
+    <h2>After days of logging, people are shown their own numbers again.</h2>
+    <div class="cols">
+      <div class="col">
+        <p>
+          Ourobion began with signals most apps overlook — gut and urinary health, hydration — and a
+          practical limit. A health company hires people to find patterns and read the research behind
+          them. We are three builders; unable to hire that department, we grew one.
+        </p>
+        <p>
+          The obvious fix — attach a language model, ask it <em>why</em> — is the most dangerous thing
+          you can put in front of a health claim. A model will state a correlation as a cause, reverse
+          which came first, and stretch a mouse study onto a person.
+        </p>
+      </div>
+      <div class="col">
+        <p class="pull">
+          The problem is not data or model access. It is grounding the interpretation, when the best
+          tool for it is the least trustworthy part of the system.
+        </p>
+        <ul class="ticks">
+          <li>Trusting the model assumes the answer.</li>
+          <li>Asking the same model “are you sure?” inherits its blind spots.</li>
+          <li>Retrieval with citations still lets it misread the paper it cited.</li>
+          <li>Manual grading — GRADE, Cochrane — is rigorous but costs experts months per question.</li>
+        </ul>
+      </div>
+    </div>
+    <blockquote class="criterion">
+      Before building, we fixed one criterion: <strong>no research claim reaches a person unless it
+      points back to its paper and survives review by a model that did not write it.</strong>
+    </blockquote>
+  </div>
+</section>
+
+<!-- ───────────────────────────── BRAIN ───────────────────────────── -->
+<section class="band band--alt" id="brain">
+  <div class="wrap">
+    <p class="kicker">The brain</p>
+    <h2>Borrowed from patient safety: stack imperfect checks so their holes don’t line up.</h2>
+    <p class="lede">
+      James Reason’s <strong>Swiss-cheese model</strong> describes how harm reaches the end of a complex
+      system — only when the gaps in successive layers happen to align. The goal is never a perfect
+      layer. It is layers that fail <em>differently</em>.
+    </p>
+
+    <div class="two">
+      <article class="card">
+        <h3>1 · Alternate deterministic and non-deterministic</h3>
+        <p>
+          A model can hallucinate a quotation that reads perfectly. A string comparison does not care
+          how plausible it reads — it simply reports that those words are not in that paper. Code
+          cannot be talked into agreeing; a model catches meaning no rule anticipates. Interleaving
+          them means an error must survive two unrelated kinds of scrutiny.
+        </p>
+      </article>
+      <article class="card">
+        <h3>2 · Decorrelate the models that remain</h3>
+        <p>
+          Two models from one company share training data, methods, and therefore blind spots — so
+          asking one to check the other is theatre. The drafting model (OpenAI <code>gpt-5</code>) and
+          the reviewing model (Agnes AI <code>agnes-2.5-flash</code>) must come from different vendors.
+          The router <strong>refuses to start</strong> otherwise. It fails closed.
+        </p>
+      </article>
+    </div>
+
+    <ol class="chain" aria-label="Pipeline layers">
+      <li class="chain__item chain__item--det"><span class="chain__n">1</span><span class="chain__t">Find &amp; retrieve open-access papers</span><span class="chain__k">deterministic</span></li>
+      <li class="chain__item"><span class="chain__n">2</span><span class="chain__t">Decide which questions are worth asking</span><span class="chain__k">model</span></li>
+      <li class="chain__item"><span class="chain__n">3</span><span class="chain__t">Draft a relationship between two health measures</span><span class="chain__k">model</span></li>
+      <li class="chain__item chain__item--det"><span class="chain__n">4</span><span class="chain__t">Verify every quoted span exists in the source</span><span class="chain__k">deterministic</span></li>
+      <li class="chain__item"><span class="chain__n">5</span><span class="chain__t">Independent review — fresh retrieval, prompted to refute</span><span class="chain__k">model · other vendor</span></li>
+      <li class="chain__item chain__item--det"><span class="chain__n">6</span><span class="chain__t">Serving gate — serve, qualify, or withhold</span><span class="chain__k">deterministic</span></li>
+      <li class="chain__item chain__item--det"><span class="chain__n">7</span><span class="chain__t">Non-diagnostic language check</span><span class="chain__k">deterministic</span></li>
+    </ol>
+    <p class="chain__note">Any layer can stop the run. A supporting verdict additionally requires the
+      reviewer to have retrieved its own evidence — without fresh grounding, the strongest verdict
+      available to it is <em>uncertain</em>.</p>
+  </div>
+</section>
+
+<!-- ───────────────────────────── EVIDENCE ───────────────────────────── -->
+<section class="band" id="evidence">
+  <div class="wrap">
+    <p class="kicker">Evidence</p>
+    <h2>Measured, not asserted.</h2>
+    <div class="stats">
+      <div class="stat"><b>21,824</b><span>records discovered</span></div>
+      <div class="stat"><b>14,726</b><span>open access</span></div>
+      <div class="stat"><b>911</b><span>with full text extracted</span></div>
+      <div class="stat"><b>11</b><span>relationships passing the serving gate</span></div>
+    </div>
+    <p class="snapshot">
+      <span class="snapshot__dot" aria-hidden="true"></span>
+      <strong>Snapshot, not a live feed.</strong> Measured 2&nbsp;August&nbsp;2026. This page is static
+      and reads no database — these figures were correct at that date and revision, and nowhere else.
+      Current counts require re-running the pipeline.
+    </p>
+    <div class="two">
+      <article class="card">
+        <h3>Two specialist models trained. Neither shipped.</h3>
+        <p>
+          <strong>Viceroy</strong> judges whether a sentence claims a cause or only a correlation. It
+          scored <b>0.866</b> where a keyword-matching baseline scored <b>0.507</b> (macro-F1).
+        </p>
+        <p>
+          <strong>Zebra</strong> judges whether evidence supports a claim. It scored <b>0.599</b>
+          against a bar of <b>0.70</b> written down <em>before</em> training — it failed, and the code
+          refuses to promote it.
+        </p>
+        <p class="muted">
+          Both disagreed substantially with a third model on 96 real papers. With no adjudication,
+          that measures disagreement, not correctness.
+        </p>
+      </article>
+      <article class="card card--quote">
+        <h3>Every relationship opens onto its receipts</h3>
+        <p>
+          In nao, any one shows the drafted claim, the quoted spans it rests on, the citation, the
+          reviewer’s verdict and confidence, and the decision that followed.
+        </p>
+        <p class="muted">“Verified” has a narrow meaning here: the claim is a faithful reading of the
+          paper it cites. It does not mean the wider literature agrees.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────── PRODUCTS ───────────────────────────── -->
+<section class="band band--alt" id="products">
+  <div class="wrap">
+    <p class="kicker">Two surfaces, one brain</p>
+    <h2>An app you live in, and a workbench that keeps it honest.</h2>
+    <div class="two">
+      <article class="product product--biotope" data-blend>
+        <img src="assets/logo/biotope-mark-dark.svg" alt="" class="product__mark" data-swap-biotope>
+        <div class="product__body">
+        <h3>biotope</h3>
+        <p class="product__role">The phone app — Flutter, Android</p>
+        <p>
+          Thirty-second daily logging of signals the category skips: digestion, hydration, energy.
+          Then descriptive insight cards about patterns in your own data — observational language
+          only, never a diagnosis.
+        </p>
+        <ul class="feat">
+          <li>Under 30 seconds of logging a day</li>
+          <li>Gut, urinary and hydration signals the category skips</li>
+          <li>Observational language only — never a diagnosis</li>
+          <li>Personal rows isolated from any community aggregate</li>
+        </ul>
+        <!-- APK: update this href when the new build is released. Also update apps/nao README + root README. -->
+        <a class="btn btn--sm" href="https://github.com/uandiqueue/ourobion/releases/download/biotope-demo-v1/ourobion-biotope-demo.apk" data-apk>Download demo APK ↓</a>
+        <p class="product__fine">Debug-signed sideload build for Android. Not a Play Store artifact.</p>
+        </div>
+      </article>
+      <article class="product product--nao" data-blend>
+        <img src="assets/logo/nao-mark-dark.svg" alt="" class="product__mark" data-swap-nao>
+        <div class="product__body">
+        <h3>nao</h3>
+        <p class="product__role">The research workbench — Next.js on Cloudflare</p>
+        <p>
+          Where the pipeline is inspectable: the corpus, each proposed relationship, the evidence
+          behind it, the independent reviewer’s verdict, and whether it was served, qualified, or
+          withheld.
+        </p>
+        <ul class="feat">
+          <li>The paper corpus, searchable</li>
+          <li>Every drafted relationship with its quoted spans and citation</li>
+          <li>The independent reviewer’s verdict and confidence</li>
+          <li>Served, qualified, or withheld — and why</li>
+        </ul>
+        <a class="btn btn--sm" href="https://nao.ourobion.com" target="_blank" rel="noopener">Open nao ↗</a>
+        <p class="product__fine">Sign in with the reviewer credentials below — viewer access, read-only.</p>
+        </div>
+      </article>
+    </div>
+    <p class="access">
+      Reviewer access — <code>test@ourobion.com</code> / <code>test123</code>, one credential, view-only
+      in both. In biotope it opens a seeded demonstration profile whose health logs are
+      <strong>synthetic</strong>; the cards and the relationships behind them are real, the health data
+      is not.
+    </p>
+  </div>
+</section>
+
+<!-- ───────────────────────────── LIMITS ───────────────────────────── -->
+<section class="band" id="limits">
+  <div class="wrap">
+    <p class="kicker">Future work</p>
+    <h2>Seven layers is where the chain stands — not where it ends.</h2>
+    <p class="lede">
+      A card can currently be served on the strength of a <strong>single paper</strong>. The gate asks
+      whether a claim is faithful to the paper it cites; it does not yet ask whether the field agrees.
+      <strong>Closing that gap is the roadmap.</strong> Four layers are planned, ordered by how soon
+      they are reachable — each one adds holes in a new place, which is the whole design.
+    </p>
+    <div class="next">
+      <div class="next__i"><h4>Sentence-level grounding</h4><p>Split papers into sections with stable sentence ids, so a quote is pinned to <em>this sentence</em> — making a stitched quotation detectable, not merely unlikely.</p></div>
+      <div class="next__i"><h4>Citation &amp; evidence chain</h4><p>Follow a paper’s own references to place a claim in a literature. Deterministic graph traversal — the substrate corroboration needs.</p></div>
+      <div class="next__i"><h4>Cross-paper agreement</h4><p>When several papers independently support the same relationship, that agreement becomes a reliability signal. Not built: the model-call volume exceeds our budget.</p></div>
+      <div class="next__i"><h4>A reliability score that gates</h4><p>Recombine the ranking signals into one interpretable score that can withhold again — without the failure mode that forced the change.</p></div>
+    </div>
+    <p class="goal">
+      <strong>The goal these build toward:</strong> a served relationship that is not merely faithful to
+      one paper, but corroborated across several — carrying a reliability score a person can read, and
+      a gate that can withhold on the strength of the wider literature rather than a single citation.
+    </p>
+  </div>
+</section>
+
+<!-- ───────────────────────────── TEAM ───────────────────────────── -->
+<section class="band band--alt" id="team">
+  <div class="wrap">
+    <p class="kicker">Built by three</p>
+    <h2>A side project among friends that had to grow a research department.</h2>
+    <div class="team">
+      <a class="member" href="https://www.linkedin.com/in/jia-jing-leong/" target="_blank" rel="noopener">
+        <b>Jayden</b><span>Project Lead &amp; Systems Architect</span>
+        <span class="member__li">LinkedIn ↗</span>
+      </a>
+      <a class="member" href="https://www.linkedin.com/in/alton-ng-8729a2367/" target="_blank" rel="noopener">
+        <b>Alton</b><span>Product Design &amp; Submission Lead</span>
+        <span class="member__li">LinkedIn ↗</span>
+      </a>
+      <a class="member" href="https://www.linkedin.com/in/leong-jia-zhe-84a133273/" target="_blank" rel="noopener">
+        <b>Janson</b><span>Development Enablement &amp; Technical Support</span>
+        <span class="member__li">LinkedIn ↗</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap foot__grid">
+    <div>
+      <img src="assets/logo/ourobion-lockup-dark.svg" alt="Ourobion" class="foot__lockup" data-swap-lockup>
+      <p class="foot__tag">An ouroboros drawn as a living cell, deliberately left open — the loop of
+        understanding is never finished.</p>
+    </div>
+    <div class="foot__links">
+      <a href="https://github.com/uandiqueue/ourobion" target="_blank" rel="noopener">Repository</a>
+      <a href="https://nao.ourobion.com" target="_blank" rel="noopener">nao</a>
+      <a href="https://github.com/uandiqueue/ourobion/blob/main/ATTRIBUTION.md" target="_blank" rel="noopener">Attribution</a>
+    </div>
+  </div>
+  <div class="wrap foot__legal">
+    <p>Ourobion is non-diagnostic by construction. It describes patterns in the available data; it does
+      not provide medical diagnosis or replace professional care.</p>
+    <p class="muted">© 2026 Ourobion · Jayden, Alton &amp; Janson</p>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -96,6 +96,7 @@ Commands:
                                                    appends claims.jsonl + blueprints.jsonl
   verify [--from-claims <path>] [--corpus <path>] [--edge <edgeId>]
          [--edges-dir <dir>] [--artifact-revision <id>] [--dry-run] [--triage-only]
+         [--push-r2]
          [--acceptance-authorization <file> --acceptance-run-id <id>]
                                                    the two acceptance flags are given TOGETHER and
                                                    carry an owner-issued authorization into the
@@ -117,6 +118,8 @@ Commands:
                                                    schema-enforced EdgeVerification; appends
                                                    <edges-dir>/verifications.jsonl + the raw provider
                                                    body to <edges-dir>/verification-raw.jsonl.
+                                                   --push-r2 additionally appends accepted
+                                                   verifications to R2 edges/verifications.jsonl.
                                                    --corpus <path>: JSONL of CorpusDoc lines the
                                                    verifier retrieves over (O15; corpus texts also
                                                    serve the quoteCheck for papers they cover);
@@ -642,6 +645,7 @@ async function runVerify(flags: Set<string>, options: Map<string, string>): Prom
     edgesDir,
     triageOnly,
     dryRun,
+    pushR2: flags.has('push-r2'),
     log,
     // #307 (d): present only when the operator supplied an owner-issued authorization. Absent, the
     // Agnes verifier is refused before dispatch — which is the guard working, not a bug.
