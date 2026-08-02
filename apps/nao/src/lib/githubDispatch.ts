@@ -3,7 +3,7 @@
  *
  * nao (a Cloudflare Worker) cannot run the ingestion CLI itself — it does
  * long-running network fetches + PDF parsing that would blow through any
- * Worker's execution-time ceiling (see docs/nao/brain-ingestion-design.md §8.1
+ * Worker's execution-time ceiling (see docs/implemented/nao/brain-ingestion-design.md §8.1
  * for the full reasoning). Dispatching a GitHub Actions workflow run
  * (`.github/workflows/brain-ingest.yml`) gives the job real, persistent
  * compute on GitHub's own runners, with the chosen seed/limit passed straight

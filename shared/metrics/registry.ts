@@ -96,7 +96,7 @@ export interface MetricDefinition {
   /** M6 Data-Quality-Score contribution. countsTowardDailyCompleteness is true only for the T1 spine. */
   dqs: { weight: number; countsTowardDailyCompleteness: boolean };
   /**
-   * S4 anomaly-signal parameters (ADR-0002, docs/shared/decisions/0002-anomaly-definition.md):
+   * S4 anomaly-signal parameters (ADR-0002, docs/development/decisions/0002-anomaly-definition.md):
    * `deadbandK` is the daily 3-state deadband in robust σ̂ = MAD/0.6745 units —
    * `neutral := |x − median| ≤ deadbandK·σ̂`. Typical value 1.0 (provisional, pending calibration).
    * Set for every baselineApplicable metric; null for metrics S4 never signals on.

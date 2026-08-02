@@ -1,7 +1,7 @@
 # The four run tracking docs
 
-All live in **`docs/temp/`** — dev-aid tier, **index-exempt** (outside `docs/INDEX.md`
-enforcement). Naming convention: `docs/temp/<run-slug>-orchestration-log.md` /
+All live in **`docs/development/`** — dev-aid tier, **index-exempt** (outside `docs/INDEX.md`
+enforcement). Naming convention: `docs/development/<run-slug>-orchestration-log.md` /
 `-blocked-register.md` / `-signoff-decisions.md` / `-config-decisions.md`, where
 `<run-slug>` = this run's slug (e.g. `phase2-run`).
 They are the run's resumable state: a fresh orchestrator session must be able to continue
@@ -46,7 +46,7 @@ object, never an inline literal (ADR-0002 mandate). Companion to the architectur
 
 ## Related but separate
 
-- `docs/temp/run1/audit/` — record-only audit runs (own orchestration log + findings
+- `docs/development/run1/audit/` — record-only audit runs (own orchestration log + findings
   register, `A#` findings) feeding fix-unit worklists — protocol in the
   **record-only-audit** skill.
 - `docs/sessions/` — per-session logs (canonical tier, indexed, enforced) — the evidence
@@ -54,5 +54,5 @@ object, never an inline literal (ADR-0002 mandate). Companion to the architectur
 
 ## Phase-2 history
 
-The Phase-2 run (`<run-slug>` = `phase2-run`) moved these docs to `docs/temp/` from
+The Phase-2 run (`<run-slug>` = `phase2-run`) moved these docs to `docs/development/` from
 `docs/shared/`, superseding its own D6.

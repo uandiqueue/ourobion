@@ -13,7 +13,7 @@
 // independently (no grounding ⇒ `uncertain`), an approving verdict requires a PASSING quote check and
 // a direction the cited paper reports, `contradicted` requires a direction that does NOT match,
 // corroboration counts cannot exceed the retrieved stances, and scores stay in range. See
-// docs/nao/brain-synthesis-design.md.
+// docs/implemented/nao/brain-synthesis-design.md.
 //
 // WHAT THESE INVARIANTS DELIBERATELY DO NOT DO (owner instruction 2026-08-01): they no longer make an
 // approving verdict conditional on OTHER papers agreeing. `corroboration` is still validated (it may

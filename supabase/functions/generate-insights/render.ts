@@ -1,6 +1,6 @@
 // supabase/functions/generate-insights/render.ts
 //
-// S8 · card producer rendering (docs/shared/insight-engine-architecture.md §S8), pure:
+// S8 · card producer rendering (docs/implemented/insight-engine-architecture.md §S8), pure:
 // deterministic template fill + the RENDER-TIME copy gate. The deterministic template is the
 // SHIPPED path — the §S8 phrasing LLM (Claude Haiku 4.5, cached, copy-gated) is a later,
 // optional layer that this session deliberately leaves unwired; when it lands it only rephrases

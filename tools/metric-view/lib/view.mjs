@@ -269,7 +269,7 @@ export function generateViewSql(registry = metrics.METRICS) {
 
   return [
     `-- S2 · metric_daily_values — the metric joint-series projection`,
-    `-- (docs/shared/insight-engine-architecture.md §S2).`,
+    `-- (docs/implemented/insight-engine-architecture.md §S2).`,
     `--`,
     `-- ▒▒ GENERATED FILE — DO NOT EDIT BY HAND ▒▒`,
     `-- Rendered from shared/metrics/registry.ts by tools/metric-view/gen_metric_view.mjs.`,

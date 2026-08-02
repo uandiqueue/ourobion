@@ -1,6 +1,6 @@
 // supabase/functions/generate-insights/composer.ts
 //
-// S7 · composed-insight composer + completeness scorer (docs/shared/insight-engine-architecture.md
+// S7 · composed-insight composer + completeness scorer (docs/implemented/insight-engine-architecture.md
 // §S7), pure: (fired pattern) x (1-hop servable D1 edges) x (D2 personal signal) -> branch-
 // classified ComposedInsight with attached stats/provenance and a deterministic completeness
 // score. No IO — the index.ts shell supplies table rows; node guard tests import this directly

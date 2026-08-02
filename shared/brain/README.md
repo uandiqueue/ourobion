@@ -1,13 +1,13 @@
 # The Brain — relationship contract
 
-**Runbook only; rationale in [`docs/nao/brain-synthesis-design.md`](../../docs/nao/brain-synthesis-design.md), stages in [`docs/shared/insight-engine-architecture.md`](../../docs/shared/insight-engine-architecture.md).**
+**Runbook only; rationale in [`docs/implemented/nao/brain-synthesis-design.md`](../../docs/implemented/nao/brain-synthesis-design.md), stages in [`docs/implemented/insight-engine-architecture.md`](../../docs/implemented/insight-engine-architecture.md).**
 
 `shared/brain/` is the cross-language contract for **the brain**: ourobion's knowledge graph of
 scientifically-derived relationships between metrics. Nodes are metric keys (from
 [`shared/metrics/registry.ts`](../metrics/registry.ts)); edges are relationships synthesised from the
 literature and then independently verified.
 
-See [`docs/nao/brain-synthesis-design.md`](../../docs/nao/brain-synthesis-design.md) for the full design (why a second LLM, the
+See [`docs/implemented/nao/brain-synthesis-design.md`](../../docs/implemented/nao/brain-synthesis-design.md) for the full design (why a second LLM, the
 evidence ladder, gating, the two-tier placement).
 
 ## Two records, two LLM passes
@@ -58,7 +58,7 @@ The authoritative shapes are in [`relationships.ts`](./relationships.ts). Highli
 ## Gating (where trust becomes behaviour)
 
 `index.ts` is the single home for gating, kept as pure functions. **Since C15 the RANK and the
-SERVING DECISION are separate** (`docs/temp/run4/config-decisions.md` C15):
+SERVING DECISION are separate** (`docs/development/run4/config-decisions.md` C15):
 
 - `singlePaperGate(v)` — **the serving decision.** Asks only whether the claim faithfully
   represents the paper it cites: verdict relevance, the deterministic quote gate, and
@@ -106,4 +106,4 @@ drift apart.
 
 The executable coupling declarations live in
 [`docs/graph/couplings.yaml`](../../docs/graph/couplings.yaml). See the broader guard design in
-[`docs/nao/brain-synthesis-design.md`](../../docs/nao/brain-synthesis-design.md).
+[`docs/implemented/nao/brain-synthesis-design.md`](../../docs/implemented/nao/brain-synthesis-design.md).

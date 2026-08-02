@@ -9,7 +9,7 @@
 //                    in .claude/settings.json.)
 //
 //   --fix-index      Regenerate the marker-delimited GENERATED sections of docs/INDEX.md,
-//                    docs/memory/README.md, and docs/shared/decisions/README.md from each doc's
+//                    docs/memory/README.md, and docs/development/decisions/README.md from each doc's
 //                    front-matter. Run this before pushing; the --check freshness gate (f) fails if
 //                    you forget. Creates the three files with a template if missing.
 //
@@ -45,12 +45,12 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SESSIONS_DIR = join(REPO_ROOT, "docs", "sessions");
 const MEMORY_DIR = join(REPO_ROOT, "docs", "memory");
 const MEMORY_INDEX = join(MEMORY_DIR, "README.md");
-const DECISIONS_DIR = join(REPO_ROOT, "docs", "shared", "decisions");
+const DECISIONS_DIR = join(REPO_ROOT, "docs", "development", "decisions");
 const DECISIONS_INDEX = join(DECISIONS_DIR, "README.md");
 const DOCS_INDEX = join(REPO_ROOT, "docs", "INDEX.md");
 const COUPLINGS = join(REPO_ROOT, "docs", "graph", "couplings.yaml");
 // Active ground-truth doc roots (relative to repo root) that INDEX must cover + archive-containment guards.
-const GROUND_TRUTH_RELDIRS = ["docs/shared", "docs/nao", "docs/biotope"];
+const GROUND_TRUTH_RELDIRS = ["docs/implemented", "docs/development", "docs/hackathon"];
 const ARCHIVE_REL = "docs/archive/";
 
 const STALE_DAYS = 21;
@@ -248,7 +248,7 @@ function fixIndex() {
     docsIndexLines(),
     "# Documentation index\n\nThe machine + human map of every active doc. Generated from front-matter — run\n`node tools/context_sync.mjs --fix-index`. Archive lives at `docs/archive/` (excluded from agent crawl via `.aiignore`); session logs are under `docs/sessions/`.",
   );
-  console.log("context_sync --fix-index: regenerated docs/INDEX.md, docs/memory/README.md, docs/shared/decisions/README.md.");
+  console.log("context_sync --fix-index: regenerated docs/INDEX.md, docs/memory/README.md, docs/development/decisions/README.md.");
   return 0;
 }
 
@@ -294,7 +294,7 @@ function checkCouplings(errors) {
 
 // (d) + (e): record front-matter validity + supersede reciprocity for memory/ and decisions/.
 function checkRecordFrontMatter(errors) {
-  for (const [dir, label] of [[MEMORY_DIR, "docs/memory"], [DECISIONS_DIR, "docs/shared/decisions"]]) {
+  for (const [dir, label] of [[MEMORY_DIR, "docs/memory"], [DECISIONS_DIR, "docs/development/decisions"]]) {
     const seenIds = new Set();
     let lastId = 0;
     for (const name of mdFilesIn(dir)) {
@@ -337,7 +337,7 @@ function checkRecordFrontMatter(errors) {
 function checkIndexFreshness(errors) {
   const want = {
     "docs/memory/README.md": recordIndexLines(MEMORY_DIR, { fromDir: MEMORY_DIR }).join("\n"),
-    "docs/shared/decisions/README.md": recordIndexLines(DECISIONS_DIR, { fromDir: DECISIONS_DIR }).join("\n"),
+    "docs/development/decisions/README.md": recordIndexLines(DECISIONS_DIR, { fromDir: DECISIONS_DIR }).join("\n"),
     "docs/INDEX.md": docsIndexLines().join("\n"),
   };
   for (const [rel, wanted] of Object.entries(want)) {
@@ -440,7 +440,7 @@ function checkSessionMemoryDelta(errors, ctx) {
     if (m[1].trim().toLowerCase() !== "none") anyDeclaresChange = true;
   }
   const changedRecords = ctx.changed.some((l) =>
-    (l.startsWith("docs/memory/") || l.startsWith("docs/shared/decisions/")) && l.endsWith(".md") && !l.endsWith("README.md"));
+    (l.startsWith("docs/memory/") || l.startsWith("docs/development/decisions/")) && l.endsWith(".md") && !l.endsWith("README.md"));
   if (changedRecords && !anyDeclaresChange) {
     errors.push("push adds/modifies memory or decisions records but every touched session log says `memory: none` — declare the change.");
   }
@@ -450,7 +450,7 @@ function checkSessionMemoryDelta(errors, ctx) {
 function checkEditHonesty(errors, ctx) {
   if (ctx.range === null || ctx.nothingToPush) return;
   const base = ctx.range.split("..")[0];
-  const { code, out } = git("diff", "--name-status", ctx.range, "--", "docs/memory", "docs/shared/decisions");
+  const { code, out } = git("diff", "--name-status", ctx.range, "--", "docs/memory", "docs/development/decisions");
   if (code !== 0) return;
   for (const line of out.split(/\r?\n/)) {
     const m = /^([AMD])\t(.+)$/.exec(line.trim());
@@ -467,7 +467,7 @@ function checkEditHonesty(errors, ctx) {
     if (curFm.updated && baseFm.updated && curFm.updated === baseFm.updated) {
       errors.push(`${rel}: modified but \`updated:\` not bumped (was ${baseFm.updated}).`);
     }
-    if (rel.startsWith("docs/shared/decisions/") && baseFm.status === "accepted") {
+    if (rel.startsWith("docs/development/decisions/") && baseFm.status === "accepted") {
       if (bodyAfterFrontMatter(curText).trim() !== bodyAfterFrontMatter(baseText).trim()) {
         errors.push(`${rel}: an accepted decision's body is immutable — supersede it instead of editing.`);
       }

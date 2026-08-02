@@ -1,6 +1,6 @@
 /**
  * b2 · Venue lookup — OpenAlex Sources-by-ISSN client
- * (docs/nao/brain-support-models-design.md §2 (b2)).
+ * (docs/implemented/nao/brain-support-models-design.md §2 (b2)).
  *
  * `GET https://api.openalex.org/sources/issn:<issn>` resolves a journal /
  * preprint server to the fields the impactTier banding reads:

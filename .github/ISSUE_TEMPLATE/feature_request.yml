@@ -61,5 +61,5 @@ body:
     attributes:
       label: Pre-checks
       options:
-        - label: "This is within the current phase scope (see `docs/shared/phase-2-plan.md`)"
+        - label: "This is within the current phase scope (see `docs/development/phase-2-plan.md`)"
         - label: "No shared types need to change — or the team has discussed it"

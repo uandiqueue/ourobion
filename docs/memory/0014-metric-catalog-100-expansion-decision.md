@@ -12,7 +12,7 @@ updated: 2026-07-13
 
 **Decision (adopted 2026-07-01).** Grow the metric registry from the shipped ~19 to **100 metrics**, in
 **collector-gated waves** — a deliberate step past phase-2-plan's original "thin slice", which it now
-**supersedes**. The full **~360-metric catalog** ([`../biotope/metrics-catalog.md`](../biotope/metrics-catalog.md))
+**supersedes**. The full **~360-metric catalog** ([`../biotope/metrics-catalog.md`](../implemented/biotope/metrics-catalog.md))
 stays the **reference**, not the ship target. Which 100 + why + by wave are fixed by the anchor brief
 (2026-07-01 metric-catalog-100-promotion).
 
@@ -29,4 +29,4 @@ invariant), and reliability is promoted alongside each metric.
 
 Follows [0001](0001-two-tier-truth.md) (raw rows are truth); relates to
 [0013](0013-brain-pipeline-and-support-models-decision.md) (more registry nodes → more for the agentic
-seeder + brain). Sequencing (Family A): [`../phase-2-plan.md` 2026-07-01 integrated update](../shared/phase-2-plan.md).
+seeder + brain). Sequencing (Family A): [`../phase-2-plan.md` 2026-07-01 integrated update](../development/phase-2-plan.md).

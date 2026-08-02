@@ -20,7 +20,7 @@ information architecture. This file records the shape as a durable fact.
 - `docs/memory/` — durable one-fact-per-file records (this directory).
 - `docs/sessions/` — chronological work logs.
 - `docs/graph/` — curated knowledge-graph truth.
-- `docs/temp/` — in-building drafts (work not yet promoted to a canonical home).
+- `docs/development/` — in-building drafts (work not yet promoted to a canonical home).
 - `docs/archive/` — frozen / superseded material, kept only for provenance.
 
 **Naming + front-matter.** Active docs use kebab-case filenames with a type suffix
@@ -30,7 +30,7 @@ records use the id/title/summary/type/status/decided/updated schema instead.
 
 **Canonical owners.** Each topic has one owner doc; every other doc points to it rather than
 restating it. The insight-engine stages live in
-[../shared/insight-engine-architecture.md](../shared/insight-engine-architecture.md); shared
+[../shared/insight-engine-architecture.md](../implemented/insight-engine-architecture.md); shared
 contract types in [../../shared/SHARED-CONTEXT.md](../../shared/SHARED-CONTEXT.md).
 
 **Enforcement.** `docs/INDEX.md` is the authoritative map of the tree, and

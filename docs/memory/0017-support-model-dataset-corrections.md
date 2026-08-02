@@ -11,7 +11,7 @@ updated: 2026-07-26
 # 0017 — Three support-model dataset assumptions are wrong
 
 Checked against primary sources on 2026-07-26 while planning the remaining custom models
-(issue #140). [`docs/nao/brain-support-models-design.md`](../nao/brain-support-models-design.md) still
+(issue #140). [`docs/implemented/nao/brain-support-models-design.md`](../implemented/nao/brain-support-models-design.md) still
 asserts all three; it was written from live samples on 2026-07-01 but these specific claims do not hold.
 **Do not reuse its recipes for (b1) or (c) without applying these corrections.**
 
@@ -39,5 +39,5 @@ royalty-free licence for personal use only and the records are Embase-derived wi
 redistribution. Unusable. Its 7.3%-positive imbalance figure is still a fine planning input.
 
 Full corrected recipes, licence register, and the nine researched-and-rejected candidates live in
-[`docs/temp/model-training/`](../temp/model-training/model-roster.md). Extends
+[`docs/development/model-training/`](../development/model-training/model-roster.md). Extends
 [0013](0013-brain-pipeline-and-support-models-decision.md) (the support-model roster).

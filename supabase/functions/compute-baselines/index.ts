@@ -5,7 +5,7 @@ import { computeStaleSnapshots, snapshotKey, type SnapshotRowRef } from "./lifec
 import { unauthorizedResponse, verifyInternalSecretRequest } from "../_shared/internal_auth.ts"
 import { readServerKeyEnv, resolveServerKey, ServerKeyConfigurationError } from "../_shared/server_keys.ts"
 
-// ─── S3 · baseline v2 (docs/shared/insight-engine-architecture.md §S3) ─────────────────
+// ─── S3 · baseline v2 (docs/implemented/insight-engine-architecture.md §S3) ─────────────────
 // Reads the S2 `metric_daily_values` view — the single long-format seam over the per-day
 // truth tables — instead of the wide tables directly, so a metric that moves to a new
 // storage primitive (signals etc.) needs no change here.

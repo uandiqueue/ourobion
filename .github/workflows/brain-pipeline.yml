@@ -14,7 +14,7 @@ name: Brain pipeline (synthesis → verification → edge load)
 #
 # nao's role is unchanged: it dispatches and reports. It never calls a provider and
 # never holds a provider key — the router runs HERE, which is why the LLM keys are
-# repository secrets rather than nao env (see docs/nao/brain-ingestion-design.md §8.1).
+# repository secrets rather than nao env (see docs/implemented/nao/brain-ingestion-design.md §8.1).
 #
 # `operation=full` SPENDS REAL MONEY. `operation=project-only` never reaches a provider:
 # it validates an exact hash-pinned R2 bundle and runs only the edge loader. Defaults are

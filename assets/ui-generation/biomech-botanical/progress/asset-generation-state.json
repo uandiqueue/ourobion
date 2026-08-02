@@ -1,0 +1,466 @@
+{
+    "schema_version":  1,
+    "updated_at":  "2026-07-11",
+    "current_batch":  5,
+    "session_limit_asset_ids":  5,
+    "session_limit_attempts_per_asset":  2,
+    "assets":  [
+                   {
+                       "asset_id":  "home_hero_robot_hand_main",
+                       "category":  "home",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/home/home_hero_robot_hand_main.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/home_hero_robot_hand_main_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/home_hero_robot_hand_main.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/home_hero_robot_hand_main.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Batch 1 accepted 2026-07-06 on attempt 1.",
+                       "intended_flutter_usage":  "Primary Home hero image behind or beside the daily biological system summary.",
+                       "background_mode":  "porcelain_white"
+                   },
+                   {
+                       "asset_id":  "home_hero_robot_hand_alt_01",
+                       "category":  "home",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/home/home_hero_robot_hand_alt_01.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/home_hero_robot_hand_alt_01_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/home_hero_robot_hand_alt_01.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/home_hero_robot_hand_alt_01.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Batch 1 accepted 2026-07-06 on attempt 1.",
+                       "intended_flutter_usage":  "Alternate Home hero for onboarding-like or seasonal hero states.",
+                       "background_mode":  "porcelain_white"
+                   },
+                   {
+                       "asset_id":  "home_flower_cluster_card",
+                       "category":  "home",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/home/home_flower_cluster_card.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/home_flower_cluster_card_attempt_1.png",
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/home_flower_cluster_card_attempt_2.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/home_flower_cluster_card.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/home_flower_cluster_card.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  2,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-07: accepted.",
+                       "intended_flutter_usage":  "Small Home card accent for system health or daily sync panels.",
+                       "background_mode":  "transparent"
+                   },
+                   {
+                       "asset_id":  "scan_biomech_orchid",
+                       "category":  "scan",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/scan/scan_biomech_orchid.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/scan_biomech_orchid_attempt_1.png",
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/scan_biomech_orchid_attempt_2.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/scan_biomech_orchid.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/scan_biomech_orchid.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  2,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-07: accepted.",
+                       "intended_flutter_usage":  "Scan tab centered botanical-biomechanical scan subject.",
+                       "background_mode":  "porcelain_white"
+                   },
+                   {
+                       "asset_id":  "scan_circular_bloom",
+                       "category":  "scan",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/scan/scan_circular_bloom.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/scan_circular_bloom_attempt_1.png",
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/scan_circular_bloom_attempt_2.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/scan_circular_bloom.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/scan_circular_bloom.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  2,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-07: accepted.",
+                       "intended_flutter_usage":  "Circular bloom asset for scan frame, readiness, or biometric scan states.",
+                       "background_mode":  "porcelain_white"
+                   },
+                   {
+                       "asset_id":  "scan_sensor_flower_closeup",
+                       "category":  "scan",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/scan/scan_sensor_flower_closeup.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/scan_sensor_flower_closeup_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/scan_sensor_flower_closeup.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/scan_sensor_flower_closeup.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-07: accepted.",
+                       "intended_flutter_usage":  "Scan detail panel or close-up card accent.",
+                       "background_mode":  "porcelain_white"
+                   },
+                   {
+                       "asset_id":  "insights_neural_botanical_cluster",
+                       "category":  "insights",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/insights/insights_neural_botanical_cluster.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/insights_neural_botanical_cluster_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/insights_neural_botanical_cluster.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/insights_neural_botanical_cluster.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-07: accepted.",
+                       "intended_flutter_usage":  "Insights summary header or card illustration.",
+                       "background_mode":  "porcelain_white"
+                   },
+                   {
+                       "asset_id":  "insights_biomech_heart_bloom",
+                       "category":  "insights",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/insights/insights_biomech_heart_bloom.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/insights_biomech_heart_bloom_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/insights_biomech_heart_bloom.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/insights_biomech_heart_bloom.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-07: accepted.",
+                       "intended_flutter_usage":  "Insights card image for body/environment balance moments.",
+                       "background_mode":  "porcelain_white"
+                   },
+                   {
+                       "asset_id":  "insights_branching_node_system",
+                       "category":  "insights",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/insights/insights_branching_node_system.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/insights_branching_node_system_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/insights_branching_node_system.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/insights_branching_node_system.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-07: accepted.",
+                       "intended_flutter_usage":  "Trend, correlation, or relationship-card visual support.",
+                       "background_mode":  "porcelain_white"
+                   },
+                   {
+                       "asset_id":  "archive_herbarium_specimen",
+                       "category":  "archive",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/archive/archive_herbarium_specimen.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/archive_herbarium_specimen_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/archive_herbarium_specimen.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/archive_herbarium_specimen.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-07: accepted.",
+                       "intended_flutter_usage":  "Archive list thumbnail or empty historical state.",
+                       "background_mode":  "porcelain_white"
+                   },
+                   {
+                       "asset_id":  "archive_preserved_flower_fragment",
+                       "category":  "archive",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/archive/archive_preserved_flower_fragment.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/archive_preserved_flower_fragment_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/archive_preserved_flower_fragment.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/archive_preserved_flower_fragment.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-07: accepted.",
+                       "intended_flutter_usage":  "Archive detail accent for saved scan/report fragments.",
+                       "background_mode":  "porcelain_white"
+                   },
+                   {
+                       "asset_id":  "archive_report_thumbnail_base",
+                       "category":  "archive",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/archive/archive_report_thumbnail_base.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/archive_report_thumbnail_base_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/archive_report_thumbnail_base.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/archive_report_thumbnail_base.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-07: accepted.",
+                       "intended_flutter_usage":  "Reusable base thumbnail for report cards.",
+                       "background_mode":  "porcelain_white"
+                   },
+                   {
+                       "asset_id":  "profile_signature_flower",
+                       "category":  "profile",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/profile/profile_signature_flower.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/profile_signature_flower_attempt_1.png",
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/profile_signature_flower_attempt_2.png",
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/profile_signature_flower_attempt_3.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/profile_signature_flower.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/profile_signature_flower.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  3,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-11: accepted attempt 3 overall after verified 32-bit alpha extraction, transparent corners, ivory-card review, and zero blue-fringe pixels.",
+                       "intended_flutter_usage":  "Profile identity accent or personal ecosystem marker.",
+                       "background_mode":  "transparent"
+                   },
+                   {
+                       "asset_id":  "profile_porcelain_camellia",
+                       "category":  "profile",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/profile/profile_porcelain_camellia.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/profile_porcelain_camellia_attempt_1.png",
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/profile_porcelain_camellia_attempt_2.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/profile_porcelain_camellia.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/profile_porcelain_camellia.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  2,
+                       "total_attempts":  2,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-07: Accepted on attempt 2; attempt 1 duplicated profile_signature_flower too closely.",
+                       "intended_flutter_usage":  "Profile header or settings visual accent.",
+                       "background_mode":  "transparent"
+                   },
+                   {
+                       "asset_id":  "profile_botanical_crest",
+                       "category":  "profile",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/profile/profile_botanical_crest.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/profile_botanical_crest_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/profile_botanical_crest.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/profile_botanical_crest.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-07: Accepted on attempt 1 with transparent alpha crest composition.",
+                       "intended_flutter_usage":  "Profile badge-style art that complements but does not copy the logo.",
+                       "background_mode":  "transparent"
+                   },
+                   {
+                       "asset_id":  "deco_vine_corner_left",
+                       "category":  "decorative",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/decorative/deco_vine_corner_left.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/deco_vine_corner_left_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/deco_vine_corner_left.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/deco_vine_corner_left.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-07: Accepted on attempt 1 as transparent left corner overlay.",
+                       "intended_flutter_usage":  "Left-edge decorative overlay for cards or screen edges.",
+                       "background_mode":  "transparent"
+                   },
+                   {
+                       "asset_id":  "deco_vine_corner_right",
+                       "category":  "decorative",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/decorative/deco_vine_corner_right.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/deco_vine_corner_right_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/deco_vine_corner_right.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/deco_vine_corner_right.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-07: Accepted on attempt 1 as transparent right corner overlay.",
+                       "intended_flutter_usage":  "Right-edge decorative overlay for cards or screen edges.",
+                       "background_mode":  "transparent"
+                   },
+                   {
+                       "asset_id":  "deco_flower_cluster_white",
+                       "category":  "decorative",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/decorative/deco_flower_cluster_white.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/deco_flower_cluster_white_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/deco_flower_cluster_white.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/deco_flower_cluster_white.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-11: accepted attempt 1 after technical alpha and ivory-card review.",
+                       "intended_flutter_usage":  "Small white floral cluster for card corners and calm empty areas.",
+                       "background_mode":  "transparent"
+                   },
+                   {
+                       "asset_id":  "deco_flower_cluster_blush",
+                       "category":  "decorative",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/decorative/deco_flower_cluster_blush.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/deco_flower_cluster_blush_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/deco_flower_cluster_blush.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/deco_flower_cluster_blush.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-11: accepted attempt 1 after technical alpha and ivory-card review.",
+                       "intended_flutter_usage":  "Small blush floral cluster for subtle variation in UI cards.",
+                       "background_mode":  "transparent"
+                   },
+                   {
+                       "asset_id":  "deco_small_biomech_bloom",
+                       "category":  "decorative",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/decorative/deco_small_biomech_bloom.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/deco_small_biomech_bloom_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/deco_small_biomech_bloom.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/deco_small_biomech_bloom.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-11: accepted attempt 1 after technical alpha and intended micro-accent scale review.",
+                       "intended_flutter_usage":  "Small reusable bloom accent for chips, cards, and tab microstates.",
+                       "background_mode":  "transparent"
+                   },
+                   {
+                       "asset_id":  "deco_leaf_brass_node",
+                       "category":  "decorative",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/decorative/deco_leaf_brass_node.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/deco_leaf_brass_node_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/deco_leaf_brass_node.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/deco_leaf_brass_node.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Continue batch 2026-07-11: accepted attempt 1 after technical alpha and ivory-card review.",
+                       "intended_flutter_usage":  "Small decorative brass-leaf node for dividers and metadata rows.",
+                       "background_mode":  "transparent"
+                   },
+                   {
+                       "asset_id":  "empty_scan_bloom",
+                       "category":  "empty_states",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/empty_states/empty_scan_bloom.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/empty_scan_bloom_attempt_1.png",
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/empty_scan_bloom_attempt_2.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/empty_scan_bloom.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/empty_scan_bloom.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  2,
+                       "total_attempts":  2,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Final batch 2026-07-11: accepted attempt 2 after attempt 1 was rejected for a badge-like scan ring; verified 32-bit alpha, transparent corners, ivory-card fit, and zero blue-fringe pixels.",
+                       "intended_flutter_usage":  "Empty state when no scan result is available.",
+                       "background_mode":  "transparent"
+                   },
+                   {
+                       "asset_id":  "empty_archive_specimen",
+                       "category":  "empty_states",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/empty_states/empty_archive_specimen.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/empty_archive_specimen_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/empty_archive_specimen.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/empty_archive_specimen.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Final batch 2026-07-11: accepted attempt 1 after technical alpha and ivory-card review.",
+                       "intended_flutter_usage":  "Empty state when no archived items exist.",
+                       "background_mode":  "transparent"
+                   },
+                   {
+                       "asset_id":  "empty_insights_seedpod",
+                       "category":  "empty_states",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/empty_states/empty_insights_seedpod.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/empty_insights_seedpod_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/empty_insights_seedpod.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/empty_insights_seedpod.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Final batch 2026-07-11: accepted attempt 1 after technical alpha and ivory-card review.",
+                       "intended_flutter_usage":  "Empty state when insights are not ready yet.",
+                       "background_mode":  "transparent"
+                   },
+                   {
+                       "asset_id":  "empty_notifications_flower",
+                       "category":  "empty_states",
+                       "target_final_output_path":  "apps/biotope/assets/images/generated/biomech_botanical/empty_states/empty_notifications_flower.png",
+                       "candidate_attempt_paths":  [
+                                                       "assets/ui-generation/biomech-botanical/reviews/candidates/empty_notifications_flower_attempt_1.png"
+                                                   ],
+                       "prompt_file_path":  "assets/ui-generation/biomech-botanical/prompts/empty_notifications_flower.md",
+                       "review_file_path":  "assets/ui-generation/biomech-botanical/reviews/empty_notifications_flower.md",
+                       "status":  "accepted",
+                       "latest_session_attempts":  1,
+                       "total_attempts":  1,
+                       "rejection_or_regeneration_reason":  null,
+                       "next_action":  "No action unless explicitly asked to regenerate.",
+                       "timestamp_or_session_note":  "Final batch 2026-07-11: accepted attempt 1 after technical alpha and ivory-card review.",
+                       "intended_flutter_usage":  "Empty state when there are no notifications.",
+                       "background_mode":  "transparent"
+                   }
+               ]
+}

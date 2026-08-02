@@ -28,7 +28,7 @@ record-only literature review of a run's decisions) — read them; this skill as
 1. Activate the toolchain per shell: `. .\scripts\biotope-env.ps1` (see
    windows-toolchain-gotchas).
 2. `node tools/context_sync.mjs --session-start`; read the latest `docs/sessions/` logs.
-3. Read this run's tracking docs under `docs/temp/<run-slug>-*.md` (naming convention in
+3. Read this run's tracking docs under `docs/development/<run-slug>-*.md` (naming convention in
    `references/tracking-docs.md`) — the **orchestration log is the resume point** (read
    top-to-bottom, then the blocked register, then continue at the first `next` unit).
 4. **Verify git/chain state against the ledger** — branches, open PRs, and whether the

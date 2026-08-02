@@ -17,7 +17,7 @@ local-agent run) → A8 synthesis (the real U10 claim `gut_comfort_score|correla
 A10 verification → A11 edge load → S2/S3 baselines → S4/S5 signals → S7 composer → S8 card — into
 one user-facing card carrying its §S8 source-panel dataset (verbatim quotes + char offsets +
 derivation + population + U1 `'unknown'` applicability). Reproduce via
-[`../shared/insight-slice-demo-runbook.md`](../shared/insight-slice-demo-runbook.md).
+[`../shared/insight-slice-demo-runbook.md`](../development/insight-slice-demo-runbook.md).
 
 **The load-bearing caveat.** The decorrelated A10 verifier **cannot run for real** — it needs a
 non-Anthropic key (run decision D4; blocked register B5) and must not use the Anthropic-family

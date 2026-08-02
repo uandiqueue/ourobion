@@ -44,7 +44,7 @@ You are a build agent in C:\project\ourobion (Windows). <One-sentence mission.>
 ## Bookkeeping
 - Session log docs/sessions/<UTC>-<device>-claude-<slug>.md, house format
   (Attempted/Changed/Decided/Left/Blockers) + `memory:` line.
-- Update docs/temp/<run-slug>-orchestration-log.md: worklist row + ledger row.
+- Update docs/development/<run-slug>-orchestration-log.md: worklist row + ledger row.
 
 ## Commit / push / PR
 - One commit: `<type>(<scope>): <summary>` + Co-Authored-By line. Push.

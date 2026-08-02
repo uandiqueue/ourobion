@@ -27,7 +27,7 @@ audit-fix phase (R1 + U19–U28) that dispositioned all 27. Sibling skills:
 
 ## 1. Scaffold (unit AU0)
 
-Create an audit dir under `docs/temp/` (index-exempt dev-aid tier) holding exactly two docs:
+Create an audit dir under `docs/development/` (index-exempt dev-aid tier) holding exactly two docs:
 
 1. **`audit-orchestration-log.md`** — resume protocol, ground rules, worklist
    (`AU# | Unit | Status | Notes`, statuses `done/in-progress/next/queued/blocked`), a

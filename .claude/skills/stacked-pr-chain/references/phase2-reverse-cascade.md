@@ -1,7 +1,7 @@
 # The Phase-2 reverse-cascade merge (2026-07-18) — the incident behind this skill
 
-Primary records: `docs/temp/run1/orchestration-log.md` (⚠ 2026-07-18 section),
-`docs/temp/run1/signoff-decisions.md` (D1 amended, D20),
+Primary records: `docs/development/run1/orchestration-log.md` (⚠ 2026-07-18 section),
+`docs/development/run1/signoff-decisions.md` (D1 amended, D20),
 `docs/sessions/20260718T033750Z-agentjwork-claude-chain-recovery-docs-move.md`.
 
 ## How the chain came to exist

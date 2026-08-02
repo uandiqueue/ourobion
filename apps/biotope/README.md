@@ -231,7 +231,7 @@ toolchain folder.
 ---
 
 **Doc map (start here):** [`docs/INDEX.md`](../../docs/INDEX.md).
-**Product / architecture / UI rationale:** [`docs/shared/project-context.md`](../../docs/shared/project-context.md),
-[`docs/biotope/architecture-context.md`](../../docs/biotope/architecture-context.md),
-[`docs/biotope/ui/ui-design-context.md`](../../docs/biotope/ui/ui-design-context.md).
+**Product / architecture / UI rationale:** [`docs/implemented/project-context.md`](../../docs/implemented/project-context.md),
+[`docs/implemented/biotope/architecture-context.md`](../../docs/implemented/biotope/architecture-context.md),
+[`docs/implemented/biotope/ui-design-context.md`](../../docs/implemented/biotope/ui-design-context.md).
 The other app — the **nao** web dashboard — has its own [README](../nao/README.md).

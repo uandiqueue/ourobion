@@ -31,7 +31,7 @@ only if inspecting code).
 
 ## 1. Scaffold (unit RU0)
 
-Create a research dir under `docs/temp/` (index-exempt dev-aid tier) holding exactly three docs:
+Create a research dir under `docs/development/` (index-exempt dev-aid tier) holding exactly three docs:
 
 1. **`research-orchestration-log.md`** — resume protocol, ground rules, worklist
    (`RU# | Unit | Status | Notes`), a `▶ RESUME AT: RU#` pointer, and a session ledger.

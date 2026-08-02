@@ -1,7 +1,7 @@
 // supabase/functions/evaluate-signals/stats.ts
 //
 // The pure statistical core for S4 (robust 3-state signal) and S5 (n=1 pairwise evaluator),
-// exactly as specified by ADR-0002 (docs/shared/decisions/0002-anomaly-definition.md):
+// exactly as specified by ADR-0002 (docs/development/decisions/0002-anomaly-definition.md):
 //   S4 — median/MAD robust baseline (σ̂ = MAD/0.6745), |M| > 3.5 artifact rejection,
 //        deadbandK·σ̂ 3-state deadband, baselineMinDays guard, MAD-degeneracy fallback.
 //   S5 — Spearman ρ (average-rank tie handling), Pyper–Peterman modified-Chelton N_eff,

@@ -31,7 +31,7 @@ export function hashTextEvidence(value) {
 // R4-U1 (PR #170) failed with `landing delta has 12957 added lines; cap is 8500` because the
 // model-training MT4 merge (PR #169) had advanced the base and alone consumed 7,897 of the 8,500
 // lines, leaving 603 for any unit. The same class of failure is recorded for Run 3 in
-// docs/temp/run4/README.md ("MT0 added 59 files / 5,362 insertions after the candidate baseline and
+// docs/development/run4/README.md ("MT0 added 59 files / 5,362 insertions after the candidate baseline and
 // broke U0's evidence and mergeability").
 //
 // So: at the start of each unit, set this to that unit's exact base SHA and re-record the deploy

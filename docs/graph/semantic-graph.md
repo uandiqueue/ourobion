@@ -248,52 +248,52 @@ an integrity defect in the machine graph and should be resolved before treating 
 
 | Hyperedge | Relation | Members | Missing | Confidence | Source |
 |---|---|---:|---:|---|---|
-| Anomaly and personal-signal detectors | participate_in | 8 | 0 | EXTRACTED | `docs/shared/decisions/0002-anomaly-definition.md` |
+| Anomaly and personal-signal detectors | participate_in | 8 | 0 | EXTRACTED | `docs/development/decisions/0002-anomaly-definition.md` |
 | Resumable Multi-Unit Run Governance | participate_in | 7 | 0 | EXTRACTED | `.claude/skills/orchestrate-build-run/SKILL.md` |
-| Run 3 Security Data and Scientific Semantics Tranche | participate_in | 7 | 0 | EXTRACTED | `docs/temp/run3/pending-build-register.md` |
-| Citation reference graph pipeline | participate_in | 6 | 0 | EXTRACTED | `docs/shared/decisions/0001-citation-extraction.md` |
+| Run 3 Security Data and Scientific Semantics Tranche | participate_in | 7 | 0 | EXTRACTED | `docs/archive/runs/run3/pending-build-register.md` |
+| Citation reference graph pipeline | participate_in | 6 | 0 | EXTRACTED | `docs/development/decisions/0001-citation-extraction.md` |
 | Graphify Adoption History | participate_in | 6 | 0 | EXTRACTED | `docs/sessions/20260617T041218Z-uandiqueue-claude-graphify-adoption.md` |
-| Run 3 Locked Remediation Units | form | 6 | 0 | EXTRACTED | `docs/temp/run3/README.md` |
+| Run 3 Locked Remediation Units | form | 6 | 0 | EXTRACTED | `docs/archive/runs/run3/README.md` |
 | Brain-to-card Pipeline Slice | participate_in | 5 | 0 | EXTRACTED | `docs/sessions/20260716T050639Z-agentjwork-claude-s7-composer-s8-cards.md` |
 | Graph build and human-view refresh flow | participate_in | 5 | 0 | INFERRED | `docs/graph/README.md` |
 | Graph-view renderer verification suite | implement | 5 | 0 | EXTRACTED | `tools/graph-view/tests/render_graph_view.test.mjs` |
 | Graphify Knowledge Graph Workflow | form | 5 | 0 | EXTRACTED | `.claude/skills/graphify/SKILL.md` |
-| Isolated Model-Training Workstreams | participate_in | 5 | 0 | EXTRACTED | `docs/temp/model-training/README.md` |
-| Localized Low-Friction Capture | participate_in | 5 | 0 | EXTRACTED | `docs/biotope/metrics-catalog.md` |
+| Isolated Model-Training Workstreams | participate_in | 5 | 0 | EXTRACTED | `docs/development/model-training/README.md` |
+| Localized Low-Friction Capture | participate_in | 5 | 0 | EXTRACTED | `docs/implemented/biotope/metrics-catalog.md` |
 | M2 Self-Report Logging Contract | form | 5 | 0 | EXTRACTED | `apps/biotope/lib/modules/m2_self_report/m2-context.md` |
-| Manual Collection Tiers | form | 5 | 0 | EXTRACTED | `docs/biotope/metrics-catalog.md` |
+| Manual Collection Tiers | form | 5 | 0 | EXTRACTED | `docs/implemented/biotope/metrics-catalog.md` |
 | Ourobion Master Identity System | form | 5 | 0 | EXTRACTED | `assets/ourobion-brand/DESIGN.md` |
 | Phase 2 Audit Fix Units | participate_in | 5 | 0 | EXTRACTED | `docs/sessions/20260718T051721Z-agentjwork-claude-u25-db-constraint-hygiene.md` |
 | Run 2 early pipeline units | conceptually_related_to | 5 | 0 | INFERRED | `docs/sessions/20260724T083316Z-agentjwork-claude-run2-u4-card-semantics.md` |
-| Run 3 Client Trust Tranche | participate_in | 5 | 0 | EXTRACTED | `docs/temp/run3/pending-build-register.md` |
-| Sustainable Trend Discovery | form | 5 | 0 | EXTRACTED | `docs/biotope/metrics-catalog.md` |
-| Transparent Decorative Cutouts | participate_in | 5 | 0 | EXTRACTED | `docs/biotope/ui/ai-assets/prompts/deco_flower_cluster_blush.md` |
-| Accepted Empty-State Asset Family | participate_in | 4 | 0 | EXTRACTED | `docs/biotope/ui/ai-assets/reviews/empty_scan_bloom.md` |
-| Decorative Review Family | participate_in | 4 | 0 | EXTRACTED | `docs/biotope/ui/ai-assets/reviews/deco_flower_cluster_blush.md` |
+| Run 3 Client Trust Tranche | participate_in | 5 | 0 | EXTRACTED | `docs/archive/runs/run3/pending-build-register.md` |
+| Sustainable Trend Discovery | form | 5 | 0 | EXTRACTED | `docs/implemented/biotope/metrics-catalog.md` |
+| Transparent Decorative Cutouts | participate_in | 5 | 0 | EXTRACTED | `assets/ui-generation/biomech-botanical/prompts/deco_flower_cluster_blush.md` |
+| Accepted Empty-State Asset Family | participate_in | 4 | 0 | EXTRACTED | `assets/ui-generation/biomech-botanical/reviews/empty_scan_bloom.md` |
+| Decorative Review Family | participate_in | 4 | 0 | EXTRACTED | `assets/ui-generation/biomech-botanical/reviews/deco_flower_cluster_blush.md` |
 | Deterministic Insight-Engine Foundation | form | 4 | 0 | EXTRACTED | `docs/sessions/20260716T024359Z-agentjwork-claude-s4-signals-s5-evaluator.md` |
 | Documentation Routing and Authority | form | 4 | 0 | EXTRACTED | `docs/INDEX.md` |
 | Enforced Cross-Language Safety | form | 4 | 0 | EXTRACTED | `docs/graph/couplings.yaml` |
-| Generated Asset Quality System | participate_in | 4 | 0 | EXTRACTED | `docs/biotope/ui/ai-assets/README.md` |
-| Ingestion Identity and Retrieval Flow | participate_in | 4 | 0 | EXTRACTED | `docs/nao/brain-ingestion-design.md` |
-| Insight engine deterministic serve flow | participate_in | 4 | 0 | EXTRACTED | `docs/shared/insight-engine-architecture.md` |
+| Generated Asset Quality System | participate_in | 4 | 0 | EXTRACTED | `assets/ui-generation/biomech-botanical/README.md` |
+| Ingestion Identity and Retrieval Flow | participate_in | 4 | 0 | EXTRACTED | `docs/implemented/nao/brain-ingestion-design.md` |
+| Insight engine deterministic serve flow | participate_in | 4 | 0 | EXTRACTED | `docs/implemented/insight-engine-architecture.md` |
 | Metric Platform Foundation History | participate_in | 4 | 0 | INFERRED | `docs/sessions/20260622T021945Z-uandiqueue-claude-w0-metric-platform-foundation.md` |
 | One-Card Proof and CI Backstop | form | 4 | 0 | INFERRED | `docs/sessions/20260716T061453Z-agentjwork-claude-ci-node-tool-suites.md` |
 | Phase 2 Workflow Evolution | participate_in | 4 | 0 | EXTRACTED | `docs/sessions/20260610T042206Z-uandiqueue-claude-consolidate-onto-dev-phase2.md` |
-| Porcelain Archive Asset Family | form | 4 | 0 | EXTRACTED | `docs/biotope/ui/ai-assets/prompts/archive_report_thumbnail_base.md` |
+| Porcelain Archive Asset Family | form | 4 | 0 | EXTRACTED | `assets/ui-generation/biomech-botanical/prompts/archive_report_thumbnail_base.md` |
 | Run 2 demo curation features | conceptually_related_to | 4 | 0 | EXTRACTED | `docs/sessions/20260724T165648Z-agentjwork-claude-run2-u12-demo-dryrun.md` |
-| Run-3 Documentation Reconciliation | participate_in | 4 | 0 | EXTRACTED | `docs/temp/documentation-freshness-audit-2026-07-26.md` |
-| Scan Asset Family | participate_in | 4 | 0 | EXTRACTED | `docs/biotope/ui/ai-assets/prompts/scan_biomech_orchid.md` |
+| Run-3 Documentation Reconciliation | participate_in | 4 | 0 | EXTRACTED | `docs/development/documentation-freshness-audit-2026-07-26.md` |
+| Scan Asset Family | participate_in | 4 | 0 | EXTRACTED | `assets/ui-generation/biomech-botanical/prompts/scan_biomech_orchid.md` |
 | U6 Simulated Data Loading Flow | participate_in | 4 | 0 | EXTRACTED | `docs/sessions/20260724T094500Z-agentjwork-claude-run2-u6-nao-data-loader.md` |
 | U8 Model Configuration Boundary | participate_in | 4 | 0 | EXTRACTED | `docs/sessions/20260724T121500Z-agentjwork-claude-run2-u8-model-config-spend.md` |
-| Accepted Insights Asset Family | participate_in | 3 | 0 | EXTRACTED | `docs/biotope/ui/ai-assets/reviews/insights_neural_botanical_cluster.md` |
+| Accepted Insights Asset Family | participate_in | 3 | 0 | EXTRACTED | `assets/ui-generation/biomech-botanical/reviews/insights_neural_botanical_cluster.md` |
 | Agent Guidance Graphify Navigation | participate_in | 3 | 0 | INFERRED | `CLAUDE.md` |
 | Brain Verification Support | participate_in | 3 | 0 | INFERRED | `docs/sessions/20260715T143750Z-agentjwork-claude-brain-llm-router.md` |
-| Insight engine authoring loop | participate_in | 3 | 0 | EXTRACTED | `docs/shared/insight-engine-architecture.md` |
-| Phase 2 Demo Analysis Flow | participate_in | 3 | 0 | INFERRED | `docs/shared/phase2-demo-runbook.md` |
-| Profile Asset Family | participate_in | 3 | 0 | EXTRACTED | `docs/biotope/ui/ai-assets/prompts/profile_botanical_crest.md` |
-| Semantic Graph Quality Gaps | participate_in | 3 | 0 | EXTRACTED | `docs/temp/run3/pending-build-register.md` |
+| Insight engine authoring loop | participate_in | 3 | 0 | EXTRACTED | `docs/implemented/insight-engine-architecture.md` |
+| Phase 2 Demo Analysis Flow | participate_in | 3 | 0 | INFERRED | `docs/development/phase2-demo-runbook.md` |
+| Profile Asset Family | participate_in | 3 | 0 | EXTRACTED | `assets/ui-generation/biomech-botanical/prompts/profile_botanical_crest.md` |
+| Semantic Graph Quality Gaps | participate_in | 3 | 0 | EXTRACTED | `docs/archive/runs/run3/pending-build-register.md` |
 | Shared Contract Projection Pattern | participate_in | 3 | 0 | INFERRED | `shared/brain/README.md` |
-| Shared engineering delivery guidance | conceptually_related_to | 3 | 0 | INFERRED | `docs/shared/dev-workflow.md` |
+| Shared engineering delivery guidance | conceptually_related_to | 3 | 0 | INFERRED | `docs/development/dev-workflow.md` |
 | U5 Pipeline and Baseline Lifecycle | participate_in | 3 | 0 | EXTRACTED | `docs/sessions/20260724T090500Z-agentjwork-claude-run2-u5-trigger-provenance-prune.md` |
 
 <details>
@@ -344,13 +344,13 @@ once to each endpoint community.
 | 37 | Windows Flutter Window C++ | 28 | 39 | 26 | 0 | composer.ts · engine_orientation_gap.test.ts · classifyPattern() · CandidatePattern | `supabase/functions/generate-insights/composer.ts`<br/>`tools/rules/tests/engine_orientation_gap.test.ts`<br/>`supabase/functions/generate-insights/render.ts` |
 | 38 | Stool Form Screen State | 28 | 62 | 18 | 0 | types.ts · ingestControl.ts · route.ts · route.ts | `apps/nao/src/lib/types.ts`<br/>`apps/nao/src/lib/ingestControl.ts`<br/>`apps/nao/src/app/(app)/api/ingest-control/route.ts` |
 | 39 | Consent Service | 27 | 48 | 13 | 0 | evaluators.ts · engine_condition_coverage.test.ts · windowedBaseline() · evaluateCoincidence() | `supabase/functions/generate-insights/evaluators.ts`<br/>`tools/rules/tests/engine_condition_coverage.test.ts` |
-| 40 | Parity Schema Tests | 27 | 26 | 0 | 0 | What Phase 2 contains (by workstream) · Phase 2 plan · The metric platform (the floor everything else stands on) · Tracks, dependencies & sequencing | `docs/shared/phase-2-plan.md` |
+| 40 | Parity Schema Tests | 27 | 26 | 0 | 0 | What Phase 2 contains (by workstream) · Phase 2 plan · The metric platform (the floor everything else stands on) · Tracks, dependencies & sequencing | `docs/development/phase-2-plan.md` |
 | 41 | Supabase Package | 26 | 28 | 30 | 0 | package:supabase_flutter/supabase_flutter.dart · SupabaseClient · mosquito_logging.dart · metric_series_service.dart | `apps/biotope/lib/modules/m2_self_report/impl/behaviour/mosquito_logging.dart`<br/>`apps/biotope/lib/modules/m1_core/impl/profile_service.dart`<br/>`apps/biotope/lib/modules/m5a_baselines/impl/metric_series_service.dart` |
 | 42 | Graphify Extraction Spec | 26 | 51 | 1 | 0 | modelsControl.ts · ModelsPanel.tsx · modelsControl.test.ts · ModelsPanel() | `apps/nao/src/lib/modelsControl.ts`<br/>`apps/nao/src/components/ModelsPanel.tsx`<br/>`apps/nao/src/app/(app)/api/models/caps/route.ts` |
 | 43 | Session Isolation Worktrees | 26 | 27 | 38 | 0 | index.ts · Branch · GapStatus · GapEventRow | `supabase/functions/generate-insights/index.ts`<br/>`supabase/functions/generate-insights/composer.ts` |
 | 44 | Profile Service | 25 | 30 | 0 | 2 | my_application.cc · _MyApplication · GApplication · my_application_local_command_line() | `apps/biotope/linux/runner/my_application.cc`<br/>`apps/biotope/linux/flutter/generated_plugin_registrant.cc`<br/>`apps/biotope/linux/runner/main.cc` |
 | 45 | Auth Result Model | 25 | 29 | 6 | 0 | index.ts · relationships.ts · EdgeVerification · Citation | `shared/brain/relationships.ts`<br/>`shared/brain/index.ts` |
-| 46 | Urine Color Screen | 25 | 24 | 0 | 0 | The Brain — Ingestion (paper corpus) Design · 10 · Build sequence · 2 · The source-API catalog · 5 · Tooling — fetch, capture, extract (TypeScript, no Python) | `docs/nao/brain-ingestion-design.md` |
+| 46 | Urine Color Screen | 25 | 24 | 0 | 0 | The Brain — Ingestion (paper corpus) Design · 10 · Build sequence · 2 · The source-API catalog · 5 · Tooling — fetch, capture, extract (TypeScript, no Python) | `docs/implemented/nao/brain-ingestion-design.md` |
 | 47 | Copy Guidelines Enforcement | 25 | 36 | 14 | 0 | pmcJats.ts · pmcJats.test.ts · retrieveJats() · parseJats() | `tools/brain-ingest/src/retrieval/pmcJats.ts`<br/>`tools/brain-ingest/tests/pmcJats.test.ts` |
 | 48 | Flutter LLDB Helper | 25 | 61 | 102 | 0 | router.ts · budget.ts · types.ts · LlmNodeId | `tools/llm-router/src/budget.ts`<br/>`tools/llm-router/src/router.ts`<br/>`tools/llm-router/src/types.ts` |
 | 49 | Community 310 | 24 | 27 | 0 | 5 | Semantic context graph · Graphify operational policy · Curated coupling guards · Deferred structural import graph | `docs/graph/README.md`<br/>`docs/memory/0008-graphify-context-tool.md`<br/>`shared/brain/README.md` |
@@ -388,16 +388,16 @@ once to each endpoint community.
 | 81 | Community 88 | 20 | 19 | 16 | 0 | wearable_service.dart · static const · double? · _aggregate | `apps/biotope/lib/modules/m3_passive_health/impl/wearable_service.dart` |
 | 82 | User Consent and Metrics Models | 20 | 19 | 1 | 0 | metric_series_models.dart · d · date · distinctMetricKeys | `apps/biotope/lib/modules/m5a_baselines/impl/metric_series_models.dart` |
 | 83 | Community 92 | 20 | 20 | 20 | 0 | rule.schema.ts · gateTemplate() · templateSyntaxError() · coincidenceConditionSchema | `shared/rules/rule.schema.ts` |
-| 84 | Community 94 | 20 | 19 | 0 | 0 | ui-design-context.md — Ourobion · Component Specs · AI-Generated Image Assets · Cards | `docs/biotope/ui/ui-design-context.md` |
+| 84 | Community 94 | 20 | 19 | 0 | 0 | ui-design-context.md — Ourobion · Component Specs · AI-Generated Image Assets · Cards | `docs/implemented/biotope/ui-design-context.md` |
 | 86 | Logging and Metric Trends | 19 | 18 | 8 | 0 | logging_controller.dart · int? · _client · DailyLogInput | `apps/biotope/lib/modules/m2_self_report/impl/logging_controller.dart` |
 | 87 | Community 97 | 19 | 32 | 8 | 0 | artifacts.mjs · edge_artifacts.test.ts · buildLoad() · parseClaims() | `tools/edge-loader/lib/artifacts.mjs`<br/>`tools/edge-loader/tests/edge_artifacts.test.ts`<br/>`tools/edge-loader/tests/edge_endpoints_registry.test.ts` |
 | 88 | Community 98 | 19 | 28 | 0 | 2 | auth.ts · verifyAccessToken() · middleware.ts · auth.test.ts | `apps/nao/src/lib/auth.ts`<br/>`apps/nao/src/middleware.ts`<br/>`apps/nao/tests/auth.test.ts` |
 | 89 | Community 101 | 19 | 44 | 99 | 0 | index.ts · LlmRequest · LlmResponse · localAgent.ts | `tools/llm-router/src/routes/localAgent.ts`<br/>`tools/llm-router/tests/localAgent.test.ts`<br/>`tools/llm-router/src/types.ts` |
 | 90 | Antibiotic Course Screen | 19 | 28 | 35 | 0 | State · StatefulWidget · HomeTabState · _LivingBackdropState | `apps/biotope/lib/modules/m2_self_report/ui/screens/daily_log_screen.dart`<br/>`apps/biotope/lib/modules/m1_core/ui/screens/home_tab.dart`<br/>`apps/biotope/lib/modules/m1_core/ui/widgets/living_backdrop.dart` |
 | 91 | Community 102 | 19 | 18 | 0 | 0 | Session 20260617T041218Z — uandiqueue — claude — graphify-adoption · 20260610T093356Z-uandiqueue-claude-graphify-dart-probe.md · 20260617T041218Z-uandiqueue-claude-graphify-adoption.md · 20260617T064658Z-uandiqueue-claude-graphify-setup-and-readme.md | `docs/sessions/20260617T041218Z-uandiqueue-claude-graphify-adoption.md`<br/>`docs/sessions/20260610T093356Z-uandiqueue-claude-graphify-dart-probe.md`<br/>`docs/sessions/20260617T064658Z-uandiqueue-claude-graphify-setup-and-readme.md` |
-| 92 | Community 235 | 18 | 17 | 0 | 5 | Insight Engine · Offline authoring and loop pipeline · Composed insights · Brain support models | `docs/shared/insight-engine-architecture.md`<br/>`AGENTS.md`<br/>`docs/biotope/architecture-context.md` |
+| 92 | Community 235 | 18 | 17 | 0 | 5 | Insight Engine · Offline authoring and loop pipeline · Composed insights · Brain support models | `docs/implemented/insight-engine-architecture.md`<br/>`AGENTS.md`<br/>`docs/implemented/biotope/architecture-context.md` |
 | 93 | Community 104 | 18 | 17 | 10 | 0 | relationships.schema.ts · citationSchema · claimKindSchema · edgeVerificationSchema | `shared/brain/relationships.schema.ts` |
-| 94 | Community 107 | 18 | 17 | 0 | 0 | ADR: Paper-reliability scoring — the evidence-tier ladder and the rel… · Decision · Options considered · 0003-paper-reliability.md | `docs/shared/decisions/0003-paper-reliability.md` |
+| 94 | Community 107 | 18 | 17 | 0 | 0 | ADR: Paper-reliability scoring — the evidence-tier ladder and the rel… · Decision · Options considered · 0003-paper-reliability.md | `docs/development/decisions/0003-paper-reliability.md` |
 | 95 | Community 108 | 18 | 17 | 0 | 0 | package.json · devDependencies · scripts · allowScripts | `tools/engine-stats/package.json` |
 | 96 | Windows Win32 Runner | 18 | 32 | 24 | 0 | stats.ts · s4_signal.test.ts · classifyDaily() · mad() | `supabase/functions/evaluate-signals/stats.ts`<br/>`tools/engine-stats/tests/s4_signal.test.ts` |
 | 97 | Community 110 | 18 | 17 | 0 | 0 | compilerOptions · tsconfig.json · declaration · esModuleInterop | `tools/llm-router/tsconfig.json` |
@@ -408,14 +408,14 @@ once to each endpoint community.
 | 102 | Community 109 | 17 | 31 | 9 | 0 | seedsControl.ts · route.ts · seedsControl.test.ts · INGEST_SEED_TOPICS | `apps/nao/src/lib/seedsControl.ts`<br/>`apps/nao/src/app/(app)/api/seeds/route.ts`<br/>`apps/nao/tests/seedsControl.test.ts` |
 | 103 | Community 119 | 17 | 16 | 0 | 0 | m2-context.md — M2: Self-Report — Gut & Behaviour · Metrics Implemented (Phase 1 Stage 1) · Antibiotic Tracker (event-based, not daily) · Core Logging Flow (~30 seconds) | `apps/biotope/lib/modules/m2_self_report/m2-context.md` |
 | 104 | Community 121 | 17 | 27 | 5 | 0 | d1.test.ts · etl.mjs · manifestToSql() · main() | `apps/nao/scripts/etl.mjs`<br/>`apps/nao/tests/d1.test.ts` |
-| 105 | Community 122 | 17 | 16 | 0 | 0 | Each Step · dev-workflow.md — Ourobion Development Workflow · 1. Issue · 2. Branch + Worktree | `docs/shared/dev-workflow.md` |
+| 105 | Community 122 | 17 | 16 | 0 | 0 | Each Step · dev-workflow.md — Ourobion Development Workflow · 1. Issue · 2. Branch + Worktree | `docs/development/dev-workflow.md` |
 | 106 | Community 123 | 17 | 16 | 0 | 0 | package.json · dependencies · devDependencies · scripts | `shared/package.json` |
 | 107 | Community 83 | 17 | 38 | 29 | 0 | BudgetLedger · .assertCanSpend() · .record() · .wouldExceed() | `tools/llm-router/src/budget.ts`<br/>`tools/llm-router/src/overrides.ts`<br/>`tools/llm-router/src/types.ts` |
 | 108 | iOS/macOS Runner Tests | 17 | 28 | 42 | 0 | retrieval.ts · DiscoverFn · retrieveForClaim() · claimQueryTerms() | `tools/brain-ingest/src/verify/retrieval.ts`<br/>`tools/brain-ingest/src/types.ts` |
 | 109 | Claim Verification Types | 17 | 21 | 44 | 1 | types.ts · corpus.ts · CorpusDoc · loadCorpusFromFile() | `tools/brain-ingest/src/verify/types.ts`<br/>`tools/brain-ingest/src/verify/corpus.ts`<br/>`tools/brain-ingest/src/verify/retrieval.ts` |
 | 110 | Community 129 | 16 | 15 | 0 | 0 | compilerOptions · tsconfig.json · esModuleInterop · forceConsistentCasingInFileNames | `tools/brain-ingest/tsconfig.json` |
 | 111 | Paper Search Filters | 16 | 24 | 12 | 0 | page.tsx · PapersPage() · one() · filtersFrom() | `apps/nao/src/app/(app)/papers/page.tsx`<br/>`apps/nao/src/components/SortSelect.tsx`<br/>`apps/nao/src/components/SearchBar.tsx` |
-| 112 | Community 131 | 16 | 15 | 0 | 0 | Decision 0002: Anomaly & Personal-Signal Definition for the nao Brain… · Options considered · Decision · 0002-anomaly-definition.md | `docs/shared/decisions/0002-anomaly-definition.md` |
+| 112 | Community 131 | 16 | 15 | 0 | 0 | Decision 0002: Anomaly & Personal-Signal Definition for the nao Brain… · Options considered · Decision · 0002-anomaly-definition.md | `docs/development/decisions/0002-anomaly-definition.md` |
 | 113 | Community 132 | 16 | 15 | 0 | 0 | compilerOptions · tsconfig.json · allowImportingTsExtensions · allowJs | `tools/edge-loader/tsconfig.json` |
 | 114 | Community 133 | 16 | 15 | 4 | 0 | antibiotic_service.dart · AntibioticCourse · _client · _fmt | `apps/biotope/lib/modules/m2_self_report/impl/antibiotic_service.dart` |
 | 115 | Community 134 | 16 | 22 | 0 | 0 | view.mjs · view_migration_drift.test.ts · gen_metric_view.mjs · generateViewSql() | `tools/metric-view/lib/view.mjs`<br/>`tools/metric-view/gen_metric_view.mjs`<br/>`tools/metric-view/tests/view_migration_drift.test.ts` |
@@ -430,10 +430,10 @@ once to each endpoint community.
 | 124 | Claim Verification Workflow | 16 | 25 | 77 | 0 | verifier.ts · verifyClaim() · load.ts · verify() | `tools/brain-ingest/src/verify/verifier.ts`<br/>`tools/brain-ingest/src/verify/load.ts`<br/>`tools/brain-ingest/src/verify/enforce.ts` |
 | 125 | Community 141 | 15 | 14 | 0 | 1 | GeneratedPluginRegistrant.swift · MainFlutterWindow · MainFlutterWindow.swift · RegisterGeneratedPlugins() | `apps/biotope/macos/Flutter/GeneratedPluginRegistrant.swift`<br/>`apps/biotope/macos/Runner/MainFlutterWindow.swift` |
 | 126 | Community 142 | 15 | 19 | 12 | 0 | page.tsx · OverviewPage() · humanBytes() · retrievabilityConic() | `apps/nao/src/app/(app)/page.tsx`<br/>`apps/nao/src/lib/palette.ts` |
-| 127 | Community 143 | 15 | 14 | 1 | 0 | C2. Derived `D` (D-1 … D-150) · Activity, fitness & neuromotor (D-28 … D-43) · Cardiovascular / autonomic (D-16 … D-27) — all 🟠 (wearable HR/HRV) · Composite roll-ups (D-146 … D-150) | `docs/biotope/metrics-catalog.md` |
+| 127 | Community 143 | 15 | 14 | 1 | 0 | C2. Derived `D` (D-1 … D-150) · Activity, fitness & neuromotor (D-28 … D-43) · Cardiovascular / autonomic (D-16 … D-27) — all 🟠 (wearable HR/HRV) · Composite roll-ups (D-146 … D-150) | `docs/implemented/biotope/metrics-catalog.md` |
 | 128 | Paper Detail Display | 15 | 26 | 19 | 0 | palette.ts · PaperCard.tsx · PaperCard() · PaperDetailPage() | `apps/nao/src/lib/palette.ts`<br/>`apps/nao/src/components/PaperCard.tsx`<br/>`apps/nao/src/app/(app)/paper/[uid]/page.tsx` |
-| 129 | Community 148 | 14 | 13 | 0 | 0 | Collection Tier Ladder · Manual Logging Budget · Three Data Economies · Event-Triggered Logging | `docs/biotope/metrics-catalog.md` |
-| 130 | Community 149 | 14 | 13 | 0 | 0 | Metrics Registry — Design · Add a metric (safe flow) · Alternatives considered · Fix-on-arrival — RESOLVED (registry seeded from deployed truth) | `docs/biotope/metrics-registry-design.md` |
+| 129 | Community 148 | 14 | 13 | 0 | 0 | Collection Tier Ladder · Manual Logging Budget · Three Data Economies · Event-Triggered Logging | `docs/implemented/biotope/metrics-catalog.md` |
+| 130 | Community 149 | 14 | 13 | 0 | 0 | Metrics Registry — Design · Add a metric (safe flow) · Alternatives considered · Fix-on-arrival — RESOLVED (registry seeded from deployed truth) | `docs/implemented/biotope/metrics-registry-design.md` |
 | 131 | Paper Detail Display | 14 | 18 | 13 | 0 | page.tsx · r2.ts · getPaperMeta() · PaperRecord | `apps/nao/src/app/(app)/paper/[uid]/page.tsx`<br/>`apps/nao/src/lib/r2.ts`<br/>`apps/nao/src/components/CollapsibleAbstract.tsx` |
 | 132 | Community 151 | 14 | 13 | 0 | 0 | compilerOptions · tsconfig.json · allowImportingTsExtensions · esModuleInterop | `tools/engine-stats/tsconfig.json` |
 | 133 | Community 152 | 14 | 13 | 5 | 1 | Record-only evidence-review run · Audit Unit Resume Protocol · Research Unit Resume Protocol · 0. Ground rules (non-negotiable) | `.claude/skills/evidence-review-run/SKILL.md`<br/>`.claude/skills/record-only-audit/SKILL.md` |
@@ -446,25 +446,25 @@ once to each endpoint community.
 | 140 | Community 161 | 13 | 12 | 0 | 0 | RunnerTests.swift · RunnerTests.swift · RunnerTests · RunnerTests | `apps/biotope/ios/RunnerTests/RunnerTests.swift`<br/>`apps/biotope/macos/RunnerTests/RunnerTests.swift` |
 | 141 | Windows Win32 Runner | 13 | 18 | 18 | 0 | s5_pairwise.test.ts · evaluatePair() · spearman() · effectiveN() | `supabase/functions/evaluate-signals/stats.ts`<br/>`tools/engine-stats/tests/s5_pairwise.test.ts` |
 | 142 | Linux GTK Runner | 13 | 12 | 22 | 0 | metric_trend_section_widget_test.dart · List · MetricSeriesService · _FakeSeriesService | `apps/biotope/test/m5a_baselines/metric_trend_section_widget_test.dart`<br/>`apps/biotope/lib/modules/m5a_baselines/impl/metric_series_service.dart` |
-| 143 | Community 164 | 13 | 12 | 0 | 1 | deco_flower_cluster_blush.md · deco_flower_cluster_white Review · deco_flower_cluster_blush.md · deco_flower_cluster_white.md | `docs/biotope/ui/ai-assets/reviews/deco_flower_cluster_white.md`<br/>`docs/biotope/ui/ai-assets/reviews/deco_flower_cluster_blush.md`<br/>`docs/biotope/ui/ai-assets/prompts/deco_flower_cluster_blush.md` |
+| 143 | Community 164 | 13 | 12 | 0 | 1 | deco_flower_cluster_blush.md · deco_flower_cluster_white Review · deco_flower_cluster_blush.md · deco_flower_cluster_white.md | `assets/ui-generation/biomech-botanical/reviews/deco_flower_cluster_white.md`<br/>`assets/ui-generation/biomech-botanical/reviews/deco_flower_cluster_blush.md`<br/>`assets/ui-generation/biomech-botanical/prompts/deco_flower_cluster_blush.md` |
 | 144 | Community 166 | 13 | 15 | 12 | 0 | index.ts · _assert.ts · _assert.typetest.ts · AssertExact | `shared/rules/index.ts`<br/>`shared/rules/_assert.ts`<br/>`shared/rules/rule.ts` |
 | 146 | Community 168 | 13 | 12 | 0 | 0 | Run-2 U9 · Human verdict override + nao claims curation (O13, DEMO-CR… · What ships · 1 · Migration `20260724150000_create_o13_edge_human_verdicts.sql` · 2 · Migration `20260724150001_o13_verified_edges_human_overlay.sql` | `docs/sessions/20260724T150900Z-agentjwork-claude-run2-u9-claims-human-verdict.md` |
 | 147 | Community 159 | 13 | 12 | 0 | 0 | shared/SHARED-CONTEXT.md — Ourobion Shared Contract · BaselineSnapshot · DailyEnvRow · DailyGutRow | `shared/SHARED-CONTEXT.md` |
 | 148 | Insight Rules Engine Two-Tier | 13 | 19 | 5 | 0 | extract.ts · extract.test.ts · extractFromJats() · extractFromPdf() | `tools/brain-ingest/src/extract.ts`<br/>`tools/brain-ingest/tests/extract.test.ts` |
 | 149 | Community 124 | 13 | 15 | 26 | 0 | overrides.ts · overrides.test.ts · fetchCapOverrides() · FetchCapOverridesOptions | `tools/llm-router/src/overrides.ts`<br/>`tools/llm-router/tests/overrides.test.ts`<br/>`tools/llm-router/src/router.ts` |
 | 150 | Community 173 | 13 | 23 | 0 | 0 | shared_memory.mjs · main() · loadDb() · cmdClaim() | `tools/shared_memory.mjs` |
-| 145 | Insight Rules Engine Two-Tier | 12 | 0 | 12 | 0 | B-BR1 Real Attested Decorrelated Verifier · B-DATA1 Simulated Loader Raw-Truth Corruption Risk · B-DATA2 Pipeline Idempotency Demand Semantics and Atomic Publication · B-PL14 Exact-Tip CI and Deno Release Evidence | `docs/temp/run3/pending-build-register.md` |
-| 151 | Community 174 | 12 | 11 | 0 | 0 | Biotope AI Asset Style Guide · Accepted Botanical Direction · Accepted Material Language · Accepted Robot-Hand Direction | `docs/biotope/ui/ai-assets/asset-style-guide.md` |
+| 145 | Insight Rules Engine Two-Tier | 12 | 0 | 12 | 0 | B-BR1 Real Attested Decorrelated Verifier · B-DATA1 Simulated Loader Raw-Truth Corruption Risk · B-DATA2 Pipeline Idempotency Demand Semantics and Atomic Publication · B-PL14 Exact-Tip CI and Deno Release Evidence | `docs/archive/runs/run3/pending-build-register.md` |
+| 151 | Community 174 | 12 | 11 | 0 | 0 | Biotope AI Asset Style Guide · Accepted Botanical Direction · Accepted Material Language · Accepted Robot-Hand Direction | `assets/ui-generation/biomech-botanical/asset-style-guide.md` |
 | 152 | Community 175 | 12 | 14 | 0 | 2 | GetCommandLineArguments() · wWinMain() · Utf8FromUtf16() · utils.cpp | `apps/biotope/windows/runner/utils.cpp`<br/>`apps/biotope/windows/runner/main.cpp`<br/>`apps/biotope/windows/runner/utils.h` |
 | 153 | Community 177 | 12 | 11 | 7 | 0 | edge_table_schema.test.ts · relationKindSchema · verdictSchema · verificationStatusSchema | `tools/edge-loader/tests/edge_table_schema.test.ts`<br/>`shared/brain/relationships.schema.ts` |
-| 154 | Community 179 | 12 | 11 | 0 | 0 | Citation extraction & reference-graph construction — architecture dec… · Options considered · 0001-citation-extraction.md · Context (what doc-12 leaves open, why it matters) | `docs/shared/decisions/0001-citation-extraction.md` |
+| 154 | Community 179 | 12 | 11 | 0 | 0 | Citation extraction & reference-graph construction — architecture dec… · Options considered · 0001-citation-extraction.md · Context (what doc-12 leaves open, why it matters) | `docs/development/decisions/0001-citation-extraction.md` |
 | 155 | Documentation Navigation | 12 | 11 | 0 | 1 | Documentation Index · Generated Active Documentation Map · AI Agent Navigation Protocol · Archive Exclusion from Agent Crawl | `docs/INDEX.md` |
 | 156 | Community 180 | 12 | 18 | 3 | 0 | load_edges.mjs · main() · loadIntoDb() · parseArgs() | `tools/edge-loader/load_edges.mjs` |
 | 157 | Community 184 | 12 | 11 | 0 | 0 | m1-context.md — M1: Core Platform & Compliance · Consent Scopes · Current State · Database Tables Owned | `apps/biotope/lib/modules/m1_core/m1-context.md` |
 | 158 | User Consent and Metrics Models | 12 | 11 | 1 | 0 | user_profile.dart · city · createdAt · displayName | `apps/biotope/lib/modules/m1_core/models/user_profile.dart` |
-| 159 | Community 187 | 12 | 11 | 0 | 0 | The Brain — Design · The safeguard — a second, independent, adversarial verifier · Alternatives considered · brain-synthesis-design.md | `docs/nao/brain-synthesis-design.md` |
-| 160 | Community 188 | 12 | 11 | 0 | 1 | archive_herbarium_specimen · archive_preserved_flower_fragment · archive_herbarium_specimen.md · archive_preserved_flower_fragment.md | `docs/biotope/ui/ai-assets/reviews/archive_herbarium_specimen.md`<br/>`docs/biotope/ui/ai-assets/reviews/archive_preserved_flower_fragment.md` |
-| 161 | Community 189 | 12 | 11 | 0 | 1 | deco_leaf_brass_node Review · deco_small_biomech_bloom Review · deco_leaf_brass_node.md · deco_small_biomech_bloom.md | `docs/biotope/ui/ai-assets/reviews/deco_leaf_brass_node.md`<br/>`docs/biotope/ui/ai-assets/reviews/deco_small_biomech_bloom.md` |
+| 159 | Community 187 | 12 | 11 | 0 | 0 | The Brain — Design · The safeguard — a second, independent, adversarial verifier · Alternatives considered · brain-synthesis-design.md | `docs/implemented/nao/brain-synthesis-design.md` |
+| 160 | Community 188 | 12 | 11 | 0 | 1 | archive_herbarium_specimen · archive_preserved_flower_fragment · archive_herbarium_specimen.md · archive_preserved_flower_fragment.md | `assets/ui-generation/biomech-botanical/reviews/archive_herbarium_specimen.md`<br/>`assets/ui-generation/biomech-botanical/reviews/archive_preserved_flower_fragment.md` |
+| 161 | Community 189 | 12 | 11 | 0 | 1 | deco_leaf_brass_node Review · deco_small_biomech_bloom Review · deco_leaf_brass_node.md · deco_small_biomech_bloom.md | `assets/ui-generation/biomech-botanical/reviews/deco_leaf_brass_node.md`<br/>`assets/ui-generation/biomech-botanical/reviews/deco_small_biomech_bloom.md` |
 | 162 | Community 190 | 12 | 13 | 0 | 0 | demo-dryrun-run2.ps1 · Add-Result() · Invoke-Api() · Invoke-Nao() | `scripts/demo-dryrun-run2.ps1` |
 | 163 | Community 192 | 12 | 11 | 0 | 0 | Run-2 U10 · Manual seed-load from nao, seeds-as-data (O14, DEMO-CRITI… · What ships · 1 · Migration `20260724152525_create_o14_ingestion_seeds.sql` · 2 · Pipeline consumption — `tools/brain-ingest/src/seeder/dbSeeds.ts` | `docs/sessions/20260724T152525Z-agentjwork-claude-run2-u10-seeds-as-data.md` |
 | 164 | Community 193 | 12 | 11 | 0 | 0 | Part A — decorrelated full-loop simulation (H1) · Run-2 U13 · Decorrelated full-loop simulation (H1) + baseline-confide… · `router.config.json` — restored, proof · 20260725T051506Z-agentjwork-claude-run2-u13-decorrelated-fullrun.md | `docs/sessions/20260725T051506Z-agentjwork-claude-run2-u13-decorrelated-fullrun.md` |
@@ -472,42 +472,42 @@ once to each endpoint community.
 | 166 | Community 195 | 12 | 18 | 9 | 0 | config.ts · inspectConfig() · loadConfig() · readEnv() | `tools/brain-ingest/src/config.ts`<br/>`tools/brain-ingest/src/types.ts` |
 | 167 | Community 196 | 12 | 21 | 16 | 0 | artifact.ts · appendVerificationsToDir() · VerifyRecord · appendVerificationsToR2() | `tools/brain-ingest/src/verify/artifact.ts`<br/>`tools/brain-ingest/src/verify/types.ts`<br/>`tools/brain-ingest/src/verify/verifier.ts` |
 | 168 | Community 199 | 11 | 10 | 9 | 0 | metrics_registry_engine_test.dart · dart:convert · insight_card_roundtrip_test.dart · metric_series_model_test.dart | `apps/biotope/test/guards/metrics_registry_engine_test.dart`<br/>`apps/biotope/test/m5a_baselines/metric_series_model_test.dart`<br/>`apps/biotope/test/shared_types/insight_card_roundtrip_test.dart` |
-| 169 | Community 205 | 11 | 14 | 0 | 8 | Botanical-Luxury Visual Language · Chroma-Key Alpha Workflow · Archive Report Thumbnail Base · Herbarium Archive Cover | `docs/biotope/ui/ai-assets/prompts/archive_report_thumbnail_base.md`<br/>`docs/biotope/ui/ai-assets/prompts/deco_flower_cluster_blush.md`<br/>`docs/biotope/ui/ai-assets/prompts/deco_vine_corner_left.md` |
+| 169 | Community 205 | 11 | 14 | 0 | 8 | Botanical-Luxury Visual Language · Chroma-Key Alpha Workflow · Archive Report Thumbnail Base · Herbarium Archive Cover | `assets/ui-generation/biomech-botanical/prompts/archive_report_thumbnail_base.md`<br/>`assets/ui-generation/biomech-botanical/prompts/deco_flower_cluster_blush.md`<br/>`assets/ui-generation/biomech-botanical/prompts/deco_vine_corner_left.md` |
 | 170 | Community 206 | 11 | 10 | 7 | 0 | Record-only audit run · 2. Resume protocol (what makes a killed session cheap) · 0. Ground rules (non-negotiable) · 1. Scaffold (unit AU0) | `.claude/skills/record-only-audit/SKILL.md` |
 | 171 | Architecture Module Dependency Graph | 11 | 16 | 22 | 0 | apiWorker.ts · callApiWorker() · providerFor() · callAnthropic() | `tools/llm-router/src/routes/apiWorker.ts`<br/>`tools/llm-router/src/config.ts` |
 | 172 | Community 208 | 11 | 10 | 11 | 0 | rules_table_schema.test.ts · CONDITION_TYPES · ruleProvenanceTierSchema · ruleScopeSchema | `tools/rules/tests/rules_table_schema.test.ts`<br/>`shared/rules/rule.schema.ts` |
 | 173 | Community 210 | 11 | 21 | 25 | 3 | publish-status.ts · resolveRepoPath() · repoRoot() · smoke-openai.ts | `tools/llm-router/scripts/publish-status.ts`<br/>`tools/llm-router/scripts/smoke-openai.ts`<br/>`tools/llm-router/src/config.ts` |
 | 174 | Community 211 | 11 | 10 | 0 | 0 | What shipped · Run-2 U6 · Simulated health-data loader in nao (O11, DEMO-CRITICAL) +… · 20260724T094500Z-agentjwork-claude-run2-u6-nao-data-loader.md · Decisions made autonomously (for review) | `docs/sessions/20260724T094500Z-agentjwork-claude-run2-u6-nao-data-loader.md` |
 | 175 | Community 212 | 11 | 10 | 0 | 0 | What was built · Run-2 U8 · Model-config + spend read boundaries + editable caps + nao… · 1 · Migration `supabase/migrations/20260724130000_create_o10_llm_rout… · 2 · Publisher (router side) | `docs/sessions/20260724T121500Z-agentjwork-claude-run2-u8-model-config-spend.md` |
-| 176 | Community 213 | 11 | 11 | 0 | 1 | Commit Message Format · Commit message guidelines · AI routing and review protocol · Development workflow | `docs/shared/commit-conventions.md`<br/>`docs/shared/agent-protocol.md`<br/>`docs/shared/dev-workflow.md` |
-| 177 | Community 215 | 11 | 10 | 0 | 0 | project-context.md — Ourobion · Module Map · Phases · Product Principles (Non-Negotiable) | `docs/shared/project-context.md` |
+| 176 | Community 213 | 11 | 11 | 0 | 1 | Commit Message Format · Commit message guidelines · AI routing and review protocol · Development workflow | `docs/development/commit-conventions.md`<br/>`docs/development/agent-protocol.md`<br/>`docs/development/dev-workflow.md` |
+| 177 | Community 215 | 11 | 10 | 0 | 0 | project-context.md — Ourobion · Module Map · Phases · Product Principles (Non-Negotiable) | `docs/implemented/project-context.md` |
 | 178 | Community 216 | 11 | 10 | 0 | 0 | index.ts · BaselineSnapshot · DailyEnvRow · DailyGutRow | `shared/types/index.ts` |
 | 179 | Community 217 | 11 | 10 | 0 | 0 | manifest.json · background_color · description · display | `apps/biotope/web/manifest.json` |
 | 180 | Paper Search Filters | 10 | 11 | 8 | 0 | Facets.tsx · facets.ts · ActiveChips.tsx · FacetBucket | `apps/nao/src/lib/facets.ts`<br/>`apps/nao/src/components/ActiveChips.tsx`<br/>`apps/nao/src/components/Facets.tsx` |
-| 181 | Community 221 | 10 | 9 | 0 | 0 | S4 robust median MAD baseline · S5 pairwise personal co-movement · deterministic serve detectors · Anomaly and Personal-Signal Definition | `docs/shared/decisions/0002-anomaly-definition.md` |
-| 182 | Community 225 | 10 | 9 | 0 | 0 | Prompt Lessons · Background Mode Lessons · Batch 1 Lessons · Botanical Realism Lessons | `docs/biotope/ui/ai-assets/lessons/prompt-lessons.md` |
+| 181 | Community 221 | 10 | 9 | 0 | 0 | S4 robust median MAD baseline · S5 pairwise personal co-movement · deterministic serve detectors · Anomaly and Personal-Signal Definition | `docs/development/decisions/0002-anomaly-definition.md` |
+| 182 | Community 225 | 10 | 9 | 0 | 0 | Prompt Lessons · Background Mode Lessons · Batch 1 Lessons · Botanical Realism Lessons | `assets/ui-generation/biomech-botanical/lessons/prompt-lessons.md` |
 | 183 | Community 226 | 10 | 11 | 7 | 0 | load_rules.test.ts · contentHash() · flattenRule() · canonicalJson() | `tools/rules/tests/load_rules.test.ts`<br/>`tools/rules/lib/blueprints.mjs` |
 | 184 | Community 228 | 10 | 9 | 5 | 0 | Windows Toolchain Gotchas · Self-Contained Build Agent Dispatch Brief · Bookkeeping and Return Contract · Dispatch Environment and Scope Contract | `.claude/skills/windows-toolchain-gotchas/SKILL.md`<br/>`.claude/skills/orchestrate-build-run/references/dispatch-brief-template.md` |
 | 185 | Community 229 | 10 | 11 | 2 | 0 | Stacked Pull Request Chain · Phase-2 Reverse-Cascade Incident · Bottom-Up Merge Procedure · GitHub Branch-Base Contract | `.claude/skills/stacked-pr-chain/SKILL.md`<br/>`.claude/skills/stacked-pr-chain/references/phase2-reverse-cascade.md`<br/>`.claude/skills/orchestrate-build-run/references/phase2-run-example.md` |
 | 186 | Community 232 | 10 | 9 | 0 | 0 | Run-2 U4 · Card semantics + gap ledger (O16 + O18 + the gap_ledger sl… · What changed · 20260724T083316Z-agentjwork-claude-run2-u4-card-semantics.md · Divergences / judgment calls (recorded) | `docs/sessions/20260724T083316Z-agentjwork-claude-run2-u4-card-semantics.md` |
 | 187 | Community 233 | 10 | 9 | 0 | 0 | Run-2 U5 · Serve-pipeline trigger + provenance read + baseline prune … · What changed · 20260724T090500Z-agentjwork-claude-run2-u5-trigger-provenance-prune.md · Divergences / judgment calls (recorded) | `docs/sessions/20260724T090500Z-agentjwork-claude-run2-u5-trigger-provenance-prune.md` |
 | 188 | Community 234 | 10 | 9 | 0 | 0 | Run-2 U12 · Scripted E2E demo dry-run + reproducible demo runbook (fi… · 20260724T165648Z-agentjwork-claude-run2-u12-demo-dryrun.md · Biotope visual check (Android emulator; Windows desktop honestly bloc… · Decisions made autonomously (for review) | `docs/sessions/20260724T165648Z-agentjwork-claude-run2-u12-demo-dryrun.md` |
-| 620 | Custom Model Training | 10 | 16 | 2 | 0 | Zebra NLI Shadow v0 · Support-Model Roster · Model Training Workstreams · Giraffe Study-Design v0 | `docs/temp/model-training/zebra-nli-shadow-v0-training-plan.md`<br/>`docs/memory/0017-support-model-dataset-corrections.md`<br/>`docs/sessions/20260726T172257Z-agentjwork-claude-model-training-plans.md` |
-| 189 | Community 237 | 9 | 8 | 1 | 0 | Part B — The manual layer, rebuilt by tier · B1. Tier 1 — Daily Core (the sticky spine: two ~30s micro-checks) · B2. Tier 2 — Daily Optional / Rotating (opt-in, or app samples a few … · B3. Tier 3 — Event-Triggered (log at the moment via quick-action/widg… | `docs/biotope/metrics-catalog.md` |
+| 620 | Custom Model Training | 10 | 16 | 2 | 0 | Zebra NLI Shadow v0 · Support-Model Roster · Model Training Workstreams · Giraffe Study-Design v0 | `docs/development/model-training/zebra-nli-shadow-v0-training-plan.md`<br/>`docs/memory/0017-support-model-dataset-corrections.md`<br/>`docs/sessions/20260726T172257Z-agentjwork-claude-model-training-plans.md` |
+| 189 | Community 237 | 9 | 8 | 1 | 0 | Part B — The manual layer, rebuilt by tier · B1. Tier 1 — Daily Core (the sticky spine: two ~30s micro-checks) · B2. Tier 2 — Daily Optional / Rotating (opt-in, or app samples a few … · B3. Tier 3 — Event-Triggered (log at the moment via quick-action/widg… | `docs/implemented/biotope/metrics-catalog.md` |
 | 190 | User Consent and Metrics Models | 9 | 8 | 3 | 0 | consent_service.dart · ../../models/consent_record.dart · _client · ConsentService | `apps/biotope/lib/modules/m1_core/impl/consent_service.dart` |
 | 191 | Community 243 | 9 | 13 | 5 | 0 | load_rules.mjs · buildRows() · loadIntoDb() · main() | `tools/rules/load_rules.mjs`<br/>`tools/rules/lib/blueprints.mjs` |
 | 192 | Community 246 | 9 | 8 | 0 | 0 | Orchestrate a build run · 1. Roles · 2. Startup checklist (fresh orchestrator session) · 3. Assessment before dispatch | `.claude/skills/orchestrate-build-run/SKILL.md` |
-| 193 | Community 247 | 9 | 8 | 0 | 1 | profile_signature_flower.md · profile_porcelain_camellia.md · Background Mode · Flutter Usage | `docs/biotope/ui/ai-assets/reviews/profile_signature_flower.md`<br/>`docs/biotope/ui/ai-assets/prompts/profile_porcelain_camellia.md`<br/>`docs/biotope/ui/ai-assets/prompts/profile_signature_flower.md` |
+| 193 | Community 247 | 9 | 8 | 0 | 1 | profile_signature_flower.md · profile_porcelain_camellia.md · Background Mode · Flutter Usage | `assets/ui-generation/biomech-botanical/reviews/profile_signature_flower.md`<br/>`assets/ui-generation/biomech-botanical/prompts/profile_porcelain_camellia.md`<br/>`assets/ui-generation/biomech-botanical/prompts/profile_signature_flower.md` |
 | 194 | Community 248 | 9 | 8 | 0 | 0 | graphify reference: extra exports and benchmark · exports.md · Step 6b - Wiki (only if --wiki flag) · Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag) | `.claude/skills/graphify/references/exports.md` |
 | 195 | Community 250 | 9 | 8 | 0 | 0 | Session 20260716T042500Z — agentjwork — claude — a8-synthesis · 20260716T042500Z-agentjwork-claude-a8-synthesis.md · Attempted · Blockers | `docs/sessions/20260716T042500Z-agentjwork-claude-a8-synthesis.md` |
 | 196 | Community 251 | 9 | 8 | 0 | 0 | Session 20260718T050856Z — agentjwork — claude — u24-loader-hardening · 20260718T050856Z-agentjwork-claude-u24-loader-hardening.md · Attempted · Blockers | `docs/sessions/20260718T050856Z-agentjwork-claude-u24-loader-hardening.md` |
 | 197 | Community 252 | 9 | 8 | 0 | 0 | Session 20260718T051721Z — agentjwork — claude — u25-db-constraint-hy… · 20260718T051721Z-agentjwork-claude-u25-db-constraint-hygiene.md · Attempted · Blockers | `docs/sessions/20260718T051721Z-agentjwork-claude-u25-db-constraint-hygiene.md` |
 | 198 | Community 253 | 9 | 8 | 0 | 0 | run-pipeline edge function · baseline snapshot lifecycle · get_insight_provenance RPC · InsightProvenanceScreen | `docs/sessions/20260724T090500Z-agentjwork-claude-run2-u5-trigger-provenance-prune.md`<br/>`docs/sessions/20260724T102352Z-agentjwork-claude-run2-u7-biotope-trend-provenance.md`<br/>`docs/sessions/20260724T094500Z-agentjwork-claude-run2-u6-nao-data-loader.md` |
 | 199 | Community 254 | 9 | 8 | 0 | 0 | Run-2 U7 · biotope trend view + insight provenance view (O12 app side… · What shipped · 20260724T102352Z-agentjwork-claude-run2-u7-biotope-trend-provenance.md · Decisions made autonomously (for review) | `docs/sessions/20260724T102352Z-agentjwork-claude-run2-u7-biotope-trend-provenance.md` |
-| 200 | Community 255 | 9 | 8 | 0 | 0 | agent-protocol.md — AI Agent Navigation Protocol · agent-protocol.md · Branch and PR Conventions · How to Use This File | `docs/shared/agent-protocol.md` |
-| 201 | Community 256 | 8 | 7 | 5 | 0 | metrics-catalog.md · Part G — Summary counts · Metrics Catalog — Candidate Metrics, Reorganized Around a Logging Bud… · Manual layer (`L-1 … L-110`) — re-tiered by logging budget | `docs/biotope/metrics-catalog.md` |
-| 202 | TypeScript Config | 8 | 7 | 0 | 0 | Metrics Registry · `MetricDefinition` fields · Add a metric (safe flow) · Guard couplings | `shared/metrics/README.md`<br/>`docs/biotope/metrics-registry-design.md` |
-| 203 | Community 258 | 8 | 8 | 0 | 0 | claimCites mapping · format-routed citation pipeline · reference graph · GROBID PDF sidecar | `docs/shared/decisions/0001-citation-extraction.md` |
+| 200 | Community 255 | 9 | 8 | 0 | 0 | agent-protocol.md — AI Agent Navigation Protocol · agent-protocol.md · Branch and PR Conventions · How to Use This File | `docs/development/agent-protocol.md` |
+| 201 | Community 256 | 8 | 7 | 5 | 0 | metrics-catalog.md · Part G — Summary counts · Metrics Catalog — Candidate Metrics, Reorganized Around a Logging Bud… · Manual layer (`L-1 … L-110`) — re-tiered by logging budget | `docs/implemented/biotope/metrics-catalog.md` |
+| 202 | TypeScript Config | 8 | 7 | 0 | 0 | Metrics Registry · `MetricDefinition` fields · Add a metric (safe flow) · Guard couplings | `shared/metrics/README.md`<br/>`docs/implemented/biotope/metrics-registry-design.md` |
+| 203 | Community 258 | 8 | 8 | 0 | 0 | claimCites mapping · format-routed citation pipeline · reference graph · GROBID PDF sidecar | `docs/development/decisions/0001-citation-extraction.md` |
 | 204 | Community 259 | 8 | 10 | 0 | 2 | Linux Desktop Relocatable Bundle · Linux Flutter Engine Build · Linux Runner Target · Windows Desktop In-Place Bundle | `apps/biotope/linux/CMakeLists.txt`<br/>`apps/biotope/windows/CMakeLists.txt`<br/>`apps/biotope/linux/flutter/CMakeLists.txt` |
 | 205 | Community 260 | 8 | 7 | 8 | 0 | engine_cards_schema.test.ts · REPO_ROOT · ruleCategorySchema · PRODUCERS | `tools/rules/tests/engine_cards_schema.test.ts`<br/>`shared/rules/rule.schema.ts`<br/>`supabase/functions/generate-insights/render.ts` |
 | 206 | Community 261 | 8 | 7 | 0 | 0 | Checklist · PULL_REQUEST_TEMPLATE.md · Changes · Code | `.github/PULL_REQUEST_TEMPLATE.md` |
@@ -539,21 +539,21 @@ once to each endpoint community.
 | 232 | Community 288 | 8 | 7 | 0 | 0 | Run 2.0 U2 — ground the adversarial verifier (O15 / verdict B1) · 20260724T074529Z-agentjwork-claude-run2-u2-verifier-grounding.md · Acceptance test (i) · Context | `docs/sessions/20260724T074529Z-agentjwork-claude-run2-u2-verifier-grounding.md` |
 | 233 | Community 289 | 8 | 7 | 0 | 0 | Run-2 independent adversarial sign-off audit and Run-3 scope lock · 20260726T045406Z-agentjwork-codex-run2-adversarial-audit.md · Attempted · Blockers | `docs/sessions/20260726T045406Z-agentjwork-codex-run2-adversarial-audit.md` |
 | 234 | Community 292 | 8 | 7 | 0 | 0 | Windows toolchain gotchas — the recurring traps on this repo · 1. node/flutter are NOT on the base PATH · 2. Generated-plugin churn (phantom modified files) · 3. Write-tool NUL bytes (binary-looking files) | `.claude/skills/windows-toolchain-gotchas/SKILL.md` |
-| 235 | Community 293 | 7 | 6 | 0 | 1 | Biomech-botanical Asset Style · Asset Acceptance Workflow · Background Mode Prompting · Biotope Design Tokens | `docs/biotope/ui/ai-assets/asset-style-guide.md`<br/>`docs/biotope/ui/ai-assets/lessons/prompt-lessons.md`<br/>`docs/biotope/ui/ai-assets/lessons/rejected-assets.md` |
-| 236 | Community 294 | 7 | 6 | 1 | 0 | Part A — Operating principles · A1. The three economies · A2. The three levers that decide every manual metric · A3. The tier ladder | `docs/biotope/metrics-catalog.md` |
-| 237 | Community 295 | 7 | 6 | 1 | 0 | Part D — SG/MY localization deep-dive · D-i. Diet capture kit (replaces gram-level logging) · D-ii. Hydration without asking volume · D-iii. Climate & exposome priorities | `docs/biotope/metrics-catalog.md` |
+| 235 | Community 293 | 7 | 6 | 0 | 1 | Biomech-botanical Asset Style · Asset Acceptance Workflow · Background Mode Prompting · Biotope Design Tokens | `assets/ui-generation/biomech-botanical/asset-style-guide.md`<br/>`assets/ui-generation/biomech-botanical/lessons/prompt-lessons.md`<br/>`assets/ui-generation/biomech-botanical/lessons/rejected-assets.md` |
+| 236 | Community 294 | 7 | 6 | 1 | 0 | Part A — Operating principles · A1. The three economies · A2. The three levers that decide every manual metric · A3. The tier ladder | `docs/implemented/biotope/metrics-catalog.md` |
+| 237 | Community 295 | 7 | 6 | 1 | 0 | Part D — SG/MY localization deep-dive · D-i. Diet capture kit (replaces gram-level logging) · D-ii. Hydration without asking volume · D-iii. Climate & exposome priorities | `docs/implemented/biotope/metrics-catalog.md` |
 | 238 | Community 296 | 7 | 6 | 0 | 0 | copy_guidelines.dart · _forbiddenWordPattern · allowedPhrases · CopyRules | `shared/constants/copy_guidelines.dart` |
 | 239 | Community 297 | 7 | 7 | 2 | 0 | copy_guidelines.test.ts · copy_guidelines.ts · COPY_RULES · forbiddenWordPattern() | `shared/constants/copy_guidelines.ts`<br/>`tools/rules/tests/copy_guidelines.test.ts` |
 | 240 | Windows Win32 Runner | 7 | 10 | 4 | 0 | lifecycle.ts · s5_lifecycle.test.ts · computeStalePairs() · pairEligibilityKey() | `supabase/functions/evaluate-signals/lifecycle.ts`<br/>`tools/engine-stats/tests/s5_lifecycle.test.ts` |
 | 241 | Community 204 | 7 | 8 | 3 | 0 | githubDispatch.ts · dispatchIngestWorkflow() · githubDispatch.test.ts · requiredEnv() | `apps/nao/src/lib/githubDispatch.ts`<br/>`apps/nao/tests/githubDispatch.test.ts` |
 | 242 | Community 302 | 7 | 6 | 3 | 0 | provenance_model_test.dart · package:src/modules/m5b_insight_engine/impl/provenance_models.dart · _edgeCardJson · _json | `apps/biotope/test/m5b_insight_engine/provenance_model_test.dart` |
 | 243 | Community 303 | 7 | 6 | 0 | 0 | _ · AuthResult · errorMessage · failure | `apps/biotope/lib/modules/m1_core/models/auth_result.dart` |
-| 244 | Community 304 | 7 | 6 | 0 | 0 | deco_vine_corner_right.md · Background Mode · deco_vine_corner_right · deco_vine_corner_right.md | `docs/biotope/ui/ai-assets/reviews/deco_vine_corner_right.md`<br/>`docs/biotope/ui/ai-assets/prompts/deco_vine_corner_right.md` |
-| 245 | Community 305 | 7 | 6 | 0 | 0 | empty_archive_specimen.md · Background Mode · empty_archive_specimen · empty_archive_specimen.md | `docs/biotope/ui/ai-assets/reviews/empty_archive_specimen.md`<br/>`docs/biotope/ui/ai-assets/prompts/empty_archive_specimen.md` |
-| 246 | Community 306 | 7 | 6 | 0 | 0 | empty_notifications_flower.md · Background Mode · empty_notifications_flower · empty_notifications_flower.md | `docs/biotope/ui/ai-assets/reviews/empty_notifications_flower.md`<br/>`docs/biotope/ui/ai-assets/prompts/empty_notifications_flower.md` |
+| 244 | Community 304 | 7 | 6 | 0 | 0 | deco_vine_corner_right.md · Background Mode · deco_vine_corner_right · deco_vine_corner_right.md | `assets/ui-generation/biomech-botanical/reviews/deco_vine_corner_right.md`<br/>`assets/ui-generation/biomech-botanical/prompts/deco_vine_corner_right.md` |
+| 245 | Community 305 | 7 | 6 | 0 | 0 | empty_archive_specimen.md · Background Mode · empty_archive_specimen · empty_archive_specimen.md | `assets/ui-generation/biomech-botanical/reviews/empty_archive_specimen.md`<br/>`assets/ui-generation/biomech-botanical/prompts/empty_archive_specimen.md` |
+| 246 | Community 306 | 7 | 6 | 0 | 0 | empty_notifications_flower.md · Background Mode · empty_notifications_flower · empty_notifications_flower.md | `assets/ui-generation/biomech-botanical/reviews/empty_notifications_flower.md`<br/>`assets/ui-generation/biomech-botanical/prompts/empty_notifications_flower.md` |
 | 247 | Community 307 | 7 | 6 | 0 | 0 | Where audit findings cluster in this repo · 1. The "shared schema is the only gate on foreign inputs" seam · 2. Contract-vs-reality drift on app-facing surfaces · 3. Projection lifecycle — rows that only ever accumulate, or vanish w… | `.claude/skills/record-only-audit/references/finding-hotspots.md` |
-| 248 | Community 308 | 7 | 6 | 0 | 1 | Insights Neural Botanical Cluster · Fits Well · Flutter Usage · Insights Branching System | `docs/biotope/ui/ai-assets/reviews/insights_neural_botanical_cluster.md`<br/>`docs/biotope/ui/ai-assets/reviews/insights_branching_node_system.md` |
-| 249 | Community 309 | 7 | 6 | 0 | 1 | scan_circular_bloom · Fits Well · Flutter Usage · Scan Biomechanical Orchid | `docs/biotope/ui/ai-assets/reviews/scan_circular_bloom.md`<br/>`docs/biotope/ui/ai-assets/reviews/scan_biomech_orchid.md` |
+| 248 | Community 308 | 7 | 6 | 0 | 1 | Insights Neural Botanical Cluster · Fits Well · Flutter Usage · Insights Branching System | `assets/ui-generation/biomech-botanical/reviews/insights_neural_botanical_cluster.md`<br/>`assets/ui-generation/biomech-botanical/reviews/insights_branching_node_system.md` |
+| 249 | Community 309 | 7 | 6 | 0 | 1 | scan_circular_bloom · Fits Well · Flutter Usage · Scan Biomechanical Orchid | `assets/ui-generation/biomech-botanical/reviews/scan_circular_bloom.md`<br/>`assets/ui-generation/biomech-botanical/reviews/scan_biomech_orchid.md` |
 | 250 | Community 312 | 7 | 6 | 0 | 0 | Session 20260601T000000Z — uandiqueue — team — historical-backfill · 20260601T000000Z-uandiqueue-team-historical-backfill.md · Attempted · Blockers / notes | `docs/sessions/20260601T000000Z-uandiqueue-team-historical-backfill.md` |
 | 251 | Community 313 | 7 | 6 | 0 | 0 | Session 20260610T035536Z — uandiqueue — claude — pr-target-dev-phase2… · 20260610T035536Z-uandiqueue-claude-pr-target-dev-phase2-alton.md · Attempted · Blockers | `docs/sessions/20260610T035536Z-uandiqueue-claude-pr-target-dev-phase2-alton.md` |
 | 252 | Community 314 | 7 | 6 | 0 | 0 | Session 20260610T042206Z — uandiqueue — claude — consolidate-onto-dev… · 20260610T042206Z-uandiqueue-claude-consolidate-onto-dev-phase2.md · Attempted · Blockers | `docs/sessions/20260610T042206Z-uandiqueue-claude-consolidate-onto-dev-phase2.md` |
@@ -604,74 +604,74 @@ once to each endpoint community.
 | 297 | Community 359 | 7 | 6 | 0 | 0 | What was done · Run 2.0 U3 — contract hardening (O17 + O20; verdict B3 + H3) · 20260724T080239Z-agentjwork-claude-run2-u3-contract-hardening.md · Gate summary (all green) | `docs/sessions/20260724T080239Z-agentjwork-claude-run2-u3-contract-hardening.md` |
 | 298 | Community 360 | 7 | 6 | 0 | 0 | Run-2 U11 — gap surfacing in nao (O9 demo slice / feature (d)) · 20260724T161012Z-agentjwork-claude-run2-u11-gap-surfacing.md · Decisions made autonomously (for review) · Gates | `docs/sessions/20260724T161012Z-agentjwork-claude-run2-u11-gap-surfacing.md` |
 | 299 | Community 363 | 7 | 6 | 0 | 0 | Stacked PR chains — run, merge, recover · Branch-cleanup safety · Recovery · SKILL.md | `.claude/skills/stacked-pr-chain/SKILL.md` |
-| 300 | Community 235 | 7 | 6 | 0 | 0 | Documentation Readiness · Truth Hierarchy · B-PL20 Documentation and Agent Safety Work · B-PL21 Shared Contract Debt | `docs/temp/documentation-freshness-audit-2026-07-26.md` |
+| 300 | Community 235 | 7 | 6 | 0 | 0 | Documentation Readiness · Truth Hierarchy · B-PL20 Documentation and Agent Safety Work · B-PL21 Shared Contract Debt | `docs/development/documentation-freshness-audit-2026-07-26.md` |
 | 301 | Claim Verification Workflow | 7 | 7 | 11 | 0 | prompt.ts · buildVerifierPrompt() · VerifyCitation · claimBlock() | `tools/brain-ingest/src/verify/prompt.ts`<br/>`tools/brain-ingest/src/verify/types.ts` |
-| 621 | Run 3 Product Units | 7 | 0 | 19 | 1 | O24-O29 Locked Six-Unit Product-Only Run 3 Tranche · O29 Live Verifier Attestation · O24 Exact-Tip CI and Reproducible Deno Release Gate · O25 Security and Privacy Boundary | `docs/temp/run3/pending-build-register.md` |
-| 302 | Community 366 | 6 | 5 | 0 | 0 | Biotope AI Image Assets · Continuation Workflow · Flutter Usage · README.md | `docs/biotope/ui/ai-assets/README.md` |
-| 303 | Community 303 | 6 | 5 | 0 | 0 | Tracked human semantic-graph view · Graph projection parity · Semantic graph-view implementation session · Graph-view tooling structure | `docs/temp/documentation-freshness-audit-2026-07-26.md`<br/>`docs/graph/README.md`<br/>`docs/sessions/20260726T163505Z-agentjwork-codex-zebra-model-training-doc-split.md` |
+| 621 | Run 3 Product Units | 7 | 0 | 19 | 1 | O24-O29 Locked Six-Unit Product-Only Run 3 Tranche · O29 Live Verifier Attestation · O24 Exact-Tip CI and Reproducible Deno Release Gate · O25 Security and Privacy Boundary | `docs/archive/runs/run3/pending-build-register.md` |
+| 302 | Community 366 | 6 | 5 | 0 | 0 | Biotope AI Image Assets · Continuation Workflow · Flutter Usage · README.md | `assets/ui-generation/biomech-botanical/README.md` |
+| 303 | Community 303 | 6 | 5 | 0 | 0 | Tracked human semantic-graph view · Graph projection parity · Semantic graph-view implementation session · Graph-view tooling structure | `docs/development/documentation-freshness-audit-2026-07-26.md`<br/>`docs/graph/README.md`<br/>`docs/sessions/20260726T163505Z-agentjwork-codex-zebra-model-training-doc-split.md` |
 | 304 | Community 374 | 6 | 5 | 3 | 0 | edge_human_verdicts.test.ts · REPO_ROOT · migrationsDir · migrationSql() | `tools/edge-loader/tests/edge_human_verdicts.test.ts`<br/>`tools/edge-loader/lib/artifacts.mjs` |
 | 305 | Community 73 | 6 | 4 | 2 | 0 | chart_math_test.dart · mosquito_logging_test.dart · main · main | `apps/biotope/test/m2_self_report/mosquito_logging_test.dart`<br/>`apps/biotope/test/m5a_baselines/chart_math_test.dart` |
-| 306 | Community 186 | 6 | 5 | 0 | 0 | Corpus as Durable Truth · Open-access Retrieval Pattern · paper_uid Identity Scheme · Resumable Ingest CLI | `docs/nao/brain-ingestion-design.md` |
+| 306 | Community 186 | 6 | 5 | 0 | 0 | Corpus as Durable Truth · Open-access Retrieval Pattern · paper_uid Identity Scheme · Resumable Ingest CLI | `docs/implemented/nao/brain-ingestion-design.md` |
 | 307 | Community 381 | 6 | 5 | 0 | 0 | The Phase-2 reverse-cascade merge (2026-07-18) — the incident behind … · How the chain came to exist · Lessons encoded in the skill · phase2-reverse-cascade.md | `.claude/skills/stacked-pr-chain/references/phase2-reverse-cascade.md` |
 | 308 | Community 382 | 6 | 5 | 0 | 0 | graphify reference: query, path, explain · For /graphify explain · For /graphify path · query.md | `.claude/skills/graphify/references/query.md` |
-| 309 | Community 385 | 6 | 5 | 0 | 0 | archive_report_thumbnail_base · archive_report_thumbnail_base.md · Fits Well · Flutter Usage | `docs/biotope/ui/ai-assets/reviews/archive_report_thumbnail_base.md` |
-| 310 | Community 386 | 6 | 5 | 0 | 0 | deco_vine_corner_left Review · Background Mode · deco_vine_corner_left.md · Flutter Usage | `docs/biotope/ui/ai-assets/reviews/deco_vine_corner_left.md` |
-| 311 | Community 387 | 6 | 5 | 0 | 0 | empty_insights_seedpod Review · Background Mode · empty_insights_seedpod.md · Flutter Usage | `docs/biotope/ui/ai-assets/reviews/empty_insights_seedpod.md` |
-| 312 | Community 388 | 6 | 5 | 0 | 0 | empty_scan_bloom Review · Background Mode · empty_scan_bloom.md · Flutter Usage | `docs/biotope/ui/ai-assets/reviews/empty_scan_bloom.md` |
-| 313 | Community 389 | 6 | 5 | 0 | 0 | home_flower_cluster_card · Fits Well · Flutter Usage · home_flower_cluster_card.md | `docs/biotope/ui/ai-assets/reviews/home_flower_cluster_card.md` |
-| 314 | Community 390 | 6 | 5 | 0 | 0 | home_hero_robot_hand_alt_01 · Fits Well · Flutter Usage · home_hero_robot_hand_alt_01.md | `docs/biotope/ui/ai-assets/reviews/home_hero_robot_hand_alt_01.md` |
-| 315 | Community 391 | 6 | 5 | 0 | 0 | home_hero_robot_hand_main · Fits Well · Flutter Usage · home_hero_robot_hand_main.md | `docs/biotope/ui/ai-assets/reviews/home_hero_robot_hand_main.md` |
-| 316 | Community 392 | 6 | 5 | 0 | 0 | insights_biomech_heart_bloom · Fits Well · Flutter Usage · insights_biomech_heart_bloom.md | `docs/biotope/ui/ai-assets/reviews/insights_biomech_heart_bloom.md` |
-| 317 | Community 393 | 6 | 5 | 0 | 0 | insights_branching_node_system · Fits Well · Flutter Usage · insights_branching_node_system.md | `docs/biotope/ui/ai-assets/reviews/insights_branching_node_system.md` |
-| 318 | Community 394 | 6 | 5 | 0 | 0 | profile_botanical_crest Review · Background Mode · Flutter Usage · profile_botanical_crest.md | `docs/biotope/ui/ai-assets/reviews/profile_botanical_crest.md` |
-| 319 | Community 395 | 6 | 5 | 0 | 0 | profile_porcelain_camellia Review · Background Mode · Flutter Usage · profile_porcelain_camellia.md | `docs/biotope/ui/ai-assets/reviews/profile_porcelain_camellia.md` |
-| 320 | Community 396 | 6 | 5 | 0 | 0 | scan_biomech_orchid · Fits Well · Flutter Usage · scan_biomech_orchid.md | `docs/biotope/ui/ai-assets/reviews/scan_biomech_orchid.md` |
-| 321 | Community 397 | 6 | 5 | 0 | 0 | Scan Sensor Flower Closeup · Fits Well · Flutter Usage · scan_sensor_flower_closeup.md | `docs/biotope/ui/ai-assets/reviews/scan_sensor_flower_closeup.md` |
+| 309 | Community 385 | 6 | 5 | 0 | 0 | archive_report_thumbnail_base · archive_report_thumbnail_base.md · Fits Well · Flutter Usage | `assets/ui-generation/biomech-botanical/reviews/archive_report_thumbnail_base.md` |
+| 310 | Community 386 | 6 | 5 | 0 | 0 | deco_vine_corner_left Review · Background Mode · deco_vine_corner_left.md · Flutter Usage | `assets/ui-generation/biomech-botanical/reviews/deco_vine_corner_left.md` |
+| 311 | Community 387 | 6 | 5 | 0 | 0 | empty_insights_seedpod Review · Background Mode · empty_insights_seedpod.md · Flutter Usage | `assets/ui-generation/biomech-botanical/reviews/empty_insights_seedpod.md` |
+| 312 | Community 388 | 6 | 5 | 0 | 0 | empty_scan_bloom Review · Background Mode · empty_scan_bloom.md · Flutter Usage | `assets/ui-generation/biomech-botanical/reviews/empty_scan_bloom.md` |
+| 313 | Community 389 | 6 | 5 | 0 | 0 | home_flower_cluster_card · Fits Well · Flutter Usage · home_flower_cluster_card.md | `assets/ui-generation/biomech-botanical/reviews/home_flower_cluster_card.md` |
+| 314 | Community 390 | 6 | 5 | 0 | 0 | home_hero_robot_hand_alt_01 · Fits Well · Flutter Usage · home_hero_robot_hand_alt_01.md | `assets/ui-generation/biomech-botanical/reviews/home_hero_robot_hand_alt_01.md` |
+| 315 | Community 391 | 6 | 5 | 0 | 0 | home_hero_robot_hand_main · Fits Well · Flutter Usage · home_hero_robot_hand_main.md | `assets/ui-generation/biomech-botanical/reviews/home_hero_robot_hand_main.md` |
+| 316 | Community 392 | 6 | 5 | 0 | 0 | insights_biomech_heart_bloom · Fits Well · Flutter Usage · insights_biomech_heart_bloom.md | `assets/ui-generation/biomech-botanical/reviews/insights_biomech_heart_bloom.md` |
+| 317 | Community 393 | 6 | 5 | 0 | 0 | insights_branching_node_system · Fits Well · Flutter Usage · insights_branching_node_system.md | `assets/ui-generation/biomech-botanical/reviews/insights_branching_node_system.md` |
+| 318 | Community 394 | 6 | 5 | 0 | 0 | profile_botanical_crest Review · Background Mode · Flutter Usage · profile_botanical_crest.md | `assets/ui-generation/biomech-botanical/reviews/profile_botanical_crest.md` |
+| 319 | Community 395 | 6 | 5 | 0 | 0 | profile_porcelain_camellia Review · Background Mode · Flutter Usage · profile_porcelain_camellia.md | `assets/ui-generation/biomech-botanical/reviews/profile_porcelain_camellia.md` |
+| 320 | Community 396 | 6 | 5 | 0 | 0 | scan_biomech_orchid · Fits Well · Flutter Usage · scan_biomech_orchid.md | `assets/ui-generation/biomech-botanical/reviews/scan_biomech_orchid.md` |
+| 321 | Community 397 | 6 | 5 | 0 | 0 | Scan Sensor Flower Closeup · Fits Well · Flutter Usage · scan_sensor_flower_closeup.md | `assets/ui-generation/biomech-botanical/reviews/scan_sensor_flower_closeup.md` |
 | 322 | Community 400 | 6 | 5 | 0 | 3 | Run 2 U0 bootstrap session · Run 2 U1 router OpenAI session · Run 2 U2 verifier grounding session · Run 2 U3 contract hardening session | `docs/sessions/20260720T054702Z-agentjwork-claude-phase2-unit-signoff-review.md`<br/>`docs/sessions/20260724T065420Z-agentjwork-claude-run2-u0-bootstrap.md`<br/>`docs/sessions/20260724T071456Z-agentjwork-claude-run2-u1-router-openai.md` |
 | 323 | Community 401 | 6 | 5 | 0 | 0 | Session: Run 2.0 · U1 router OpenAI-only posture (TEST-MODE decorrela… · 20260724T071456Z-agentjwork-claude-run2-u1-router-openai.md · Decisions taken inside the unit's mandate · Gate | `docs/sessions/20260724T071456Z-agentjwork-claude-run2-u1-router-openai.md` |
 | 324 | Community 402 | 6 | 5 | 0 | 0 | simulated health generator · planLoadRange · Run-2 U6 Nao Data Loader · loader API route | `docs/sessions/20260724T094500Z-agentjwork-claude-run2-u6-nao-data-loader.md` |
 | 325 | Community 403 | 6 | 6 | 0 | 0 | ModelsPanel · llm router cap overrides · llm_router_spend projection · llm_router_status projection | `docs/sessions/20260724T121500Z-agentjwork-claude-run2-u8-model-config-spend.md` |
-| 326 | Community 404 | 6 | 5 | 0 | 0 | Project Context · One Health personal ecological health monitor · shared contract · graceful degradation | `docs/shared/project-context.md` |
+| 326 | Community 404 | 6 | 5 | 0 | 0 | Project Context · One Health personal ecological health monitor · shared contract · graceful degradation | `docs/implemented/project-context.md` |
 | 327 | Community 406 | 6 | 5 | 0 | 0 | edge_loader_cli.test.ts · CLI · emptyMirror() · FIXTURES | `tools/edge-loader/tests/edge_loader_cli.test.ts` |
 | 328 | Community 407 | 6 | 5 | 0 | 0 | verify.cli.integration.test.ts · CLAIMS · CORPUS · EVIDENCE_SNIPPETS | `tools/brain-ingest/tests/verify.cli.integration.test.ts` |
 | 329 | Community 408 | 6 | 8 | 0 | 0 | setup_agent_worktree.mjs · main() · parseArgs() · runCmd() | `tools/setup_agent_worktree.mjs` |
 | 330 | Community 409 | 5 | 4 | 0 | 0 | Ourobion Pull Request Checklist · Code Boundary and Copy Gate · dev-phase2 Target Gate · Session Context Gate | `.github/PULL_REQUEST_TEMPLATE.md` |
 | 331 | Community 410 | 5 | 4 | 0 | 0 | layout.tsx · jetbrainsMono · metadata · outfit | `apps/nao/src/app/layout.tsx` |
 | 332 | Community 411 | 5 | 4 | 0 | 0 | SceneDelegate.swift · SceneDelegate · Flutter · FlutterSceneDelegate | `apps/biotope/ios/Runner/SceneDelegate.swift` |
-| 333 | Community 412 | 5 | 4 | 2 | 0 | C1. Auto-fetchable `E` (E-1 … E-100) · Part C — The passive layer (zero logging budget) · External APIs keyed to location + time (E-58 … E-100) — all collectib… · Phone sensors & OS signals (E-1 … E-30) | `docs/biotope/metrics-catalog.md` |
-| 334 | Community 413 | 5 | 4 | 0 | 0 | Singapore-Malaysia Localization · Local Diet Capture Kit · Hydration Proxy · Metrics Catalog | `docs/biotope/metrics-catalog.md` |
+| 333 | Community 412 | 5 | 4 | 2 | 0 | C1. Auto-fetchable `E` (E-1 … E-100) · Part C — The passive layer (zero logging budget) · External APIs keyed to location + time (E-58 … E-100) — all collectib… · Phone sensors & OS signals (E-1 … E-30) | `docs/implemented/biotope/metrics-catalog.md` |
+| 334 | Community 413 | 5 | 4 | 0 | 0 | Singapore-Malaysia Localization · Local Diet Capture Kit · Hydration Proxy · Metrics Catalog | `docs/implemented/biotope/metrics-catalog.md` |
 | 335 | Community 415 | 5 | 7 | 0 | 0 | setup.sh · setup.sh script · hint_docker() · hint_flutter() | `scripts/setup.sh` |
 | 336 | Community 417 | 5 | 4 | 0 | 0 | hooks · settings.json · $schema · PreToolUse | `.claude/settings.json` |
 | 337 | Community 169 | 5 | 4 | 0 | 0 | Insight-Engine Architecture · biotope Architecture Context · Brain Ingestion Design · Brain Synthesis and Verification Design | `docs/INDEX.md` |
 | 338 | Community 73 | 5 | 4 | 2 | 0 | rules_table_contract_test.dart · checkListLiteral · group · m | `apps/biotope/test/guards/rules_table_contract_test.dart` |
 | 339 | Community 421 | 5 | 4 | 0 | 0 | index.dart · impl/baseline_service.dart · impl/chart_math.dart · impl/metric_series_models.dart | `apps/biotope/lib/modules/m5a_baselines/index.dart` |
-| 340 | Community 422 | 5 | 4 | 0 | 0 | Rejected Assets · Needs Regeneration, Not Rejected · empty_scan_bloom - attempt 1 · home_flower_cluster_card - attempt 1 | `docs/biotope/ui/ai-assets/lessons/rejected-assets.md` |
+| 340 | Community 422 | 5 | 4 | 0 | 0 | Rejected Assets · Needs Regeneration, Not Rejected · empty_scan_bloom - attempt 1 · home_flower_cluster_card - attempt 1 | `assets/ui-generation/biomech-botanical/lessons/rejected-assets.md` |
 | 341 | Brain Ingestion Storage Pipeline | 5 | 5 | 1 | 0 | TokenBucket · .consumeOne() · .refill() · .acquire() | `tools/brain-ingest/src/limits/rateLimiter.ts` |
 | 342 | Community 424 | 5 | 4 | 0 | 0 | eslint.config.mjs · __dirname · __filename · compat | `apps/nao/eslint.config.mjs` |
 | 343 | Community 158 | 5 | 4 | 0 | 0 | nao Research Operations Dashboard · Ourobion · CI Pipeline · D1 Search Index | `apps/nao/README.md`<br/>`README.md`<br/>`.github/workflows/ci.yml` |
-| 344 | Community 425 | 5 | 4 | 0 | 1 | empty_scan_bloom · empty_scan_bloom.md · scan_circular_bloom.md · Attempt 2 Refinement | `docs/biotope/ui/ai-assets/prompts/empty_scan_bloom.md`<br/>`docs/biotope/ui/ai-assets/prompts/scan_circular_bloom.md` |
+| 344 | Community 425 | 5 | 4 | 0 | 1 | empty_scan_bloom · empty_scan_bloom.md · scan_circular_bloom.md · Attempt 2 Refinement | `assets/ui-generation/biomech-botanical/prompts/empty_scan_bloom.md`<br/>`assets/ui-generation/biomech-botanical/prompts/scan_circular_bloom.md` |
 | 345 | Community 427 | 5 | 4 | 1 | 0 | Audit Finding Hotspots · App-Facing Contract Drift · Foreign Artifact Schema Seam · Projection Lifecycle Ownership | `.claude/skills/record-only-audit/references/finding-hotspots.md` |
 | 346 | Community 428 | 5 | 4 | 0 | 0 | The Phase-2 run — the proven instance behind this skill · Named incidents (with their D/B ids) · phase2-run-example.md · Primary records | `.claude/skills/orchestrate-build-run/references/phase2-run-example.md` |
-| 347 | User Consent and Metrics Models | 5 | 5 | 0 | 0 | B-PL17 Semantic Graph Freshness · B-PL18 Semantic Graph Broad-Query Ranking · Freshness versus retrieval-quality ownership boundary · Local session-end semantic freshness checker | `docs/temp/run3/pending-build-register.md` |
+| 347 | User Consent and Metrics Models | 5 | 5 | 0 | 0 | B-PL17 Semantic Graph Freshness · B-PL18 Semantic Graph Broad-Query Ranking · Freshness versus retrieval-quality ownership boundary · Local session-end semantic freshness checker | `docs/archive/runs/run3/pending-build-register.md` |
 | 348 | Community 433 | 5 | 4 | 0 | 1 | Phase 2 Integrated Plan Session · Metric 100 Decision Consolidation Session · Brain Pipeline Decision Session · Phase 2 Goals and Features Session | `docs/sessions/20260611T070148Z-uandiqueue-claude-phase2-goals-feature-list.md`<br/>`docs/sessions/20260611T084236Z-uandiqueue-claude-phase2-integrated-plan.md`<br/>`docs/sessions/20260701T052316Z-agentjwork-claude-brain-pipeline-decision.md` |
 | 349 | Community 434 | 5 | 4 | 0 | 0 | A8 Synthesis Session · S6 Edge Store and A11 Loader Session · A10 Verifier Scaffold Session · Agentic Seeder Session | `docs/sessions/20260716T031048Z-agentjwork-claude-s6-edge-store-a11-loader.md`<br/>`docs/sessions/20260716T035351Z-agentjwork-claude-agentic-seeder.md`<br/>`docs/sessions/20260716T042500Z-agentjwork-claude-a8-synthesis.md` |
-| 350 | verified edges | 5 | 4 | 0 | 0 | verified_edges · L6 One-Card End-to-End Slice · Biotope–nao Runtime Boundary · quoteCheck | `docs/shared/biotope-nao-link.md`<br/>`docs/shared/insight-slice-demo-runbook.md` |
+| 350 | verified edges | 5 | 4 | 0 | 0 | verified_edges · L6 One-Card End-to-End Slice · Biotope–nao Runtime Boundary · quoteCheck | `docs/implemented/biotope-nao-link.md`<br/>`docs/development/insight-slice-demo-runbook.md` |
 | 351 | Community 437 | 5 | 5 | 1 | 0 | edge_score_components.test.ts · referenceBand() · referenceScore() · mk() | `tools/edge-loader/tests/edge_score_components.test.ts` |
-| 85 | Community 85 | 4 | 1 | 9 | 1 | Run 3 Product Remediation Tranche · Adversarial Verification · Agentic Systems Track · Durable Memory Index | `docs/shared/hackathon/hackathon-direction.md`<br/>`docs/memory/README.md`<br/>`docs/temp/run3/README.md` |
-| 352 | Community 438 | 4 | 3 | 1 | 0 | Part F — Logging reliability & accuracy · F1. Reliability ladder (most → least trustworthy) · F2. Quick reference · F3. Implications for the model | `docs/biotope/metrics-catalog.md` |
+| 85 | Community 85 | 4 | 1 | 9 | 1 | Run 3 Product Remediation Tranche · Adversarial Verification · Agentic Systems Track · Durable Memory Index | `docs/hackathon/the_launchpad_challenge/plan/hackathon-direction.md`<br/>`docs/memory/README.md`<br/>`docs/archive/runs/run3/README.md` |
+| 352 | Community 438 | 4 | 3 | 1 | 0 | Part F — Logging reliability & accuracy · F1. Reliability ladder (most → least trustworthy) · F2. Quick reference · F3. Implications for the model | `docs/implemented/biotope/metrics-catalog.md` |
 | 353 | Community 301 | 4 | 4 | 0 | 0 | Shared Contract Two-Reviewer Gate · Executable Semantic Data Couplings · Non-Diagnostic Copy Rule · HRV SDNN iOS-Only Signal | `docs/graph/couplings.yaml`<br/>`docs/memory/0002-shared-contract-two-reviewers.md`<br/>`docs/memory/0003-non-diagnostic-copy.md` |
 | 354 | Community 442 | 4 | 3 | 0 | 0 | index.dart · impl/insight_service.dart · impl/provenance_models.dart · impl/provenance_service.dart | `apps/biotope/lib/modules/m5b_insight_engine/index.dart` |
 | 355 | Community 218 | 4 | 3 | 0 | 1 | Bug Report Form · Feature Request Form · Module and Environment Triage · Phase Scope and Acceptance Gate | `.github/ISSUE_TEMPLATE/bug_report.yml`<br/>`.github/ISSUE_TEMPLATE/feature_request.yml` |
 | 356 | Community 443 | 4 | 3 | 0 | 1 | 0005-pgcron-config-prereqs.md · 0009-local-test-data-seeding.md · Local test data seeding (don't log for a week by hand) · pg_cron migrations need app config set in the Supabase dashboard first | `docs/memory/0005-pgcron-config-prereqs.md`<br/>`docs/memory/0009-local-test-data-seeding.md` |
 | 357 | Community 444 | 4 | 3 | 0 | 0 | 0006-wearable-sync-best-effort.md · iOS Build and HealthKit Constraints · Local Supabase Auth Constraints · Wearable sync is best-effort | `docs/memory/0006-wearable-sync-best-effort.md`<br/>`docs/memory/0010-ios-build-needs-mac-and-paid-account.md`<br/>`docs/memory/0011-local-supabase-auth-email-only.md` |
 | 358 | Community 378 | 4 | 3 | 0 | 0 | Adversarial Edge Verification · Brain Pipeline and Support Models · 100-metric Collector-gated Expansion · L6 One-card Slice with Interim Verifier | `docs/memory/0012-brain-adversarial-edge-verification.md`<br/>`docs/memory/0013-brain-pipeline-and-support-models-decision.md`<br/>`docs/memory/0014-metric-catalog-100-expansion-decision.md` |
-| 359 | Community 446 | 4 | 3 | 0 | 1 | home_hero_robot_hand_alt_01.md · home_hero_robot_hand_main.md · home_hero_robot_hand_alt_01 · home_hero_robot_hand_main | `docs/biotope/ui/ai-assets/prompts/home_hero_robot_hand_alt_01.md`<br/>`docs/biotope/ui/ai-assets/prompts/home_hero_robot_hand_main.md` |
-| 360 | Community 447 | 4 | 3 | 0 | 1 | insights_branching_node_system.md · insights_neural_botanical_cluster.md · insights_branching_node_system · insights_neural_botanical_cluster | `docs/biotope/ui/ai-assets/prompts/insights_branching_node_system.md`<br/>`docs/biotope/ui/ai-assets/prompts/insights_neural_botanical_cluster.md` |
+| 359 | Community 446 | 4 | 3 | 0 | 1 | home_hero_robot_hand_alt_01.md · home_hero_robot_hand_main.md · home_hero_robot_hand_alt_01 · home_hero_robot_hand_main | `assets/ui-generation/biomech-botanical/prompts/home_hero_robot_hand_alt_01.md`<br/>`assets/ui-generation/biomech-botanical/prompts/home_hero_robot_hand_main.md` |
+| 360 | Community 447 | 4 | 3 | 0 | 1 | insights_branching_node_system.md · insights_neural_botanical_cluster.md · insights_branching_node_system · insights_neural_botanical_cluster | `assets/ui-generation/biomech-botanical/prompts/insights_branching_node_system.md`<br/>`assets/ui-generation/biomech-botanical/prompts/insights_neural_botanical_cluster.md` |
 | 361 | Community 448 | 4 | 3 | 0 | 0 | graphify reference: add a URL and watch a folder · add-watch.md · For --watch · For /graphify add | `.claude/skills/graphify/references/add-watch.md` |
 | 362 | Community 449 | 4 | 3 | 0 | 0 | Dispatch-brief anatomy — the proven build-agent brief skeleton · dispatch-brief-template.md · Filled example (condensed from the run's U24 dispatch) · Skeleton | `.claude/skills/orchestrate-build-run/references/dispatch-brief-template.md` |
 | 363 | Community 450 | 4 | 3 | 0 | 0 | graphify reference: commit hook and native CLAUDE.md integration · For git commit hook · For native CLAUDE.md integration · hooks.md | `.claude/skills/graphify/references/hooks.md` |
 | 364 | Community 451 | 4 | 3 | 0 | 0 | graphify reference: incremental update and cluster-only · For --cluster-only · For --update (incremental re-extraction) · update.md | `.claude/skills/graphify/references/update.md` |
-| 365 | Supabase Package | 4 | 3 | 0 | 0 | Run 3 Pending-Build Register · 100-Metric Expansion · Next-Build Optimizations · Superset Gap Map | `docs/temp/run3/pending-build-register.md` |
+| 365 | Supabase Package | 4 | 3 | 0 | 0 | Run 3 Pending-Build Register · 100-Metric Expansion · Next-Build Optimizations · Superset Gap Map | `docs/archive/runs/run3/pending-build-register.md` |
 | 366 | Community 457 | 4 | 5 | 1 | 0 | route.ts · POST() · json() · supabaseUrl() | `apps/nao/src/app/(app)/api/loader/run-pipeline/route.ts` |
 | 367 | Community 458 | 4 | 3 | 0 | 1 | Graphify Adoption Session · Graphify Codex and Gemini Prewire Session · Graphify Dart Probe Session · Graphify Hook and Docs Cleanup Session | `docs/sessions/20260610T093356Z-uandiqueue-claude-graphify-dart-probe.md`<br/>`docs/sessions/20260617T041218Z-uandiqueue-claude-graphify-adoption.md`<br/>`docs/sessions/20260617T062023Z-uandiqueue-claude-graphify-hook-and-docs-cleanup.md` |
 | 368 | Community 459 | 4 | 3 | 0 | 1 | Metric Daily Values and Baseline V2 · Signal and Pairwise Evaluator · Continuity Storage Primitives · Rules as Data | `docs/sessions/20260715T140420Z-agentjwork-claude-storage-primitives.md`<br/>`docs/sessions/20260715T152517Z-agentjwork-claude-rules-as-data.md`<br/>`docs/sessions/20260715T153917Z-agentjwork-claude-s2-view-s3-baseline-v2.md` |
@@ -685,8 +685,8 @@ once to each endpoint community.
 | 376 | Community 467 | 3 | 2 | 0 | 0 | imports · @supabase/functions-js · deno.json | `supabase/functions/evaluate-signals/deno.json` |
 | 377 | Community 471 | 3 | 2 | 0 | 0 | imports · @supabase/functions-js · deno.json | `supabase/functions/generate-insights/deno.json` |
 | 378 | Community 73 | 3 | 2 | 1 | 0 | normaliser_test.dart · main · package:src/modules/m2_self_report/impl/normaliser.dart | `apps/biotope/test/m2_self_report/normaliser_test.dart` |
-| 379 | Community 379 | 3 | 2 | 0 | 0 | Adversarial Edge Verification · Brain Knowledge Graph · Serving-Band Gating | `docs/nao/brain-synthesis-design.md` |
-| 380 | Community 475 | 3 | 2 | 0 | 0 | Asset Generation Completion · Manifest-First Asset Planning · Resumable Asset Generation State | `docs/biotope/ui/ai-assets/progress/current-batch.md`<br/>`docs/biotope/ui/ai-assets/progress/next-actions.md`<br/>`docs/biotope/ui/ai-assets/progress/README.md` |
+| 379 | Community 379 | 3 | 2 | 0 | 0 | Adversarial Edge Verification · Brain Knowledge Graph · Serving-Band Gating | `docs/implemented/nao/brain-synthesis-design.md` |
+| 380 | Community 475 | 3 | 2 | 0 | 0 | Asset Generation Completion · Manifest-First Asset Planning · Resumable Asset Generation State | `assets/ui-generation/biomech-botanical/progress/current-batch.md`<br/>`assets/ui-generation/biomech-botanical/progress/next-actions.md`<br/>`assets/ui-generation/biomech-botanical/progress/README.md` |
 | 381 | Community 476 | 3 | 2 | 0 | 0 | graphify reference: GitHub clone and cross-repo merge · github-and-merge.md · Step 0 - Clone GitHub repo(s) (only if a GitHub URL was given) | `.claude/skills/graphify/references/github-and-merge.md` |
 | 382 | Community 479 | 3 | 2 | 0 | 0 | graphify reference: transcribe video and audio · Step 2.5 - Transcribe video / audio files (only if video files detect… · transcribe.md | `.claude/skills/graphify/references/transcribe.md` |
 | 383 | Community 483 | 3 | 2 | 0 | 0 | imports · @supabase/functions-js · deno.json | `supabase/functions/run-pipeline/deno.json` |
@@ -695,19 +695,19 @@ once to each endpoint community.
 | 386 | Community 486 | 3 | 2 | 0 | 1 | Brain Safeguard Hardening · Projection Loader Hardening · Stacked-Chain Recovery | `docs/sessions/20260718T033750Z-agentjwork-claude-chain-recovery-docs-move.md`<br/>`docs/sessions/20260718T035658Z-agentjwork-claude-u19-brain-safeguard-hardening.md`<br/>`docs/sessions/20260718T050856Z-agentjwork-claude-u24-loader-hardening.md` |
 | 387 | Community 487 | 3 | 2 | 0 | 1 | Skills Run Procedures Session · Skills Generality Refactor Session · U26 Budget Ledger Lifecycle Session | `docs/sessions/20260718T053625Z-agentjwork-claude-u26-budget-ledger-lifecycle.md`<br/>`docs/sessions/20260718T163741Z-agentjwork-claude-skills-run-procedures.md`<br/>`docs/sessions/20260719T102011Z-agentjwork-claude-skills-generality-refactor.md` |
 | 388 | Community 488 | 3 | 2 | 0 | 0 | MetricSeriesService · Run-2 U7 Biotope Trend and Provenance · TrendChartPainter | `docs/sessions/20260724T102352Z-agentjwork-claude-run2-u7-biotope-trend-provenance.md` |
-| 389 | Phase 2 Demo Runbook | 3 | 2 | 0 | 0 | Phase 2 Demo Runbook · Decorrelated Full Run · Next Steps and Roadmap | `docs/shared/phase2-demo-runbook.md`<br/>`docs/shared/next-steps.md` |
+| 389 | Phase 2 Demo Runbook | 3 | 2 | 0 | 0 | Phase 2 Demo Runbook · Decorrelated Full Run · Next Steps and Roadmap | `docs/development/phase2-demo-runbook.md`<br/>`docs/development/next-steps.md` |
 | 390 | Community 378 | 2 | 1 | 0 | 1 | Claude Agent Guidance · Gemini Agent Guidance | `CLAUDE.md`<br/>`GEMINI.md` |
 | 391 | Community 493 | 2 | 1 | 0 | 0 | EyebrowLabel.tsx · EyebrowLabel() | `apps/nao/src/components/EyebrowLabel.tsx` |
 | 392 | Community 494 | 2 | 1 | 0 | 0 | data/rules/cross — cross-metric rule blueprints · README.md | `data/rules/cross/README.md` |
-| 393 | Community 495 | 2 | 1 | 0 | 0 | Insight-engine ADR index · Paper-reliability scoring decision | `docs/shared/decisions/0003-paper-reliability.md`<br/>`docs/shared/decisions/README.md` |
-| 394 | Community 496 | 2 | 1 | 0 | 0 | Insight-engine architecture decisions (ADRs) · README.md | `docs/shared/decisions/README.md` |
+| 393 | Community 495 | 2 | 1 | 0 | 0 | Insight-engine ADR index · Paper-reliability scoring decision | `docs/development/decisions/0003-paper-reliability.md`<br/>`docs/development/decisions/README.md` |
+| 394 | Community 496 | 2 | 1 | 0 | 0 | Insight-engine architecture decisions (ADRs) · README.md | `docs/development/decisions/README.md` |
 | 395 | Community 497 | 2 | 1 | 0 | 1 | Phase 2 Plan · Project Context | `docs/INDEX.md` |
 | 396 | Community 498 | 2 | 1 | 0 | 0 | FIXTURE edge artifacts — hand-authored, NEVER synthesized · README.md | `tools/edge-loader/tests/fixtures/edges/README.md` |
 | 397 | Community 501 | 2 | 1 | 0 | 1 | Europe PMC full-text-not-found fixture · Minimal arXiv PDF fixture | `tools/brain-ingest/tests/fixtures/arxiv-2401.12345.pdf`<br/>`tools/brain-ingest/tests/fixtures/europepmc-fulltext-notfound.html` |
 | 398 | Community 504 | 2 | 1 | 0 | 0 | impl/engagement_service.dart · index.dart | `apps/biotope/lib/modules/m6_engagement/index.dart` |
 | 399 | Community 505 | 2 | 1 | 0 | 0 | impl/wearable_service.dart · index.dart | `apps/biotope/lib/modules/m3_passive_health/index.dart` |
 | 400 | Community 506 | 2 | 1 | 0 | 0 | Launch Screen Assets · README.md | `apps/biotope/ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md` |
-| 401 | Community 507 | 2 | 1 | 0 | 0 | Style Drift Notes · style-drift-notes.md | `docs/biotope/ui/ai-assets/lessons/style-drift-notes.md` |
+| 401 | Community 507 | 2 | 1 | 0 | 0 | Style Drift Notes · style-drift-notes.md | `assets/ui-generation/biomech-botanical/lessons/style-drift-notes.md` |
 | 402 | Community 301 | 2 | 1 | 0 | 0 | 0001-two-tier-truth.md · Two-tier truth | `docs/memory/0001-two-tier-truth.md` |
 | 403 | Community 508 | 2 | 1 | 0 | 0 | 0002-shared-contract-two-reviewers.md · Shared contract changes need 2 reviewers | `docs/memory/0002-shared-contract-two-reviewers.md` |
 | 404 | Community 509 | 2 | 1 | 0 | 0 | 0003-non-diagnostic-copy.md · Non-diagnostic language is mandatory for all user-facing copy | `docs/memory/0003-non-diagnostic-copy.md` |
@@ -722,26 +722,26 @@ once to each endpoint community.
 | 413 | Community 517 | 2 | 1 | 0 | 0 | 0016 — Insight engine L6 one-card slice shipped (interim-verifier cav… · 0016-insight-engine-l6-one-card-slice.md | `docs/memory/0016-insight-engine-l6-one-card-slice.md` |
 | 414 | Community 518 | 2 | 1 | 0 | 0 | CloudflareEnv · env.d.ts | `apps/nao/env.d.ts` |
 | 415 | Community 519 | 2 | 1 | 0 | 0 | next.config.mjs · nextConfig | `apps/nao/next.config.mjs` |
-| 416 | Community 520 | 2 | 1 | 0 | 0 | Current Batch · current-batch.md | `docs/biotope/ui/ai-assets/progress/current-batch.md` |
-| 417 | Community 521 | 2 | 1 | 0 | 0 | Next Actions · next-actions.md | `docs/biotope/ui/ai-assets/progress/next-actions.md` |
-| 418 | Community 522 | 2 | 1 | 0 | 0 | AI Asset Generation Progress · README.md | `docs/biotope/ui/ai-assets/progress/README.md` |
-| 419 | Community 523 | 2 | 1 | 0 | 0 | archive_herbarium_specimen · archive_herbarium_specimen.md | `docs/biotope/ui/ai-assets/prompts/archive_herbarium_specimen.md` |
-| 420 | Community 524 | 2 | 1 | 0 | 0 | archive_preserved_flower_fragment · archive_preserved_flower_fragment.md | `docs/biotope/ui/ai-assets/prompts/archive_preserved_flower_fragment.md` |
-| 421 | Community 525 | 2 | 1 | 0 | 0 | deco_flower_cluster_white · deco_flower_cluster_white.md | `docs/biotope/ui/ai-assets/prompts/deco_flower_cluster_white.md` |
-| 422 | Community 526 | 2 | 1 | 0 | 0 | deco_leaf_brass_node · deco_leaf_brass_node.md | `docs/biotope/ui/ai-assets/prompts/deco_leaf_brass_node.md` |
-| 423 | Community 527 | 2 | 1 | 0 | 0 | deco_small_biomech_bloom · deco_small_biomech_bloom.md | `docs/biotope/ui/ai-assets/prompts/deco_small_biomech_bloom.md` |
-| 424 | Community 528 | 2 | 1 | 0 | 0 | deco_vine_corner_left · deco_vine_corner_left.md | `docs/biotope/ui/ai-assets/prompts/deco_vine_corner_left.md` |
-| 425 | Community 529 | 2 | 1 | 0 | 0 | empty_insights_seedpod · empty_insights_seedpod.md | `docs/biotope/ui/ai-assets/prompts/empty_insights_seedpod.md` |
-| 426 | Community 530 | 2 | 1 | 0 | 0 | home_flower_cluster_card · home_flower_cluster_card.md | `docs/biotope/ui/ai-assets/prompts/home_flower_cluster_card.md` |
-| 427 | Community 531 | 2 | 1 | 0 | 0 | insights_biomech_heart_bloom · insights_biomech_heart_bloom.md | `docs/biotope/ui/ai-assets/prompts/insights_biomech_heart_bloom.md` |
-| 428 | Community 532 | 2 | 1 | 0 | 0 | profile_botanical_crest · profile_botanical_crest.md | `docs/biotope/ui/ai-assets/prompts/profile_botanical_crest.md` |
-| 429 | Community 533 | 2 | 1 | 0 | 0 | scan_biomech_orchid · scan_biomech_orchid.md | `docs/biotope/ui/ai-assets/prompts/scan_biomech_orchid.md` |
-| 430 | Community 534 | 2 | 1 | 0 | 0 | scan_sensor_flower_closeup · scan_sensor_flower_closeup.md | `docs/biotope/ui/ai-assets/prompts/scan_sensor_flower_closeup.md` |
+| 416 | Community 520 | 2 | 1 | 0 | 0 | Current Batch · current-batch.md | `assets/ui-generation/biomech-botanical/progress/current-batch.md` |
+| 417 | Community 521 | 2 | 1 | 0 | 0 | Next Actions · next-actions.md | `assets/ui-generation/biomech-botanical/progress/next-actions.md` |
+| 418 | Community 522 | 2 | 1 | 0 | 0 | AI Asset Generation Progress · README.md | `assets/ui-generation/biomech-botanical/progress/README.md` |
+| 419 | Community 523 | 2 | 1 | 0 | 0 | archive_herbarium_specimen · archive_herbarium_specimen.md | `assets/ui-generation/biomech-botanical/prompts/archive_herbarium_specimen.md` |
+| 420 | Community 524 | 2 | 1 | 0 | 0 | archive_preserved_flower_fragment · archive_preserved_flower_fragment.md | `assets/ui-generation/biomech-botanical/prompts/archive_preserved_flower_fragment.md` |
+| 421 | Community 525 | 2 | 1 | 0 | 0 | deco_flower_cluster_white · deco_flower_cluster_white.md | `assets/ui-generation/biomech-botanical/prompts/deco_flower_cluster_white.md` |
+| 422 | Community 526 | 2 | 1 | 0 | 0 | deco_leaf_brass_node · deco_leaf_brass_node.md | `assets/ui-generation/biomech-botanical/prompts/deco_leaf_brass_node.md` |
+| 423 | Community 527 | 2 | 1 | 0 | 0 | deco_small_biomech_bloom · deco_small_biomech_bloom.md | `assets/ui-generation/biomech-botanical/prompts/deco_small_biomech_bloom.md` |
+| 424 | Community 528 | 2 | 1 | 0 | 0 | deco_vine_corner_left · deco_vine_corner_left.md | `assets/ui-generation/biomech-botanical/prompts/deco_vine_corner_left.md` |
+| 425 | Community 529 | 2 | 1 | 0 | 0 | empty_insights_seedpod · empty_insights_seedpod.md | `assets/ui-generation/biomech-botanical/prompts/empty_insights_seedpod.md` |
+| 426 | Community 530 | 2 | 1 | 0 | 0 | home_flower_cluster_card · home_flower_cluster_card.md | `assets/ui-generation/biomech-botanical/prompts/home_flower_cluster_card.md` |
+| 427 | Community 531 | 2 | 1 | 0 | 0 | insights_biomech_heart_bloom · insights_biomech_heart_bloom.md | `assets/ui-generation/biomech-botanical/prompts/insights_biomech_heart_bloom.md` |
+| 428 | Community 532 | 2 | 1 | 0 | 0 | profile_botanical_crest · profile_botanical_crest.md | `assets/ui-generation/biomech-botanical/prompts/profile_botanical_crest.md` |
+| 429 | Community 533 | 2 | 1 | 0 | 0 | scan_biomech_orchid · scan_biomech_orchid.md | `assets/ui-generation/biomech-botanical/prompts/scan_biomech_orchid.md` |
+| 430 | Community 534 | 2 | 1 | 0 | 0 | scan_sensor_flower_closeup · scan_sensor_flower_closeup.md | `assets/ui-generation/biomech-botanical/prompts/scan_sensor_flower_closeup.md` |
 | 431 | Community 535 | 2 | 1 | 0 | 0 | extraction-spec.md · graphify reference: extraction subagent prompt | `.claude/skills/graphify/references/extraction-spec.md` |
-| 432 | Community 537 | 2 | 1 | 0 | 1 | Accepted Left Vine Overlay · Accepted Right Vine Overlay | `docs/biotope/ui/ai-assets/reviews/deco_vine_corner_left.md`<br/>`docs/biotope/ui/ai-assets/reviews/deco_vine_corner_right.md` |
-| 433 | Community 538 | 2 | 1 | 0 | 1 | Alternate Home Hero · Primary Home Hero | `docs/biotope/ui/ai-assets/reviews/home_hero_robot_hand_alt_01.md`<br/>`docs/biotope/ui/ai-assets/reviews/home_hero_robot_hand_main.md` |
-| 434 | Community 539 | 2 | 1 | 0 | 1 | Profile Porcelain Camellia · Profile Signature Flower | `docs/biotope/ui/ai-assets/reviews/profile_porcelain_camellia.md`<br/>`docs/biotope/ui/ai-assets/reviews/profile_signature_flower.md` |
-| 435 | Agent Worktree Setup | 2 | 1 | 0 | 0 | B-PL20 Canonical Orientation Docs Lag Long-Horizon Builds · B-PL21 PaperRecord Shared Contract Debt | `docs/temp/run3/pending-build-register.md` |
+| 432 | Community 537 | 2 | 1 | 0 | 1 | Accepted Left Vine Overlay · Accepted Right Vine Overlay | `assets/ui-generation/biomech-botanical/reviews/deco_vine_corner_left.md`<br/>`assets/ui-generation/biomech-botanical/reviews/deco_vine_corner_right.md` |
+| 433 | Community 538 | 2 | 1 | 0 | 1 | Alternate Home Hero · Primary Home Hero | `assets/ui-generation/biomech-botanical/reviews/home_hero_robot_hand_alt_01.md`<br/>`assets/ui-generation/biomech-botanical/reviews/home_hero_robot_hand_main.md` |
+| 434 | Community 539 | 2 | 1 | 0 | 1 | Profile Porcelain Camellia · Profile Signature Flower | `assets/ui-generation/biomech-botanical/reviews/profile_porcelain_camellia.md`<br/>`assets/ui-generation/biomech-botanical/reviews/profile_signature_flower.md` |
+| 435 | Agent Worktree Setup | 2 | 1 | 0 | 0 | B-PL20 Canonical Orientation Docs Lag Long-Horizon Builds · B-PL21 PaperRecord Shared Contract Debt | `docs/archive/runs/run3/pending-build-register.md` |
 | 436 | Community 545 | 2 | 1 | 0 | 0 | seed-test-data.ps1 · Write-Step() | `scripts/seed-test-data.ps1` |
 | 437 | Community 546 | 2 | 1 | 0 | 0 | setup.ps1 · Step() | `scripts/setup.ps1` |
 | 438 | Community 547 | 2 | 1 | 0 | 1 | Context-System Bootstrap · Historical Session Backfill | `docs/sessions/20260601T000000Z-uandiqueue-team-historical-backfill.md`<br/>`docs/sessions/20260608T045610Z-uandiqueue-claude-context-system-bootstrap.md` |
@@ -788,34 +788,34 @@ once to each endpoint community.
 | 479 | Community 594 | 1 | 0 | 0 | 0 | Ourobion dark lockup | `apps/nao/public/brand/ourobion-lockup-dark.svg` |
 | 480 | Community 595 | 1 | 0 | 0 | 0 | Ourobion dark mark | `apps/nao/public/brand/ourobion-mark-dark-512.png` |
 | 481 | Community 596 | 1 | 0 | 0 | 0 | Ourobion dark mark | `apps/nao/public/brand/ourobion-mark-dark.svg` |
-| 482 | Community 597 | 1 | 0 | 0 | 0 | Herbarium specimen candidate | `docs/biotope/ui/ai-assets/reviews/candidates/archive_herbarium_specimen_attempt_1.png` |
-| 483 | Community 598 | 1 | 0 | 0 | 0 | Preserved flower fragment candidate | `docs/biotope/ui/ai-assets/reviews/candidates/archive_preserved_flower_fragment_attempt_1.png` |
-| 484 | Community 599 | 1 | 0 | 0 | 0 | Archive report thumbnail candidate | `docs/biotope/ui/ai-assets/reviews/candidates/archive_report_thumbnail_base_attempt_1.png` |
-| 485 | Community 600 | 1 | 0 | 0 | 0 | Blush flower cluster candidate | `docs/biotope/ui/ai-assets/reviews/candidates/deco_flower_cluster_blush_attempt_1.png` |
-| 486 | Community 601 | 1 | 0 | 0 | 0 | White flower cluster candidate | `docs/biotope/ui/ai-assets/reviews/candidates/deco_flower_cluster_white_attempt_1.png` |
-| 487 | Community 602 | 1 | 0 | 0 | 0 | Brass leaf node candidate | `docs/biotope/ui/ai-assets/reviews/candidates/deco_leaf_brass_node_attempt_1.png` |
-| 488 | Community 603 | 1 | 0 | 0 | 0 | Small biomechanical bloom candidate | `docs/biotope/ui/ai-assets/reviews/candidates/deco_small_biomech_bloom_attempt_1.png` |
-| 489 | Community 604 | 1 | 0 | 0 | 0 | Left vine corner candidate | `docs/biotope/ui/ai-assets/reviews/candidates/deco_vine_corner_left_attempt_1.png` |
-| 490 | Community 605 | 1 | 0 | 0 | 0 | Right vine corner candidate | `docs/biotope/ui/ai-assets/reviews/candidates/deco_vine_corner_right_attempt_1.png` |
-| 491 | Community 606 | 1 | 0 | 0 | 0 | Empty archive specimen candidate | `docs/biotope/ui/ai-assets/reviews/candidates/empty_archive_specimen_attempt_1.png` |
-| 492 | Community 607 | 1 | 0 | 0 | 0 | Pale green biomechanical seedpod on a curved stem with leaves and gol… | `docs/biotope/ui/ai-assets/reviews/candidates/empty_insights_seedpod_attempt_1.png` |
-| 493 | Community 608 | 1 | 0 | 0 | 0 | Drooping white bell flower with botanical stem, leaf, and gold mechan… | `docs/biotope/ui/ai-assets/reviews/candidates/empty_notifications_flower_attempt_1.png` |
-| 494 | Community 609 | 1 | 0 | 0 | 0 | White orchid bloom with buds and a cream mechanical ring | `docs/biotope/ui/ai-assets/reviews/candidates/empty_scan_bloom_attempt_1.png` |
-| 495 | Community 610 | 1 | 0 | 0 | 0 | White orchid bloom with buds, long leaf, and cream mechanical arc | `docs/biotope/ui/ai-assets/reviews/candidates/empty_scan_bloom_attempt_2.png` |
-| 496 | Community 611 | 1 | 0 | 0 | 0 | White biomechanical flowering branch cluster arranged in the lower-ri… | `docs/biotope/ui/ai-assets/reviews/candidates/home_flower_cluster_card_attempt_1.png` |
-| 497 | Community 612 | 1 | 0 | 0 | 0 | Dense white and blush biomechanical flower cluster with branching gol… | `docs/biotope/ui/ai-assets/reviews/candidates/home_flower_cluster_card_attempt_2.png` |
-| 498 | Community 613 | 1 | 0 | 0 | 0 | White robotic hand cradling a lush white botanical flower arrangement | `docs/biotope/ui/ai-assets/reviews/candidates/home_hero_robot_hand_alt_01_attempt_1.png` |
-| 499 | Community 614 | 1 | 0 | 0 | 0 | Upraised white robotic hand holding white flowers and green botanical… | `docs/biotope/ui/ai-assets/reviews/candidates/home_hero_robot_hand_main_attempt_1.png` |
-| 500 | Community 615 | 1 | 0 | 0 | 0 | Heart-shaped biomechanical frame filled with white and blush flowers | `docs/biotope/ui/ai-assets/reviews/candidates/insights_biomech_heart_bloom_attempt_1.png` |
-| 501 | Community 616 | 1 | 0 | 0 | 0 | Branching biomechanical node network interwoven with white and blush … | `docs/biotope/ui/ai-assets/reviews/candidates/insights_branching_node_system_attempt_1.png` |
-| 502 | Community 617 | 1 | 0 | 0 | 0 | Neural-like biomechanical node system woven through a white botanical… | `docs/biotope/ui/ai-assets/reviews/candidates/insights_neural_botanical_cluster_attempt_1.png` |
-| 503 | Community 618 | 1 | 0 | 0 | 0 | Symmetrical botanical crest with central cream mechanical node and pa… | `docs/biotope/ui/ai-assets/reviews/candidates/profile_botanical_crest_attempt_1.png` |
-| 504 | Community 619 | 1 | 0 | 0 | 0 | Porcelain camellia candidate one | `docs/biotope/ui/ai-assets/reviews/candidates/profile_porcelain_camellia_attempt_1.png` |
-| 505 | Community 620 | 1 | 0 | 0 | 0 | Signature flower candidate one | `docs/biotope/ui/ai-assets/reviews/candidates/profile_signature_flower_attempt_1.png` |
-| 506 | Community 621 | 1 | 0 | 0 | 0 | Biomechanical orchid candidate one | `docs/biotope/ui/ai-assets/reviews/candidates/scan_biomech_orchid_attempt_1.png` |
-| 507 | Community 622 | 1 | 0 | 0 | 0 | Circular bloom candidate one | `docs/biotope/ui/ai-assets/reviews/candidates/scan_circular_bloom_attempt_1.png` |
-| 508 | Community 623 | 1 | 0 | 0 | 0 | Circular bloom candidate two | `docs/biotope/ui/ai-assets/reviews/candidates/scan_circular_bloom_attempt_2.png` |
-| 509 | Community 624 | 1 | 0 | 0 | 0 | Sensor flower closeup candidate | `docs/biotope/ui/ai-assets/reviews/candidates/scan_sensor_flower_closeup_attempt_1.png` |
+| 482 | Community 597 | 1 | 0 | 0 | 0 | Herbarium specimen candidate | `assets/ui-generation/biomech-botanical/reviews/candidates/archive_herbarium_specimen_attempt_1.png` |
+| 483 | Community 598 | 1 | 0 | 0 | 0 | Preserved flower fragment candidate | `assets/ui-generation/biomech-botanical/reviews/candidates/archive_preserved_flower_fragment_attempt_1.png` |
+| 484 | Community 599 | 1 | 0 | 0 | 0 | Archive report thumbnail candidate | `assets/ui-generation/biomech-botanical/reviews/candidates/archive_report_thumbnail_base_attempt_1.png` |
+| 485 | Community 600 | 1 | 0 | 0 | 0 | Blush flower cluster candidate | `assets/ui-generation/biomech-botanical/reviews/candidates/deco_flower_cluster_blush_attempt_1.png` |
+| 486 | Community 601 | 1 | 0 | 0 | 0 | White flower cluster candidate | `assets/ui-generation/biomech-botanical/reviews/candidates/deco_flower_cluster_white_attempt_1.png` |
+| 487 | Community 602 | 1 | 0 | 0 | 0 | Brass leaf node candidate | `assets/ui-generation/biomech-botanical/reviews/candidates/deco_leaf_brass_node_attempt_1.png` |
+| 488 | Community 603 | 1 | 0 | 0 | 0 | Small biomechanical bloom candidate | `assets/ui-generation/biomech-botanical/reviews/candidates/deco_small_biomech_bloom_attempt_1.png` |
+| 489 | Community 604 | 1 | 0 | 0 | 0 | Left vine corner candidate | `assets/ui-generation/biomech-botanical/reviews/candidates/deco_vine_corner_left_attempt_1.png` |
+| 490 | Community 605 | 1 | 0 | 0 | 0 | Right vine corner candidate | `assets/ui-generation/biomech-botanical/reviews/candidates/deco_vine_corner_right_attempt_1.png` |
+| 491 | Community 606 | 1 | 0 | 0 | 0 | Empty archive specimen candidate | `assets/ui-generation/biomech-botanical/reviews/candidates/empty_archive_specimen_attempt_1.png` |
+| 492 | Community 607 | 1 | 0 | 0 | 0 | Pale green biomechanical seedpod on a curved stem with leaves and gol… | `assets/ui-generation/biomech-botanical/reviews/candidates/empty_insights_seedpod_attempt_1.png` |
+| 493 | Community 608 | 1 | 0 | 0 | 0 | Drooping white bell flower with botanical stem, leaf, and gold mechan… | `assets/ui-generation/biomech-botanical/reviews/candidates/empty_notifications_flower_attempt_1.png` |
+| 494 | Community 609 | 1 | 0 | 0 | 0 | White orchid bloom with buds and a cream mechanical ring | `assets/ui-generation/biomech-botanical/reviews/candidates/empty_scan_bloom_attempt_1.png` |
+| 495 | Community 610 | 1 | 0 | 0 | 0 | White orchid bloom with buds, long leaf, and cream mechanical arc | `assets/ui-generation/biomech-botanical/reviews/candidates/empty_scan_bloom_attempt_2.png` |
+| 496 | Community 611 | 1 | 0 | 0 | 0 | White biomechanical flowering branch cluster arranged in the lower-ri… | `assets/ui-generation/biomech-botanical/reviews/candidates/home_flower_cluster_card_attempt_1.png` |
+| 497 | Community 612 | 1 | 0 | 0 | 0 | Dense white and blush biomechanical flower cluster with branching gol… | `assets/ui-generation/biomech-botanical/reviews/candidates/home_flower_cluster_card_attempt_2.png` |
+| 498 | Community 613 | 1 | 0 | 0 | 0 | White robotic hand cradling a lush white botanical flower arrangement | `assets/ui-generation/biomech-botanical/reviews/candidates/home_hero_robot_hand_alt_01_attempt_1.png` |
+| 499 | Community 614 | 1 | 0 | 0 | 0 | Upraised white robotic hand holding white flowers and green botanical… | `assets/ui-generation/biomech-botanical/reviews/candidates/home_hero_robot_hand_main_attempt_1.png` |
+| 500 | Community 615 | 1 | 0 | 0 | 0 | Heart-shaped biomechanical frame filled with white and blush flowers | `assets/ui-generation/biomech-botanical/reviews/candidates/insights_biomech_heart_bloom_attempt_1.png` |
+| 501 | Community 616 | 1 | 0 | 0 | 0 | Branching biomechanical node network interwoven with white and blush … | `assets/ui-generation/biomech-botanical/reviews/candidates/insights_branching_node_system_attempt_1.png` |
+| 502 | Community 617 | 1 | 0 | 0 | 0 | Neural-like biomechanical node system woven through a white botanical… | `assets/ui-generation/biomech-botanical/reviews/candidates/insights_neural_botanical_cluster_attempt_1.png` |
+| 503 | Community 618 | 1 | 0 | 0 | 0 | Symmetrical botanical crest with central cream mechanical node and pa… | `assets/ui-generation/biomech-botanical/reviews/candidates/profile_botanical_crest_attempt_1.png` |
+| 504 | Community 619 | 1 | 0 | 0 | 0 | Porcelain camellia candidate one | `assets/ui-generation/biomech-botanical/reviews/candidates/profile_porcelain_camellia_attempt_1.png` |
+| 505 | Community 620 | 1 | 0 | 0 | 0 | Signature flower candidate one | `assets/ui-generation/biomech-botanical/reviews/candidates/profile_signature_flower_attempt_1.png` |
+| 506 | Community 621 | 1 | 0 | 0 | 0 | Biomechanical orchid candidate one | `assets/ui-generation/biomech-botanical/reviews/candidates/scan_biomech_orchid_attempt_1.png` |
+| 507 | Community 622 | 1 | 0 | 0 | 0 | Circular bloom candidate one | `assets/ui-generation/biomech-botanical/reviews/candidates/scan_circular_bloom_attempt_1.png` |
+| 508 | Community 623 | 1 | 0 | 0 | 0 | Circular bloom candidate two | `assets/ui-generation/biomech-botanical/reviews/candidates/scan_circular_bloom_attempt_2.png` |
+| 509 | Community 624 | 1 | 0 | 0 | 0 | Sensor flower closeup candidate | `assets/ui-generation/biomech-botanical/reviews/candidates/scan_sensor_flower_closeup_attempt_1.png` |
 | 510 | Community 625 | 1 | 0 | 0 | 0 | daily_checkin.dart | `apps/biotope/lib/modules/m2_self_report/impl/checkin/daily_checkin.dart` |
 | 511 | Community 626 | 1 | 0 | 0 | 0 | Blush mechanical flower cluster | `apps/biotope/assets/images/generated/biomech_botanical/decorative/deco_flower_cluster_blush.png` |
 | 512 | Community 627 | 1 | 0 | 0 | 0 | White mechanical flower cluster | `apps/biotope/assets/images/generated/biomech_botanical/decorative/deco_flower_cluster_white.png` |
@@ -837,8 +837,8 @@ once to each endpoint community.
 | 528 | Community 642 | 1 | 0 | 0 | 0 | Ourobion favicon | `assets/ourobion-brand/favicon/favicon.svg` |
 | 529 | Community 643 | 1 | 0 | 0 | 0 | stool_logging.dart | `apps/biotope/lib/modules/m2_self_report/impl/gut/stool_logging.dart` |
 | 530 | Community 644 | 1 | 0 | 0 | 0 | urine_logging.dart | `apps/biotope/lib/modules/m2_self_report/impl/gut/urine_logging.dart` |
-| 531 | Community 645 | 1 | 0 | 0 | 0 | hackathon-rules.md | `docs/shared/hackathon/hackathon-rules.md` |
-| 532 | Community 646 | 1 | 0 | 0 | 0 | Launchpad 2026 hackathon rules | `docs/shared/hackathon/hackathon-rules.md` |
+| 531 | Community 645 | 1 | 0 | 0 | 0 | hackathon-rules.md | `docs/hackathon/the_launchpad_challenge/plan/hackathon-rules.md` |
+| 532 | Community 646 | 1 | 0 | 0 | 0 | Launchpad 2026 hackathon rules | `docs/hackathon/the_launchpad_challenge/plan/hackathon-rules.md` |
 | 533 | Community 647 | 1 | 0 | 0 | 0 | Biomechanical flower cluster for a home card | `apps/biotope/assets/images/generated/biomech_botanical/home/home_flower_cluster_card.png` |
 | 534 | Community 648 | 1 | 0 | 0 | 0 | Alternate home hero image of a robotic hand with blossoms | `apps/biotope/assets/images/generated/biomech_botanical/home/home_hero_robot_hand_alt_01.png` |
 | 535 | Community 649 | 1 | 0 | 0 | 0 | Main home hero image of an upraised robotic hand with blossoms | `apps/biotope/assets/images/generated/biomech_botanical/home/home_hero_robot_hand_main.png` |
@@ -882,15 +882,15 @@ once to each endpoint community.
 | 573 | Community 686 | 1 | 0 | 0 | 0 | Botanical mechanical profile crest | `apps/biotope/assets/images/generated/biomech_botanical/profile/profile_botanical_crest.png` |
 | 574 | Community 687 | 1 | 0 | 0 | 0 | Porcelain camellia profile flower | `apps/biotope/assets/images/generated/biomech_botanical/profile/profile_porcelain_camellia.png` |
 | 575 | Community 688 | 1 | 0 | 0 | 0 | Signature mechanical flower | `apps/biotope/assets/images/generated/biomech_botanical/profile/profile_signature_flower.png` |
-| 576 | Community 689 | 1 | 0 | 0 | 0 | Biomechanical botanical UI reference | `docs/biotope/ui/ai-assets/references/biomech-botanical-ui-seed.png` |
-| 577 | Community 692 | 1 | 0 | 0 | 0 | Archive Empty-State Specimen | `docs/biotope/ui/ai-assets/reviews/empty_archive_specimen.md` |
-| 578 | Community 693 | 1 | 0 | 0 | 0 | Insights Empty-State Seedpod | `docs/biotope/ui/ai-assets/reviews/empty_insights_seedpod.md` |
-| 579 | Community 694 | 1 | 0 | 0 | 0 | Notifications Empty-State Flower | `docs/biotope/ui/ai-assets/reviews/empty_notifications_flower.md` |
-| 580 | Community 695 | 1 | 0 | 0 | 0 | Scan Empty-State Bloom | `docs/biotope/ui/ai-assets/reviews/empty_scan_bloom.md` |
-| 581 | Community 696 | 1 | 0 | 0 | 0 | Home Flower Card Accent | `docs/biotope/ui/ai-assets/reviews/home_flower_cluster_card.md` |
-| 582 | Community 697 | 1 | 0 | 0 | 0 | Insights Heart Bloom | `docs/biotope/ui/ai-assets/reviews/insights_biomech_heart_bloom.md` |
-| 583 | Community 698 | 1 | 0 | 0 | 0 | Profile Botanical Crest | `docs/biotope/ui/ai-assets/reviews/profile_botanical_crest.md` |
-| 584 | Community 606 | 1 | 0 | 0 | 0 | B-BR4 Custom Support Models | `docs/temp/run3/pending-build-register.md` |
+| 576 | Community 689 | 1 | 0 | 0 | 0 | Biomechanical botanical UI reference | `assets/ui-generation/biomech-botanical/references/biomech-botanical-ui-seed.png` |
+| 577 | Community 692 | 1 | 0 | 0 | 0 | Archive Empty-State Specimen | `assets/ui-generation/biomech-botanical/reviews/empty_archive_specimen.md` |
+| 578 | Community 693 | 1 | 0 | 0 | 0 | Insights Empty-State Seedpod | `assets/ui-generation/biomech-botanical/reviews/empty_insights_seedpod.md` |
+| 579 | Community 694 | 1 | 0 | 0 | 0 | Notifications Empty-State Flower | `assets/ui-generation/biomech-botanical/reviews/empty_notifications_flower.md` |
+| 580 | Community 695 | 1 | 0 | 0 | 0 | Scan Empty-State Bloom | `assets/ui-generation/biomech-botanical/reviews/empty_scan_bloom.md` |
+| 581 | Community 696 | 1 | 0 | 0 | 0 | Home Flower Card Accent | `assets/ui-generation/biomech-botanical/reviews/home_flower_cluster_card.md` |
+| 582 | Community 697 | 1 | 0 | 0 | 0 | Insights Heart Bloom | `assets/ui-generation/biomech-botanical/reviews/insights_biomech_heart_bloom.md` |
+| 583 | Community 698 | 1 | 0 | 0 | 0 | Profile Botanical Crest | `assets/ui-generation/biomech-botanical/reviews/profile_botanical_crest.md` |
+| 584 | Community 606 | 1 | 0 | 0 | 0 | B-BR4 Custom Support Models | `docs/archive/runs/run3/pending-build-register.md` |
 | 585 | Community 700 | 1 | 0 | 0 | 0 | Runner-Bridging-Header.h | `apps/biotope/ios/Runner/Runner-Bridging-Header.h` |
 | 586 | Community 701 | 1 | 0 | 0 | 0 | Biomechanical orchid scan | `apps/biotope/assets/images/generated/biomech_botanical/scan/scan_biomech_orchid.png` |
 | 587 | Community 702 | 1 | 0 | 0 | 0 | Circular biomechanical bloom scan | `apps/biotope/assets/images/generated/biomech_botanical/scan/scan_circular_bloom.png` |
@@ -932,6 +932,6 @@ once to each endpoint community.
 
 - Community labels and inferred links are probabilistic; they are navigation aids, not reviewed facts.
 - Node and link counts depend on Graphify’s extractors and ignore rules, not just repository size.
-- This view does not replace `docs/biotope/architecture-context.md`, `shared/` contracts, migrations,
+- This view does not replace `docs/implemented/biotope/architecture-context.md`, `shared/` contracts, migrations,
   `docs/graph/couplings.yaml`, memory records, or accepted ADRs.
 - Historical `docs/archive/` material and this generated file are excluded through `.graphifyignore`.

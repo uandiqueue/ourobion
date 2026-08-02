@@ -1,7 +1,7 @@
 // supabase/functions/evaluate-signals/config.ts
 //
 // The adopted S4/S5 constants — docs/shared/phase2-run-config-decisions.md C3 + C4, per
-// ADR-0002 (docs/shared/decisions/0002-anomaly-definition.md). Every value ships in a named
+// ADR-0002 (docs/development/decisions/0002-anomaly-definition.md). Every value ships in a named
 // config object, never an inline literal (ADR-0002 mandate: calibration is a data change,
 // not a code change). Dependency-free and Deno-free so the node test suite can import it.
 //

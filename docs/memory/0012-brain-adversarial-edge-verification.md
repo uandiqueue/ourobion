@@ -13,7 +13,7 @@ updated: 2026-08-01
 **The brain** (knowledge graph of scientifically-derived metric relationships) produces every edge in
 two LLM passes: synthesis proposes a `RelationshipClaim`; a **second, independent LLM** re-checks it
 against **freshly-retrieved** evidence and emits an `EdgeVerification`. Contract:
-[`shared/brain/`](../../shared/brain/); design: [`brain-synthesis-design.md`](../nao/brain-synthesis-design.md).
+[`shared/brain/`](../../shared/brain/); design: [`brain-synthesis-design.md`](../implemented/nao/brain-synthesis-design.md).
 
 **Why:** synthesis from papers is the highest hallucination-surface step; a wrong edge is written once
 and read forever, so quality is paid at ingestion time (amortised). A second pass is only
@@ -39,7 +39,7 @@ instead. The measured defect: two faithful single-paper claims came back `unsupp
 with the caveat *"The other studies found did not back this up."* The independent-retrieval clause is
 UNCHANGED and still mandatory — retrieval runs, it just no longer votes. Contract invariants now bind
 an approving verdict to the quote gate + `directionCheck` (fidelity), not to a headcount. Details in
-[brain-synthesis-design](../nao/brain-synthesis-design.md) "What the verdict answers".
+[brain-synthesis-design](../implemented/nao/brain-synthesis-design.md) "What the verdict answers".
 
 **Two-tier truth:** the contract is TRUTH (2-reviewer per
 [0002](0002-shared-contract-two-reviewers.md)); the claims/verifications are a rebuildable projection
