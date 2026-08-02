@@ -3,8 +3,10 @@ title: Ourobion — Launchpad 2026 submission appendix
 summary: Evidence backing each claim in writeup.txt — corpus, verdicts, model results, judge access, and the boundary between prior work and what was built during the challenge — written for a reader who has not seen the codebase. Appendices do not count against the 1,000-word cap.
 type: reference
 scope: repo
-status: draft
-updated: 2026-08-02
+status: accepted
+updated: 2026-08-03
+verified_by: Jayden
+verified_at: 2026-08-02T21:37:42Z
 ---
 
 # Appendix — From papers to product
