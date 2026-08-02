@@ -55,7 +55,17 @@ The pipeline generates 56 insight cards:
 - 2 produced by the rules engine
 - 1 produced by the verified-edge engine
 
-**Critically, exactly 1 of the 56 cards carries an `edge_refs` citation.** This is the only user-visible card in the hosted demo that is cited to a verified edge.
+**Exactly 1 of the 56 cards carries an `edge_refs` citation** — and its status is `archived`, not `active`.
+
+That distinction matters and is easy to get wrong. The card exists, was generated 2026-08-01T16:52Z, and is real:
+
+```
+rule_id : edge:gut_comfort_score|correlates|mood_score
+title   : "Research-linked pattern: Gut comfort and Mood moved together"
+status  : archived
+```
+
+But because it is archived it does not appear in the active insights deck. A user opening the app to their current insights sees **no** paper-derived card; the app's Archive surface is where this one lives. Any statement that the demo shows a research-backed card in the normal flow would be false.
 
 ### Why one card, and not fourteen
 
@@ -67,7 +77,7 @@ A co-movement rendering path was added specifically to close that gap (`coMoveme
 
 **What has not been established here is the precise reason the remaining edges have not yet produced cards** — whether no matching personal pattern exists in the demo user's 60 logged days, or whether another gate intervenes. That would need a per-edge trace, which was not run. It is recorded as open rather than guessed at.
 
-The defensible claim is therefore narrow and worth stating exactly: every stage of the pipeline has run on real data and produced a real, cited, user-visible card. One of them.
+The defensible claim is therefore narrow, and worth stating exactly: every stage of the pipeline has run on real data and produced one real, cited card — which is currently archived rather than in the active deck. Nothing stronger than that sentence is supported.
 
 ### What the serving gate does and does not check
 

@@ -294,7 +294,7 @@ Real DOIs, real titles, real character counts. You can film the local index and 
 | nao **Ingest** / **Loader** / **Models** | Chrome renders; underlying state thin | Panel components; treat as B-roll, don't dwell |
 | nao **Claims** | **Yes — 14 rows** | `relationship_claims` = 14 hosted |
 | nao **`/paper/[uid]`** detail | **Yes, as a reduced record** | PR #354 removed the 404: when the R2 object is out of reach it renders `IndexRowDetail` from the D1 row instead. It only 404s if the index row is missing too. **Say "reduced record" if asked — do not present it as the full paper object** |
-| Evidence chain in biotope | **Renders empty** | 14 verified edges exist, but **0 cards have `producer='edge'`**, so no card carries a chain yet |
+| Evidence chain in biotope | **Renders empty in the active deck** | 14 verified edges exist. **0 ACTIVE cards have `producer='edge'`.** One archived card does — `edge:gut_comfort_score|correlates|mood_score`, generated 2026-08-01T16:52Z, title "Research-linked pattern: Gut comfort and Mood moved together" (measured 2026-08-02 as `test@ourobion.com`). It is reachable via the Archive surface, not the insights deck. Do not narrate it as what a user normally sees |
 
 ### The numbers you must not contradict
 
