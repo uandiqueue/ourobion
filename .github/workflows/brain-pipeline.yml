@@ -10,14 +10,16 @@ name: Brain pipeline (synthesis → verification → edge load)
 #   3. verification     decorrelated adversarial verifier, refute-first, over a
 #                       real echo-controlled corpus with finite authorization (--push-r2)
 #   4. artifact write   claims + extracted blueprints + verifications to R2
-#   5. projection       tools/edge-loader/load_edges.mjs --from-r2 → verified_edges
+#   5. snapshot         validate/materialize one immutable three-artifact R2 bundle
+#   6. projection       that snapshot → verified_edges + verified extracted rules
+#   7. card refresh     run-pipeline after both database projections succeed
 #
 # nao's role is unchanged: it dispatches and reports. It never calls a provider and
 # never holds a provider key — the router runs HERE, which is why the LLM keys are
 # repository secrets rather than nao env (see docs/nao/brain-ingestion-design.md §8.1).
 #
 # `operation=full` SPENDS REAL MONEY. `operation=project-only` never reaches a provider:
-# it validates an exact hash-pinned R2 bundle and runs only the edge loader. Defaults are
+# it validates an exact hash-pinned R2 bundle and runs only projection/card refresh. Defaults are
 # fail-closed (`dry_run: true`); live provider and DB paths have separate confirmation words.
 on:
   workflow_dispatch:
@@ -154,6 +156,39 @@ jobs:
           npm --prefix tools/llm-router ci
           npm --prefix tools/brain-ingest ci
           npm --prefix tools/edge-loader ci
+          npm --prefix tools/rules ci
+
+      # Prove the complete hosted projection is available before any live provider spend.
+      - name: Validate live projection configuration
+        if: inputs.dry_run == false
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          OUROBION_INTERNAL_SECRET: ${{ secrets.OUROBION_INTERNAL_SECRET }}
+        run: |
+          set -eu
+          [ -n "${SUPABASE_DB_URL:-}" ] || { echo "::error::SUPABASE_DB_URL is required."; exit 1; }
+          [ -n "${SUPABASE_ANON_KEY:-}" ] || { echo "::error::SUPABASE_ANON_KEY is required."; exit 1; }
+          [[ "${SUPABASE_URL:-}" =~ ^https://[^/]+$ ]] || { echo "::error::SUPABASE_URL must be a hosted HTTPS URL."; exit 1; }
+          [[ "${OUROBION_INTERNAL_SECRET:-}" =~ ^[A-Za-z0-9_-]{43}$ ]] || { echo "::error::OUROBION_INTERNAL_SECRET is missing or malformed."; exit 1; }
+
+      # Resolve the UUID against the append-only hosted audit log; shape alone
+      # is never authorization for provider spend.
+      - name: Validate completed nao authorization
+        if: inputs.operation == 'full' && inputs.dry_run == false
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PAPERS: ${{ inputs.papers }}
+          REVISION: ${{ inputs.artifact_revision }}
+          AUTHORIZATION_OPERATION_ID: ${{ inputs.authorization_operation_id }}
+        run: |
+          set -eu
+          IFS=, read -ra PAPER_LIST <<< $PAPERS
+          node tools/edge-loader/validate_nao_authorization.mjs \
+            --operation-id $AUTHORIZATION_OPERATION_ID \
+            --artifact-revision $REVISION \
+            --paper-count ${#PAPER_LIST[@]}
 
       # R2-only commands read tools/brain-ingest/.env. Provider credentials stay
       # out of this file and are exposed only to the two full-operation steps.
@@ -330,20 +365,23 @@ jobs:
           npx tsx src/cli.ts check-r2-edge-artifacts \
             --claims-sha256 "$CLAIMS_SHA" \
             --blueprints-sha256 "$BLUEPRINTS_SHA" \
-            --verifications-sha256 "$VERIFICATIONS_SHA"
+            --verifications-sha256 "$VERIFICATIONS_SHA" \
+            --out-dir "$RUNNER_TEMP/brain-edge-bundle"
 
-      # ── 5 · projection into verified_edges ─────────────────────────────────────
+      - name: Materialize current validated R2 artifact bundle
+        if: inputs.operation == 'full' && inputs.dry_run == false
+        working-directory: tools/brain-ingest
+        run: npx tsx src/cli.ts materialize-r2-edge-artifacts --out-dir "$RUNNER_TEMP/brain-edge-bundle"
+
+      # ── 6 · projection into verified_edges and rules ────────────────────────────
       #
       # The loader connects with `pg` and needs a PostgreSQL connection string. It does
       # NOT use a Supabase API key, so SUPABASE_SECRET_KEYS cannot drive it — see the
       # note on #233. Without SUPABASE_DB_URL this validates the artifacts and stops,
       # rather than silently reporting a projection that never happened.
       - name: Edge load (projection)
+        if: inputs.operation == 'project-only' || inputs.dry_run == false
         env:
-          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           OPERATION: ${{ inputs.operation }}
           DRY_RUN: ${{ inputs.dry_run }}
@@ -352,45 +390,58 @@ jobs:
         run: |
           set -eu
           if [ "$OPERATION" = "project-only" ]; then
-            ARGS=(--from-r2 --no-prune)
+            ARGS=(--from-dir "$RUNNER_TEMP/brain-edge-bundle" --no-prune)
             if [ "$DRY_RUN" = "true" ]; then
               ARGS+=(--check)
               echo "Project-only dry run — exact bundle validation, no database write."
-            elif [ -z "${SUPABASE_DB_URL:-}" ]; then
-              echo "::error::SUPABASE_DB_URL secret is not set; hosted projection was not attempted."
-              exit 1
             fi
             node tools/edge-loader/load_edges.mjs "${ARGS[@]}"
             exit 0
           fi
+          node tools/edge-loader/load_edges.mjs --from-dir "$RUNNER_TEMP/brain-edge-bundle"
 
+      - name: Verified rule load (projection)
+        if: inputs.operation == 'project-only' || inputs.dry_run == false
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -eu
+          ARGS=(--from-edges-dir "$RUNNER_TEMP/brain-edge-bundle")
           if [ "$DRY_RUN" = "true" ]; then
-            # A dry run deliberately does not push, so on a bucket that has never had a
-            # live run there is legitimately no edges/ object to validate. Treat that one
-            # case as the expected empty state — otherwise a dry run could never go green
-            # on a fresh bucket and would be worthless as a wiring check. Any OTHER loader
-            # failure (bad credentials, malformed artifact) still fails the step.
-            echo "Dry run — validating R2 artifacts without touching the database."
-            set +e
-            OUT=$(node tools/edge-loader/load_edges.mjs --from-r2 --check 2>&1); RC=$?
-            set -e
-            echo "$OUT"
-            if [ $RC -ne 0 ]; then
-              if echo "$OUT" | grep -q "claims.jsonl"; then
-                echo "::notice::No edges/claims.jsonl in R2 yet — expected before the first live run. R2 credentials and connectivity are proven by this probe."
-                exit 0
-              fi
-              echo "::error::edge-loader validation failed for a reason other than the edges artifact being absent."
-              exit $RC
-            fi
-            exit 0
+            ARGS+=(--check)
+            echo "Dry run — validating verified extracted rules without a database write."
           fi
-          if [ -z "${SUPABASE_DB_URL:-}" ]; then
-            node tools/edge-loader/load_edges.mjs --from-r2 --check
-            echo "::error::SUPABASE_DB_URL secret is not set, so the projection into verified_edges was SKIPPED. Artifacts above are validated and published to R2, but the database was not written. Add a PostgreSQL connection string for the demo project as the SUPABASE_DB_URL repository secret (the loader uses pg, not a Supabase API key, so SUPABASE_SECRET_KEYS cannot substitute)."
+          node tools/rules/load_rules.mjs "${ARGS[@]}"
+
+      - name: Regenerate hosted insight cards
+        if: inputs.dry_run == false
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          OUROBION_INTERNAL_SECRET: ${{ secrets.OUROBION_INTERNAL_SECRET }}
+        run: |
+          set -eu
+          RESPONSE="$RUNNER_TEMP/run-pipeline-response.json"
+          STATUS=$(curl --silent --show-error --connect-timeout 15 --max-time 900 \
+            --output "$RESPONSE" --write-out '%{http_code}' \
+            --request POST "${SUPABASE_URL%/}/functions/v1/run-pipeline" \
+            --header "apikey: $SUPABASE_ANON_KEY" \
+            --header "X-Ourobion-Internal-Secret: $OUROBION_INTERNAL_SECRET" \
+            --header "content-type: application/json" \
+            --data '{}')
+          if ! [[ "$STATUS" =~ ^2[0-9][0-9]$ ]]; then
+            echo "::error::hosted run-pipeline returned HTTP $STATUS after rule projection."
             exit 1
           fi
-          node tools/edge-loader/load_edges.mjs --from-r2
+          if ! jq -e '.ok == true and (.stages | length == 3) and all(.stages[]; .ok == true)' "$RESPONSE" >/dev/null; then
+            echo "::error::hosted run-pipeline did not confirm all three stages."
+            exit 1
+          fi
+          {
+            echo "## Hosted card regeneration"
+            jq -r '.stages[] | "- \(.stage): HTTP \(.status), ok=\(.ok)"' "$RESPONSE"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove secrets file
         if: always()

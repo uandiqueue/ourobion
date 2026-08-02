@@ -37,14 +37,17 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import {
+import { register } from 'tsx/esm/api';
+
+register();
+const {
   brain,
   buildLoad,
   CLAIMS_BASENAME,
   VERIFICATIONS_BASENAME,
   R2_CLAIMS_KEY,
   R2_VERIFICATIONS_KEY,
-} from './lib/artifacts.mjs';
+} = await import('./lib/artifacts.mjs');
 
 // R4-U4/O27 (20260728030000_r4u4_artifact_trust_and_revision_bound_disposition.sql): the
 // artifact/attestation columns are written by the loader from here on — the U4 migration

@@ -47,3 +47,41 @@ scope: issue 369 cloud brain pipeline, nao dispatch control, verifier corpus
   workflow on the repository's default branch.
 
 memory: added 0018
+
+## Safe-sequence continuation
+
+### Attempted
+
+- Compose issue #371's verified blueprint loader into the unattended issue #369 workflow without
+  weakening either loader's validation or starting a provider/live run.
+- Close the gap between a UUID-shaped workflow input and a genuinely completed nao authorization.
+
+### Changed
+
+- A live full run now resolves the operation UUID against hosted `nao_control_events` and requires
+  a fresh, matching `attempted` + `succeeded` lifecycle before provider configuration is reached.
+- Exact project-only bundles and newly published full-run bundles are contract-validated and
+  materialized once; edge and rule projections consume the same immutable local bytes.
+- The workflow now projects verified extracted rules after verified edges, then invokes hosted
+  `run-pipeline` and accepts success only when all three analysis stages report `ok`.
+- Live configuration is validated before spend so a missing database URL, hosted URL/API key, or
+  dedicated internal secret cannot leave an intentionally started run at a partial projection.
+- Added artifact materialization, audit-lifecycle, and workflow-order regression coverage.
+
+### Decided
+
+- A successful GitHub dispatch response alone is insufficient authorization evidence: its durable
+  nao audit outcome must exist and match the exact run.
+- One materialized R2 snapshot is the hand-off seam for every database projection in a run.
+
+### Left
+
+- Provision the repository `OUROBION_INTERNAL_SECRET` with the same current rotation value used by
+  the hosted `run-pipeline` functions; GitHub currently has no secret under that name.
+- Obtain eligible review, merge #383 before #384, then run and inspect the one-paper hosted
+  acceptance before closing #371 or #369.
+
+### Blockers
+
+- No code/test blocker. Required review and the missing GitHub internal-secret copy remain external
+  prerequisites for the live acceptance run.
