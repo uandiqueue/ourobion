@@ -91,6 +91,37 @@ regeneration that differed by **exactly two lines**, proving only one function h
 Scale, verified: 264 session logs, 2026-06 → 2026-08-02, ~32 June / 194 July / 38 August, across
 several distinct agent identities.
 
+## Follow-up 2 — mistakes split into their own document (owner)
+
+Owner: *"For mistakes, should be a separated docs no?"* — correct. Folding seven reversals into a
+section of `engineering-practice.md` undersold them and buried them under a heading about process.
+They are now `docs/development/what-we-got-wrong.md`, and the research had surfaced **20** findings,
+not the 7 that fitted in a section.
+
+The organising choice matters: entries are grouped by **the mechanism that caught each** — live
+verification, independent review, literature, automated gates, humans — not by the mistake. Read the
+headings alone and you are reading the project's defence in depth, which is the same argument the
+reliability design makes about decorrelated verification, applied to the team instead of the model.
+
+It also carries a **"Caught during this housekeeping run"** section listing this session's own five
+errors, because a document like this is worthless if it only records comfortably old mistakes. The
+noted pattern: every one was caught by *running* something, not by reading something, and four of the
+five came from inspection that looked authoritative and was wrong.
+
+`engineering-practice.md` keeps a pointer plus two exemplars.
+
+### Accuracy fixes to `engineering-practice.md`
+
+Reviewing the drafted file found three claims that were themselves wrong — the failure mode this whole
+run exists to prevent:
+
+- it cited `docs/shared/decisions/`, a path the reorganisation had already moved
+- it described PRs targeting `dev-phase2-run4` as the integration line; that branch was promoted into
+  `main` and has since been **deleted remotely**
+- it called the pipeline "seven-stage" while listing ten jobs; `ci.yml` defines thirteen
+
+Also corrected "250+ session logs" to the measured 264.
+
 memory: none — the durable facts here (measured system state, the reliability argument) are captured
 in the documents themselves, which is where a future session should read them.
 

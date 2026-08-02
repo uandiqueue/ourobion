@@ -16,9 +16,9 @@ This project demonstrates a development cycle built to handle AI coding agents a
 Ourobion runs on AI agents (Claude Code sessions) that start with zero memory. Rather than rely on agent recall or tool-specific settings, the repo itself carries all durable context:
 
 - **AGENTS.md** — the cross-tool single source of truth. It names every instruction, convention, module boundary, and phase gate. CLAUDE.md and GEMINI.md are ~20-line pointers to it. When guidance changes, it changes in one place.
-- **docs/sessions/** — one append-only log per session (250+ files), timestamped and device-tagged, recording what attempted, changed, decided, and why. No shared mutable status files; parallel agents cannot collide.
+- **docs/sessions/** — one append-only log per session (264 at the time of writing), timestamped and device-tagged, recording what attempted, changed, decided, and why. No shared mutable status files; parallel agents cannot collide.
 - **docs/memory/** — numbered durable facts and gotchas, indexed, immutable once filed.
-- **docs/shared/decisions/** — numbered ADRs for cross-app architecture, indexed, immutable once accepted (new decisions supersede old ones).
+- **docs/development/decisions/** — numbered ADRs for cross-app architecture, indexed, immutable once accepted (new decisions supersede old ones).
 
 Session logs matter because the *why* is unreconstructable from the diff. A future agent reading the git log sees `chore: bump Flutter version`, but only the session log says `needed for Health Connect parity on Android 14` or `discovered HealthKit SDNN unavailable on simulator, iOS-only`.
 
@@ -85,13 +85,13 @@ The structural import graph (Dart + TypeScript + SQL) is intentionally **deferre
 
 ## Issue and PR Coordination
 
-Work is isolated by **session**: one GitHub issue + one branch + one git worktree per session. Parallel agents on the same device never share mutable files. Agents coordinate through GitHub issues and PR comments using **Conventional Commits** (type/scope/subject format). PRs target `dev-phase2-run4` (the single integration line); only `dev-phase2-run4 → main` happens at phase/milestone completion.
+Work is isolated by **session**: one GitHub issue + one branch + one git worktree per session. Parallel agents on the same device never share mutable files. Agents coordinate through GitHub issues and PR comments using **Conventional Commits** (type/scope/subject format). PRs target `main`, which is the single integration line. (Through Run 4 an intermediate `dev-phase2-run4` branch sat between session branches and `main`; it was promoted into `main` and deleted, so older session logs describing that two-tier flow are records of what was true then.)
 
 The hard lesson: three agents writing the same branch caused one agent's worktree to go "stale within the hour", causing it to report a file absent that actually existed (`session: 20260727`). The rule that came out of it: **read-only subagents may run in parallel; writers must run strictly serial**. Concurrent writers in one worktree corrupt each other. Fetch before touching shared planning docs, not just at session start.
 
 ## CI Gates
 
-Every push and PR runs a seven-stage CI pipeline:
+Every push and PR runs the CI pipeline. Ten of its jobs are the day-to-day gates (the workflow defines thirteen in total, the remainder being release-evidence jobs that run conditionally):
 
 1. **context** — session coverage, memory integrity, couplings, front-matter, index freshness, archive containment
 2. **flutter** — `flutter analyze` + `flutter test`
@@ -117,27 +117,32 @@ The gates catch what humans miss. Two concurrent budget-ledger writers could los
 5. Push — pre-push hook runs `context_sync.mjs --check`
 6. CI runs automatically, shows results on the PR
 7. PR review (two reviewers for shared changes)
-8. Merge into `dev-phase2-run4`
+8. Merge into `main`
 
 The session log and the issue summary are the durable record. The diff is searchable; the *why* is in the log.
 
-## Where the Process Caught Us
+## Where the process caught us
 
-These are cases where a gate, a review, or a live check caught something the team would otherwise have shipped. A reversal with a stated reason is more credible than a decision that happened to work.
+The mechanisms above are only worth describing if they actually catch things. They do, and the record
+is kept separately: **[What we got wrong, and what caught it](development/what-we-got-wrong.md)** — a
+running list of reversed decisions, disproved assumptions and defects caught before shipping,
+organised by *the mechanism that caught each*, with a session-log citation for every entry.
 
-**A fabricated rate-limit model, disproven by live headers.** A design doc claimed the CORE API allowed "1000 tokens/day, hard-stop 950". Live inspection of `X-RateLimit-*` headers during the first real ingestion run showed the truth: roughly a 10-request bucket refilling after ~60s. CORE was removed from the budget model entirely and the rate limiter corrected from an unverified ~1/s to the real 10/60s, with 429-aware retry (`session: 20260703`). What it shows: an assumption written confidently into code and docs was falsified the moment it met reality.
+Two examples give the flavour.
 
-**A confidence threshold reverted on literature evidence.** A unit changed the "medium confidence" cutoff from 7 days to 5. An evidence review found 6–7 nights is what the literature supports and nothing supported 5. It was reverted 5→7, with a boundary test added so the regression cannot recur (`session: 20260719`). What it shows: evidence overruled a shipped change, and a test now pins the correct value.
+A design document stated that the CORE API allowed "1000 tokens/day, hard-stop 950", and the rate
+limiter was built to match. On the first real ingestion run, the live `X-RateLimit-*` headers showed
+the truth — roughly a ten-request bucket refilling after sixty seconds. The documented model was
+invented. It had been written confidently, propagated into code, and survived review, because nobody
+had asked the API (`session: 20260703`).
 
-**Three dataset assumptions, all false.** The support-model design doc asserted that BioRED carries direction labels, that MEDLINE PublicationType can express evidence tiers 1–3, and that Cochrane Crowd data was reusable. A bounded research task checked all three against primary sources and found every one wrong (`session: 20260726`). What it shows: the research task was explicitly told a negative verdict with evidence beats a padded list.
+A request to ship a hand-rolled implementation of the xDF effective-sample-size method was refused by
+a deliberate throw rather than an approximation: *"must not ship unverified"*. An approximate version
+would have produced confident-looking statistics with nothing behind them (`session: 20260719`).
 
-**A deduplication bug that would have merged distinct papers.** Adversarial review of the ingestion pipeline found the content fingerprint was being applied unconditionally, so two different papers sharing title+author+year but with different DOIs could collapse into one `paper_uid`. Fixed so the fingerprint is only used when no external identifier exists, plus a regression test (`session: 20260629`). What it shows: a correctness defect caught by review before it could corrupt the corpus.
-
-**A cross-platform reproducibility bug caught by CI.** Attestation hashes generated on Windows differed from Linux purely because of CRLF vs LF line endings — raw-byte hashing made identical content hash differently. CI caught it; attested text is now canonicalised to LF, with tests covering the invariant (`session: 20260727`). What it shows: the gate caught something no human would have noticed until it broke.
-
-**A design reversed after owner pushback.** The first control-plane design used an R2 "mailbox" for queued ingestion requests. The owner pointed out it could not actually invoke anything on demand. Redesigned around GitHub Actions `workflow_dispatch` (`session: 20260703`). What it shows: an architecture reversed early, for a concrete reason.
-
-**A refusal to produce a number we could not stand behind.** A request to ship a hand-rolled implementation of the xDF effective-sample-size method was blocked by a deliberate throw rather than an approximation: *"not yet implemented — faithful Afyouni xDF port + reference-vector verification pending … must not ship unverified"* (`session: 20260719`). The cross-correlation-aware effective-N is the principled fix for co-moving metric pairs, and shipping an unverified version would have produced statistically confident-looking output with nothing behind it. What it shows: the codebase would rather fail loudly than emit a plausible number.
+Read down that document's headings — live verification, independent review, literature, automated
+gates, humans — and you are reading the defence in depth. Each layer catches a different class of
+error and none catches all of them.
 
 ## Scale and Cadence
 
