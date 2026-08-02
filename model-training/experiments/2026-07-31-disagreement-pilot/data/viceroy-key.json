@@ -1,0 +1,186 @@
+{
+ "nao-arxiv:1804.02436#087": {
+  "viceroy": "no_relationship",
+  "haiku": "conditional_causal"
+ },
+ "nao-arxiv:2603.24460#026": {
+  "viceroy": "direct_causal",
+  "haiku": "no_relationship"
+ },
+ "nao-doi:10.1016/j.ijheh.2026#062": {
+  "viceroy": "conditional_causal",
+  "haiku": "direct_causal"
+ },
+ "nao-arxiv:1005.0776#039": {
+  "viceroy": "correlational",
+  "haiku": "no_relationship"
+ },
+ "nao-doi:10.3389/fmicb.2026.1#079": {
+  "viceroy": "no_relationship",
+  "haiku": "direct_causal"
+ },
+ "nao-doi:10.1007/s40279-025-0#081": {
+  "viceroy": "correlational",
+  "haiku": "no_relationship"
+ },
+ "nao-doi:10.1128/aem.00645-26#067": {
+  "viceroy": "no_relationship",
+  "haiku": "correlational"
+ },
+ "nao-arxiv:1505.06249#048": {
+  "viceroy": "no_relationship",
+  "haiku": "conditional_causal"
+ },
+ "nao-doi:10.3390/antibiotics1#061": {
+  "viceroy": "no_relationship",
+  "haiku": "conditional_causal"
+ },
+ "nao-doi:10.3390/s26041118#054": {
+  "viceroy": "no_relationship",
+  "haiku": "direct_causal"
+ },
+ "nao-doi:10.3390/nu18091412#049": {
+  "viceroy": "no_relationship",
+  "haiku": "direct_causal"
+ },
+ "nao-doi:10.3390/ijerph230505#000": {
+  "viceroy": "correlational",
+  "haiku": "no_relationship"
+ },
+ "nao-doi:10.12182/20260560605#072": {
+  "viceroy": "no_relationship",
+  "haiku": "direct_causal"
+ },
+ "nao-doi:10.1128/cmr.00088-26#063": {
+  "viceroy": "no_relationship",
+  "haiku": "direct_causal"
+ },
+ "nao-doi:10.3390/foods1511186#042": {
+  "viceroy": "no_relationship",
+  "haiku": "direct_causal"
+ },
+ "nao-doi:10.1093/inteam/vjag1#084": {
+  "viceroy": "no_relationship",
+  "haiku": "conditional_causal"
+ },
+ "nao-arxiv:2207.08165#057": {
+  "viceroy": "correlational",
+  "haiku": "no_relationship"
+ },
+ "nao-arxiv:1904.11058#076": {
+  "viceroy": "no_relationship",
+  "haiku": "conditional_causal"
+ },
+ "nao-doi:10.1128/msystems.001#056": {
+  "viceroy": "direct_causal",
+  "haiku": "no_relationship"
+ },
+ "nao-arxiv:1303.4429#071": {
+  "viceroy": "no_relationship",
+  "haiku": "direct_causal"
+ },
+ "nao-arxiv:1709.01852#053": {
+  "viceroy": "no_relationship",
+  "haiku": "direct_causal"
+ },
+ "nao-doi:10.1371/journal.pntd#080": {
+  "viceroy": "no_relationship",
+  "haiku": "conditional_causal"
+ },
+ "nao-arxiv:2207.01910#059": {
+  "viceroy": "no_relationship",
+  "haiku": "direct_causal"
+ },
+ "nao-doi:10.1016/j.scitotenv.#065": {
+  "viceroy": "conditional_causal",
+  "haiku": "no_relationship"
+ },
+ "nao-doi:10.3390/cancers18132#093": {
+  "viceroy": "no_relationship",
+  "haiku": "conditional_causal"
+ },
+ "nao-doi:10.3390/tropicalmed1#030": {
+  "viceroy": "no_relationship",
+  "haiku": "direct_causal"
+ },
+ "nao-arxiv:2601.17149#073": {
+  "viceroy": "conditional_causal",
+  "haiku": "no_relationship"
+ },
+ "nao-doi:10.3389/fphys.2025.1#074": {
+  "viceroy": "no_relationship",
+  "haiku": "direct_causal"
+ },
+ "nao-arxiv:2502.07535#006": {
+  "viceroy": "correlational",
+  "haiku": "direct_causal"
+ },
+ "nao-doi:10.3390/microorganis#094": {
+  "viceroy": "conditional_causal",
+  "haiku": "no_relationship"
+ },
+ "nao-doi:10.52082/jssm.2026.4#082": {
+  "viceroy": "no_relationship",
+  "haiku": "direct_causal"
+ },
+ "nao-doi:10.1016/j.envpol.202#060": {
+  "viceroy": "no_relationship",
+  "haiku": "direct_causal"
+ },
+ "nao-arxiv:1706.08652#005": {
+  "viceroy": "direct_causal",
+  "haiku": "conditional_causal"
+ },
+ "nao-arxiv:2511.04276#036": {
+  "viceroy": "direct_causal",
+  "haiku": "conditional_causal"
+ },
+ "nao-doi:10.1007/s11325-026-0#020": {
+  "viceroy": "no_relationship",
+  "haiku": "conditional_causal"
+ },
+ "nao-doi:10.1002/advs.75874#088": {
+  "viceroy": "correlational",
+  "haiku": "no_relationship"
+ },
+ "nao-doi:10.1016/j.crpvbd.202#011": {
+  "viceroy": "no_relationship",
+  "haiku": "conditional_causal"
+ },
+ "nao-doi:10.46234/ccdcw2026.1#066": {
+  "viceroy": "no_relationship",
+  "haiku": "direct_causal"
+ },
+ "nao-arxiv:1710.07319#064": {
+  "viceroy": "direct_causal",
+  "haiku": "conditional_causal"
+ },
+ "nao-arxiv:2604.18345#078": {
+  "viceroy": "no_relationship",
+  "haiku": "direct_causal"
+ },
+ "nao-arxiv:1303.3842#044": {
+  "viceroy": "correlational",
+  "haiku": "no_relationship"
+ },
+ "nao-arxiv:2202.13496#068": {
+  "viceroy": "correlational",
+  "haiku": "direct_causal"
+ },
+ "nao-doi:10.2987/25-7254#023": {
+  "viceroy": "correlational",
+  "haiku": "conditional_causal"
+ },
+ "nao-doi:10.1016/j.jpsychores#092": {
+  "viceroy": "correlational",
+  "haiku": "no_relationship"
+ },
+ "nao-doi:10.1038/s44276-026-0#077": {
+  "viceroy": "correlational",
+  "haiku": "no_relationship"
+ },
+ "nao-doi:10.1186/s13071-025-0#015": {
+  "viceroy": "direct_causal",
+  "haiku": "conditional_causal"
+ }
+}

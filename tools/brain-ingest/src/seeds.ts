@@ -54,9 +54,9 @@ export const SEEDS: readonly Seed[] = [
   // ---------------------------------------------------------------------------
   // #297 / #307 D5 - FAMILY-BALANCED SEEDS
   //
-  // WHY THESE EXIST. The six topics above were written for the original
-  // ~19-metric registry and never followed the catalogue to ~100 (memory 0014),
-  // so ingestion kept deepening a microbiome/environmental corpus while the
+  // WHY THESE EXIST. The six topics above were written for the original thin
+  // registry and did not follow its later collector-gated expansion, so
+  // ingestion kept deepening a microbiome/environmental corpus while the
   // registry grew self-report and wearable metrics that corpus cannot evidence.
   // Measured: two live runs on gut_comfort_score x mood_score emitted ZERO
   // claims, and the model was right to decline - those papers measure microbiome

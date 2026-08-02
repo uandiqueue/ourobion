@@ -22,7 +22,7 @@
  * fully functional without it. See the U4 session log — do not fabricate one.
  *
  * `impactTier` is a NOTABILITY axis only — it is EXCLUDED from edgeScore /
- * reliability (ADR docs/shared/decisions/0003-paper-reliability.md invariant:
+ * reliability (ADR docs/development/decisions/0003-paper-reliability.md invariant:
  * notability ≠ trust). This module feeds `Citation.impactTier`, nothing else.
  *
  * ESM / NodeNext — imports use explicit `.js` extensions.

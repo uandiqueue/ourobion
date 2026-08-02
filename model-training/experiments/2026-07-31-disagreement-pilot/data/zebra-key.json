@@ -1,0 +1,166 @@
+{
+ "zeb-antibi-015": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-sleep_-087": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-antibi-011": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-sleep_-082": {
+  "zebra": "supported",
+  "haiku": "insufficient_evidence"
+ },
+ "zeb-sleep_-083": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-hydrat-076": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-sleep_-091": {
+  "zebra": "supported",
+  "haiku": "insufficient_evidence"
+ },
+ "zeb-gut_mi-059": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-enviro-040": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-enviro-038": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-gut_mi-048": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-gut_mi-049": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-enviro-046": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-sleep_-092": {
+  "zebra": "supported",
+  "haiku": "insufficient_evidence"
+ },
+ "zeb-antibi-010": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-enviro-039": {
+  "zebra": "supported",
+  "haiku": "contradicted"
+ },
+ "zeb-dengue-027": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-antibi-005": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-gut_mi-055": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-hydrat-075": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-dengue-023": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-antibi-000": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-antibi-009": {
+  "zebra": "contradicted",
+  "haiku": "supported"
+ },
+ "zeb-gut_mi-054": {
+  "zebra": "supported",
+  "haiku": "contradicted"
+ },
+ "zeb-hydrat-071": {
+  "zebra": "supported",
+  "haiku": "insufficient_evidence"
+ },
+ "zeb-enviro-047": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-hydrat-079": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-enviro-041": {
+  "zebra": "contradicted",
+  "haiku": "insufficient_evidence"
+ },
+ "zeb-dengue-022": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-hydrat-065": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-hydrat-066": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-enviro-032": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-sleep_-090": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-dengue-031": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-enviro-037": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-sleep_-085": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-gut_mi-058": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-antibi-004": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-antibi-002": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-sleep_-080": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ },
+ "zeb-gut_mi-057": {
+  "zebra": "insufficient_evidence",
+  "haiku": "supported"
+ }
+}

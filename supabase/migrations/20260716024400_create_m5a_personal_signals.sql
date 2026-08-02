@@ -1,5 +1,5 @@
 -- M5a · S5: personal_signals — the D2 n=1 evaluator's output table
--- (docs/shared/insight-engine-architecture.md §S5; statistics + gates per ADR-0002 /
+-- (docs/implemented/shared/insight-engine-architecture.md §S5; statistics + gates per ADR-0002 /
 -- docs/shared/phase2-run-config-decisions.md C4).
 --
 -- One row per (user_id, metric_a, metric_b) with metric_a < metric_b (lexicographic).

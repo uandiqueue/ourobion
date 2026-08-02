@@ -2,5 +2,5 @@
   "dataset": "example-fixture",
   "status": "approved",
   "approved_by": "example-approver@example.invalid",
-  "reference": "docs/temp/model-training/human-gates.md#example-fixture"
+  "reference": "docs/development/model-training/human-gates.md#example-fixture"
 }

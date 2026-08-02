@@ -20,7 +20,7 @@ name: CI
 #                        in CI, where no supabase stack exists.
 #   - model-training-core      : model-training/'s stdlib `unittest` suite + CLI config-validation/
 #                                offline-smoke commands. NO `pip install` step at all (D2,
-#                                docs/temp/model-training/code-build-decisions.md) — proves the
+#                                docs/development/model-training/code-build-decisions.md) — proves the
 #                                core substrate really needs zero installed packages.
 #   - model-training-lint-type : ruff format/lint + mypy over model-training/. Installs only the
 #                                `dev` extra (ruff/mypy) — never the heavy `ml` extra.

@@ -8,7 +8,7 @@ import '../../../../core/widgets/biotope_screen_entrance.dart';
 import '../widgets/living_backdrop.dart';
 
 /// Transient screen shown while `AuthGate` resolves onboarding state after
-/// sign-in. Per docs/biotope/ui/ui-design-context.md "Living Backdrop on all
+/// sign-in. Per docs/implemented/biotope/ui-design-context.md "Living Backdrop on all
 /// full-screen moments" — reuses [LivingBackdrop] rather than a bare spinner.
 class WakingScreen extends StatefulWidget {
   const WakingScreen({super.key});

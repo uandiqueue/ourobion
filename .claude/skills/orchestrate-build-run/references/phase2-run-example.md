@@ -15,7 +15,7 @@ An autonomous multi-unit build/fix run on this repo, 2026-07-15→18. Run slug
   A1–A27 — see the record-only-audit skill), whose register drove the fix worklist,
   followed by a record-only **evidence review** of the run's decisions (see the
   evidence-review-run skill).
-- Tracking docs: `docs/temp/phase2-run-*.md` (orchestration log, blocked register,
+- Tracking docs: `docs/development/phase2-run-*.md` (orchestration log, blocked register,
   sign-off decisions D1–D20, config decisions C1–C12).
 
 ## Named incidents (with their D/B ids)
@@ -36,6 +36,6 @@ An autonomous multi-unit build/fix run on this repo, 2026-07-15→18. Run slug
 
 ## Primary records
 
-`docs/temp/run1/orchestration-log.md` (worklist + session ledger),
-`docs/temp/run1/signoff-decisions.md`, `docs/temp/run1/blocked-register.md`,
-`docs/temp/run1/audit/`, and the per-session logs under `docs/sessions/`.
+`docs/development/run1/orchestration-log.md` (worklist + session ledger),
+`docs/development/run1/signoff-decisions.md`, `docs/development/run1/blocked-register.md`,
+`docs/development/run1/audit/`, and the per-session logs under `docs/sessions/`.

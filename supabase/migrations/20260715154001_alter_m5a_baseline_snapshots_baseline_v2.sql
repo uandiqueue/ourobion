@@ -1,5 +1,5 @@
 -- S3 · baseline v2 — additive amendment to baseline_snapshots
--- (docs/shared/insight-engine-architecture.md §S3; confidence cutoffs per
+-- (docs/implemented/shared/insight-engine-architecture.md §S3; confidence cutoffs per
 -- docs/shared/phase2-run-config-decisions.md C5: 3 / 5 / 14).
 --
 -- baseline_snapshots is a rebuildable projection (two-tier truth, docs/memory/0001):

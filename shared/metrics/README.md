@@ -1,6 +1,6 @@
 # Metrics Registry
 
-**This file is the ONLY definition of the `MetricDefinition` shape; [`docs/biotope/metrics-registry-design.md`](../../docs/biotope/metrics-registry-design.md) carries rationale only.**
+**This file is the ONLY definition of the `MetricDefinition` shape; [`docs/implemented/biotope/metrics-registry-design.md`](../../docs/implemented/biotope/metrics-registry-design.md) carries rationale only.**
 
 `registry.ts` is **the single source of truth** for every metric ourobion collects.
 `lib/src/registry.dart` is its faithful mirror for the Flutter app, exposed only through the
@@ -8,7 +8,7 @@
 guards — adding or removing a metric is a localized, guard-protected change, so incomplete
 propagation fails the build instead of silently breaking at runtime.
 
-See [`docs/biotope/metrics-registry-design.md`](../../docs/biotope/metrics-registry-design.md) for the full design.
+See [`docs/implemented/biotope/metrics-registry-design.md`](../../docs/implemented/biotope/metrics-registry-design.md) for the full design.
 
 ## `MetricDefinition` fields
 
@@ -30,9 +30,9 @@ See [`docs/biotope/metrics-registry-design.md`](../../docs/biotope/metrics-regis
 | `availability` | `both` \| `ios_only` \| `android_only` \| `hardware_gated` (graceful degradation) |
 | `preferredSource` | semi-passive: fetch from this source first (health store), else `null` |
 | `dqs` | `{ weight, countsTowardDailyCompleteness }` — only the `T1` spine counts; weights sum to 100 |
-| `signal` | S4 anomaly params ([ADR-0002](../../docs/shared/decisions/0002-anomaly-definition.md)): `{ deadbandK }`, the daily 3-state deadband in robust σ̂ (= MAD/0.6745) units — `neutral` iff \|x − median\| ≤ `deadbandK`·σ̂; set (typically `1.0`, provisional) for every `baselineApplicable` metric, else `null` |
+| `signal` | S4 anomaly params ([ADR-0002](../../docs/development/decisions/0002-anomaly-definition.md)): `{ deadbandK }`, the daily 3-state deadband in robust σ̂ (= MAD/0.6745) units — `neutral` iff \|x − median\| ≤ `deadbandK`·σ̂; set (typically `1.0`, provisional) for every `baselineApplicable` metric, else `null` |
 | `ui` | optional display metadata; `label` is human-facing, while nullable `inputType` is present only for self-report controls |
-| `dailyProjection` | optional explicit primitive-to-day policy; absent/`null` by default. The contract currently implements legacy `utc`; [ADR-0004](../../docs/shared/decisions/0004-local-day-projection.md) accepts additive `local_day_v1` (implementation pending). Each metric explicitly selects its calendar and event `count` / `sum` / `mean` / `latest` or state-band `presence` reducer |
+| `dailyProjection` | optional explicit primitive-to-day policy; absent/`null` by default. The contract currently implements legacy `utc`; [ADR-0004](../../docs/development/decisions/0004-local-day-projection.md) accepts additive `local_day_v1` (implementation pending). Each metric explicitly selects its calendar and event `count` / `sum` / `mean` / `latest` or state-band `presence` reducer |
 | `status` | `active` \| `deprecated` |
 | `introducedIn` / `deprecatedAt` | lifecycle stamps |
 

@@ -3,8 +3,8 @@
   "entries": [
     {
       "ruleId": "generic-api-key",
-      "path": "docs/nao/nao-app-design.md",
-      "fingerprint": "docs/nao/nao-app-design.md:generic-api-key:224",
+      "path": "docs/implemented/nao/nao-app-design.md",
+      "fingerprint": "docs/implemented/nao/nao-app-design.md:generic-api-key:224",
       "justification": "Illustrative placeholder token inside a design document's example payload; docs/nao is documentation, not runtime configuration, and the value is not a live credential. Re-review at expiry.",
       "approvedBy": "Jayden via issue #166",
       "addedOn": "2026-07-28",

@@ -169,5 +169,5 @@ variants are bundled for white/pale surfaces and are intentionally unused by thi
 This section is an operator outline, not evidence that those hosted steps were executed. Issue #227's
 authorized verification stops at local build, bundle inspection, and config/type validation.
 
-See [`docs/nao/nao-app-design.md`](../../docs/nao/nao-app-design.md) for the full design + rationale.
+See [`docs/implemented/nao/nao-app-design.md`](../../docs/implemented/nao/nao-app-design.md) for the full design + rationale.
 **Doc map (start here):** [`docs/INDEX.md`](../../docs/INDEX.md).

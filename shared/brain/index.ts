@@ -92,7 +92,7 @@ export const EDGE_GATES = {
  * what #300 §E asks for: low credibility must be SURFACED via a caveat, never used to reject.
  *
  * Values live here as named constants rather than inline literals (ADR-0002); the C-entry is
- * **C15** in `docs/temp/run4/config-decisions.md`.
+ * **C15** in `docs/development/run4/config-decisions.md`.
  */
 export const SINGLE_PAPER_GATE = {
   /**

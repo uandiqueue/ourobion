@@ -1,23 +1,20 @@
 ---
 id: "0006"
 title: Wearable sync is best-effort
-summary: Wearable writes use .ignore() and silently no-op on permission/availability failures; never treat a missing wearable_daily row or null field as an error — wearables augment confidence, never gate.
+summary: Wearables are optional confidence inputs, never product gates; missing rows or nullable platform-specific fields represent unavailable data rather than a user or pipeline failure.
 type: memory
-status: accepted
+status: unverified
 decided: 2026-07-13
-updated: 2026-07-13
+updated: 2026-08-03
 ---
 
 # Wearable sync is best-effort
 
-**Gotcha (M3 wearables).** Wearable sync is intentionally **best-effort** (`.ignore()` on the write):
-a permission denial, a missing Health Connect install, or an unavailable signal **silently no-ops**. A
-`wearable_daily` row is written **only if at least one signal is available**.
+Wearable data augments confidence; it never gates the core self-report loop or the user's access to
+the product. Permission denial, unavailable platform APIs, unsupported metrics, and missing daily
+rows are expected states rather than failures.
 
-**Why.** Product Principle #3 — *graceful degradation*: wearables and env data are **confidence
-multipliers, never hard gates**. The 30-second self-report flow must never block on a wearable.
-
-**How to apply.** Never treat a missing `wearable_daily` row (or any null wearable field) as an error.
-M5a baseline logic must treat data sources as pluggable — self-report works alone; wearable/env data
-augment confidence when present. Related platform caveat: HRV SDNN is iOS-only
-([0004-hrv-sdnn-ios-only](0004-hrv-sdnn-ios-only.md)).
+Every downstream reader must tolerate an absent wearable row and nullable fields. Never block
+logging, baseline computation, or insight generation on a wearable. The implementation may later
+report sync status more explicitly, but it must preserve this graceful-degradation rule. Related:
+[HRV SDNN is iOS-only](0004-hrv-sdnn-ios-only.md).

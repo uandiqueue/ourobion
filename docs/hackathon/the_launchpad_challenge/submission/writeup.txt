@@ -1,0 +1,107 @@
+Ourobion
+
+Patient safety does not rely on one perfect check. It stacks imperfect ones so their holes do not
+line up — James Reason's Swiss-cheese model. We built our research pipeline the same way: of eleven
+health relationships drafted from the literature, one was held back from people.
+
+The README at github.com/uandiqueue/ourobion is the front door: judge credentials, references, and
+an appendix carrying corpus counts, per-verdict tables, model results, and the prior-work boundary.
+
+
+Problem
+
+Health apps collect well and explain badly. After days of logging, people are shown their own
+numbers again. Ourobion began with signals those apps overlook — gut and urinary health. A health
+company hires people to find patterns and read the research behind them. We are three builders;
+unable to hire that department, we grew one.
+
+The obvious fix — attach a language model, ask it why — is the most dangerous thing to put in front
+of a health claim: a model will state a correlation as a cause, reverse which came first, and stretch
+a mouse study onto a person. The problem is not data or model access. It is grounding the
+interpretation, when the best tool for it is the least trustworthy part of the system.
+
+Existing approaches fall short: trusting the model assumes the answer. Asking the same model
+"are you sure?" inherits its blind spots. Retrieval with citations still lets it misread the paper it
+cited. Manual evidence grading — GRADE, Cochrane reviews — is rigorous but costs experts months per
+question.
+
+Before building, we fixed one criterion: no research claim reaches a person unless it points back
+to its paper and survives review by a model that did not write it.
+
+
+Approach
+
+biotope is the phone app: quick daily logging, patterns in a person's own data. nao is the research
+workbench, where every proposed relationship can be opened and inspected. We enter the Agentic
+Systems track: the research loop is judged; biotope is where it must land.
+
+Why an agent rather than one well-prompted call? A single call asks one model to find, interpret, and
+check its own evidence — one slice of cheese. Our loop stacks layers that fail differently: papers
+retrieved, a relationship drafted, its quotes checked by deterministic code, fresh evidence retrieved
+again for a reviewer at another company, a numeric serving gate, and a language check before anything
+reaches a person. Any layer can stop the run.
+
+OpenAI's GPT-5 drafts the relationships from open-access papers; Agnes AI's Agnes 2.5 Flash retrieves
+its own evidence and reviews them. The router refuses to start if writer and reviewer come from the
+same company, because a model checking its own family's work shares its blind spots. That enforced
+separation, not call volume, is why Agnes is here; it is also Singapore-built, fitting an ASEAN
+product.
+
+Models are used only where interpretation is needed. Deterministic code handles identity, quotation
+checks, budgets, routing, non-diagnostic language, and release — layers that must behave identically
+every run.
+
+
+Evidence
+
+The corpus holds full text for 911 papers. From a narrow slice, GPT-5 drafted eleven relationships;
+Agnes returned one supported and ten partial. Ten cleared the serving gate; one did not. That whole
+loop ran unattended in the cloud, dispatched from nao, three times end to end. Clearing the gate
+makes a relationship eligible, not visible — it reaches someone only when it matches that person's
+own data. Two have.
+
+Eleven is small, deliberately: depth on a curated slice, not breadth. In nao, any one opens
+onto the drafted claim, its quoted spans, the citation, the verdict, and the decision that followed.
+
+We trained two specialist checkpoints. Viceroy classifies causal versus correlational wording;
+it scored 0.866 where a keyword-matching baseline scored 0.507 (macro-F1).
+Zebra classifies whether evidence supports a claim; it missed its pre-registered bar of 0.70, so the
+code refuses to promote it. Neither serves the product. Both disagreed substantially with Anthropic's
+Claude Haiku 4.5 on 96 real papers — but without adjudicated truth, that is disagreement, not
+accuracy. A system that can say "not proven" is evidence too.
+
+
+Constraints
+
+The independence rule is close to free at our volume — Agnes carries the token-heaviest stage at no
+cost. It is not free in time: verification adds a second model call with its own retrieval. If the reviewer is unavailable, verification stops rather
+than falling back to the writer.
+
+Retrieval cost is paid once at ingestion and amortised over every read, under budget stops. nao runs
+on a Cloudflare Worker with a CPU limit, so long runs go to a scheduled job.
+
+The GPU container we requested from GMI Cloud did not arrive in time, so both models trained locally
+on Apple Silicon. Personal health rows stay isolated; automated checks keep user-facing language
+non-diagnostic.
+
+
+Honesty & Trajectory
+
+biotope shows research-backed cards today on our seeded demo account. A judge signing up fresh sees
+an empty app — by design: it needs your logs before it has anything of yours to say. Better said
+than found later.
+
+Every layer has holes. "Verified" means only that a claim faithfully reads the paper it cites, not
+that the wider literature agrees. Ten relationships are eligible to be shown; two have surfaced, and
+we have not traced why the other eight have not. Zebra failed its own bar. The
+Claude comparison has no ground truth. The sample is eleven relationships on a few metric pairs.
+
+With two more weeks: run the single-call baseline comparison, adjudicate the disagreement set with a
+second labeller, record the per-edge trace showing which relationships surface and which do not, and
+split papers into sections with sentence-level identifiers so drafting quotes precisely.
+
+Further out, corroboration: when several papers independently support the same relationship,
+agreement becomes a reliability score rather than a new claim — beyond our model-call budget today.
+
+The reviewer never sees a health fact. It sees a claim, sources, and an instruction to refute them —
+readable in the schema. Swap the corpus and metric list and the same gate runs elsewhere.

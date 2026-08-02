@@ -365,7 +365,7 @@ export function renderGraphView(graph, options = {}) {
     '',
     '- Community labels and inferred links are probabilistic; they are navigation aids, not reviewed facts.',
     '- Node and link counts depend on Graphify’s extractors and ignore rules, not just repository size.',
-    '- This view does not replace `docs/biotope/architecture-context.md`, `shared/` contracts, migrations,',
+    '- This view does not replace `docs/implemented/biotope/architecture-context.md`, `shared/` contracts, migrations,',
     '  `docs/graph/couplings.yaml`, memory records, or accepted ADRs.',
     '- Historical `docs/archive/` material and this generated file are excluded through `.graphifyignore`.',
     '',

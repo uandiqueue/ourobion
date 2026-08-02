@@ -9,7 +9,7 @@ Part of the **orchestrate-build-run** skill set (see that skill for the full run
 
 Six traps, each hit repeatedly during the Phase-2 run. Full command reference:
 `AGENTS.md` §4 (Environment & commands) and the backend test plan
-`docs/temp/briefs/2026-07-18-backend-test-plan.md` (if still present) — don't duplicate
+`docs/development/briefs/2026-07-18-backend-test-plan.md` (if still present) — don't duplicate
 them, read them.
 
 ## 1. node/flutter are NOT on the base PATH

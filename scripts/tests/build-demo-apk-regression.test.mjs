@@ -15,7 +15,8 @@ const mainManifest = read('apps/biotope/android/app/src/main/AndroidManifest.xml
 const docs = [
   read('README.md'),
   read('apps/biotope/README.md'),
-  read('docs/shared/hackathon/submission/demo-runbook.md'),
+  // Moved by the #328 documentation reorganisation; docs/shared/ no longer exists.
+  read('docs/hackathon/the_launchpad_challenge/plan/demo-runbook.md'),
 ];
 const stableAssetUrl =
   'https://github.com/uandiqueue/ourobion/releases/download/biotope-demo-v1/ourobion-biotope-demo.apk';
@@ -56,7 +57,10 @@ test('all reviewer entry points carry the stable link and safety notes', () => {
   for (const doc of docs) {
     assert.ok(doc.includes(stableAssetUrl), 'missing stable APK asset URL');
     assert.match(doc, /Install unknown apps/i);
-    assert.match(doc, /private reviewer\/submission handoff/i);
+    // Every reviewer entry point must say how to sign in. The credential policy changed after this
+    // test was written: the shared view-only account is published deliberately, while the Supabase
+    // publishable key stays out of the repository. The guard is the sign-in pointer, not the wording.
+    assert.match(doc, /shared (test|reviewer) account/i);
     assert.match(doc, /iOS.+out of scope/is);
     assert.match(doc, /same\s+Windows host/i);
   }

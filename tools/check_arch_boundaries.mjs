@@ -4,8 +4,8 @@
 // O35 architecture-boundary guard. Mechanises two prose rules from AGENTS.md:
 //
 //   R1  — "No module imports from another module's /impl directory — public
-//          index/facade only." (docs/biotope/architecture-context.md:146,
-//          docs/shared/agent-protocol.md:84)
+//          index/facade only." (docs/implemented/biotope/architecture-context.md:146,
+//          docs/development/agent-protocol.md:84)
 //   R2  — model-training isolation (AGENTS.md "Language is task-fit" section):
 //          apps/, supabase/, shared/, tools/ must not import, subprocess-invoke,
 //          or path-construct into model-training/.

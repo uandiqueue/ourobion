@@ -20,8 +20,8 @@ import {
 } from "./config.ts"
 import { computeStalePairs, pairEligibilityKey, type PairRowRef } from "./lifecycle.ts"
 
-// ─── S4 + S5 · evaluate-signals (docs/shared/insight-engine-architecture.md §S4/§S5, as ───
-// superseded by ADR-0002, docs/shared/decisions/0002-anomaly-definition.md) ───────────────
+// ─── S4 + S5 · evaluate-signals (docs/implemented/shared/insight-engine-architecture.md §S4/§S5, as ───
+// superseded by ADR-0002, docs/development/decisions/0002-anomaly-definition.md) ───────────────
 //
 // S4 — per (user, metric): robust median/MAD baseline over the 28-day window EXCLUDING the
 //      evaluated day, artifact rejection, per-metric deadband from the registry

@@ -1,31 +1,20 @@
 ---
 id: "0010"
-title: iOS builds need a Mac; HealthKit needs a paid Apple account + real device
-summary: iOS cannot be built on Windows (do daily work on Android emulator); HealthKit + Apple Sign In need the paid Apple Developer Program ($99/yr) plus a real iPhone, so treat iOS as a Mac/cloud-CI task.
+title: iOS and HealthKit require Apple hardware and provisioning
+summary: Native iOS builds require macOS and Xcode, while meaningful HealthKit validation requires a physical iPhone and the appropriate paid Apple programme; Android remains the cross-platform development path.
 type: memory
-status: accepted
+status: unverified
 decided: 2026-07-13
-updated: 2026-07-13
+updated: 2026-08-03
 ---
 
-# iOS builds need a Mac; HealthKit needs a paid Apple account + real device
+# iOS and HealthKit require Apple hardware and provisioning
 
-**Constraint (dev environment).** The iOS target exists and is configured — `apps/biotope/ios/` is present
-with HealthKit wired (`Runner.entitlements` has `com.apple.developer.healthkit`; `Info.plist` has the
-`NSHealthShareUsageDescription` / `NSHealthUpdateUsageDescription` strings). But **iOS cannot be built
-or run on Windows** — Apple's toolchain is macOS + Xcode only. On the Windows-native dev box, do all
-day-to-day work on the **Android emulator**; treat iOS as a Mac / cloud-CI task (a Mac, or
-macOS GitHub Actions / Codemagic runners).
+The iOS target can only be built with macOS and Xcode. Meaningful Apple Health/HealthKit validation
+also requires a physical iPhone and the appropriate paid Apple Developer Program membership for
+entitlement provisioning. Apple Sign In similarly requires provider-side Apple credentials.
 
-**Costs that are real.**
-- **Apple Developer Program — US$99/year** is required to provision the **HealthKit** entitlement, test
-  on a **physical iPhone**, and ship to the App Store. HealthKit can't be exercised meaningfully in the
-  iOS Simulator anyway, so testing Apple Health genuinely needs a Mac **+** an iPhone **+** the paid
-  program.
-- **Apple Sign In** (OAuth) also requires the paid program to create the credential.
-- Free by contrast: all **Android** testing (incl. Health Connect, the M3 Android path), local
-  Supabase, email/password auth, and Google OAuth credentials.
-
-**How to apply.** This is why M3's "end-to-end wearable test on real device" stays pending on a
-Windows-only setup. Related: HRV SDNN is iOS-only ([0004-hrv-sdnn-ios-only](0004-hrv-sdnn-ios-only.md)); wearable sync is
-best-effort ([0006-wearable-sync-best-effort](0006-wearable-sync-best-effort.md)); local auth options ([0011-local-supabase-auth-email-only](0011-local-supabase-auth-email-only.md)).
+Android and Health Connect remain the accessible cross-platform development path when Apple hardware
+or provisioning is unavailable. External programme pricing must be checked when budgeting rather
+than frozen in memory. Related: [0004](0004-hrv-sdnn-ios-only.md) and
+[0006](0006-wearable-sync-best-effort.md).

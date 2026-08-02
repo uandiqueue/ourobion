@@ -36,7 +36,7 @@ auto-generated structural graph, run a semantic context graph for agents, and en
   `semantic-graph.*` file other than the canonical Markdown appears in `docs/graph/`.
 
 The curated **module dependency graph and interface rules** are not duplicated here — they live in
-[`../biotope/architecture-context.md`](../biotope/architecture-context.md), which is the boundary reference today.
+[`../biotope/architecture-context.md`](../implemented/biotope/architecture-context.md), which is the boundary reference today.
 
 ## Semantic context graph — graphify
 

@@ -1,16 +1,39 @@
 ---
 id: "0007"
-title: Analysis rules become data, via a two-tier blueprint→table pattern
-summary: Insight rules come from git-tracked hand-authored truth or gated paper-extracted brain artifacts and load into a rebuildable Postgres rules table; serving remains deterministic.
+title: Verified rules auto-project; humans retain revocation authority
+summary: Insight rules are data, not a hardcoded condition array — hand-authored blueprints are git-tracked truth and gated paper-extracted brain artifacts may auto-project into a rebuildable Postgres rules table; human review is an audited revocation layer rather than a pre-publication bottleneck, and serving stays deterministic.
 type: memory
-status: accepted
+status: unverified
 decided: 2026-06-09
-updated: 2026-08-02
+updated: 2026-08-03
 ---
 
-# 0007 — Analysis rules become data, via a two-tier blueprint→table pattern
+# Verified rules auto-project; humans retain revocation authority
 
-**Decision (Phase 2 plan, 2026-06-09):** ourobion's insight rules move from **hardcoded TypeScript**
+Ourobion's rules are data rather than an accumulating hardcoded condition array. Two production
+paths share one contract:
+
+- human-authored blueprints are versioned source;
+- research-derived blueprints are generated alongside evidence claims and may enter the rule
+  projection automatically only after their structural, metric, provenance, evidence/verifier, and
+  non-diagnostic-copy gates pass.
+
+Passing those gates is the automatic promotion boundary. A human does not need to pre-approve every
+rule before it reaches the database; requiring that would prevent the research system from scaling.
+The deterministic engine evaluates only active, in-force rules.
+
+Human curation remains authoritative after projection. An authorized reviewer may revoke or
+deprecate a rule when its evidence, interpretation, safety, or usefulness is challenged. That human
+decision is truth, must be audited, and must survive regeneration of the machine projection. A loader
+must never reactivate a human-revoked rule merely because the generated blueprint still exists.
+
+This is the required architecture, not proof that every current workflow step is connected. The
+current implementation must be checked for both automatic verified-blueprint loading and a durable
+human-revocation overlay before claiming the loop is end to end.
+
+## The two-tier mechanism
+
+**Decision (Phase 2 plan, 2026-06-09):** insight rules moved from **hardcoded TypeScript**
 (`supabase/functions/generate-insights/index.ts`, the `RULES: Rule[]` array with
 `condition: (s) => boolean`) to **data**, using the same two-tier pattern as sister repo **NUSPlan**,
 adapted to Postgres:
@@ -28,16 +51,22 @@ Malformed provenance/citations hard-fail; incompatible phase/copy, missing or he
 hand-authored id collisions are withheld with audit reasons. Every hand-authored rule remains in the
 full rebuild.
 
-This extends the existing two-tier-truth rule ([0001-two-tier-truth](0001-two-tier-truth.md)): `rules` joins
-`baseline_snapshots`/`insight_cards` as a rebuildable projection.
+This extends the existing two-tier-truth rule ([0001-two-tier-truth](0001-two-tier-truth.md)): `rules`
+joins `baseline_snapshots`/`insight_cards` as a rebuildable projection.
 
-**Constraints locked:** the analysis **engine is sequenced LAST** (foundations first); the engine is
-**deterministic — no LLM in the hot path**; **AI/LLM summarization is a separate, later, additive phase**.
-LLM use remains offline/batch: the manual candidate path is human-reviewed, while the brain path is
-independently model-verified and then deterministically gated, all with cost discipline. Phase-2
-condition set is **core only**: `trend` + `threshold` + `correlation`
-(cross-metric). The `shared/rules` contract is a cross-language seam → **2-reviewer PR**
-([0002-shared-contract-two-reviewers](0002-shared-contract-two-reviewers.md)). All rule copy stays non-diagnostic
-([0003-non-diagnostic-copy](0003-non-diagnostic-copy.md)), enforced at load, blueprint-guard, and render.
+## Constraints locked
 
-Engine design: `docs/biotope/rules-engine-design.md`; plan: `docs/phase-2-plan.md`. Context tool: [0008-graphify-context-tool](0008-graphify-context-tool.md).
+The analysis **engine is sequenced LAST** (foundations first); the engine is **deterministic — no LLM
+in the hot path**; **AI/LLM summarization is a separate, later, additive phase**. LLM use remains
+offline/batch: the manual candidate path is human-reviewed, while the brain path is independently
+model-verified and then deterministically gated, all with cost discipline. The Phase-2 condition set
+is **core only**: `trend` + `threshold` + `correlation` (cross-metric). The `shared/rules` contract is
+a cross-language seam → **2-reviewer PR**
+([0002-shared-contract-two-reviewers](0002-shared-contract-two-reviewers.md)). All rule copy stays
+non-diagnostic ([0003-non-diagnostic-copy](0003-non-diagnostic-copy.md)), enforced at load,
+blueprint-guard, and render.
+
+Contract and engine detail lives in
+[`rules-engine-design.md`](../implemented/biotope/rules-engine-design.md); plan:
+`docs/development/phase-2-plan.md`. Context tool:
+[0008-graphify-context-tool](0008-graphify-context-tool.md).

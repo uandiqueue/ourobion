@@ -257,7 +257,7 @@ interface EngagementState {
 > Produced by: the brain ingestion pipeline (synthesis + verification LLM passes)
 > Consumed by: M5b Insight Engine (the "why" behind a surfaced pattern) [forthcoming]
 > Authoritative shapes live in `shared/brain/relationships.ts` (TS-first). Full design:
-> [`docs/nao/brain-synthesis-design.md`](../docs/nao/brain-synthesis-design.md).
+> [`docs/implemented/nao/brain-synthesis-design.md`](../docs/implemented/nao/brain-synthesis-design.md).
 
 The brain is ourobion's knowledge graph of scientifically-derived relationships between metrics. Nodes
 are metric keys (`shared/metrics/registry.ts`); edges are produced in **two LLM passes**, kept as two
@@ -274,7 +274,7 @@ records so verification can re-run without re-synthesising:
 
 The two join into a `VerifiedEdge` — the servable unit of the graph. **Why the second pass isn't a
 rubber stamp, the schema invariants that enforce it, gating (`edgeScore` / `servingBand`), and the
-two-tier placement are rationale — see [`docs/nao/brain-synthesis-design.md`](../docs/nao/brain-synthesis-design.md)**
+two-tier placement are rationale — see [`docs/implemented/nao/brain-synthesis-design.md`](../docs/implemented/nao/brain-synthesis-design.md)**
 (field-level reference: [`shared/brain/README.md`](./brain/README.md)).
 
 ### Artifact trust + scientific semantics (R4-U4 / O27, additive)

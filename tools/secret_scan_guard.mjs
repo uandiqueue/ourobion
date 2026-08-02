@@ -157,6 +157,25 @@ export function isTracked(repoRoot, relPath) {
   return res.status === 0 && res.stdout.trim().length > 0;
 }
 
+/**
+ * Did `relPath` exist at `commit`? Used only for git-mode (commit-pinned) allowlist
+ * entries, whose path is HISTORICAL by construction.
+ *
+ * Why this exists: gitleaks' git-mode fingerprint embeds the path AS IT WAS IN THAT
+ * COMMIT. Once a file is moved, that path is no longer tracked at HEAD, so the
+ * `isTracked` test would reject a correct, still-necessary suppression — while
+ * rewriting the path to the new location breaks the fingerprint match and silently
+ * un-suppresses the finding. Neither is acceptable, so a commit-pinned entry is
+ * verified against the commit it names. This is NOT a relaxation: the path must
+ * still resolve to a real blob in history, the ruleId must still match exactly, and
+ * globs are still refused.
+ */
+export function existedAtCommit(repoRoot, commit, relPath) {
+  if (!/^[0-9a-f]{40}$/i.test(commit || '')) return false;
+  const res = git(['cat-file', '-e', `${commit}:${relPath}`], repoRoot, { allowFailure: true });
+  return res.status === 0;
+}
+
 export function gitLsFiles(repoRoot) {
   const res = git(['ls-files'], repoRoot);
   return res.stdout.split(/\r?\n/).filter(Boolean);
@@ -370,8 +389,14 @@ export function validateAllowlistEntry(entry, { repoRoot, knownRuleIds, today, c
     if (/[*?[\]{}]/.test(p) || p.endsWith('/') || p.includes('**')) {
       violations.push('ALLOW_BROAD_PATH_GLOB');
     }
-    if (checkTracked && !isTracked(repoRoot, p)) {
-      violations.push('ALLOW_PATH_NOT_TRACKED');
+    if (checkTracked) {
+      // A git-mode fingerprint pins a commit, so its path is historical: verify it
+      // against THAT commit, not against HEAD. Dir-mode entries still require HEAD.
+      const fpParsed = typeof entry.fingerprint === 'string' ? parseFingerprint(entry.fingerprint) : null;
+      const ok = fpParsed && fpParsed.commit
+        ? existedAtCommit(repoRoot, fpParsed.commit, p)
+        : isTracked(repoRoot, p);
+      if (!ok) violations.push('ALLOW_PATH_NOT_TRACKED');
     }
   }
 

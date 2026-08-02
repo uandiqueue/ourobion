@@ -1,17 +1,32 @@
 # model-training — Ourobion custom-model training/evaluation/release workspace
 
-> **No training has been run.** This workspace contains reproducible training, evaluation, export, and
-> release-build **code** for Ourobion's five planned custom models. No GMI organization, container, GPU,
-> dataset, or pretrained weight has been provisioned or downloaded from here, no paid model API has been
-> called, and no model has been trained. The honest status of every model in this workspace is:
+> **Two models have been trained; none of the five model plugins in *this* workspace has been.** Both
+> statements are true at once, and the distinction is the whole point of this banner.
 >
-> **"training code built and offline-smoke-tested; training not run."**
+> - **Trained, evaluated, published.** **Zebra v1** and **Viceroy v0** were trained on **local Apple
+>   Silicon** (`device: mps`, fp32) after the requested GMI GPU container did not arrive. That work ran
+>   in two self-contained bundles —
+>   [`zebra-training/`](../docs/development/model-training/zebra-training/) and
+>   [`viceroy-training/`](../docs/development/model-training/viceroy-training/) — **not** through the
+>   `JobSpec` substrate here. Their frozen reports, aggregate metrics and provenance hashes are in
+>   [`evidence/publication-results/`](evidence/publication-results/); `predict` (below) scores against
+>   those frozen releases offline.
+> - **Not trained here.** The five `JobSpec` plugins under `src/ourobion_model_lab/models/` (MT1–MT5)
+>   are still `__init__.py` placeholders. No `train` run has ever gone through `JobSpec.execute()`, so
+>   for the substrate itself the honest status remains **"training code built and offline-smoke-tested;
+>   training not run."** The only registered runnable JobSpec is the `self-check` reference job.
+> - **GMI was never provisioned.** No GMI organization, container or GPU was allocated from here, and
+>   no paid model API has been called by this workspace.
 >
-> GMI provisioning, per-model dataset/model licence approvals, the BioREDirect data-licence question, the
-> Yu/Li/Wang GPL-3.0 determination, frozen human audit-set labels, storage-retention posture, and
-> GPU-hour/cost caps are all outstanding **human gates** tracked in
-> [`../docs/temp/model-training/human-gates.md`](../docs/temp/model-training/human-gates.md). This
-> workspace never resolves any of those questions itself. What "fails closed" means here, concretely:
+> Neither checkpoint is validated or authorized for product serving: both remain `validated=false`,
+> `serving_ready=false`, `public_weights_cleared=false`. Evidence is not serving permission.
+>
+> Per-model dataset/model licence approvals, the BioREDirect data-licence question, the Yu/Li/Wang
+> GPL-3.0 determination, frozen human audit-set labels, storage-retention posture, and GPU-hour/cost
+> caps are tracked as **human gates** in
+> [`../docs/development/model-training/human-gates.md`](../docs/development/model-training/human-gates.md),
+> which is the authority on which remain open. This workspace never resolves any of them itself. What
+> "fails closed" means here, concretely:
 
 **The fail-closed gate (what the code actually does).** `JobSpec.execute()` in
 [`job.py`](./src/ourobion_model_lab/job.py) is the single entry point `cli.py` uses for **every**
@@ -41,13 +56,13 @@ check that reads no config and touches no data).
   reproducibility tooling — the language and location Jayden approved, superseding the repo's former
   blanket "no Python" rule and the plans' "separate `ourobion-model-lab` repository" requirement. See
   [`AGENTS.md`](../AGENTS.md) §1/§4 and
-  [`../docs/temp/model-training/code-build-decisions.md`](../docs/temp/model-training/code-build-decisions.md)
+  [`../docs/development/model-training/code-build-decisions.md`](../docs/development/model-training/code-build-decisions.md)
   (D1).
 - **Not** a product-runtime dependency. Nothing here is imported by `apps/`, `supabase/`, `shared/`, or
   `tools/brain-ingest`, and nothing here changes at what any of those serve. Model-training completion
   never authorizes serving, verifier short-circuiting, prediction logging, or a contract/UI change — each
   is a later, separate product decision (see
-  [`../docs/temp/model-training/README.md`](../docs/temp/model-training/README.md)).
+  [`../docs/development/model-training/README.md`](../docs/development/model-training/README.md)).
 - **Not** where GMI is provisioned, where real datasets are downloaded, or where any of the five models
   is actually trained. Real execution is a later, human-gated run against this same code.
 
@@ -244,13 +259,13 @@ model-training/
 - [`evidence/publication-results/`](evidence/publication-results/) —
   canonical Zebra v1 and Viceroy v0 training/evaluation reports, aggregate results, and provenance
   hashes
-- [`../docs/temp/model-training/README.md`](../docs/temp/model-training/README.md) — workstream overview
-- [`../docs/temp/model-training/model-roster.md`](../docs/temp/model-training/model-roster.md) — what we
+- [`../docs/development/model-training/README.md`](../docs/development/model-training/README.md) — workstream overview
+- [`../docs/development/model-training/model-roster.md`](../docs/development/model-training/model-roster.md) — what we
   train, what we don't, and why
-- `../docs/temp/model-training/*-training-plan.md` — one preregistered plan per model
-- [`../docs/temp/model-training/code-build-decisions.md`](../docs/temp/model-training/code-build-decisions.md) —
+- `../docs/development/model-training/*-training-plan.md` — one preregistered plan per model
+- [`../docs/development/model-training/code-build-decisions.md`](../docs/development/model-training/code-build-decisions.md) —
   D1–D4 and every decision this workspace's shape encodes
-- [`../docs/temp/model-training/human-gates.md`](../docs/temp/model-training/human-gates.md) — every
+- [`../docs/development/model-training/human-gates.md`](../docs/development/model-training/human-gates.md) — every
   unresolved approval gating real execution
-- [`../docs/temp/model-training/code-build-unit-index.md`](../docs/temp/model-training/code-build-unit-index.md) —
+- [`../docs/development/model-training/code-build-unit-index.md`](../docs/development/model-training/code-build-unit-index.md) —
   per-unit status; `training status` is always `not run`

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // ─── Ourobion color tokens (M3) ────────────────────────────────────────────────
-// Source of truth: docs/biotope/ui/ui-design-context.md
+// Source of truth: docs/implemented/biotope/ui-design-context.md
 //
 // biomech-botanical reskin (2026-07-28): primary/primaryContainer/primaryFixed*
 // now carry the gold/porcelain brand ramp. The old forest-green and cyan tokens
@@ -50,7 +50,7 @@ abstract final class OurobionColors {
   static const outlineVariant      = Color(0xFFc1c8c2);
 }
 
-/// Card / button corner radii per docs/biotope/ui/ui-design-context.md.
+/// Card / button corner radii per docs/implemented/biotope/ui-design-context.md.
 const double kCardRadius = 22;
 const double kButtonRadius = 16;
 
