@@ -685,6 +685,9 @@ test('#300 whole-paper push publishes the blueprint before its claim', async () 
   const dir = mkdtempSync(join(tmpdir(), 'ourobion-batch-'));
   const puts: string[] = [];
   const r2Store = {
+    async headExists() {
+      return { exists: false };
+    },
     async getObjectText() {
       throw new Error('missing');
     },
@@ -789,6 +792,75 @@ test('#300 G2: resumability — a paper already in claims.jsonl is skipped with 
   assert.equal(router.calls.length, 2, 'p1 must cost nothing on the re-run — never pay twice');
   assert.equal(result.budget.papersSkippedAlreadyDone, 1);
   assert.equal(result.perPaper.find((p) => p.paperUid === 'p1')!.status, 'skipped-already-done');
+});
+
+test('#387 G2: a fresh --push-r2 runner resumes from remote claims with NO provider call', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ourobion-batch-'));
+  const router = routerFor({ inputTokens: 0, outputTokens: 0 });
+  const remoteClaims = JSON.stringify(
+    claim({ citations: [{ paperId: 'p1', stance: 'supports' }] }),
+  ) + '\n';
+  const r2Store = {
+    async headExists(key: string) {
+      assert.equal(key, 'edges/claims.jsonl');
+      return { exists: true };
+    },
+    async getObjectText(key: string) {
+      assert.equal(key, 'edges/claims.jsonl');
+      return remoteClaims;
+    },
+    async putObject() {
+      throw new Error('a skipped run must not publish');
+    },
+  };
+
+  const result = await synthesizePapers(
+    batchOpts({ edgesDir: dir, paperUids: ['p1'], router, pushR2: true, r2Store }) as never,
+  );
+
+  assert.equal(router.calls.length, 0, 'remote resume evidence must stop spend before routing');
+  assert.equal(result.budget.providerCalls, 0);
+  assert.equal(result.budget.papersSkippedAlreadyDone, 1);
+  assert.equal(result.perPaper[0]!.status, 'skipped-already-done');
+});
+
+test('#387 G2: an R2 resume-check outage fails closed before provider spend', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ourobion-batch-'));
+  const router = routerFor({ inputTokens: 0, outputTokens: 0 });
+  const r2Store = {
+    async headExists() {
+      throw new Error('simulated R2 resume outage');
+    },
+  };
+
+  await assert.rejects(
+    () => synthesizePapers(
+      batchOpts({ edgesDir: dir, paperUids: ['p1'], router, pushR2: true, r2Store }) as never,
+    ),
+    /simulated R2 resume outage/,
+  );
+  assert.equal(router.calls.length, 0, 'an unreadable durable resume boundary cannot trigger spend');
+});
+
+test('#387 G2: malformed remote resume evidence fails closed before provider spend', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ourobion-batch-'));
+  const router = routerFor({ inputTokens: 0, outputTokens: 0 });
+  const r2Store = {
+    async headExists() {
+      return { exists: true };
+    },
+    async getObjectText() {
+      return '{not-json}\n';
+    },
+  };
+
+  await assert.rejects(
+    () => synthesizePapers(
+      batchOpts({ edgesDir: dir, paperUids: ['p1'], router, pushR2: true, r2Store }) as never,
+    ),
+    /invalid JSON during spend-safe resume/,
+  );
+  assert.equal(router.calls.length, 0, 'malformed durable resume evidence cannot trigger spend');
 });
 
 test('#300 G2: --no-resume re-synthesises an already-present paper', async () => {
