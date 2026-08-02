@@ -58,6 +58,39 @@ the new taxonomy (0 dead doc paths remain) and onto `main` as the integration li
 - **README edit kept additive** so it merges cleanly with the launch instructions already open in
   PR #374.
 
+## Follow-up — session-log research (owner: "#379 isn't comprehensive enough")
+
+The first draft described mechanisms without showing them working. Issue #328 §2.3 had asked for
+exactly what was missing: *mine the session logs for the* why *, not the* what *, and include
+decisions we reversed, with the reason.* Two read-only agents mined all 264 logs.
+
+`engineering-practice.md` gained **"Where the process caught us"** — seven incidents where a gate,
+review or live check caught something that would otherwise have shipped, each cited to its session:
+
+- a fabricated CORE rate-limit model ("1000 tokens/day") falsified by live `X-RateLimit-*` headers on
+  the first real ingestion run — the real limit was ~10 requests per 60s (`20260703`)
+- a confidence cutoff changed 7→5 days, reverted to 7 when an evidence review found the literature
+  supports 6–7 and nothing supported 5; a boundary test now pins it (`20260719`)
+- three support-model dataset assumptions checked against primary sources and **all three false**,
+  recorded as memory 0017 (`20260726`)
+- a dedup bug where an unconditional content fingerprint could merge two different papers sharing
+  title+author+year but with different DOIs (`20260629`)
+- a CRLF-vs-LF attestation bug that made identical content hash differently across platforms, caught
+  by CI (`20260727`)
+- the R2-mailbox control plane reversed after the owner pointed out it could not invoke on demand
+  (`20260703`)
+- a refusal to ship an unverified xDF effective-N implementation — a deliberate throw rather than an
+  approximation (`20260719`)
+
+Existing sections were also made concrete: the two-reviewer rule **blocking PR #199** (nine `shared/`
+files; "no agent can supply them"); the stale-worktree failure that produced the rule that read-only
+subagents may run in parallel but **writers must be strictly serial**; the budget ledger's
+element-wise merge so a hard stop fires on totals no single writer ever saw; and an attestation
+regeneration that differed by **exactly two lines**, proving only one function had drifted.
+
+Scale, verified: 264 session logs, 2026-06 → 2026-08-02, ~32 June / 194 July / 38 August, across
+several distinct agent identities.
+
 memory: none — the durable facts here (measured system state, the reliability argument) are captured
 in the documents themselves, which is where a future session should read them.
 

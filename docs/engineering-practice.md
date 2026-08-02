@@ -57,6 +57,8 @@ The system is Dart (mobile) + TypeScript (backend) + SQL. Contracts crossing the
 
 Result: Dart↔TypeScript skew reaches a test failure, not production.
 
+This has real teeth: PR #199 touched nine `shared/` files and was blocked because "no agent can supply them; Jayden and Alton must both be recorded as reviewers. Test evidence does not substitute for review" (`session: 20260728`). The rule forces human eyes on shared contracts before they ship.
+
 ## Two-Tier Truth
 
 The repo treats data into two tiers:
@@ -85,6 +87,8 @@ The structural import graph (Dart + TypeScript + SQL) is intentionally **deferre
 
 Work is isolated by **session**: one GitHub issue + one branch + one git worktree per session. Parallel agents on the same device never share mutable files. Agents coordinate through GitHub issues and PR comments using **Conventional Commits** (type/scope/subject format). PRs target `dev-phase2-run4` (the single integration line); only `dev-phase2-run4 → main` happens at phase/milestone completion.
 
+The hard lesson: three agents writing the same branch caused one agent's worktree to go "stale within the hour", causing it to report a file absent that actually existed (`session: 20260727`). The rule that came out of it: **read-only subagents may run in parallel; writers must run strictly serial**. Concurrent writers in one worktree corrupt each other. Fetch before touching shared planning docs, not just at session start.
+
 ## CI Gates
 
 Every push and PR runs a seven-stage CI pipeline:
@@ -102,6 +106,8 @@ Every push and PR runs a seven-stage CI pipeline:
 
 A **run-4 gate** aggregates: if any stage fails, the PR is red and cannot merge. The run4 release gate adds provenance checks and frozen-graph attestation for phase completions.
 
+The gates catch what humans miss. Two concurrent budget-ledger writers could lose one call's accounting (last-write-wins); both ledgers now merge element-wise on every write, with the hard stop firing on merged totals (`session: 20260718`). Attestation proved its value when a regenerated graph differed from the recorded one by exactly two lines—both under one function, with every other hash byte-identical—independent evidence that only that function changed (`session: 20260728`).
+
 ## The Cycle
 
 1. Open issue (`gh issue create`)
@@ -114,6 +120,28 @@ A **run-4 gate** aggregates: if any stage fails, the PR is red and cannot merge.
 8. Merge into `dev-phase2-run4`
 
 The session log and the issue summary are the durable record. The diff is searchable; the *why* is in the log.
+
+## Where the Process Caught Us
+
+These are cases where a gate, a review, or a live check caught something the team would otherwise have shipped. A reversal with a stated reason is more credible than a decision that happened to work.
+
+**A fabricated rate-limit model, disproven by live headers.** A design doc claimed the CORE API allowed "1000 tokens/day, hard-stop 950". Live inspection of `X-RateLimit-*` headers during the first real ingestion run showed the truth: roughly a 10-request bucket refilling after ~60s. CORE was removed from the budget model entirely and the rate limiter corrected from an unverified ~1/s to the real 10/60s, with 429-aware retry (`session: 20260703`). What it shows: an assumption written confidently into code and docs was falsified the moment it met reality.
+
+**A confidence threshold reverted on literature evidence.** A unit changed the "medium confidence" cutoff from 7 days to 5. An evidence review found 6–7 nights is what the literature supports and nothing supported 5. It was reverted 5→7, with a boundary test added so the regression cannot recur (`session: 20260719`). What it shows: evidence overruled a shipped change, and a test now pins the correct value.
+
+**Three dataset assumptions, all false.** The support-model design doc asserted that BioRED carries direction labels, that MEDLINE PublicationType can express evidence tiers 1–3, and that Cochrane Crowd data was reusable. A bounded research task checked all three against primary sources and found every one wrong (`session: 20260726`). What it shows: the research task was explicitly told a negative verdict with evidence beats a padded list.
+
+**A deduplication bug that would have merged distinct papers.** Adversarial review of the ingestion pipeline found the content fingerprint was being applied unconditionally, so two different papers sharing title+author+year but with different DOIs could collapse into one `paper_uid`. Fixed so the fingerprint is only used when no external identifier exists, plus a regression test (`session: 20260629`). What it shows: a correctness defect caught by review before it could corrupt the corpus.
+
+**A cross-platform reproducibility bug caught by CI.** Attestation hashes generated on Windows differed from Linux purely because of CRLF vs LF line endings — raw-byte hashing made identical content hash differently. CI caught it; attested text is now canonicalised to LF, with tests covering the invariant (`session: 20260727`). What it shows: the gate caught something no human would have noticed until it broke.
+
+**A design reversed after owner pushback.** The first control-plane design used an R2 "mailbox" for queued ingestion requests. The owner pointed out it could not actually invoke anything on demand. Redesigned around GitHub Actions `workflow_dispatch` (`session: 20260703`). What it shows: an architecture reversed early, for a concrete reason.
+
+**A refusal to produce a number we could not stand behind.** A request to ship a hand-rolled implementation of the xDF effective-sample-size method was blocked by a deliberate throw rather than an approximation: *"not yet implemented — faithful Afyouni xDF port + reference-vector verification pending … must not ship unverified"* (`session: 20260719`). The cross-correlation-aware effective-N is the principled fix for co-moving metric pairs, and shipping an unverified version would have produced statistically confident-looking output with nothing behind it. What it shows: the codebase would rather fail loudly than emit a plausible number.
+
+## Scale and Cadence
+
+The system operates at a measurable scale: 264 session logs spanning 2026-06 to 2026-08-02; roughly 32 in June, 194 in July, 38 in the first two days of August. Multiple distinct agent identities appear (`uandiqueue-claude`, `uandiqueue-codex`, `agentjwork-claude`, `agentjwork-codex`, `agent-j-claude`), plus occasional collaborator machines. One build was orchestrated across many parallel agents producing 22 source files, 24 test files, and 22 fixtures. The session log itself is the append-only ledger of what each agent attempted, changed, decided, and why.
 
 ---
 
