@@ -91,7 +91,7 @@ Human reviewers and judges should begin with the [`repository guide`](repository
 - [R4-U6 progress ledger](development/run4/u6-progress.md) — Live orchestration ledger for the small-PR delivery of U6a storage primitives, U6b EASY metrics, and U6c MEDIUM collector families. `draft`
 - [Run 4 Unit Signoff Index](development/run4/unit-signoff-index.md) — Current Run 4 unit delivery, PR, evidence, reviewer, reconciliation, and integration state. `draft`
 - [Repository Structure](development/structure-context.md) — The authoritative repo directory layout (apps/, shared/, supabase/, tools/, docs/), the env-file two-tier convention, the out-of-repo Windows toolchain, and the doc naming convention (kebab-case + type suffix + front-matter). Agents read this to locate any file or understand where new files belong.
-- [Temp — in-building and promotable docs](development/temp-lifecycle.md) — TEMP is the staging area for active drafts, the current product-build run, independent experimental workstreams, and dated briefs; closed run records move to archive after their actionable debt is reconciled forward.
+- [Temp — in-building and promotable docs](development/temp-lifecycle.md) — TEMP is the staging area for active drafts, the current product-build run, independent experimental workstreams, and dated briefs; closed run records move to archive after their actionable debt is reconciled forward. `unverified`
 - [What we got wrong, and what caught it](development/what-we-got-wrong.md) — A running record of decisions this project reversed, assumptions it disproved, and defects it caught before they shipped — organised by the mechanism that caught each, because the mechanism is the point.
 
 ### docs/hackathon

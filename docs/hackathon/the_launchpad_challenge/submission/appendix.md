@@ -61,13 +61,19 @@ taken on our word: commit dates are recorded when the work is done, and branches
 squashing, so the original timeline survives in the history.
 
 ```bash
-git log --until=2026-07-03 --oneline | wc -l   # 117 — prior work
-git log --since=2026-07-03  --oneline | wc -l   # 700 — the delta
+git log --until=2026-07-03 --oneline 7b5a064 | wc -l   # 115 — prior work
+git log --since=2026-07-03  --oneline 7b5a064 | wc -l   # 737 — the delta
 ```
 
 Boundary commit: `b5ad0f4`, 3 July 2026. No baseline tag was pushed, so the date is the boundary.
 
-### Prior work — before 3 July 2026, 117 commits
+The commands are pinned to `7b5a064` deliberately. **115 is permanent** — no future commit can
+predate 3 July 2026, so running it against any later revision returns the same number. **The delta
+only grows**, including with the commit that wrote these figures down, so quoting it without a
+revision would be a number nobody could reproduce. Drop the `7b5a064` and you will get 115 and
+something a little above 737.
+
+### Prior work — before 3 July 2026, 115 commits
 
 - **The biotope app** — sign-in, daily self-report logging, personal baselines, insight cards driven
   by hardcoded rules, and the engagement loop.
@@ -80,7 +86,7 @@ Boundary commit: `b5ad0f4`, 3 July 2026. No baseline tag was pushed, so the date
 - **nao v1** — a dashboard for searching and inspecting paper metadata.
 - Design and decision documents for all of the above.
 
-### The delta — 3 July to 2 August 2026, 700 commits
+### The delta — 3 July to 3 August 2026, 737 commits at `7b5a064`
 
 | Area | What was built during the challenge |
 |---|---|
@@ -95,7 +101,7 @@ Boundary commit: `b5ad0f4`, 3 July 2026. No baseline tag was pushed, so the date
 | Corpus | Expansion to 911 papers with extracted full text, and the tooling to assemble a corpus suitable for real verification runs. |
 | Safety and provenance | Signed records of what each automated run changed, secret scanning, and checks that stop a run on failure rather than continuing past it. |
 
-Each working block is logged in [`docs/sessions/`](../../../sessions/); 229 of those logs fall inside
+Each working block is logged in [`docs/sessions/`](../../../sessions/); 240 of those logs fall inside
 the challenge window, and each records what was attempted and what actually landed.
 
 ## Not claimed

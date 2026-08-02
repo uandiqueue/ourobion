@@ -252,7 +252,7 @@ sacrificial slide.**
 
 ## 4 · Prebuild vs. Delta scope (judges score the delta)
 
-**Established fact:** all 117 commits are dated **on or before 3 Jul 2026**. Essentially the entire
+**Established fact:** all 115 prior-work commits are dated **on or before 3 Jul 2026**. Essentially the entire
 codebase is prebuild. Be scrupulous about the layering — blur it and we risk the DQ line; get it right
 and we win the Honesty pillar for free.
 
@@ -293,9 +293,11 @@ presentation agent). Leaving these out keeps judges scoring the brain, not the C
 
 ### 4.3 Draw the line **in git** so the delta is checkable
 
-> **Superseded 2026-08-02.** The `pre-hackathon-baseline` tag was **never pushed**. The boundary is
-> the commit date instead, which is equally checkable: `git log --until=2026-07-03 | wc -l` → **117
-> commits of prior work**; `--since` → **700 commits of delta**. Boundary commit `b5ad0f4`
+> **Superseded 2026-08-02, re-measured 2026-08-03.** The `pre-hackathon-baseline` tag was **never
+> pushed**. The boundary is the commit date instead, which is equally checkable:
+> `git log --until=2026-07-03 --oneline 7b5a064 | wc -l` → **115 commits of prior work**; `--since` →
+> **737 commits of delta at that revision**. The prior-work count is permanent; the delta grows with
+> every commit, which is why the appendix pins a revision. Boundary commit `b5ad0f4`
 > (3 Jul 2026). History was merged without squashing, so the timeline survives. The submission
 > appendix states it this way; do not cite a tag that does not exist.
 Judges do repo spot-checks and read **commit dates** (baked into each commit), not push dates — so a
@@ -573,7 +575,7 @@ wrong-rejected, and why]`.
 
 ### Source appendix (where each decision is grounded)
 - Rules: `docs/hackathon/the_launchpad_challenge/plan/hackathon-rules.md` (raw event page — reference only, not submitted).
-- Prebuild/delta scope + git dates: repo `git log` (117 commits ≤ 2026-07-03); `docs/development/phase-2-plan.md`;
+- Prebuild/delta scope + git dates: repo `git log` (115 commits ≤ 2026-07-03); `docs/development/phase-2-plan.md`;
   session `docs/sessions/20260703T065307Z-agentjwork-claude-nao-corpus-run-plus-controls.md`.
 - Architecture / Approach / decision log: `docs/implemented/nao/brain-synthesis-design.md`, `brain-ingestion-design.md`,
   `nao-app-design.md`, `brain-support-models-design.md`.

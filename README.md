@@ -46,8 +46,9 @@ placeholder in the current build.
 | [`appendix.md`](docs/hackathon/the_launchpad_challenge/submission/appendix.md) | Evidence table, the prebuild-versus-delta commit boundary, and what is explicitly not claimed |
 | [`references.md`](docs/hackathon/the_launchpad_challenge/submission/references.md) | External works cited by the write-up |
 
-Prior work versus the challenge delta is stated in the appendix and checkable in commit dates: 117 of
-817 commits predate 3 July 2026; the remaining 700 are the delta.
+Prior work versus the challenge delta is stated in the appendix and checkable in commit dates: **115**
+commits predate 3 July 2026, and **737** at revision `7b5a064` are the delta. The prior-work figure is
+permanent; the delta keeps growing, so the appendix pins the exact command and revision.
 
 ## Two products, different users
 
