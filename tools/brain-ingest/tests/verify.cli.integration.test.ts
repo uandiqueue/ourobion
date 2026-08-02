@@ -22,6 +22,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -128,8 +130,42 @@ function agnesBody(): unknown {
   };
 }
 
-test('ACCEPTANCE (i): real CLI verify seam puts evidence TEXT + provenance in the router request', async () => {
+test('ACCEPTANCE (i): real CLI verify seam carries evidence and publishes with --push-r2', async () => {
   const edgesDir = mkdtempSync(join(tmpdir(), 'verify-cli-'));
+
+  // The AWS SDK uses Node's HTTP transport rather than global fetch. A loopback
+  // S3-compatible stub therefore proves the real CLI seam reaches R2 without
+  // allowing external network access. GET reports a missing first-run object;
+  // PUT retains the exact verification bytes for assertions below.
+  const r2Requests: Array<{ method: string; url: string; body: string }> = [];
+  const r2Server = createServer((request, response) => {
+    const chunks: Buffer[] = [];
+    request.on('data', (chunk: Buffer) => chunks.push(chunk));
+    request.on('end', () => {
+      const method = request.method ?? '';
+      const url = request.url ?? '';
+      const body = Buffer.concat(chunks).toString('utf8');
+      r2Requests.push({ method, url, body });
+      if (method === 'GET') {
+        response.statusCode = 404;
+        response.setHeader('content-type', 'application/xml');
+        response.end('<Error><Code>NoSuchKey</Code><Message>missing test object</Message></Error>');
+        return;
+      }
+      if (method === 'PUT') {
+        response.statusCode = 200;
+        response.end();
+        return;
+      }
+      response.statusCode = 405;
+      response.end();
+    });
+  });
+  await new Promise<void>((resolve, reject) => {
+    r2Server.once('error', reject);
+    r2Server.listen(0, '127.0.0.1', resolve);
+  });
+  const r2Address = r2Server.address() as AddressInfo;
 
   // Env the CLI seam needs: dummy R2/config keys plus every provider key so the api_worker route
   // reaches fetch. The shipped posture (#307) sends the verifier to AGNES and everything else to
@@ -145,7 +181,7 @@ test('ACCEPTANCE (i): real CLI verify seam puts evidence TEXT + provenance in th
   setEnv('AGNES_API_KEY', 'agnes-test-dummy');
   setEnv('INGEST_CONTACT_EMAIL', 'test@example.com');
   setEnv('OPENALEX_API_KEY', 'dummy');
-  setEnv('R2_ENDPOINT', 'https://example.com');
+  setEnv('R2_ENDPOINT', `http://127.0.0.1:${r2Address.port}`);
   setEnv('R2_ACCESS_KEY_ID', 'dummy');
   setEnv('R2_SECRET_ACCESS_KEY', 'dummy');
   setEnv('R2_BUCKET', 'dummy');
@@ -173,6 +209,7 @@ test('ACCEPTANCE (i): real CLI verify seam puts evidence TEXT + provenance in th
       // #307 (d): the verifier is Agnes, which the router restricts to the acceptance path.
       '--acceptance-authorization', authorization.path,
       '--acceptance-run-id', `${authorization.authorizationId}-run`,
+      '--push-r2',
     ]);
     assert.equal(code, 0, 'verify command should exit 0');
 
@@ -193,8 +230,19 @@ test('ACCEPTANCE (i): real CLI verify seam puts evidence TEXT + provenance in th
 
     // (b) provenance: paperId + locator for the evidence.
     assert.match(prompt, /corpus:[a-z0-9-]+ @ chars:\d+-\d+/, 'the request must carry paperId + locator provenance');
+
+    // (c) argv-level --push-r2 reaches verify(), which reads then writes the
+    // canonical object. This is the exact wiring omitted in live run 30743133643.
+    const r2Get = r2Requests.find((request) => request.method === 'GET');
+    const r2Put = r2Requests.find((request) => request.method === 'PUT');
+    assert.match(r2Get?.url ?? '', /\/edges\/verifications\.jsonl(?:\?|$)/);
+    assert.match(r2Put?.url ?? '', /\/edges\/verifications\.jsonl(?:\?|$)/);
+    assert.ok(r2Put?.body.includes(EDGE), 'R2 PUT must contain the emitted verification');
   } finally {
     globalThis.fetch = savedFetch;
+    await new Promise<void>((resolve, reject) => {
+      r2Server.close((error) => error === undefined ? resolve() : reject(error));
+    });
     rmSync(authorization.journalDir, { recursive: true, force: true });
     for (const [k, v] of Object.entries(savedEnv)) {
       if (v === undefined) delete process.env[k];
