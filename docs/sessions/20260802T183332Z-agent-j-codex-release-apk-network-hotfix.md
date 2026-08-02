@@ -32,9 +32,9 @@ memory: none
 
 ## Left
 
-- Rebuild and verify the guarded APK from the complete hotfix.
-- Replace it on the attached Huawei, verify the save/archive, dismiss, reset, and process-restart
-  flows, then publish the reviewed branch as a PR into main.
+- Review and merge the prepared PR into main.
+- Rebuild from merged main before replacing the public biotope-demo-v1 release asset; the verified
+  branch APK remains a private sideload artifact and is not Play Store eligible.
 
 ## Blockers
 
@@ -50,3 +50,13 @@ memory: none
 - First corrected APK on Huawei YAL-L21 - clean install and demo email/password authentication
   succeeded with no app-level network/auth exception; save raised SAVED from 0 to 1 and exposed the
   stale Archive activation defect fixed in this branch.
+- Final guarded APK from f0e2eb80f75cc79d247b3a6a97917d244f62e7c4 - 91,011,968 bytes; SHA-256
+  5f1911538ae6992ee49d9259339e22391a9b14108c2e02eb0fbadc93c9b29164; hosted backend embedded;
+  android.permission.INTERNET packaged; APK Signature Scheme v2 verified with the approved
+  same-host debug certificate.
+- Final Huawei YAL-L21 acceptance - clean install and demo authentication passed; daily
+  self-report returned without an app error; research card present; save moved SAVED 0 to 1 and
+  appeared in Archive; left-dismiss removed the next card; reset reported 2 restored, moved SAVED
+  to 0, and emptied Archive.
+- Full force-stop/relaunch - authentication persisted while session overlays cleared: SAVED was 0,
+  the seeded research card was back, Archive was empty, and all 7 daily channels were open again.
