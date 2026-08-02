@@ -3,8 +3,10 @@ title: Ourobion — project summary
 summary: A short plain-prose overview of Ourobion as an agentic research system — the layered pipeline that turns scientific literature into reviewed relationships, why it is built that way, and what it does not claim; the write-up, appendix and references carry the detail and the figures.
 type: reference
 scope: repo
-status: unverified
+status: accepted
 updated: 2026-08-03
+verified_by: Jayden
+verified_at: 2026-08-02T21:23:46Z
 ---
 
 # Ourobion — project summary
