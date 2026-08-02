@@ -45,8 +45,10 @@ test('provider credentials are scoped to full-operation steps', () => {
 
 test('live verifier builds a real corpus and excludes every cited paper id', () => {
   assert.match(workflow, /- name: Build echo-controlled verifier corpus/);
-  assert.match(workflow, /build-verify-corpus[\s\\]*\n[\s\S]*--exclude-claims data\/corpus\/edges\/claims\.jsonl/);
-  assert.match(workflow, /--corpus data\/corpus\/verify-corpus-workflow\.jsonl/);
+  assert.match(workflow, /build-verify-corpus[\s\\]*\n[\s\S]*--exclude-claims \.\.\/\.\.\/data\/corpus\/edges\/claims\.jsonl/);
+  assert.match(workflow, /--corpus \.\.\/\.\.\/data\/corpus\/verify-corpus-workflow\.jsonl/);
+  assert.doesNotMatch(workflow, /--exclude-claims data\/corpus\/edges\/claims\.jsonl/);
+  assert.doesNotMatch(workflow, /--corpus data\/corpus\/verify-corpus-workflow\.jsonl/);
   assert.doesNotMatch(workflow, /tools\/brain-ingest\/fixtures\/verify-corpus\.jsonl/);
   assert.doesNotMatch(workflow, /^\s{6}corpus:$/m);
 });
