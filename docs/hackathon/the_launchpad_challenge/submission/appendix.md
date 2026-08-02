@@ -101,7 +101,8 @@ something a little above 737.
 | Corpus | Expansion to 911 papers with extracted full text, and the tooling to assemble a corpus suitable for real verification runs. |
 | Safety and provenance | Signed records of what each automated run changed, secret scanning, and checks that stop a run on failure rather than continuing past it. |
 
-Each working block is logged in [`docs/sessions/`](../../../sessions/); 240 of those logs fall inside
+Each working block is logged in [`docs/sessions/`](../../../sessions/); 240 of those logs, at the same
+`7b5a064` revision, fall inside
 the challenge window, and each records what was attempted and what actually landed.
 
 ## Not claimed
