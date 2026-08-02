@@ -160,7 +160,6 @@ jobs:
           # the package's own tests instead.
           - package: tools/rules
             drift_check: true
-            needs_edge_loader: true
           - package: tools/metric-view
             drift_check: true
     steps:
@@ -185,13 +184,6 @@ jobs:
 
       - name: Install dependencies
         working-directory: ${{ matrix.package }}
-        run: npm ci
-
-      # The optional rules --from-edges-dir path deliberately reuses the edge loader's canonical
-      # schema validation and serving-band projection. Its subprocess test exercises that real seam.
-      - name: Install edge-loader dependency for extracted-rule gate
-        if: matrix.needs_edge_loader
-        working-directory: tools/edge-loader
         run: npm ci
 
       - name: Typecheck

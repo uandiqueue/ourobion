@@ -78,3 +78,12 @@ None for the code change or draft PR. Hosted database/deck acceptance requires t
   was not retained.
 
 memory: updated 0007
+
+## Release-gate compatibility continuation
+
+- Kept `tools/edge-loader/lib/artifacts.mjs` pure with respect to package resolution: callers now
+  provide the already-required tsx registration, while the edge-loader CLI registers it itself.
+- Removed the conditional dependency-install step that changed the release-frozen `node-tools` CI
+  step set. The rules package can now reuse canonical edge validation with only its own install.
+- This is an import-boundary correction only; verified-pair gates, promotion decisions, and database
+  rows are unchanged.

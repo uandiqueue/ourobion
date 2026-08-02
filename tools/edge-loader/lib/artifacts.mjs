@@ -11,19 +11,12 @@
 // Deterministic: same artifact text → same rows (stable edge order, stable status computation).
 // The only load-time-varying column, loaded_at, is set by the DB.
 //
-// The shared contract is TypeScript; this stays an .mjs Node script (house tools/ style, per
-// tools/rules), so it registers the tsx ESM loader once and imports the TS sources directly —
-// no build step, one source of truth.
+// The shared contract is TypeScript; callers register the tsx ESM loader before importing this
+// module (the CLI does so explicitly; tests preload tsx; the rules loader already registers it).
+// That keeps this pure module reusable by rules without requiring a sibling node_modules tree.
 
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { register } from 'tsx/esm/api';
-
-const TSX_REGISTERED = Symbol.for('ourobion.tsx-esm-registered');
-if (!globalThis[TSX_REGISTERED]) {
-  register();
-  globalThis[TSX_REGISTERED] = true;
-}
 
 export const REPO_ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 
