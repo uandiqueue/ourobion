@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -236,6 +236,97 @@ test('the guard does not touch the normal path: --check over data/rules stays gr
   assert.equal(out.status, 0);
   assert.match(out.stdout, /blueprint\(s\) valid/);
   assert.doesNotMatch(out.stdout, /^✓ 0 blueprint/m);
+});
+
+test('#371: CLI admits only servable extracted pairs and preserves every hand-authored rule', () => {
+  const edgesDir = mkdtempSync(path.join(tmpdir(), 'ourobion-rules-edges-'));
+  const edgeFixtures = path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '..',
+    '..',
+    'edge-loader',
+    'tests',
+    'fixtures',
+    'edges',
+  );
+  const extractedBlueprint = (
+    ruleId: string,
+    metricKeys: [string, string],
+    paperId: string,
+  ) => ({
+    blueprint: {
+      ruleId,
+      schemaVersion: 1,
+      category: 'behaviour',
+      severity: 'notice',
+      scope: 'cross',
+      enabledPhase: 'phase_2',
+      metricKeys,
+      provenance: {
+        tier: 'extracted',
+        sourceNote: 'CLI integration fixture',
+        citation: { paperId, locator: 'Results' },
+      },
+      effectiveFrom: null,
+      effectiveTo: null,
+      status: 'active',
+      deprecatedAt: null,
+      cooldownDays: 7,
+      expiryDays: 14,
+      condition: {
+        type: 'coincidence',
+        metricKeys,
+        both: [
+          { type: 'trend', metricKey: metricKeys[0], equals: 'rising', minConfidence: 'low' },
+          { type: 'trend', metricKey: metricKeys[1], equals: 'rising', minConfidence: 'low' },
+        ],
+        lagDays: null,
+        minConfidence: 'low',
+      },
+      template: {
+        title: 'Pattern: {{metric_a_label}} and {{metric_b_label}}',
+        body: 'Your {{metric_a_label}} and {{metric_b_label}} data moved together recently.',
+      },
+    },
+    dedupeKey: 'fixture-' + ruleId,
+    paperId,
+    synthesisModel: 'fixture-model',
+    promptVersion: 'fixture-prompt',
+    synthesisedAt: '2026-08-02T00:00:00.000Z',
+  });
+
+  try {
+    for (const name of ['claims.jsonl', 'verifications.jsonl']) {
+      writeFileSync(path.join(edgesDir, name), readFileSync(path.join(edgeFixtures, name)));
+    }
+    const accepted = extractedBlueprint(
+      'extracted_sleep_hrv_cli',
+      ['sleep_duration_min', 'hrv_sdnn_ms'],
+      'fixture:sleep-hrv-meta-2023',
+    );
+    const withheld = extractedBlueprint(
+      'extracted_steps_sleep_cli',
+      ['step_count', 'sleep_duration_min'],
+      'fixture:steps-sleep-xsect-2019',
+    );
+    writeFileSync(
+      path.join(edgesDir, 'blueprints.jsonl'),
+      [accepted, withheld].map((value) => JSON.stringify(value)).join('\n') + '\n',
+    );
+
+    const out = runCli(['--check', '--from-edges-dir', edgesDir]);
+    assert.equal(out.status, 0, out.stderr);
+    assert.match(out.stdout, /✓ 9 blueprint\(s\) valid/);
+    assert.match(out.stdout, /8 hand-authored \+ 1 verified extracted/);
+    assert.match(out.stdout, /\+ extracted extracted_sleep_hrv_cli; normalized phase_2->phase2_engine/);
+    assert.match(
+      out.stdout,
+      /x withheld extracted_steps_sleep_cli: no-servable-verified-pair/,
+    );
+    assert.match(out.stdout, /- gut_form_stable /);
+  } finally {
+    rmSync(edgesDir, { recursive: true, force: true });
+  }
 });
 
 test('an unknown argument is a usage error (exit 2), matching the edge-loader convention', () => {
