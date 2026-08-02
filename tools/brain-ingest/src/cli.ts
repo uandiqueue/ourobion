@@ -34,7 +34,7 @@ import {
 import { repoRoot } from './seeder/load.js';
 import { R2Store } from './storage/r2.js';
 import { r2TextLoader } from './verify/quoteCheck.js';
-import { verify } from './verify/verifier.js';
+import { loadClaimsFromFile, verify } from './verify/verifier.js';
 import { corpusTexts, loadCorpusFromFile } from './verify/corpus.js';
 import {
   buildCorpusRows,
@@ -142,7 +142,7 @@ Commands:
   venue --issn <issn> [--sjr-quartile 1-4]         b2 venue lookup: OpenAlex Source stats +
                                                    C8 impactTier band (per-ISSN cache)
   build-verify-corpus [--manifest <path>] [--out <path>] [--text-dir <dir>]
-                      [--limit N] [--dry-run]
+                      [--exclude-claims <claims.jsonl>] [--limit N] [--dry-run]
                                                    OFFLINE projection of data/corpus/papers.jsonl
                                                    into the REAL CorpusDoc JSONL that 'verify
                                                    --corpus' ranks over (replaces the 5-line test
@@ -157,6 +157,9 @@ Commands:
                                                    --text-dir mirrors R2's text/<uid>.txt, else the
                                                    real abstract; papers with NEITHER are skipped
                                                    and counted. No provider, R2, or network calls.
+                                                   --exclude-claims removes every cited paper id
+                                                   from retrieval while quoteCheck loads canonical
+                                                   cited text from R2 (echo control).
                                                    Default out: data/corpus/verify-corpus.jsonl
                                                    (gitignored — do not commit it).
 
@@ -313,6 +316,35 @@ function runBuildVerifyCorpus(flags: Set<string>, options: Map<string, string>):
   const manifestPath = options.get('manifest') ?? join(corpusDir, MANIFEST_FILENAME);
   const outPath = options.get('out') ?? join(corpusDir, VERIFY_CORPUS_FILENAME);
   const textDir = options.get('text-dir');
+  const excludeClaimsPath = options.get('exclude-claims');
+
+  const excludePaperIds = new Set<string>();
+  if (excludeClaimsPath !== undefined) {
+    const claims = loadClaimsFromFile(excludeClaimsPath);
+    if (claims.length === 0) {
+      process.stderr.write(
+        `build-verify-corpus: no claims at '${excludeClaimsPath}' - cannot prove cited-paper echo exclusion\n`,
+      );
+      return 1;
+    }
+    for (const claim of claims) {
+      if (!Array.isArray(claim.citations) || claim.citations.length === 0) {
+        process.stderr.write(
+          `build-verify-corpus: claim '${claim.edgeId}' has no citations - refusing incomplete echo control\n`,
+        );
+        return 1;
+      }
+      for (const citation of claim.citations) {
+        if (typeof citation?.paperId !== 'string' || citation.paperId.trim() === '') {
+          process.stderr.write(
+            `build-verify-corpus: claim '${claim.edgeId}' has an invalid citation paperId\n`,
+          );
+          return 1;
+        }
+        excludePaperIds.add(citation.paperId);
+      }
+    }
+  }
 
   const records = readAll(manifestPath);
   if (records.length === 0) {
@@ -323,6 +355,7 @@ function runBuildVerifyCorpus(flags: Set<string>, options: Map<string, string>):
   }
 
   const result = buildCorpusRows(records, {
+    ...(excludeClaimsPath !== undefined ? { excludePaperIds } : {}),
     ...(textDir !== undefined ? { loadText: textDirLoader(textDir) } : {}),
     resolveImpact: cachedVenueImpactResolver(VenueCache.open(corpusDir)),
     ...(parseLimit(options) !== undefined ? { limit: parseLimit(options) } : {}),
@@ -347,6 +380,8 @@ function runBuildVerifyCorpus(flags: Set<string>, options: Map<string, string>):
         out: flags.has('dry-run') ? null : outPath,
         dryRun: flags.has('dry-run'),
         textDir: textDir ?? null,
+        excludeClaims: excludeClaimsPath ?? null,
+        excludedPaperIds: excludePaperIds.size,
         ...result.stats,
         skipExamples: result.skips.slice(0, 10),
       },

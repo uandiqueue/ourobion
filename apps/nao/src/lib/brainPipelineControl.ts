@@ -6,16 +6,11 @@ export const BRAIN_PIPELINE_METRICS = Object.freeze(
     .map((metric) => ({ key: metric.key, label: metric.ui?.label ?? metric.key })),
 );
 
-export const BRAIN_PIPELINE_CORPORA = Object.freeze([
-  'tools/brain-ingest/fixtures/verify-corpus.jsonl',
-] as const);
-
 const ALLOWED_KEYS = new Set(BRAIN_PIPELINE_METRICS.map((metric) => metric.key));
 const BODY_KEYS = new Set([
   'pair',
   'papers',
   'artifactRevision',
-  'corpus',
   'dryRun',
   'confirmSpend',
 ]);
@@ -26,7 +21,6 @@ export interface BrainPipelineRequest {
   pair: readonly [string, string];
   papers: readonly string[];
   artifactRevision: string;
-  corpus: (typeof BRAIN_PIPELINE_CORPORA)[number] | '';
   dryRun: boolean;
   confirmSpend: '' | 'RUN';
 }
@@ -42,8 +36,9 @@ export interface BrainPipelineRequest {
  * artifact revision instead. The workflow keeps `default: project-only`, so the
  * no-spend projection remains the default for every other dispatcher and for a
  * manual run from the Actions tab. The `full` path is still fail-closed here:
- * `dry_run` defaults to true and a live run needs both an approved corpus and
- * the exact `confirm_spend: RUN`.
+ * `dry_run` defaults to true and a live run needs the exact `confirm_spend: RUN`.
+ * The workflow builds its verifier corpus from the hydrated real manifest and
+ * excludes cited paper ids; callers cannot substitute a fixture or arbitrary path.
  */
 export const BRAIN_PIPELINE_OPERATION = 'full';
 
@@ -51,7 +46,7 @@ export interface BrainPipelineWorkflowInputs {
   operation: typeof BRAIN_PIPELINE_OPERATION;
   papers: string;
   artifact_revision: string;
-  corpus: string;
+  authorization_operation_id: string;
   dry_run: boolean;
   confirm_spend: string;
 }
@@ -122,14 +117,6 @@ export function parseBrainPipelineRequest(body: unknown): BrainPipelineParseResu
     return { ok: false, error: 'dryRun must be a boolean' };
   }
   const dryRun = value.dryRun !== false;
-  const corpus = typeof value.corpus === 'string' ? value.corpus.trim() : '';
-  if (corpus !== '' && !(BRAIN_PIPELINE_CORPORA as readonly string[]).includes(corpus)) {
-    return { ok: false, error: 'corpus must be an approved repository corpus' };
-  }
-  if (!dryRun && corpus === '') {
-    return { ok: false, error: 'a live run requires a non-empty approved corpus' };
-  }
-
   const confirmSpend = typeof value.confirmSpend === 'string' ? value.confirmSpend : '';
   if (dryRun && confirmSpend !== '') {
     return { ok: false, error: 'dry runs must not include a spend confirmation' };
@@ -142,7 +129,6 @@ export function parseBrainPipelineRequest(body: unknown): BrainPipelineParseResu
     pair: [pair[0]!, pair[1]!],
     papers,
     artifactRevision,
-    corpus: corpus as BrainPipelineRequest['corpus'],
     dryRun,
     confirmSpend: confirmSpend as BrainPipelineRequest['confirmSpend'],
   };
@@ -156,7 +142,10 @@ export function parseBrainPipelineRequest(body: unknown): BrainPipelineParseResu
       // chosen metric pair is still recorded on the control-audit event.
       papers: parsed.papers.join(','),
       artifact_revision: parsed.artifactRevision,
-      corpus: parsed.corpus,
+      // The route replaces this with the already-validated control operation id.
+      // Keeping the key here makes the workflow_dispatch contract exact while
+      // preventing request-body spoofing (authorization_operation_id is not a BODY_KEY).
+      authorization_operation_id: '',
       dry_run: parsed.dryRun,
       confirm_spend: parsed.confirmSpend,
     },

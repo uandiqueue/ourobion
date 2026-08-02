@@ -41,3 +41,30 @@ test('provider credentials are scoped to full-operation steps', () => {
   assert.match(checkBlock, /if: inputs\.operation == 'full'/);
   assert.match(checkBlock, /OPENAI_API_KEY|ANTHROPIC_API_KEY|AGNES_API_KEY/);
 });
+
+test('live verifier builds a real corpus and excludes every cited paper id', () => {
+  assert.match(workflow, /- name: Build echo-controlled verifier corpus/);
+  assert.match(workflow, /build-verify-corpus[\s\\]*\n[\s\S]*--exclude-claims data\/corpus\/edges\/claims\.jsonl/);
+  assert.match(workflow, /--corpus data\/corpus\/verify-corpus-workflow\.jsonl/);
+  assert.doesNotMatch(workflow, /tools\/brain-ingest\/fixtures\/verify-corpus\.jsonl/);
+  assert.doesNotMatch(workflow, /^\s{6}corpus:$/m);
+});
+
+test('Agnes dispatch remains acceptance-only with a finite owner-audited authorization', () => {
+  assert.match(workflow, /^\s{6}authorization_operation_id:$/m);
+  assert.match(workflow, /requires nao's audited authorization_operation_id UUID/);
+  assert.match(workflow, /AGNES_MAX_POST_STARTS="\$\(\(PAPER_COUNT \* 60\)\)"/);
+  assert.match(workflow, /anthropic: \{maxPostStarts: 0, maxReservedUsd: 0/);
+  assert.match(workflow, /openai: \{maxPostStarts: 0, maxReservedUsd: 0/);
+  assert.match(workflow, /agnes: \{maxPostStarts: \$agnesMaxPostStarts, maxReservedUsd: 0/);
+  assert.match(workflow, /--acceptance-authorization "\$ACCEPTANCE_AUTHORIZATION_FILE"/);
+  assert.match(workflow, /--acceptance-run-id "\$ACCEPTANCE_RUN_ID"/);
+});
+
+test('workflow retains a human-attributed acceptance run record', () => {
+  assert.match(workflow, /authorized by nao curator control event \$\{AUTHORIZATION_OPERATION_ID\}/);
+  assert.match(workflow, /dispatched by GitHub actor \$\{GITHUB_ACTOR\}/);
+  assert.match(workflow, /GITHUB_STEP_SUMMARY/);
+  assert.match(workflow, /actions\/upload-artifact@[0-9a-f]{40}/);
+  assert.match(workflow, /attempts\.jsonl/);
+});

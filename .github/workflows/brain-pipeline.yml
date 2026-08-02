@@ -7,8 +7,8 @@ name: Brain pipeline (synthesis → verification → edge load)
 #
 #   1. synthesis        WHOLE paper → RelationshipClaim + quote spans  (--push-r2)
 #   2. quoteCheck       deterministic, BEFORE any verifier token is spent
-#   3. verification     decorrelated adversarial verifier, refute-first, independent
-#                       retrieval, defaults to `uncertain`               (--push-r2)
+#   3. verification     decorrelated adversarial verifier, refute-first, over a
+#                       real echo-controlled corpus with finite authorization (--push-r2)
 #   4. artifact write   claims + extracted blueprints + verifications to R2
 #   5. projection       tools/edge-loader/load_edges.mjs --from-r2 → verified_edges
 #
@@ -36,8 +36,8 @@ on:
         description: "Full only: artifact revision stamped on every verification"
         required: false
         type: string
-      corpus:
-        description: "Repo-relative JSONL corpus the verifier retrieves over (blank = EMPTY corpus ⇒ every verdict is uncertain)"
+      authorization_operation_id:
+        description: "Full live only: nao control-event UUID that identifies the authorizing curator"
         required: false
         type: string
         default: ""
@@ -102,7 +102,7 @@ jobs:
           CONFIRM_PROJECTION: ${{ inputs.confirm_projection }}
           PAPERS: ${{ inputs.papers }}
           REVISION: ${{ inputs.artifact_revision }}
-          CORPUS: ${{ inputs.corpus }}
+          AUTHORIZATION_OPERATION_ID: ${{ inputs.authorization_operation_id }}
           CLAIMS_SHA: ${{ inputs.expected_claims_sha256 }}
           BLUEPRINTS_SHA: ${{ inputs.expected_blueprints_sha256 }}
           VERIFICATIONS_SHA: ${{ inputs.expected_verifications_sha256 }}
@@ -127,22 +127,23 @@ jobs:
               echo "::error::full operation requires papers and artifact_revision."
               exit 1
             fi
+            IFS=',' read -ra PAPER_LIST <<< "$PAPERS"
+            if [ "${#PAPER_LIST[@]}" -lt 1 ] || [ "${#PAPER_LIST[@]}" -gt 20 ]; then
+              echo "::error::full operation requires between 1 and 20 comma-separated paper UIDs."
+              exit 1
+            fi
             if [ "$DRY_RUN" != "true" ]; then
               if [ "$CONFIRM" != "RUN" ]; then
                 echo "::error::live full run requires confirm_spend=RUN. Refusing to spend."
                 exit 1
               fi
-              if [ -z "${CORPUS:-}" ]; then
-                echo "::error::live full run needs a corpus; empty retrieval would spend and force uncertain."
+              if ! [[ "$AUTHORIZATION_OPERATION_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+                echo "::error::live full run requires nao's audited authorization_operation_id UUID."
                 exit 1
               fi
               echo "Live provider run authorised."
             else
               echo "Full dry run: no provider call, no R2 write, no DB write."
-            fi
-            if [ -n "${CORPUS:-}" ] && [ ! -f "$CORPUS" ]; then
-              echo "::error::corpus '$CORPUS' not found in the checkout."
-              exit 1
             fi
           fi
 
@@ -217,24 +218,105 @@ jobs:
           npx tsx src/cli.ts "${ARGS[@]}"
 
       # ── 3 + 4 · decorrelated verification, verdicts published to R2 ─────────────
+      # Build verifier-owned retrieval from the hydrated REAL manifest. The
+      # claims' cited paper ids are excluded so retrieval cannot merely echo the
+      # source being checked; quoteCheck still loads those canonical texts from R2.
+      - name: Build echo-controlled verifier corpus
+        if: inputs.operation == 'full' && inputs.dry_run == false
+        working-directory: tools/brain-ingest
+        run: |
+          set -eu
+          npx tsx src/cli.ts build-verify-corpus \
+            --out data/corpus/verify-corpus-workflow.jsonl \
+            --exclude-claims data/corpus/edges/claims.jsonl
+
+      # The repository policy fixes every verifier channel and ceiling. The nao
+      # control-event UUID joins this run to the authenticated curator recorded
+      # by the database without copying curator identity into GitHub.
+      - name: Issue finite Agnes acceptance authorization
+        if: inputs.operation == 'full' && inputs.dry_run == false
+        working-directory: tools/brain-ingest
+        env:
+          PAPERS: ${{ inputs.papers }}
+          AUTHORIZATION_OPERATION_ID: ${{ inputs.authorization_operation_id }}
+        run: |
+          set -eu
+          IFS=',' read -ra PAPER_LIST <<< "$PAPERS"
+          PAPER_COUNT="${#PAPER_LIST[@]}"
+          AGNES_MAX_POST_STARTS="$((PAPER_COUNT * 60))"
+          AUTHORIZATION_ID="brain-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          ACCEPTANCE_RUN_ID="${AUTHORIZATION_ID}-verify"
+          AUTHORIZATION_FILE="$RUNNER_TEMP/agnes-acceptance.json"
+          ISSUED_AT="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+          EXPIRES_AT="$(date -u -d '+3 hours' '+%Y-%m-%dT%H:%M:%SZ')"
+          AUTHORIZATION_BASIS="Owner-approved repository policy #369; authorized by nao curator control event ${AUTHORIZATION_OPERATION_ID}; dispatched by GitHub actor ${GITHUB_ACTOR}; workflow run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}. Agnes is capped at ${AGNES_MAX_POST_STARTS} POST starts and USD 0 reserved; Anthropic and OpenAI verifier starts are forbidden."
+
+          jq -n \
+            --arg authorizationId "$AUTHORIZATION_ID" \
+            --arg authorizationBasis "$AUTHORIZATION_BASIS" \
+            --arg issuedAt "$ISSUED_AT" \
+            --arg expiresAt "$EXPIRES_AT" \
+            --argjson agnesMaxPostStarts "$AGNES_MAX_POST_STARTS" \
+            '{
+              version: 1,
+              authorizationId: $authorizationId,
+              authorizationBasis: $authorizationBasis,
+              issuedAt: $issuedAt,
+              expiresAt: $expiresAt,
+              providers: {
+                anthropic: {maxPostStarts: 0, maxReservedUsd: 0, priorPostStarts: 0, priorReservedUsd: 0},
+                openai: {maxPostStarts: 0, maxReservedUsd: 0, priorPostStarts: 0, priorReservedUsd: 0},
+                agnes: {maxPostStarts: $agnesMaxPostStarts, maxReservedUsd: 0, priorPostStarts: 0, priorReservedUsd: 0}
+              }
+            }' > "$AUTHORIZATION_FILE"
+
+          {
+            echo "ACCEPTANCE_AUTHORIZATION_ID=$AUTHORIZATION_ID"
+            echo "ACCEPTANCE_RUN_ID=$ACCEPTANCE_RUN_ID"
+            echo "ACCEPTANCE_AUTHORIZATION_FILE=$AUTHORIZATION_FILE"
+          } >> "$GITHUB_ENV"
+          {
+            echo "## Agnes acceptance authorization"
+            echo "- Authorization: $AUTHORIZATION_ID"
+            echo "- Authorizing control event: $AUTHORIZATION_OPERATION_ID (authenticated curator is recorded in nao)"
+            echo "- GitHub dispatcher: $GITHUB_ACTOR"
+            echo "- Window: $ISSUED_AT to $EXPIRES_AT"
+            echo "- Agnes ceiling: $AGNES_MAX_POST_STARTS POST starts; USD 0 reserved"
+            echo "- Anthropic/OpenAI verifier ceiling: 0 starts; USD 0 reserved"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Verification
-        if: inputs.operation == 'full'
+        if: inputs.operation == 'full' && inputs.dry_run == false
         working-directory: tools/brain-ingest
         env:
           # Same reason as Synthesis: the router reads process.env, not .env.
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
-          CORPUS: ${{ inputs.corpus }}
           REVISION: ${{ inputs.artifact_revision }}
-          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -eu
-          ARGS=(verify --artifact-revision "$REVISION")
-          if [ -n "${CORPUS:-}" ]; then ARGS+=(--corpus "$GITHUB_WORKSPACE/$CORPUS"); fi
-          if [ "$DRY_RUN" = "true" ]; then ARGS+=(--dry-run); else ARGS+=(--push-r2); fi
+          ARGS=(
+            verify
+            --artifact-revision "$REVISION"
+            --corpus data/corpus/verify-corpus-workflow.jsonl
+            --acceptance-authorization "$ACCEPTANCE_AUTHORIZATION_FILE"
+            --acceptance-run-id "$ACCEPTANCE_RUN_ID"
+            --push-r2
+          )
           echo "Running: npx tsx src/cli.ts ${ARGS[*]}"
           npx tsx src/cli.ts "${ARGS[@]}"
+
+      - name: Retain Agnes authorization and attempt journal
+        if: always() && inputs.operation == 'full' && inputs.dry_run == false
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: agnes-acceptance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ env.ACCEPTANCE_AUTHORIZATION_FILE }}
+            data/brain-ingest/live-acceptance/${{ env.ACCEPTANCE_AUTHORIZATION_ID }}/attempts.jsonl
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Validate exact R2 artifact bundle (no providers)
         if: inputs.operation == 'project-only'
