@@ -1,12 +1,12 @@
 ---
 title: Ourobion — what it is, why it exists, and why it is two systems
-summary: The long-form project explainer — the problem that produced Ourobion, what One Health means and why it frames the product, who it is for and who it is not for, what biotope and nao each are and why they are separate, and what the identity and logo encode.
+summary: The long-form project explainer — the problem that produced Ourobion, what One Health means and why it frames biotope, who the app is for and who it is not for, what biotope and nao each are and why they are separate, and what the identity and logo encode. Ourobion is the system; biotope is the One Health app.
 type: reference
 scope: repo
 status: accepted
-updated: 2026-08-02
+updated: 2026-08-03
 verified_by: Jayden
-verified_at: 2026-08-02T09:57:50Z
+verified_at: 2026-08-02T20:25:59Z
 ---
 
 ## The origin
@@ -23,7 +23,7 @@ This points to a wider claim. A traditional health app faces an iron triangle: i
 
 The ambition, stated carefully, is larger: paving the way for applications that are *generative* natively — that produce new value instead of serving a fixed feature set. Apps that keep surprising you because they keep learning.
 
-## What One Health means, and why Ourobion is framed by it
+## What One Health means, and why biotope is framed by it
 
 **One Health** is the principle that human health, animal health, and the health of the shared environment are one interdependent system rather than three separate fields. The World Health Organization defines it as:
 
@@ -33,7 +33,7 @@ The fuller formulation, developed by the One Health High-Level Expert Panel, ext
 
 It is not a metaphor. It is the framing behind pandemic preparedness, antimicrobial-resistance policy, and food-system safety, and it is operationalised: on 17 October 2022 the Quadripartite — the Food and Agriculture Organization, the UN Environment Programme, the World Health Organization, and the World Organisation for Animal Health — launched the **One Health Joint Plan of Action (2022–2026)**, whose six action tracks include controlling endemic zoonotic, neglected tropical and vector-borne diseases, food-safety risk, antimicrobial resistance, and integrating the environment into One Health.
 
-Ourobion applies the part of that system an individual can actually observe and act on: their own physiology, their daily behaviour, and the environment they are exposed to. **It does not claim to implement One Health in full.** Animal and ecosystem surveillance are real components of the framework and are not what a consumer phone app does. What Ourobion takes from One Health is the refusal to treat a person's body as a closed system — the recognition that hydration, digestion, air quality, heat, and season are not separate topics.
+Biotope applies the part of that system an individual can actually observe and act on: their own physiology, their daily behaviour, and the environment they are exposed to. **It does not claim to implement One Health in full.** Animal and ecosystem surveillance are real components of the framework and are not what a consumer phone app does; environmental collection is a placeholder in the current build. What biotope takes from One Health is the refusal to treat a person's body as a closed system — the recognition that hydration, digestion, air quality, heat, and season are not separate topics.
 
 That framing matters more in ASEAN than it would elsewhere. A tropical, densely populated, rapidly urbanising region has a different baseline: heat and humidity load, vector-borne disease pressure, water and sanitation variation, and food systems in close contact with both livestock and wildlife. A health app designed against temperate assumptions quietly imports the wrong defaults.
 
@@ -41,7 +41,7 @@ That framing matters more in ASEAN than it would elsewhere. A tropical, densely 
 
 ## Who it is for
 
-Ourobion is a One Health personal ecological health monitor built for the ASEAN market.
+**Biotope** is a One Health personal ecological health monitor built for the ASEAN market. **Ourobion** is the wider system it belongs to: the research pipeline that produces biotope's evidence, and nao, where that evidence is inspected.
 
 **The person it is built for** is someone curious about their own body who has been failed by the generic tracker: they have logged steps and weight, watched the app hand their own numbers back, and stopped opening it. They are interested in signals the mainstream category skips — digestion, stool and urine patterns, hydration — precisely because nobody else is showing them. They are willing to spend thirty seconds a day, and not a minute more.
 

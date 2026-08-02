@@ -26,7 +26,8 @@ code, migrations, shared contracts, configuration, and executed tests are the st
 
 ## What the system is
 
-Ourobion is a non-diagnostic One Health system with two product surfaces:
+Ourobion is an agentic research system for health evidence, with two product surfaces that consume
+what it produces. Biotope is the non-diagnostic One Health app; Nao is the research workbench:
 
 - **Biotope** is the Flutter personal-health application. It records user observations, optionally
   reads a bounded set of wearable signals, computes deterministic baselines and personal patterns,

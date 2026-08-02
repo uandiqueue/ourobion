@@ -1,13 +1,17 @@
 # Ourobion
 
-**A One Health personal ecological health monitor for the ASEAN market.** Ourobion connects daily
-observations about a person's body and behaviour with environmental context, then presents
-descriptive patterns without making diagnostic claims.
+**An agentic research system for health evidence.** Ourobion reads open-access scientific literature
+and turns it into relationships between health measures — each one traceable back to the paper it
+came from and to an independent review by a model from a different company. Two products consume
+that evidence: **Biotope**, the phone app, and **Nao**, the research workbench.
 
-**One Health** is the principle that the health of people, animals, and the environment is
-interconnected. Ourobion currently starts with the part an individual can observe and act on:
-personal physiology, daily behaviour, and environmental exposure. It does not claim that every One
-Health domain is already implemented.
+**Biotope is a One Health personal ecological health monitor for the ASEAN market.** It connects
+daily observations about a person's body and behaviour with environmental context, then presents
+descriptive patterns without making diagnostic claims. **One Health** is the principle that the
+health of people, animals, and the environment is interconnected; Biotope applies the part an
+individual can observe and act on — personal physiology, daily behaviour, and environmental exposure
+— and does not claim that every One Health domain is implemented. Environmental collection is a
+placeholder in the current build.
 
 > This README is the human front door: where to go, what the two products do, and how to run them
 > from source. AI coding agents start with [`AGENTS.md`](AGENTS.md).

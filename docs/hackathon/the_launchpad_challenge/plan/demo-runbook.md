@@ -595,8 +595,8 @@ One line on what's next, the repo and write-up links, team name.
 
 ~450 words at 150 wpm. Read it flat and unhurried.
 
-**Slide 1 (8s).** "Ourobion is a One Health health monitor in two parts: nao, which reads the
-scientific literature, and biotope, which puts what it finds in front of a person."
+**Slide 1 (8s).** "Ourobion is a research system in two parts: nao, which reads the
+scientific literature, and biotope, the One Health app that puts what it finds in front of a person."
 
 **Slide 2 (14s).** "Consumer health apps correlate two numbers and call it an insight. They assert;
 they don't show their working. The evidence exists — it's sitting in an ocean of papers nobody reads.

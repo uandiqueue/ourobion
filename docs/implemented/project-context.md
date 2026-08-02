@@ -24,10 +24,15 @@ updated: 2026-08-02
 
 ## What We Are Building
 
-Ourobion is a One Health personal ecological health monitor for the ASEAN market.
-It connects human physiology, daily behaviour, and environmental context to help users
+Ourobion is an agentic research system for health evidence: a pipeline that turns scientific
+literature into independently reviewed relationships between health measures, plus the products that
+consume them.
+
+**Biotope**, the phone app, is the One Health personal ecological health monitor for the ASEAN
+market. It connects human physiology, daily behaviour, and environmental context to help users
 understand patterns in their gut health, hydration, vector exposure, and ecological
-wellbeing — without making diagnostic claims.
+wellbeing — without making diagnostic claims. **Nao** is the research workbench where any
+relationship can be opened and inspected.
 
 Users log a small set of high-yield health signals in under 30 seconds per day.
 The app surfaces descriptive patterns and insight cards. It never diagnoses.
