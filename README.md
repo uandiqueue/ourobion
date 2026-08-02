@@ -30,8 +30,8 @@ placeholder in the current build.
 | Review what is actually implemented and measured | [`docs/implemented/system-truth.md`](docs/implemented/system-truth.md) |
 | Read the research-model results (Zebra, Viceroy) | [Research models](#research-models) below, then [`model-training/evidence/publication-results/`](model-training/evidence/publication-results/) |
 | See what we got wrong along the way | [`docs/development/what-we-got-wrong.md`](docs/development/what-we-got-wrong.md) |
-| Run Biotope | [`apps/biotope/README.md`](apps/biotope/README.md) |
-| Run Nao | [`apps/nao/README.md`](apps/nao/README.md) |
+| Build and run Biotope locally *(not needed to review it — use the APK)* | [`apps/biotope/README.md`](apps/biotope/README.md) |
+| Build and run Nao locally *(not needed to review it — use the hosted app)* | [`apps/nao/README.md`](apps/nao/README.md) |
 | Understand the full insight-engine architecture | [`docs/implemented/shared/insight-engine-architecture.md`](docs/implemented/shared/insight-engine-architecture.md) |
 | Navigate all active documentation | [`docs/INDEX.md`](docs/INDEX.md) |
 | Understand the engineering practice | [`docs/engineering-practice.md`](docs/engineering-practice.md) |
@@ -162,15 +162,15 @@ uninstall the older demo first (which deletes its local app data) and then insta
 distribution is out of scope because it requires a Mac and a paid Apple Developer account. The
 source-build and release process is in [`apps/biotope/README.md`](apps/biotope/README.md).
 
-## Run from source
+## Open Nao in a browser
 
-Biotope also runs from source on an Android emulator or physical device, and Nao runs locally with
-Node.js. The app-specific READMEs remain the authority for prerequisites, environment variables,
-troubleshooting, verification, and deployment.
+**Nao is live at [nao.ourobion.com](https://nao.ourobion.com) — nothing to install.** Sign in with the
+[shared test account](#shared-test-account) below. It is the fastest way to see the brain: the paper
+corpus, every drafted relationship, the verification verdict behind each one, and the loader.
 
-### Shared test account
+## Shared test account
 
-Use the following account when the apps are connected to Ourobion's configured demo environment:
+Use the following account for the Android APK and for the hosted Nao:
 
 ```text
 Email:    test@ourobion.com
@@ -188,71 +188,20 @@ This is a public shared account. Do not enter personal or sensitive information 
 local Supabase stack has a separate authentication database, so the account is available only when
 the app points to the configured demo environment unless it is provisioned locally as well.
 
-### Run Biotope
+## Building from source
 
-Full instructions: [`apps/biotope/README.md`](apps/biotope/README.md).
+Nothing here has to be built to review it — install the APK, or open the hosted Nao. If you do want
+to build, configure, run or test either product locally, those instructions live with the product
+they belong to, which is the authority for prerequisites, environment variables, troubleshooting,
+verification and deployment:
 
-At minimum, install Flutter, Node.js, Docker, and an Android toolchain. From the repository root:
+| Product | Local build, run and test |
+|---|---|
+| **Biotope** (Flutter) | [`apps/biotope/README.md`](apps/biotope/README.md) |
+| **Nao** (Next.js) | [`apps/nao/README.md`](apps/nao/README.md) |
 
-```bash
-# Linux/macOS project setup. Windows uses .\scripts\setup.ps1 instead.
-chmod +x scripts/setup.sh
-./scripts/setup.sh
-
-# Public client configuration: fill in the URL and anon key after Supabase starts.
-cp apps/biotope/.env.public.example apps/biotope/.env.public
-npx supabase start
-npx supabase db reset
-
-cd apps/biotope
-flutter pub get
-flutter run
-```
-
-For an Android emulator, set `SUPABASE_URL=http://10.0.2.2:54321` in
-`apps/biotope/.env.public`. A physical phone uses the development machine's LAN address. Never place
-private backend secrets in this file; it is bundled into the app.
-
-### Run Nao
-
-**Nao is live at [nao.ourobion.com](https://nao.ourobion.com) — nothing to install.** Sign in with
-the [shared test account](#shared-test-account) and it works. That is the fastest way to see the
-brain: the paper corpus, relationship claims, verification verdicts, and the loader. The instructions
-below are only for running it locally.
-
-Full instructions: [`apps/nao/README.md`](apps/nao/README.md). Nao requires Node.js **26 or newer**.
-
-From `apps/nao/`:
-
-```bash
-cp .env.public.example .env.public
-cp .env.example .env
-# Fill in the selected Supabase project values. R2 credentials are needed for ETL.
-
-npm install
-npm run dev
-# http://localhost:3000
-```
-
-The interface can start without rebuilding the paper index, but corpus search and paper detail depend
-on the documented D1/R2 setup. Follow the app README to initialise D1, run the ETL, or exercise the
-Cloudflare path.
-
-### Verify the applications
-
-```bash
-# Biotope
-cd apps/biotope
-flutter analyze
-flutter test
-
-# Nao
-cd ../nao
-npm run typecheck
-npm test
-```
-
-Repository context and documentation checks run from the root:
+Repository-wide documentation and context checks are the exception, since they belong to no single
+app and run from the root:
 
 ```bash
 npm run context:check
