@@ -22,6 +22,7 @@ placeholder in the current build.
 |---|---|
 | **Judge the Launchpad 2026 submission** | [`docs/hackathon/the_launchpad_challenge/submission/`](docs/hackathon/the_launchpad_challenge/submission/) — write-up, appendix, references |
 | **Install Biotope on Android** | [Install Biotope on Android](#install-biotope-on-android) below — sideloadable demo APK, no toolchain needed |
+| **Open Nao without installing anything** | [nao.ourobion.com](https://nao.ourobion.com) — live; sign in with the shared test account |
 | **Sign in and look around** | [Shared test account](#shared-test-account) below — `test@ourobion.com` / `test123`, one credential for both apps |
 | See the project at a glance | [www.ourobion.com](https://www.ourobion.com) — the showcase site, or [`apps/site/`](apps/site/) for its source |
 | Take a guided reviewer route through the repository | [`docs/repository-guide.md`](docs/repository-guide.md) |
@@ -142,6 +143,19 @@ permission to **Install unknown apps** before opening the download.
 The APK connects to Ourobion's hosted demo Supabase project — sign in with the
 [shared test account](#shared-test-account) below.
 
+Built from `c9ea97b`, and verifiable before you install it:
+
+```text
+SHA-256: 861824d1ecd6be50faf10f4aa21b10fe4a5e5ecae358ac731695894bd52cbd29
+```
+
+```bash
+# macOS / Linux
+shasum -a 256 ourobion-biotope-demo.apk
+# Windows PowerShell
+Get-FileHash ourobion-biotope-demo.apk -Algorithm SHA256
+```
+
 This hackathon APK is debug-signed for sideloading and is **not** a Play Store artifact. Demo APK
 updates must be built on the same Windows host; if Android reports an incompatible signature,
 uninstall the older demo first (which deletes its local app data) and then install the new APK. iOS
@@ -200,6 +214,11 @@ For an Android emulator, set `SUPABASE_URL=http://10.0.2.2:54321` in
 private backend secrets in this file; it is bundled into the app.
 
 ### Run Nao
+
+**Nao is live at [nao.ourobion.com](https://nao.ourobion.com) — nothing to install.** Sign in with
+the [shared test account](#shared-test-account) and it works. That is the fastest way to see the
+brain: the paper corpus, relationship claims, verification verdicts, and the loader. The instructions
+below are only for running it locally.
 
 Full instructions: [`apps/nao/README.md`](apps/nao/README.md). Nao requires Node.js **26 or newer**.
 
