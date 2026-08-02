@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -15,6 +17,8 @@ import 'modules/m1_core/ui/screens/consent_screen.dart';
 import 'modules/m1_core/ui/screens/profile_setup_screen.dart';
 import 'modules/m1_core/ui/screens/app_shell.dart';
 import 'modules/m1_core/ui/screens/waking_screen.dart';
+import 'modules/m1_core/ui/widgets/auth_gate_recovery_screen.dart';
+import 'modules/m1_core/ui/widgets/auth_gate_session_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,17 +31,16 @@ Future<void> main() async {
 
   final supabaseUrl = dotenv.env['SUPABASE_URL'];
   final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
-  if (supabaseUrl == null || supabaseUrl.isEmpty ||
-      supabaseAnonKey == null || supabaseAnonKey.isEmpty) {
+  if (supabaseUrl == null ||
+      supabaseUrl.isEmpty ||
+      supabaseAnonKey == null ||
+      supabaseAnonKey.isEmpty) {
     throw StateError(
       'Missing SUPABASE_URL or SUPABASE_ANON_KEY in .env.public.',
     );
   }
 
-  await Supabase.initialize(
-    url: supabaseUrl,
-    anonKey: supabaseAnonKey,
-  );
+  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
   runApp(const OurobionApp());
 }
 
@@ -57,16 +60,19 @@ class OurobionApp extends StatelessWidget {
 
 // ─── Onboarding state ────────────────────────────────────────────────────────
 
-enum _OnboardStep { consent, profile, done }
+enum _OnboardStep { signedOut, consent, profile, done }
 
 Future<_OnboardStep> _checkOnboarding(String userId) async {
   final client = Supabase.instance.client;
-  final hasConsent = await ConsentService(client)
-      .hasConsented(userId, ConsentScope.gutTracking);
+  final hasConsent = await ConsentService(
+    client,
+  ).hasConsented(userId, ConsentScope.gutTracking);
   if (!hasConsent) return _OnboardStep.consent;
 
   final profile = await ProfileService(client).getProfile(userId);
-  if (profile == null || profile.displayName.isEmpty) return _OnboardStep.profile;
+  if (profile == null || profile.displayName.isEmpty) {
+    return _OnboardStep.profile;
+  }
 
   return _OnboardStep.done;
 }
@@ -83,29 +89,158 @@ Future<_OnboardStep> _checkOnboardingWithMinDisplay(String userId) async {
 
 // ─── Auth gate ────────────────────────────────────────────────────────────────
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
   @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
+  late final AuthService _authService;
+  late final AuthGateSessionController _session;
+  StreamSubscription<AuthState>? _authSubscription;
+  Future<_OnboardStep>? _onboardingFuture;
+  String? _onboardingUserId;
+  bool _revalidateOnResume = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final client = Supabase.instance.client;
+    _authService = AuthService(client);
+    _session = AuthGateSessionController(
+      initialUserId: client.auth.currentSession?.user.id,
+    );
+    _startOnboardingFor(_session.userId);
+    _listenForAuthChanges();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  void _listenForAuthChanges() {
+    _authSubscription = _authService.onAuthStateChange.listen(
+      _handleAuthState,
+      onError: _handleAuthError,
+    );
+  }
+
+  void _handleAuthState(AuthState state) {
+    if (!mounted) return;
+    final userId = state.session?.user.id;
+    setState(() {
+      final changedUser = _session.userId != userId;
+      // Use this event's session rather than reading a global session again.
+      // This makes a password sign-in transition in the same turn Supabase
+      // publishes it, and treats a null event as sign-out.
+      _session.receiveSession(userId);
+      if (changedUser) _startOnboardingFor(userId);
+    });
+  }
+
+  void _handlePasswordSignIn(String userId) {
+    if (!mounted) return;
+    setState(() {
+      // `signInWithPassword` saved this session before returning. This direct
+      // handoff closes the gap before its async `signedIn` stream event.
+      _session.receiveSession(userId);
+      _startOnboardingFor(userId);
+    });
+  }
+
+  void _handleAuthError(Object error, StackTrace _) {
+    if (!mounted) return;
+    setState(() => _session.receiveError(error));
+  }
+
+  void _startOnboardingFor(String? userId) {
+    if (_onboardingUserId == userId && _onboardingFuture != null) return;
+    _onboardingUserId = userId;
+    _onboardingFuture = userId == null
+        ? null
+        : _checkSessionAndOnboarding(userId);
+  }
+
+  Future<_OnboardStep> _checkSessionAndOnboarding(String userId) async {
+    final validity = await _authService.validateCurrentSession();
+    if (validity == AuthSessionValidation.invalid) {
+      // GoTrue removes the local token and publishes signedOut before its
+      // remote call, including when the hosted user was already deleted.
+      await _authService.signOut();
+      return _OnboardStep.signedOut;
+    }
+    return _checkOnboardingWithMinDisplay(userId);
+  }
+
+  void _retryOnboarding() {
+    final userId = _session.userId;
+    if (userId == null) return;
+    setState(() {
+      _onboardingUserId = null;
+      _startOnboardingFor(userId);
+    });
+  }
+
+  void _retryAuthStream() {
+    setState(_session.retry);
+    unawaited(_restartAuthListener());
+  }
+
+  Future<void> _restartAuthListener() async {
+    await _authSubscription?.cancel();
+    if (!mounted) return;
+    _listenForAuthChanges();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      _revalidateOnResume = true;
+      return;
+    }
+    if (state == AppLifecycleState.resumed &&
+        _revalidateOnResume &&
+        _session.phase == AuthGateSessionPhase.signedIn) {
+      _revalidateOnResume = false;
+      _retryOnboarding();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final authService = AuthService(Supabase.instance.client);
-
-    return StreamBuilder<AuthState>(
-      stream: authService.onAuthStateChange,
-      builder: (context, snapshot) {
-        final session = Supabase.instance.client.auth.currentSession;
-
-        if (session == null) {
-          return SignInScreen(authService: authService);
+    switch (_session.phase) {
+      case AuthGateSessionPhase.recoverableError:
+        return AuthGateRecoveryScreen(onRetry: _retryAuthStream);
+      case AuthGateSessionPhase.signedOut:
+        return SignInScreen(
+          authService: _authService,
+          onSignedIn: _handlePasswordSignIn,
+        );
+      case AuthGateSessionPhase.signedIn:
+        final onboardingFuture = _onboardingFuture;
+        if (onboardingFuture == null) {
+          return AuthGateRecoveryScreen(onRetry: _retryOnboarding);
         }
-
         return FutureBuilder<_OnboardStep>(
-          future: _checkOnboardingWithMinDisplay(session.user.id),
-          builder: (context, snap) {
-            if (!snap.hasData) {
-              return const WakingScreen();
+          future: onboardingFuture,
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return AuthGateRecoveryScreen(onRetry: _retryOnboarding);
             }
-            switch (snap.data!) {
+            if (!snapshot.hasData) return const WakingScreen();
+            switch (snapshot.data!) {
+              case _OnboardStep.signedOut:
+                return SignInScreen(
+                  authService: _authService,
+                  onSignedIn: _handlePasswordSignIn,
+                );
               case _OnboardStep.consent:
                 return const ConsentScreen();
               case _OnboardStep.profile:
@@ -115,7 +250,6 @@ class AuthGate extends StatelessWidget {
             }
           },
         );
-      },
-    );
+    }
   }
 }

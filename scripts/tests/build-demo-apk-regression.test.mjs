@@ -11,6 +11,7 @@ const read = (path) => readFileSync(resolve(ROOT, path), 'utf8');
 
 const script = read('scripts/build-demo-apk.ps1');
 const gradle = read('apps/biotope/android/app/build.gradle.kts');
+const mainManifest = read('apps/biotope/android/app/src/main/AndroidManifest.xml');
 const docs = [
   read('README.md'),
   read('apps/biotope/README.md'),
@@ -27,6 +28,19 @@ test('release builder fails closed around hosted config and signing', () => {
   assert.match(script, /git -C \$RepoRoot status --porcelain --untracked-files=normal/);
   assert.match(script, /The Git worktree is dirty/);
   assert.match(gradle, /signingConfigs\.getByName\(\x22debug\x22\)/);
+});
+
+test('release networking is declared in main and enforced by preflight', () => {
+  assert.match(
+    mainManifest,
+    /<uses-permission\s+android:name="android\.permission\.INTERNET"\s*\/>/,
+  );
+  assert.match(script, /MainManifestPath/);
+  assert.match(script, /hasReleaseInternetPermission/);
+  assert.match(
+    script,
+    /Android main manifest must declare android\.permission\.INTERNET/,
+  );
 });
 
 test('release builder creates and verifies one universal APK', () => {

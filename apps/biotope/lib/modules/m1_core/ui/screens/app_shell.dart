@@ -55,7 +55,10 @@ class _AppShellState extends State<AppShell> {
               ),
               BiotopeScreenEntrance(active: _index == 1, child: const ScanTab()),
               BiotopeScreenEntrance(active: _index == 2, child: const InsightsTab()),
-              BiotopeScreenEntrance(active: _index == 3, child: const ArchiveTab()),
+              BiotopeScreenEntrance(
+                active: _index == 3,
+                child: ArchiveTab(active: _index == 3),
+              ),
               BiotopeScreenEntrance(active: _index == 4, child: const ProfileTab()),
             ],
           ),
