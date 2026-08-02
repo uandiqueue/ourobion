@@ -14,7 +14,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -822,6 +822,11 @@ test('#387 G2: a fresh --push-r2 runner resumes from remote claims with NO provi
   assert.equal(result.budget.providerCalls, 0);
   assert.equal(result.budget.papersSkippedAlreadyDone, 1);
   assert.equal(result.perPaper[0]!.status, 'skipped-already-done');
+  assert.equal(
+    readFileSync(join(dir, 'claims.jsonl'), 'utf8'),
+    remoteClaims,
+    'the fresh runner must hydrate the validated claim for downstream verification',
+  );
 });
 
 test('#387 G2: an R2 resume-check outage fails closed before provider spend', async () => {
@@ -861,6 +866,37 @@ test('#387 G2: malformed remote resume evidence fails closed before provider spe
     /invalid JSON during spend-safe resume/,
   );
   assert.equal(router.calls.length, 0, 'malformed durable resume evidence cannot trigger spend');
+});
+
+test('#389 G2: contract-invalid remote claims fail before hydration or provider spend', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ourobion-batch-'));
+  const router = routerFor({ inputTokens: 0, outputTokens: 0 });
+  const r2Store = {
+    async headExists() {
+      return { exists: true };
+    },
+    async getObjectText() {
+      return '{}\n';
+    },
+  };
+
+  await assert.rejects(
+    () => synthesizePapers(
+      batchOpts({
+        edgesDir: dir,
+        paperUids: ['p1'],
+        router,
+        pushR2: true,
+        r2Store,
+        validateClaim: () => {
+          throw new Error('schema mismatch');
+        },
+      }) as never,
+    ),
+    /contract validation failed during spend-safe resume: schema mismatch/,
+  );
+  assert.equal(router.calls.length, 0);
+  assert.equal(existsSync(join(dir, 'claims.jsonl')), false);
 });
 
 test('#300 G2: --no-resume re-synthesises an already-present paper', async () => {
