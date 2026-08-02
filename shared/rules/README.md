@@ -1,8 +1,9 @@
 # shared/rules — the rule-blueprint contract
 
 **THE contract for insight rules as data** (rules-engine-design §B1, [memory 0007](../../docs/memory/0007-rules-as-data-two-tier.md)).
-Insight rules are git-tracked JSON **blueprints** — not TypeScript — validated against this package
-and projected into the Postgres `rules` table by the loader.
+Insight rules are validated JSON **blueprints** — not TypeScript — projected into the Postgres
+`rules` table by the loader. Git-tracked blueprints are the hand-authored truth; paper-extracted
+blueprints remain rebuildable brain artifacts and enter only through the verified-edge gate.
 
 - `rule.ts` — hand-authored types (the readable contract).
 - `rule.schema.ts` — zod mirror + structural invariants + `AssertExact` drift guards (`tsc` fails if
@@ -15,9 +16,12 @@ and projected into the Postgres `rules` table by the loader.
 | Tier | What | Where |
 |---|---|---|
 | **TRUTH** | this contract + the blueprint JSONs | `shared/rules/`, `data/rules/{single,cross}/<category>/<rule_id>.json` (one file per rule) |
+| **DERIVED INPUT** | paper-extracted blueprints + their claims/verifications | an explicitly supplied `edges/` artifact bundle; never copied into `data/rules/` |
 | **DERIVED** | the `rules` table | populated ONLY by `tools/rules/load_rules.mjs` (full-rebuild upsert + prune); never hand-edited |
 
-To change a rule: edit its blueprint, PR it, re-run the loader. Never write to the table.
+To change a hand-authored rule: edit its blueprint, PR it, and re-run the loader. To change an
+extracted rule: fix/rerun synthesis or verification and load that artifact bundle with
+`--from-edges-dir`. Never write to the table.
 
 ## Blueprint shape (schemaVersion 1)
 
@@ -32,8 +36,10 @@ sets** (`hydration|gut|vector|behaviour|descriptive`; `info|notice|watch`). `sco
 `shared/metrics/registry.ts` (active or deprecated — never unknown; enforced by loader + guard, not
 the schema, so the contract stays self-contained).
 
-Provenance: `{ tier: 'hand_authored'|'extracted', sourceNote, citation }` — `extracted` rules come
-from the B4 paper-extract CLI and are human-promoted out of `data/rules/_candidates/`.
+Provenance: `{ tier: 'hand_authored'|'extracted', sourceNote, citation }`. Extracted blueprints are
+admitted only when an active, non-hold verified edge covers the same unordered metric pair. The gate
+also requires paper citation provenance, engine-compatible phase/copy, and preserves hand-authored
+ownership on every rule-id collision.
 
 Copy: `template { title, body }` with optional snake_case `{{placeholder}}`s, rendered by the
 engine. **Every template must pass `validateCopyString`** (non-diagnostic,
