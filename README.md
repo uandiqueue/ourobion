@@ -27,6 +27,23 @@ consent is granular, and community aggregates only publish above per-region thre
 
 Product principles in full: [`docs/shared/project-context.md`](docs/shared/project-context.md).
 
+### Install biotope on Android
+
+Reviewers can install the universal
+[`ourobion-biotope-demo.apk`](https://github.com/uandiqueue/ourobion/releases/download/biotope-demo-v1/ourobion-biotope-demo.apk)
+without Flutter, Android Studio, or a local backend. Android may ask the browser or file manager for
+permission to **Install unknown apps** before opening the download.
+
+The APK connects to Ourobion's hosted demo Supabase project. Sign in with the credentials supplied in
+the private reviewer/submission handoff; credentials are intentionally not committed to this public
+repository. Ask the project owner if that handoff is missing.
+
+This hackathon APK is debug-signed for sideloading and is not a Play Store artifact. Demo APK updates
+must be built on the same Windows host; if Android reports an incompatible signature, uninstall the
+older demo first (which deletes its local app data) and then install the new APK. iOS distribution is
+out of scope because it requires a Mac and a paid Apple Developer account. Contributors can find the
+source-build and release process in [`apps/biotope/README.md`](apps/biotope/README.md).
+
 ---
 
 ## 🧬 The brain — an evidence-tiered, verified relationship graph

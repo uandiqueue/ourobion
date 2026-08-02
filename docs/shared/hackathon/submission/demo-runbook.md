@@ -374,6 +374,39 @@ npm run dev        # → http://localhost:3000, sign in as the staff user
 
 ## 5. Setup — biotope
 
+### Reviewer installation — hosted Android APK
+
+Use the stable universal
+[`ourobion-biotope-demo.apk`](https://github.com/uandiqueue/ourobion/releases/download/biotope-demo-v1/ourobion-biotope-demo.apk).
+On Android, allow the browser or file manager to **Install unknown apps** when prompted, then install
+and open the downloaded file. It connects to the hosted demo Supabase project; no local toolchain or
+backend is required.
+
+Use credentials from the private reviewer/submission handoff. Credentials are deliberately not
+committed to this public repository; contact the project owner if the handoff is missing. iOS is
+explicitly out of scope because a distributable device build requires a Mac and a paid Apple
+Developer account.
+
+The hackathon APK is debug-signed for sideloading only. All demo releases must be built on the same
+Windows host. A different host has a different debug key, so Android must uninstall the prior demo
+before installing that build, which deletes the prior app's local data.
+
+Maintainers build it from the repo root only after placing the approved public hosted config at
+`apps/biotope/.env.public`:
+
+```powershell
+# If this worktree is not beside the bounded toolchain, point to the existing one:
+$env:BIOTOPE_TOOLCHAIN = 'C:\path\to\biotope-toolchain'
+.\scripts\build-demo-apk.ps1 -PreflightOnly -AcceptDebugSigning
+.\scripts\build-demo-apk.ps1 -AcceptDebugSigning
+```
+
+The full build must run from a clean, committed, reviewed checkout. The script refuses a dirty Git
+tree, a local/unknown backend, or implicit debug signing; it produces one universal APK, verifies the
+hosted config inside the built archive, verifies its signature, and reports a SHA-256.
+
+### Local capture setup
+
 All macOS/bash from the repo root. `scripts/seed-test-data.ps1` is PowerShell and will not run here;
 the SQL seeder below is the documented standalone path.
 
