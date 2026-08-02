@@ -3,11 +3,9 @@ id: "0003"
 title: Non-diagnostic language is mandatory for all user-facing copy
 summary: User-facing copy remains observational and non-diagnostic while exposing evidence strength, uncertainty, disagreement, and provenance so users can judge the evidence chain rather than receiving a hidden or inflated conclusion.
 type: memory
-status: accepted
+status: unverified
 decided: 2026-07-13
 updated: 2026-08-02
-verified_by: Jayden
-verified_at: 2026-08-02T09:21:34Z
 ---
 
 # Non-diagnostic language is mandatory for all user-facing copy

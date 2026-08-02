@@ -3,11 +3,9 @@ id: "0004"
 title: HRV SDNN is iOS-only
 summary: hrv_sdnn_ms comes only from Apple HealthKit and stays null on Android (Health Connect exposes RMSSD) by design — treat it as a nullable, platform-dependent signal, never gate on it.
 type: memory
-status: accepted
+status: unverified
 decided: 2026-07-13
 updated: 2026-08-02
-verified_by: Jayden
-verified_at: 2026-08-02T09:00:58Z
 ---
 
 # HRV SDNN is iOS-only

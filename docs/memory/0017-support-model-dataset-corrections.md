@@ -3,11 +3,9 @@ id: "0017"
 title: Support-model dataset corrections
 summary: BioRED does not supervise direction, MEDLINE PublicationType cannot label evidence tiers 1–3 by itself, and Cochrane Crowd's terms do not support the proposed training use; do not restore those recipes.
 type: memory
-status: accepted
+status: unverified
 decided: 2026-07-26
 updated: 2026-08-02
-verified_by: Jayden
-verified_at: 2026-08-02T09:00:58Z
 ---
 
 # Support-model dataset corrections

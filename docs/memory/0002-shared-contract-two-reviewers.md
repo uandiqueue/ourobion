@@ -3,11 +3,9 @@ id: "0002"
 title: Shared contract changes normally need two reviewers
 summary: Shared-contract changes normally need two team reviewers; when one is genuinely unavailable, Jayden may explicitly authorize an exception as project lead, with the exception recorded in the issue or PR.
 type: memory
-status: accepted
+status: unverified
 decided: 2026-07-13
 updated: 2026-08-02
-verified_by: Jayden
-verified_at: 2026-08-02T09:21:34Z
 ---
 
 # Shared contract changes normally need two reviewers
