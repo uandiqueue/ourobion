@@ -5,7 +5,7 @@ summary: Insight rules are data, not a hardcoded condition array — hand-author
 type: memory
 status: accepted
 decided: 2026-06-09
-updated: 2026-08-03
+updated: 2026-08-02
 verified_by: Jayden
 verified_at: 2026-08-02T16:51:13Z
 ---
